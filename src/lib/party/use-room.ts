@@ -1,0 +1,119 @@
+"use client";
+
+import { useEffect, useRef, useCallback } from "react";
+import PartySocket from "partysocket";
+import { useRoomStore } from "@/lib/stores/room-store";
+import type {
+  LobbyClientMessage,
+  LobbyServerMessage,
+} from "@/lib/party/message-types";
+
+export function useRoom(roomCode: string, playerId: string, playerName: string, avatar?: string, isGuest = true) {
+  const socketRef = useRef<PartySocket | null>(null);
+  const store = useRoomStore();
+
+  useEffect(() => {
+    const host = process.env.NEXT_PUBLIC_PARTYKIT_HOST || "localhost:1999";
+    const protocol = host.startsWith("localhost") ? "ws" : "wss";
+
+    const socket = new PartySocket({
+      host,
+      room: roomCode,
+      protocol,
+    });
+
+    socketRef.current = socket;
+
+    socket.addEventListener("open", () => {
+      store.setConnected(true);
+      store.setError(null);
+      // Send join message
+      const msg: LobbyClientMessage = {
+        type: "join",
+        payload: { playerId, name: playerName, avatar, isGuest },
+      };
+      socket.send(JSON.stringify(msg));
+    });
+
+    socket.addEventListener("message", (event) => {
+      const msg = JSON.parse(event.data) as LobbyServerMessage;
+
+      switch (msg.type) {
+        case "lobby-state":
+          store.setLobbyState(msg.payload);
+          break;
+        case "player-joined":
+          store.addPlayer(msg.payload.player);
+          break;
+        case "player-left":
+          store.removePlayer(msg.payload.playerId);
+          break;
+        case "player-updated":
+          store.updatePlayer(msg.payload.player);
+          break;
+        case "game-selected":
+          store.setSelectedGame(msg.payload.gameId);
+          break;
+        case "ready-changed":
+          store.setReadyState(msg.payload.playerId, msg.payload.isReady);
+          break;
+        case "host-changed":
+          store.setHostId(msg.payload.playerId);
+          break;
+        case "game-starting":
+          store.setStatus("in-game");
+          break;
+        case "scores-updated":
+        case "game-ended":
+          store.setSessionScores(msg.payload.scores);
+          store.setStatus("waiting");
+          // Reset ready state for all players
+          store.players.forEach((p) => store.setReadyState(p.id, false));
+          break;
+        case "error":
+          store.setError(msg.payload.message);
+          break;
+      }
+    });
+
+    socket.addEventListener("close", () => {
+      store.setConnected(false);
+    });
+
+    socket.addEventListener("error", () => {
+      store.setError("Connexion perdue");
+    });
+
+    return () => {
+      socket.close();
+      socketRef.current = null;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [roomCode, playerId, playerName]);
+
+  const send = useCallback((msg: LobbyClientMessage) => {
+    socketRef.current?.send(JSON.stringify(msg));
+  }, []);
+
+  const selectGame = useCallback(
+    (gameId: string) => send({ type: "select-game", payload: { gameId } }),
+    [send]
+  );
+
+  const toggleReady = useCallback(
+    () => send({ type: "toggle-ready" }),
+    [send]
+  );
+
+  const startGame = useCallback(
+    () => send({ type: "start-game" }),
+    [send]
+  );
+
+  const returnToLobby = useCallback(
+    () => send({ type: "return-to-lobby" }),
+    [send]
+  );
+
+  return { send, selectGame, toggleReady, startGame, returnToLobby };
+}

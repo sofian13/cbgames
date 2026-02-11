@@ -1,0 +1,284 @@
+import type { Party, Connection } from "partykit/server";
+import type { Player, LobbyState } from "./shared/types";
+import { calculateSessionPoints, mergeScores } from "./shared/scoring";
+
+const MAX_PLAYERS = 8;
+
+export default class LobbyServer {
+  party: Party;
+  players: Map<string, Player> = new Map();
+  selectedGameId: string | null = null;
+  status: "waiting" | "ready-check" | "in-game" = "waiting";
+  sessionScores: Record<string, number> = {};
+
+  constructor(party: Party) {
+    this.party = party;
+  }
+
+  getState(): LobbyState {
+    const players = Array.from(this.players.values());
+    const host = players.find((p) => p.isHost);
+    return {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      players: players.map(({ connectionId, ...rest }) => rest),
+      selectedGameId: this.selectedGameId,
+      hostId: host?.id ?? "",
+      status: this.status,
+      sessionScores: this.sessionScores,
+    };
+  }
+
+  broadcast(msg: Record<string, unknown>, exclude?: string) {
+    const data = JSON.stringify(msg);
+    for (const [, player] of this.players) {
+      if (player.connectionId !== exclude) {
+        const conn = this.getConnectionById(player.connectionId);
+        conn?.send(data);
+      }
+    }
+  }
+
+  sendTo(connectionId: string, msg: Record<string, unknown>) {
+    const conn = this.getConnectionById(connectionId);
+    conn?.send(JSON.stringify(msg));
+  }
+
+  getConnectionById(connectionId: string): Connection | undefined {
+    for (const conn of this.party.getConnections()) {
+      if (conn.id === connectionId) return conn;
+    }
+    return undefined;
+  }
+
+  promoteNewHost() {
+    const players = Array.from(this.players.values()).filter((p) => p.isConnected);
+    if (players.length === 0) return;
+
+    // Clear old host
+    for (const [, p] of this.players) {
+      p.isHost = false;
+    }
+
+    players[0].isHost = true;
+    this.broadcast({
+      type: "host-changed",
+      payload: { playerId: players[0].id },
+    });
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  onConnect(conn: Connection) {
+    // Connection established, waiting for join message
+  }
+
+  onMessage(message: string, sender: Connection) {
+    let msg: { type: string; payload?: Record<string, unknown> };
+    try {
+      msg = JSON.parse(message);
+    } catch {
+      return;
+    }
+
+    switch (msg.type) {
+      case "join": {
+        const { playerId, name, avatar, isGuest } = msg.payload as {
+          playerId: string;
+          name: string;
+          avatar?: string;
+          isGuest: boolean;
+        };
+
+        if (this.players.size >= MAX_PLAYERS && !this.players.has(playerId)) {
+          this.sendTo(sender.id, {
+            type: "error",
+            payload: { message: "Salle pleine (8 joueurs max)" },
+          });
+          return;
+        }
+
+        const isFirst = this.players.size === 0;
+        const existing = this.players.get(playerId);
+
+        const player: Player = {
+          id: playerId,
+          name,
+          avatar,
+          isHost: existing?.isHost ?? isFirst,
+          isReady: false,
+          isConnected: true,
+          isGuest,
+          connectionId: sender.id,
+        };
+
+        this.players.set(playerId, player);
+
+        // Send full state to the joining player
+        this.sendTo(sender.id, {
+          type: "lobby-state",
+          payload: this.getState(),
+        });
+
+        // Notify others
+        this.broadcast(
+          {
+            type: "player-joined",
+            payload: { player: { ...player, connectionId: undefined } },
+          },
+          sender.id
+        );
+        break;
+      }
+
+      case "select-game": {
+        const player = this.findPlayerByConnection(sender.id);
+        if (!player?.isHost) return;
+
+        const { gameId } = msg.payload as { gameId: string };
+        this.selectedGameId = gameId;
+
+        // Reset ready states
+        for (const [, p] of this.players) {
+          p.isReady = false;
+        }
+
+        this.broadcast({
+          type: "game-selected",
+          payload: { gameId },
+        });
+        break;
+      }
+
+      case "toggle-ready": {
+        const player = this.findPlayerByConnection(sender.id);
+        if (!player) return;
+
+        player.isReady = !player.isReady;
+        this.broadcast({
+          type: "ready-changed",
+          payload: { playerId: player.id, isReady: player.isReady },
+        });
+        break;
+      }
+
+      case "start-game": {
+        const player = this.findPlayerByConnection(sender.id);
+        if (!player?.isHost) return;
+        if (!this.selectedGameId) return;
+
+        const connectedPlayers = Array.from(this.players.values()).filter(
+          (p) => p.isConnected
+        );
+        if (connectedPlayers.length < 2) {
+          this.sendTo(sender.id, {
+            type: "error",
+            payload: { message: "Il faut au moins 2 joueurs" },
+          });
+          return;
+        }
+
+        const allReady = connectedPlayers.every(
+          (p) => p.isReady || p.isHost
+        );
+        if (!allReady) {
+          this.sendTo(sender.id, {
+            type: "error",
+            payload: { message: "Tous les joueurs doivent être prêts" },
+          });
+          return;
+        }
+
+        this.status = "in-game";
+        this.broadcast({
+          type: "game-starting",
+          payload: {
+            gameId: this.selectedGameId,
+            roomCode: this.party.id,
+          },
+        });
+        break;
+      }
+
+      case "return-to-lobby": {
+        this.status = "waiting";
+        for (const [, p] of this.players) {
+          p.isReady = false;
+        }
+        this.broadcast({
+          type: "lobby-state",
+          payload: this.getState(),
+        });
+        break;
+      }
+
+      case "game-results": {
+        // Called by game server to update session scores
+        const { rankings } = msg.payload as {
+          rankings: { playerId: string; playerName: string; rank: number; score: number }[];
+        };
+        const points = calculateSessionPoints(rankings);
+        this.sessionScores = mergeScores(this.sessionScores, points);
+        this.status = "waiting";
+
+        for (const [, p] of this.players) {
+          p.isReady = false;
+        }
+
+        this.broadcast({
+          type: "game-ended",
+          payload: { scores: this.sessionScores },
+        });
+        break;
+      }
+
+      case "kick-player": {
+        const host = this.findPlayerByConnection(sender.id);
+        if (!host?.isHost) return;
+
+        const { playerId: targetId } = msg.payload as { playerId: string };
+        const target = this.players.get(targetId);
+        if (!target || target.isHost) return;
+
+        this.players.delete(targetId);
+        this.broadcast({
+          type: "player-left",
+          payload: { playerId: targetId },
+        });
+
+        // Close target's connection
+        const targetConn = this.getConnectionById(target.connectionId);
+        targetConn?.close();
+        break;
+      }
+    }
+  }
+
+  onClose(conn: Connection) {
+    const player = this.findPlayerByConnection(conn.id);
+    if (!player) return;
+
+    player.isConnected = false;
+
+    // Remove after timeout if they don't reconnect
+    setTimeout(() => {
+      const current = this.players.get(player.id);
+      if (current && !current.isConnected) {
+        this.players.delete(player.id);
+        this.broadcast({
+          type: "player-left",
+          payload: { playerId: player.id },
+        });
+
+        if (current.isHost) {
+          this.promoteNewHost();
+        }
+      }
+    }, 15_000);
+  }
+
+  findPlayerByConnection(connectionId: string): Player | undefined {
+    for (const [, player] of this.players) {
+      if (player.connectionId === connectionId) return player;
+    }
+    return undefined;
+  }
+}
