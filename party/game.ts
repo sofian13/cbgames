@@ -4,6 +4,21 @@ import { BombPartyGame } from "./games/bomb-party";
 import { SpeedQuizGame } from "./games/speed-quiz";
 import { WordChainGame } from "./games/word-chain";
 import { ReactionTimeGame } from "./games/reaction-time";
+import { LoupGarouGame } from "./games/loup-garou";
+import { UndercoverGame } from "./games/undercover";
+import { CodeNamesGame } from "./games/code-names";
+import { InfiltreGame } from "./games/infiltre";
+import { UnoGame } from "./games/uno";
+import { PokerGame } from "./games/poker";
+import { RoastQuizGame } from "./games/roast-quiz";
+import { LaTaupeGame } from "./games/la-taupe";
+import { EnchereGame } from "./games/enchere";
+import { SplitSecondGame } from "./games/split-second";
+import { BlindControlGame } from "./games/blind-control";
+import { RouletteGame } from "./games/roulette";
+import { BlackMarketGame } from "./games/black-market";
+import { KingHillGame } from "./games/king-hill";
+import { MotionTennisGame } from "./games/motion-tennis";
 
 // Registry of game constructors
 const GAME_REGISTRY: Record<string, () => BaseGame> = {
@@ -11,6 +26,21 @@ const GAME_REGISTRY: Record<string, () => BaseGame> = {
   "speed-quiz": () => new SpeedQuizGame(),
   "word-chain": () => new WordChainGame(),
   "reaction-time": () => new ReactionTimeGame(),
+  "loup-garou": () => new LoupGarouGame(),
+  "undercover": () => new UndercoverGame(),
+  "code-names": () => new CodeNamesGame(),
+  "infiltre": () => new InfiltreGame(),
+  "uno": () => new UnoGame(),
+  "poker": () => new PokerGame(),
+  "roast-quiz": () => new RoastQuizGame(),
+  "la-taupe": () => new LaTaupeGame(),
+  "enchere": () => new EnchereGame(),
+  "split-second": () => new SplitSecondGame(),
+  "blind-control": () => new BlindControlGame(),
+  "roulette": () => new RouletteGame(),
+  "black-market": () => new BlackMarketGame(),
+  "king-hill": () => new KingHillGame(),
+  "motion-tennis": () => new MotionTennisGame(),
 };
 
 export default class GameServer {
@@ -61,8 +91,10 @@ export default class GameServer {
         })
       );
 
-      // Auto-start when enough players join (2+) and game hasn't started
-      if (this.game.players.size >= 2 && !this.game.started) {
+      // Auto-start when enough players join and game hasn't started
+      // Motion tennis can start solo (vs bot)
+      const minToStart = this.gameId === "motion-tennis" ? 1 : 2;
+      if (this.game.players.size >= minToStart && !this.game.started) {
         this.game.start();
       }
       return;

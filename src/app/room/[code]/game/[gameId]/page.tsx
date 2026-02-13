@@ -27,6 +27,66 @@ const GameComponents = {
     () => import("@/components/games/reaction-time/reaction-time-game"),
     { ssr: false }
   ),
+  "loup-garou": dynamic(
+    () => import("@/components/games/loup-garou/loup-garou-game"),
+    { ssr: false }
+  ),
+  "undercover": dynamic(
+    () => import("@/components/games/undercover/undercover-game"),
+    { ssr: false }
+  ),
+  "code-names": dynamic(
+    () => import("@/components/games/code-names/code-names-game"),
+    { ssr: false }
+  ),
+  "infiltre": dynamic(
+    () => import("@/components/games/infiltre/infiltre-game"),
+    { ssr: false }
+  ),
+  "uno": dynamic(
+    () => import("@/components/games/uno/uno-game"),
+    { ssr: false }
+  ),
+  "poker": dynamic(
+    () => import("@/components/games/poker/poker-game"),
+    { ssr: false }
+  ),
+  "roast-quiz": dynamic(
+    () => import("@/components/games/roast-quiz/roast-quiz-game"),
+    { ssr: false }
+  ),
+  "la-taupe": dynamic(
+    () => import("@/components/games/la-taupe/la-taupe-game"),
+    { ssr: false }
+  ),
+  "enchere": dynamic(
+    () => import("@/components/games/enchere/enchere-game"),
+    { ssr: false }
+  ),
+  "split-second": dynamic(
+    () => import("@/components/games/split-second/split-second-game"),
+    { ssr: false }
+  ),
+  "blind-control": dynamic(
+    () => import("@/components/games/blind-control/blind-control-game"),
+    { ssr: false }
+  ),
+  "roulette": dynamic(
+    () => import("@/components/games/roulette/roulette-game"),
+    { ssr: false }
+  ),
+  "black-market": dynamic(
+    () => import("@/components/games/black-market/black-market-game"),
+    { ssr: false }
+  ),
+  "king-hill": dynamic(
+    () => import("@/components/games/king-hill/king-hill-game"),
+    { ssr: false }
+  ),
+  "motion-tennis": dynamic(
+    () => import("@/components/games/motion-tennis/motion-tennis-game"),
+    { ssr: false }
+  ),
 } as const;
 
 export default function GamePage() {
@@ -69,7 +129,7 @@ export default function GamePage() {
   }
 
   return (
-    <GameShell roomCode={code} gameId={gameId} onReturnToLobby={handleReturnToLobby}>
+    <GameShell roomCode={code} gameId={gameId} playerId={playerId} playerName={playerName} isGuest={isGuest} onReturnToLobby={handleReturnToLobby}>
       <Suspense
         fallback={
           <div className="flex flex-1 items-center justify-center">

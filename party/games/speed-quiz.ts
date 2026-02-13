@@ -1,98 +1,73 @@
 import type { Connection } from "partykit/server";
 import { BaseGame } from "./base-game";
 import type { GameRanking } from "../shared/types";
+import { ALL_QUESTIONS, type QuizQuestion } from "./quiz-questions";
 
-interface QuizQuestion {
-  text: string;
-  choices: string[];
-  answer: number; // index of correct choice
-}
-
-const QUESTIONS: QuizQuestion[] = [
-  { text: "Quelle est la capitale de l'Australie ?", choices: ["Sydney", "Melbourne", "Canberra", "Brisbane"], answer: 2 },
-  { text: "En quelle année l'homme a-t-il marché sur la Lune pour la première fois ?", choices: ["1967", "1969", "1971", "1965"], answer: 1 },
-  { text: "Quel est le plus grand océan du monde ?", choices: ["Atlantique", "Indien", "Arctique", "Pacifique"], answer: 3 },
-  { text: "Qui a peint La Joconde ?", choices: ["Michel-Ange", "Raphaël", "Léonard de Vinci", "Botticelli"], answer: 2 },
-  { text: "Combien d'os le corps humain adulte possède-t-il ?", choices: ["186", "206", "226", "196"], answer: 1 },
-  { text: "Quel est le plus long fleuve du monde ?", choices: ["Amazone", "Nil", "Yangtsé", "Mississippi"], answer: 1 },
-  { text: "En quelle année a eu lieu la Révolution française ?", choices: ["1776", "1789", "1804", "1815"], answer: 1 },
-  { text: "Quel élément chimique a pour symbole 'Au' ?", choices: ["Argent", "Aluminium", "Or", "Cuivre"], answer: 2 },
-  { text: "Quel pays a la plus grande population au monde ?", choices: ["Inde", "États-Unis", "Chine", "Indonésie"], answer: 0 },
-  { text: "Combien de planètes composent le système solaire ?", choices: ["7", "8", "9", "10"], answer: 1 },
-  { text: "Qui a écrit 'Les Misérables' ?", choices: ["Émile Zola", "Victor Hugo", "Alexandre Dumas", "Gustave Flaubert"], answer: 1 },
-  { text: "Quelle est la monnaie du Japon ?", choices: ["Won", "Yuan", "Yen", "Ringgit"], answer: 2 },
-  { text: "Quel est le plus haut sommet du monde ?", choices: ["K2", "Kangchenjunga", "Mont Blanc", "Everest"], answer: 3 },
-  { text: "Quelle planète est surnommée la planète rouge ?", choices: ["Vénus", "Jupiter", "Mars", "Saturne"], answer: 2 },
-  { text: "Combien de côtés a un hexagone ?", choices: ["5", "6", "7", "8"], answer: 1 },
-  { text: "En quelle année le mur de Berlin est-il tombé ?", choices: ["1987", "1989", "1991", "1985"], answer: 1 },
-  { text: "Quel est le plus petit pays du monde ?", choices: ["Monaco", "Vatican", "Saint-Marin", "Liechtenstein"], answer: 1 },
-  { text: "Qui a composé la Symphonie n°5 ?", choices: ["Mozart", "Bach", "Beethoven", "Vivaldi"], answer: 2 },
-  { text: "Quel gaz les plantes absorbent-elles pour la photosynthèse ?", choices: ["Oxygène", "Azote", "Dioxyde de carbone", "Hydrogène"], answer: 2 },
-  { text: "Quel sport pratique-t-on à Roland-Garros ?", choices: ["Football", "Tennis", "Rugby", "Athlétisme"], answer: 1 },
-  { text: "Combien de dents un adulte a-t-il normalement ?", choices: ["28", "30", "32", "34"], answer: 2 },
-  { text: "Quelle est la langue la plus parlée au monde ?", choices: ["Anglais", "Espagnol", "Mandarin", "Hindi"], answer: 2 },
-  { text: "Quel animal est le symbole de la marque Lacoste ?", choices: ["Crocodile", "Alligator", "Lézard", "Caméléon"], answer: 0 },
-  { text: "En combien de temps la Terre fait-elle le tour du Soleil ?", choices: ["364 jours", "365,25 jours", "366 jours", "360 jours"], answer: 1 },
-  { text: "Quel est le métal le plus abondant dans la croûte terrestre ?", choices: ["Fer", "Cuivre", "Aluminium", "Or"], answer: 2 },
-  { text: "Qui a inventé la théorie de la relativité ?", choices: ["Newton", "Einstein", "Hawking", "Bohr"], answer: 1 },
-  { text: "Quelle ville est surnommée 'la ville lumière' ?", choices: ["Londres", "Rome", "Paris", "New York"], answer: 2 },
-  { text: "Combien y a-t-il de continents ?", choices: ["5", "6", "7", "8"], answer: 2 },
-  { text: "Quel est le plus grand désert du monde ?", choices: ["Sahara", "Gobi", "Antarctique", "Kalahari"], answer: 2 },
-  { text: "Quel animal peut vivre le plus longtemps ?", choices: ["Éléphant", "Tortue géante", "Baleine", "Perroquet"], answer: 1 },
-  { text: "Dans quel pays se trouve la tour de Pise ?", choices: ["France", "Espagne", "Italie", "Grèce"], answer: 2 },
-  { text: "Quelle est la formule chimique de l'eau ?", choices: ["HO2", "H2O", "OH2", "H3O"], answer: 1 },
-  { text: "Quel est le plus grand mammifère marin ?", choices: ["Requin blanc", "Orque", "Baleine bleue", "Cachalot"], answer: 2 },
-  { text: "Combien de joueurs composent une équipe de football ?", choices: ["9", "10", "11", "12"], answer: 2 },
-  { text: "Quel pays a inventé les Jeux Olympiques ?", choices: ["Italie", "France", "Grèce", "Turquie"], answer: 2 },
-  { text: "Quelle est la vitesse de la lumière ?", choices: ["200 000 km/s", "300 000 km/s", "400 000 km/s", "150 000 km/s"], answer: 1 },
-  { text: "Quel organe produit l'insuline ?", choices: ["Foie", "Rein", "Pancréas", "Estomac"], answer: 2 },
-  { text: "Qui a découvert l'Amérique en 1492 ?", choices: ["Magellan", "Christophe Colomb", "Vasco de Gama", "Marco Polo"], answer: 1 },
-  { text: "Quelle est la plus grande île du monde ?", choices: ["Madagascar", "Bornéo", "Groenland", "Nouvelle-Guinée"], answer: 2 },
-  { text: "Quel est le symbole chimique du fer ?", choices: ["Fr", "Fe", "Fi", "Fa"], answer: 1 },
-  { text: "Combien de cordes a un violon ?", choices: ["3", "4", "5", "6"], answer: 1 },
-  { text: "Quel fleuve traverse Paris ?", choices: ["Rhône", "Loire", "Seine", "Garonne"], answer: 2 },
-  { text: "Quel est le pays le plus vaste du monde ?", choices: ["Canada", "Chine", "États-Unis", "Russie"], answer: 3 },
-  { text: "De quelle couleur est une émeraude ?", choices: ["Bleu", "Rouge", "Vert", "Violet"], answer: 2 },
-  { text: "En quelle année le Titanic a-t-il coulé ?", choices: ["1910", "1912", "1914", "1908"], answer: 1 },
-  { text: "Quel est le plus rapide animal terrestre ?", choices: ["Lion", "Guépard", "Antilope", "Lévrier"], answer: 1 },
-  { text: "Combien de faces a un dé classique ?", choices: ["4", "6", "8", "10"], answer: 1 },
-  { text: "Quelle est la capitale du Canada ?", choices: ["Toronto", "Montréal", "Ottawa", "Vancouver"], answer: 2 },
-  { text: "Quel gaz compose principalement l'atmosphère terrestre ?", choices: ["Oxygène", "Azote", "Dioxyde de carbone", "Argon"], answer: 1 },
-  { text: "Qui a peint le plafond de la chapelle Sixtine ?", choices: ["Léonard de Vinci", "Raphaël", "Michel-Ange", "Donatello"], answer: 2 },
-];
-
+// ── Config ───────────────────────────────────────────────
 const TOTAL_ROUNDS = 10;
-const QUESTION_TIME = 15; // seconds per question
-const REVEAL_TIME = 3000; // ms to show correct answer
+const QUESTION_TIME = 20; // seconds to answer
+const SCORES_TIME = 4000; // ms to show round scores before next question
 
+// ── Player state ─────────────────────────────────────────
 interface QuizPlayer {
   id: string;
   name: string;
   score: number;
   hasAnswered: boolean;
-  lastCorrect?: boolean;
-  answerTime?: number;
+  submittedAnswer: string | null;
+  answerTime: number | null;
 }
 
+// ── Answer to validate ───────────────────────────────────
+interface AnswerEntry {
+  playerId: string;
+  playerName: string;
+  answer: string;
+  validated: boolean;
+  correct: boolean | null; // null = not yet validated
+}
+
+// ══════════════════════════════════════════════════════════
 export class SpeedQuizGame extends BaseGame {
   quizPlayers: Map<string, QuizPlayer> = new Map();
   questions: QuizQuestion[] = [];
   currentQuestionIndex = 0;
   timeLeft = QUESTION_TIME;
   timer: ReturnType<typeof setInterval> | null = null;
-  status: "waiting" | "question" | "reveal" | "game-over" = "waiting";
+  status: "waiting" | "question" | "validating" | "scores" | "game-over" = "waiting";
   questionStartTime = 0;
-  firstCorrectId: string | null = null;
-  answeredCount = 0;
+  hostId: string | null = null;
+
+  // Validation phase
+  answersToValidate: AnswerEntry[] = [];
+  currentValidationIndex = 0;
 
   pickQuestions() {
-    const shuffled = [...QUESTIONS].sort(() => Math.random() - 0.5);
-    this.questions = shuffled.slice(0, TOTAL_ROUNDS);
+    // Pick 10 questions sorted by difficulty: easy → medium → hard
+    const easy = ALL_QUESTIONS.filter((q) => q.difficulty === "easy");
+    const medium = ALL_QUESTIONS.filter((q) => q.difficulty === "medium");
+    const hard = ALL_QUESTIONS.filter((q) => q.difficulty === "hard");
+
+    const shuffle = <T>(arr: T[]): T[] => [...arr].sort(() => Math.random() - 0.5);
+
+    const picked: QuizQuestion[] = [];
+    // 3 easy, 4 medium, 3 hard
+    picked.push(...shuffle(easy).slice(0, 3));
+    picked.push(...shuffle(medium).slice(0, 4));
+    picked.push(...shuffle(hard).slice(0, 3));
+
+    this.questions = picked;
   }
 
   start() {
     this.started = true;
     this.pickQuestions();
+
+    // First player in the map = host
+    const firstPlayer = this.players.entries().next().value;
+    if (firstPlayer) {
+      this.hostId = firstPlayer[0];
+    }
 
     for (const [id, player] of this.players) {
       this.quizPlayers.set(id, {
@@ -100,6 +75,8 @@ export class SpeedQuizGame extends BaseGame {
         name: player.name,
         score: 0,
         hasAnswered: false,
+        submittedAnswer: null,
+        answerTime: null,
       });
     }
 
@@ -115,13 +92,13 @@ export class SpeedQuizGame extends BaseGame {
     this.status = "question";
     this.timeLeft = QUESTION_TIME;
     this.questionStartTime = Date.now();
-    this.firstCorrectId = null;
-    this.answeredCount = 0;
+    this.answersToValidate = [];
+    this.currentValidationIndex = 0;
 
     for (const p of this.quizPlayers.values()) {
       p.hasAnswered = false;
-      p.lastCorrect = undefined;
-      p.answerTime = undefined;
+      p.submittedAnswer = null;
+      p.answerTime = null;
     }
 
     this.broadcastState();
@@ -138,7 +115,7 @@ export class SpeedQuizGame extends BaseGame {
       });
 
       if (this.timeLeft <= 0) {
-        this.revealAnswer();
+        this.startValidation();
       }
     }, 1000);
   }
@@ -150,30 +127,70 @@ export class SpeedQuizGame extends BaseGame {
     }
   }
 
-  revealAnswer() {
+  startValidation() {
     this.stopTimer();
-    this.status = "reveal";
+    this.status = "validating";
+    this.currentValidationIndex = 0;
 
-    const q = this.questions[this.currentQuestionIndex];
-    this.broadcast({
-      type: "game-state",
-      payload: {
-        ...this.getState(),
-        correctAnswer: q.answer,
-      },
+    // Build answers list — ordered by submission time (fastest first)
+    // Players who didn't answer go at the end
+    const answered: AnswerEntry[] = [];
+    const notAnswered: AnswerEntry[] = [];
+
+    for (const p of this.quizPlayers.values()) {
+      const entry: AnswerEntry = {
+        playerId: p.id,
+        playerName: p.name,
+        answer: p.submittedAnswer ?? "",
+        validated: false,
+        correct: null,
+      };
+
+      if (p.hasAnswered && p.submittedAnswer) {
+        answered.push(entry);
+      } else {
+        entry.answer = "";
+        notAnswered.push(entry);
+      }
+    }
+
+    // Sort answered by answer time
+    const sortedAnswered = answered.sort((a, b) => {
+      const pa = this.quizPlayers.get(a.playerId);
+      const pb = this.quizPlayers.get(b.playerId);
+      return (pa?.answerTime ?? 0) - (pb?.answerTime ?? 0);
     });
 
-    setTimeout(() => {
-      this.currentQuestionIndex++;
-      this.startQuestion();
-    }, REVEAL_TIME);
+    this.answersToValidate = [...sortedAnswered, ...notAnswered];
+
+    // Skip players who didn't answer (auto-mark as wrong)
+    for (const entry of this.answersToValidate) {
+      if (!entry.answer) {
+        entry.validated = true;
+        entry.correct = false;
+      }
+    }
+
+    // If all are auto-validated (nobody answered), go to scores
+    if (this.answersToValidate.every((a) => a.validated)) {
+      this.showScores();
+      return;
+    }
+
+    // Find first non-validated answer
+    this.currentValidationIndex = this.answersToValidate.findIndex((a) => !a.validated);
+
+    this.broadcastValidationState();
   }
 
   onMessage(payload: Record<string, unknown>, sender: Connection) {
     const action = payload.action as string;
 
+    // ── Player submits answer during question phase ──
     if (action === "answer" && this.status === "question") {
-      const choiceIndex = payload.choiceIndex as number;
+      const answer = ((payload.answer as string) ?? "").trim();
+      if (!answer) return;
+
       const senderPlayer = this.findGamePlayerByConnection(sender.id);
       if (!senderPlayer) return;
 
@@ -181,55 +198,71 @@ export class SpeedQuizGame extends BaseGame {
       if (!qp || qp.hasAnswered) return;
 
       qp.hasAnswered = true;
-      this.answeredCount++;
+      qp.submittedAnswer = answer;
+      qp.answerTime = Date.now() - this.questionStartTime;
 
-      const q = this.questions[this.currentQuestionIndex];
-      const isCorrect = choiceIndex === q.answer;
-      qp.lastCorrect = isCorrect;
-
-      if (isCorrect) {
-        const elapsed = (Date.now() - this.questionStartTime) / 1000;
-        const timeBonus = Math.max(0, 1 - elapsed / QUESTION_TIME);
-        const points = Math.round(50 + 50 * timeBonus); // 50-100 points based on speed
-
-        if (!this.firstCorrectId) {
-          this.firstCorrectId = senderPlayer.id;
-          qp.score += points + 20; // bonus for being first
-        } else {
-          qp.score += points;
-        }
-        qp.answerTime = Math.round(elapsed * 100) / 100;
-      }
-
-      // Notify the answering player of their result
-      this.sendTo(sender.id, {
-        type: "round-result",
-        payload: {
-          correct: isCorrect,
-          isFirst: this.firstCorrectId === senderPlayer.id,
-          points: isCorrect ? (this.firstCorrectId === senderPlayer.id ? Math.round(50 + 50 * Math.max(0, 1 - (Date.now() - this.questionStartTime) / 1000 / QUESTION_TIME)) + 20 : Math.round(50 + 50 * Math.max(0, 1 - (Date.now() - this.questionStartTime) / 1000 / QUESTION_TIME))) : 0,
-        },
-      });
-
-      // Update all players with answer status
+      // Broadcast updated player states (only hasAnswered visible)
       this.broadcast({
         type: "game-update",
         payload: {
-          players: Array.from(this.quizPlayers.values()).map(p => ({
+          players: Array.from(this.quizPlayers.values()).map((p) => ({
             id: p.id,
             name: p.name,
             score: p.score,
             hasAnswered: p.hasAnswered,
-            lastCorrect: p.lastCorrect,
           })),
         },
       });
 
-      // If all players answered, reveal immediately
-      if (this.answeredCount >= this.quizPlayers.size) {
-        this.revealAnswer();
+      // If all answered, start validation immediately
+      if (Array.from(this.quizPlayers.values()).every((p) => p.hasAnswered)) {
+        this.startValidation();
       }
+      return;
     }
+
+    // ── Host validates an answer ──
+    if (action === "validate" && this.status === "validating") {
+      const senderPlayer = this.findGamePlayerByConnection(sender.id);
+      if (!senderPlayer || senderPlayer.id !== this.hostId) return;
+
+      const correct = payload.correct === true;
+      const entry = this.answersToValidate[this.currentValidationIndex];
+      if (!entry || entry.validated) return;
+
+      entry.validated = true;
+      entry.correct = correct;
+
+      // Award point if correct
+      if (correct) {
+        const qp = this.quizPlayers.get(entry.playerId);
+        if (qp) {
+          qp.score += 1;
+        }
+      }
+
+      // Move to next non-validated answer
+      const nextIndex = this.answersToValidate.findIndex((a, i) => i > this.currentValidationIndex && !a.validated);
+
+      if (nextIndex === -1) {
+        // All validated → show scores
+        this.showScores();
+      } else {
+        this.currentValidationIndex = nextIndex;
+        this.broadcastValidationState();
+      }
+      return;
+    }
+  }
+
+  showScores() {
+    this.status = "scores";
+    this.broadcastScoresState();
+
+    setTimeout(() => {
+      this.currentQuestionIndex++;
+      this.startQuestion();
+    }, SCORES_TIME);
   }
 
   endQuiz() {
@@ -256,27 +289,106 @@ export class SpeedQuizGame extends BaseGame {
     return null;
   }
 
+  // ── State: question phase ──────────────────────────────
   getState(): Record<string, unknown> {
     const q = this.questions[this.currentQuestionIndex];
     return {
-      currentQuestion: q ? {
-        text: q.text,
-        choices: q.choices,
-        index: this.currentQuestionIndex,
-        total: this.questions.length,
-      } : null,
-      players: Array.from(this.quizPlayers.values()).map(p => ({
+      currentQuestion: q
+        ? {
+            text: q.text,
+            category: q.category,
+            difficulty: q.difficulty,
+            image: q.image ?? null,
+            index: this.currentQuestionIndex,
+            total: this.questions.length,
+          }
+        : null,
+      players: Array.from(this.quizPlayers.values()).map((p) => ({
         id: p.id,
         name: p.name,
         score: p.score,
         hasAnswered: p.hasAnswered,
-        lastCorrect: p.lastCorrect,
       })),
       timeLeft: this.timeLeft,
       status: this.status,
       round: this.currentQuestionIndex + 1,
-      firstCorrectId: this.firstCorrectId,
+      hostId: this.hostId,
     };
+  }
+
+  // ── State: validation phase ────────────────────────────
+  broadcastValidationState() {
+    const q = this.questions[this.currentQuestionIndex];
+    this.broadcast({
+      type: "game-state",
+      payload: {
+        currentQuestion: {
+          text: q.text,
+          category: q.category,
+          difficulty: q.difficulty,
+          image: q.image ?? null,
+          index: this.currentQuestionIndex,
+          total: this.questions.length,
+        },
+        // Hint for the host (reference answers)
+        referenceAnswers: q.answers,
+        players: Array.from(this.quizPlayers.values()).map((p) => ({
+          id: p.id,
+          name: p.name,
+          score: p.score,
+          hasAnswered: p.hasAnswered,
+        })),
+        answers: this.answersToValidate.map((a, i) => ({
+          playerId: a.playerId,
+          playerName: a.playerName,
+          answer: i <= this.currentValidationIndex ? a.answer : null, // only reveal up to current
+          validated: a.validated,
+          correct: a.correct,
+        })),
+        currentValidationIndex: this.currentValidationIndex,
+        timeLeft: 0,
+        status: "validating",
+        round: this.currentQuestionIndex + 1,
+        hostId: this.hostId,
+      },
+    });
+  }
+
+  // ── State: scores phase ────────────────────────────────
+  broadcastScoresState() {
+    const q = this.questions[this.currentQuestionIndex];
+    this.broadcast({
+      type: "game-state",
+      payload: {
+        currentQuestion: {
+          text: q.text,
+          category: q.category,
+          difficulty: q.difficulty,
+          image: q.image ?? null,
+          index: this.currentQuestionIndex,
+          total: this.questions.length,
+        },
+        players: Array.from(this.quizPlayers.values())
+          .map((p) => ({
+            id: p.id,
+            name: p.name,
+            score: p.score,
+            hasAnswered: p.hasAnswered,
+          }))
+          .sort((a, b) => b.score - a.score),
+        answers: this.answersToValidate.map((a) => ({
+          playerId: a.playerId,
+          playerName: a.playerName,
+          answer: a.answer,
+          validated: true,
+          correct: a.correct,
+        })),
+        timeLeft: 0,
+        status: "scores",
+        round: this.currentQuestionIndex + 1,
+        hostId: this.hostId,
+      },
+    });
   }
 
   broadcastState() {

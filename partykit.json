@@ -3,7 +3,8 @@
   "name": "af-games",
   "main": "party/lobby.ts",
   "parties": {
-    "game": "party/game.ts"
+    "game": "party/game.ts",
+    "stats": "party/stats.ts"
   },
   "compatibilityDate": "2025-01-01"
 }

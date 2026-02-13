@@ -88,16 +88,21 @@ export type BombPartyAction =
 export interface SpeedQuizState {
   currentQuestion: {
     text: string;
-    choices: string[];
+    category: string;
+    difficulty: "easy" | "medium" | "hard";
+    image?: string | null;
     index: number;
     total: number;
   } | null;
   players: SpeedQuizPlayer[];
   timeLeft: number;
-  status: "waiting" | "question" | "reveal" | "game-over";
-  correctAnswer?: number;
+  status: "waiting" | "question" | "validating" | "scores" | "game-over";
   round: number;
-  firstCorrectId: string | null;
+  hostId: string | null;
+  // Validation phase
+  answers?: SpeedQuizAnswer[];
+  currentValidationIndex?: number;
+  referenceAnswers?: string[]; // hint for the host
 }
 
 export interface SpeedQuizPlayer {
@@ -105,7 +110,14 @@ export interface SpeedQuizPlayer {
   name: string;
   score: number;
   hasAnswered: boolean;
-  lastCorrect?: boolean;
+}
+
+export interface SpeedQuizAnswer {
+  playerId: string;
+  playerName: string;
+  answer: string | null; // null if not yet revealed
+  validated: boolean;
+  correct: boolean | null;
 }
 
 // ===== Word Chain Specific =====

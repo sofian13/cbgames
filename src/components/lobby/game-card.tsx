@@ -1,9 +1,11 @@
 "use client";
 
+import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import type { GameMeta } from "@/lib/games/types";
+import { BookOpen, X } from "lucide-react";
 
 interface GameCardProps {
   game: GameMeta;
@@ -13,35 +15,75 @@ interface GameCardProps {
 }
 
 export function GameCard({ game, isSelected, isHost, onSelect }: GameCardProps) {
+  const [showRules, setShowRules] = useState(false);
   const disabled = !game.implemented || !isHost;
 
   return (
-    <Card
-      className={cn(
-        "cursor-pointer transition-all hover:border-primary/50",
-        isSelected && "border-primary bg-primary/5 ring-1 ring-primary/20",
-        disabled && "opacity-50 cursor-not-allowed hover:border-border",
-        !disabled && "hover:scale-[1.02]"
-      )}
-      onClick={() => !disabled && onSelect()}
-    >
-      <CardContent className="p-4">
-        <div className="flex items-start gap-3">
-          <span className="text-3xl">{game.icon}</span>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <h4 className="font-semibold">{game.name}</h4>
-              {!game.implemented && (
-                <Badge variant="outline" className="text-xs">Bientôt</Badge>
-              )}
+    <>
+      <Card
+        className={cn(
+          "cursor-pointer transition-all hover:border-primary/50 relative",
+          isSelected && "border-primary bg-primary/5 ring-1 ring-primary/20",
+          disabled && "opacity-50 cursor-not-allowed hover:border-border",
+          !disabled && "hover:scale-[1.02]"
+        )}
+        onClick={() => !disabled && onSelect()}
+      >
+        <CardContent className="p-4">
+          <div className="flex items-start gap-3">
+            <span className="text-3xl">{game.icon}</span>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <h4 className="font-semibold">{game.name}</h4>
+                {!game.implemented && (
+                  <Badge variant="outline" className="text-xs">Bientôt</Badge>
+                )}
+              </div>
+              <p className="text-sm text-muted-foreground mt-1">{game.description}</p>
+              <div className="flex items-center justify-between mt-2">
+                <p className="text-xs text-muted-foreground">
+                  {game.minPlayers}-{game.maxPlayers} joueurs
+                </p>
+                {game.rules.length > 0 && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setShowRules(true); }}
+                    className="flex items-center gap-1 text-[11px] text-white/30 hover:text-ember transition-colors"
+                  >
+                    <BookOpen className="h-3 w-3" />
+                    Règles
+                  </button>
+                )}
+              </div>
             </div>
-            <p className="text-sm text-muted-foreground mt-1">{game.description}</p>
-            <p className="text-xs text-muted-foreground mt-2">
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Rules modal */}
+      {showRules && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setShowRules(false)}>
+          <div className="relative w-full max-w-md mx-4 rounded-xl border border-white/[0.08] bg-[#0a0a0a] p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <button onClick={() => setShowRules(false)} className="absolute top-3 right-3 text-white/30 hover:text-white/60 transition-colors">
+              <X className="h-5 w-5" />
+            </button>
+            <div className="flex items-center gap-3 mb-4">
+              <span className="text-3xl">{game.icon}</span>
+              <h3 className="text-xl font-serif font-light text-white/90">{game.name}</h3>
+            </div>
+            <ul className="space-y-2.5">
+              {game.rules.map((rule, i) => (
+                <li key={i} className="flex items-start gap-2.5 text-sm text-white/60 font-sans">
+                  <span className="mt-0.5 h-1.5 w-1.5 shrink-0 rounded-full bg-ember/60" />
+                  {rule}
+                </li>
+              ))}
+            </ul>
+            <p className="mt-4 text-xs text-white/20 font-sans">
               {game.minPlayers}-{game.maxPlayers} joueurs
             </p>
           </div>
         </div>
-      </CardContent>
-    </Card>
+      )}
+    </>
   );
 }

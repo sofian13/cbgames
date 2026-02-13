@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { useSession, signIn } from "next-auth/react";
-import { Plus, ArrowRight } from "lucide-react";
+import { useSession, signIn, signOut } from "next-auth/react";
+import { Plus, ArrowRight, Pencil, Check, LogOut } from "lucide-react";
 import { EmberBackground, MagneticButton, EmberKeyframes } from "@/components/shared/ember";
 import { generateRoomCode, ROOM_CODE_LENGTH } from "@/lib/party/constants";
+import { getOrCreateGuest, setGuestName } from "@/lib/guest";
 
 function useTyping(text: string, startDelay: number, charSpeed = 35) {
   const [out, setOut] = useState("");
@@ -66,11 +67,75 @@ function DiscordIcon({ className }: { className?: string }) {
   );
 }
 
+function UsernameEditor({ initialName, onSave }: { initialName: string; onSave: (name: string) => void }) {
+  const [editing, setEditing] = useState(false);
+  const [name, setName] = useState(initialName);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (editing) inputRef.current?.focus();
+  }, [editing]);
+
+  const save = () => {
+    const trimmed = name.trim();
+    if (trimmed && trimmed !== initialName) {
+      onSave(trimmed);
+    } else {
+      setName(initialName);
+    }
+    setEditing(false);
+  };
+
+  if (!editing) {
+    return (
+      <button
+        onClick={() => setEditing(true)}
+        className="group flex items-center gap-2 transition-all duration-300"
+      >
+        <span className="text-sm font-sans text-white/60 group-hover:text-white/90 transition-colors">
+          {initialName}
+        </span>
+        <Pencil className="w-3 h-3 text-white/20 group-hover:text-ember/60 transition-colors" />
+      </button>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-2">
+      <input
+        ref={inputRef}
+        type="text"
+        value={name}
+        onChange={(e) => setName(e.target.value.slice(0, 20))}
+        onKeyDown={(e) => { if (e.key === "Enter") save(); if (e.key === "Escape") { setName(initialName); setEditing(false); } }}
+        onBlur={save}
+        maxLength={20}
+        className="bg-white/[0.04] border border-white/[0.12] rounded-lg px-3 py-1.5 text-sm text-white font-sans outline-none focus:border-ember/40 transition-all w-40 text-center"
+      />
+      <button onClick={save} className="text-ember/60 hover:text-ember transition-colors">
+        <Check className="w-3.5 h-3.5" />
+      </button>
+    </div>
+  );
+}
+
 export default function HomePage() {
   const router = useRouter();
   const { data: session } = useSession();
   const [code, setCode] = useState("");
+  const [guestName, setGuestNameState] = useState("");
   const subtitle = useTyping("Joue avec tes potes, sans pub, sans prise de tête.", 1800, 30);
+
+  // Load guest name on mount
+  useEffect(() => {
+    const guest = getOrCreateGuest();
+    setGuestNameState(guest.name);
+  }, []);
+
+  const handleSaveName = useCallback((newName: string) => {
+    setGuestName(newName);
+    setGuestNameState(newName);
+  }, []);
 
   const handleCreate = useCallback(() => {
     const roomCode = generateRoomCode();
@@ -96,10 +161,47 @@ export default function HomePage() {
         </div>
 
         {/* Subtitle (typing) */}
-        <p className="h-5 mb-14 font-sans" style={{ fontSize: "0.7rem", letterSpacing: "0.32em", textTransform: "uppercase", color: "rgba(255,255,255,0.28)", fontWeight: 300 }}>
+        <p className="h-5 mb-10 font-sans" style={{ fontSize: "0.7rem", letterSpacing: "0.32em", textTransform: "uppercase", color: "rgba(255,255,255,0.28)", fontWeight: 300 }}>
           {subtitle}
           <span style={{ animation: "blink 0.8s step-end infinite", color: "rgba(200,60,30,0.5)" }}>|</span>
         </p>
+
+        {/* User identity */}
+        <div className="mb-8 flex flex-col items-center gap-2" style={{ opacity: 0, animation: "fadeUp 1s cubic-bezier(0.16,1,0.3,1) 2s forwards" }}>
+          {session?.user ? (
+            /* Discord user — show avatar + name + sign out */
+            <div className="flex items-center gap-3 rounded-full border border-white/[0.08] px-4 py-2" style={{ background: "rgba(255,255,255,0.03)", backdropFilter: "blur(16px)" }}>
+              {session.user.image && (
+                <img
+                  src={session.user.image}
+                  alt=""
+                  className="w-7 h-7 rounded-full ring-2 ring-ember/30"
+                />
+              )}
+              <span className="text-sm font-sans text-white/80">
+                {session.user.name}
+              </span>
+              <div className="w-px h-4 bg-white/[0.08]" />
+              <button
+                onClick={() => signOut()}
+                className="text-white/20 hover:text-white/50 transition-colors"
+                title="Déconnexion"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          ) : (
+            /* Guest — editable username */
+            <div className="flex flex-col items-center gap-3">
+              <span className="text-[10px] uppercase tracking-[0.2em] text-white/20 font-sans">
+                Ton pseudo
+              </span>
+              {guestName && (
+                <UsernameEditor initialName={guestName} onSave={handleSaveName} />
+              )}
+            </div>
+          )}
+        </div>
 
         {/* Actions */}
         <div className="flex gap-3.5 items-center" style={{ opacity: 0, animation: "fadeUp 1s cubic-bezier(0.16,1,0.3,1) 2.2s forwards" }}>
@@ -145,23 +247,14 @@ export default function HomePage() {
           </MagneticButton>
         </div>
 
-        {/* Discord */}
+        {/* Discord login for guests */}
         {!session?.user && (
-          <button onClick={() => signIn("discord")} className="group flex items-center gap-2 mt-12" style={{ opacity: 0, animation: "fadeIn 1s ease 2.8s forwards" }}>
+          <button onClick={() => signIn("discord")} className="group flex items-center gap-2 mt-10" style={{ opacity: 0, animation: "fadeIn 1s ease 2.8s forwards" }}>
             <DiscordIcon className="w-3.5 h-3.5 text-white/15 group-hover:text-[#5865F2]/60 transition-colors duration-500" />
             <span className="text-[11px] tracking-[0.12em] text-white/15 group-hover:text-white/40 transition-colors duration-500 font-sans">
               Connexion Discord
             </span>
           </button>
-        )}
-
-        {session?.user && (
-          <div className="flex items-center gap-2 mt-12" style={{ opacity: 0, animation: "fadeIn 1s ease 2.8s forwards" }}>
-            <div className="w-2 h-2 rounded-full bg-emerald-500/60" />
-            <span className="text-[11px] tracking-[0.12em] text-white/30 font-sans">
-              {session.user.name}
-            </span>
-          </div>
         )}
       </main>
     </EmberBackground>

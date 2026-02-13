@@ -4,11 +4,12 @@ export interface GameMeta {
   id: string;
   name: string;
   description: string;
-  category: "words" | "trivia" | "speed" | "strategy";
+  category: "words" | "trivia" | "speed" | "strategy" | "social" | "cards" | "party" | "sport";
   minPlayers: number;
   maxPlayers: number;
   icon: string;
   implemented: boolean;
+  rules: string[];
   component: () => Promise<{ default: ComponentType<GameProps> }>;
 }
 
