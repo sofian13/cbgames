@@ -699,12 +699,30 @@ export default function UndercoverGame({
           <div className="relative flex min-h-[100svh] flex-1 flex-col overflow-hidden bg-[#030921] p-4 pb-8 sm:p-6">
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_25%,rgba(149,60,101,0.38),transparent_40%),radial-gradient(circle_at_50%_62%,rgba(36,224,224,0.35),transparent_34%),linear-gradient(180deg,#040424_0%,#05113a_42%,#01072a_100%)]" />
             <div className="relative mx-auto flex w-full max-w-md flex-1 flex-col items-center text-white">
-              <p className="mt-10 text-xl font-sans uppercase tracking-[0.2em] text-white/70">
+              <p className="mt-8 rounded-full bg-white/15 px-4 py-1 text-sm font-sans uppercase tracking-[0.2em] text-white/80">
+                Etape 2/2
+              </p>
+              <p className="mt-4 text-xl font-sans uppercase tracking-[0.2em] text-white/70">
                 Entrer les noms
               </p>
               <p className="mt-2 text-5xl font-sans font-semibold">
                 Joueur {localNameIndex + 1}/{localPlayerCount}
               </p>
+              <div className="mt-4 flex gap-2">
+                {Array.from({ length: localPlayerCount }).map((_, idx) => (
+                  <span
+                    key={`step-dot-${idx}`}
+                    className={cn(
+                      "h-2.5 w-8 rounded-full",
+                      idx < localNameIndex
+                        ? "bg-emerald-300"
+                        : idx === localNameIndex
+                          ? "bg-cyan-300"
+                          : "bg-white/25"
+                    )}
+                  />
+                ))}
+              </div>
 
               <div className="mt-8 w-full rounded-3xl border border-white/25 bg-black/30 p-4">
                 <label className="text-sm font-sans text-white/75">
@@ -728,7 +746,7 @@ export default function UndercoverGame({
                   onClick={handleSubmitLocalName}
                   className="mt-4 w-full rounded-full bg-gradient-to-r from-[#65dfb2] to-[#4ecf8a] px-8 py-3 text-2xl font-sans font-semibold text-white"
                 >
-                  Continuer
+                  {localNameIndex + 1 === localPlayerCount ? "Lancer la distribution" : "Continuer"}
                 </button>
               </div>
 
@@ -772,7 +790,10 @@ export default function UndercoverGame({
           <div className="absolute inset-x-0 bottom-0 h-48 bg-[linear-gradient(180deg,rgba(5,11,34,0),rgba(0,4,24,0.95))]" />
 
           <div className="relative mx-auto flex w-full max-w-md flex-1 flex-col items-center text-white">
-            <p className="mt-2 text-4xl font-sans font-semibold">
+            <p className="mt-2 rounded-full bg-white/15 px-4 py-1 text-sm font-sans uppercase tracking-[0.2em] text-white/80">
+              Etape 1/2
+            </p>
+            <p className="mt-3 text-4xl font-sans font-semibold">
               Players: {localPlayerCount}
             </p>
             <div className="mt-4 h-[3px] w-[92%] rounded-full bg-white/85" />
@@ -840,11 +861,14 @@ export default function UndercoverGame({
             </div>
 
             <div className="mt-4 w-full rounded-3xl border border-black/15 bg-[#dde1e9] px-4 py-3 text-center text-black/75 shadow-[0_8px_28px_rgba(0,0,0,0.22)]">
-              <p className="text-xl font-sans">
-                Max roles: {maxUndercover} Undercover / {maxMrWhite} Mr.White
+              <p className="text-xl font-sans font-semibold">
+                Limites
               </p>
               <p className="mt-1 text-sm font-sans">
-                Menaces totales max: {maxThreats}
+                Undercover max {maxUndercover} | Mr.White max {maxMrWhite}
+              </p>
+              <p className="text-sm font-sans">
+                Menaces totales max {maxThreats}
               </p>
             </div>
 
@@ -904,7 +928,7 @@ export default function UndercoverGame({
               onClick={handleContinueToNames}
               className="mt-6 w-[78%] rounded-full bg-gradient-to-r from-[#65dfb2] to-[#4ecf8a] px-8 py-3 text-3xl font-sans font-semibold text-white shadow-[0_8px_24px_rgba(80,214,154,0.45)]"
             >
-              Continuer
+              Suivant
             </button>
             <button
               onClick={() => setLocalMode(false)}
