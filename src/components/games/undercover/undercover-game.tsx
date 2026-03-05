@@ -591,66 +591,97 @@ export default function UndercoverGame({
     };
 
     if (localPhase === "setup") {
-      return (
-        <div className="relative flex flex-1 flex-col items-center justify-center overflow-hidden p-6">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_15%_20%,rgba(80,216,255,0.22),transparent_35%),radial-gradient(circle_at_85%_80%,rgba(34,197,94,0.12),transparent_35%),radial-gradient(circle_at_50%_50%,rgba(99,102,241,0.18),transparent_45%)]" />
-          <div className="relative w-full max-w-3xl rounded-3xl border border-cyan-300/20 bg-[#060b16]/85 p-6 backdrop-blur-xl shadow-[0_30px_80px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.08)]">
-            <div className="text-center">
-              <p className="text-[11px] font-sans uppercase tracking-[0.28em] text-cyan-300/60">
-                Undercover Local Premium
-              </p>
-              <h2 className="mt-2 text-3xl font-serif text-white">Mode 1 telephone</h2>
-              <p className="mt-2 text-xs font-sans text-white/45">
-                Un nom par ligne. Entre 3 et 8 joueurs.
-              </p>
-            </div>
+      const localNameCount = localNamesInput
+        .split("\n")
+        .map((n) => n.trim())
+        .filter(Boolean).length;
+      const previewCount = Math.min(8, Math.max(3, localNameCount || 3));
+      const previewUndercover = previewCount >= 7 ? 2 : 1;
+      const previewMrWhite = previewCount >= 5 ? 1 : 0;
+      const previewCivilians = Math.max(
+        0,
+        previewCount - previewUndercover - previewMrWhite
+      );
 
-            <div className="mt-5 grid gap-5 md:grid-cols-[1.2fr_1fr]">
-              <textarea
-                value={localNamesInput}
-                onChange={(e) => setLocalNamesInput(e.target.value)}
-                className="h-52 w-full rounded-2xl border border-cyan-300/20 bg-[#050913] p-4 text-sm text-white/85 font-sans focus:outline-none focus:border-cyan-300/45 focus:shadow-[0_0_25px_rgba(80,216,255,0.2)]"
-              />
-              <div className="space-y-2">
-                <p className="text-xs font-sans uppercase tracking-widest text-white/35">
-                  Theme
-                </p>
-                <div className="grid grid-cols-1 gap-2">
-                  {(["classic", "manga", "adult", "mixed"] as ThemeId[]).map((themeId) => (
-                    <button
-                      key={themeId}
-                      onClick={() => setLocalTheme(themeId)}
-                      className={cn(
-                        "rounded-xl border px-3 py-2.5 text-left transition-all",
-                        localTheme === themeId
-                          ? "border-cyan-300/45 bg-cyan-400/10 shadow-[0_0_25px_rgba(80,216,255,0.2)]"
-                          : "border-white/10 bg-white/[0.03] hover:border-cyan-300/30 hover:bg-cyan-400/[0.06]"
-                      )}
-                    >
-                      <p className={cn("text-sm font-sans", localTheme === themeId ? "text-cyan-300" : "text-white/75")}>
-                        {localThemeLabel[themeId]}
-                      </p>
-                      <p className="text-[11px] font-sans text-white/35">{localThemeDesc[themeId]}</p>
-                    </button>
-                  ))}
+      return (
+        <div className="relative flex min-h-[100svh] flex-1 flex-col overflow-hidden bg-[#030921] p-4 pb-8 sm:p-6">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_25%,rgba(149,60,101,0.38),transparent_40%),radial-gradient(circle_at_50%_62%,rgba(36,224,224,0.35),transparent_34%),linear-gradient(180deg,#040424_0%,#05113a_42%,#01072a_100%)]" />
+          <div className="absolute inset-x-0 bottom-0 h-48 bg-[linear-gradient(180deg,rgba(5,11,34,0),rgba(0,4,24,0.95))]" />
+
+          <div className="relative mx-auto flex w-full max-w-md flex-1 flex-col items-center text-white">
+            <p className="mt-2 text-4xl font-sans font-semibold">Players: {previewCount}</p>
+            <div className="mt-4 h-[3px] w-[92%] rounded-full bg-white/85" />
+
+            <div className="mt-6 w-full rounded-3xl border border-black/15 bg-[#e5e8ef] px-4 py-4 text-black shadow-[0_10px_40px_rgba(0,0,0,0.28)]">
+              <p className="mx-auto mb-3 w-fit rounded-full bg-[#5ba5ee] px-4 py-1 text-lg font-semibold leading-none text-white">
+                {previewCivilians} Civilians
+              </p>
+              <div className="space-y-2 text-lg font-semibold">
+                <div className="mx-auto flex w-fit items-center gap-2 rounded-full bg-black px-3 py-1 text-white">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-black text-xl leading-none">-</span>
+                  <span>{previewUndercover} Undercover</span>
+                </div>
+                <div className="mx-auto flex w-fit items-center gap-2 rounded-full bg-white px-3 py-1 text-black shadow-[inset_0_0_0_2px_rgba(0,0,0,0.15)]">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white text-xl leading-none">-</span>
+                  <span>{previewMrWhite} Mr. White</span>
                 </div>
               </div>
             </div>
 
-            <div className="mt-6 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
-              <button
-                onClick={startLocalGame}
-                className="w-full rounded-xl border border-cyan-300/40 bg-gradient-to-r from-cyan-600 to-blue-600 px-6 py-3 text-sm font-sans font-medium text-white transition-all hover:from-cyan-500 hover:to-blue-500 hover:shadow-[0_0_35px_rgba(59,130,246,0.35)] sm:w-auto"
-              >
-                Lancer la partie locale
-              </button>
-              <button
-                onClick={() => setLocalMode(false)}
-                className="w-full rounded-xl border border-white/15 bg-white/[0.03] px-6 py-3 text-sm font-sans text-white/65 transition-colors hover:text-white/85 sm:w-auto"
-              >
-                Revenir au mode en ligne
-              </button>
+            <div className="mt-4 w-full rounded-3xl border border-black/15 bg-[#dde1e9] px-4 py-3 text-center text-black/75 shadow-[0_8px_28px_rgba(0,0,0,0.22)]">
+              <p className="text-2xl font-sans">Add special roles</p>
+              <div className="mt-2 flex items-center justify-center gap-3 text-black/35">
+                <span className="text-3xl">?</span>
+                <span className="text-3xl">?</span>
+                <span className="text-3xl">?</span>
+                <span className="text-3xl">?</span>
+              </div>
             </div>
+
+            <div className="mt-4 w-[70%] rounded-2xl border border-black/20 bg-[#dde1e9] px-4 py-2 text-center text-black">
+              <p className="text-lg font-sans leading-tight">Words</p>
+              <p className="text-2xl font-sans font-semibold leading-tight">{localThemeLabel[localTheme]}</p>
+            </div>
+
+            <div className="mt-5 w-full rounded-2xl border border-white/20 bg-black/20 p-3">
+              <p className="text-xs font-sans uppercase tracking-[0.2em] text-white/60">Noms des joueurs</p>
+              <textarea
+                value={localNamesInput}
+                onChange={(e) => setLocalNamesInput(e.target.value)}
+                className="mt-2 h-24 w-full rounded-xl border border-white/15 bg-black/25 p-3 text-sm text-white/90 font-sans focus:outline-none focus:border-cyan-300/45"
+              />
+            </div>
+
+            <div className="mt-3 grid w-full grid-cols-2 gap-2">
+              {(["classic", "manga", "adult", "mixed"] as ThemeId[]).map((themeId) => (
+                <button
+                  key={themeId}
+                  onClick={() => setLocalTheme(themeId)}
+                  className={cn(
+                    "rounded-xl border px-3 py-2 text-left transition-all",
+                    localTheme === themeId
+                      ? "border-cyan-300/50 bg-cyan-400/20"
+                      : "border-white/20 bg-white/10"
+                  )}
+                >
+                  <p className="text-sm font-sans font-medium text-white">{localThemeLabel[themeId]}</p>
+                  <p className="text-[11px] font-sans text-white/65">{localThemeDesc[themeId]}</p>
+                </button>
+              ))}
+            </div>
+
+            <button
+              onClick={startLocalGame}
+              className="mt-6 w-[78%] rounded-full bg-gradient-to-r from-[#65dfb2] to-[#4ecf8a] px-8 py-3 text-3xl font-sans font-semibold text-white shadow-[0_8px_24px_rgba(80,214,154,0.45)]"
+            >
+              Start
+            </button>
+            <button
+              onClick={() => setLocalMode(false)}
+              className="mt-3 text-sm font-sans text-white/75 underline-offset-4 hover:underline"
+            >
+              Revenir au mode en ligne
+            </button>
           </div>
         </div>
       );
@@ -659,24 +690,23 @@ export default function UndercoverGame({
     if (localPhase === "cards") {
       const current = localPlayers[localCardTurnIndex] ?? null;
       const remaining = localPlayers.length - localCardTurnIndex - (localCardReveal ? 1 : 0);
+      const remainingInfiltrators = localSecretDeck.filter((c) => c.role !== "civilian").length;
+      const remainingMrWhite = localSecretDeck.filter((c) => c.role === "mrwhite").length;
       if (!current) return null;
 
       if (localPassToId && !localCardReveal) {
         const passPlayer = localPlayers.find((p) => p.id === localPassToId) ?? null;
         if (passPlayer) {
           return (
-            <div className="flex flex-1 flex-col items-center justify-center p-6">
-              <div className="w-full max-w-lg rounded-3xl border border-cyan-300/25 bg-[#070d17]/90 p-7 text-center shadow-[0_20px_70px_rgba(0,0,0,0.4)]">
-                <p className="text-[11px] font-sans uppercase tracking-[0.24em] text-cyan-300/60">
-                  Passe le telephone
-                </p>
-                <p className="mt-3 text-4xl font-serif text-white">{passPlayer.name}</p>
-                <p className="mt-3 text-sm font-sans text-white/45">
-                  A toi de piocher une carte secrete.
-                </p>
+            <div className="relative flex min-h-[100svh] flex-1 flex-col items-center justify-center overflow-hidden bg-[#040824] p-6 text-white">
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_25%,rgba(149,60,101,0.35),transparent_40%),radial-gradient(circle_at_50%_62%,rgba(36,224,224,0.3),transparent_34%),linear-gradient(180deg,#040424_0%,#05113a_42%,#01072a_100%)]" />
+              <div className="relative w-full max-w-lg rounded-3xl border border-white/35 bg-black/35 p-7 text-center shadow-[0_20px_70px_rgba(0,0,0,0.4)] backdrop-blur-sm">
+                <p className="text-[11px] font-sans uppercase tracking-[0.24em] text-cyan-300/80">Passe le telephone</p>
+                <p className="mt-3 text-5xl font-sans font-semibold text-cyan-300">{passPlayer.name}</p>
+                <p className="mt-3 text-base font-sans text-white/85">Please pick a card</p>
                 <button
                   onClick={() => setLocalPassToId(null)}
-                  className="mt-6 rounded-xl border border-cyan-300/40 bg-gradient-to-r from-cyan-600 to-blue-600 px-7 py-2.5 text-sm font-sans font-medium text-white transition-all hover:from-cyan-500 hover:to-blue-500"
+                  className="mt-6 rounded-full bg-gradient-to-r from-[#65dfb2] to-[#4ecf8a] px-8 py-2.5 text-lg font-sans font-semibold text-white"
                 >
                   Continuer
                 </button>
@@ -687,46 +717,54 @@ export default function UndercoverGame({
       }
 
       return (
-        <div className="relative flex flex-1 flex-col gap-6 overflow-hidden p-6">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_15%_20%,rgba(80,216,255,0.18),transparent_35%),radial-gradient(circle_at_85%_70%,rgba(99,102,241,0.14),transparent_40%)]" />
-          <div className="relative text-center">
-            <p className="text-[11px] font-sans uppercase tracking-[0.24em] text-cyan-300/55">Distribution</p>
-            <h2 className="mt-2 text-4xl font-serif text-white">{current.name}</h2>
-            <p className="mt-2 text-sm font-sans text-white/45">Choisis une carte. La pioche reste aleatoire.</p>
+        <div className="relative flex min-h-[100svh] flex-1 flex-col gap-5 overflow-hidden bg-[#040824] p-4 pb-8 text-white">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_25%,rgba(149,60,101,0.35),transparent_40%),radial-gradient(circle_at_50%_62%,rgba(36,224,224,0.3),transparent_34%),linear-gradient(180deg,#040424_0%,#05113a_42%,#01072a_100%)]" />
+          <div className="relative mt-6 text-center">
+            <h2 className="text-5xl font-sans font-semibold text-cyan-300">Player {localCardTurnIndex + 1}</h2>
+            <p className="mt-1 text-3xl font-sans text-white/90">Please pick a card</p>
           </div>
 
-          <div className="relative mx-auto grid w-full max-w-xl grid-cols-3 gap-3">
+          <div className="relative mx-auto flex w-full max-w-md gap-2">
+            <div className="flex-1 rounded-3xl bg-white/35 px-4 py-3 text-center text-black/80 backdrop-blur-[1px]">
+              <p className="text-xl font-sans">Remaining infiltrators</p>
+              <p className="text-3xl font-semibold">{remainingInfiltrators}</p>
+            </div>
+            <div className="flex-1 rounded-3xl bg-white/35 px-4 py-3 text-center text-black/80 backdrop-blur-[1px]">
+              <p className="text-xl font-sans">Special Roles</p>
+              <p className="text-3xl font-semibold">{remainingMrWhite === 0 ? "None" : `${remainingMrWhite} Mr. White`}</p>
+            </div>
+          </div>
+
+          <div className="relative mx-auto grid w-full max-w-md grid-cols-3 gap-3">
             {Array.from({ length: 6 }).map((_, i) => (
               <button
                 key={i}
                 onClick={drawLocalRandomCard}
                 disabled={!!localCardReveal}
                 className={cn(
-                  "group relative h-40 rounded-2xl border border-cyan-300/30 bg-gradient-to-br from-[#0a1730] via-[#070b16] to-[#141026] text-white shadow-[0_12px_30px_rgba(0,0,0,0.35)] transition-all hover:-translate-y-1 hover:shadow-[0_16px_36px_rgba(80,216,255,0.18)] disabled:opacity-55",
-                  localDrawnSlot === i && "ring-2 ring-cyan-300/60"
+                  "group relative h-32 rounded-2xl border border-yellow-300/60 bg-[#ffc911] text-black shadow-[0_8px_25px_rgba(0,0,0,0.35)] transition-all hover:-translate-y-1 disabled:opacity-55",
+                  localDrawnSlot === i && "ring-2 ring-white/80"
                 )}
               >
-                <div className="absolute inset-[1px] rounded-2xl border border-white/10 bg-[linear-gradient(145deg,rgba(255,255,255,0.08),rgba(255,255,255,0.02))]" />
-                <div className="relative flex h-full flex-col items-center justify-center gap-1">
-                  <span className="text-[10px] font-sans uppercase tracking-[0.3em] text-white/45">Card</span>
-                  <span className="font-serif text-xl text-cyan-300 drop-shadow-[0_0_15px_rgba(80,216,255,0.35)]">UNDERCOVER</span>
-                  <span className="text-[11px] font-sans text-white/45 group-hover:text-white/65">Tap to draw</span>
+                <div className="relative flex h-full items-center justify-center">
+                  <span className="text-6xl font-sans font-bold text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.2)]">?</span>
                 </div>
               </button>
             ))}
           </div>
 
           <div className="relative text-center">
-            <p className="text-xs font-sans text-white/40">{Math.max(remaining, 0)} cartes restantes</p>
+            <p className="text-sm font-sans text-white/70">
+              {current.name} - {Math.max(remaining, 0)} cartes restantes
+            </p>
           </div>
 
           {localCardReveal && (
-            <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/75 backdrop-blur-sm p-6">
-              <div className="w-full max-w-sm rounded-3xl border border-cyan-300/30 bg-[#0b111d]/95 p-6 text-center shadow-[0_0_70px_rgba(80,216,255,0.2)]">
-                <p className="mb-4 text-xs font-sans uppercase tracking-[0.24em] text-white/35">
-                  Carte de {localCardReveal.playerName}
-                </p>
-                <div className="mx-auto h-64 w-44 [perspective:1000px]">
+            <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/70 backdrop-blur-sm p-5">
+              <div className="w-full max-w-md rounded-3xl border border-white/65 bg-[rgba(8,19,58,0.55)] p-6 text-center shadow-[0_20px_90px_rgba(0,0,0,0.55)]">
+                <p className="text-5xl font-sans font-semibold text-cyan-300">Player {localCardTurnIndex + 1}</p>
+                <p className="mt-1 text-3xl font-sans text-white/95">Please pick a card</p>
+                <div className="mx-auto mt-5 h-56 w-40 [perspective:1000px]">
                   <div
                     className="relative h-full w-full transition-transform duration-500"
                     style={{
@@ -735,22 +773,22 @@ export default function UndercoverGame({
                     }}
                   >
                     <div
-                      className="absolute inset-0 flex items-center justify-center rounded-2xl border border-cyan-300/25 bg-[radial-gradient(circle_at_20%_20%,rgba(80,216,255,0.22),transparent_40%),linear-gradient(145deg,#0b172e,#0a1020_45%,#140f25)]"
+                      className="absolute inset-0 flex items-center justify-center rounded-2xl border border-yellow-300/60 bg-[#ffc911]"
                       style={{ backfaceVisibility: "hidden" }}
                     >
-                      <p className="text-xl font-serif text-cyan-300 drop-shadow-[0_0_20px_rgba(80,216,255,0.35)]">Undercover</p>
+                      <p className="text-6xl font-sans font-bold text-white">?</p>
                     </div>
                     <div
-                      className="absolute inset-0 flex flex-col items-center justify-center rounded-2xl border border-cyan-300/35 bg-[linear-gradient(145deg,#070c16,#0f1523)]"
+                      className="absolute inset-0 flex flex-col items-center justify-center rounded-2xl border border-white/40 bg-[linear-gradient(145deg,#102046,#1c2a63)]"
                       style={{
                         backfaceVisibility: "hidden",
                         transform: "rotateY(180deg)",
                       }}
                     >
-                      <p className="text-xl font-serif text-cyan-300">
-                        {localCardReveal.role === "mrwhite" ? "Mr. White" : "Civil"}
+                      <p className="text-3xl font-sans font-semibold text-cyan-300">
+                        {localCardReveal.role === "mrwhite" ? "Mr. White" : localCardReveal.role === "undercover" ? "Undercover" : "Civil"}
                       </p>
-                      <p className="mt-2 px-3 text-center text-3xl font-serif text-white">
+                      <p className="mt-2 px-3 text-center text-4xl font-sans font-semibold text-white">
                         {localCardReveal.role === "mrwhite" ? "???" : localCardReveal.word}
                       </p>
                     </div>
@@ -758,9 +796,9 @@ export default function UndercoverGame({
                 </div>
                 <button
                   onClick={confirmLocalCard}
-                  className="mt-6 w-full rounded-xl border border-cyan-300/40 bg-gradient-to-r from-cyan-600 to-blue-600 py-2.5 text-sm font-sans font-medium text-white transition-all hover:from-cyan-500 hover:to-blue-500"
+                  className="mt-6 w-[78%] rounded-full bg-gradient-to-r from-[#65dfb2] to-[#4ecf8a] py-2.5 text-2xl font-sans font-semibold text-white"
                 >
-                  J&apos;ai memorise, passer le telephone
+                  OK
                 </button>
               </div>
             </div>
