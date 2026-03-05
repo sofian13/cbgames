@@ -174,6 +174,45 @@ function getRoleColor(role: Role | null): string {
   return role ? ROLE_COLORS[role] : "text-white/40";
 }
 
+function getMaxUndercoverFor(playerCount: number): number {
+  return playerCount >= 5 ? 2 : 1;
+}
+
+function getMaxMrWhiteFor(playerCount: number): number {
+  return playerCount >= 5 ? 1 : 0;
+}
+
+function getMaxThreatsFor(playerCount: number): number {
+  return playerCount >= 5 ? 2 : 1;
+}
+
+function normalizeLocalRoleConfig(
+  playerCount: number,
+  undercoverCount: number,
+  mrWhiteCount: number
+) {
+  const safePlayers = Math.max(1, playerCount);
+  const maxUndercover = Math.min(getMaxUndercoverFor(safePlayers), safePlayers - 1);
+  const maxMrWhite = Math.min(getMaxMrWhiteFor(safePlayers), safePlayers - 1);
+  const maxThreats = Math.min(getMaxThreatsFor(safePlayers), safePlayers - 1);
+
+  const normalizedUndercover = Math.max(1, Math.min(undercoverCount, maxUndercover));
+  let normalizedMrWhite = Math.max(0, Math.min(mrWhiteCount, maxMrWhite));
+
+  if (normalizedUndercover + normalizedMrWhite > maxThreats) {
+    normalizedMrWhite = Math.max(0, maxThreats - normalizedUndercover);
+  }
+
+  if (safePlayers - normalizedUndercover - normalizedMrWhite < 1) {
+    normalizedMrWhite = Math.max(0, safePlayers - normalizedUndercover - 1);
+  }
+
+  return {
+    undercoverCount: normalizedUndercover,
+    mrWhiteCount: normalizedMrWhite,
+  };
+}
+
 // ── Component ───────────────────────────────────────────────
 
 export default function UndercoverGame({
@@ -199,9 +238,17 @@ export default function UndercoverGame({
   // Single-phone local mode
   const [localMode, setLocalMode] = useState(false);
   const [localPhase, setLocalPhase] = useState<LocalPhase>("setup");
+  const [localSetupStep, setLocalSetupStep] = useState<"config" | "names">(
+    "config"
+  );
   const [localTheme, setLocalTheme] = useState<ThemeId>("mixed");
-  const [localNamesInput, setLocalNamesInput] = useState(
-    "Alice\nBob\nCharlie\nDina\nEli\nFanny"
+  const [localPlayerCount, setLocalPlayerCount] = useState(5);
+  const [localUndercoverCount, setLocalUndercoverCount] = useState(1);
+  const [localMrWhiteCount, setLocalMrWhiteCount] = useState(1);
+  const [localNameInput, setLocalNameInput] = useState("");
+  const [localNameIndex, setLocalNameIndex] = useState(0);
+  const [localCollectedNames, setLocalCollectedNames] = useState<string[]>(
+    []
   );
   const [localPlayers, setLocalPlayers] = useState<LocalPlayer[]>([]);
   const [localTurnOrder, setLocalTurnOrder] = useState<string[]>([]);
@@ -342,14 +389,26 @@ export default function UndercoverGame({
     ];
   }, []);
 
-  const startLocalGame = useCallback(() => {
-    const names = localNamesInput
-      .split("\n")
-      .map((n) => n.trim())
-      .filter(Boolean)
-      .slice(0, 8);
+  const applyLocalRoleConfig = useCallback(
+    (playerCount: number, undercoverCount: number, mrWhiteCount: number) => {
+      const normalized = normalizeLocalRoleConfig(
+        playerCount,
+        undercoverCount,
+        mrWhiteCount
+      );
+      setLocalUndercoverCount(normalized.undercoverCount);
+      setLocalMrWhiteCount(normalized.mrWhiteCount);
+    },
+    []
+  );
 
+  const startLocalGame = useCallback((names: string[]) => {
     if (names.length < 1) return;
+    const normalizedRoles = normalizeLocalRoleConfig(
+      names.length,
+      localUndercoverCount,
+      localMrWhiteCount
+    );
 
     const pairs = getLocalPairs(localTheme);
     const pair = pairs[Math.floor(Math.random() * pairs.length)];
@@ -364,13 +423,19 @@ export default function UndercoverGame({
       alive: true,
     }));
 
-    const baseRoles: Role[] = Array.from({ length: players.length }, (_, i) =>
-      i === 0 ? "undercover" : "civilian"
-    );
-    if (players.length >= 6 && Math.random() < 0.45) {
-      const idx = 1 + Math.floor(Math.random() * (players.length - 1));
-      baseRoles[idx] = "mrwhite";
-    }
+    const baseRoles: Role[] = [
+      ...Array.from({ length: normalizedRoles.undercoverCount }, () => "undercover" as Role),
+      ...Array.from({ length: normalizedRoles.mrWhiteCount }, () => "mrwhite" as Role),
+      ...Array.from(
+        {
+          length:
+            players.length -
+            normalizedRoles.undercoverCount -
+            normalizedRoles.mrWhiteCount,
+        },
+        () => "civilian" as Role
+      ),
+    ];
 
     const secretDeck = shuffle(
       baseRoles.map((role) => ({
@@ -405,10 +470,42 @@ export default function UndercoverGame({
     setLocalEliminatedRole(null);
     setLocalWinners(null);
     setShowWordPeek(false);
+    setLocalSetupStep("config");
+    setLocalNameInput("");
+    setLocalNameIndex(0);
+    setLocalCollectedNames([]);
     setLocalPassToId(players[0]?.id ?? null);
     setLocalPhase("cards");
     setLocalMode(true);
-  }, [buildDescribeOrder, localNamesInput, localTheme]);
+  }, [localMrWhiteCount, localTheme, localUndercoverCount]);
+
+  const handleContinueToNames = useCallback(() => {
+    setLocalCollectedNames([]);
+    setLocalNameIndex(0);
+    setLocalNameInput("");
+    setLocalSetupStep("names");
+  }, []);
+
+  const handleSubmitLocalName = useCallback(() => {
+    const raw = localNameInput.trim();
+    const nextName = raw || `Player ${localNameIndex + 1}`;
+    const nextNames = [...localCollectedNames, nextName];
+
+    if (nextNames.length >= localPlayerCount) {
+      startLocalGame(nextNames);
+      return;
+    }
+
+    setLocalCollectedNames(nextNames);
+    setLocalNameIndex(nextNames.length);
+    setLocalNameInput("");
+  }, [
+    localCollectedNames,
+    localNameIndex,
+    localNameInput,
+    localPlayerCount,
+    startLocalGame,
+  ]);
 
   const beginLocalVote = useCallback(() => {
     setLocalSelectedTarget(null);
@@ -454,7 +551,7 @@ export default function UndercoverGame({
     if (!current || localSecretDeck.length === 0) return;
 
     const drawIndex = Math.floor(Math.random() * localSecretDeck.length);
-    const deckSlot = Math.floor(Math.random() * 6);
+    const deckSlot = drawIndex;
     const card = localSecretDeck[drawIndex];
     const nextDeck = localSecretDeck.filter((_, i) => i !== drawIndex);
 
@@ -591,17 +688,83 @@ export default function UndercoverGame({
     };
 
     if (localPhase === "setup") {
-      const localNameCount = localNamesInput
-        .split("\n")
-        .map((n) => n.trim())
-        .filter(Boolean).length;
-      const previewCount = Math.min(8, Math.max(1, localNameCount || 1));
-      const previewUndercover = previewCount >= 7 ? 2 : 1;
-      const previewMrWhite = previewCount >= 5 ? 1 : 0;
-      const previewCivilians = Math.max(
-        0,
-        previewCount - previewUndercover - previewMrWhite
-      );
+      const maxUndercover = getMaxUndercoverFor(localPlayerCount);
+      const maxMrWhite = getMaxMrWhiteFor(localPlayerCount);
+      const maxThreats = getMaxThreatsFor(localPlayerCount);
+      const previewCivilians =
+        localPlayerCount - localUndercoverCount - localMrWhiteCount;
+
+      if (localSetupStep === "names") {
+        return (
+          <div className="relative flex min-h-[100svh] flex-1 flex-col overflow-hidden bg-[#030921] p-4 pb-8 sm:p-6">
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_25%,rgba(149,60,101,0.38),transparent_40%),radial-gradient(circle_at_50%_62%,rgba(36,224,224,0.35),transparent_34%),linear-gradient(180deg,#040424_0%,#05113a_42%,#01072a_100%)]" />
+            <div className="relative mx-auto flex w-full max-w-md flex-1 flex-col items-center text-white">
+              <p className="mt-10 text-xl font-sans uppercase tracking-[0.2em] text-white/70">
+                Entrer les noms
+              </p>
+              <p className="mt-2 text-5xl font-sans font-semibold">
+                Joueur {localNameIndex + 1}/{localPlayerCount}
+              </p>
+
+              <div className="mt-8 w-full rounded-3xl border border-white/25 bg-black/30 p-4">
+                <label className="text-sm font-sans text-white/75">
+                  Nom du joueur
+                </label>
+                <input
+                  type="text"
+                  value={localNameInput}
+                  onChange={(e) => setLocalNameInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      handleSubmitLocalName();
+                    }
+                  }}
+                  placeholder={`Player ${localNameIndex + 1}`}
+                  autoFocus
+                  className="mt-2 w-full rounded-xl border border-white/20 bg-black/35 px-4 py-3 text-lg text-white placeholder:text-white/35 focus:outline-none focus:border-cyan-300/50"
+                />
+                <button
+                  onClick={handleSubmitLocalName}
+                  className="mt-4 w-full rounded-full bg-gradient-to-r from-[#65dfb2] to-[#4ecf8a] px-8 py-3 text-2xl font-sans font-semibold text-white"
+                >
+                  Continuer
+                </button>
+              </div>
+
+              {localCollectedNames.length > 0 && (
+                <div className="mt-4 w-full rounded-2xl border border-white/20 bg-black/20 p-3">
+                  <p className="text-xs font-sans uppercase tracking-[0.2em] text-white/65">
+                    Deja saisis
+                  </p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {localCollectedNames.map((name, idx) => (
+                      <span
+                        key={`${name}-${idx}`}
+                        className="rounded-full bg-white/15 px-3 py-1 text-sm font-sans text-white/90"
+                      >
+                        {idx + 1}. {name}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <button
+                onClick={() => {
+                  setLocalSetupStep("config");
+                  setLocalCollectedNames([]);
+                  setLocalNameIndex(0);
+                  setLocalNameInput("");
+                }}
+                className="mt-4 text-sm font-sans text-white/75 underline-offset-4 hover:underline"
+              >
+                Retour configuration
+              </button>
+            </div>
+          </div>
+        );
+      }
 
       return (
         <div className="relative flex min-h-[100svh] flex-1 flex-col overflow-hidden bg-[#030921] p-4 pb-8 sm:p-6">
@@ -609,7 +772,9 @@ export default function UndercoverGame({
           <div className="absolute inset-x-0 bottom-0 h-48 bg-[linear-gradient(180deg,rgba(5,11,34,0),rgba(0,4,24,0.95))]" />
 
           <div className="relative mx-auto flex w-full max-w-md flex-1 flex-col items-center text-white">
-            <p className="mt-2 text-4xl font-sans font-semibold">Players: {previewCount}</p>
+            <p className="mt-2 text-4xl font-sans font-semibold">
+              Players: {localPlayerCount}
+            </p>
             <div className="mt-4 h-[3px] w-[92%] rounded-full bg-white/85" />
 
             <div className="mt-6 w-full rounded-3xl border border-black/15 bg-[#e5e8ef] px-4 py-4 text-black shadow-[0_10px_40px_rgba(0,0,0,0.28)]">
@@ -618,24 +783,69 @@ export default function UndercoverGame({
               </p>
               <div className="space-y-2 text-lg font-semibold">
                 <div className="mx-auto flex w-fit items-center gap-2 rounded-full bg-black px-3 py-1 text-white">
-                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-black text-xl leading-none">-</span>
-                  <span>{previewUndercover} Undercover</span>
+                  <button
+                    onClick={() =>
+                      applyLocalRoleConfig(
+                        localPlayerCount,
+                        localUndercoverCount - 1,
+                        localMrWhiteCount
+                      )
+                    }
+                    className="flex h-6 w-6 items-center justify-center rounded-full bg-black text-xl leading-none"
+                  >
+                    -
+                  </button>
+                  <span>{localUndercoverCount} Undercover</span>
+                  <button
+                    onClick={() =>
+                      applyLocalRoleConfig(
+                        localPlayerCount,
+                        localUndercoverCount + 1,
+                        localMrWhiteCount
+                      )
+                    }
+                    className="flex h-6 w-6 items-center justify-center rounded-full bg-black text-xl leading-none"
+                  >
+                    +
+                  </button>
                 </div>
                 <div className="mx-auto flex w-fit items-center gap-2 rounded-full bg-white px-3 py-1 text-black shadow-[inset_0_0_0_2px_rgba(0,0,0,0.15)]">
-                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white text-xl leading-none">-</span>
-                  <span>{previewMrWhite} Mr. White</span>
+                  <button
+                    onClick={() =>
+                      applyLocalRoleConfig(
+                        localPlayerCount,
+                        localUndercoverCount,
+                        localMrWhiteCount - 1
+                      )
+                    }
+                    className="flex h-6 w-6 items-center justify-center rounded-full bg-white text-xl leading-none"
+                  >
+                    -
+                  </button>
+                  <span>{localMrWhiteCount} Mr. White</span>
+                  <button
+                    onClick={() =>
+                      applyLocalRoleConfig(
+                        localPlayerCount,
+                        localUndercoverCount,
+                        localMrWhiteCount + 1
+                      )
+                    }
+                    className="flex h-6 w-6 items-center justify-center rounded-full bg-white text-xl leading-none"
+                  >
+                    +
+                  </button>
                 </div>
               </div>
             </div>
 
             <div className="mt-4 w-full rounded-3xl border border-black/15 bg-[#dde1e9] px-4 py-3 text-center text-black/75 shadow-[0_8px_28px_rgba(0,0,0,0.22)]">
-              <p className="text-2xl font-sans">Add special roles</p>
-              <div className="mt-2 flex items-center justify-center gap-3 text-black/35">
-                <span className="text-3xl">?</span>
-                <span className="text-3xl">?</span>
-                <span className="text-3xl">?</span>
-                <span className="text-3xl">?</span>
-              </div>
+              <p className="text-xl font-sans">
+                Max roles: {maxUndercover} Undercover / {maxMrWhite} Mr.White
+              </p>
+              <p className="mt-1 text-sm font-sans">
+                Menaces totales max: {maxThreats}
+              </p>
             </div>
 
             <div className="mt-4 w-[70%] rounded-2xl border border-black/20 bg-[#dde1e9] px-4 py-2 text-center text-black">
@@ -644,12 +854,32 @@ export default function UndercoverGame({
             </div>
 
             <div className="mt-5 w-full rounded-2xl border border-white/20 bg-black/20 p-3">
-              <p className="text-xs font-sans uppercase tracking-[0.2em] text-white/60">Noms des joueurs</p>
-              <textarea
-                value={localNamesInput}
-                onChange={(e) => setLocalNamesInput(e.target.value)}
-                className="mt-2 h-24 w-full rounded-xl border border-white/15 bg-black/25 p-3 text-sm text-white/90 font-sans focus:outline-none focus:border-cyan-300/45"
-              />
+              <p className="text-xs font-sans uppercase tracking-[0.2em] text-white/60">
+                Nombre de joueurs
+              </p>
+              <div className="mt-2 flex items-center justify-center gap-4">
+                <button
+                  onClick={() => {
+                    const next = Math.max(1, localPlayerCount - 1);
+                    setLocalPlayerCount(next);
+                    applyLocalRoleConfig(next, localUndercoverCount, localMrWhiteCount);
+                  }}
+                  className="h-10 w-10 rounded-full bg-white/20 text-2xl"
+                >
+                  -
+                </button>
+                <span className="text-4xl font-sans font-semibold">{localPlayerCount}</span>
+                <button
+                  onClick={() => {
+                    const next = Math.min(8, localPlayerCount + 1);
+                    setLocalPlayerCount(next);
+                    applyLocalRoleConfig(next, localUndercoverCount, localMrWhiteCount);
+                  }}
+                  className="h-10 w-10 rounded-full bg-white/20 text-2xl"
+                >
+                  +
+                </button>
+              </div>
             </div>
 
             <div className="mt-3 grid w-full grid-cols-2 gap-2">
@@ -671,10 +901,10 @@ export default function UndercoverGame({
             </div>
 
             <button
-              onClick={startLocalGame}
+              onClick={handleContinueToNames}
               className="mt-6 w-[78%] rounded-full bg-gradient-to-r from-[#65dfb2] to-[#4ecf8a] px-8 py-3 text-3xl font-sans font-semibold text-white shadow-[0_8px_24px_rgba(80,214,154,0.45)]"
             >
-              Start
+              Continuer
             </button>
             <button
               onClick={() => setLocalMode(false)}
@@ -689,7 +919,7 @@ export default function UndercoverGame({
 
     if (localPhase === "cards") {
       const current = localPlayers[localCardTurnIndex] ?? null;
-      const remaining = localPlayers.length - localCardTurnIndex - (localCardReveal ? 1 : 0);
+      const remaining = localSecretDeck.length;
       const remainingInfiltrators = localSecretDeck.filter((c) => c.role !== "civilian").length;
       const remainingMrWhite = localSecretDeck.filter((c) => c.role === "mrwhite").length;
       if (!current) return null;
@@ -735,8 +965,13 @@ export default function UndercoverGame({
             </div>
           </div>
 
-          <div className="relative mx-auto grid w-full max-w-md grid-cols-3 gap-3">
-            {Array.from({ length: 6 }).map((_, i) => (
+          <div
+            className={cn(
+              "relative mx-auto grid w-full max-w-md gap-3",
+              remaining <= 4 ? "grid-cols-2" : "grid-cols-3"
+            )}
+          >
+            {Array.from({ length: remaining }).map((_, i) => (
               <button
                 key={i}
                 onClick={drawLocalRandomCard}
@@ -1045,7 +1280,13 @@ export default function UndercoverGame({
             {localWinners === "civilian" ? "Les Civils gagnent" : "Undercover / Mr.White gagnent"}
           </p>
           <button
-            onClick={() => setLocalPhase("setup")}
+            onClick={() => {
+              setLocalSetupStep("config");
+              setLocalCollectedNames([]);
+              setLocalNameIndex(0);
+              setLocalNameInput("");
+              setLocalPhase("setup");
+            }}
             className="rounded-xl border border-cyan-300/40 bg-gradient-to-r from-cyan-600 to-blue-600 px-6 py-2 text-sm font-sans text-white"
           >
             Rejouer
@@ -1164,6 +1405,10 @@ export default function UndercoverGame({
               <button
                 onClick={() => {
                   setLocalMode(true);
+                  setLocalSetupStep("config");
+                  setLocalCollectedNames([]);
+                  setLocalNameIndex(0);
+                  setLocalNameInput("");
                   setLocalPhase("setup");
                 }}
                 className="w-full rounded-xl border border-white/15 bg-white/[0.03] px-5 py-3 text-sm font-sans text-white/70 transition-colors hover:text-white sm:w-auto"
