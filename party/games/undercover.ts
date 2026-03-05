@@ -215,12 +215,22 @@ interface ClueEntry {
   round: number;
 }
 
+interface RoleDistributionConfig {
+  undercoverCount: number;
+  mrWhiteCount: number;
+}
+
+interface RoleDistributionOption extends RoleDistributionConfig {
+  civilianCount: number;
+}
+
 // ── Game Class ──────────────────────────────────────────────
 
 export class UndercoverGame extends BaseGame {
   ucPlayers: Map<string, UndercoverPlayer> = new Map();
   botIds: Set<string> = new Set();
   selectedThemeId: ThemeId = "mixed";
+  selectedRoleDistribution: RoleDistributionConfig | null = null;
   phase: GamePhase = "waiting";
   round = 0;
   civilianWord = "";
@@ -241,6 +251,59 @@ export class UndercoverGame extends BaseGame {
   timerInterval: ReturnType<typeof setInterval> | null = null;
   botActionTimeouts: Set<ReturnType<typeof setTimeout>> = new Set();
   timeLeft = 0;
+
+  getExpectedPlayerCount() {
+    const humanPlayerCount = this.players.size;
+    if (humanPlayerCount < 1) return 0;
+    if (humanPlayerCount < 3) {
+      return Math.max(LOCAL_BOT_TARGET_PLAYERS, humanPlayerCount);
+    }
+    return humanPlayerCount;
+  }
+
+  getRoleDistributionOptions(playerCount: number): RoleDistributionOption[] {
+    if (playerCount <= 1) return [];
+
+    const minCivilians = 2;
+    const minThreats = playerCount >= 6 ? 2 : 1;
+    const maxThreatsByCount =
+      playerCount >= 10 ? 4 : playerCount >= 8 ? 3 : playerCount >= 6 ? 2 : 1;
+    const maxThreats = Math.min(maxThreatsByCount, playerCount - minCivilians);
+    const options: RoleDistributionOption[] = [];
+
+    for (let threats = maxThreats; threats >= minThreats; threats--) {
+      for (let mrWhiteCount = 0; mrWhiteCount <= threats; mrWhiteCount++) {
+        const undercoverCount = threats - mrWhiteCount;
+        const civilianCount = playerCount - threats;
+        if (civilianCount < minCivilians) continue;
+        options.push({ undercoverCount, mrWhiteCount, civilianCount });
+      }
+    }
+
+    return options;
+  }
+
+  getResolvedRoleDistribution(playerCount: number): RoleDistributionOption {
+    const options = this.getRoleDistributionOptions(playerCount);
+    if (options.length === 0) {
+      return {
+        undercoverCount: 1,
+        mrWhiteCount: 0,
+        civilianCount: Math.max(0, playerCount - 1),
+      };
+    }
+
+    if (this.selectedRoleDistribution) {
+      const picked = options.find(
+        (opt) =>
+          opt.undercoverCount === this.selectedRoleDistribution?.undercoverCount &&
+          opt.mrWhiteCount === this.selectedRoleDistribution?.mrWhiteCount
+      );
+      if (picked) return picked;
+    }
+
+    return options[0];
+  }
 
   start() {
     const humanPlayerCount = this.players.size;
@@ -291,22 +354,9 @@ export class UndercoverGame extends BaseGame {
     const playerIds = roster.map((p) => p.id);
     this.shuffleArray(playerIds);
 
-    let undercoverCount: number;
-    let mrWhiteCount: number;
-
-    if (playerCount <= 5) {
-      undercoverCount = 1;
-      mrWhiteCount = 0;
-    } else {
-      // 6+ players: 1 undercover + 1 mr white OR 2 undercovers
-      if (Math.random() < 0.5) {
-        undercoverCount = 1;
-        mrWhiteCount = 1;
-      } else {
-        undercoverCount = 2;
-        mrWhiteCount = 0;
-      }
-    }
+    const resolvedDistribution = this.getResolvedRoleDistribution(playerCount);
+    const undercoverCount = resolvedDistribution.undercoverCount;
+    const mrWhiteCount = resolvedDistribution.mrWhiteCount;
 
     for (let i = 0; i < playerIds.length; i++) {
       const pid = playerIds[i];
@@ -770,6 +820,29 @@ export class UndercoverGame extends BaseGame {
         return;
       }
 
+      if (action === "set-role-distribution") {
+        const undercoverCount = Number(payload.undercoverCount);
+        const mrWhiteCount = Number(payload.mrWhiteCount);
+        if (!Number.isFinite(undercoverCount) || !Number.isFinite(mrWhiteCount)) {
+          return;
+        }
+
+        const expectedCount = this.getExpectedPlayerCount();
+        const allowed = this.getRoleDistributionOptions(expectedCount).some(
+          (opt) =>
+            opt.undercoverCount === undercoverCount &&
+            opt.mrWhiteCount === mrWhiteCount
+        );
+        if (!allowed) return;
+
+        this.selectedRoleDistribution = {
+          undercoverCount,
+          mrWhiteCount,
+        };
+        this.broadcastPersonalizedState();
+        return;
+      }
+
       if (action === "start-game") {
         this.start();
         return;
@@ -854,6 +927,11 @@ export class UndercoverGame extends BaseGame {
 
   getStateForPlayer(playerId: string): Record<string, unknown> {
     if (this.phase === "waiting" || !this.started) {
+      const expectedPlayerCount = this.getExpectedPlayerCount();
+      const availableRoleDistributions =
+        this.getRoleDistributionOptions(expectedPlayerCount);
+      const selectedRoleDistribution =
+        this.getResolvedRoleDistribution(expectedPlayerCount);
       return {
         phase: "waiting",
         round: 0,
@@ -881,6 +959,9 @@ export class UndercoverGame extends BaseGame {
         undercoverWord: null,
         selectedThemeId: this.selectedThemeId,
         availableThemes: this.getAvailableThemes(),
+        expectedPlayerCount,
+        selectedRoleDistribution,
+        availableRoleDistributions,
       };
     }
 

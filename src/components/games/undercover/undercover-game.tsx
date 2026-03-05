@@ -58,6 +58,17 @@ interface UndercoverState {
     label: string;
     description: string;
   }>;
+  expectedPlayerCount?: number;
+  selectedRoleDistribution?: {
+    undercoverCount: number;
+    mrWhiteCount: number;
+    civilianCount: number;
+  };
+  availableRoleDistributions?: Array<{
+    undercoverCount: number;
+    mrWhiteCount: number;
+    civilianCount: number;
+  }>;
 }
 
 type ThemeId = "classic" | "manga" | "adult" | "mixed";
@@ -1006,48 +1017,130 @@ export default function UndercoverGame({
     }
   }
   if (!state || state.phase === "waiting") {
+    const onlineCount = state?.players?.length ?? 0;
+    const expectedCount = state?.expectedPlayerCount ?? onlineCount;
+    const selectedDist = state?.selectedRoleDistribution;
+
     return (
-      <div className="flex flex-1 flex-col items-center justify-center p-6 gap-5">
-        <p className="text-white/40 animate-pulse font-sans">En attente des joueurs...</p>
+      <div className="relative flex flex-1 flex-col overflow-hidden p-4 sm:p-6">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_10%_10%,rgba(251,146,60,0.16),transparent_32%),radial-gradient(circle_at_85%_85%,rgba(239,68,68,0.12),transparent_38%),linear-gradient(145deg,#09090b,#111118_48%,#1b0f0f)]" />
+        <div className="relative mx-auto flex w-full max-w-4xl flex-1 flex-col rounded-3xl border border-orange-300/20 bg-black/35 p-4 shadow-[0_24px_70px_rgba(0,0,0,0.45)] backdrop-blur-xl sm:p-6">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <p className="text-[11px] font-sans uppercase tracking-[0.22em] text-orange-200/65">
+                Undercover
+              </p>
+              <h2 className="mt-1 text-2xl font-serif text-white sm:text-3xl">
+                Preparer la partie
+              </h2>
+            </div>
+            <div className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-right">
+              <p className="text-[10px] font-sans uppercase tracking-widest text-white/35">
+                Joueurs
+              </p>
+              <p className="text-sm font-sans text-white/85">
+                {onlineCount} connectes
+                {expectedCount > onlineCount && ` + ${expectedCount - onlineCount} bot`}
+              </p>
+            </div>
+          </div>
 
-        <div className="grid gap-2 w-full max-w-lg">
-          {state?.availableThemes?.map((theme) => {
-            const active = theme.id === state.selectedThemeId;
-            return (
+          <div className="mt-4 grid flex-1 gap-4 overflow-y-auto pr-1 sm:mt-6">
+            <section className="rounded-2xl border border-white/10 bg-white/[0.03] p-3 sm:p-4">
+              <p className="text-xs font-sans uppercase tracking-widest text-white/45">
+                Theme des mots
+              </p>
+              <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                {state?.availableThemes?.map((theme) => {
+                  const active = theme.id === state.selectedThemeId;
+                  return (
+                    <button
+                      key={theme.id}
+                      onClick={() => sendAction({ action: "set-theme", themeId: theme.id })}
+                      className={cn(
+                        "rounded-xl border px-4 py-3 text-left transition-all",
+                        active
+                          ? "border-orange-300/45 bg-orange-300/10 shadow-[0_0_24px_rgba(251,146,60,0.16)]"
+                          : "border-white/[0.08] bg-white/[0.03] hover:border-orange-300/30 hover:bg-orange-300/[0.06]"
+                      )}
+                    >
+                      <p className={cn("text-sm font-sans", active ? "text-orange-200" : "text-white/80")}>
+                        {theme.label}
+                      </p>
+                      <p className="text-xs text-white/35 font-sans">{theme.description}</p>
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+
+            <section className="rounded-2xl border border-white/10 bg-white/[0.03] p-3 sm:p-4">
+              <p className="text-xs font-sans uppercase tracking-widest text-white/45">
+                Repartition des roles ({expectedCount} joueurs)
+              </p>
+              <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                {state?.availableRoleDistributions?.map((option, idx) => {
+                  const active =
+                    selectedDist?.undercoverCount === option.undercoverCount &&
+                    selectedDist?.mrWhiteCount === option.mrWhiteCount;
+                  return (
+                    <button
+                      key={`${option.undercoverCount}-${option.mrWhiteCount}-${idx}`}
+                      onClick={() =>
+                        sendAction({
+                          action: "set-role-distribution",
+                          undercoverCount: option.undercoverCount,
+                          mrWhiteCount: option.mrWhiteCount,
+                        })
+                      }
+                      className={cn(
+                        "rounded-xl border p-3 text-left transition-all",
+                        active
+                          ? "border-emerald-300/45 bg-emerald-300/10 shadow-[0_0_24px_rgba(52,211,153,0.14)]"
+                          : "border-white/[0.08] bg-white/[0.03] hover:border-emerald-300/30 hover:bg-emerald-300/[0.06]"
+                      )}
+                    >
+                      <p className="text-sm font-sans text-white/90">
+                        {option.undercoverCount} Undercover
+                        {option.undercoverCount > 1 ? "s" : ""} • {option.mrWhiteCount} Mr. White
+                        {option.mrWhiteCount > 1 ? "s" : ""}
+                      </p>
+                      <p className="mt-1 text-xs font-sans text-white/40">
+                        {option.civilianCount} civil
+                        {option.civilianCount > 1 ? "s" : ""}
+                      </p>
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+          </div>
+
+          <div className="mt-4 flex flex-col items-center gap-3 sm:flex-row sm:justify-between">
+            <p className="text-xs font-sans text-white/45">
+              {selectedDist
+                ? `Selection: ${selectedDist.undercoverCount} Undercover / ${selectedDist.mrWhiteCount} Mr. White / ${selectedDist.civilianCount} civils`
+                : "Choisis les roles puis lance la partie"}
+            </p>
+            <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
               <button
-                key={theme.id}
-                onClick={() => sendAction({ action: "set-theme", themeId: theme.id })}
-                className={cn(
-                  "rounded-lg border px-4 py-3 text-left transition-all",
-                  active
-                    ? "border-ember/40 bg-ember/10"
-                    : "border-white/[0.08] bg-white/[0.03] hover:border-white/[0.18]"
-                )}
+                onClick={() => {
+                  setLocalMode(true);
+                  setLocalPhase("setup");
+                }}
+                className="w-full rounded-xl border border-white/15 bg-white/[0.03] px-5 py-3 text-sm font-sans text-white/70 transition-colors hover:text-white sm:w-auto"
               >
-                <p className={cn("text-sm font-sans", active ? "text-ember" : "text-white/80")}>
-                  {theme.label}
-                </p>
-                <p className="text-xs text-white/30 font-sans">{theme.description}</p>
+                Jouer sur 1 telephone
               </button>
-            );
-          })}
+              <button
+                onClick={() => sendAction({ action: "start-game" })}
+                className="w-full rounded-xl border border-orange-300/40 bg-gradient-to-r from-orange-500 to-red-500 px-6 py-3 text-sm font-sans font-medium text-white transition-all hover:from-orange-400 hover:to-red-400 sm:w-auto"
+              >
+                Lancer la partie en ligne
+              </button>
+            </div>
+          </div>
         </div>
-
-        <button
-          onClick={() => sendAction({ action: "start-game" })}
-          className="px-8 py-3 rounded-lg bg-ember hover:bg-ember-glow text-white font-sans text-sm font-medium transition-all"
-        >
-          Lancer la partie en ligne
-        </button>
-        <button
-          onClick={() => {
-            setLocalMode(true);
-            setLocalPhase("setup");
-          }}
-          className="text-xs text-white/40 hover:text-white/70 font-sans"
-        >
-          Jouer sur 1 telephone
-        </button>
       </div>
     );
   }
