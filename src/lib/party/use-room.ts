@@ -107,7 +107,11 @@ export function useRoom(roomCode: string, playerId: string, playerName: string, 
   );
 
   const startGame = useCallback(
-    () => send({ type: "start-game" }),
+    (gameId?: string | null) =>
+      send({
+        type: "start-game",
+        payload: gameId ? { gameId: gameId.trim().toLowerCase() } : undefined,
+      }),
     [send]
   );
 

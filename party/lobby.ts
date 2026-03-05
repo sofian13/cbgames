@@ -164,6 +164,10 @@ export default class LobbyServer {
       case "start-game": {
         const player = this.findPlayerByConnection(sender.id);
         if (!player?.isHost) return;
+        const payloadGameId = (msg.payload as { gameId?: string } | undefined)?.gameId;
+        if (payloadGameId && payloadGameId.trim()) {
+          this.selectedGameId = payloadGameId.trim().toLowerCase();
+        }
         if (!this.selectedGameId) return;
         const normalizedGameId = this.selectedGameId.trim().toLowerCase();
 

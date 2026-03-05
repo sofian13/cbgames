@@ -14,7 +14,7 @@ export type LobbyClientMessage =
   | { type: "join"; payload: { playerId: string; name: string; avatar?: string; isGuest: boolean } }
   | { type: "select-game"; payload: { gameId: string } }
   | { type: "toggle-ready" }
-  | { type: "start-game" }
+  | { type: "start-game"; payload?: { gameId?: string } }
   | { type: "kick-player"; payload: { playerId: string } }
   | { type: "return-to-lobby" };
 

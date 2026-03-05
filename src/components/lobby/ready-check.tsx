@@ -10,7 +10,7 @@ interface ReadyCheckProps {
   selectedGameId: string | null;
   isHost: boolean;
   onToggleReady: () => void;
-  onStartGame: () => void;
+  onStartGame: (gameId?: string | null) => void;
 }
 
 export function ReadyCheck({
@@ -58,7 +58,7 @@ export function ReadyCheck({
 
         {isHost && (
           <Button
-            onClick={onStartGame}
+            onClick={() => onStartGame(normalizedGameId)}
             disabled={!canStart}
             className="flex-1"
           >
