@@ -739,8 +739,9 @@ export default function ChessGame({ roomCode, playerId, playerName }: GameProps)
 
   const selectedTargets = selected !== null ? legalMovesByFrom.get(selected) ?? [] : [];
   const orientation: Color = myColor === "b" ? "b" : "w";
-  const whiteName = state.players.find((p) => p.color === "w")?.name ?? "Blanc";
-  const blackName = state.players.find((p) => p.color === "b")?.name ?? "Noir";
+  const gamePlayers = state.players ?? [];
+  const whiteName = gamePlayers.find((p) => p.color === "w")?.name ?? "Blanc";
+  const blackName = gamePlayers.find((p) => p.color === "b")?.name ?? "Noir";
   const info =
     state.phase === "game-over"
       ? gameOverLabel(state.winner, state.reason)

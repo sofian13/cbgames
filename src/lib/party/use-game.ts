@@ -3,6 +3,7 @@
 import { useEffect, useRef, useCallback } from "react";
 import PartySocket from "partysocket";
 import { useGameStore } from "@/lib/stores/game-store";
+import { getPartyKitHost, getPartyKitWsProtocol } from "@/lib/party/host";
 import type {
   GameClientMessage,
   GameServerMessage,
@@ -13,8 +14,8 @@ export function useGame(roomCode: string, gameId: string, playerId: string, play
   const store = useGameStore();
 
   useEffect(() => {
-    const host = process.env.NEXT_PUBLIC_PARTYKIT_HOST || "localhost:1999";
-    const protocol = host.startsWith("localhost") ? "ws" : "wss";
+    const host = getPartyKitHost();
+    const protocol = getPartyKitWsProtocol(host);
 
     const socket = new PartySocket({
       host,

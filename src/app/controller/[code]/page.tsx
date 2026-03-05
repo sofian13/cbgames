@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import PartySocket from "partysocket";
 import { SwingDetector, type SwingType } from "@/components/games/motion-tennis/swing-detector";
+import { getPartyKitHost, getPartyKitWsProtocol } from "@/lib/party/host";
 
 type Phase = "permission" | "connecting" | "calibrating" | "ready" | "playing" | "disconnected";
 
@@ -46,10 +47,11 @@ export default function ControllerPage() {
   const detectorRef = useRef(new SwingDetector());
   const motionListenerRef = useRef<((e: DeviceMotionEvent) => void) | null>(null);
   const sendThrottleRef = useRef(0);
+  const startMotionListeningRef = useRef<() => void>(() => {});
 
   const connectToRoom = useCallback((name: string) => {
-    const host = process.env.NEXT_PUBLIC_PARTYKIT_HOST || "localhost:1999";
-    const protocol = host.startsWith("localhost") ? "ws" : "wss";
+    const host = getPartyKitHost();
+    const protocol = getPartyKitWsProtocol(host);
 
     const socket = new PartySocket({
       host,
@@ -117,10 +119,10 @@ export default function ControllerPage() {
 
     const name = playerName.trim() || "Joueur";
     connectToRoom(name);
-    startMotionListening();
+    startMotionListeningRef.current();
   }, [playerName, connectToRoom]);
 
-  const startMotionListening = useCallback(() => {
+  function startMotionListening() {
     const detector = detectorRef.current;
 
     const handler = (e: DeviceMotionEvent) => {
@@ -162,7 +164,11 @@ export default function ControllerPage() {
 
     motionListenerRef.current = handler;
     window.addEventListener("devicemotion", handler);
-  }, [calibrationSwings]);
+  }
+
+  useEffect(() => {
+    startMotionListeningRef.current = startMotionListening;
+  });
 
   useEffect(() => {
     return () => {

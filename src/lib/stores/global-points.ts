@@ -1,5 +1,7 @@
 "use client";
 
+import { getPartyKitHost, getPartyKitHttpProtocol } from "@/lib/party/host";
+
 const GLOBAL_STATS_KEY = "af-games-global-stats";
 
 export interface GlobalStats {
@@ -13,8 +15,8 @@ export interface GlobalStats {
 }
 
 function getStatsUrl(): string {
-  const host = process.env.NEXT_PUBLIC_PARTYKIT_HOST || "localhost:1999";
-  const protocol = host.startsWith("localhost") || host.startsWith("127.") ? "http" : "https";
+  const host = getPartyKitHost();
+  const protocol = getPartyKitHttpProtocol(host);
   return `${protocol}://${host}/parties/stats/global`;
 }
 

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useCallback } from "react";
 import PartySocket from "partysocket";
 import { useRoomStore } from "@/lib/stores/room-store";
+import { getPartyKitHost, getPartyKitWsProtocol } from "@/lib/party/host";
 import type {
   LobbyClientMessage,
   LobbyServerMessage,
@@ -13,8 +14,8 @@ export function useRoom(roomCode: string, playerId: string, playerName: string, 
   const store = useRoomStore();
 
   useEffect(() => {
-    const host = process.env.NEXT_PUBLIC_PARTYKIT_HOST || "localhost:1999";
-    const protocol = host.startsWith("localhost") ? "ws" : "wss";
+    const host = getPartyKitHost();
+    const protocol = getPartyKitWsProtocol(host);
 
     const socket = new PartySocket({
       host,

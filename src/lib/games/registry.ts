@@ -9,7 +9,7 @@ export const GAMES: GameMeta[] = [
     category: "words",
     minPlayers: 2,
     maxPlayers: 8,
-    icon: "ðŸ’£",
+    icon: "💣",
     implemented: true,
     rules: [
       "Une syllabe est imposÃ©e Ã  chaque tour",
@@ -27,7 +27,7 @@ export const GAMES: GameMeta[] = [
     category: "words",
     minPlayers: 2,
     maxPlayers: 8,
-    icon: "ðŸ”—",
+    icon: "🔗",
     implemented: true,
     rules: [
       "Dis un mot commenÃ§ant par la derniÃ¨re lettre du mot prÃ©cÃ©dent",
@@ -46,7 +46,7 @@ export const GAMES: GameMeta[] = [
     category: "trivia",
     minPlayers: 2,
     maxPlayers: 8,
-    icon: "âš¡",
+    icon: "⚡",
     implemented: true,
     rules: [
       "10 questions de culture gÃ©nÃ©rale",
@@ -64,7 +64,7 @@ export const GAMES: GameMeta[] = [
     category: "trivia",
     minPlayers: 2,
     maxPlayers: 8,
-    icon: "ðŸ”¥",
+    icon: "🔥",
     implemented: true,
     rules: [
       "10 questions de culture gÃ©nÃ©rale, 4 choix, 12s par question",
@@ -83,7 +83,7 @@ export const GAMES: GameMeta[] = [
     category: "speed",
     minPlayers: 2,
     maxPlayers: 8,
-    icon: "ðŸŽ¯",
+    icon: "🎯",
     implemented: true,
     rules: [
       "5 manches de rÃ©flexes",
@@ -101,7 +101,7 @@ export const GAMES: GameMeta[] = [
     category: "speed",
     minPlayers: 2,
     maxPlayers: 8,
-    icon: "â±ï¸",
+    icon: "⏱️",
     implemented: true,
     rules: [
       "Des micro-dÃ©fis ultra-rapides (3 secondes !)",
@@ -119,7 +119,7 @@ export const GAMES: GameMeta[] = [
     category: "speed",
     minPlayers: 2,
     maxPlayers: 8,
-    icon: "ðŸ‘‘",
+    icon: "👑",
     implemented: true,
     rules: [
       "Monte sur la colline pour devenir Roi et gagner 5 pts/seconde",
@@ -138,7 +138,7 @@ export const GAMES: GameMeta[] = [
     category: "social",
     minPlayers: 4,
     maxPlayers: 8,
-    icon: "ðŸº",
+    icon: "🐺",
     implemented: true,
     rules: [
       "RÃ´les secrets : Villageois, Loup-Garou, Voyante, SorciÃ¨re, Chasseur",
@@ -156,7 +156,7 @@ export const GAMES: GameMeta[] = [
     category: "social",
     minPlayers: 1,
     maxPlayers: 8,
-    icon: "ðŸ•¶ï¸",
+    icon: "🕶️",
     implemented: true,
     rules: [
       "Chaque joueur reÃ§oit un mot â€” certains ont un mot lÃ©gÃ¨rement diffÃ©rent",
@@ -174,7 +174,7 @@ export const GAMES: GameMeta[] = [
     category: "social",
     minPlayers: 3,
     maxPlayers: 8,
-    icon: "ðŸ•µï¸",
+    icon: "🕵️",
     implemented: true,
     rules: [
       "Un mot secret est donnÃ© Ã  tous... sauf Ã  l'InfiltrÃ© !",
@@ -192,7 +192,7 @@ export const GAMES: GameMeta[] = [
     category: "social",
     minPlayers: 3,
     maxPlayers: 8,
-    icon: "ðŸ€",
+    icon: "🐀",
     implemented: true,
     rules: [
       "Un joueur est secrÃ¨tement la Taupe, les autres sont Loyaux",
@@ -210,7 +210,7 @@ export const GAMES: GameMeta[] = [
     category: "social",
     minPlayers: 3,
     maxPlayers: 8,
-    icon: "ðŸ´â€â˜ ï¸",
+    icon: "🏴‍☠️",
     implemented: true,
     rules: [
       "Chaque vendeur pioche 3 cartes (Diamant, Or, ContrefaÃ§on, Bombe...)",
@@ -229,7 +229,7 @@ export const GAMES: GameMeta[] = [
     category: "strategy",
     minPlayers: 4,
     maxPlayers: 8,
-    icon: "ðŸ”",
+    icon: "🔍",
     implemented: true,
     rules: [
       "2 Ã©quipes avec un Espion-maÃ®tre chacune",
@@ -247,7 +247,7 @@ export const GAMES: GameMeta[] = [
     category: "strategy",
     minPlayers: 2,
     maxPlayers: 8,
-    icon: "ðŸ›ï¸",
+    icon: "🏛️",
     implemented: true,
     rules: [
       "10 objets mis aux enchÃ¨res, chacun avec une valeur cachÃ©e (bonus ou malus !)",
@@ -265,7 +265,7 @@ export const GAMES: GameMeta[] = [
     category: "strategy",
     minPlayers: 2,
     maxPlayers: 8,
-    icon: "ðŸ”«",
+    icon: "🔫",
     implemented: true,
     rules: [
       "Barillet de 6 chambres avec 1 balle â€” chaque tour, un joueur tire",
@@ -302,7 +302,7 @@ export const GAMES: GameMeta[] = [
     category: "cards",
     minPlayers: 2,
     maxPlayers: 8,
-    icon: "ðŸƒ",
+    icon: "🃏",
     implemented: true,
     rules: [
       "Joue une carte de mÃªme couleur ou mÃªme numÃ©ro que la carte du dessus",
@@ -320,7 +320,7 @@ export const GAMES: GameMeta[] = [
     category: "cards",
     minPlayers: 2,
     maxPlayers: 8,
-    icon: "â™ ï¸",
+    icon: "♠️",
     implemented: true,
     rules: [
       "Texas Hold'em : 2 cartes privÃ©es + 5 cartes communes",
@@ -339,7 +339,7 @@ export const GAMES: GameMeta[] = [
     category: "party",
     minPlayers: 2,
     maxPlayers: 8,
-    icon: "ðŸŽ®",
+    icon: "🎮",
     implemented: true,
     rules: [
       "Chaque joueur contrÃ´le UNE direction du personnage (â¬†ï¸â¬‡ï¸â¬…ï¸âž¡ï¸)",
@@ -358,7 +358,7 @@ export const GAMES: GameMeta[] = [
     category: "sport",
     minPlayers: 1,
     maxPlayers: 2,
-    icon: "ðŸŽ¾",
+    icon: "🎾",
     implemented: true,
     rules: [
       "Doubles Wii Sports : 4 persos sur le terrain, tu contrÃ´les les 2 de ton cÃ´tÃ©",
