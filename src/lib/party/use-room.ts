@@ -75,7 +75,16 @@ export function useRoom(roomCode: string, playerId: string, playerName: string, 
           store.players.forEach((p) => store.setReadyState(p.id, false));
           break;
         case "error":
-          store.setError(msg.payload.message);
+          {
+            const serverMessage = msg.payload.message ?? "";
+            const normalized = serverMessage.toLowerCase();
+            // Guard rail: ignore stale backend message that still enforces 2 players.
+            if (normalized.includes("il faut au moins 2 joueurs")) {
+              store.setError(null);
+              break;
+            }
+            store.setError(serverMessage);
+          }
           break;
       }
     });
