@@ -61,6 +61,14 @@ export default function LobbyPage() {
 
   const isHost = hostId === playerId;
 
+  const handleStartGame = (gameId?: string | null) => {
+    const id = (gameId ?? selectedGameId)?.trim().toLowerCase();
+    if (!id) return;
+    startGame(id);
+    // Fallback navigation in case lobby websocket event is delayed/dropped.
+    router.push(`/room/${code}/game/${id}`);
+  };
+
   useEffect(() => {
     if (status === "in-game" && selectedGameId) {
       router.push(`/room/${code}/game/${selectedGameId}`);
@@ -134,7 +142,7 @@ export default function LobbyPage() {
                   selectedGameId={selectedGameId}
                   isHost={isHost}
                   onToggleReady={toggleReady}
-                  onStartGame={startGame}
+                  onStartGame={handleStartGame}
                 />
               </div>
             </div>

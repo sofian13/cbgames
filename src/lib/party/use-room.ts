@@ -65,6 +65,7 @@ export function useRoom(roomCode: string, playerId: string, playerName: string, 
           store.setHostId(msg.payload.playerId);
           break;
         case "game-starting":
+          store.setSelectedGame(msg.payload.gameId);
           store.setStatus("in-game");
           break;
         case "scores-updated":
