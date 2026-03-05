@@ -2,7 +2,6 @@
 
 import { Button } from "@/components/ui/button";
 import type { Player } from "@/lib/party/message-types";
-import { getGameById } from "@/lib/games/registry";
 
 interface ReadyCheckProps {
   players: Player[];
@@ -26,13 +25,7 @@ export function ReadyCheck({
   const readyCount = connectedPlayers.filter((p) => p.isReady || p.isHost).length;
   const allReady = readyCount === connectedPlayers.length;
   const normalizedGameId = selectedGameId?.trim().toLowerCase() ?? null;
-  const soloGameIds = new Set(["motion-tennis", "undercover", "chess"]);
-  const minPlayers = normalizedGameId
-    ? soloGameIds.has(normalizedGameId)
-      ? 1
-      : (getGameById(normalizedGameId)?.minPlayers ?? 2)
-    : 2;
-  const canStart = isHost && allReady && selectedGameId && connectedPlayers.length >= minPlayers;
+  const canStart = isHost && allReady && selectedGameId && connectedPlayers.length >= 1;
 
   return (
     <div className="premium-panel-soft flex flex-col gap-3 rounded-2xl border p-4">
@@ -66,9 +59,7 @@ export function ReadyCheck({
               ? "Choisis un jeu"
               : !allReady
                 ? "En attente..."
-                : connectedPlayers.length < minPlayers
-                  ? `Il faut ${minPlayers} joueurs minimum`
-                  : "Lancer la partie"}
+                : "Lancer la partie"}
           </Button>
         )}
       </div>

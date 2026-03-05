@@ -287,11 +287,13 @@ export class ChessGame extends BaseGame {
 
     if (this.mode === "online") {
       if (ids.length < 2) {
-        this.sendError("Mode en ligne: 2 joueurs minimum.");
-        return;
+        this.mode = "bot";
+        this.whitePlayerId = ids[0];
+        this.blackPlayerId = BOT_PLAYER_ID;
+      } else {
+        this.whitePlayerId = ids[0];
+        this.blackPlayerId = ids[1];
       }
-      this.whitePlayerId = ids[0];
-      this.blackPlayerId = ids[1];
     } else {
       this.whitePlayerId = ids[0];
       this.blackPlayerId = BOT_PLAYER_ID;
@@ -611,4 +613,3 @@ export class ChessGame extends BaseGame {
     }
   }
 }
-

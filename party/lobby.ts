@@ -183,14 +183,6 @@ export default class LobbyServer {
         const connectedPlayers = Array.from(this.players.values()).filter(
           (p) => p.isConnected
         );
-        const minRequired = 1;
-        if (connectedPlayers.length < minRequired) {
-          this.sendTo(sender.id, {
-            type: "error",
-            payload: { message: `Il faut au moins ${minRequired} joueurs` },
-          });
-          return;
-        }
 
         const allReady = connectedPlayers.every(
           (p) => p.isReady || p.isHost
