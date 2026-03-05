@@ -349,7 +349,7 @@ export default function UndercoverGame({
       .filter(Boolean)
       .slice(0, 8);
 
-    if (names.length < 3) return;
+    if (names.length < 1) return;
 
     const pairs = getLocalPairs(localTheme);
     const pair = pairs[Math.floor(Math.random() * pairs.length)];
@@ -595,7 +595,7 @@ export default function UndercoverGame({
         .split("\n")
         .map((n) => n.trim())
         .filter(Boolean).length;
-      const previewCount = Math.min(8, Math.max(3, localNameCount || 3));
+      const previewCount = Math.min(8, Math.max(1, localNameCount || 1));
       const previewUndercover = previewCount >= 7 ? 2 : 1;
       const previewMrWhite = previewCount >= 5 ? 1 : 0;
       const previewCivilians = Math.max(
