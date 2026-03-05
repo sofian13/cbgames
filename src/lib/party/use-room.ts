@@ -14,6 +14,9 @@ export function useRoom(roomCode: string, playerId: string, playerName: string, 
   const store = useRoomStore();
 
   useEffect(() => {
+    // Prevent stale lobby state when switching rooms or reconnecting.
+    store.reset();
+
     const host = getPartyKitHost();
     const protocol = getPartyKitWsProtocol(host);
 
@@ -88,6 +91,7 @@ export function useRoom(roomCode: string, playerId: string, playerName: string, 
     return () => {
       socket.close();
       socketRef.current = null;
+      store.reset();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [roomCode, playerId, playerName]);
@@ -97,8 +101,13 @@ export function useRoom(roomCode: string, playerId: string, playerName: string, 
   }, []);
 
   const selectGame = useCallback(
-    (gameId: string) => send({ type: "select-game", payload: { gameId } }),
-    [send]
+    (gameId: string) => {
+      const normalized = gameId.trim().toLowerCase();
+      // Optimistic update to avoid race with start-game click.
+      store.setSelectedGame(normalized);
+      send({ type: "select-game", payload: { gameId: normalized } });
+    },
+    [send, store]
   );
 
   const toggleReady = useCallback(
