@@ -4,6 +4,25 @@ import { calculateSessionPoints, mergeScores } from "./shared/scoring";
 
 const MAX_PLAYERS = 8;
 
+function normalizeGameId(raw: string | null | undefined) {
+  if (!raw) return "";
+  return raw
+    .trim()
+    .toLowerCase()
+    .replace(/[\u0000-\u001f]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/[^a-z0-9-]/g, "");
+}
+
+function isSoloGame(rawGameId: string | null | undefined) {
+  const gameId = normalizeGameId(rawGameId);
+  if (!gameId) return false;
+  if (gameId === "motion-tennis" || gameId === "undercover" || gameId === "chess") {
+    return true;
+  }
+  return gameId.includes("undercover") || gameId.includes("chess") || gameId.includes("motion-tennis");
+}
+
 export default class LobbyServer {
   party: Party;
   players: Map<string, Player> = new Map();
@@ -134,7 +153,7 @@ export default class LobbyServer {
         if (!player?.isHost) return;
 
         const { gameId } = msg.payload as { gameId: string };
-        const normalizedGameId = gameId.trim().toLowerCase();
+        const normalizedGameId = normalizeGameId(gameId);
         this.selectedGameId = normalizedGameId;
 
         // Reset ready states
@@ -166,17 +185,15 @@ export default class LobbyServer {
         if (!player?.isHost) return;
         const payloadGameId = (msg.payload as { gameId?: string } | undefined)?.gameId;
         if (payloadGameId && payloadGameId.trim()) {
-          this.selectedGameId = payloadGameId.trim().toLowerCase();
+          this.selectedGameId = normalizeGameId(payloadGameId);
         }
         if (!this.selectedGameId) return;
-        const normalizedGameId = this.selectedGameId.trim().toLowerCase();
+        const normalizedGameId = normalizeGameId(this.selectedGameId);
 
         const connectedPlayers = Array.from(this.players.values()).filter(
           (p) => p.isConnected
         );
-        // Some games allow solo play (e.g. motion-tennis vs bot)
-        const soloGames = new Set(["motion-tennis", "undercover", "chess"]);
-        const minRequired = soloGames.has(normalizedGameId) ? 1 : 2;
+        const minRequired = isSoloGame(normalizedGameId) ? 1 : 2;
         if (connectedPlayers.length < minRequired) {
           this.sendTo(sender.id, {
             type: "error",
