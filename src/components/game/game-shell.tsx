@@ -56,7 +56,13 @@ export function GameShell({ roomCode, gameId, playerId, playerName, isGuest, chi
   const level = stats ? getLevel(stats.totalPoints) : null;
 
   return (
-    <div className="relative min-h-screen overflow-hidden" style={{ background: "#060606" }}>
+    <div
+      className="relative min-h-screen overflow-hidden"
+      style={{
+        background:
+          "radial-gradient(130% 85% at 50% -10%, rgba(90,160,255,0.2) 0%, transparent 60%), linear-gradient(180deg, #030710 0%, #040b1a 55%, #030710 100%)",
+      }}
+    >
       <FilmGrain />
       <EmberParticles mouse={mouseRef} count={isGameOver ? 30 : 20} />
       <EmberKeyframes />
@@ -67,7 +73,7 @@ export function GameShell({ roomCode, gameId, playerId, playerName, isGuest, chi
         {!isGameOver && gameMeta?.rules && (
           <button
             onClick={() => setShowRules(true)}
-            className="fixed top-4 right-4 z-50 flex items-center gap-1.5 rounded-lg border border-white/[0.08] bg-white/[0.04] px-3 py-1.5 text-xs text-white/50 backdrop-blur-sm transition-colors hover:text-white/80 hover:bg-white/[0.08]"
+            className="fixed top-4 right-4 z-50 flex items-center gap-1.5 rounded-xl border border-cyan-300/24 bg-cyan-300/10 px-3 py-1.5 text-xs text-cyan-100/75 backdrop-blur-sm transition-colors hover:text-white hover:bg-cyan-300/20"
           >
             <BookOpen className="h-3.5 w-3.5" />
             Règles
@@ -77,7 +83,7 @@ export function GameShell({ roomCode, gameId, playerId, playerName, isGuest, chi
         {/* Rules modal */}
         {showRules && gameMeta && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setShowRules(false)}>
-            <div className="relative w-full max-w-md mx-4 rounded-xl border border-white/[0.08] bg-[#0a0a0a] p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="premium-panel relative w-full max-w-md mx-4 rounded-2xl border p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
               <button onClick={() => setShowRules(false)} className="absolute top-3 right-3 text-white/30 hover:text-white/60 transition-colors">
                 <X className="h-5 w-5" />
               </button>
@@ -110,8 +116,8 @@ export function GameShell({ roomCode, gameId, playerId, playerName, isGuest, chi
 
               {/* Global points earned */}
               {pointsEarned != null && level && (
-                <div className="rounded-lg border border-ember/20 bg-ember/5 p-4 text-center space-y-2">
-                  <p className="text-sm text-ember font-sans font-medium">
+                <div className="premium-panel-soft rounded-2xl p-4 text-center space-y-2">
+                  <p className="text-sm text-cyan-300 font-sans font-medium">
                     +{pointsEarned} points globaux
                   </p>
                   <div className="flex items-center justify-center gap-2">

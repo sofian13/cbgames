@@ -146,9 +146,9 @@ const ROLE_CONFIG: Record<
   chasseur: {
     label: "Chasseur",
     icon: "\u{1F3AF}",
-    color: "text-amber-400",
-    bg: "bg-amber-500/10",
-    border: "border-amber-500/30",
+    color: "text-cyan-400",
+    bg: "bg-cyan-500/10",
+    border: "border-cyan-500/30",
     description: "Emporte un joueur dans sa mort.",
   },
   cupidon: {
@@ -785,7 +785,7 @@ export default function LoupGarouGame({
           "Le village se reveille",
           `Jour ${state.dayCount}`,
           "\u{2600}\u{FE0F}",
-          "text-amber-300/80"
+          "text-cyan-300/80"
         )}
 
         {deaths.length > 0 ? (
@@ -854,7 +854,7 @@ export default function LoupGarouGame({
           "Discussion",
           "Debattez et trouvez les Loups-Garous !",
           "\u{1F4AC}",
-          "text-amber-300/70"
+          "text-cyan-300/70"
         )}
 
         {/* Chat area */}
@@ -945,7 +945,7 @@ export default function LoupGarouGame({
           "Vote du village",
           "Qui sera elimine ?",
           "\u{2696}\u{FE0F}",
-          "text-amber-300/70"
+          "text-cyan-300/70"
         )}
 
         {state.targets && myAlive && !state.hasVoted && (
@@ -1054,7 +1054,7 @@ export default function LoupGarouGame({
           "Resultat du vote",
           `Jour ${state.dayCount}`,
           "\u{2696}\u{FE0F}",
-          "text-amber-300/70"
+          "text-cyan-300/70"
         )}
 
         {state.eliminatedToday && state.eliminatedName ? (
@@ -1118,13 +1118,13 @@ export default function LoupGarouGame({
               "Dernier tir du Chasseur",
               "Tu meurs ! Choisis qui emporter avec toi",
               "\u{1F3AF}",
-              "text-amber-400"
+              "text-cyan-400"
             )}
             {state.targets &&
               renderTargetGrid(
                 state.targets,
                 handleHunterShot,
-                "border-amber-500/50 bg-amber-500/10"
+                "border-cyan-500/50 bg-cyan-500/10"
               )}
           </>
         ) : (
@@ -1133,7 +1133,7 @@ export default function LoupGarouGame({
               "Le Chasseur tire !",
               "Il emporte quelqu\u2019un dans sa mort...",
               "\u{1F3AF}",
-              "text-amber-400/60"
+              "text-cyan-400/60"
             )}
             <p className="text-sm text-white/20 font-sans animate-pulse">
               En attente du tir du chasseur...

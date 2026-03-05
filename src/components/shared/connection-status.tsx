@@ -9,15 +9,15 @@ interface ConnectionStatusProps {
 
 export function ConnectionStatus({ isConnected, className }: ConnectionStatusProps) {
   return (
-    <div className={cn("flex items-center gap-2 text-sm", className)}>
+    <div className={cn("flex items-center gap-2 rounded-full border border-cyan-300/20 px-2.5 py-1 text-xs premium-panel-soft", className)}>
       <span
         className={cn(
           "h-2 w-2 rounded-full",
-          isConnected ? "bg-green-500" : "bg-destructive animate-pulse"
+          isConnected ? "bg-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.65)]" : "bg-red-400 animate-pulse"
         )}
       />
-      <span className="text-muted-foreground">
-        {isConnected ? "Connecté" : "Déconnecté"}
+      <span className="text-white/65 font-sans">
+        {isConnected ? "Connecte" : "Deconnecte"}
       </span>
     </div>
   );

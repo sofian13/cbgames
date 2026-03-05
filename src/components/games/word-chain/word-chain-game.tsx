@@ -71,7 +71,7 @@ export default function WordChainGame({ roomCode, playerId, playerName }: GamePr
         <div
           className="text-7xl font-serif font-bold text-ember"
           style={{
-            textShadow: "0 0 40px rgba(249,115,22,0.3), 0 0 80px rgba(234,88,12,0.15)",
+            textShadow: "0 0 40px rgba(80,216,255,0.35), 0 0 80px rgba(62,136,255,0.2)",
           }}
         >
           {state.requiredLetter}
@@ -104,7 +104,7 @@ export default function WordChainGame({ roomCode, playerId, playerName }: GamePr
             className={cn(
               "flex-1 rounded-lg border px-4 py-3 text-sm font-sans bg-transparent outline-none transition-all",
               isMyTurn
-                ? "border-ember/30 text-white placeholder:text-white/20 focus:border-ember/60 focus:shadow-[0_0_20px_rgba(249,115,22,0.1)]"
+                ? "border-ember/30 text-white placeholder:text-white/20 focus:border-ember/60 focus:shadow-[0_0_20px_rgba(80,216,255,0.18)]"
                 : "border-white/[0.06] text-white/30 placeholder:text-white/10 cursor-not-allowed"
             )}
             autoFocus={isMyTurn}

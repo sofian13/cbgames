@@ -29,13 +29,13 @@ export function ReadyCheck({
   const canStart = isHost && allReady && selectedGameId && connectedPlayers.length >= minPlayers;
 
   return (
-    <div className="flex flex-col gap-3 border-t border-border pt-4">
-      <div className="flex items-center justify-between text-sm text-muted-foreground">
+    <div className="premium-panel-soft flex flex-col gap-3 rounded-2xl border p-4">
+      <div className="flex items-center justify-between text-sm text-white/55">
         <span>
           {readyCount}/{connectedPlayers.length} joueurs prêts
         </span>
         {!selectedGameId && (
-          <span className="text-yellow-500">Aucun jeu sélectionné</span>
+          <span className="text-cyan-200/75">Aucun jeu sélectionné</span>
         )}
       </div>
 
@@ -69,3 +69,4 @@ export function ReadyCheck({
     </div>
   );
 }
+

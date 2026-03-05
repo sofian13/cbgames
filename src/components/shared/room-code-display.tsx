@@ -22,11 +22,11 @@ export function RoomCodeDisplay({ code, className }: RoomCodeDisplayProps) {
 
   return (
     <div className={cn("flex items-center gap-2", className)}>
-      <span className="font-mono text-2xl font-bold tracking-[0.3em] text-primary">
+      <span className="rounded-lg border border-cyan-300/25 bg-cyan-300/10 px-2.5 py-1 font-mono text-xl font-bold tracking-[0.24em] text-cyan-200 premium-text-glow">
         {code}
       </span>
-      <Button variant="ghost" size="icon" onClick={copyToClipboard} className="h-8 w-8">
-        {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+      <Button variant="ghost" size="icon" onClick={copyToClipboard} className="h-8 w-8 border border-cyan-300/20 bg-cyan-300/10">
+        {copied ? <Check className="h-4 w-4 text-emerald-300" /> : <Copy className="h-4 w-4 text-cyan-200/80" />}
       </Button>
     </div>
   );

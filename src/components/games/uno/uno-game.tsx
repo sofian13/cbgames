@@ -213,7 +213,7 @@ export default function UnoGame({ roomCode, playerId, playerName }: GameProps) {
               className={cn(
                 "px-4 py-2 rounded-lg border font-sans text-sm font-medium animate-pulse",
                 unoToast.type === "called"
-                  ? "bg-orange-500/20 border-orange-500/40 text-orange-300"
+                  ? "bg-cyan-400/20 border-cyan-300/40 text-cyan-200"
                   : "bg-red-500/20 border-red-500/40 text-red-300"
               )}
             >
@@ -266,14 +266,14 @@ export default function UnoGame({ roomCode, playerId, playerName }: GameProps) {
                 className={cn(
                   "flex flex-col items-center gap-1 rounded-lg border px-3 py-2 min-w-[80px] transition-all",
                   p.isCurrentTurn
-                    ? "border-amber-400/40 bg-amber-400/5 shadow-[0_0_12px_rgba(251,191,36,0.15)]"
+                    ? "border-cyan-400/40 bg-cyan-400/5 shadow-[0_0_12px_rgba(251,191,36,0.15)]"
                     : "border-white/[0.06] bg-white/[0.02]"
                 )}
               >
                 <span
                   className={cn(
                     "text-xs font-medium font-sans truncate max-w-[70px]",
-                    p.isCurrentTurn ? "text-amber-300" : "text-white/50"
+                    p.isCurrentTurn ? "text-cyan-300" : "text-white/50"
                   )}
                 >
                   {p.name}
@@ -298,7 +298,7 @@ export default function UnoGame({ roomCode, playerId, playerName }: GameProps) {
                   {p.cardCount} carte{p.cardCount !== 1 ? "s" : ""}
                 </span>
                 {p.calledUno && p.cardCount === 1 && (
-                  <span className="text-[9px] font-sans font-bold text-orange-400">UNO</span>
+                  <span className="text-[9px] font-sans font-bold text-cyan-300">UNO</span>
                 )}
                 {p.mustCallUno && !p.calledUno && p.id !== playerId && (
                   <button
@@ -341,7 +341,7 @@ export default function UnoGame({ roomCode, playerId, playerName }: GameProps) {
           {/* Turn indicator */}
           <div className="absolute top-2 left-4">
             {isMyTurn ? (
-              <span className="text-xs font-sans text-amber-300 font-medium animate-pulse">
+              <span className="text-xs font-sans text-cyan-300 font-medium animate-pulse">
                 Ton tour !
               </span>
             ) : (
@@ -392,7 +392,7 @@ export default function UnoGame({ roomCode, playerId, playerName }: GameProps) {
           <div className="flex justify-center py-2">
             <button
               onClick={handleUnoCall}
-              className="px-8 py-3 rounded-xl bg-orange-500 hover:bg-orange-400 text-white font-sans font-bold text-lg tracking-wide shadow-[0_0_30px_rgba(249,115,22,0.4)] hover:shadow-[0_0_40px_rgba(249,115,22,0.6)] transition-all active:scale-95 animate-pulse"
+              className="px-8 py-3 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-sans font-bold text-lg tracking-wide shadow-[0_0_30px_rgba(80,216,255,0.45)] hover:shadow-[0_0_40px_rgba(80,216,255,0.65)] transition-all active:scale-95 animate-pulse"
             >
               UNO !
             </button>
@@ -417,7 +417,7 @@ export default function UnoGame({ roomCode, playerId, playerName }: GameProps) {
         {/* ── Bottom: My hand (fan spread) ───────────── */}
         <div className="relative pb-4 pt-2 px-2">
           {state.drewCard && (
-            <p className="text-center text-[10px] text-amber-300/60 font-sans mb-1">
+            <p className="text-center text-[10px] text-cyan-300/60 font-sans mb-1">
               Carte piochee ! Joue-la ou passe.
             </p>
           )}

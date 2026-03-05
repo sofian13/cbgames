@@ -36,24 +36,46 @@ function AnimatedTitle({ delay }: { delay: number }) {
   }, [delay, letters.length]);
 
   return (
-    <h1 className="relative font-serif" style={{ fontSize: "clamp(4.5rem,11vw,8.5rem)", fontWeight: 300, letterSpacing: "-0.02em", lineHeight: 0.92 }}>
+    <h1
+      className="relative font-serif"
+      style={{
+        fontSize: "clamp(3.2rem,11vw,8.5rem)",
+        fontWeight: 300,
+        letterSpacing: "-0.02em",
+        lineHeight: 0.92,
+      }}
+    >
       {letters.map((ch, i) => (
-        <span key={i} className="inline-block" style={{
-          opacity: 0, animation: `letterIn 0.9s cubic-bezier(0.16,1,0.3,1) ${delay + i * 90}ms forwards`,
-          textShadow: shimmer ? "0 0 40px rgba(220,75,35,0.3), 0 0 80px rgba(200,55,30,0.12)" : "0 0 0 transparent",
-          transition: "text-shadow 1.5s ease",
-        }}>
+        <span
+          key={i}
+          className="inline-block"
+          style={{
+            opacity: 0,
+            animation: `letterIn 0.9s cubic-bezier(0.16,1,0.3,1) ${delay + i * 90}ms forwards`,
+            textShadow: shimmer
+              ? "0 0 40px rgba(80,216,255,0.35), 0 0 80px rgba(89,120,255,0.16)"
+              : "0 0 0 transparent",
+            transition: "text-shadow 1.5s ease",
+          }}
+        >
           {ch === " " ? "\u00A0" : ch}
         </span>
       ))}
       {shimmer && (
-        <span className="absolute inset-0 pointer-events-none" aria-hidden="true" style={{
-          background: "linear-gradient(90deg, transparent 0%, transparent 35%, rgba(255,170,90,0.12) 50%, transparent 65%, transparent 100%)",
-          backgroundSize: "200% 100%",
-          WebkitBackgroundClip: "text",
-          WebkitTextFillColor: "transparent",
-          animation: "shimmer 5s ease-in-out infinite",
-        }}>{text}</span>
+        <span
+          className="absolute inset-0 pointer-events-none"
+          aria-hidden="true"
+          style={{
+            background:
+              "linear-gradient(90deg, transparent 0%, transparent 35%, rgba(112,228,255,0.2) 50%, transparent 65%, transparent 100%)",
+            backgroundSize: "200% 100%",
+            WebkitBackgroundClip: "text",
+            WebkitTextFillColor: "transparent",
+            animation: "shimmer 5s ease-in-out infinite",
+          }}
+        >
+          {text}
+        </span>
       )}
     </h1>
   );
@@ -67,7 +89,13 @@ function DiscordIcon({ className }: { className?: string }) {
   );
 }
 
-function UsernameEditor({ initialName, onSave }: { initialName: string; onSave: (name: string) => void }) {
+function UsernameEditor({
+  initialName,
+  onSave,
+}: {
+  initialName: string;
+  onSave: (name: string) => void;
+}) {
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(initialName);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -95,7 +123,7 @@ function UsernameEditor({ initialName, onSave }: { initialName: string; onSave: 
         <span className="text-sm font-sans text-white/60 group-hover:text-white/90 transition-colors">
           {initialName}
         </span>
-        <Pencil className="w-3 h-3 text-white/20 group-hover:text-ember/60 transition-colors" />
+        <Pencil className="h-3 w-3 text-white/20 group-hover:text-cyan-300/70 transition-colors" />
       </button>
     );
   }
@@ -107,13 +135,19 @@ function UsernameEditor({ initialName, onSave }: { initialName: string; onSave: 
         type="text"
         value={name}
         onChange={(e) => setName(e.target.value.slice(0, 20))}
-        onKeyDown={(e) => { if (e.key === "Enter") save(); if (e.key === "Escape") { setName(initialName); setEditing(false); } }}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") save();
+          if (e.key === "Escape") {
+            setName(initialName);
+            setEditing(false);
+          }
+        }}
         onBlur={save}
         maxLength={20}
-        className="bg-white/[0.04] border border-white/[0.12] rounded-lg px-3 py-1.5 text-sm text-white font-sans outline-none focus:border-ember/40 transition-all w-40 text-center"
+        className="w-44 rounded-lg border border-cyan-300/24 bg-cyan-300/8 px-3 py-1.5 text-center text-sm text-white font-sans outline-none transition-all focus:border-cyan-300/45"
       />
-      <button onClick={save} className="text-ember/60 hover:text-ember transition-colors">
-        <Check className="w-3.5 h-3.5" />
+      <button onClick={save} className="text-cyan-300/75 hover:text-cyan-200 transition-colors">
+        <Check className="h-3.5 w-3.5" />
       </button>
     </div>
   );
@@ -124,9 +158,8 @@ export default function HomePage() {
   const { data: session } = useSession();
   const [code, setCode] = useState("");
   const [guestName, setGuestNameState] = useState("");
-  const subtitle = useTyping("Joue avec tes potes, sans pub, sans prise de tête.", 1800, 30);
+  const subtitle = useTyping("Joue avec tes potes, sans pub, sans prise de tete.", 1800, 30);
 
-  // Load guest name on mount
   useEffect(() => {
     const guest = getOrCreateGuest();
     setGuestNameState(guest.name);
@@ -153,105 +186,105 @@ export default function HomePage() {
     <EmberBackground>
       <EmberKeyframes />
 
-      {/* Content */}
-      <main className="relative z-10 flex flex-col items-center justify-center min-h-screen px-6 text-white select-none">
-        {/* Title */}
+      <main className="relative z-10 flex min-h-screen flex-col items-center justify-center px-6 py-10 text-white select-none">
         <div className="mb-5">
           <AnimatedTitle delay={700} />
         </div>
 
-        {/* Subtitle (typing) */}
-        <p className="h-5 mb-10 font-sans" style={{ fontSize: "0.7rem", letterSpacing: "0.32em", textTransform: "uppercase", color: "rgba(255,255,255,0.28)", fontWeight: 300 }}>
+        <p
+          className="mb-8 h-5 text-center font-sans"
+          style={{
+            fontSize: "0.7rem",
+            letterSpacing: "0.32em",
+            textTransform: "uppercase",
+            color: "rgba(255,255,255,0.3)",
+            fontWeight: 300,
+          }}
+        >
           {subtitle}
-          <span style={{ animation: "blink 0.8s step-end infinite", color: "rgba(200,60,30,0.5)" }}>|</span>
+          <span style={{ animation: "blink 0.8s step-end infinite", color: "rgba(80,216,255,0.6)" }}>|</span>
         </p>
 
-        {/* User identity */}
-        <div className="mb-8 flex flex-col items-center gap-2" style={{ opacity: 0, animation: "fadeUp 1s cubic-bezier(0.16,1,0.3,1) 2s forwards" }}>
+        <div
+          className="mb-8 flex flex-col items-center gap-2"
+          style={{ opacity: 0, animation: "fadeUp 1s cubic-bezier(0.16,1,0.3,1) 2s forwards" }}
+        >
           {session?.user ? (
-            /* Discord user — show avatar + name + sign out */
-            <div className="flex items-center gap-3 rounded-full border border-white/[0.08] px-4 py-2" style={{ background: "rgba(255,255,255,0.03)", backdropFilter: "blur(16px)" }}>
+            <div className="premium-panel-soft flex items-center gap-3 rounded-full px-4 py-2">
               {session.user.image && (
-                <img
-                  src={session.user.image}
-                  alt=""
-                  className="w-7 h-7 rounded-full ring-2 ring-ember/30"
-                />
+                <img src={session.user.image} alt="" className="h-7 w-7 rounded-full ring-2 ring-cyan-300/40" />
               )}
-              <span className="text-sm font-sans text-white/80">
-                {session.user.name}
-              </span>
-              <div className="w-px h-4 bg-white/[0.08]" />
+              <span className="text-sm font-sans text-white/80">{session.user.name}</span>
+              <div className="h-4 w-px bg-white/[0.08]" />
               <button
                 onClick={() => signOut()}
-                className="text-white/20 hover:text-white/50 transition-colors"
-                title="Déconnexion"
+                className="text-white/25 hover:text-white/55 transition-colors"
+                title="Deconnexion"
               >
-                <LogOut className="w-3.5 h-3.5" />
+                <LogOut className="h-3.5 w-3.5" />
               </button>
             </div>
           ) : (
-            /* Guest — editable username */
             <div className="flex flex-col items-center gap-3">
-              <span className="text-[10px] uppercase tracking-[0.2em] text-white/20 font-sans">
-                Ton pseudo
-              </span>
-              {guestName && (
-                <UsernameEditor initialName={guestName} onSave={handleSaveName} />
-              )}
+              <span className="text-[10px] uppercase tracking-[0.2em] text-white/25 font-sans">Ton pseudo</span>
+              {guestName && <UsernameEditor initialName={guestName} onSave={handleSaveName} />}
             </div>
           )}
         </div>
 
-        {/* Actions */}
-        <div className="flex gap-3.5 items-center" style={{ opacity: 0, animation: "fadeUp 1s cubic-bezier(0.16,1,0.3,1) 2.2s forwards" }}>
-          {/* Create room */}
+        <div
+          className="flex w-full max-w-xl flex-col items-center gap-3 sm:flex-row sm:justify-center"
+          style={{ opacity: 0, animation: "fadeUp 1s cubic-bezier(0.16,1,0.3,1) 2.2s forwards" }}
+        >
           <MagneticButton
             onClick={handleCreate}
-            className="group flex items-center gap-2.5 rounded-full border border-white/[0.08] overflow-hidden relative"
-            style={{ padding: "0.85rem 2.2rem", background: "rgba(255,255,255,0.03)", backdropFilter: "blur(16px)", transition: "all 0.5s cubic-bezier(0.16,1,0.3,1)" }}
+            className="group relative flex w-full items-center justify-center gap-2.5 overflow-hidden rounded-full border border-cyan-300/24 bg-cyan-300/8 px-6 py-3.5 sm:w-auto"
+            style={{ backdropFilter: "blur(16px)", transition: "all 0.5s cubic-bezier(0.16,1,0.3,1)" }}
           >
-            <Plus className="w-3.5 h-3.5 text-white/40 group-hover:text-red-400/80 transition-colors duration-500" />
-            <span className="text-[13px] font-medium tracking-[0.04em] text-white/70 group-hover:text-white transition-colors duration-500 font-sans">
+            <Plus className="h-3.5 w-3.5 text-white/45 group-hover:text-cyan-300 transition-colors duration-500" />
+            <span className="text-[13px] font-medium tracking-[0.04em] text-white/75 group-hover:text-white transition-colors duration-500 font-sans">
               Nouvelle salle
             </span>
-            <div className="absolute inset-0 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-600" style={{ boxShadow: "0 0 50px rgba(200,55,28,0.12), inset 0 0 30px rgba(200,55,28,0.04)" }} />
+            <div
+              className="absolute inset-0 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-600"
+              style={{ boxShadow: "0 0 50px rgba(76,176,255,0.2), inset 0 0 30px rgba(90,130,255,0.08)" }}
+            />
           </MagneticButton>
 
-          {/* Join room */}
           <MagneticButton
-            className="group flex items-center rounded-full border border-white/[0.08] overflow-hidden relative"
-            style={{ background: "rgba(255,255,255,0.03)", backdropFilter: "blur(16px)", transition: "all 0.5s cubic-bezier(0.16,1,0.3,1)" }}
+            className="group relative flex w-full items-center overflow-hidden rounded-full border border-cyan-300/24 bg-cyan-300/8 sm:w-auto"
+            style={{ backdropFilter: "blur(16px)", transition: "all 0.5s cubic-bezier(0.16,1,0.3,1)" }}
           >
             <input
-              type="text" value={code}
-              onChange={e => setCode(e.target.value.toUpperCase().replace(/[^A-Z]/g, "").slice(0, ROOM_CODE_LENGTH))}
-              placeholder="CODE" maxLength={ROOM_CODE_LENGTH}
-              className="bg-transparent w-[5.5rem] px-5 py-3.5 text-[13px] tracking-[0.35em] text-white/70 placeholder:text-white/15 outline-none text-center font-sans"
-              onKeyDown={e => { if (e.key === "Enter") handleJoin(); }}
-              onFocus={e => {
-                const p = e.currentTarget.parentElement;
-                if (p) { p.style.borderColor = "rgba(200,65,30,0.3)"; p.style.boxShadow = "0 0 50px rgba(200,55,28,0.1)"; }
-              }}
-              onBlur={e => {
-                const p = e.currentTarget.parentElement;
-                if (p) { p.style.borderColor = "rgba(255,255,255,0.08)"; p.style.boxShadow = "none"; }
+              type="text"
+              value={code}
+              onChange={(e) =>
+                setCode(e.target.value.toUpperCase().replace(/[^A-Z]/g, "").slice(0, ROOM_CODE_LENGTH))
+              }
+              placeholder="CODE"
+              maxLength={ROOM_CODE_LENGTH}
+              className="w-full bg-transparent px-5 py-3.5 text-center text-[13px] tracking-[0.35em] text-white/75 placeholder:text-white/18 outline-none font-sans sm:w-[7rem]"
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleJoin();
               }}
             />
             <button
               onClick={handleJoin}
-              className="flex items-center justify-center px-4 py-3.5 border-l border-white/[0.06] text-white/30 hover:text-red-400/70 hover:bg-white/[0.03] transition-all duration-300"
+              className="flex items-center justify-center border-l border-cyan-300/18 px-4 py-3.5 text-white/35 transition-all duration-300 hover:text-cyan-200 hover:bg-cyan-300/10"
             >
-              <ArrowRight className="w-3.5 h-3.5" />
+              <ArrowRight className="h-3.5 w-3.5" />
             </button>
           </MagneticButton>
         </div>
 
-        {/* Discord login for guests */}
         {!session?.user && (
-          <button onClick={() => signIn("discord")} className="group flex items-center gap-2 mt-10" style={{ opacity: 0, animation: "fadeIn 1s ease 2.8s forwards" }}>
-            <DiscordIcon className="w-3.5 h-3.5 text-white/15 group-hover:text-[#5865F2]/60 transition-colors duration-500" />
-            <span className="text-[11px] tracking-[0.12em] text-white/15 group-hover:text-white/40 transition-colors duration-500 font-sans">
+          <button
+            onClick={() => signIn("discord")}
+            className="group mt-10 flex items-center gap-2"
+            style={{ opacity: 0, animation: "fadeIn 1s ease 2.8s forwards" }}
+          >
+            <DiscordIcon className="h-3.5 w-3.5 text-white/18 transition-colors duration-500 group-hover:text-[#5865F2]/75" />
+            <span className="text-[11px] tracking-[0.12em] text-white/20 transition-colors duration-500 group-hover:text-white/45 font-sans">
               Connexion Discord
             </span>
           </button>

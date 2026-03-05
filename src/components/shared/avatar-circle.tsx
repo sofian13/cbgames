@@ -35,23 +35,27 @@ export function AvatarCircle({
 
   return (
     <div className={cn("relative", className)}>
-      <Avatar className={cn(sizeClasses[size], !isConnected && "opacity-40")}>
+      <Avatar
+        className={cn(
+          sizeClasses[size],
+          "ring-1 ring-cyan-300/25 shadow-[0_0_20px_rgba(80,216,255,0.12)]",
+          !isConnected && "opacity-45 grayscale"
+        )}
+      >
         {avatar && <AvatarImage src={avatar} alt={name} />}
-        <AvatarFallback className="bg-primary/20 text-primary text-xs font-bold">
+        <AvatarFallback className="bg-cyan-400/14 text-cyan-200 text-xs font-bold">
           {initials}
         </AvatarFallback>
       </Avatar>
-      {/* Online indicator */}
+
       <span
         className={cn(
           "absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-background",
-          isConnected ? "bg-green-500" : "bg-muted-foreground"
+          isConnected ? "bg-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.6)]" : "bg-white/35"
         )}
       />
-      {/* Host crown */}
-      {isHost && (
-        <span className="absolute -top-1 -right-1 text-xs">👑</span>
-      )}
+
+      {isHost && <span className="absolute -top-1 -right-1 text-xs">👑</span>}
     </div>
   );
 }

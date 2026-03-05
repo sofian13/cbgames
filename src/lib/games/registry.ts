@@ -154,7 +154,7 @@ export const GAMES: GameMeta[] = [
     name: "Undercover",
     description: "Découvre qui a le mot différent parmi les joueurs !",
     category: "social",
-    minPlayers: 3,
+    minPlayers: 1,
     maxPlayers: 8,
     icon: "🕶️",
     implemented: true,

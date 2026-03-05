@@ -72,7 +72,13 @@ export default function LobbyPage() {
   };
 
   return (
-    <div className="relative min-h-screen overflow-hidden" style={{ background: "#060606" }}>
+    <div
+      className="relative min-h-screen overflow-hidden"
+      style={{
+        background:
+          "radial-gradient(130% 85% at 50% -10%, rgba(90,160,255,0.22) 0%, transparent 60%), linear-gradient(180deg, #030710 0%, #040b1a 55%, #030710 100%)",
+      }}
+    >
       <FilmGrain />
       <EmberParticles mouse={mouseRef} count={30} />
       <EmberKeyframes />
@@ -80,17 +86,17 @@ export default function LobbyPage() {
       <div className="relative z-10 flex min-h-screen flex-col">
         <Header roomCode={code} isConnected={isConnected} />
         <main className="flex flex-1">
-          <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 p-6">
+          <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 p-6">
             {error && (
-              <div className="rounded-lg border border-red-500/20 bg-red-500/5 p-3 text-sm text-red-400 backdrop-blur-sm">
+              <div className="rounded-xl border border-red-500/25 bg-red-500/10 p-3 text-sm text-red-300 backdrop-blur-sm">
                 {error}
               </div>
             )}
 
             {/* Session scores */}
             {Object.keys(sessionScores).length > 0 && (
-              <div className="rounded-lg border border-white/[0.06] bg-white/[0.03] p-4 backdrop-blur-sm">
-                <h3 className="text-sm font-semibold text-white/40 uppercase tracking-wider mb-2 font-sans">
+              <div className="premium-panel rounded-2xl p-4">
+                <h3 className="mb-2 text-sm font-semibold text-white/55 uppercase tracking-[0.16em] font-sans">
                   Scores de session
                 </h3>
                 <div className="flex gap-4 flex-wrap">
@@ -99,7 +105,7 @@ export default function LobbyPage() {
                     .map((p) => (
                       <span key={p.id} className="text-sm font-sans">
                         <span className="font-medium text-white/80">{p.name}</span>
-                        <span className="text-ember ml-1">
+                        <span className="ml-1 text-cyan-300">
                           {sessionScores[p.id] ?? 0} pts
                         </span>
                       </span>

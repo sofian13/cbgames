@@ -261,7 +261,7 @@ export default function InfiltreGame({ roomCode, playerId, playerName }: GamePro
         <div className="text-center mb-6">
           {isMyTurn ? (
             <div>
-              <p className="text-xs text-amber-400/60 font-sans uppercase tracking-wider mb-2">
+              <p className="text-xs text-cyan-400/60 font-sans uppercase tracking-wider mb-2">
                 C&apos;est ton tour !
               </p>
               <p className="text-sm text-white/50 font-sans mb-4">
@@ -280,12 +280,12 @@ export default function InfiltreGame({ roomCode, playerId, playerName }: GamePro
                     autoFocus
                     autoComplete="off"
                     maxLength={50}
-                    className="flex-1 px-4 py-3 rounded-lg border border-white/[0.1] bg-white/[0.04] text-white font-sans text-sm placeholder:text-white/20 focus:outline-none focus:border-amber-500/50 focus:bg-white/[0.06] transition-all"
+                    className="flex-1 px-4 py-3 rounded-lg border border-white/[0.1] bg-white/[0.04] text-white font-sans text-sm placeholder:text-white/20 focus:outline-none focus:border-cyan-500/50 focus:bg-white/[0.06] transition-all"
                   />
                   <button
                     onClick={handleSubmitClue}
                     disabled={!clueInput.trim()}
-                    className="px-6 py-3 rounded-lg bg-amber-600 hover:bg-amber-500 disabled:bg-white/[0.06] disabled:text-white/20 text-white font-sans text-sm font-medium transition-all"
+                    className="px-6 py-3 rounded-lg bg-blue-500 hover:bg-cyan-500 disabled:bg-white/[0.06] disabled:text-white/20 text-white font-sans text-sm font-medium transition-all"
                   >
                     Envoyer
                   </button>
@@ -349,14 +349,14 @@ export default function InfiltreGame({ roomCode, playerId, playerName }: GamePro
                   className={cn(
                     "flex flex-col items-center gap-1 rounded-lg border p-2.5 min-w-[80px] transition-all",
                     p.isEliminated && "opacity-30",
-                    isCurrent && "border-amber-500/40 bg-amber-500/5 ring-1 ring-amber-500/20",
+                    isCurrent && "border-cyan-500/40 bg-cyan-500/5 ring-1 ring-cyan-500/20",
                     !isCurrent && hasGone && "border-white/[0.08] bg-white/[0.04]",
                     !isCurrent && !hasGone && "border-white/[0.06] bg-white/[0.02]"
                   )}
                 >
                   <span className={cn(
                     "text-xs font-medium truncate max-w-[70px] font-sans",
-                    isCurrent ? "text-amber-400" : "text-white/50"
+                    isCurrent ? "text-cyan-400" : "text-white/50"
                   )}>
                     {p.name}{p.id === playerId && " (toi)"}
                   </span>
@@ -369,7 +369,7 @@ export default function InfiltreGame({ roomCode, playerId, playerName }: GamePro
                           ? "Parle..."
                           : "En attente"}
                   </span>
-                  <span className="text-xs text-amber-400/80 font-mono">{p.score} pts</span>
+                  <span className="text-xs text-cyan-400/80 font-mono">{p.score} pts</span>
                 </div>
               );
             })}
@@ -570,7 +570,7 @@ export default function InfiltreGame({ roomCode, playerId, playerName }: GamePro
         )}
 
         {state.eliminatedIsInfiltre && (
-          <p className="text-xs text-amber-400/60 font-sans animate-pulse">
+          <p className="text-xs text-cyan-400/60 font-sans animate-pulse">
             L&apos;infiltr&eacute; va tenter de deviner le mot...
           </p>
         )}
@@ -763,7 +763,7 @@ export default function InfiltreGame({ roomCode, playerId, playerName }: GamePro
               key={p.id}
               className={cn(
                 "flex items-center justify-between rounded-lg border p-3 transition-all",
-                i === 0 && "border-amber-500/30 bg-amber-500/5",
+                i === 0 && "border-cyan-500/30 bg-cyan-500/5",
                 i > 0 && "border-white/[0.06] bg-white/[0.03]",
                 p.isEliminated && "opacity-60"
               )}
@@ -771,7 +771,7 @@ export default function InfiltreGame({ roomCode, playerId, playerName }: GamePro
               <div className="flex items-center gap-3">
                 <span className={cn(
                   "text-lg font-mono w-7",
-                  i === 0 ? "text-amber-400" : "text-white/20"
+                  i === 0 ? "text-cyan-400" : "text-white/20"
                 )}>
                   #{i + 1}
                 </span>
@@ -803,7 +803,7 @@ export default function InfiltreGame({ roomCode, playerId, playerName }: GamePro
               </div>
               <span className={cn(
                 "text-lg font-mono font-bold",
-                i === 0 ? "text-amber-400" : "text-white/40"
+                i === 0 ? "text-cyan-400" : "text-white/40"
               )}>
                 {p.score}
               </span>

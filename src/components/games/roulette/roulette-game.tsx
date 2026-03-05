@@ -33,8 +33,8 @@ function BarrelVisual({ chambers, bullets }: { chambers: number; bullets: number
         <circle cx="50" cy="50" r="8" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.1)" strokeWidth="0.5" />
         {slots.map((s) => (
           <circle key={s.index} cx={s.cx} cy={s.cy} r={s.isActive ? 7 : 5}
-            fill={!s.isActive ? "rgba(255,255,255,0.02)" : s.index < bullets ? "rgba(249,115,22,0.6)" : "rgba(255,255,255,0.08)"}
-            stroke={!s.isActive ? "rgba(255,255,255,0.04)" : s.index < bullets ? "rgba(249,115,22,0.8)" : "rgba(255,255,255,0.15)"}
+            fill={!s.isActive ? "rgba(255,255,255,0.02)" : s.index < bullets ? "rgba(80,216,255,0.6)" : "rgba(255,255,255,0.08)"}
+            stroke={!s.isActive ? "rgba(255,255,255,0.04)" : s.index < bullets ? "rgba(80,216,255,0.85)" : "rgba(255,255,255,0.15)"}
             strokeWidth="1" />
         ))}
       </svg>

@@ -9,9 +9,18 @@ const VOTE_TIMEOUT = 30000;
 const RESULT_DISPLAY_TIME = 4000;
 const MR_WHITE_GUESS_TIMEOUT = 20000;
 const GAME_END_DISPLAY_TIME = 5000;
+const LOCAL_BOT_TARGET_PLAYERS = 4;
+const BOT_NAME_POOL = [
+  "Bot Alpha",
+  "Bot Bravo",
+  "Bot Charlie",
+  "Bot Delta",
+  "Bot Echo",
+  "Bot Foxtrot",
+];
 
 // ── Word Pairs (70 pairs) ───────────────────────────────────
-const WORD_PAIRS: [string, string][] = [
+const CLASSIC_WORD_PAIRS: [string, string][] = [
   ["Chat", "Chien"],
   ["Coca-Cola", "Pepsi"],
   ["Netflix", "YouTube"],
@@ -84,6 +93,96 @@ const WORD_PAIRS: [string, string][] = [
   ["Banane", "Ananas"],
 ];
 
+const MANGA_WORD_PAIRS: [string, string][] = [
+  ["Naruto", "Sasuke"],
+  ["Goku", "Vegeta"],
+  ["Luffy", "Zoro"],
+  ["Itachi", "Madara"],
+  ["Gojo", "Sukuna"],
+  ["Tanjiro", "Zenitsu"],
+  ["Levi", "Eren"],
+  ["Mikasa", "Historia"],
+  ["Nami", "Robin"],
+  ["One Piece", "Bleach"],
+  ["Konoha", "Akatsuki"],
+  ["Shinigami", "Hollow"],
+  ["Sharingan", "Byakugan"],
+  ["Bankai", "Zanpakuto"],
+  ["Titan", "Geant"],
+  ["Jutsu", "Technique"],
+];
+
+const ADULT_WORD_PAIRS: [string, string][] = [
+  ["Tinder", "Bumble"],
+  ["Date", "Plan d'un soir"],
+  ["Crush", "Ex"],
+  ["Flirt", "Seduire"],
+  ["Love hotel", "Airbnb"],
+  ["String", "Culotte"],
+  ["Corset", "Porte-jarretelles"],
+  ["Strip-tease", "Lap dance"],
+  ["Fantasme", "Roleplay"],
+  ["Soumis", "Dominant"],
+  ["chaine", "Menottes"],
+  ["Latex", "Cuir"],
+  ["message mignon", "Nude"],
+  ["OnlyFans", "MYM"],
+ ["Johnny Sins", "Manuel Ferrara"],                                                                                                                                   
+  ["Mia Khalifa", "Angela White"],                                                                                                                                     
+  ["Lana Rhoades", "Abella Danger"],                                                                                                                                   
+["Riley Reid", "Adriana Chechik"],                                                                                                                                   
+   ["Pornhub", "Xvideos"],                                                                                                                                              
+    ["XHamster", "YouPorn"],                                                                                                                                             
+    ["Brazzers", "xnxx"],                                                                                                                                                                                                                                                                         
+    ["Jacquie et Michel", "youporn"],                                                                                                                                                                                                                                                                                
+    ["MYM", "OnlyFans"],                                                                                                                                                 
+["Tinder", "Bumble"],
+  ["Date", "Plan d'un soir"],
+  ["Crush", "Ex"],
+  ["18+", "Tout public"],
+  ["Sensuel", "Sexuel"],
+  ["Tease", "Provoc"],
+  ["Kiss", "French kiss"],
+  ["Preliminaires", "Baiser"],
+["Infidele", "Fidele"],
+  ["Desir", "Tentation"],
+
+
+];
+
+type ThemeId = "classic" | "manga" | "adult" | "mixed";
+
+const THEME_LABELS: Record<ThemeId, string> = {
+  classic: "Classique",
+  manga: "Anime / Manga",
+  adult: "-18",
+  mixed: "Melange total",
+};
+
+const THEME_DESCRIPTIONS: Record<ThemeId, string> = {
+  classic: "Mots generalistes",
+  manga: "Persos et references anime/manga",
+  adult: "References reservees adultes",
+  mixed: "Pioche dans tous les themes",
+};
+
+const THEME_PAIR_MAP: Record<Exclude<ThemeId, "mixed">, [string, string][]> = {
+  classic: CLASSIC_WORD_PAIRS,
+  manga: MANGA_WORD_PAIRS,
+  adult: ADULT_WORD_PAIRS,
+};
+
+function getWordPairsForTheme(themeId: ThemeId): [string, string][] {
+  if (themeId === "mixed") {
+    return [
+      ...CLASSIC_WORD_PAIRS,
+      ...MANGA_WORD_PAIRS,
+      ...ADULT_WORD_PAIRS,
+    ];
+  }
+  return THEME_PAIR_MAP[themeId];
+}
+
 // ── Types ───────────────────────────────────────────────────
 
 type Role = "civilian" | "undercover" | "mrwhite";
@@ -120,6 +219,8 @@ interface ClueEntry {
 
 export class UndercoverGame extends BaseGame {
   ucPlayers: Map<string, UndercoverPlayer> = new Map();
+  botIds: Set<string> = new Set();
+  selectedThemeId: ThemeId = "mixed";
   phase: GamePhase = "waiting";
   round = 0;
   civilianWord = "";
@@ -138,24 +239,46 @@ export class UndercoverGame extends BaseGame {
   resultTimeout: ReturnType<typeof setTimeout> | null = null;
   mrWhiteTimeout: ReturnType<typeof setTimeout> | null = null;
   timerInterval: ReturnType<typeof setInterval> | null = null;
+  botActionTimeouts: Set<ReturnType<typeof setTimeout>> = new Set();
   timeLeft = 0;
 
   start() {
-    const playerCount = this.players.size;
+    const humanPlayerCount = this.players.size;
 
-    if (playerCount < 3) {
+    if (humanPlayerCount < 1) {
       this.broadcast({
         type: "game-error",
-        payload: { message: "Il faut au moins 3 joueurs pour jouer." },
+        payload: { message: "Aucun joueur connecté." },
       });
       return;
     }
 
     this.started = true;
+    this.ucPlayers.clear();
+    this.botIds.clear();
+    this.clearBotActionTimeouts();
 
-    // Pick a random word pair
-    const pairIndex = Math.floor(Math.random() * WORD_PAIRS.length);
-    const pair = WORD_PAIRS[pairIndex];
+    const roster: { id: string; name: string }[] = Array.from(
+      this.players.values()
+    ).map((p) => ({ id: p.id, name: p.name }));
+
+    if (humanPlayerCount < 3) {
+      const botCount = Math.max(0, LOCAL_BOT_TARGET_PLAYERS - humanPlayerCount);
+      for (let i = 0; i < botCount; i++) {
+        const botId = `bot-${i + 1}`;
+        const botName = BOT_NAME_POOL[i] ?? `Bot ${i + 1}`;
+        roster.push({ id: botId, name: botName });
+        this.botIds.add(botId);
+      }
+    }
+
+    const playerCount = roster.length;
+
+    // Pick a random word pair from selected theme
+    const pairs = getWordPairsForTheme(this.selectedThemeId);
+    const safePairs = pairs.length > 0 ? pairs : CLASSIC_WORD_PAIRS;
+    const pairIndex = Math.floor(Math.random() * safePairs.length);
+    const pair = safePairs[pairIndex];
     if (Math.random() < 0.5) {
       this.civilianWord = pair[0];
       this.undercoverWord = pair[1];
@@ -165,7 +288,7 @@ export class UndercoverGame extends BaseGame {
     }
 
     // Assign roles
-    const playerIds = Array.from(this.players.keys());
+    const playerIds = roster.map((p) => p.id);
     this.shuffleArray(playerIds);
 
     let undercoverCount: number;
@@ -187,7 +310,8 @@ export class UndercoverGame extends BaseGame {
 
     for (let i = 0; i < playerIds.length; i++) {
       const pid = playerIds[i];
-      const player = this.players.get(pid)!;
+      const player = roster.find((p) => p.id === pid);
+      if (!player) continue;
       let role: Role = "civilian";
       let word: string | null = this.civilianWord;
 
@@ -213,7 +337,7 @@ export class UndercoverGame extends BaseGame {
     }
 
     // Randomize turn order
-    this.turnOrder = Array.from(this.players.keys());
+    this.turnOrder = Array.from(this.ucPlayers.keys());
     this.shuffleArray(this.turnOrder);
 
     // Start role reveal
@@ -243,6 +367,7 @@ export class UndercoverGame extends BaseGame {
     this.advanceToNextAliveDescriber();
     this.startDescribeTimer();
     this.broadcastPersonalizedState();
+    this.scheduleBotDescribeIfNeeded();
   }
 
   advanceToNextAliveDescriber(): boolean {
@@ -296,6 +421,7 @@ export class UndercoverGame extends BaseGame {
     } else {
       this.startDescribeTimer();
       this.broadcastPersonalizedState();
+      this.scheduleBotDescribeIfNeeded();
     }
   }
 
@@ -324,6 +450,7 @@ export class UndercoverGame extends BaseGame {
     }, VOTE_TIMEOUT);
 
     this.broadcastPersonalizedState();
+    this.scheduleBotVotes();
   }
 
   resolveVotes() {
@@ -392,6 +519,8 @@ export class UndercoverGame extends BaseGame {
           this.afterVoteResult();
         }, RESULT_DISPLAY_TIME);
       }, MR_WHITE_GUESS_TIMEOUT);
+
+      this.scheduleBotMrWhiteGuess(ep.id);
       return;
     }
 
@@ -478,10 +607,174 @@ export class UndercoverGame extends BaseGame {
 
   // ── Message handling ──────────────────────────────────────
 
+  isBot(playerId: string): boolean {
+    return this.botIds.has(playerId);
+  }
+
+  queueBotAction(action: () => void, minDelayMs = 900, maxDelayMs = 2200) {
+    const delay =
+      minDelayMs + Math.floor(Math.random() * (maxDelayMs - minDelayMs + 1));
+    const timeout = setTimeout(() => {
+      this.botActionTimeouts.delete(timeout);
+      action();
+    }, delay);
+    this.botActionTimeouts.add(timeout);
+  }
+
+  scheduleBotDescribeIfNeeded() {
+    if (this.phase !== "describe") return;
+    const currentPid = this.turnOrder[this.currentDescriberIndex];
+    if (!currentPid || !this.isBot(currentPid)) return;
+
+    this.queueBotAction(() => {
+      const current = this.turnOrder[this.currentDescriberIndex];
+      if (current !== currentPid || this.phase !== "describe") return;
+
+      const p = this.ucPlayers.get(currentPid);
+      if (!p || !p.alive || p.hasDescribed) return;
+
+      const clue = this.generateBotClue(p.role);
+      p.description = clue;
+      p.hasDescribed = true;
+      this.clueHistory.push({
+        playerId: p.id,
+        playerName: p.name,
+        text: clue,
+        round: this.round,
+      });
+
+      this.clearTimers();
+      this.moveToNextDescriber();
+    });
+  }
+
+  scheduleBotVotes() {
+    if (this.phase !== "vote") return;
+
+    for (const botId of this.botIds) {
+      const bot = this.ucPlayers.get(botId);
+      if (!bot || !bot.alive || bot.hasVoted) continue;
+
+      this.queueBotAction(() => {
+        if (this.phase !== "vote") return;
+        const currentBot = this.ucPlayers.get(botId);
+        if (!currentBot || !currentBot.alive || currentBot.hasVoted) return;
+
+        const aliveTargets = Array.from(this.ucPlayers.values()).filter(
+          (p) => p.alive && p.id !== botId
+        );
+        if (aliveTargets.length === 0) return;
+
+        const target =
+          aliveTargets[Math.floor(Math.random() * aliveTargets.length)];
+        currentBot.vote = target.id;
+        currentBot.hasVoted = true;
+
+        this.broadcastPersonalizedState();
+
+        const allVoted = Array.from(this.ucPlayers.values())
+          .filter((p) => p.alive)
+          .every((p) => p.hasVoted);
+        if (allVoted) {
+          this.resolveVotes();
+        }
+      });
+    }
+  }
+
+  scheduleBotMrWhiteGuess(playerId: string) {
+    if (!this.isBot(playerId) || this.phase !== "mrwhite-guess") return;
+
+    this.queueBotAction(
+      () => {
+        if (this.phase !== "mrwhite-guess") return;
+        const bot = this.ucPlayers.get(playerId);
+        if (!bot || bot.role !== "mrwhite") return;
+
+        const guessPool = [this.civilianWord, this.undercoverWord];
+        const guess =
+          Math.random() < 0.35
+            ? this.civilianWord
+            : guessPool[Math.floor(Math.random() * guessPool.length)];
+        this.applyMrWhiteGuess(guess);
+      },
+      1200,
+      2600
+    );
+  }
+
+  applyMrWhiteGuess(guessText: string) {
+    const guess = guessText.trim().toLowerCase();
+    const correct = guess === this.civilianWord.toLowerCase();
+
+    this.clearTimers();
+    this.mrWhiteGuessCorrect = correct;
+
+    if (correct) {
+      this.winners = "mrwhite";
+      this.phase = "vote-result";
+      this.broadcastPersonalizedState();
+
+      this.resultTimeout = setTimeout(() => {
+        this.endUndercoverGame();
+      }, RESULT_DISPLAY_TIME);
+    } else {
+      this.phase = "vote-result";
+      this.broadcastPersonalizedState();
+
+      this.resultTimeout = setTimeout(() => {
+        this.afterVoteResult();
+      }, RESULT_DISPLAY_TIME);
+    }
+  }
+
+  generateBotClue(role: Role): string {
+    const commonClues = [
+      "C'est quelque chose de tres connu.",
+      "On peut le voir souvent.",
+      "Le mot est assez simple.",
+      "Je pense que tout le monde connait.",
+      "C'est plutot facile a imaginer.",
+    ];
+    const undercoverClues = [
+      "Je dirais que c'est un peu similaire.",
+      "Ca me fait penser a quelque chose de proche.",
+      "C'est dans la meme idee.",
+    ];
+    const mrWhiteClues = [
+      "Je dirais que c'est quelque chose de courant.",
+      "On en entend parler tres souvent.",
+      "Je vais rester vague sur ce tour.",
+    ];
+
+    if (role === "mrwhite") {
+      return mrWhiteClues[Math.floor(Math.random() * mrWhiteClues.length)];
+    }
+    if (role === "undercover" && Math.random() < 0.7) {
+      return undercoverClues[Math.floor(Math.random() * undercoverClues.length)];
+    }
+    return commonClues[Math.floor(Math.random() * commonClues.length)];
+  }
+
   onMessage(payload: Record<string, unknown>, sender: Connection) {
     const action = payload.action as string;
     const senderPlayer = this.findPlayerByConnection(sender.id);
     if (!senderPlayer) return;
+
+    if (!this.started || this.phase === "waiting") {
+      if (action === "set-theme") {
+        const themeId = payload.themeId as ThemeId;
+        if (!themeId || !Object.keys(THEME_LABELS).includes(themeId)) return;
+        this.selectedThemeId = themeId;
+        this.broadcastPersonalizedState();
+        return;
+      }
+
+      if (action === "start-game") {
+        this.start();
+        return;
+      }
+    }
 
     const pid = senderPlayer.id;
     const ucp = this.ucPlayers.get(pid);
@@ -541,28 +834,8 @@ export class UndercoverGame extends BaseGame {
         if (this.phase !== "mrwhite-guess") return;
         if (ucp.role !== "mrwhite") return;
 
-        const guess = ((payload.guess as string) || "").trim().toLowerCase();
-        const correct = guess === this.civilianWord.toLowerCase();
-
-        this.clearTimers();
-        this.mrWhiteGuessCorrect = correct;
-
-        if (correct) {
-          this.winners = "mrwhite";
-          this.phase = "vote-result";
-          this.broadcastPersonalizedState();
-
-          this.resultTimeout = setTimeout(() => {
-            this.endUndercoverGame();
-          }, RESULT_DISPLAY_TIME);
-        } else {
-          this.phase = "vote-result";
-          this.broadcastPersonalizedState();
-
-          this.resultTimeout = setTimeout(() => {
-            this.afterVoteResult();
-          }, RESULT_DISPLAY_TIME);
-        }
+        const guess = (payload.guess as string) || "";
+        this.applyMrWhiteGuess(guess);
         break;
       }
     }
@@ -580,7 +853,44 @@ export class UndercoverGame extends BaseGame {
   }
 
   getStateForPlayer(playerId: string): Record<string, unknown> {
+    if (this.phase === "waiting" || !this.started) {
+      return {
+        phase: "waiting",
+        round: 0,
+        players: Array.from(this.players.values()).map((p) => ({
+          id: p.id,
+          name: p.name,
+          alive: true,
+          hasDescribed: false,
+          hasVoted: false,
+          description: null,
+          role: null,
+          word: null,
+        })),
+        turnOrder: [],
+        currentDescriberId: null,
+        clueHistory: [],
+        timeLeft: 0,
+        myRole: null,
+        myWord: null,
+        eliminatedPlayerId: null,
+        eliminatedRole: null,
+        mrWhiteGuessCorrect: null,
+        winners: null,
+        civilianWord: null,
+        undercoverWord: null,
+        selectedThemeId: this.selectedThemeId,
+        availableThemes: this.getAvailableThemes(),
+      };
+    }
+
     const me = this.ucPlayers.get(playerId);
+    const visibleMyRole: Role | null =
+      this.phase === "game-over"
+        ? (me?.role ?? null)
+        : me?.role === "mrwhite"
+          ? "mrwhite"
+          : null;
 
     const players = Array.from(this.ucPlayers.values()).map((p) => {
       const isMe = p.id === playerId;
@@ -594,9 +904,11 @@ export class UndercoverGame extends BaseGame {
         hasVoted: p.hasVoted,
         description: p.description,
         role:
-          isMe || isEliminated || this.phase === "game-over"
-            ? p.role
-            : null,
+          isMe
+            ? visibleMyRole
+            : isEliminated || this.phase === "game-over"
+              ? p.role
+              : null,
         word:
           isMe
             ? p.word
@@ -622,7 +934,7 @@ export class UndercoverGame extends BaseGame {
       currentDescriberId,
       clueHistory: this.clueHistory,
       timeLeft: this.timeLeft,
-      myRole: me?.role ?? null,
+      myRole: visibleMyRole,
       myWord: me?.word ?? null,
       eliminatedPlayerId: this.eliminatedPlayerId,
       eliminatedRole: this.eliminatedRole,
@@ -630,12 +942,14 @@ export class UndercoverGame extends BaseGame {
       winners: this.winners,
       civilianWord: this.phase === "game-over" ? this.civilianWord : null,
       undercoverWord: this.phase === "game-over" ? this.undercoverWord : null,
+      selectedThemeId: this.selectedThemeId,
+      availableThemes: this.getAvailableThemes(),
     };
   }
 
   getState(): Record<string, unknown> {
-    if (!this.started) {
-      return { phase: "waiting", players: [], round: 0 };
+    if (!this.started || this.phase === "waiting") {
+      return this.getStateForPlayer("");
     }
     return {
       phase: this.phase,
@@ -662,6 +976,8 @@ export class UndercoverGame extends BaseGame {
       winners: this.winners,
       civilianWord: null,
       undercoverWord: null,
+      selectedThemeId: this.selectedThemeId,
+      availableThemes: this.getAvailableThemes(),
     };
   }
 
@@ -672,6 +988,14 @@ export class UndercoverGame extends BaseGame {
       if (player.connectionId === connectionId) return player;
     }
     return null;
+  }
+
+  getAvailableThemes() {
+    return (Object.keys(THEME_LABELS) as ThemeId[]).map((id) => ({
+      id,
+      label: THEME_LABELS[id],
+      description: THEME_DESCRIPTIONS[id],
+    }));
   }
 
   shuffleArray<T>(arr: T[]) {
@@ -690,11 +1014,19 @@ export class UndercoverGame extends BaseGame {
 
   clearTimers() {
     this.clearTimerInterval();
+    this.clearBotActionTimeouts();
     if (this.revealTimeout) { clearTimeout(this.revealTimeout); this.revealTimeout = null; }
     if (this.describeTimeout) { clearTimeout(this.describeTimeout); this.describeTimeout = null; }
     if (this.voteTimeout) { clearTimeout(this.voteTimeout); this.voteTimeout = null; }
     if (this.resultTimeout) { clearTimeout(this.resultTimeout); this.resultTimeout = null; }
     if (this.mrWhiteTimeout) { clearTimeout(this.mrWhiteTimeout); this.mrWhiteTimeout = null; }
+  }
+
+  clearBotActionTimeouts() {
+    for (const timeout of this.botActionTimeouts) {
+      clearTimeout(timeout);
+    }
+    this.botActionTimeouts.clear();
   }
 
   cleanup() {

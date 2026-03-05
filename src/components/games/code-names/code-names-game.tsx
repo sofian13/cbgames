@@ -478,8 +478,8 @@ export default function CodeNamesGame({ roomCode, playerId, playerName }: GamePr
 
       {/* Spymaster indicator */}
       {state.isSpymaster && state.phase !== "game-over" && (
-        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 px-4 py-2 rounded-full border border-amber-500/30 bg-amber-500/10 backdrop-blur-sm">
-          <p className="text-xs text-amber-400 font-sans font-medium">Tu es l&apos;Espion - tu vois la carte secrete</p>
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 px-4 py-2 rounded-full border border-cyan-500/30 bg-cyan-500/10 backdrop-blur-sm">
+          <p className="text-xs text-cyan-400 font-sans font-medium">Tu es l&apos;Espion - tu vois la carte secrete</p>
         </div>
       )}
 

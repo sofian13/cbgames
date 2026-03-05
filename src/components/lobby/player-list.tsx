@@ -17,7 +17,7 @@ interface PlayerListProps {
 export function PlayerList({ players, currentPlayerId, isHost, onKick }: PlayerListProps) {
   return (
     <div className="space-y-2">
-      <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+      <h3 className="text-sm font-semibold text-white/55 uppercase tracking-[0.16em]">
         Joueurs ({players.length}/8)
       </h3>
       <div className="grid gap-2">
@@ -25,8 +25,8 @@ export function PlayerList({ players, currentPlayerId, isHost, onKick }: PlayerL
           <div
             key={player.id}
             className={cn(
-              "flex items-center gap-3 rounded-lg border border-border p-3 transition-colors",
-              player.id === currentPlayerId && "border-primary/50 bg-primary/5"
+              "premium-panel-soft flex items-center gap-3 rounded-xl border p-3 transition-colors",
+              player.id === currentPlayerId && "border-cyan-300/50 bg-cyan-300/10"
             )}
           >
             <AvatarCircle
@@ -53,7 +53,7 @@ export function PlayerList({ players, currentPlayerId, isHost, onKick }: PlayerL
             </div>
             <div className="flex items-center gap-2">
               {player.isReady && (
-                <Badge className="bg-green-500/20 text-green-400 border-green-500/30">
+                <Badge className="border-emerald-400/35 bg-emerald-400/15 text-emerald-200">
                   Prêt
                 </Badge>
               )}
@@ -61,7 +61,7 @@ export function PlayerList({ players, currentPlayerId, isHost, onKick }: PlayerL
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                  className="h-7 w-7 border border-cyan-300/18 bg-cyan-300/8 text-white/45 hover:text-red-300 hover:bg-red-500/15"
                   onClick={() => onKick(player.id)}
                 >
                   <X className="h-4 w-4" />
@@ -74,3 +74,4 @@ export function PlayerList({ players, currentPlayerId, isHost, onKick }: PlayerL
     </div>
   );
 }
+

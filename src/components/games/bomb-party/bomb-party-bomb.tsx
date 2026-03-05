@@ -37,7 +37,7 @@ export function BombPartyBomb({ syllable, timeLeft, isMyTurn }: BombPartyBombPro
             className={cn(
               "absolute -top-2 left-1/2 -translate-x-1/2 h-3 w-3 rounded-full",
               isUrgent
-                ? "bg-orange-500 animate-ping"
+                ? "bg-cyan-400 animate-ping"
                 : "bg-yellow-500/60 animate-pulse"
             )}
           />

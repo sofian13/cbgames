@@ -17,17 +17,17 @@ export function Header({ roomCode, isConnected }: HeaderProps) {
   const { data: session } = useSession();
 
   return (
-    <header className="sticky top-0 z-40 border-b border-white/[0.06] bg-black/20 backdrop-blur-xl">
-      <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4">
+    <header className="sticky top-0 z-40 border-b border-cyan-300/15 bg-[#030813]/76 backdrop-blur-xl">
+      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
         <Link href="/" className="flex items-center gap-2.5">
           <div
-            className="w-5 h-5 rounded-full"
+            className="h-6 w-6 rounded-full"
             style={{
-              border: "1.5px solid rgba(200,65,30,0.35)",
-              boxShadow: "0 0 12px rgba(200,55,28,0.2)",
+              border: "1.5px solid rgba(80,216,255,0.55)",
+              boxShadow: "0 0 24px rgba(64,170,255,0.45), inset 0 0 14px rgba(80,216,255,0.18)",
             }}
           />
-          <span className="text-sm font-semibold tracking-[0.1em] text-white/85 font-serif">
+          <span className="text-sm font-semibold tracking-[0.2em] text-cyan-100/95 font-serif premium-text-glow">
             AF GAMES
           </span>
         </Link>
@@ -49,7 +49,7 @@ export function Header({ roomCode, isConnected }: HeaderProps) {
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 text-white/30 hover:text-white/60 hover:bg-white/[0.04]"
+                className="h-8 w-8 border border-cyan-300/20 bg-cyan-300/10 text-cyan-100/45 hover:text-cyan-100 hover:bg-cyan-400/20"
                 onClick={() => signOut()}
               >
                 <LogOut className="h-4 w-4" />
@@ -59,7 +59,7 @@ export function Header({ roomCode, isConnected }: HeaderProps) {
             <Button
               variant="outline"
               size="sm"
-              className="border-white/[0.08] bg-white/[0.03] text-white/60 hover:text-white hover:bg-white/[0.06] hover:border-white/[0.12]"
+              className="border-cyan-300/25 bg-cyan-400/10 text-cyan-100/80 hover:text-white hover:bg-cyan-400/20 hover:border-cyan-300/45"
               onClick={() => signIn("discord")}
             >
               Discord

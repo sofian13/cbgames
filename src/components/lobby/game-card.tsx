@@ -22,10 +22,10 @@ export function GameCard({ game, isSelected, isHost, onSelect }: GameCardProps) 
     <>
       <Card
         className={cn(
-          "cursor-pointer transition-all hover:border-primary/50 relative",
-          isSelected && "border-primary bg-primary/5 ring-1 ring-primary/20",
+          "cursor-pointer transition-all relative premium-panel-soft",
+          isSelected && "border-cyan-300/50 bg-cyan-300/12 ring-1 ring-cyan-300/35 shadow-[0_0_30px_rgba(80,216,255,0.2)]",
           disabled && "opacity-50 cursor-not-allowed hover:border-border",
-          !disabled && "hover:scale-[1.02]"
+          !disabled && "hover:-translate-y-0.5 hover:border-cyan-300/45"
         )}
         onClick={() => !disabled && onSelect()}
       >
@@ -47,7 +47,7 @@ export function GameCard({ game, isSelected, isHost, onSelect }: GameCardProps) 
                 {game.rules.length > 0 && (
                   <button
                     onClick={(e) => { e.stopPropagation(); setShowRules(true); }}
-                    className="flex items-center gap-1 text-[11px] text-white/30 hover:text-ember transition-colors"
+                    className="flex items-center gap-1 text-[11px] text-white/35 hover:text-cyan-200 transition-colors"
                   >
                     <BookOpen className="h-3 w-3" />
                     Règles
@@ -62,7 +62,7 @@ export function GameCard({ game, isSelected, isHost, onSelect }: GameCardProps) 
       {/* Rules modal */}
       {showRules && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setShowRules(false)}>
-          <div className="relative w-full max-w-md mx-4 rounded-xl border border-white/[0.08] bg-[#0a0a0a] p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+          <div className="relative w-full max-w-md mx-4 rounded-2xl border border-cyan-300/22 bg-[#071023]/96 p-6 shadow-2xl premium-panel" onClick={(e) => e.stopPropagation()}>
             <button onClick={() => setShowRules(false)} className="absolute top-3 right-3 text-white/30 hover:text-white/60 transition-colors">
               <X className="h-5 w-5" />
             </button>

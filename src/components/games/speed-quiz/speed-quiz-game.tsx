@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils";
 
 const DIFF_COLORS = {
   easy: { bg: "bg-emerald-500/10", border: "border-emerald-500/30", text: "text-emerald-400", label: "Facile" },
-  medium: { bg: "bg-amber-500/10", border: "border-amber-500/30", text: "text-amber-400", label: "Moyen" },
+  medium: { bg: "bg-cyan-500/10", border: "border-cyan-500/30", text: "text-cyan-400", label: "Moyen" },
   hard: { bg: "bg-red-500/10", border: "border-red-500/30", text: "text-red-400", label: "Difficile" },
 };
 
@@ -204,8 +204,8 @@ export default function SpeedQuizGame({
 
         {/* Reference answer hint for host */}
         {isHost && state.referenceAnswers && (
-          <div className="px-3 py-1.5 rounded border border-amber-500/20 bg-amber-500/5">
-            <p className="text-[10px] text-amber-400/60 font-sans">
+          <div className="px-3 py-1.5 rounded border border-cyan-500/20 bg-cyan-500/5">
+            <p className="text-[10px] text-cyan-400/60 font-sans">
               Indice : {state.referenceAnswers.join(" / ")}
             </p>
           </div>
@@ -343,7 +343,7 @@ export default function SpeedQuizGame({
               .sort((a: SpeedQuizPlayer, b: SpeedQuizPlayer) => b.score - a.score)
               .map((p: SpeedQuizPlayer, i: number) => (
                 <div key={p.id} className="text-center">
-                  <span className={cn("text-xs font-sans", i === 0 ? "text-amber-400" : "text-white/40")}>
+                  <span className={cn("text-xs font-sans", i === 0 ? "text-cyan-400" : "text-white/40")}>
                     {p.name}
                   </span>
                   <p className={cn("text-2xl font-mono font-bold", i === 0 ? "text-ember" : "text-white/60")}>

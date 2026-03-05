@@ -52,6 +52,80 @@ interface UndercoverState {
   winners: Role | null;
   civilianWord: string | null;
   undercoverWord: string | null;
+  selectedThemeId?: "classic" | "manga" | "adult" | "mixed";
+  availableThemes?: Array<{
+    id: "classic" | "manga" | "adult" | "mixed";
+    label: string;
+    description: string;
+  }>;
+}
+
+type ThemeId = "classic" | "manga" | "adult" | "mixed";
+
+interface LocalPlayer {
+  id: string;
+  name: string;
+  role: Role;
+  word: string | null;
+  alive: boolean;
+}
+
+interface LocalSecretCard {
+  role: Role;
+  word: string | null;
+}
+
+type LocalPhase =
+  | "setup"
+  | "cards"
+  | "order"
+  | "describe"
+  | "vote"
+  | "vote-result"
+  | "game-over";
+
+const LOCAL_WORD_PAIRS: Record<Exclude<ThemeId, "mixed">, [string, string][]> = {
+  classic: [
+    ["Chat", "Chien"],
+    ["Pizza", "Burger"],
+    ["Paris", "Londres"],
+    ["Cinema", "Theatre"],
+    ["Soleil", "Lune"],
+  ],
+  manga: [
+    ["Naruto", "Sasuke"],
+    ["Goku", "Vegeta"],
+    ["Luffy", "Zoro"],
+    ["Gojo", "Sukuna"],
+    ["One Piece", "Bleach"],
+  ],
+  adult: [
+    ["OnlyFans", "Fansly"],
+    ["Pornhub", "Xvideos"],
+    ["Johnny Sins", "Rocco Siffredi"],
+    ["Mia Khalifa", "Angela White"],
+    ["Tinder", "Bumble"],
+  ],
+};
+
+function getLocalPairs(themeId: ThemeId): [string, string][] {
+  if (themeId === "mixed") {
+    return [
+      ...LOCAL_WORD_PAIRS.classic,
+      ...LOCAL_WORD_PAIRS.manga,
+      ...LOCAL_WORD_PAIRS.adult,
+    ];
+  }
+  return LOCAL_WORD_PAIRS[themeId];
+}
+
+function shuffle<T>(arr: T[]): T[] {
+  const copy = [...arr];
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy;
 }
 
 // ── Helpers ─────────────────────────────────────────────────
@@ -110,6 +184,39 @@ export default function UndercoverGame({
   const prevRoundRef = useRef(0);
   const prevPhaseRef = useRef<GamePhase>("waiting");
   const clueListRef = useRef<HTMLDivElement>(null);
+
+  // Single-phone local mode
+  const [localMode, setLocalMode] = useState(false);
+  const [localPhase, setLocalPhase] = useState<LocalPhase>("setup");
+  const [localTheme, setLocalTheme] = useState<ThemeId>("mixed");
+  const [localNamesInput, setLocalNamesInput] = useState(
+    "Alice\nBob\nCharlie\nDina\nEli\nFanny"
+  );
+  const [localPlayers, setLocalPlayers] = useState<LocalPlayer[]>([]);
+  const [localTurnOrder, setLocalTurnOrder] = useState<string[]>([]);
+  const [localCurrentIndex, setLocalCurrentIndex] = useState(0);
+  const [localRound, setLocalRound] = useState(1);
+  const [localClues, setLocalClues] = useState<ClueEntry[]>([]);
+  const [localCardTurnIndex, setLocalCardTurnIndex] = useState(0);
+  const [localSecretDeck, setLocalSecretDeck] = useState<LocalSecretCard[]>([]);
+  const [localCardReveal, setLocalCardReveal] = useState<{
+    playerName: string;
+    role: Role;
+    word: string | null;
+  } | null>(null);
+  const [localCardFlip, setLocalCardFlip] = useState(false);
+  const [localDrawnSlot, setLocalDrawnSlot] = useState<number | null>(null);
+  const [localReviewOpen, setLocalReviewOpen] = useState(false);
+  const [localReviewPlayerId, setLocalReviewPlayerId] = useState<string | null>(null);
+  const [localVoteQueue, setLocalVoteQueue] = useState<string[]>([]);
+  const [localVoteIndex, setLocalVoteIndex] = useState(0);
+  const [localSelectedTarget, setLocalSelectedTarget] = useState<string | null>(null);
+  const [localVotes, setLocalVotes] = useState<Record<string, string>>({});
+  const [localPassToId, setLocalPassToId] = useState<string | null>(null);
+  const [localEliminatedId, setLocalEliminatedId] = useState<string | null>(null);
+  const [localEliminatedRole, setLocalEliminatedRole] = useState<Role | null>(null);
+  const [localWinners, setLocalWinners] = useState<Role | null>(null);
+  const [showWordPeek, setShowWordPeek] = useState(false);
 
   // Reset state on phase/round changes
   useEffect(() => {
@@ -195,13 +302,752 @@ export default function UndercoverGame({
     [handleMrWhiteGuess]
   );
 
+  const getLocalCurrentPlayer = useCallback(() => {
+    const id = localTurnOrder[localCurrentIndex];
+    return localPlayers.find((p) => p.id === id) ?? null;
+  }, [localCurrentIndex, localPlayers, localTurnOrder]);
+
+  const getLocalAlive = useCallback(
+    () => localPlayers.filter((p) => p.alive),
+    [localPlayers]
+  );
+
+  const buildDescribeOrder = useCallback((playersList: LocalPlayer[]) => {
+    const aliveIds = playersList.filter((p) => p.alive).map((p) => p.id);
+    if (aliveIds.length <= 1) return aliveIds;
+
+    const first = playersList.find((p) => p.id === aliveIds[0]);
+    if (first?.role !== "mrwhite") return aliveIds;
+
+    const nextNonMrWhiteIndex = aliveIds.findIndex((id) => {
+      const player = playersList.find((p) => p.id === id);
+      return player?.role !== "mrwhite";
+    });
+    if (nextNonMrWhiteIndex <= 0) return aliveIds;
+
+    return [
+      ...aliveIds.slice(nextNonMrWhiteIndex),
+      ...aliveIds.slice(0, nextNonMrWhiteIndex),
+    ];
+  }, []);
+
+  const startLocalGame = useCallback(() => {
+    const names = localNamesInput
+      .split("\n")
+      .map((n) => n.trim())
+      .filter(Boolean)
+      .slice(0, 8);
+
+    if (names.length < 3) return;
+
+    const pairs = getLocalPairs(localTheme);
+    const pair = pairs[Math.floor(Math.random() * pairs.length)];
+    const civilianWord = Math.random() < 0.5 ? pair[0] : pair[1];
+    const undercoverWord = civilianWord === pair[0] ? pair[1] : pair[0];
+
+    const players: LocalPlayer[] = names.map((name, i) => ({
+      id: `local-${i + 1}`,
+      name,
+      role: "civilian",
+      word: null,
+      alive: true,
+    }));
+
+    const baseRoles: Role[] = Array.from({ length: players.length }, (_, i) =>
+      i === 0 ? "undercover" : "civilian"
+    );
+    if (players.length >= 6 && Math.random() < 0.45) {
+      const idx = 1 + Math.floor(Math.random() * (players.length - 1));
+      baseRoles[idx] = "mrwhite";
+    }
+
+    const secretDeck = shuffle(
+      baseRoles.map((role) => ({
+        role,
+        word:
+          role === "mrwhite"
+            ? null
+            : role === "undercover"
+              ? undercoverWord
+              : civilianWord,
+      }))
+    );
+
+    setLocalPlayers(players);
+    setLocalTurnOrder([]);
+    setLocalCurrentIndex(0);
+    setLocalRound(1);
+    setLocalClues([]);
+    setLocalCardTurnIndex(0);
+    setLocalSecretDeck(secretDeck);
+    setLocalCardReveal(null);
+    setLocalCardFlip(false);
+    setLocalDrawnSlot(null);
+    setLocalReviewOpen(false);
+    setLocalReviewPlayerId(null);
+    setLocalVotes({});
+    setLocalPassToId(null);
+    setLocalVoteQueue([]);
+    setLocalVoteIndex(0);
+    setLocalSelectedTarget(null);
+    setLocalEliminatedId(null);
+    setLocalEliminatedRole(null);
+    setLocalWinners(null);
+    setShowWordPeek(false);
+    setLocalPassToId(players[0]?.id ?? null);
+    setLocalPhase("cards");
+    setLocalMode(true);
+  }, [buildDescribeOrder, localNamesInput, localTheme]);
+
+  const beginLocalVote = useCallback(() => {
+    setLocalSelectedTarget(null);
+    setLocalPhase("vote");
+  }, []);
+
+  const goNextDescribeTurn = useCallback(() => {
+    let nextIndex = localCurrentIndex + 1;
+    while (
+      nextIndex < localTurnOrder.length &&
+      !localPlayers.find((p) => p.id === localTurnOrder[nextIndex] && p.alive)
+    ) {
+      nextIndex++;
+    }
+
+    if (nextIndex >= localTurnOrder.length) {
+      beginLocalVote();
+      return;
+    }
+    setLocalCurrentIndex(nextIndex);
+    setLocalPassToId(localTurnOrder[nextIndex] ?? null);
+  }, [beginLocalVote, localCurrentIndex, localPlayers, localTurnOrder]);
+
+  const submitLocalClue = useCallback(() => {
+    const current = getLocalCurrentPlayer();
+    if (!current) return;
+
+    setLocalClues((prev) => [
+      ...prev,
+      {
+        playerId: current.id,
+        playerName: current.name,
+        text: "(indice oral)",
+        round: localRound,
+      },
+    ]);
+    setShowWordPeek(false);
+    goNextDescribeTurn();
+  }, [getLocalCurrentPlayer, goNextDescribeTurn, localRound]);
+
+  const drawLocalRandomCard = useCallback(() => {
+    const current = localPlayers[localCardTurnIndex];
+    if (!current || localSecretDeck.length === 0) return;
+
+    const drawIndex = Math.floor(Math.random() * localSecretDeck.length);
+    const deckSlot = Math.floor(Math.random() * 6);
+    const card = localSecretDeck[drawIndex];
+    const nextDeck = localSecretDeck.filter((_, i) => i !== drawIndex);
+
+    setLocalPlayers((prev) =>
+      prev.map((p) =>
+        p.id === current.id ? { ...p, role: card.role, word: card.word } : p
+      )
+    );
+    setLocalSecretDeck(nextDeck);
+    setLocalCardReveal({
+      playerName: current.name,
+      role: card.role,
+      word: card.word,
+    });
+    setLocalDrawnSlot(deckSlot);
+    setLocalCardFlip(false);
+    setTimeout(() => setLocalCardFlip(true), 30);
+  }, [localCardTurnIndex, localPlayers, localSecretDeck]);
+
+  const confirmLocalCard = useCallback(() => {
+    if (!localCardReveal) return;
+    setLocalCardReveal(null);
+    setLocalDrawnSlot(null);
+
+    const nextIndex = localCardTurnIndex + 1;
+    if (nextIndex < localPlayers.length) {
+      setLocalCardTurnIndex(nextIndex);
+      setLocalPassToId(localPlayers[nextIndex]?.id ?? null);
+      return;
+    }
+
+    const order = buildDescribeOrder(localPlayers);
+    setLocalTurnOrder(order);
+    setLocalCurrentIndex(0);
+    setLocalPassToId(null);
+    setLocalPhase("order");
+  }, [buildDescribeOrder, localCardReveal, localCardTurnIndex, localPlayers]);
+
+  const resolveLocalVotes = useCallback(
+    (votes: Record<string, string>) => {
+      const counts: Record<string, number> = {};
+      Object.values(votes).forEach((targetId) => {
+        counts[targetId] = (counts[targetId] ?? 0) + 1;
+      });
+
+      let eliminatedId: string | null = null;
+      let maxVotes = 0;
+      let tie = false;
+      Object.entries(counts).forEach(([pid, count]) => {
+        if (count > maxVotes) {
+          maxVotes = count;
+          eliminatedId = pid;
+          tie = false;
+        } else if (count === maxVotes) {
+          tie = true;
+        }
+      });
+
+      if (tie || !eliminatedId || maxVotes === 0) {
+        setLocalEliminatedId(null);
+        setLocalEliminatedRole(null);
+        setLocalPassToId(null);
+        setLocalPhase("vote-result");
+        return;
+      }
+
+      const eliminatedPlayer = localPlayers.find((p) => p.id === eliminatedId);
+      if (!eliminatedPlayer) return;
+
+      setLocalPlayers((prev) =>
+        prev.map((p) => (p.id === eliminatedId ? { ...p, alive: false } : p))
+      );
+      setLocalEliminatedId(eliminatedId);
+      setLocalEliminatedRole(eliminatedPlayer.role);
+      setLocalPassToId(null);
+      setLocalPhase("vote-result");
+    },
+    [localPlayers]
+  );
+
+  const submitLocalVote = useCallback(() => {
+    if (!localSelectedTarget) return;
+    resolveLocalVotes({ oral: localSelectedTarget });
+    setLocalSelectedTarget(null);
+  }, [localSelectedTarget, resolveLocalVotes]);
+
+  const continueAfterLocalVoteResult = useCallback(() => {
+    const alive = localPlayers.filter((p) => p.alive);
+    const aliveThreats = alive.filter(
+      (p) => p.role === "undercover" || p.role === "mrwhite"
+    ).length;
+    const aliveCivilians = alive.filter((p) => p.role === "civilian").length;
+
+    if (aliveThreats === 0) {
+      setLocalWinners("civilian");
+      setLocalPhase("game-over");
+      return;
+    }
+    if (aliveThreats >= aliveCivilians) {
+      setLocalWinners("undercover");
+      setLocalPhase("game-over");
+      return;
+    }
+
+    const nextTurnOrder = buildDescribeOrder(alive);
+    setLocalTurnOrder(nextTurnOrder);
+    setLocalCurrentIndex(0);
+    setLocalRound((r) => r + 1);
+    setLocalEliminatedId(null);
+    setLocalEliminatedRole(null);
+    setLocalVotes({});
+    setLocalVoteQueue([]);
+    setLocalVoteIndex(0);
+    setLocalSelectedTarget(null);
+    setLocalPassToId(null);
+    setLocalReviewOpen(false);
+    setLocalReviewPlayerId(null);
+    setLocalPhase("order");
+  }, [buildDescribeOrder, localPlayers]);
+
   // ── Waiting ───────────────────────────────────────────────
+  if (localMode) {
+    const localThemeLabel: Record<ThemeId, string> = {
+      classic: "Classique",
+      manga: "Anime / Manga",
+      adult: "Culture Pop 18+",
+      mixed: "Melange Total",
+    };
+    const localThemeDesc: Record<ThemeId, string> = {
+      classic: "Mots grand public",
+      manga: "Univers anime",
+      adult: "References adultes connues",
+      mixed: "Tout melange",
+    };
+
+    if (localPhase === "setup") {
+      return (
+        <div className="relative flex flex-1 flex-col items-center justify-center overflow-hidden p-6">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_15%_20%,rgba(80,216,255,0.22),transparent_35%),radial-gradient(circle_at_85%_80%,rgba(34,197,94,0.12),transparent_35%),radial-gradient(circle_at_50%_50%,rgba(99,102,241,0.18),transparent_45%)]" />
+          <div className="relative w-full max-w-3xl rounded-3xl border border-cyan-300/20 bg-[#060b16]/85 p-6 backdrop-blur-xl shadow-[0_30px_80px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.08)]">
+            <div className="text-center">
+              <p className="text-[11px] font-sans uppercase tracking-[0.28em] text-cyan-300/60">
+                Undercover Local Premium
+              </p>
+              <h2 className="mt-2 text-3xl font-serif text-white">Mode 1 telephone</h2>
+              <p className="mt-2 text-xs font-sans text-white/45">
+                Un nom par ligne. Entre 3 et 8 joueurs.
+              </p>
+            </div>
+
+            <div className="mt-5 grid gap-5 md:grid-cols-[1.2fr_1fr]">
+              <textarea
+                value={localNamesInput}
+                onChange={(e) => setLocalNamesInput(e.target.value)}
+                className="h-52 w-full rounded-2xl border border-cyan-300/20 bg-[#050913] p-4 text-sm text-white/85 font-sans focus:outline-none focus:border-cyan-300/45 focus:shadow-[0_0_25px_rgba(80,216,255,0.2)]"
+              />
+              <div className="space-y-2">
+                <p className="text-xs font-sans uppercase tracking-widest text-white/35">
+                  Theme
+                </p>
+                <div className="grid grid-cols-1 gap-2">
+                  {(["classic", "manga", "adult", "mixed"] as ThemeId[]).map((themeId) => (
+                    <button
+                      key={themeId}
+                      onClick={() => setLocalTheme(themeId)}
+                      className={cn(
+                        "rounded-xl border px-3 py-2.5 text-left transition-all",
+                        localTheme === themeId
+                          ? "border-cyan-300/45 bg-cyan-400/10 shadow-[0_0_25px_rgba(80,216,255,0.2)]"
+                          : "border-white/10 bg-white/[0.03] hover:border-cyan-300/30 hover:bg-cyan-400/[0.06]"
+                      )}
+                    >
+                      <p className={cn("text-sm font-sans", localTheme === themeId ? "text-cyan-300" : "text-white/75")}>
+                        {localThemeLabel[themeId]}
+                      </p>
+                      <p className="text-[11px] font-sans text-white/35">{localThemeDesc[themeId]}</p>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-6 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
+              <button
+                onClick={startLocalGame}
+                className="w-full rounded-xl border border-cyan-300/40 bg-gradient-to-r from-cyan-600 to-blue-600 px-6 py-3 text-sm font-sans font-medium text-white transition-all hover:from-cyan-500 hover:to-blue-500 hover:shadow-[0_0_35px_rgba(59,130,246,0.35)] sm:w-auto"
+              >
+                Lancer la partie locale
+              </button>
+              <button
+                onClick={() => setLocalMode(false)}
+                className="w-full rounded-xl border border-white/15 bg-white/[0.03] px-6 py-3 text-sm font-sans text-white/65 transition-colors hover:text-white/85 sm:w-auto"
+              >
+                Revenir au mode en ligne
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    if (localPhase === "cards") {
+      const current = localPlayers[localCardTurnIndex] ?? null;
+      const remaining = localPlayers.length - localCardTurnIndex - (localCardReveal ? 1 : 0);
+      if (!current) return null;
+
+      if (localPassToId && !localCardReveal) {
+        const passPlayer = localPlayers.find((p) => p.id === localPassToId) ?? null;
+        if (passPlayer) {
+          return (
+            <div className="flex flex-1 flex-col items-center justify-center p-6">
+              <div className="w-full max-w-lg rounded-3xl border border-cyan-300/25 bg-[#070d17]/90 p-7 text-center shadow-[0_20px_70px_rgba(0,0,0,0.4)]">
+                <p className="text-[11px] font-sans uppercase tracking-[0.24em] text-cyan-300/60">
+                  Passe le telephone
+                </p>
+                <p className="mt-3 text-4xl font-serif text-white">{passPlayer.name}</p>
+                <p className="mt-3 text-sm font-sans text-white/45">
+                  A toi de piocher une carte secrete.
+                </p>
+                <button
+                  onClick={() => setLocalPassToId(null)}
+                  className="mt-6 rounded-xl border border-cyan-300/40 bg-gradient-to-r from-cyan-600 to-blue-600 px-7 py-2.5 text-sm font-sans font-medium text-white transition-all hover:from-cyan-500 hover:to-blue-500"
+                >
+                  Continuer
+                </button>
+              </div>
+            </div>
+          );
+        }
+      }
+
+      return (
+        <div className="relative flex flex-1 flex-col gap-6 overflow-hidden p-6">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_15%_20%,rgba(80,216,255,0.18),transparent_35%),radial-gradient(circle_at_85%_70%,rgba(99,102,241,0.14),transparent_40%)]" />
+          <div className="relative text-center">
+            <p className="text-[11px] font-sans uppercase tracking-[0.24em] text-cyan-300/55">Distribution</p>
+            <h2 className="mt-2 text-4xl font-serif text-white">{current.name}</h2>
+            <p className="mt-2 text-sm font-sans text-white/45">Choisis une carte. La pioche reste aleatoire.</p>
+          </div>
+
+          <div className="relative mx-auto grid w-full max-w-xl grid-cols-3 gap-3">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <button
+                key={i}
+                onClick={drawLocalRandomCard}
+                disabled={!!localCardReveal}
+                className={cn(
+                  "group relative h-40 rounded-2xl border border-cyan-300/30 bg-gradient-to-br from-[#0a1730] via-[#070b16] to-[#141026] text-white shadow-[0_12px_30px_rgba(0,0,0,0.35)] transition-all hover:-translate-y-1 hover:shadow-[0_16px_36px_rgba(80,216,255,0.18)] disabled:opacity-55",
+                  localDrawnSlot === i && "ring-2 ring-cyan-300/60"
+                )}
+              >
+                <div className="absolute inset-[1px] rounded-2xl border border-white/10 bg-[linear-gradient(145deg,rgba(255,255,255,0.08),rgba(255,255,255,0.02))]" />
+                <div className="relative flex h-full flex-col items-center justify-center gap-1">
+                  <span className="text-[10px] font-sans uppercase tracking-[0.3em] text-white/45">Card</span>
+                  <span className="font-serif text-xl text-cyan-300 drop-shadow-[0_0_15px_rgba(80,216,255,0.35)]">UNDERCOVER</span>
+                  <span className="text-[11px] font-sans text-white/45 group-hover:text-white/65">Tap to draw</span>
+                </div>
+              </button>
+            ))}
+          </div>
+
+          <div className="relative text-center">
+            <p className="text-xs font-sans text-white/40">{Math.max(remaining, 0)} cartes restantes</p>
+          </div>
+
+          {localCardReveal && (
+            <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/75 backdrop-blur-sm p-6">
+              <div className="w-full max-w-sm rounded-3xl border border-cyan-300/30 bg-[#0b111d]/95 p-6 text-center shadow-[0_0_70px_rgba(80,216,255,0.2)]">
+                <p className="mb-4 text-xs font-sans uppercase tracking-[0.24em] text-white/35">
+                  Carte de {localCardReveal.playerName}
+                </p>
+                <div className="mx-auto h-64 w-44 [perspective:1000px]">
+                  <div
+                    className="relative h-full w-full transition-transform duration-500"
+                    style={{
+                      transformStyle: "preserve-3d",
+                      transform: localCardFlip ? "rotateY(180deg)" : "rotateY(0deg)",
+                    }}
+                  >
+                    <div
+                      className="absolute inset-0 flex items-center justify-center rounded-2xl border border-cyan-300/25 bg-[radial-gradient(circle_at_20%_20%,rgba(80,216,255,0.22),transparent_40%),linear-gradient(145deg,#0b172e,#0a1020_45%,#140f25)]"
+                      style={{ backfaceVisibility: "hidden" }}
+                    >
+                      <p className="text-xl font-serif text-cyan-300 drop-shadow-[0_0_20px_rgba(80,216,255,0.35)]">Undercover</p>
+                    </div>
+                    <div
+                      className="absolute inset-0 flex flex-col items-center justify-center rounded-2xl border border-cyan-300/35 bg-[linear-gradient(145deg,#070c16,#0f1523)]"
+                      style={{
+                        backfaceVisibility: "hidden",
+                        transform: "rotateY(180deg)",
+                      }}
+                    >
+                      <p className="text-xl font-serif text-cyan-300">
+                        {localCardReveal.role === "mrwhite" ? "Mr. White" : "Civil"}
+                      </p>
+                      <p className="mt-2 px-3 text-center text-3xl font-serif text-white">
+                        {localCardReveal.role === "mrwhite" ? "???" : localCardReveal.word}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <button
+                  onClick={confirmLocalCard}
+                  className="mt-6 w-full rounded-xl border border-cyan-300/40 bg-gradient-to-r from-cyan-600 to-blue-600 py-2.5 text-sm font-sans font-medium text-white transition-all hover:from-cyan-500 hover:to-blue-500"
+                >
+                  J&apos;ai memorise, passer le telephone
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    if (localPhase === "order") {
+      const orderedPlayers = localTurnOrder
+        .map((id) => localPlayers.find((p) => p.id === id))
+        .filter((p): p is LocalPlayer => !!p);
+
+      const reviewedPlayer =
+        localReviewPlayerId
+          ? localPlayers.find((p) => p.id === localReviewPlayerId) ?? null
+          : null;
+
+      return (
+        <div className="relative flex flex-1 flex-col gap-5 overflow-hidden p-6">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_10%_15%,rgba(80,216,255,0.14),transparent_35%),radial-gradient(circle_at_90%_75%,rgba(96,165,250,0.13),transparent_35%)]" />
+          <div className="relative text-center">
+            <p className="text-[11px] text-white/30 font-sans uppercase tracking-[0.24em]">Ordre des joueurs</p>
+            <p className="mt-1 text-sm text-white/55 font-sans">Indices a voix haute, dans cet ordre.</p>
+          </div>
+
+          <div className="relative mx-auto w-full max-w-xl space-y-2 rounded-2xl border border-cyan-300/20 bg-[#070d17]/75 p-3">
+            {orderedPlayers.map((p, idx) => (
+              <div
+                key={p.id}
+                className="rounded-lg border border-white/[0.08] bg-white/[0.03] px-4 py-3 flex items-center justify-between"
+              >
+                <span className="text-white/85 font-sans">
+                  {idx + 1}. {p.name}
+                </span>
+                <span className="text-[11px] text-cyan-300/70 font-sans">{idx === 0 ? "commence" : "ensuite"}</span>
+              </div>
+            ))}
+          </div>
+
+          <div className="relative flex flex-col sm:flex-row gap-2 justify-center">
+            <button
+              onClick={() => setLocalReviewOpen(true)}
+              className="px-5 py-2.5 rounded-xl border border-white/[0.12] bg-white/[0.04] text-white/80 text-sm font-sans hover:border-cyan-300/30 hover:bg-cyan-300/[0.06]"
+            >
+              Revoir le mot
+            </button>
+            <button
+              onClick={beginLocalVote}
+              className="px-5 py-2.5 rounded-xl border border-cyan-300/35 bg-gradient-to-r from-cyan-600 to-blue-600 text-white text-sm font-sans font-medium"
+            >
+              Lancer le vote
+            </button>
+          </div>
+
+          {localReviewOpen && (
+            <div className="fixed inset-0 z-30 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+              <div className="w-full max-w-md rounded-2xl border border-cyan-300/25 bg-[#0b111d] p-5">
+                {!reviewedPlayer ? (
+                  <>
+                    <p className="mb-3 text-sm text-white/80 font-sans">Choisis ta carte pour revoir ton mot:</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {localPlayers.filter((p) => p.alive).map((p) => (
+                        <button
+                          key={p.id}
+                          onClick={() => setLocalReviewPlayerId(p.id)}
+                          className="rounded-lg border border-white/[0.12] bg-white/[0.03] px-3 py-2 text-left text-sm text-white/80 font-sans hover:border-cyan-300/35 hover:bg-cyan-300/[0.06]"
+                        >
+                          {p.name}
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <div className="text-center">
+                    <p className="text-xs text-white/30 font-sans">{reviewedPlayer.name}</p>
+                    <p className="mt-2 text-xl text-cyan-300 font-serif">
+                      {reviewedPlayer.role === "mrwhite" ? "Mr. White" : "Civil"}
+                    </p>
+                    <p className="mt-1 text-3xl text-white font-serif">
+                      {reviewedPlayer.role === "mrwhite" ? "???" : reviewedPlayer.word}
+                    </p>
+                  </div>
+                )}
+                <div className="flex gap-2 justify-end mt-4">
+                  {reviewedPlayer && (
+                    <button
+                      onClick={() => setLocalReviewPlayerId(null)}
+                      className="px-3 py-2 rounded border border-white/[0.15] text-white/70 text-xs font-sans"
+                    >
+                      Choisir autre carte
+                    </button>
+                  )}
+                  <button
+                    onClick={() => {
+                      setLocalReviewOpen(false);
+                      setLocalReviewPlayerId(null);
+                    }}
+                    className="px-3 py-2 rounded border border-cyan-300/35 bg-cyan-500/80 text-white text-xs font-sans"
+                  >
+                    Fermer
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    if (localPhase === "vote" && localPassToId && !localCardReveal) {
+      const passPlayer = localPlayers.find((p) => p.id === localPassToId) ?? null;
+      if (passPlayer) {
+        return (
+          <div className="flex flex-1 flex-col items-center justify-center p-6">
+            <div className="w-full max-w-lg rounded-3xl border border-cyan-300/25 bg-[#070d17]/90 p-7 text-center shadow-[0_20px_70px_rgba(0,0,0,0.4)]">
+              <p className="text-[11px] font-sans uppercase tracking-[0.24em] text-cyan-300/60">Passe le telephone</p>
+              <p className="mt-3 text-4xl text-white font-serif text-center">{passPlayer.name}</p>
+              <p className="mt-3 text-sm text-white/45 font-sans">Ordre direct. Le prochain joueur prend la parole.</p>
+              <button
+                onClick={() => {
+                  setLocalPassToId(null);
+                  setShowWordPeek(false);
+                }}
+                className="mt-6 rounded-xl border border-cyan-300/40 bg-gradient-to-r from-cyan-600 to-blue-600 px-7 py-2.5 text-sm font-sans font-medium text-white"
+              >
+                Continuer
+              </button>
+            </div>
+          </div>
+        );
+      }
+    }
+
+    if (localPhase === "describe") {
+      const current = getLocalCurrentPlayer();
+      if (!current) return null;
+      return (
+        <div className="relative flex flex-1 flex-col gap-4 p-6">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_20%,rgba(80,216,255,0.14),transparent_35%),radial-gradient(circle_at_82%_70%,rgba(99,102,241,0.14),transparent_35%)]" />
+          <div className="relative text-center">
+            <p className="text-xs text-white/30 font-sans">Manche {localRound}</p>
+            <h2 className="mt-1 text-3xl text-white font-serif">{current.name}</h2>
+            <p className="text-xs text-white/35 font-sans">donne un indice oral</p>
+          </div>
+          <div className="relative mx-auto w-full max-w-md rounded-2xl border border-cyan-300/20 bg-[#070d17]/85 p-4 text-center">
+            <p className="text-sm text-white/70 font-sans">Donne ton indice a voix haute.</p>
+            <button
+              onClick={submitLocalClue}
+              className="mt-3 rounded-xl border border-cyan-300/40 bg-gradient-to-r from-cyan-600 to-blue-600 px-4 py-2 text-sm font-sans text-white"
+            >
+              Indice donne, joueur suivant
+            </button>
+          </div>
+          <button
+            onClick={() => setShowWordPeek((v) => !v)}
+            className="mx-auto text-xs text-cyan-300/70 hover:text-cyan-200 font-sans"
+          >
+            {showWordPeek ? "Masquer mon mot" : "Revoir mon mot"}
+          </button>
+          {showWordPeek && (
+            <div className="mx-auto w-full max-w-sm rounded-2xl border border-cyan-300/25 bg-[#070d17]/85 p-4 text-center">
+              <p className="text-xs text-white/30 font-sans">{current.role === "mrwhite" ? "Mr. White" : "Mot secret"}</p>
+              <p className="mt-1 text-2xl text-white font-serif">{current.role === "mrwhite" ? "???" : current.word}</p>
+            </div>
+          )}
+          <div className="relative mx-auto w-full max-w-2xl space-y-1">
+            {localClues.map((clue, i) => (
+              <div key={`${clue.playerId}-${i}`} className="rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-2">
+                <span className="text-xs text-white/40 font-sans">{clue.playerName}</span>
+                <span className="text-sm text-white/60 font-sans ml-2">{clue.text}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    if (localPhase === "vote") {
+      const aliveTargets = getLocalAlive();
+      return (
+        <div className="relative flex flex-1 flex-col items-center gap-4 p-6">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_15%_20%,rgba(80,216,255,0.14),transparent_35%),radial-gradient(circle_at_85%_80%,rgba(14,165,233,0.12),transparent_35%)]" />
+          <p className="relative text-xs text-white/30 font-sans">Vote oral de groupe</p>
+          <h2 className="relative text-3xl text-white/90 font-serif">Qui eliminer ?</h2>
+          <div className="relative grid w-full max-w-lg grid-cols-2 gap-2 sm:grid-cols-3">
+            {aliveTargets.map((p) => (
+              <button
+                key={p.id}
+                onClick={() => setLocalSelectedTarget(p.id)}
+                className={cn(
+                  "rounded-xl border px-3 py-3 text-sm font-sans transition-all",
+                  localSelectedTarget === p.id
+                    ? "border-cyan-300/50 bg-cyan-300/[0.12] text-cyan-200 shadow-[0_0_25px_rgba(80,216,255,0.2)]"
+                    : "border-white/[0.1] bg-white/[0.03] text-white/75 hover:border-cyan-300/35"
+                )}
+              >
+                {p.name}
+              </button>
+            ))}
+          </div>
+          <button
+            onClick={submitLocalVote}
+            disabled={!localSelectedTarget}
+            className="relative rounded-xl border border-cyan-300/40 bg-gradient-to-r from-cyan-600 to-blue-600 px-6 py-2.5 text-sm font-sans font-medium text-white disabled:border-white/[0.12] disabled:bg-white/[0.05] disabled:text-white/20"
+          >
+            Eliminer ce joueur
+          </button>
+        </div>
+      );
+    }
+
+    if (localPhase === "vote-result") {
+      const eliminated = localPlayers.find((p) => p.id === localEliminatedId) ?? null;
+      return (
+        <div className="flex flex-1 flex-col items-center justify-center p-6 gap-4">
+          {!eliminated ? (
+            <p className="text-white/60 font-serif text-2xl">Egalite, personne elimine.</p>
+          ) : (
+            <>
+              <p className="text-xs text-white/30 font-sans">Elimine</p>
+              <p className="text-3xl text-white font-serif">{eliminated.name}</p>
+              <p className="text-sm text-cyan-200/85 font-sans">
+                Role: {localEliminatedRole === "undercover" ? "Undercover" : localEliminatedRole === "mrwhite" ? "Mr. White" : "Civil"}
+              </p>
+            </>
+          )}
+          <p className="text-xs text-white/25 font-sans">Le mot n&apos;est jamais revele ici.</p>
+          <button
+            onClick={continueAfterLocalVoteResult}
+            className="rounded-xl border border-cyan-300/40 bg-gradient-to-r from-cyan-600 to-blue-600 px-6 py-2 text-sm font-sans text-white"
+          >
+            Continuer
+          </button>
+        </div>
+      );
+    }
+
+    if (localPhase === "game-over") {
+      return (
+        <div className="flex flex-1 flex-col items-center justify-center p-6 gap-4">
+          <p className="text-xs text-white/30 font-sans">Fin de partie locale</p>
+          <p className="text-3xl font-serif text-cyan-300">
+            {localWinners === "civilian" ? "Les Civils gagnent" : "Undercover / Mr.White gagnent"}
+          </p>
+          <button
+            onClick={() => setLocalPhase("setup")}
+            className="rounded-xl border border-cyan-300/40 bg-gradient-to-r from-cyan-600 to-blue-600 px-6 py-2 text-sm font-sans text-white"
+          >
+            Rejouer
+          </button>
+        </div>
+      );
+    }
+  }
   if (!state || state.phase === "waiting") {
     return (
-      <div className="flex flex-1 items-center justify-center">
-        <p className="text-white/40 animate-pulse font-sans">
-          En attente des joueurs...
-        </p>
+      <div className="flex flex-1 flex-col items-center justify-center p-6 gap-5">
+        <p className="text-white/40 animate-pulse font-sans">En attente des joueurs...</p>
+
+        <div className="grid gap-2 w-full max-w-lg">
+          {state?.availableThemes?.map((theme) => {
+            const active = theme.id === state.selectedThemeId;
+            return (
+              <button
+                key={theme.id}
+                onClick={() => sendAction({ action: "set-theme", themeId: theme.id })}
+                className={cn(
+                  "rounded-lg border px-4 py-3 text-left transition-all",
+                  active
+                    ? "border-ember/40 bg-ember/10"
+                    : "border-white/[0.08] bg-white/[0.03] hover:border-white/[0.18]"
+                )}
+              >
+                <p className={cn("text-sm font-sans", active ? "text-ember" : "text-white/80")}>
+                  {theme.label}
+                </p>
+                <p className="text-xs text-white/30 font-sans">{theme.description}</p>
+              </button>
+            );
+          })}
+        </div>
+
+        <button
+          onClick={() => sendAction({ action: "start-game" })}
+          className="px-8 py-3 rounded-lg bg-ember hover:bg-ember-glow text-white font-sans text-sm font-medium transition-all"
+        >
+          Lancer la partie en ligne
+        </button>
+        <button
+          onClick={() => {
+            setLocalMode(true);
+            setLocalPhase("setup");
+          }}
+          className="text-xs text-white/40 hover:text-white/70 font-sans"
+        >
+          Jouer sur 1 telephone
+        </button>
       </div>
     );
   }
@@ -328,7 +1174,7 @@ export default function UndercoverGame({
           {isMyTurn ? (
             <h2
               className="text-2xl font-serif font-light text-ember"
-              style={{ textShadow: "0 0 30px rgba(249,115,22,0.3)" }}
+              style={{ textShadow: "0 0 30px rgba(80,216,255,0.35)" }}
             >
               C&apos;est ton tour !
             </h2>

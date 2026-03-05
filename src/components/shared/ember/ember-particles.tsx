@@ -39,7 +39,7 @@ export function EmberParticles({ mouse, count = 80 }: EmberParticlesProps) {
         x, y, vx: (Math.random() - 0.5) * 0.4, vy: -(Math.random() * 0.6 + 0.15),
         size: Math.random() * 2.2 + 0.4, op: Math.random() * 0.45 + 0.08,
         life: scattered ? Math.random() * 400 : 0, max: 350 + Math.random() * 400,
-        hue: Math.random() * 30, trail: [], hasTrail: Math.random() < 0.2,
+        hue: 190 + Math.random() * 80, trail: [], hasTrail: Math.random() < 0.25,
       };
     }
 

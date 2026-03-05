@@ -9,9 +9,9 @@ interface ScoreboardProps {
 }
 
 const RANK_STYLES = [
-  "text-yellow-400 border-yellow-400/30 bg-yellow-400/5",
-  "text-gray-300 border-gray-300/30 bg-gray-300/5",
-  "text-amber-600 border-amber-600/30 bg-amber-600/5",
+  "text-cyan-200 border-cyan-300/40 bg-cyan-300/12 shadow-[0_0_30px_rgba(80,216,255,0.2)]",
+  "text-blue-100 border-blue-300/35 bg-blue-300/10",
+  "text-indigo-200 border-indigo-300/35 bg-indigo-300/10",
 ];
 
 const RANK_EMOJIS = ["🥇", "🥈", "🥉"];
@@ -23,7 +23,7 @@ export function Scoreboard({ rankings }: ScoreboardProps) {
         <Card
           key={r.playerId}
           className={cn(
-            "border transition-all",
+            "border transition-all rounded-2xl",
             i < 3 ? RANK_STYLES[i] : "border-border"
           )}
         >

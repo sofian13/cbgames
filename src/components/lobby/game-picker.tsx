@@ -22,20 +22,20 @@ export function GamePicker({ selectedGameId, isHost, onSelectGame }: GamePickerP
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+        <h3 className="text-sm font-semibold text-white/55 uppercase tracking-[0.16em]">
           {isHost ? "Choisis un jeu" : "En attente du choix du host..."}
         </h3>
       </div>
 
       {/* Category tabs */}
-      <div className="flex gap-1 flex-wrap">
+      <div className="flex gap-1.5 flex-wrap rounded-xl border border-cyan-300/15 bg-cyan-300/[0.03] p-1.5">
         {CATEGORIES.map((cat) => (
           <Button
             key={cat.id}
             variant={activeCategory === cat.id ? "secondary" : "ghost"}
             size="sm"
             onClick={() => setActiveCategory(cat.id)}
-            className={cn("text-xs", activeCategory === cat.id && "font-semibold")}
+            className={cn("text-xs", activeCategory === cat.id && "font-semibold border-cyan-300/35")}
           >
             {cat.label}
           </Button>

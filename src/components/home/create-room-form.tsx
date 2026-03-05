@@ -15,12 +15,10 @@ export function CreateRoomForm() {
   };
 
   return (
-    <Card className="flex-1">
+    <Card className="flex-1 premium-panel">
       <CardHeader>
-        <CardTitle className="text-xl">Créer une salle</CardTitle>
-        <CardDescription>
-          Crée une nouvelle salle et invite tes potes
-        </CardDescription>
+        <CardTitle className="text-xl text-cyan-100">Creer une salle</CardTitle>
+        <CardDescription>Cree une nouvelle salle et invite tes potes</CardDescription>
       </CardHeader>
       <CardContent>
         <Button onClick={handleCreate} className="w-full gap-2" size="lg">

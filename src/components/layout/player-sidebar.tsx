@@ -19,8 +19,8 @@ export function PlayerSidebar({
   className,
 }: PlayerSidebarProps) {
   return (
-    <aside className={cn("w-64 border-r border-border bg-card/30 p-4", className)}>
-      <h3 className="mb-3 text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+    <aside className={cn("premium-panel w-72 rounded-r-2xl border-r p-4", className)}>
+      <h3 className="mb-3 text-xs font-semibold text-white/55 uppercase tracking-[0.16em]">
         Joueurs ({players.length})
       </h3>
       <div className="space-y-2">
@@ -28,8 +28,8 @@ export function PlayerSidebar({
           <div
             key={player.id}
             className={cn(
-              "flex items-center gap-3 rounded-lg p-2 transition-colors",
-              player.id === currentPlayerId && "bg-primary/10"
+              "premium-panel-soft flex items-center gap-3 rounded-xl p-2.5 transition-colors",
+              player.id === currentPlayerId && "border-cyan-300/50 bg-cyan-300/12"
             )}
           >
             <AvatarCircle
@@ -40,21 +40,17 @@ export function PlayerSidebar({
               size="sm"
             />
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate">
+              <p className="truncate text-sm font-medium text-white/85">
                 {player.name}
-                {player.id === currentPlayerId && (
-                  <span className="text-muted-foreground"> (toi)</span>
-                )}
+                {player.id === currentPlayerId && <span className="text-white/45"> (toi)</span>}
               </p>
               {sessionScores[player.id] !== undefined && (
-                <p className="text-xs text-muted-foreground">
-                  {sessionScores[player.id]} pts
-                </p>
+                <p className="text-xs text-cyan-300/80">{sessionScores[player.id]} pts</p>
               )}
             </div>
             {player.isReady && (
-              <Badge variant="secondary" className="text-xs bg-green-500/20 text-green-400">
-                Prêt
+              <Badge className="border-emerald-400/35 bg-emerald-400/15 text-emerald-200">
+                Pret
               </Badge>
             )}
           </div>

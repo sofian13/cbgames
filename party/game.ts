@@ -83,17 +83,19 @@ export default class GameServer {
 
       this.game.addPlayer(playerId, name, sender);
 
-      // Send current state to joining player
-      sender.send(
-        JSON.stringify({
-          type: "game-state",
-          payload: this.game.getState(),
-        })
-      );
+      // Broadcast current state so waiting screens stay in sync
+      this.game.broadcast({
+        type: "game-state",
+        payload: this.game.getState(),
+      });
 
       // Auto-start when enough players join and game hasn't started
       // Motion tennis can start solo (vs bot)
-      const minToStart = this.gameId === "motion-tennis" ? 1 : 2;
+      if (this.gameId === "undercover") {
+        return;
+      }
+      const soloGames = new Set(["motion-tennis", "undercover"]);
+      const minToStart = this.gameId && soloGames.has(this.gameId) ? 1 : 2;
       if (this.game.players.size >= minToStart && !this.game.started) {
         this.game.start();
       }

@@ -126,7 +126,7 @@ function CardView({
         "rounded-lg border flex flex-col items-center justify-center gap-0 font-mono font-bold shadow-md",
         "bg-white transition-all duration-300 select-none relative",
         highlight
-          ? "border-amber-400/80 ring-1 ring-amber-400/40 shadow-amber-400/20 shadow-lg"
+          ? "border-cyan-400/80 ring-1 ring-cyan-400/40 shadow-cyan-400/20 shadow-lg"
           : "border-zinc-300"
       )}
     >
@@ -147,7 +147,7 @@ function ChipCount({ amount, label }: { amount: number; label?: string }) {
       {label && (
         <span className="text-[10px] text-white/30 font-sans">{label}</span>
       )}
-      <span className="font-mono text-amber-400 font-bold text-xs">
+      <span className="font-mono text-cyan-400 font-bold text-xs">
         {amount.toLocaleString("fr-FR")}
       </span>
     </div>
@@ -191,7 +191,7 @@ function PlayerSeat({
         player.isCurrentPlayer &&
           !player.folded &&
           !player.eliminated &&
-          "border-amber-400/50 bg-amber-400/[0.06] ring-1 ring-amber-400/20",
+          "border-cyan-400/50 bg-cyan-400/[0.06] ring-1 ring-cyan-400/20",
         isWinner && "border-emerald-400/50 bg-emerald-400/[0.06] ring-1 ring-emerald-400/20",
         !player.isCurrentPlayer &&
           !isWinner &&
@@ -247,7 +247,7 @@ function PlayerSeat({
 
       {/* Current bet */}
       {player.currentBet > 0 && (
-        <span className="text-[10px] text-amber-300/60 font-mono">
+        <span className="text-[10px] text-cyan-300/60 font-mono">
           Mise : {player.currentBet}
         </span>
       )}
@@ -260,7 +260,7 @@ function PlayerSeat({
             player.lastAction === "Se couche"
               ? "text-red-400/70 bg-red-400/10"
               : player.lastAction === "Tapis"
-                ? "text-orange-400 bg-orange-400/10 font-bold"
+                ? "text-cyan-300 bg-cyan-300/10 font-bold"
                 : "text-white/40 bg-white/[0.04]"
           )}
         >
@@ -407,7 +407,7 @@ export default function PokerGame({
               className={cn(
                 "flex items-center justify-between rounded-lg border p-3 transition-all",
                 i === 0
-                  ? "border-amber-400/40 bg-amber-400/[0.06]"
+                  ? "border-cyan-400/40 bg-cyan-400/[0.06]"
                   : "border-white/[0.08] bg-white/[0.03]"
               )}
             >
@@ -416,11 +416,11 @@ export default function PokerGame({
                   className={cn(
                     "text-lg font-mono font-bold w-6 text-center",
                     i === 0
-                      ? "text-amber-400"
+                      ? "text-cyan-400"
                       : i === 1
                         ? "text-zinc-300"
                         : i === 2
-                          ? "text-orange-600"
+                          ? "text-cyan-300"
                           : "text-white/30"
                   )}
                 >
@@ -470,7 +470,7 @@ export default function PokerGame({
               state.phase === "flop" &&
                 "border-emerald-500/30 bg-emerald-500/10 text-emerald-400",
               state.phase === "turn" &&
-                "border-amber-500/30 bg-amber-500/10 text-amber-400",
+                "border-cyan-500/30 bg-cyan-500/10 text-cyan-400",
               state.phase === "river" &&
                 "border-red-500/30 bg-red-500/10 text-red-400",
               state.phase === "showdown" &&
@@ -492,7 +492,7 @@ export default function PokerGame({
           <span
             className={cn(
               "text-sm font-mono font-bold",
-              (state.timeLeft ?? 30) <= 10 ? "text-red-400" : "text-amber-400"
+              (state.timeLeft ?? 30) <= 10 ? "text-red-400" : "text-cyan-400"
             )}
           >
             {state.timeLeft ?? 30}s
@@ -506,7 +506,7 @@ export default function PokerGame({
           <div
             className={cn(
               "h-full rounded-full transition-all duration-1000 ease-linear",
-              (state.timeLeft ?? 30) <= 10 ? "bg-red-500" : "bg-amber-400"
+              (state.timeLeft ?? 30) <= 10 ? "bg-red-500" : "bg-cyan-400"
             )}
             style={{ width: `${((state.timeLeft ?? 30) / 30) * 100}%` }}
           />
@@ -528,9 +528,9 @@ export default function PokerGame({
       {/* Table center: pot + community cards */}
       <div className="flex flex-col items-center gap-3 py-4">
         {/* Pot */}
-        <div className="flex items-center gap-2 px-4 py-1.5 rounded-full border border-amber-500/20 bg-amber-500/[0.06]">
-          <span className="text-xs text-amber-400/60 font-sans">Pot</span>
-          <span className="font-mono text-amber-400 font-bold text-sm">
+        <div className="flex items-center gap-2 px-4 py-1.5 rounded-full border border-cyan-500/20 bg-cyan-500/[0.06]">
+          <span className="text-xs text-cyan-400/60 font-sans">Pot</span>
+          <span className="font-mono text-cyan-400 font-bold text-sm">
             {state.pot.toLocaleString("fr-FR")}
           </span>
         </div>
@@ -622,7 +622,7 @@ export default function PokerGame({
             </span>
             <ChipCount amount={me.chips} />
             {me.currentBet > 0 && (
-              <span className="text-[10px] text-amber-300/60 font-mono">
+              <span className="text-[10px] text-cyan-300/60 font-mono">
                 Mise : {me.currentBet}
               </span>
             )}
@@ -737,8 +737,8 @@ export default function PokerGame({
                 onClick={handleAllIn}
                 className={cn(
                   "px-4 py-2.5 rounded-lg font-sans text-sm font-bold transition-all active:scale-95",
-                  "bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white",
-                  "shadow-md shadow-orange-600/20"
+                  "bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white",
+                  "shadow-md shadow-cyan-500/20"
                 )}
               >
                 Tapis ({me.chips})

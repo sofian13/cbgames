@@ -63,7 +63,7 @@ export default function EnchereGame({ roomCode, playerId, playerName }: GameProp
             </div>
             <input type="range" min={0} max={me?.gold ?? 0} step={25} value={bidAmount}
               onChange={e => setBidAmount(Number(e.target.value))}
-              disabled={hasBid} className="w-full accent-orange-500" />
+              disabled={hasBid} className="w-full accent-cyan-400" />
             <div className="flex items-center justify-between">
               <span className="text-lg font-mono text-white/80">{bidAmount} 🪙</span>
               <div className="flex gap-2">

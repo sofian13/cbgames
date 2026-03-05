@@ -14,7 +14,7 @@ export function FilmGrain() {
       {/* Cinematic vignette */}
       <div
         className="pointer-events-none fixed inset-0 z-[3]"
-        style={{ boxShadow: "inset 0 0 280px 110px rgba(0,0,0,0.6)" }}
+        style={{ boxShadow: "inset 0 0 260px 90px rgba(0,2,8,0.65)" }}
       />
     </>
   );

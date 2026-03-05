@@ -21,12 +21,10 @@ export function JoinRoomForm() {
   };
 
   return (
-    <Card className="flex-1">
+    <Card className="flex-1 premium-panel">
       <CardHeader>
-        <CardTitle className="text-xl">Rejoindre une salle</CardTitle>
-        <CardDescription>
-          Entre le code à 4 lettres de la salle
-        </CardDescription>
+        <CardTitle className="text-xl text-cyan-100">Rejoindre une salle</CardTitle>
+        <CardDescription>Entre le code a 4 lettres de la salle</CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleJoin} className="flex gap-2">
