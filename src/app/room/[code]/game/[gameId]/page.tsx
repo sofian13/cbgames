@@ -87,6 +87,10 @@ const GameComponents = {
     () => import("@/components/games/motion-tennis/motion-tennis-game"),
     { ssr: false }
   ),
+  "chess": dynamic(
+    () => import("@/components/games/chess/chess-game"),
+    { ssr: false }
+  ),
 } as const;
 
 export default function GamePage() {

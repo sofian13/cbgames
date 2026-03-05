@@ -169,7 +169,7 @@ export default class LobbyServer {
           (p) => p.isConnected
         );
         // Some games allow solo play (e.g. motion-tennis vs bot)
-        const soloGames = new Set(["motion-tennis", "undercover"]);
+        const soloGames = new Set(["motion-tennis", "undercover", "chess"]);
         const minRequired = soloGames.has(this.selectedGameId) ? 1 : 2;
         if (connectedPlayers.length < minRequired) {
           this.sendTo(sender.id, {

@@ -19,6 +19,7 @@ import { RouletteGame } from "./games/roulette";
 import { BlackMarketGame } from "./games/black-market";
 import { KingHillGame } from "./games/king-hill";
 import { MotionTennisGame } from "./games/motion-tennis";
+import { ChessGame } from "./games/chess";
 
 // Registry of game constructors
 const GAME_REGISTRY: Record<string, () => BaseGame> = {
@@ -41,6 +42,7 @@ const GAME_REGISTRY: Record<string, () => BaseGame> = {
   "black-market": () => new BlackMarketGame(),
   "king-hill": () => new KingHillGame(),
   "motion-tennis": () => new MotionTennisGame(),
+  "chess": () => new ChessGame(),
 };
 
 export default class GameServer {
@@ -91,10 +93,10 @@ export default class GameServer {
 
       // Auto-start when enough players join and game hasn't started
       // Motion tennis can start solo (vs bot)
-      if (this.gameId === "undercover") {
+      if (this.gameId === "undercover" || this.gameId === "chess") {
         return;
       }
-      const soloGames = new Set(["motion-tennis", "undercover"]);
+      const soloGames = new Set(["motion-tennis", "undercover", "chess"]);
       const minToStart = this.gameId && soloGames.has(this.gameId) ? 1 : 2;
       if (this.game.players.size >= minToStart && !this.game.started) {
         this.game.start();
