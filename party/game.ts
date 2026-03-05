@@ -96,8 +96,7 @@ export default class GameServer {
       if (this.gameId === "undercover" || this.gameId === "chess") {
         return;
       }
-      const soloGames = new Set(["motion-tennis", "undercover", "chess"]);
-      const minToStart = this.gameId && soloGames.has(this.gameId) ? 1 : 2;
+      const minToStart = 1;
       if (this.game.players.size >= minToStart && !this.game.started) {
         this.game.start();
       }

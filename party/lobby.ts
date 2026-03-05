@@ -14,14 +14,6 @@ function normalizeGameId(raw: string | null | undefined) {
     .replace(/[^a-z0-9-]/g, "");
 }
 
-function isSoloGame(rawGameId: string | null | undefined) {
-  const gameId = normalizeGameId(rawGameId);
-  if (!gameId) return false;
-  if (gameId === "motion-tennis" || gameId === "undercover" || gameId === "chess") {
-    return true;
-  }
-  return gameId.includes("undercover") || gameId.includes("chess") || gameId.includes("motion-tennis");
-}
 
 export default class LobbyServer {
   party: Party;
@@ -188,12 +180,10 @@ export default class LobbyServer {
           this.selectedGameId = normalizeGameId(payloadGameId);
         }
         if (!this.selectedGameId) return;
-        const normalizedGameId = normalizeGameId(this.selectedGameId);
-
         const connectedPlayers = Array.from(this.players.values()).filter(
           (p) => p.isConnected
         );
-        const minRequired = isSoloGame(normalizedGameId) ? 1 : 2;
+        const minRequired = 1;
         if (connectedPlayers.length < minRequired) {
           this.sendTo(sender.id, {
             type: "error",
