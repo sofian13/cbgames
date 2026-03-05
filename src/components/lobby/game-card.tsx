@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import type { GameMeta } from "@/lib/games/types";
-import { BookOpen, X } from "lucide-react";
+import { BookOpen, CheckCircle2, X } from "lucide-react";
 
 interface GameCardProps {
   game: GameMeta;
@@ -23,12 +23,18 @@ export function GameCard({ game, isSelected, isHost, onSelect }: GameCardProps) 
       <Card
         className={cn(
           "cursor-pointer transition-all relative premium-panel-soft",
-          isSelected && "border-cyan-300/50 bg-cyan-300/12 ring-1 ring-cyan-300/35 shadow-[0_0_30px_rgba(80,216,255,0.2)]",
+          isSelected && "border-cyan-300 bg-cyan-300/18 ring-2 ring-cyan-300/70 shadow-[0_0_45px_rgba(80,216,255,0.35)]",
           disabled && "opacity-50 cursor-not-allowed hover:border-border",
           !disabled && "hover:-translate-y-0.5 hover:border-cyan-300/45"
         )}
         onClick={() => !disabled && onSelect()}
       >
+        {isSelected && (
+          <div className="absolute right-3 top-3 z-10 inline-flex items-center gap-1 rounded-full border border-cyan-300/70 bg-cyan-300/20 px-2 py-0.5 text-[10px] font-semibold text-cyan-100">
+            <CheckCircle2 className="h-3 w-3" />
+            Selectionne
+          </div>
+        )}
         <CardContent className="p-4">
           <div className="flex items-start gap-3">
             <span className="text-3xl">{game.icon}</span>
@@ -44,6 +50,11 @@ export function GameCard({ game, isSelected, isHost, onSelect }: GameCardProps) 
                 <p className="text-xs text-muted-foreground">
                   {game.minPlayers}-{game.maxPlayers} joueurs
                 </p>
+                {isSelected && (
+                  <p className="text-[11px] font-semibold text-cyan-200">
+                    Jeu actif
+                  </p>
+                )}
                 {game.rules.length > 0 && (
                   <button
                     onClick={(e) => { e.stopPropagation(); setShowRules(true); }}
