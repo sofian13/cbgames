@@ -25,7 +25,13 @@ export function ReadyCheck({
   const connectedPlayers = players.filter((p) => p.isConnected);
   const readyCount = connectedPlayers.filter((p) => p.isReady || p.isHost).length;
   const allReady = readyCount === connectedPlayers.length;
-  const minPlayers = selectedGameId ? (getGameById(selectedGameId)?.minPlayers ?? 2) : 2;
+  const normalizedGameId = selectedGameId?.trim().toLowerCase() ?? null;
+  const soloGameIds = new Set(["motion-tennis", "undercover", "chess"]);
+  const minPlayers = normalizedGameId
+    ? soloGameIds.has(normalizedGameId)
+      ? 1
+      : (getGameById(normalizedGameId)?.minPlayers ?? 2)
+    : 2;
   const canStart = isHost && allReady && selectedGameId && connectedPlayers.length >= minPlayers;
 
   return (

@@ -164,13 +164,14 @@ export default class LobbyServer {
         const player = this.findPlayerByConnection(sender.id);
         if (!player?.isHost) return;
         if (!this.selectedGameId) return;
+        const normalizedGameId = this.selectedGameId.trim().toLowerCase();
 
         const connectedPlayers = Array.from(this.players.values()).filter(
           (p) => p.isConnected
         );
         // Some games allow solo play (e.g. motion-tennis vs bot)
         const soloGames = new Set(["motion-tennis", "undercover", "chess"]);
-        const minRequired = soloGames.has(this.selectedGameId) ? 1 : 2;
+        const minRequired = soloGames.has(normalizedGameId) ? 1 : 2;
         if (connectedPlayers.length < minRequired) {
           this.sendTo(sender.id, {
             type: "error",
