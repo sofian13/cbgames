@@ -134,7 +134,8 @@ export default class LobbyServer {
         if (!player?.isHost) return;
 
         const { gameId } = msg.payload as { gameId: string };
-        this.selectedGameId = gameId;
+        const normalizedGameId = gameId.trim().toLowerCase();
+        this.selectedGameId = normalizedGameId;
 
         // Reset ready states
         for (const [, p] of this.players) {
@@ -143,7 +144,7 @@ export default class LobbyServer {
 
         this.broadcast({
           type: "game-selected",
-          payload: { gameId },
+          payload: { gameId: normalizedGameId },
         });
         break;
       }
