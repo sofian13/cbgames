@@ -151,9 +151,16 @@ export default function UnoGame({ roomCode, playerId, playerName }: GameProps) {
   const [colorPickerCard, setColorPickerCard] = useState<number | null>(null);
   const [unoToast, setUnoToast] = useState<UnoEvent | null>(null);
   const [playedCardAnim, setPlayedCardAnim] = useState<number | null>(null);
+  const [selectedCardIndex, setSelectedCardIndex] = useState<number | null>(null);
   const prevUnoEventRef = useRef<string>("");
+  const drawLockRef = useRef(false);
 
   const state = gameState as unknown as UnoState;
+
+  // Reset selected card when hand changes
+  useEffect(() => {
+    setSelectedCardIndex(null);
+  }, [state?.myHand?.length]);
 
   // ── UNO event toast ────────────────────────────────────
   useEffect(() => {
@@ -196,7 +203,11 @@ export default function UnoGame({ roomCode, playerId, playerName }: GameProps) {
   );
 
   const handleDraw = useCallback(() => {
+    if (drawLockRef.current) return;
+    drawLockRef.current = true;
     sendAction({ action: "draw" });
+    // Unlock after server has time to respond
+    setTimeout(() => { drawLockRef.current = false; }, 1000);
   }, [sendAction]);
 
   const handlePassAfterDraw = useCallback(() => {
@@ -493,15 +504,45 @@ export default function UnoGame({ roomCode, playerId, playerName }: GameProps) {
               Carte piochee ! Joue-la ou passe.
             </p>
           )}
-          <div className="flex justify-center items-end relative" style={{ minHeight: "130px" }}>
+
+          {/* Selected card preview (mobile) */}
+          {selectedCardIndex !== null && myHand[selectedCardIndex] && (
+            <div className="sm:hidden flex justify-center mb-2">
+              <div className="flex flex-col items-center gap-2">
+                <CardView card={myHand[selectedCardIndex]} size="large" playable={myHand[selectedCardIndex].playable} />
+                <div className="flex gap-2">
+                  {myHand[selectedCardIndex].playable && (
+                    <button
+                      onClick={() => {
+                        handlePlayCard(selectedCardIndex, myHand[selectedCardIndex]);
+                        setSelectedCardIndex(null);
+                      }}
+                      className="px-4 py-1.5 rounded-xl bg-cyan-500/20 border border-cyan-400/30 text-cyan-200 font-sans text-xs font-semibold active:scale-95 transition-all"
+                    >
+                      Jouer
+                    </button>
+                  )}
+                  <button
+                    onClick={() => setSelectedCardIndex(null)}
+                    className="px-4 py-1.5 rounded-xl bg-white/5 border border-white/10 text-white/40 font-sans text-xs active:scale-95 transition-all"
+                  >
+                    Fermer
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="flex justify-center items-end relative" style={{ minHeight: "100px" }}>
             {myHand.map((card, index) => {
               const totalCards = myHand.length;
-              const maxSpread = Math.min(totalCards * 48, 600);
-              const cardWidth = Math.min(maxSpread / totalCards, 72);
+              const maxSpread = Math.min(totalCards * 40, 500);
+              const cardWidth = Math.min(maxSpread / totalCards, 52);
               const centerOffset = index - (totalCards - 1) / 2;
               const rotationDeg = totalCards > 1 ? centerOffset * Math.min(3, 30 / totalCards) : 0;
-              const translateY = totalCards > 1 ? Math.abs(centerOffset) * Math.min(4, 40 / totalCards) : 0;
+              const translateY = totalCards > 1 ? Math.abs(centerOffset) * Math.min(3, 30 / totalCards) : 0;
               const isAnimating = playedCardAnim === index;
+              const isSelected = selectedCardIndex === index;
 
               return (
                 <div
@@ -512,19 +553,33 @@ export default function UnoGame({ roomCode, playerId, playerName }: GameProps) {
                   )}
                   style={{
                     width: `${cardWidth}px`,
-                    transform: `rotate(${rotationDeg}deg) translateY(${translateY}px)`,
-                    zIndex: index,
-                    marginLeft: index === 0 ? "0" : `-${Math.max(0, 72 - cardWidth)}px`,
+                    transform: `rotate(${rotationDeg}deg) translateY(${isSelected ? translateY - 12 : translateY}px)`,
+                    zIndex: isSelected ? 100 : index,
+                    marginLeft: index === 0 ? "0" : `-${Math.max(0, 52 - cardWidth)}px`,
                   }}
                 >
                   <button
-                    onClick={() => handlePlayCard(index, card)}
-                    disabled={!card.playable}
+                    onClick={() => {
+                      // On mobile: tap to select, second tap to play
+                      const isMobile = window.innerWidth < 640;
+                      if (isMobile) {
+                        if (selectedCardIndex === index) {
+                          handlePlayCard(index, card);
+                          setSelectedCardIndex(null);
+                        } else {
+                          setSelectedCardIndex(index);
+                        }
+                      } else {
+                        handlePlayCard(index, card);
+                      }
+                    }}
+                    disabled={false}
                     className={cn(
                       "block transition-all duration-150 origin-bottom",
                       card.playable
-                        ? "hover:-translate-y-4 hover:scale-105 cursor-pointer active:scale-95"
-                        : "opacity-40 cursor-default"
+                        ? "sm:hover:-translate-y-8 sm:hover:scale-[1.35] cursor-pointer active:scale-95"
+                        : "opacity-40 cursor-default",
+                      isSelected && "ring-2 ring-cyan-400/60 rounded-xl"
                     )}
                   >
                     <CardView card={card} size="hand" playable={card.playable} />
@@ -573,9 +628,9 @@ function CardView({
   const colorStyle = color ? COLOR_MAP[color as CardColor] : null;
   const label = getCardLabel(card);
 
-  const sizeClasses = size === "large" ? "w-[92px] h-[134px]" : "w-[72px] h-[104px]";
-  const labelSize = size === "large" ? "text-4xl" : "text-2xl";
-  const cornerSize = size === "large" ? "text-xs" : "text-[10px]";
+  const sizeClasses = size === "large" ? "w-[92px] h-[134px]" : "w-[52px] h-[76px] sm:w-[72px] sm:h-[104px]";
+  const labelSize = size === "large" ? "text-4xl" : "text-xl sm:text-2xl";
+  const cornerSize = size === "large" ? "text-xs" : "text-[8px] sm:text-[10px]";
 
   // Build inline gradient for card background instead of flat color
   const cardGradient = (() => {

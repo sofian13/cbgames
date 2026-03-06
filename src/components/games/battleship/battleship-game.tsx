@@ -119,23 +119,70 @@ function randomPlacement(): { grid: CellState[]; ships: Ship[] } {
   return { grid, ships };
 }
 
+// ── Ship visual config ──────────────────────────────────
+const SHIP_STYLES: Record<string, { gradient: string; border: string; icon: string }> = {
+  carrier:    { gradient: "from-slate-500/70 to-slate-700/60", border: "border-slate-300/40", icon: "\u2693" },   // anchor
+  battleship: { gradient: "from-zinc-500/70 to-zinc-600/60",  border: "border-zinc-300/40",  icon: "\u{1F4A3}" },   // bomb
+  cruiser1:   { gradient: "from-cyan-500/60 to-teal-600/50",  border: "border-cyan-300/35",  icon: "\u{1F6A2}" },   // ship
+  cruiser2:   { gradient: "from-blue-500/60 to-indigo-600/50", border: "border-blue-300/35", icon: "\u{1F30A}" },   // wave
+  destroyer:  { gradient: "from-amber-500/60 to-orange-600/50", border: "border-amber-300/40", icon: "\u26A1" }, // bolt
+};
+const DEFAULT_SHIP_STYLE = { gradient: "from-cyan-500/50 to-blue-600/40", border: "border-cyan-300/30", icon: "" };
+
 // ── Ship shape helpers ──────────────────────────────────
-function getShipEdges(ships: Ship[], idx: number): { isShip: boolean; top: boolean; bottom: boolean; left: boolean; right: boolean } {
+interface ShipEdgeInfo {
+  isShip: boolean;
+  shipId: string;
+  top: boolean;
+  bottom: boolean;
+  left: boolean;
+  right: boolean;
+  isHead: boolean;
+  isTail: boolean;
+  isHoriz: boolean;
+}
+
+function getShipEdges(ships: Ship[], idx: number): ShipEdgeInfo {
   for (const s of ships) {
     const pos = s.cells.indexOf(idx);
     if (pos === -1) continue;
-    const x = idx % 10;
-    const y = Math.floor(idx / 10);
     const isHoriz = s.cells.length > 1 && Math.abs(s.cells[0] - s.cells[1]) === 1;
+    const isHead = pos === 0;
+    const isTail = pos === s.cells.length - 1;
     return {
       isShip: true,
-      top: isHoriz || pos === 0,
-      bottom: isHoriz || pos === s.cells.length - 1,
-      left: !isHoriz || pos === 0,
-      right: !isHoriz || pos === s.cells.length - 1,
+      shipId: s.id,
+      top: isHoriz || isHead,
+      bottom: isHoriz || isTail,
+      left: !isHoriz || isHead,
+      right: !isHoriz || isTail,
+      isHead,
+      isTail,
+      isHoriz,
     };
   }
-  return { isShip: false, top: false, bottom: false, left: false, right: false };
+  return { isShip: false, shipId: "", top: false, bottom: false, left: false, right: false, isHead: false, isTail: false, isHoriz: false };
+}
+
+function getShipCellRadius(edges: ShipEdgeInfo): string {
+  if (!edges.isShip) return "0";
+  const r = "40%";
+  const z = "0";
+  if (edges.isHoriz) {
+    // Horizontal ship
+    const tl = edges.isHead ? r : z;
+    const tr = edges.isTail ? r : z;
+    const br = edges.isTail ? r : z;
+    const bl = edges.isHead ? r : z;
+    return `${tl} ${tr} ${br} ${bl}`;
+  } else {
+    // Vertical ship
+    const tl = edges.isHead ? r : z;
+    const tr = edges.isHead ? r : z;
+    const br = edges.isTail ? r : z;
+    const bl = edges.isTail ? r : z;
+    return `${tl} ${tr} ${br} ${bl}`;
+  }
 }
 
 // ── Grid Component ──────────────────────────────────────
@@ -208,6 +255,9 @@ function BattleGrid({
               const isMiss = cell === "miss";
               const showShip = !isEnemy && !hideShips && (cell === "ship" || shipCells.has(idx));
               const edges = showShip && ships ? getShipEdges(ships, idx) : null;
+              const shipStyle = edges?.isShip ? (SHIP_STYLES[edges.shipId] ?? DEFAULT_SHIP_STYLE) : null;
+              const radius = edges ? getShipCellRadius(edges) : "0";
+              const isMidCell = edges?.isShip && !edges.isHead && !edges.isTail;
 
               return (
                 <button
@@ -216,31 +266,44 @@ function BattleGrid({
                   disabled={disabled || (!isEnemy)}
                   className={cn(
                     "w-[var(--cell)] h-[var(--cell)] transition-all relative",
-                    // Base cell
+                    // Base empty cell
                     !showShip && CELL_COLORS[isEnemy && cell === "ship" ? "empty" : (isHit ? "hit" : isMiss ? "miss" : "empty")],
-                    // Ship styling with rounded edges
-                    showShip && !isHit && "bg-gradient-to-br from-cyan-500/50 to-blue-600/40 border-cyan-300/30",
-                    showShip && isHit && "bg-red-500/50 border-red-400/30",
                     !showShip && "border border-cyan-300/8",
-                    // Ship border rounding
-                    showShip && edges?.top && "border-t-2 border-t-cyan-300/40",
-                    showShip && edges?.bottom && "border-b-2 border-b-cyan-300/40",
-                    showShip && edges?.left && "border-l-2 border-l-cyan-300/40",
-                    showShip && edges?.right && "border-r-2 border-r-cyan-300/40",
+                    // Ship hull styling
+                    showShip && !isHit && `bg-gradient-to-br ${shipStyle?.gradient ?? "from-cyan-500/50 to-blue-600/40"}`,
+                    showShip && !isHit && "border-2",
+                    showShip && !isHit && (shipStyle?.border ?? "border-cyan-300/30"),
+                    showShip && isHit && "bg-red-500/50 border-2 border-red-400/40",
                     isHighlight && "bg-cyan-400/20 border-cyan-300/40",
                     isSunk && isHit && "bg-red-600/50 border-red-400/30",
                     isEnemy && !disabled && cell !== "hit" && cell !== "miss" && "hover:bg-cyan-300/15 cursor-crosshair",
                     disabled && isEnemy && "cursor-not-allowed",
                   )}
+                  style={{ borderRadius: showShip ? radius : undefined }}
                 >
-                  {/* Ship dot marker */}
+                  {/* Ship hull shine */}
                   {showShip && !isHit && (
+                    <span className="absolute inset-0 pointer-events-none" style={{
+                      borderRadius: radius,
+                      background: edges?.isHoriz
+                        ? "linear-gradient(180deg, rgba(255,255,255,0.15) 0%, transparent 50%, rgba(0,0,0,0.1) 100%)"
+                        : "linear-gradient(90deg, rgba(255,255,255,0.15) 0%, transparent 50%, rgba(0,0,0,0.1) 100%)",
+                    }} />
+                  )}
+                  {/* Porthole on mid cells */}
+                  {showShip && !isHit && isMidCell && (
                     <span className="absolute inset-0 flex items-center justify-center">
-                      <span className="w-1.5 h-1.5 rounded-full bg-cyan-200/50" />
+                      <span className="w-2 h-2 rounded-full border border-white/25 bg-white/8" />
+                    </span>
+                  )}
+                  {/* Ship icon on head cell */}
+                  {showShip && !isHit && edges?.isHead && shipStyle?.icon && (
+                    <span className="absolute inset-0 flex items-center justify-center text-[10px] opacity-60 drop-shadow-sm">
+                      {shipStyle.icon}
                     </span>
                   )}
                   {isHit && (
-                    <span className="absolute inset-0 flex items-center justify-center text-red-400 font-bold text-sm">
+                    <span className="absolute inset-0 flex items-center justify-center text-red-400 font-bold text-sm drop-shadow-[0_0_4px_rgba(239,68,68,0.5)]">
                       X
                     </span>
                   )}
@@ -458,20 +521,23 @@ function LocalBattleship({ onReturnToLobby }: { onReturnToLobby?: () => void }) 
           <div className="flex flex-wrap gap-2 justify-center">
             {DEFAULT_SHIPS.map((s) => {
               const placed = placedIds.has(s.id);
+              const style = SHIP_STYLES[s.id] ?? DEFAULT_SHIP_STYLE;
               return (
                 <button key={s.id} disabled={placed}
                   onClick={() => setSelectedShipId(s.id)}
                   className={cn(
-                    "rounded-lg border px-3 py-1.5 text-xs font-sans transition-all",
+                    "rounded-lg border px-3 py-1.5 text-xs font-sans transition-all flex items-center gap-1.5",
                     placed ? "border-white/5 bg-white/[0.02] text-white/20 line-through" :
                     selectedShipId === s.id ? "border-cyan-300/50 bg-cyan-300/10 text-cyan-200" :
                     "border-white/10 bg-white/[0.03] text-white/60 hover:border-cyan-300/30"
                   )}>
+                  <span className="text-[11px]">{style.icon}</span>
                   {s.label ?? s.id} ({s.size})
                 </button>
               );
             })}
           </div>
+          <p className="text-[10px] text-white/20 font-sans sm:hidden">Maintiens un navire pour le deplacer</p>
 
           <div className="flex gap-3">
             <button onClick={() => setHorizontal((h) => !h)}
@@ -513,22 +579,61 @@ function LocalBattleship({ onReturnToLobby }: { onReturnToLobby?: () => void }) 
                       const isHover = hoverCells.has(idx);
                       const isShip = cell === "ship";
                       const edges = isShip ? getShipEdges(currentShips, idx) : null;
+                      const shipStyle = edges?.isShip ? (SHIP_STYLES[edges.shipId] ?? DEFAULT_SHIP_STYLE) : null;
+                      const radius = edges ? getShipCellRadius(edges) : "0";
+                      const isMidCell = edges?.isShip && !edges.isHead && !edges.isTail;
                       return (
                         <button key={idx}
                           onClick={() => handlePlacementClick(idx)}
                           onMouseEnter={() => handleHover(idx)}
+                          onTouchStart={(e) => {
+                            if (!isShip) return;
+                            const ship = currentShips.find((s) => s.cells.includes(idx));
+                            if (!ship) return;
+                            const timer = setTimeout(() => {
+                              // Long press: pick up ship to move it
+                              const newGrid = [...currentGrid];
+                              for (const c of ship.cells) newGrid[c] = "empty";
+                              setCurrentGrid(newGrid);
+                              setCurrentShips((prev) => prev.filter((s) => s.id !== ship.id));
+                              setSelectedShipId(ship.id);
+                              const cfg = DEFAULT_SHIPS.find((s) => s.id === ship.id);
+                              if (cfg) {
+                                const isH = ship.cells.length > 1 && Math.abs(ship.cells[0] - ship.cells[1]) === 1;
+                                setHorizontal(isH);
+                              }
+                            }, 400);
+                            const el = e.currentTarget;
+                            const clearTimer = () => { clearTimeout(timer); el.removeEventListener("touchend", clearTimer); el.removeEventListener("touchmove", clearTimer); };
+                            el.addEventListener("touchend", clearTimer, { once: true });
+                            el.addEventListener("touchmove", clearTimer, { once: true });
+                          }}
                           className={cn(
                             "w-[var(--cell)] h-[var(--cell)] transition-all relative",
-                            isShip ? "bg-gradient-to-br from-cyan-500/50 to-blue-600/40" : "bg-[#0c1a3a] border border-cyan-300/8",
-                            isShip && edges?.top && "border-t-2 border-t-cyan-300/40",
-                            isShip && edges?.bottom && "border-b-2 border-b-cyan-300/40",
-                            isShip && edges?.left && "border-l-2 border-l-cyan-300/40",
-                            isShip && edges?.right && "border-r-2 border-r-cyan-300/40",
+                            isShip ? `bg-gradient-to-br ${shipStyle?.gradient ?? "from-cyan-500/50 to-blue-600/40"} border-2 ${shipStyle?.border ?? "border-cyan-300/30"}`
+                              : "bg-[#0c1a3a] border border-cyan-300/8",
                             isHover && !isShip && "bg-cyan-400/20 border-cyan-300/35",
-                          )}>
+                          )}
+                          style={{ borderRadius: isShip ? radius : undefined }}>
+                          {/* Hull shine */}
                           {isShip && (
+                            <span className="absolute inset-0 pointer-events-none" style={{
+                              borderRadius: radius,
+                              background: edges?.isHoriz
+                                ? "linear-gradient(180deg, rgba(255,255,255,0.15) 0%, transparent 50%, rgba(0,0,0,0.1) 100%)"
+                                : "linear-gradient(90deg, rgba(255,255,255,0.15) 0%, transparent 50%, rgba(0,0,0,0.1) 100%)",
+                            }} />
+                          )}
+                          {/* Porthole */}
+                          {isShip && isMidCell && (
                             <span className="absolute inset-0 flex items-center justify-center">
-                              <span className="w-1.5 h-1.5 rounded-full bg-cyan-200/50" />
+                              <span className="w-2 h-2 rounded-full border border-white/25 bg-white/8" />
+                            </span>
+                          )}
+                          {/* Ship icon */}
+                          {isShip && edges?.isHead && shipStyle?.icon && (
+                            <span className="absolute inset-0 flex items-center justify-center text-[10px] opacity-60">
+                              {shipStyle.icon}
                             </span>
                           )}
                         </button>

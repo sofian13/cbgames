@@ -165,8 +165,6 @@ const ADULT_WORD_PAIRS: [string, string][] = [
   ["Pornhub", "Xvideos"],
   ["Lingerie", "String troue"],
   ["Date", "Plan cul"],
-  ["Formicophilie", "Zoophilie"],
-  ["Pedophilie", "Gerontophilie"],
   ["Brazzers", "xnxx"],
   ["Jacquie et Michel", "YouPorn"],
   ["XHamster", "RedTube"],

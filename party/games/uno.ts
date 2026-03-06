@@ -62,6 +62,7 @@ export class UnoGame extends BaseGame {
   // After drawing, the player can play the drawn card or pass
   drawnCard: UnoCard | null = null;
   drawnPlayerId: string | null = null;
+  lastDrawTime = 0; // timestamp to prevent rapid draws
 
   // ── Deck creation ────────────────────────────────────────
   createDeck(): UnoCard[] {
@@ -456,6 +457,10 @@ export class UnoGame extends BaseGame {
     if (this.status !== "playing") return;
     if (this.getCurrentPlayerId() !== playerId) return;
     if (this.drawnPlayerId === playerId) return; // already drew this turn
+    // Prevent rapid-fire draws (500ms cooldown)
+    const now = Date.now();
+    if (now - this.lastDrawTime < 500) return;
+    this.lastDrawTime = now;
 
     const player = this.unoPlayers.get(playerId);
     if (!player) return;
