@@ -933,7 +933,7 @@ export default function UndercoverGame({
     if (localPhase === "cards") {
       const current = localPlayers[localCardTurnIndex] ?? null;
       const remaining = localSecretDeck.length;
-      const remainingInfiltrators = localSecretDeck.filter((c) => c.role !== "civilian").length;
+      const infiltratedCount = localUndercoverCount + localMrWhiteCount;
       const remainingMrWhite = localSecretDeck.filter((c) => c.role === "mrwhite").length;
       if (!current) return null;
 
@@ -969,8 +969,8 @@ export default function UndercoverGame({
 
           <div className="relative mx-auto flex w-full max-w-md gap-2">
             <div className="flex-1 rounded-3xl bg-white/35 px-4 py-3 text-center text-black/80 backdrop-blur-[1px]">
-              <p className="text-xl font-sans">Infiltrateurs restants</p>
-              <p className="text-3xl font-semibold">{remainingInfiltrators}</p>
+              <p className="text-xl font-sans">Nombre infiltrés</p>
+              <p className="text-3xl font-semibold">{infiltratedCount}</p>
             </div>
             <div className="flex-1 rounded-3xl bg-white/35 px-4 py-3 text-center text-black/80 backdrop-blur-[1px]">
               <p className="text-xl font-sans">Roles speciaux</p>
