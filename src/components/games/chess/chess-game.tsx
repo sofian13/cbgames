@@ -475,6 +475,7 @@ interface ChessBoardViewProps {
   availableTargets: number[];
   lastMove: ChessMove | null;
   orientation?: Color;
+  inCheckSquare?: number | null;
 }
 
 const ChessBoardView = memo(function ChessBoardView({
@@ -484,6 +485,7 @@ const ChessBoardView = memo(function ChessBoardView({
   availableTargets,
   lastMove,
   orientation = "w",
+  inCheckSquare = null,
 }: ChessBoardViewProps) {
   const rows = orientation === "w" ? [...Array(8).keys()] : [...Array(8).keys()].reverse();
   const cols = orientation === "w" ? [...Array(8).keys()] : [...Array(8).keys()].reverse();
@@ -526,6 +528,7 @@ const ChessBoardView = memo(function ChessBoardView({
               const isTarget = targetSet.has(idx);
               const isLastMove = lastMoveSet.has(idx);
               const isCapture = isTarget && piece !== null;
+              const isCheck = inCheckSquare === idx;
 
               return (
                 <button
@@ -533,27 +536,36 @@ const ChessBoardView = memo(function ChessBoardView({
                   onClick={() => onSquareClick(idx)}
                   className={cn(
                     "relative flex aspect-square items-center justify-center leading-none",
-                    isLight ? "bg-[#b7c0d8]" : "bg-[#5b6a8a]",
+                    isLight ? "bg-[#e8dab2]" : "bg-[#7b6b4a]",
                     isLastMove && (isLight ? "bg-[#c8b878]" : "bg-[#8a7a48]"),
-                    isSelected && "bg-[#6ecf6e]/40",
+                    isSelected && "bg-[#6ecf6e]/50",
+                    isCheck && "bg-red-500/70",
                   )}
-                  style={{ fontSize: "min(calc((100vw - 3rem) / 8 * 0.7), 3rem)" }}
+                  style={{ fontSize: "min(calc((100vw - 3rem) / 8 * 0.78), 3.2rem)" }}
                 >
                   {isTarget && !isCapture && (
-                    <span className="absolute h-[25%] w-[25%] rounded-full bg-black/25" />
+                    <span className="absolute h-[28%] w-[28%] rounded-full bg-black/20" />
                   )}
                   {isCapture && (
-                    <span className="absolute inset-[6%] rounded-full border-[3px] border-red-500/50" />
+                    <span className="absolute inset-[5%] rounded-full border-[3px] border-red-500/60" />
                   )}
-                  <span
-                    className={cn(
-                      "relative z-10 select-none",
-                      piece?.color === "w" ? "text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.5)]" : "text-[#1a1a2a] drop-shadow-[0_1px_1px_rgba(255,255,255,0.15)]",
-                      isSelected && "scale-110"
-                    )}
-                  >
-                    {code ? PIECE_GLYPH[code] : ""}
-                  </span>
+                  {code && (
+                    <span
+                      className={cn(
+                        "relative z-10 select-none transition-transform duration-100",
+                        isSelected && "scale-110"
+                      )}
+                      style={{
+                        filter: piece?.color === "w"
+                          ? "drop-shadow(0 2px 3px rgba(0,0,0,0.45)) drop-shadow(0 0 1px rgba(0,0,0,0.3))"
+                          : "drop-shadow(0 2px 2px rgba(0,0,0,0.3)) drop-shadow(0 0 1px rgba(255,255,255,0.1))",
+                        color: piece?.color === "w" ? "#fff" : "#1a1a2e",
+                        WebkitTextStroke: piece?.color === "w" ? "0.3px rgba(0,0,0,0.15)" : "0.3px rgba(255,255,255,0.08)",
+                      }}
+                    >
+                      {PIECE_GLYPH[code]}
+                    </span>
+                  )}
                 </button>
               );
             })
@@ -620,8 +632,16 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
   }, [localLegalMoves]);
   const localCapturedWhite = useMemo(() => getCapturedPieceSymbols(localBoard, "w"), [localBoard]);
   const localCapturedBlack = useMemo(() => getCapturedPieceSymbols(localBoard, "b"), [localBoard]);
+  const localInCheckSquare = useMemo(() => {
+    if (isInCheck(localBoard, localTurn)) return findKingSquare(localBoard, localTurn);
+    return null;
+  }, [localBoard, localTurn]);
   const onlineCapturedWhite = useMemo(() => getCapturedPieceSymbols(board, "w"), [board]);
   const onlineCapturedBlack = useMemo(() => getCapturedPieceSymbols(board, "b"), [board]);
+  const onlineInCheckSquare = useMemo(() => {
+    if (state?.inCheck && state?.turn) return findKingSquare(board, state.turn);
+    return null;
+  }, [board, state?.inCheck, state?.turn]);
   const isFocusView = isFullscreen || focusMode;
 
   const getAudioCtx = useCallback(() => {
@@ -638,23 +658,39 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
     const ctx = getAudioCtx();
     if (!ctx) return;
     const now = ctx.currentTime;
-    const oscA = ctx.createOscillator();
-    const oscB = ctx.createOscillator();
-    const gain = ctx.createGain();
-    oscA.type = "triangle";
-    oscB.type = "sine";
-    oscA.frequency.value = 720;
-    oscB.frequency.value = 980;
-    gain.gain.setValueAtTime(0.0001, now);
-    gain.gain.exponentialRampToValueAtTime(0.07, now + 0.01);
-    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.08);
-    oscA.connect(gain);
-    oscB.connect(gain);
-    gain.connect(ctx.destination);
-    oscA.start(now);
-    oscB.start(now);
-    oscA.stop(now + 0.08);
-    oscB.stop(now + 0.08);
+
+    // Wooden thud — low-freq knock with noise texture
+    const osc = ctx.createOscillator();
+    const oscGain = ctx.createGain();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(180, now);
+    osc.frequency.exponentialRampToValueAtTime(60, now + 0.08);
+    oscGain.gain.setValueAtTime(0.25, now);
+    oscGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.12);
+    osc.connect(oscGain);
+    oscGain.connect(ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.12);
+
+    // Noise burst for click texture
+    const bufSize = ctx.sampleRate * 0.04;
+    const buf = ctx.createBuffer(1, bufSize, ctx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < bufSize; i++) data[i] = (Math.random() * 2 - 1) * 0.4;
+    const noise = ctx.createBufferSource();
+    noise.buffer = buf;
+    const noiseGain = ctx.createGain();
+    noiseGain.gain.setValueAtTime(0.12, now);
+    noiseGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.04);
+    const noiseFilter = ctx.createBiquadFilter();
+    noiseFilter.type = "bandpass";
+    noiseFilter.frequency.value = 800;
+    noiseFilter.Q.value = 1.5;
+    noise.connect(noiseFilter);
+    noiseFilter.connect(noiseGain);
+    noiseGain.connect(ctx.destination);
+    noise.start(now);
+    noise.stop(now + 0.04);
   }, [getAudioCtx]);
 
   const playWinSound = useCallback(() => {
@@ -984,6 +1020,7 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
                 availableTargets={localTargets}
                 lastMove={localLastMove}
                 orientation="w"
+                inCheckSquare={localInCheckSquare}
               />
             </div>
 
@@ -1108,6 +1145,7 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
               availableTargets={localTargets}
               lastMove={localLastMove}
               orientation="w"
+              inCheckSquare={localInCheckSquare}
             />
           </div>
 
@@ -1420,6 +1458,7 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
               availableTargets={selectedTargets}
               lastMove={state.lastMove ? { from: state.lastMove.from, to: state.lastMove.to } : null}
               orientation={orientation}
+              inCheckSquare={onlineInCheckSquare}
             />
           </div>
 
@@ -1561,6 +1600,7 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
             availableTargets={selectedTargets}
             lastMove={state.lastMove ? { from: state.lastMove.from, to: state.lastMove.to } : null}
             orientation={orientation}
+            inCheckSquare={onlineInCheckSquare}
           />
         </div>
 
