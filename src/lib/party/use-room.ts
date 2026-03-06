@@ -31,6 +31,7 @@ export function useRoom(
     const socket = new PartySocket({
       host,
       room: roomCode,
+      party: "main",
       protocol,
     });
 
@@ -38,6 +39,7 @@ export function useRoom(
     hasLobbyStateRef.current = false;
 
     socket.addEventListener("open", () => {
+      store.setDebugEvent("ws-open");
       store.setConnected(true);
       store.setError(null);
       // Host fallback only for the room creator route (?host=1), not invite links.
@@ -58,12 +60,14 @@ export function useRoom(
         type: "join",
         payload: { playerId, name: playerName, avatar, isGuest },
       };
+      store.setDebugEvent("join-send");
       socket.send(JSON.stringify(msg));
 
       // Mobile networks can occasionally drop the first message:
       // retry join until lobby-state arrives.
       const retry = setInterval(() => {
         if (hasLobbyStateRef.current || socket.readyState !== WebSocket.OPEN) return;
+        store.setDebugEvent("join-retry");
         socket.send(JSON.stringify(msg));
       }, 1500);
 
@@ -77,7 +81,13 @@ export function useRoom(
     });
 
     socket.addEventListener("message", (event) => {
-      const msg = JSON.parse(event.data) as LobbyServerMessage;
+      let msg: LobbyServerMessage;
+      try {
+        msg = JSON.parse(event.data) as LobbyServerMessage;
+      } catch {
+        store.setDebugEvent("ws-parse-error");
+        return;
+      }
       store.setDebugEvent(msg.type);
 
       switch (msg.type) {
@@ -130,10 +140,12 @@ export function useRoom(
     });
 
     socket.addEventListener("close", () => {
+      store.setDebugEvent("ws-close");
       store.setConnected(false);
     });
 
     socket.addEventListener("error", () => {
+      store.setDebugEvent("ws-error");
       store.setError("Connexion perdue");
     });
 
