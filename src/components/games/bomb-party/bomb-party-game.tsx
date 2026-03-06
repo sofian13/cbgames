@@ -18,7 +18,7 @@ export default function BombPartyGame({ roomCode, playerId, playerName }: GamePr
   if (!state || state.status === "waiting") {
     return (
       <div className="flex flex-1 items-center justify-center">
-        <p className="text-muted-foreground animate-pulse">En attente des joueurs...</p>
+        <p className="text-white/40 font-sans animate-pulse text-lg">En attente des joueurs...</p>
       </div>
     );
   }
@@ -30,13 +30,16 @@ export default function BombPartyGame({ roomCode, playerId, playerName }: GamePr
   };
 
   return (
-    <div className="flex flex-1 flex-col items-center gap-6 p-6">
+    <div
+      className="flex flex-1 flex-col items-center gap-6 p-6"
+      style={{
+        background:
+          "radial-gradient(circle at 50% 20%, rgba(34,211,238,0.08), transparent 45%), radial-gradient(circle at 50% 80%, rgba(239,68,68,0.06), transparent 40%)",
+      }}
+    >
       {/* Timer */}
       <div className="w-full max-w-md">
-        <CountdownTimer
-          timeLeft={state.timeLeft ?? 0}
-          maxTime={10}
-        />
+        <CountdownTimer timeLeft={state.timeLeft ?? 0} maxTime={10} />
       </div>
 
       {/* Bomb + syllable */}
@@ -47,13 +50,15 @@ export default function BombPartyGame({ roomCode, playerId, playerName }: GamePr
       />
 
       {/* Current player indicator */}
-      <p className="text-lg">
+      <p className="text-lg font-sans">
         {isMyTurn ? (
-          <span className="font-bold text-primary">C&apos;est ton tour !</span>
+          <span className="font-bold text-cyan-300 drop-shadow-[0_0_8px_rgba(34,211,238,0.4)]">
+            C&apos;est ton tour !
+          </span>
         ) : (
-          <span className="text-muted-foreground">
+          <span className="text-white/40">
             Tour de{" "}
-            <span className="font-semibold text-foreground">
+            <span className="font-semibold text-white/70">
               {state.players?.find((p: BombPartyPlayer) => p.id === state.currentPlayerId)?.name ?? "..."}
             </span>
           </span>
@@ -61,57 +66,64 @@ export default function BombPartyGame({ roomCode, playerId, playerName }: GamePr
       </p>
 
       {/* Input */}
-      <BombPartyInput
-        isMyTurn={isMyTurn}
-        syllable={state.syllable ?? ""}
-        onSubmit={handleSubmitWord}
-      />
+      <BombPartyInput isMyTurn={isMyTurn} syllable={state.syllable ?? ""} onSubmit={handleSubmitWord} />
 
       {/* Error message */}
       {error && (
-        <p className="text-sm text-destructive animate-in fade-in">{error}</p>
+        <div className="rounded-xl border border-red-400/20 bg-red-400/[0.06] px-4 py-2">
+          <p className="text-sm text-red-300 font-sans">{error}</p>
+        </div>
       )}
 
       {/* Players status */}
-      <div className="flex flex-wrap justify-center gap-3 mt-4">
+      <div className="flex flex-wrap justify-center gap-3 mt-2">
         {state.players?.map((p: BombPartyPlayer) => (
           <div
             key={p.id}
             className={cn(
-              "flex flex-col items-center gap-1 rounded-lg border p-3 min-w-[100px] transition-all",
-              p.id === state.currentPlayerId && "border-primary bg-primary/5 ring-1 ring-primary/20",
-              !p.isAlive && "opacity-40"
+              "flex flex-col items-center gap-1.5 rounded-2xl border p-3.5 min-w-[110px] transition-all backdrop-blur-sm",
+              p.id === state.currentPlayerId
+                ? "border-cyan-300/25 bg-cyan-300/[0.06] shadow-[0_0_20px_rgba(34,211,238,0.08)]"
+                : "border-white/[0.08] bg-white/[0.03]",
+              !p.isAlive && "opacity-30 grayscale"
             )}
           >
-            <span className="text-sm font-medium truncate max-w-[90px]">
+            <span className="text-sm font-sans font-semibold truncate max-w-[90px] text-white/80">
               {p.name}
-              {p.id === playerId && " (toi)"}
+              {p.id === playerId && (
+                <span className="text-cyan-300/60 ml-1">(toi)</span>
+              )}
             </span>
-            <div className="flex gap-0.5">
+            <div className="flex gap-1">
               {Array.from({ length: 3 }).map((_, i) => (
                 <span
                   key={i}
                   className={cn(
-                    "text-sm",
-                    i < p.lives ? "text-red-500" : "text-muted-foreground/30"
+                    "text-sm transition-all",
+                    i < p.lives
+                      ? "drop-shadow-[0_0_4px_rgba(239,68,68,0.5)]"
+                      : "opacity-20 grayscale"
                   )}
                 >
                   ❤️
                 </span>
               ))}
             </div>
-            <span className="text-xs text-muted-foreground">{p.score} pts</span>
+            <span className="text-xs font-mono text-white/35">{p.score} pts</span>
           </div>
         ))}
       </div>
 
       {/* Used words */}
       {state.usedWords && state.usedWords.length > 0 && (
-        <div className="w-full max-w-md mt-4">
-          <p className="text-xs text-muted-foreground mb-1">Mots utilisés :</p>
-          <div className="flex flex-wrap gap-1">
+        <div className="w-full max-w-md mt-2">
+          <p className="text-[11px] text-white/25 font-sans mb-2 uppercase tracking-wider">Mots utilises</p>
+          <div className="flex flex-wrap gap-1.5">
             {state.usedWords.slice(-10).map((word: string, i: number) => (
-              <span key={i} className="text-xs bg-muted rounded px-1.5 py-0.5 font-mono">
+              <span
+                key={i}
+                className="text-xs font-mono rounded-lg border border-white/[0.06] bg-white/[0.03] px-2 py-1 text-white/40"
+              >
                 {word}
               </span>
             ))}

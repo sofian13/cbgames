@@ -67,59 +67,92 @@ export default function RouletteGame({ roomCode, playerId, playerName }: GamePro
     sendAction({ action: "bet", prediction: betPrediction, amount: betAmount });
   }, [hasBet, betPrediction, betAmount, sendAction]);
 
-  if (!state || state.status === "waiting") return <div className="flex flex-1 items-center justify-center"><p className="text-white/40 animate-pulse font-sans">En attente...</p></div>;
+  if (!state || state.status === "waiting") return (
+    <div className="flex flex-1 items-center justify-center" style={{ background: "radial-gradient(circle at 50% 25%, rgba(101,223,178,0.06), transparent 40%), #060606" }}>
+      <p className="text-white/40 animate-pulse font-sans text-lg">En attente...</p>
+    </div>
+  );
 
   const me = state.players?.find(p => p.id === playerId);
   const isMyTurn = state.currentPlayerId === playerId;
 
   if (state.status === "betting") {
     return (
-      <div className="flex flex-1 flex-col items-center justify-center p-6" style={{ background: "#060606" }}>
+      <div className="flex flex-1 flex-col items-center justify-center p-6" style={{ background: "radial-gradient(circle at 50% 25%, rgba(80,216,255,0.08), transparent 40%), #060606" }}>
         <div className="w-full max-w-md space-y-6">
+          {/* Header row */}
           <div className="flex justify-between items-center">
-            <span className="text-xs text-white/20 font-sans uppercase tracking-wider">Tour {state.turn}/{state.maxTurns}</span>
-            <span className="text-sm font-mono text-ember">{state.timeLeft}s</span>
+            <span className="text-xs text-white/25 font-sans uppercase tracking-[0.2em]">Tour {state.turn}/{state.maxTurns}</span>
+            <span className="text-sm font-mono text-ember shadow-[0_0_20px_rgba(255,100,50,0.25)]">{state.timeLeft}s</span>
           </div>
+
+          {/* Barrel */}
           <BarrelVisual chambers={state.barrel.chambers} bullets={state.barrel.bullets} />
-          <p className="text-center text-sm text-white/60 font-sans">
+
+          {/* Current turn info */}
+          <p className="text-center text-white/90 font-sans text-xl font-semibold">
             {isMyTurn ? "C'est ton tour de tirer..." : `${state.players.find(p => p.id === state.currentPlayerId)?.name} va tirer`}
           </p>
+
+          {/* Betting panel */}
           {!isMyTurn && me?.isAlive && !hasBet ? (
-            <div className="space-y-3 rounded-xl border border-white/[0.08] bg-white/[0.03] p-4">
-              <p className="text-xs text-white/40 font-sans text-center">Ton pari</p>
-              <div className="flex gap-2 justify-center">
+            <div className="space-y-4 rounded-3xl border border-white/25 bg-black/30 backdrop-blur-sm p-5 shadow-[0_0_20px_rgba(80,216,255,0.08)]">
+              <p className="text-sm text-white/40 font-sans text-center uppercase tracking-wider">Ton pari</p>
+              <div className="flex gap-3 justify-center">
                 <button onClick={() => setBetPrediction("bang")}
-                  className={cn("rounded-lg border px-4 py-2 text-sm font-sans transition-all", betPrediction === "bang" ? "border-red-500/50 bg-red-500/10 text-red-300" : "border-white/[0.08] text-white/40 hover:text-white/60")}>
+                  className={cn("rounded-2xl border px-5 py-2.5 text-sm font-sans font-semibold transition-all",
+                    betPrediction === "bang"
+                      ? "border-red-400/50 bg-red-500/15 text-red-300 shadow-[0_0_20px_rgba(239,68,68,0.25)]"
+                      : "border-white/[0.08] text-white/40 hover:text-white/60 hover:border-white/15")}>
                   BANG
                 </button>
                 <button onClick={() => setBetPrediction("safe")}
-                  className={cn("rounded-lg border px-4 py-2 text-sm font-sans transition-all", betPrediction === "safe" ? "border-emerald-500/50 bg-emerald-500/10 text-emerald-300" : "border-white/[0.08] text-white/40 hover:text-white/60")}>
+                  className={cn("rounded-2xl border px-5 py-2.5 text-sm font-sans font-semibold transition-all",
+                    betPrediction === "safe"
+                      ? "border-emerald-400/50 bg-emerald-500/15 text-emerald-300 shadow-[0_0_20px_rgba(52,211,153,0.25)]"
+                      : "border-white/[0.08] text-white/40 hover:text-white/60 hover:border-white/15")}>
                   Safe
                 </button>
               </div>
               <div className="flex gap-2 justify-center">
                 {BETS.map(b => (
                   <button key={b} onClick={() => setBetAmount(b)}
-                    className={cn("rounded-lg border px-3 py-1 text-xs font-mono transition-all", betAmount === b ? "border-ember/50 bg-ember/10 text-ember" : "border-white/[0.08] text-white/30")}>
+                    className={cn("rounded-xl border px-4 py-1.5 text-xs font-mono transition-all",
+                      betAmount === b
+                        ? "border-ember/50 bg-ember/10 text-ember shadow-[0_0_12px_rgba(255,100,50,0.2)]"
+                        : "border-white/[0.08] text-white/30 hover:text-white/50")}>
                     {b}
                   </button>
                 ))}
               </div>
               <button onClick={handleBet} disabled={!betPrediction}
-                className="w-full rounded-lg bg-ember/80 py-2 text-sm font-sans text-white hover:bg-ember transition-colors disabled:opacity-30">
+                className="w-full rounded-2xl bg-gradient-to-r from-[#65dfb2] to-[#4ecf8a] py-3 text-sm font-sans font-semibold text-white shadow-[0_0_20px_rgba(101,223,178,0.25)] hover:shadow-[0_0_30px_rgba(101,223,178,0.35)] transition-all disabled:opacity-30 disabled:shadow-none">
                 Parier
               </button>
             </div>
           ) : hasBet ? (
-            <p className="text-xs text-white/20 text-center font-sans">Pari enregistré</p>
+            <div className="rounded-3xl border border-white/25 bg-black/30 backdrop-blur-sm py-4 text-center">
+              <p className="text-sm text-white/40 font-sans">Pari enregistre</p>
+            </div>
           ) : isMyTurn ? (
-            <p className="text-xs text-ember/60 text-center font-sans">Tu ne peux pas parier sur toi-même</p>
+            <div className="rounded-3xl border border-white/25 bg-black/30 backdrop-blur-sm py-4 text-center">
+              <p className="text-sm text-ember/60 font-sans">Tu ne peux pas parier sur toi-meme</p>
+            </div>
           ) : null}
+
+          {/* Players row */}
           <div className="flex gap-3 flex-wrap justify-center">
             {state.players.map(p => (
-              <div key={p.id} className={cn("text-center", !p.isAlive && "opacity-30")}>
-                <span className={cn("text-xs font-sans", p.id === state.currentPlayerId ? "text-ember" : "text-white/30")}>{p.name}</span>
-                <p className="text-xs text-white/20 font-mono">{p.points}pts</p>
+              <div key={p.id} className={cn(
+                "text-center px-3 py-2 rounded-2xl border transition-all",
+                !p.isAlive
+                  ? "opacity-30 border-white/[0.04]"
+                  : p.id === state.currentPlayerId
+                    ? "border-ember/30 bg-ember/5 shadow-[0_0_12px_rgba(255,100,50,0.15)]"
+                    : "border-white/[0.06]"
+              )}>
+                <span className={cn("text-xs font-sans font-semibold", p.id === state.currentPlayerId ? "text-ember" : "text-white/40")}>{p.name}</span>
+                <p className="text-xs text-white/25 font-mono">{p.points}pts</p>
               </div>
             ))}
           </div>
@@ -130,35 +163,43 @@ export default function RouletteGame({ roomCode, playerId, playerName }: GamePro
 
   if (state.status === "action" && isMyTurn) {
     return (
-      <div className="flex flex-1 flex-col items-center justify-center p-6" style={{ background: "#060606" }}>
+      <div className="flex flex-1 flex-col items-center justify-center p-6" style={{ background: "radial-gradient(circle at 50% 25%, rgba(239,68,68,0.08), transparent 40%), #060606" }}>
         <div className="w-full max-w-md space-y-6">
+          {/* Header */}
           <div className="flex justify-between items-center">
-            <span className="text-xs text-white/20 font-sans uppercase">Ton action</span>
-            <span className="text-sm font-mono text-ember">{state.timeLeft}s</span>
+            <span className="text-xs text-white/25 font-sans uppercase tracking-[0.2em]">Ton action</span>
+            <span className="text-sm font-mono text-ember shadow-[0_0_20px_rgba(255,100,50,0.25)]">{state.timeLeft}s</span>
           </div>
+
+          {/* Barrel */}
           <BarrelVisual chambers={state.barrel.chambers} bullets={state.barrel.bullets} />
+
+          {/* Action buttons */}
           <div className="grid grid-cols-2 gap-3">
             <button onClick={() => sendAction({ action: "tirer" })}
-              className="rounded-xl border border-red-500/30 bg-red-500/5 p-4 text-center font-sans text-red-300 hover:bg-red-500/10 transition-all col-span-2">
-              <span className="text-2xl block mb-1">🔫</span>Tirer
+              className="rounded-3xl border border-red-400/30 bg-red-500/10 p-5 text-center font-sans text-red-300 hover:bg-red-500/15 hover:border-red-400/50 shadow-[0_0_20px_rgba(239,68,68,0.1)] hover:shadow-[0_0_30px_rgba(239,68,68,0.2)] transition-all col-span-2 backdrop-blur-sm">
+              <span className="text-3xl block mb-2">🔫</span>
+              <span className="text-lg font-semibold">Tirer</span>
             </button>
             <button onClick={() => sendAction({ action: "sauter" })}
-              className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-3 text-center font-sans text-white/60 hover:text-white/80 transition-all">
-              <span className="text-lg block mb-1">⏭️</span>
-              <span className="text-xs">Passer (-100)</span>
+              className="rounded-3xl border border-white/25 bg-black/30 backdrop-blur-sm p-4 text-center font-sans text-white/60 hover:text-white/90 hover:border-white/40 transition-all">
+              <span className="text-xl block mb-1">⏭️</span>
+              <span className="text-xs text-white/40">Passer (-100)</span>
             </button>
             <button onClick={() => sendAction({ action: "ajouter-balle" })}
-              className="rounded-xl border border-ember/30 bg-ember/5 p-3 text-center font-sans text-ember/80 hover:text-ember transition-all">
-              <span className="text-lg block mb-1">💀</span>
+              className="rounded-3xl border border-ember/30 bg-ember/5 backdrop-blur-sm p-4 text-center font-sans text-ember/80 hover:text-ember hover:border-ember/50 shadow-[0_0_12px_rgba(255,100,50,0.08)] hover:shadow-[0_0_20px_rgba(255,100,50,0.15)] transition-all">
+              <span className="text-xl block mb-1">💀</span>
               <span className="text-xs">+Balle (-150)</span>
             </button>
             <button onClick={() => sendAction({ action: "verifier" })}
-              className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-3 text-center font-sans text-white/60 hover:text-white/80 transition-all col-span-2">
-              <span className="text-lg">👁️</span>
-              <span className="text-xs ml-2">Vérifier (-75)</span>
+              className="rounded-3xl border border-white/25 bg-black/30 backdrop-blur-sm p-4 text-center font-sans text-white/60 hover:text-white/90 hover:border-white/40 transition-all col-span-2">
+              <span className="text-xl">👁️</span>
+              <span className="text-xs ml-2 text-white/40">Verifier (-75)</span>
             </button>
           </div>
-          <p className="text-xs text-white/20 font-mono text-center">{me?.points ?? 0} pts restants</p>
+
+          {/* Points */}
+          <p className="text-sm text-white/25 font-mono text-center">{me?.points ?? 0} pts restants</p>
         </div>
       </div>
     );
@@ -166,11 +207,11 @@ export default function RouletteGame({ roomCode, playerId, playerName }: GamePro
 
   if (state.status === "action") {
     return (
-      <div className="flex flex-1 flex-col items-center justify-center p-6" style={{ background: "#060606" }}>
+      <div className="flex flex-1 flex-col items-center justify-center p-6" style={{ background: "radial-gradient(circle at 50% 25%, rgba(80,216,255,0.06), transparent 40%), #060606" }}>
         <div className="w-full max-w-md space-y-6 text-center">
           <BarrelVisual chambers={state.barrel.chambers} bullets={state.barrel.bullets} />
-          <p className="text-lg font-serif text-white/90">{state.players.find(p => p.id === state.currentPlayerId)?.name} choisit...</p>
-          <span className="text-sm font-mono text-ember">{state.timeLeft}s</span>
+          <p className="text-3xl font-serif font-semibold text-white/90">{state.players.find(p => p.id === state.currentPlayerId)?.name} choisit...</p>
+          <span className="text-sm font-mono text-ember shadow-[0_0_20px_rgba(255,100,50,0.25)]">{state.timeLeft}s</span>
         </div>
       </div>
     );
@@ -179,19 +220,40 @@ export default function RouletteGame({ roomCode, playerId, playerName }: GamePro
   if (state.status === "resolution" && state.resolution) {
     const r = state.resolution;
     return (
-      <div className="flex flex-1 flex-col items-center justify-center p-6" style={{ background: "#060606" }}>
-        <div className="w-full max-w-md text-center space-y-4">
-          <span className="text-6xl">{r.hit ? "💥" : "😮‍💨"}</span>
-          <h2 className={cn("text-2xl font-serif font-light", r.hit ? "text-red-300" : "text-emerald-300")}>
+      <div className="flex flex-1 flex-col items-center justify-center p-6" style={{
+        background: r.hit
+          ? "radial-gradient(circle at 50% 25%, rgba(239,68,68,0.12), transparent 40%), #060606"
+          : "radial-gradient(circle at 50% 25%, rgba(52,211,153,0.10), transparent 40%), #060606"
+      }}>
+        <div className="w-full max-w-md text-center space-y-5">
+          {/* Result icon */}
+          <span className="text-7xl block">{r.hit ? "💥" : "😮‍💨"}</span>
+
+          {/* Result title */}
+          <h2 className={cn(
+            "text-5xl font-serif font-semibold",
+            r.hit
+              ? "text-red-300 [text-shadow:0_0_30px_rgba(239,68,68,0.4)]"
+              : "text-emerald-300 [text-shadow:0_0_30px_rgba(52,211,153,0.4)]"
+          )}>
             {r.hit ? "BANG !" : "Safe..."}
           </h2>
-          <p className="text-sm text-white/60 font-sans">
-            {r.playerName} a {r.action === "tirer" ? "tiré" : r.action === "sauter" ? "passé son tour" : r.action === "ajouter-balle" ? "ajouté une balle et tiré" : "vérifié et tiré"}
+
+          {/* Description */}
+          <p className="text-base text-white/90 font-sans">
+            {r.playerName} a {r.action === "tirer" ? "tire" : r.action === "sauter" ? "passe son tour" : r.action === "ajouter-balle" ? "ajoute une balle et tire" : "verifie et tire"}
           </p>
-          <div className="flex gap-3 flex-wrap justify-center mt-4">
+
+          {/* Player cards */}
+          <div className="flex gap-3 flex-wrap justify-center mt-6">
             {state.players.map(p => (
-              <div key={p.id} className={cn("text-center px-3 py-2 rounded-lg border", !p.isAlive ? "border-red-500/20 bg-red-500/5 opacity-50" : "border-white/[0.06] bg-white/[0.03]")}>
-                <span className="text-xs font-sans text-white/60">{p.name}</span>
+              <div key={p.id} className={cn(
+                "text-center px-4 py-3 rounded-3xl border backdrop-blur-sm transition-all",
+                !p.isAlive
+                  ? "border-red-500/20 bg-red-500/5 opacity-40"
+                  : "border-white/25 bg-black/30 shadow-[0_0_12px_rgba(255,255,255,0.03)]"
+              )}>
+                <span className="text-sm font-sans font-semibold text-white/90">{p.name}</span>
                 <p className="text-sm font-mono text-ember">{p.points}</p>
               </div>
             ))}
@@ -201,5 +263,9 @@ export default function RouletteGame({ roomCode, playerId, playerName }: GamePro
     );
   }
 
-  return <div className="flex flex-1 items-center justify-center"><p className="text-white/40 animate-pulse font-sans">Chargement...</p></div>;
+  return (
+    <div className="flex flex-1 items-center justify-center" style={{ background: "radial-gradient(circle at 50% 25%, rgba(101,223,178,0.06), transparent 40%), #060606" }}>
+      <p className="text-white/40 animate-pulse font-sans text-lg">Chargement...</p>
+    </div>
+  );
 }

@@ -340,50 +340,75 @@ export default function MotionTennisGame({ roomCode, playerId, playerName }: Gam
   // Connecting phase: show QR code
   if (!state.status || state.status === "waiting" || state.status === "connecting") {
     return (
-      <div className="flex flex-1 items-center justify-center p-6">
+      <div
+        className="flex flex-1 items-center justify-center p-6"
+        style={{
+          background: "radial-gradient(circle at 50% 25%, rgba(101, 223, 178, 0.15), transparent 40%), radial-gradient(circle at 80% 80%, rgba(59, 130, 246, 0.1), transparent 50%)",
+        }}
+      >
         <div className="flex flex-col items-center gap-8 max-w-md text-center">
-          <div className="text-6xl">🎾</div>
-          <h1 className="text-3xl font-serif font-light text-white/90">Motion Tennis</h1>
-          <p className="text-white/50 font-sans text-sm">
-            Doubles Wii Sports — 2 joueurs, 4 persos sur le terrain !
-          </p>
-          <p className="text-white/40 font-sans text-xs">
-            Scanne ce QR code avec ton t&eacute;l&eacute;phone pour l&apos;utiliser comme raquette
-          </p>
-
-          <div className="rounded-2xl bg-white p-4">
-            <QRCode value={controllerUrl} size={200} />
+          {/* Title area */}
+          <div className="flex flex-col items-center gap-3">
+            <div
+              className="text-5xl font-serif font-semibold text-white/90"
+              style={{
+                textShadow: "0 0 20px rgba(101, 223, 178, 0.25), 0 0 40px rgba(101, 223, 178, 0.1)",
+              }}
+            >
+              Motion Tennis
+            </div>
+            <p className="text-white/40 font-sans text-sm tracking-wide">
+              Doubles Wii Sports — 2 joueurs, 4 persos sur le terrain !
+            </p>
           </div>
 
-          <p className="text-xs text-white/30 font-mono break-all">{controllerUrl}</p>
+          {/* QR Code panel */}
+          <div className="flex flex-col items-center gap-4 rounded-3xl border border-white/25 bg-black/30 backdrop-blur-sm px-10 py-8 shadow-[0_0_20px_rgba(101,223,178,0.12)]">
+            <p className="text-white/40 font-sans text-xs tracking-wide">
+              Scanne ce QR code avec ton t&eacute;l&eacute;phone pour l&apos;utiliser comme raquette
+            </p>
+            <div className="rounded-2xl bg-white p-4 shadow-[0_0_20px_rgba(255,255,255,0.15)]">
+              <QRCode value={controllerUrl} size={200} />
+            </div>
+            <p className="text-xs text-white/25 font-mono break-all">{controllerUrl}</p>
+          </div>
 
+          {/* Connected players */}
           {state.players && state.players.length > 0 && (
-            <div className="space-y-2 w-full">
-              <p className="text-xs text-white/40 font-sans">Joueurs connect&eacute;s :</p>
+            <div className="space-y-3 w-full">
+              <p className="text-xs text-white/40 font-sans uppercase tracking-widest font-semibold">
+                Joueurs connect&eacute;s
+              </p>
               {state.players.map((p) => (
                 <div
                   key={p.id}
-                  className="flex items-center justify-between rounded-lg bg-white/[0.04] border border-white/[0.08] px-4 py-2"
+                  className="flex items-center justify-between rounded-2xl border border-white/25 bg-black/30 backdrop-blur-sm px-5 py-3"
                 >
-                  <span className="text-sm text-white/70 font-sans">{p.name}</span>
-                  <span className={`text-xs font-sans ${p.controllerConnected ? "text-green-400" : "text-white/30"}`}>
-                    {p.controllerConnected ? "📱 Manette connect\u00e9e" : "⏳ En attente de la manette"}
+                  <span className="text-sm text-white/90 font-sans font-semibold">{p.name}</span>
+                  <span
+                    className={`text-xs font-sans font-medium ${p.controllerConnected ? "text-[#65dfb2]" : "text-white/25"}`}
+                  >
+                    {p.controllerConnected ? "Manette connectee" : "En attente de la manette"}
                   </span>
                 </div>
               ))}
             </div>
           )}
 
+          {/* Keyboard play button */}
           <button
             onClick={() => sendAction({ action: "start-keyboard" })}
-            className="mt-2 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 px-8 py-3 text-white font-sans font-medium transition-colors"
+            className="mt-2 rounded-2xl bg-gradient-to-r from-[#65dfb2] to-[#4ecf8a] px-10 py-4 text-white font-sans font-semibold text-lg transition-all hover:scale-105 hover:shadow-[0_0_20px_rgba(101,223,178,0.4)] active:scale-95"
           >
-            ⌨️ Jouer au clavier
+            Jouer au clavier
           </button>
 
-          <p className="text-xs text-white/20 font-sans">
-            → coup droit, ← revers, ↑ smash, ↓ slice, espace = lob
-          </p>
+          {/* Controls hint */}
+          <div className="rounded-2xl border border-white/25 bg-black/30 backdrop-blur-sm px-6 py-3">
+            <p className="text-xs text-white/25 font-mono">
+              &rarr; coup droit &middot; &larr; revers &middot; &uarr; smash &middot; &darr; slice &middot; espace = lob
+            </p>
+          </div>
         </div>
       </div>
     );
@@ -393,34 +418,54 @@ export default function MotionTennisGame({ roomCode, playerId, playerName }: Gam
   return (
     <div className="relative w-full" style={{ height: "calc(100vh - 56px)" }}>
       {/* Score overlay */}
-      <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-6 rounded-xl bg-black/70 backdrop-blur-md px-8 py-3 border border-white/[0.08] shadow-xl">
-        <div className="text-center min-w-[60px]">
-          <p className="text-[10px] text-blue-400 font-sans uppercase tracking-wider font-medium">
+      <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-8 rounded-3xl border border-white/25 bg-black/30 backdrop-blur-sm px-10 py-4 shadow-[0_0_20px_rgba(0,0,0,0.4)]">
+        <div className="text-center min-w-[80px]">
+          <p className="text-[10px] text-blue-400 font-sans uppercase tracking-widest font-semibold">
             {nearPlayer?.name || "Joueur 1"}
           </p>
-          <p className="text-4xl font-bold text-white font-mono">{state.score?.near ?? 0}</p>
+          <p
+            className="text-5xl font-semibold text-white/90 font-mono"
+            style={{ textShadow: "0 0 20px rgba(59, 130, 246, 0.25)" }}
+          >
+            {state.score?.near ?? 0}
+          </p>
         </div>
-        <div className="flex flex-col items-center gap-0.5">
-          <div className="text-white/20 text-lg font-light">vs</div>
-          <div className="text-[8px] text-white/20 font-sans">
+        <div className="flex flex-col items-center gap-1">
+          <div
+            className="text-white/25 text-xl font-serif font-light"
+            style={{ textShadow: "0 0 10px rgba(255,255,255,0.1)" }}
+          >
+            vs
+          </div>
+          <div className="text-[9px] text-white/25 font-sans tracking-wider">
             Premier \u00e0 {state.pointsToWin || 7}
           </div>
         </div>
-        <div className="text-center min-w-[60px]">
-          <p className="text-[10px] text-red-400 font-sans uppercase tracking-wider font-medium">
-            {farPlayer?.isBot ? "🤖 BOT" : farPlayer?.name || "Joueur 2"}
+        <div className="text-center min-w-[80px]">
+          <p className="text-[10px] text-red-400 font-sans uppercase tracking-widest font-semibold">
+            {farPlayer?.isBot ? "BOT" : farPlayer?.name || "Joueur 2"}
           </p>
-          <p className="text-4xl font-bold text-white font-mono">{state.score?.far ?? 0}</p>
+          <p
+            className="text-5xl font-semibold text-white/90 font-mono"
+            style={{ textShadow: "0 0 20px rgba(239, 68, 68, 0.25)" }}
+          >
+            {state.score?.far ?? 0}
+          </p>
         </div>
       </div>
 
       {/* Serve prompt */}
       {(state.status === "serving" || showServePrompt) && (
-        <div className="absolute top-24 left-1/2 -translate-x-1/2 z-20 animate-pulse rounded-xl bg-yellow-500/20 backdrop-blur-md px-6 py-3 border border-yellow-500/30 shadow-lg">
-          <p className="text-lg text-yellow-300 font-sans font-bold text-center">
-            🎾 SERVICE
+        <div
+          className="absolute top-28 left-1/2 -translate-x-1/2 z-20 animate-pulse rounded-3xl border border-yellow-400/30 bg-black/30 backdrop-blur-sm px-8 py-4 shadow-[0_0_20px_rgba(250,204,21,0.25)]"
+        >
+          <p
+            className="text-3xl text-yellow-300 font-sans font-semibold text-center"
+            style={{ textShadow: "0 0 20px rgba(250, 204, 21, 0.4)" }}
+          >
+            SERVICE
           </p>
-          <p className="text-sm text-yellow-200/70 font-sans text-center">
+          <p className="text-sm text-white/40 font-sans text-center mt-1">
             {state.servingSide === "near" ? nearPlayer?.name : farPlayer?.name} — Swing pour servir !
           </p>
         </div>
@@ -429,8 +474,15 @@ export default function MotionTennisGame({ roomCode, playerId, playerName }: Gam
       {/* Point scored message */}
       {pointMessage && (
         <div className="absolute inset-0 z-30 flex items-center justify-center pointer-events-none">
-          <div className="rounded-2xl bg-black/80 backdrop-blur-lg px-12 py-6 border border-ember/30 shadow-2xl">
-            <p className="text-3xl font-serif text-white text-center">{pointMessage}</p>
+          <div
+            className="rounded-3xl border border-white/25 bg-black/30 backdrop-blur-sm px-16 py-8 shadow-[0_0_40px_rgba(101,223,178,0.2)]"
+          >
+            <p
+              className="text-5xl font-serif font-semibold text-white/90 text-center"
+              style={{ textShadow: "0 0 20px rgba(255,255,255,0.2)" }}
+            >
+              {pointMessage}
+            </p>
           </div>
         </div>
       )}
@@ -439,22 +491,27 @@ export default function MotionTennisGame({ roomCode, playerId, playerName }: Gam
       {timingMessage && (
         <>
           {timingMessage.text === "PARFAIT !" && (
-            <div className="absolute inset-0 z-24 pointer-events-none bg-green-400/15 animate-pulse" />
+            <div
+              className="absolute inset-0 z-24 pointer-events-none animate-pulse"
+              style={{
+                background: "radial-gradient(circle at 50% 50%, rgba(34, 197, 94, 0.2), transparent 60%)",
+              }}
+            />
           )}
           <div className={`absolute z-25 pointer-events-none ${
             timingMessage.text === "PARFAIT !"
               ? "inset-0 flex items-center justify-center"
-              : "top-36 left-1/2 -translate-x-1/2"
+              : "top-40 left-1/2 -translate-x-1/2"
           }`}>
             <p
-              className={`font-black font-sans ${
-                timingMessage.text === "PARFAIT !" ? "text-7xl" : "text-2xl animate-bounce"
+              className={`font-sans font-semibold ${
+                timingMessage.text === "PARFAIT !" ? "text-7xl" : "text-3xl animate-bounce"
               }`}
               style={{
                 color: timingMessage.color,
                 textShadow: timingMessage.text === "PARFAIT !"
                   ? "0 0 20px rgba(34,197,94,0.9), 0 0 40px rgba(34,197,94,0.6), 0 0 80px rgba(34,197,94,0.3)"
-                  : "0 2px 4px rgba(0,0,0,0.5)",
+                  : `0 0 20px ${timingMessage.color}66, 0 0 40px ${timingMessage.color}33`,
               }}
             >
               {timingMessage.text}
@@ -463,15 +520,48 @@ export default function MotionTennisGame({ roomCode, playerId, playerName }: Gam
         </>
       )}
 
-      {/* Controls legend — Wii Sports style */}
-      <div className="absolute bottom-4 left-4 z-20 flex flex-col gap-1.5 rounded-lg bg-black/50 backdrop-blur-sm px-4 py-3 border border-white/[0.08]">
-        <p className="text-[10px] text-white/50 font-sans font-bold">Direction de la balle :</p>
-        <p className="text-[10px] text-white/50 font-mono">→ Coup droit = balle à <span className="text-blue-400">DROITE</span></p>
-        <p className="text-[10px] text-white/50 font-mono">← Revers = balle à <span className="text-blue-400">GAUCHE</span></p>
-        <p className="text-[10px] text-white/50 font-mono">↑ Smash rapide · ↓ Slice courbe</p>
-        <p className="text-[10px] text-white/50 font-mono">⎵ Lob haut</p>
-        <p className="text-[9px] text-green-400/60 font-sans mt-1">Bon timing = PARFAIT !</p>
+      {/* Controls legend */}
+      <div className="absolute bottom-4 left-4 z-20 flex flex-col gap-2 rounded-3xl border border-white/25 bg-black/30 backdrop-blur-sm px-5 py-4">
+        <p className="text-[10px] text-white/40 font-sans font-semibold uppercase tracking-widest">
+          Direction de la balle
+        </p>
+        <p className="text-[10px] text-white/25 font-mono">&rarr; Coup droit = balle &agrave; <span className="text-blue-400/70">DROITE</span></p>
+        <p className="text-[10px] text-white/25 font-mono">&larr; Revers = balle &agrave; <span className="text-blue-400/70">GAUCHE</span></p>
+        <p className="text-[10px] text-white/25 font-mono">&uarr; Smash rapide &middot; &darr; Slice courbe</p>
+        <p className="text-[10px] text-white/25 font-mono">&#9251; Lob haut</p>
+        <div className="mt-1 h-px w-full bg-white/10" />
+        <p className="text-[9px] text-[#65dfb2]/50 font-sans">Bon timing = PARFAIT !</p>
       </div>
+
+      {/* Game over overlay */}
+      {state.status === "game-over" && (
+        <div className="absolute inset-0 z-40 flex items-center justify-center pointer-events-none">
+          <div
+            className="rounded-3xl border border-white/25 bg-black/30 backdrop-blur-sm px-16 py-10 shadow-[0_0_40px_rgba(101,223,178,0.2)] flex flex-col items-center gap-4"
+            style={{
+              background: "radial-gradient(circle at 50% 25%, rgba(101, 223, 178, 0.15), transparent 40%), rgba(0,0,0,0.3)",
+            }}
+          >
+            <p
+              className="text-5xl font-serif font-semibold text-white/90"
+              style={{ textShadow: "0 0 20px rgba(101,223,178,0.25)" }}
+            >
+              Partie Terminee
+            </p>
+            <div className="flex items-center gap-8 mt-2">
+              <div className="text-center">
+                <p className="text-xs text-blue-400 font-sans uppercase tracking-widest font-semibold">{nearPlayer?.name || "Joueur 1"}</p>
+                <p className="text-4xl font-mono font-semibold text-white/90">{state.score?.near ?? 0}</p>
+              </div>
+              <div className="text-white/25 text-lg font-serif">-</div>
+              <div className="text-center">
+                <p className="text-xs text-red-400 font-sans uppercase tracking-widest font-semibold">{farPlayer?.isBot ? "BOT" : farPlayer?.name || "Joueur 2"}</p>
+                <p className="text-4xl font-mono font-semibold text-white/90">{state.score?.far ?? 0}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 3D Canvas — no Physics wrapper */}
       <Canvas

@@ -75,10 +75,10 @@ const SUIT_SYMBOLS: Record<Suit, string> = {
 };
 
 const SUIT_COLORS: Record<Suit, string> = {
-  spades: "text-zinc-200",
-  hearts: "text-red-500",
-  diamonds: "text-red-500",
-  clubs: "text-zinc-200",
+  spades: "text-zinc-800",
+  hearts: "text-red-600",
+  diamonds: "text-red-600",
+  clubs: "text-zinc-800",
 };
 
 const VALUE_LABELS: Record<number, string> = {
@@ -99,9 +99,9 @@ function CardView({
   highlight?: boolean;
 }) {
   const sizes = {
-    sm: "w-8 h-11 text-[10px]",
-    md: "w-11 h-16 text-sm",
-    lg: "w-14 h-20 text-base",
+    sm: "w-9 h-12 text-[10px]",
+    md: "w-12 h-[68px] text-sm",
+    lg: "w-16 h-[88px] text-lg",
   };
 
   if (!card || !revealed) {
@@ -109,12 +109,15 @@ function CardView({
       <div
         className={cn(
           sizes[size],
-          "rounded-lg border border-white/[0.08] flex items-center justify-center",
-          "bg-gradient-to-br from-blue-900/60 to-indigo-900/60 shadow-md",
-          "select-none"
+          "rounded-xl border border-amber-900/40 flex items-center justify-center",
+          "bg-gradient-to-br from-emerald-950 via-emerald-900/80 to-green-950 shadow-lg",
+          "select-none",
+          "shadow-[0_2px_10px_rgba(0,0,0,0.4)]"
         )}
       >
-        <span className="text-white/20 font-serif text-lg">?</span>
+        <div className="w-[70%] h-[70%] rounded-md border border-amber-700/30 bg-gradient-to-br from-amber-900/20 to-emerald-900/30 flex items-center justify-center">
+          <span className="text-amber-600/40 font-serif text-sm">AF</span>
+        </div>
       </div>
     );
   }
@@ -123,17 +126,17 @@ function CardView({
     <div
       className={cn(
         sizes[size],
-        "rounded-lg border flex flex-col items-center justify-center gap-0 font-mono font-bold shadow-md",
-        "bg-white transition-all duration-300 select-none relative",
+        "rounded-xl border-2 flex flex-col items-center justify-center gap-0.5 font-mono font-bold",
+        "bg-gradient-to-br from-white via-gray-50 to-gray-100 transition-all duration-300 select-none relative overflow-hidden",
         highlight
-          ? "border-cyan-400/80 ring-1 ring-cyan-400/40 shadow-cyan-400/20 shadow-lg"
-          : "border-zinc-300"
+          ? "border-amber-400/90 ring-2 ring-amber-400/50 shadow-[0_0_20px_rgba(251,191,36,0.35)]"
+          : "border-white/60 shadow-[0_4px_15px_rgba(0,0,0,0.4)]"
       )}
     >
-      <span className={cn(SUIT_COLORS[card.suit], "leading-none")}>
+      <span className={cn(SUIT_COLORS[card.suit], "leading-none drop-shadow-sm")}>
         {VALUE_LABELS[card.value]}
       </span>
-      <span className={cn(SUIT_COLORS[card.suit], "leading-none text-[0.7em]")}>
+      <span className={cn(SUIT_COLORS[card.suit], "leading-none text-[0.75em] drop-shadow-sm")}>
         {SUIT_SYMBOLS[card.suit]}
       </span>
     </div>
@@ -143,11 +146,11 @@ function CardView({
 // ── Chip Display ────────────────────────────────────────
 function ChipCount({ amount, label }: { amount: number; label?: string }) {
   return (
-    <div className="flex items-center gap-1">
+    <div className="flex items-center gap-1.5">
       {label && (
-        <span className="text-[10px] text-white/30 font-sans">{label}</span>
+        <span className="text-[10px] text-white/40 font-sans">{label}</span>
       )}
-      <span className="font-mono text-cyan-400 font-bold text-xs">
+      <span className="font-mono text-amber-400 font-bold text-xs drop-shadow-[0_0_6px_rgba(251,191,36,0.3)]">
         {amount.toLocaleString("fr-FR")}
       </span>
     </div>
@@ -159,7 +162,7 @@ function RoleBadge({ label, color }: { label: string; color: string }) {
   return (
     <span
       className={cn(
-        "text-[9px] font-bold px-1.5 py-0.5 rounded-full leading-none select-none",
+        "text-[9px] font-bold px-1.5 py-0.5 rounded-full leading-none select-none shadow-md",
         color
       )}
     >
@@ -185,34 +188,35 @@ function PlayerSeat({
   return (
     <div
       className={cn(
-        "flex flex-col items-center gap-1 rounded-xl border p-2 min-w-[100px] transition-all relative",
+        "flex flex-col items-center gap-1.5 rounded-2xl border p-2.5 min-w-[110px] transition-all relative",
+        "backdrop-blur-sm",
         player.eliminated && "opacity-30",
         player.folded && !player.eliminated && "opacity-40",
         player.isCurrentPlayer &&
           !player.folded &&
           !player.eliminated &&
-          "border-cyan-400/50 bg-cyan-400/[0.06] ring-1 ring-cyan-400/20",
-        isWinner && "border-emerald-400/50 bg-emerald-400/[0.06] ring-1 ring-emerald-400/20",
+          "border-amber-400/50 bg-amber-400/[0.08] ring-1 ring-amber-400/30 shadow-[0_0_20px_rgba(251,191,36,0.15)]",
+        isWinner && "border-emerald-400/60 bg-emerald-400/[0.08] ring-1 ring-emerald-400/30 shadow-[0_0_20px_rgba(52,211,153,0.2)]",
         !player.isCurrentPlayer &&
           !isWinner &&
           !player.folded &&
           !player.eliminated &&
-          "border-white/[0.08] bg-white/[0.03]",
+          "border-white/[0.12] bg-black/30",
         (player.folded || player.eliminated) &&
-          "border-white/[0.04] bg-white/[0.01]",
-        isMe && !player.isCurrentPlayer && !isWinner && "border-blue-500/30 bg-blue-500/[0.04]"
+          "border-white/[0.06] bg-black/20",
+        isMe && !player.isCurrentPlayer && !isWinner && "border-emerald-500/30 bg-emerald-500/[0.06]"
       )}
     >
       {/* Role badges */}
-      <div className="flex gap-1 absolute -top-2 left-1/2 -translate-x-1/2">
+      <div className="flex gap-1 absolute -top-2.5 left-1/2 -translate-x-1/2">
         {player.isDealer && (
-          <RoleBadge label="D" color="bg-yellow-500 text-black" />
+          <RoleBadge label="D" color="bg-gradient-to-r from-amber-400 to-yellow-500 text-black shadow-[0_0_8px_rgba(251,191,36,0.4)]" />
         )}
         {player.isSmallBlind && (
-          <RoleBadge label="SB" color="bg-blue-500/80 text-white" />
+          <RoleBadge label="SB" color="bg-gradient-to-r from-blue-500 to-blue-600 text-white" />
         )}
         {player.isBigBlind && (
-          <RoleBadge label="BB" color="bg-purple-500/80 text-white" />
+          <RoleBadge label="BB" color="bg-gradient-to-r from-purple-500 to-purple-600 text-white" />
         )}
       </div>
 
@@ -220,7 +224,7 @@ function PlayerSeat({
       <span
         className={cn(
           "text-xs font-medium truncate max-w-[90px] font-sans mt-1",
-          isMe ? "text-blue-300" : "text-white/60"
+          isMe ? "text-emerald-300" : "text-white/60"
         )}
       >
         {player.name}
@@ -229,7 +233,7 @@ function PlayerSeat({
 
       {/* Hole cards */}
       {hasCards && !player.folded && (
-        <div className="flex gap-0.5">
+        <div className="flex gap-1">
           {player.holeCards.map((card, i) => (
             <CardView
               key={i}
@@ -247,7 +251,7 @@ function PlayerSeat({
 
       {/* Current bet */}
       {player.currentBet > 0 && (
-        <span className="text-[10px] text-cyan-300/60 font-mono">
+        <span className="text-[10px] text-amber-300/60 font-mono">
           Mise : {player.currentBet}
         </span>
       )}
@@ -256,12 +260,12 @@ function PlayerSeat({
       {player.lastAction && (
         <span
           className={cn(
-            "text-[10px] font-sans px-1.5 py-0.5 rounded-full",
+            "text-[10px] font-sans px-2 py-0.5 rounded-full",
             player.lastAction === "Se couche"
-              ? "text-red-400/70 bg-red-400/10"
+              ? "text-red-400/80 bg-red-400/10 border border-red-400/20"
               : player.lastAction === "Tapis"
-                ? "text-cyan-300 bg-cyan-300/10 font-bold"
-                : "text-white/40 bg-white/[0.04]"
+                ? "text-amber-300 bg-amber-300/10 border border-amber-300/20 font-bold"
+                : "text-white/40 bg-white/[0.05] border border-white/[0.08]"
           )}
         >
           {player.lastAction}
@@ -280,7 +284,7 @@ function PlayerSeat({
             {showdownResult.hand.name}
           </span>
           {isWinner && showdownResult.chipsWon > 0 && (
-            <span className="block text-[10px] font-mono text-emerald-400 font-bold">
+            <span className="block text-[10px] font-mono text-emerald-400 font-bold drop-shadow-[0_0_6px_rgba(52,211,153,0.4)]">
               +{showdownResult.chipsWon}
             </span>
           )}
@@ -370,15 +374,21 @@ export default function PokerGame({
   // ── Waiting ───────────────────────────────────────
   if (!state || state.phase === "waiting") {
     return (
-      <div className="flex flex-1 items-center justify-center min-h-[400px]">
-        <div className="text-center space-y-3">
-          <div className="flex justify-center gap-2">
+      <div
+        className="flex flex-1 items-center justify-center min-h-[400px]"
+        style={{
+          background:
+            "radial-gradient(circle at 50% 25%, rgba(16,80,50,0.5), transparent 60%), linear-gradient(180deg, #050a05 0%, #0a1a0e 50%, #050a05 100%)",
+        }}
+      >
+        <div className="rounded-3xl border border-white/25 bg-black/30 backdrop-blur-sm p-10 text-center space-y-4">
+          <div className="flex justify-center gap-3">
             {["\u2660", "\u2665", "\u2666", "\u2663"].map((s, i) => (
               <span
                 key={s}
                 className={cn(
-                  "text-3xl animate-pulse",
-                  i === 1 || i === 2 ? "text-red-500" : "text-white/40"
+                  "text-4xl font-serif animate-pulse",
+                  i === 1 || i === 2 ? "text-red-500 drop-shadow-[0_0_10px_rgba(239,68,68,0.4)]" : "text-amber-400/60 drop-shadow-[0_0_10px_rgba(251,191,36,0.3)]"
                 )}
                 style={{ animationDelay: `${i * 200}ms` }}
               >
@@ -386,7 +396,7 @@ export default function PokerGame({
               </span>
             ))}
           </div>
-          <p className="text-white/40 animate-pulse font-sans">
+          <p className="text-white/40 animate-pulse font-sans text-lg">
             En attente des joueurs...
           </p>
         </div>
@@ -398,30 +408,38 @@ export default function PokerGame({
   if (state.phase === "game-over") {
     const sorted = [...state.players].sort((a, b) => b.chips - a.chips);
     return (
-      <div className="flex flex-1 flex-col items-center justify-center gap-6 p-6 min-h-[400px]">
-        <h2 className="text-2xl font-serif text-white/90">Partie terminée</h2>
-        <div className="w-full max-w-sm space-y-2">
+      <div
+        className="flex flex-1 flex-col items-center justify-center gap-6 p-6 min-h-[400px]"
+        style={{
+          background:
+            "radial-gradient(circle at 50% 25%, rgba(251,191,36,0.12), transparent 50%), radial-gradient(circle at 50% 75%, rgba(16,80,50,0.4), transparent 50%), linear-gradient(180deg, #050a05 0%, #0a1a0e 50%, #050a05 100%)",
+        }}
+      >
+        <h2 className="text-3xl font-serif text-white/90 drop-shadow-[0_0_20px_rgba(251,191,36,0.25)]">
+          Partie terminée
+        </h2>
+        <div className="w-full max-w-sm space-y-2.5">
           {sorted.map((p, i) => (
             <div
               key={p.id}
               className={cn(
-                "flex items-center justify-between rounded-lg border p-3 transition-all",
+                "flex items-center justify-between rounded-2xl border p-3.5 transition-all backdrop-blur-sm",
                 i === 0
-                  ? "border-cyan-400/40 bg-cyan-400/[0.06]"
-                  : "border-white/[0.08] bg-white/[0.03]"
+                  ? "border-amber-400/50 bg-amber-400/[0.08] shadow-[0_0_20px_rgba(251,191,36,0.15)]"
+                  : "border-white/[0.12] bg-black/30"
               )}
             >
               <div className="flex items-center gap-3">
                 <span
                   className={cn(
-                    "text-lg font-mono font-bold w-6 text-center",
+                    "text-xl font-mono font-bold w-7 text-center",
                     i === 0
-                      ? "text-cyan-400"
+                      ? "text-amber-400 drop-shadow-[0_0_10px_rgba(251,191,36,0.5)]"
                       : i === 1
                         ? "text-zinc-300"
                         : i === 2
-                          ? "text-cyan-300"
-                          : "text-white/30"
+                          ? "text-amber-700"
+                          : "text-white/25"
                   )}
                 >
                   {i + 1}
@@ -429,7 +447,7 @@ export default function PokerGame({
                 <span
                   className={cn(
                     "text-sm font-sans",
-                    p.id === playerId ? "text-blue-300" : "text-white/70"
+                    p.id === playerId ? "text-emerald-300" : "text-white/70"
                   )}
                 >
                   {p.name}
@@ -450,33 +468,33 @@ export default function PokerGame({
       className="flex flex-1 flex-col min-h-[500px] p-3 gap-3 select-none"
       style={{
         background:
-          "linear-gradient(180deg, #060606 0%, #0a0f05 50%, #060606 100%)",
+          "radial-gradient(circle at 50% 40%, rgba(16,80,50,0.5), transparent 55%), radial-gradient(circle at 80% 20%, rgba(251,191,36,0.06), transparent 40%), linear-gradient(180deg, #050a05 0%, #0a1a0e 50%, #050a05 100%)",
       }}
     >
       {/* Header: hand info + blinds + timer */}
       <div className="flex items-center justify-between px-2">
         <div className="flex items-center gap-3">
-          <span className="text-[10px] text-white/20 font-sans">
+          <span className="text-[11px] text-white/25 font-sans">
             Main {state.handNumber}/{state.maxHands}
           </span>
-          <span className="text-[10px] px-2 py-0.5 rounded-full border border-white/[0.08] bg-white/[0.03] text-white/40 font-sans">
+          <span className="text-[11px] px-2.5 py-1 rounded-full border border-amber-500/20 bg-amber-500/[0.06] text-amber-400/70 font-sans">
             Blindes {state.blinds[0]}/{state.blinds[1]}
           </span>
           <span
             className={cn(
-              "text-[10px] px-2 py-0.5 rounded-full border font-sans font-medium",
+              "text-[11px] px-2.5 py-1 rounded-full border font-sans font-medium",
               state.phase === "pre-flop" &&
                 "border-blue-500/30 bg-blue-500/10 text-blue-400",
               state.phase === "flop" &&
                 "border-emerald-500/30 bg-emerald-500/10 text-emerald-400",
               state.phase === "turn" &&
-                "border-cyan-500/30 bg-cyan-500/10 text-cyan-400",
+                "border-amber-500/30 bg-amber-500/10 text-amber-400",
               state.phase === "river" &&
                 "border-red-500/30 bg-red-500/10 text-red-400",
               state.phase === "showdown" &&
                 "border-purple-500/30 bg-purple-500/10 text-purple-400",
               state.phase === "hand-end" &&
-                "border-white/[0.08] bg-white/[0.03] text-white/40"
+                "border-white/[0.12] bg-white/[0.04] text-white/40"
             )}
           >
             {state.phase === "pre-flop" && "Pré-flop"}
@@ -491,8 +509,10 @@ export default function PokerGame({
         {isMyTurn && (
           <span
             className={cn(
-              "text-sm font-mono font-bold",
-              (state.timeLeft ?? 30) <= 10 ? "text-red-400" : "text-cyan-400"
+              "text-base font-mono font-bold",
+              (state.timeLeft ?? 30) <= 10
+                ? "text-red-400 drop-shadow-[0_0_8px_rgba(248,113,113,0.5)]"
+                : "text-amber-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.4)]"
             )}
           >
             {state.timeLeft ?? 30}s
@@ -502,11 +522,13 @@ export default function PokerGame({
 
       {/* Timer bar (only when it is my turn) */}
       {isMyTurn && (
-        <div className="w-full h-1 rounded-full bg-white/[0.06] overflow-hidden mx-2">
+        <div className="w-full h-1.5 rounded-full bg-white/[0.08] overflow-hidden mx-2">
           <div
             className={cn(
               "h-full rounded-full transition-all duration-1000 ease-linear",
-              (state.timeLeft ?? 30) <= 10 ? "bg-red-500" : "bg-cyan-400"
+              (state.timeLeft ?? 30) <= 10
+                ? "bg-gradient-to-r from-red-600 to-red-400 shadow-[0_0_10px_rgba(248,113,113,0.5)]"
+                : "bg-gradient-to-r from-amber-500 to-emerald-500 shadow-[0_0_10px_rgba(251,191,36,0.3)]"
             )}
             style={{ width: `${((state.timeLeft ?? 30) / 30) * 100}%` }}
           />
@@ -514,7 +536,7 @@ export default function PokerGame({
       )}
 
       {/* Other players (top row) */}
-      <div className="flex flex-wrap justify-center gap-2 px-2">
+      <div className="flex flex-wrap justify-center gap-2.5 px-2">
         {topPlayers.map((p) => (
           <PlayerSeat
             key={p.id}
@@ -528,21 +550,21 @@ export default function PokerGame({
       {/* Table center: pot + community cards */}
       <div className="flex flex-col items-center gap-3 py-4">
         {/* Pot */}
-        <div className="flex items-center gap-2 px-4 py-1.5 rounded-full border border-cyan-500/20 bg-cyan-500/[0.06]">
-          <span className="text-xs text-cyan-400/60 font-sans">Pot</span>
-          <span className="font-mono text-cyan-400 font-bold text-sm">
+        <div className="flex items-center gap-2.5 px-5 py-2 rounded-3xl border border-amber-500/30 bg-black/30 backdrop-blur-sm shadow-[0_0_20px_rgba(251,191,36,0.1)]">
+          <span className="text-xs text-amber-400/60 font-sans font-medium tracking-wide uppercase">Pot</span>
+          <span className="font-mono text-amber-400 font-bold text-lg drop-shadow-[0_0_10px_rgba(251,191,36,0.4)]">
             {state.pot.toLocaleString("fr-FR")}
           </span>
         </div>
 
         {/* Community cards */}
-        <div className="flex items-center gap-1.5 min-h-[68px]">
+        <div className="flex items-center gap-2 min-h-[76px] p-3 rounded-2xl border border-white/[0.08] bg-emerald-950/30 backdrop-blur-sm">
           {state.communityCards.length === 0 && (
-            <div className="flex gap-1.5">
+            <div className="flex gap-2">
               {[0, 1, 2, 3, 4].map((i) => (
                 <div
                   key={i}
-                  className="w-11 h-16 rounded-lg border border-dashed border-white/[0.06] bg-white/[0.02]"
+                  className="w-12 h-[68px] rounded-xl border border-dashed border-emerald-700/20 bg-emerald-900/10"
                 />
               ))}
             </div>
@@ -563,7 +585,7 @@ export default function PokerGame({
               (_, i) => (
                 <div
                   key={`empty-${i}`}
-                  className="w-11 h-16 rounded-lg border border-dashed border-white/[0.06] bg-white/[0.02]"
+                  className="w-12 h-[68px] rounded-xl border border-dashed border-emerald-700/20 bg-emerald-900/10"
                 />
               )
             )}
@@ -571,7 +593,7 @@ export default function PokerGame({
 
         {/* Current bet level */}
         {state.currentBetLevel > 0 && (
-          <span className="text-[10px] text-white/20 font-sans">
+          <span className="text-[11px] text-white/25 font-sans">
             Mise actuelle : {state.currentBetLevel}
           </span>
         )}
@@ -580,23 +602,23 @@ export default function PokerGame({
       {/* Showdown results banner */}
       {(state.phase === "showdown" || state.phase === "hand-end") &&
         state.showdownResults.length > 0 && (
-          <div className="mx-auto max-w-md w-full space-y-1.5 px-2">
+          <div className="mx-auto max-w-md w-full space-y-2 px-2">
             {state.showdownResults
               .filter((r) => r.won)
               .map((r) => (
                 <div
                   key={r.playerId}
-                  className="flex items-center justify-between rounded-lg border border-emerald-500/30 bg-emerald-500/[0.06] px-3 py-2"
+                  className="flex items-center justify-between rounded-2xl border border-emerald-500/30 bg-emerald-500/[0.08] backdrop-blur-sm px-4 py-2.5 shadow-[0_0_15px_rgba(52,211,153,0.1)]"
                 >
                   <div>
                     <span className="text-xs font-sans text-emerald-300">
                       {r.playerName} remporte{" "}
                     </span>
-                    <span className="font-mono text-emerald-400 font-bold text-xs">
+                    <span className="font-mono text-emerald-400 font-bold text-sm drop-shadow-[0_0_6px_rgba(52,211,153,0.4)]">
                       {r.chipsWon}
                     </span>
                   </div>
-                  <span className="text-[10px] font-serif text-emerald-300/70">
+                  <span className="text-[11px] font-serif text-emerald-300/70">
                     {r.hand.name}
                   </span>
                 </div>
@@ -606,23 +628,23 @@ export default function PokerGame({
 
       {/* My seat + hole cards (large) */}
       {me && (
-        <div className="flex flex-col items-center gap-2 mt-auto">
-          <div className="flex items-center gap-2">
+        <div className="flex flex-col items-center gap-2.5 mt-auto">
+          <div className="flex items-center gap-2.5 px-4 py-2 rounded-2xl border border-white/[0.12] bg-black/30 backdrop-blur-sm">
             {me.isDealer && (
-              <RoleBadge label="D" color="bg-yellow-500 text-black" />
+              <RoleBadge label="D" color="bg-gradient-to-r from-amber-400 to-yellow-500 text-black shadow-[0_0_8px_rgba(251,191,36,0.4)]" />
             )}
             {me.isSmallBlind && (
-              <RoleBadge label="SB" color="bg-blue-500/80 text-white" />
+              <RoleBadge label="SB" color="bg-gradient-to-r from-blue-500 to-blue-600 text-white" />
             )}
             {me.isBigBlind && (
-              <RoleBadge label="BB" color="bg-purple-500/80 text-white" />
+              <RoleBadge label="BB" color="bg-gradient-to-r from-purple-500 to-purple-600 text-white" />
             )}
-            <span className="text-xs text-blue-300 font-sans font-medium">
+            <span className="text-sm text-emerald-300 font-sans font-medium">
               {me.name} (toi)
             </span>
             <ChipCount amount={me.chips} />
             {me.currentBet > 0 && (
-              <span className="text-[10px] text-cyan-300/60 font-mono">
+              <span className="text-[11px] text-amber-300/60 font-mono">
                 Mise : {me.currentBet}
               </span>
             )}
@@ -630,7 +652,7 @@ export default function PokerGame({
 
           {/* My hole cards */}
           {me.holeCards.length > 0 && !me.folded && (
-            <div className="flex gap-2">
+            <div className="flex gap-2.5">
               {me.holeCards.map((card, i) => (
                 <CardView
                   key={i}
@@ -644,16 +666,16 @@ export default function PokerGame({
           )}
 
           {me.folded && (
-            <span className="text-xs text-red-400/50 font-sans">Couché</span>
+            <span className="text-xs text-red-400/50 font-sans italic">Couché</span>
           )}
 
           {/* Showdown result for me */}
           {getShowdown(playerId) && (
             <span
               className={cn(
-                "text-xs font-serif",
+                "text-sm font-serif",
                 getShowdown(playerId)?.won
-                  ? "text-emerald-400"
+                  ? "text-emerald-400 drop-shadow-[0_0_8px_rgba(52,211,153,0.4)]"
                   : "text-white/40"
               )}
             >
@@ -667,11 +689,11 @@ export default function PokerGame({
 
       {/* Action buttons */}
       {isMyTurn && actions && me && !me.folded && !me.eliminated && (
-        <div className="flex flex-col items-center gap-3 pb-2">
+        <div className="flex flex-col items-center gap-3 pb-3">
           {/* Raise slider */}
           {actions.canRaise && (
             <div className="flex items-center gap-3 w-full max-w-sm px-4">
-              <span className="text-[10px] text-white/30 font-mono">
+              <span className="text-[11px] text-white/30 font-mono">
                 {actions.minRaiseTotal}
               </span>
               <input
@@ -681,21 +703,25 @@ export default function PokerGame({
                 step={Math.max(1, Math.floor(state.blinds[1] / 2))}
                 value={raiseAmount}
                 onChange={(e) => setRaiseAmount(Number(e.target.value))}
-                className="flex-1 accent-emerald-500 h-1.5 bg-white/[0.06] rounded-full cursor-pointer"
+                className="flex-1 accent-emerald-500 h-2 bg-white/[0.08] rounded-full cursor-pointer"
               />
-              <span className="text-[10px] text-white/30 font-mono">
+              <span className="text-[11px] text-white/30 font-mono">
                 {actions.maxRaiseTotal}
               </span>
             </div>
           )}
 
           {/* Buttons row */}
-          <div className="flex items-center gap-2 flex-wrap justify-center">
+          <div className="flex items-center gap-2.5 flex-wrap justify-center">
             {/* Fold */}
             {actions.canFold && (
               <button
                 onClick={handleFold}
-                className="px-4 py-2.5 rounded-lg bg-red-600/80 hover:bg-red-500 text-white font-sans text-sm font-medium transition-all active:scale-95"
+                className={cn(
+                  "px-5 py-2.5 rounded-xl font-sans text-sm font-semibold transition-all active:scale-95",
+                  "bg-gradient-to-r from-red-700 to-red-600 hover:from-red-600 hover:to-red-500 text-white",
+                  "border border-red-500/30 shadow-[0_0_12px_rgba(220,38,38,0.2)]"
+                )}
               >
                 Se coucher
               </button>
@@ -705,7 +731,11 @@ export default function PokerGame({
             {actions.canCheck && (
               <button
                 onClick={handleCheck}
-                className="px-4 py-2.5 rounded-lg bg-zinc-700/80 hover:bg-zinc-600 text-white font-sans text-sm font-medium transition-all active:scale-95"
+                className={cn(
+                  "px-5 py-2.5 rounded-xl font-sans text-sm font-semibold transition-all active:scale-95",
+                  "bg-gradient-to-r from-zinc-700 to-zinc-600 hover:from-zinc-600 hover:to-zinc-500 text-white",
+                  "border border-white/[0.12] shadow-md"
+                )}
               >
                 Parole
               </button>
@@ -715,7 +745,11 @@ export default function PokerGame({
             {actions.canCall && (
               <button
                 onClick={handleCall}
-                className="px-4 py-2.5 rounded-lg bg-blue-600/80 hover:bg-blue-500 text-white font-sans text-sm font-medium transition-all active:scale-95"
+                className={cn(
+                  "px-5 py-2.5 rounded-xl font-sans text-sm font-semibold transition-all active:scale-95",
+                  "bg-gradient-to-r from-blue-700 to-blue-600 hover:from-blue-600 hover:to-blue-500 text-white",
+                  "border border-blue-500/30 shadow-[0_0_12px_rgba(59,130,246,0.2)]"
+                )}
               >
                 Suivre ({actions.callAmount})
               </button>
@@ -725,7 +759,11 @@ export default function PokerGame({
             {actions.canRaise && (
               <button
                 onClick={handleRaise}
-                className="px-4 py-2.5 rounded-lg bg-emerald-600/80 hover:bg-emerald-500 text-white font-sans text-sm font-medium transition-all active:scale-95"
+                className={cn(
+                  "px-5 py-2.5 rounded-xl font-sans text-sm font-semibold transition-all active:scale-95",
+                  "bg-gradient-to-r from-[#65dfb2] to-[#4ecf8a] hover:from-[#72e8bc] hover:to-[#5dd896] text-black",
+                  "border border-emerald-400/30 shadow-[0_0_15px_rgba(78,207,138,0.25)]"
+                )}
               >
                 Relancer ({raiseAmount})
               </button>
@@ -736,9 +774,9 @@ export default function PokerGame({
               <button
                 onClick={handleAllIn}
                 className={cn(
-                  "px-4 py-2.5 rounded-lg font-sans text-sm font-bold transition-all active:scale-95",
-                  "bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white",
-                  "shadow-md shadow-cyan-500/20"
+                  "px-5 py-2.5 rounded-xl font-sans text-sm font-bold transition-all active:scale-95",
+                  "bg-gradient-to-r from-amber-500 via-yellow-500 to-amber-500 hover:from-amber-400 hover:via-yellow-400 hover:to-amber-400 text-black",
+                  "border border-amber-400/50 shadow-[0_0_20px_rgba(251,191,36,0.35)]"
                 )}
               >
                 Tapis ({me.chips})
@@ -755,7 +793,7 @@ export default function PokerGame({
         state.phase !== "game-over" &&
         state.currentPlayerId && (
           <div className="text-center pb-2">
-            <p className="text-xs text-white/20 font-sans animate-pulse">
+            <p className="text-sm text-white/25 font-sans animate-pulse">
               En attente de{" "}
               {state.players.find((p) => p.id === state.currentPlayerId)
                 ?.name ?? "..."}
@@ -767,7 +805,7 @@ export default function PokerGame({
       {/* Hand-end waiting message */}
       {state.phase === "hand-end" && (
         <div className="text-center pb-2">
-          <p className="text-xs text-white/20 font-sans animate-pulse">
+          <p className="text-sm text-white/25 font-sans animate-pulse">
             Prochaine main...
           </p>
         </div>
@@ -775,7 +813,9 @@ export default function PokerGame({
 
       {/* Error */}
       {error && (
-        <p className="text-xs text-red-400 font-sans text-center">{error}</p>
+        <p className="text-xs text-red-400 font-sans text-center bg-red-400/10 border border-red-400/20 rounded-xl px-3 py-2 mx-auto">
+          {error}
+        </p>
       )}
     </div>
   );

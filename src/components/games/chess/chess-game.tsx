@@ -60,18 +60,18 @@ const PIECE_VALUES: Record<PieceType, number> = {
 };
 
 const PIECE_GLYPH: Record<string, string> = {
-  wp: "♙",
-  wn: "♘",
-  wb: "♗",
-  wr: "♖",
-  wq: "♕",
-  wk: "♔",
-  bp: "♟",
-  bn: "♞",
-  bb: "♝",
-  br: "♜",
-  bq: "♛",
-  bk: "♚",
+  wp: "\u2659",
+  wn: "\u2658",
+  wb: "\u2657",
+  wr: "\u2656",
+  wq: "\u2655",
+  wk: "\u2654",
+  bp: "\u265F",
+  bn: "\u265E",
+  bb: "\u265D",
+  br: "\u265C",
+  bq: "\u265B",
+  bk: "\u265A",
 };
 
 const PIECE_SYMBOL: Record<string, string> = {
@@ -384,10 +384,47 @@ function getCapturedPieceSymbols(board: Array<Piece | null>, color: Color) {
 
 function CapturedPieces({ label, pieces }: { label: string; pieces: string[] }) {
   return (
-    <div className="rounded-xl border border-white/15 bg-white/5 px-3 py-2">
-      <p className="text-[11px] uppercase tracking-[0.12em] text-white/55">{label}</p>
-      <p className="mt-1 min-h-6 text-lg leading-6 text-white/90">
-        {pieces.length > 0 ? pieces.join(" ") : "-"}
+    <div className="rounded-2xl border border-white/15 bg-black/30 px-4 py-3 backdrop-blur-sm">
+      <p className="font-sans text-[11px] uppercase tracking-[0.15em] text-white/40">{label}</p>
+      <p className="mt-1.5 min-h-7 font-sans text-lg leading-7 text-white/90">
+        {pieces.length > 0 ? pieces.join(" ") : <span className="text-white/25">--</span>}
+      </p>
+    </div>
+  );
+}
+
+/* ── Clock display component ── */
+function ClockPanel({
+  name,
+  time,
+  isActive,
+  color,
+}: {
+  name: string;
+  time: number;
+  isActive: boolean;
+  color: "white" | "black";
+}) {
+  const isLow = time < 60_000;
+  return (
+    <div
+      className={cn(
+        "rounded-2xl border px-4 py-3 backdrop-blur-sm transition-all",
+        isActive
+          ? color === "white"
+            ? "border-white/30 bg-white/10 shadow-[0_0_20px_rgba(255,255,255,0.08)]"
+            : "border-purple-400/30 bg-purple-500/10 shadow-[0_0_20px_rgba(168,85,247,0.12)]"
+          : "border-white/10 bg-black/30"
+      )}
+    >
+      <p className="font-sans text-[11px] uppercase tracking-[0.15em] text-white/40">{name}</p>
+      <p
+        className={cn(
+          "mt-1 font-mono text-2xl font-semibold",
+          isLow ? "text-red-400" : isActive ? "text-white/90" : "text-white/60"
+        )}
+      >
+        {formatClock(time)}
       </p>
     </div>
   );
@@ -412,43 +449,85 @@ function ChessBoardView({
 }: ChessBoardViewProps) {
   const rows = orientation === "w" ? [...Array(8).keys()] : [...Array(8).keys()].reverse();
   const cols = orientation === "w" ? [...Array(8).keys()] : [...Array(8).keys()].reverse();
+  const fileLabels = orientation === "w" ? ["a","b","c","d","e","f","g","h"] : ["h","g","f","e","d","c","b","a"];
+  const rankLabels = orientation === "w" ? ["8","7","6","5","4","3","2","1"] : ["1","2","3","4","5","6","7","8"];
 
   return (
-    <div className="grid grid-cols-8 overflow-hidden rounded-2xl border border-amber-200/35 shadow-[0_10px_32px_rgba(0,0,0,0.4)]">
-      {rows.map((y) =>
-        cols.map((x) => {
-          const idx = makeIndex(x, y);
-          const isLight = (x + y) % 2 === 0;
-          const piece = board[idx];
-          const code = piece ? `${piece.color}${piece.type}` : "";
-          const isSelected = selectedSquare === idx;
-          const isTarget = availableTargets.includes(idx);
-          const isLastMove = !!lastMove && (lastMove.from === idx || lastMove.to === idx);
+    <div className="relative">
+      {/* File labels (bottom) */}
+      <div className="mt-1 grid grid-cols-8 px-0">
+        {fileLabels.map((f, i) => (
+          <span key={`file-${i}`} className="text-center font-mono text-[10px] text-white/25">
+            {f}
+          </span>
+        ))}
+      </div>
+      <div className="flex">
+        {/* Rank labels (left) */}
+        <div className="mr-1 flex flex-col justify-around">
+          {rankLabels.map((r, i) => (
+            <span key={`rank-${i}`} className="font-mono text-[10px] leading-none text-white/25">
+              {r}
+            </span>
+          ))}
+        </div>
+        {/* Board */}
+        <div className="grid flex-1 grid-cols-8 overflow-hidden rounded-2xl border border-white/25 shadow-[0_0_40px_rgba(0,0,0,0.5),0_0_80px_rgba(139,92,246,0.08)]">
+          {rows.map((y) =>
+            cols.map((x) => {
+              const idx = makeIndex(x, y);
+              const isLight = (x + y) % 2 === 0;
+              const piece = board[idx];
+              const code = piece ? `${piece.color}${piece.type}` : "";
+              const isSelected = selectedSquare === idx;
+              const isTarget = availableTargets.includes(idx);
+              const isLastMove = !!lastMove && (lastMove.from === idx || lastMove.to === idx);
+              const isCapture = isTarget && piece !== null;
 
-          return (
-            <button
-              key={idx}
-              onClick={() => onSquareClick(idx)}
-              className={cn(
-                "relative flex aspect-square items-center justify-center text-4xl transition-all sm:text-5xl",
-                isLight ? "bg-[#f0d9b5]" : "bg-[#b58863]",
-                isLastMove && "ring-2 ring-yellow-300/70 ring-inset",
-                isSelected && "ring-2 ring-cyan-300 ring-inset",
-                isTarget && "after:absolute after:h-3 after:w-3 after:rounded-full after:bg-cyan-400/80"
-              )}
-            >
-              <span
-                className={cn(
-                  "select-none drop-shadow-[0_2px_2px_rgba(0,0,0,0.55)]",
-                  piece?.color === "w" ? "text-[#f8fafc]" : "text-[#111827]"
-                )}
-              >
-                {code ? PIECE_SYMBOL[code] ?? PIECE_GLYPH[code] : ""}
-              </span>
-            </button>
-          );
-        })
-      )}
+              return (
+                <button
+                  key={idx}
+                  onClick={() => onSquareClick(idx)}
+                  className={cn(
+                    "relative flex aspect-square items-center justify-center text-4xl transition-all duration-150 sm:text-5xl",
+                    /* Dark theme board squares */
+                    isLight
+                      ? "bg-[#2a2a3e]"
+                      : "bg-[#1a1a2e]",
+                    /* Last move highlight */
+                    isLastMove && "bg-[#3d3560]",
+                    /* Selected piece glow */
+                    isSelected && "bg-[#4ecf8a]/25 shadow-[inset_0_0_20px_rgba(78,207,138,0.3)]",
+                    /* Hover */
+                    !isSelected && "hover:brightness-125"
+                  )}
+                >
+                  {/* Available move dot */}
+                  {isTarget && !isCapture && (
+                    <span className="absolute h-3.5 w-3.5 rounded-full bg-[#65dfb2]/50 shadow-[0_0_8px_rgba(101,223,178,0.4)]" />
+                  )}
+                  {/* Capture ring */}
+                  {isCapture && (
+                    <span className="absolute inset-1 rounded-full border-2 border-red-400/60 shadow-[0_0_12px_rgba(248,113,113,0.3)]" />
+                  )}
+                  {/* Piece */}
+                  <span
+                    className={cn(
+                      "relative z-10 select-none",
+                      piece?.color === "w"
+                        ? "text-[#e8e0f0] drop-shadow-[0_0_8px_rgba(255,255,255,0.4)]"
+                        : "text-[#8b7aab] drop-shadow-[0_2px_4px_rgba(0,0,0,0.7)]",
+                      isSelected && "scale-110 drop-shadow-[0_0_16px_rgba(78,207,138,0.6)]"
+                    )}
+                  >
+                    {code ? PIECE_SYMBOL[code] ?? PIECE_GLYPH[code] : ""}
+                  </span>
+                </button>
+              );
+            })
+          )}
+        </div>
+      </div>
     </div>
   );
 }
@@ -735,6 +814,9 @@ export default function ChessGame({ roomCode, playerId, playerName }: GameProps)
     setLocalMode(true);
   }, [localTimeMinutes]);
 
+  /* ════════════════════════════════════════════════════════
+     LOCAL MODE
+     ════════════════════════════════════════════════════════ */
   if (localMode) {
     const localTargets = localSelected !== null ? localLegalByFrom.get(localSelected) ?? [] : [];
     const statusText = localWinner
@@ -747,22 +829,26 @@ export default function ChessGame({ roomCode, playerId, playerName }: GameProps)
 
     if (isFocusView) {
       return (
-        <div className="fixed inset-0 z-[120] flex flex-col bg-[linear-gradient(155deg,#0f172a,#111827)] p-3 font-sans sm:p-5">
+        <div className="fixed inset-0 z-[120] flex flex-col bg-[radial-gradient(circle_at_50%_25%,rgba(139,92,246,0.15),transparent_40%),linear-gradient(155deg,#0a0a1a,#111827)] p-3 font-sans sm:p-5">
           <div className="mx-auto flex w-full max-w-[980px] flex-1 flex-col">
-            <div className="grid grid-cols-2 gap-2">
-              <div className="rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-white">
-                <p className="text-[11px] uppercase tracking-[0.12em] text-white/55">{localWhiteName}</p>
-                <p className="text-xl font-semibold">{formatClock(localWhiteTimeMs)}</p>
-              </div>
-              <div className="rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-white">
-                <p className="text-[11px] uppercase tracking-[0.12em] text-white/55">
-                  {localKind === "bot" ? "Bot" : localBlackName}
-                </p>
-                <p className="text-xl font-semibold">{formatClock(localBlackTimeMs)}</p>
-              </div>
+            {/* Clocks */}
+            <div className="grid grid-cols-2 gap-3">
+              <ClockPanel
+                name={localWhiteName}
+                time={localWhiteTimeMs}
+                isActive={!localWinner && localTurn === "w"}
+                color="white"
+              />
+              <ClockPanel
+                name={localKind === "bot" ? "Bot" : localBlackName}
+                time={localBlackTimeMs}
+                isActive={!localWinner && localTurn === "b"}
+                color="black"
+              />
             </div>
 
-            <div className="mt-2 grid grid-cols-2 gap-2">
+            {/* Captured pieces */}
+            <div className="mt-3 grid grid-cols-2 gap-3">
               <CapturedPieces label={`${localWhiteName} a pris`} pieces={localCapturedBlack} />
               <CapturedPieces
                 label={`${localKind === "bot" ? "Bot" : localBlackName} a pris`}
@@ -770,7 +856,8 @@ export default function ChessGame({ roomCode, playerId, playerName }: GameProps)
               />
             </div>
 
-            <div className="mx-auto mt-3 w-full max-w-[min(98vw,940px)]">
+            {/* Board */}
+            <div className="mx-auto mt-4 w-full max-w-[min(98vw,940px)]">
               <ChessBoardView
                 board={localBoard}
                 selectedSquare={localSelected}
@@ -781,8 +868,9 @@ export default function ChessGame({ roomCode, playerId, playerName }: GameProps)
               />
             </div>
 
-            <div className="mt-2 flex items-center justify-between gap-2">
-              <p className="text-xs text-white/75">{statusText}</p>
+            {/* Status bar */}
+            <div className="mt-3 flex items-center justify-between gap-2">
+              <p className="font-sans text-sm text-white/90">{statusText}</p>
               <button
                 onClick={() => {
                   if (document.fullscreenElement) {
@@ -790,7 +878,7 @@ export default function ChessGame({ roomCode, playerId, playerName }: GameProps)
                   }
                   setFocusMode(false);
                 }}
-                className="rounded-lg border border-cyan-300/35 bg-cyan-500/20 px-3 py-2 text-xs text-cyan-100 hover:bg-cyan-500/30"
+                className="rounded-xl border border-white/25 bg-black/30 px-4 py-2 font-sans text-xs text-white/90 backdrop-blur-sm transition hover:bg-white/10"
               >
                 Quitter plein ecran
               </button>
@@ -801,48 +889,69 @@ export default function ChessGame({ roomCode, playerId, playerName }: GameProps)
     }
 
     return (
-      <div
-        className="relative flex flex-1 flex-col overflow-hidden p-4 font-sans sm:p-6"
-      >
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_15%_15%,rgba(34,197,94,0.12),transparent_35%),radial-gradient(circle_at_85%_85%,rgba(249,115,22,0.15),transparent_35%),linear-gradient(145deg,#111827,#1f2937)]" />
-        <div className="relative mx-auto flex w-full max-w-4xl flex-1 flex-col rounded-3xl border border-white/10 bg-black/35 p-4 backdrop-blur-xl sm:p-6">
-          <div className="flex items-center justify-between gap-2">
+      <div className="relative flex flex-1 flex-col overflow-hidden p-4 font-sans sm:p-6">
+        {/* Background gradient */}
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_25%,rgba(78,207,138,0.12),transparent_40%),radial-gradient(circle_at_85%_85%,rgba(139,92,246,0.1),transparent_40%),linear-gradient(145deg,#0a0a1a,#111827)]" />
+
+        {/* Main panel */}
+        <div className="relative mx-auto flex w-full max-w-4xl flex-1 flex-col rounded-3xl border border-white/25 bg-black/30 p-5 backdrop-blur-sm sm:p-7">
+          {/* Header */}
+          <div className="flex items-center justify-between gap-3">
             <div>
-              <p className="text-[11px] uppercase tracking-[0.2em] text-emerald-200/70">Echecs Local</p>
-              <p className="text-sm text-white/80">{localKind === "bot" ? `vs Bot (${localBotLevel})` : "Duel 1 telephone"}</p>
+              <p className="font-sans text-[11px] uppercase tracking-[0.2em] text-white/40">Echecs Local</p>
+              <p className="mt-0.5 font-sans text-sm text-white/90">
+                {localKind === "bot" ? `vs Bot (${localBotLevel})` : "Duel 1 telephone"}
+              </p>
             </div>
             <div className="flex gap-2">
               <button
                 onClick={toggleFullscreen}
-                className="rounded-lg border border-cyan-300/35 bg-cyan-500/20 px-3 py-2 text-xs text-cyan-100 hover:bg-cyan-500/30"
+                className="rounded-xl border border-white/25 bg-black/30 px-3 py-2 font-sans text-xs text-white/90 backdrop-blur-sm transition hover:bg-white/10"
               >
                 {isFullscreen ? "Quitter plein ecran" : "Plein ecran"}
               </button>
               <button
                 onClick={() => setLocalMode(false)}
-                className="rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-xs text-white/80 hover:bg-white/15"
+                className="rounded-xl border border-white/25 bg-black/30 px-3 py-2 font-sans text-xs text-white/90 backdrop-blur-sm transition hover:bg-white/10"
               >
                 Quitter local
               </button>
             </div>
           </div>
 
-          <p className="mt-3 text-sm text-white/85">{statusText}</p>
-          <div className="mt-2 flex flex-wrap gap-2 text-sm">
-            <span className="rounded-full border border-white/20 bg-white/10 px-3 py-1 text-white">
-              Blanc {formatClock(localWhiteTimeMs)}
-            </span>
-            <span className="rounded-full border border-white/20 bg-white/10 px-3 py-1 text-white">
-              Noir {formatClock(localBlackTimeMs)}
-            </span>
+          {/* Status */}
+          {localWinner ? (
+            <div className="mt-4 rounded-2xl border border-[#65dfb2]/30 bg-[#65dfb2]/10 px-5 py-3 shadow-[0_0_20px_rgba(101,223,178,0.15)]">
+              <p className="font-sans text-lg font-semibold text-white/90">{statusText}</p>
+            </div>
+          ) : (
+            <p className="mt-4 font-sans text-lg font-semibold text-white/90">{statusText}</p>
+          )}
+
+          {/* Clocks */}
+          <div className="mt-3 grid grid-cols-2 gap-3">
+            <ClockPanel
+              name={localWhiteName}
+              time={localWhiteTimeMs}
+              isActive={!localWinner && localTurn === "w"}
+              color="white"
+            />
+            <ClockPanel
+              name={localKind === "bot" ? "Bot" : localBlackName}
+              time={localBlackTimeMs}
+              isActive={!localWinner && localTurn === "b"}
+              color="black"
+            />
           </div>
+
           {!localWinner && localKind === "duel" && (
-            <p className="mt-1 text-xs text-white/55">
+            <p className="mt-2 font-sans text-xs text-white/40">
               Passe le telephone au joueur {localTurn === "w" ? "Blanc" : "Noir"}.
             </p>
           )}
 
-          <div className="mt-4 mx-auto w-full max-w-[min(92vw,820px)]">
+          {/* Board */}
+          <div className="mx-auto mt-4 w-full max-w-[min(92vw,820px)]">
             <ChessBoardView
               board={localBoard}
               selectedSquare={localSelected}
@@ -853,16 +962,21 @@ export default function ChessGame({ roomCode, playerId, playerName }: GameProps)
             />
           </div>
 
-          <div className="mt-4 flex flex-wrap items-center gap-2 text-xs text-white/65">
-            <span className="rounded-full border border-white/20 px-3 py-1">{localWhiteName} • Blanc</span>
-            <span className="rounded-full border border-white/20 px-3 py-1">{localKind === "bot" ? "Bot" : `${localBlackName}`} • Noir</span>
+          {/* Captured pieces */}
+          <div className="mt-4 grid grid-cols-2 gap-3">
+            <CapturedPieces label={`${localWhiteName} a pris`} pieces={localCapturedBlack} />
+            <CapturedPieces
+              label={`${localKind === "bot" ? "Bot" : localBlackName} a pris`}
+              pieces={localCapturedWhite}
+            />
           </div>
 
-          <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+          {/* Action buttons */}
+          <div className="mt-5 flex flex-col gap-3 sm:flex-row">
             {localWinner ? (
               <button
                 onClick={startLocalGame}
-                className="rounded-xl border border-emerald-300/40 bg-emerald-500/80 px-4 py-3 text-sm font-medium text-white hover:bg-emerald-500"
+                className="rounded-xl bg-gradient-to-r from-[#65dfb2] to-[#4ecf8a] px-6 py-3 font-sans text-sm font-semibold text-black shadow-[0_0_20px_rgba(78,207,138,0.25)] transition hover:shadow-[0_0_30px_rgba(78,207,138,0.4)]"
               >
                 Rejouer
               </button>
@@ -873,7 +987,7 @@ export default function ChessGame({ roomCode, playerId, playerName }: GameProps)
                   setLocalWinner(otherColor(side));
                   setLocalReason("resign");
                 }}
-                className="rounded-xl border border-red-300/35 bg-red-500/70 px-4 py-3 text-sm font-medium text-white hover:bg-red-500"
+                className="rounded-xl border border-red-400/30 bg-red-500/20 px-5 py-3 font-sans text-sm font-semibold text-red-300 transition hover:bg-red-500/30"
               >
                 Abandonner
               </button>
@@ -884,56 +998,69 @@ export default function ChessGame({ roomCode, playerId, playerName }: GameProps)
     );
   }
 
+  /* ════════════════════════════════════════════════════════
+     WAITING / MODE SELECT
+     ════════════════════════════════════════════════════════ */
   if (!state || state.phase === "waiting") {
     const onlinePlayers = state?.connectedPlayers ?? [];
     return (
-      <div
-        className="relative flex flex-1 flex-col overflow-hidden p-4 font-sans sm:p-6"
-      >
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_15%_15%,rgba(251,191,36,0.16),transparent_35%),radial-gradient(circle_at_85%_85%,rgba(59,130,246,0.14),transparent_35%),linear-gradient(145deg,#0f172a,#111827)]" />
-        <div className="relative mx-auto flex w-full max-w-4xl flex-1 flex-col rounded-3xl border border-amber-200/20 bg-black/35 p-4 backdrop-blur-xl sm:p-6">
+      <div className="relative flex flex-1 flex-col overflow-hidden p-4 font-sans sm:p-6">
+        {/* Background gradient */}
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_25%,rgba(251,191,36,0.14),transparent_40%),radial-gradient(circle_at_80%_80%,rgba(139,92,246,0.12),transparent_40%),linear-gradient(145deg,#0a0a1a,#111827)]" />
+
+        {/* Main panel */}
+        <div className="relative mx-auto flex w-full max-w-4xl flex-1 flex-col rounded-3xl border border-white/25 bg-black/30 p-5 backdrop-blur-sm sm:p-7">
+          {/* Title */}
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <p className="text-[11px] uppercase tracking-[0.2em] text-amber-200/70">Mode de jeu</p>
-              <h2 className="mt-1 text-3xl font-serif text-white">Echecs</h2>
+              <p className="font-sans text-[11px] uppercase tracking-[0.2em] text-white/40">Mode de jeu</p>
+              <h2 className="mt-1 font-serif text-4xl font-semibold text-white/90">Echecs</h2>
             </div>
           </div>
 
+          {/* Mode chooser */}
           {entryMode === "choose" && (
-            <div className="mt-6 grid gap-4 sm:grid-cols-2">
+            <div className="mt-8 grid gap-4 sm:grid-cols-2">
               <button
                 onClick={() => setEntryMode("local")}
-                className="rounded-2xl border border-emerald-300/35 bg-emerald-400/10 p-6 text-left transition hover:bg-emerald-400/15"
+                className="group rounded-3xl border border-white/25 bg-black/30 p-7 text-left backdrop-blur-sm transition hover:border-[#65dfb2]/40 hover:shadow-[0_0_20px_rgba(101,223,178,0.1)]"
               >
-                <p className="text-xl font-semibold text-emerald-200">Local</p>
-                <p className="mt-2 text-sm text-white/75">Sur le meme telephone: vs bot ou vs collegue</p>
+                <p className="font-sans text-xl font-semibold text-white/90 transition group-hover:text-[#65dfb2]">
+                  Local
+                </p>
+                <p className="mt-2 font-sans text-sm text-white/40">
+                  Sur le meme telephone: vs bot ou vs collegue
+                </p>
               </button>
               <button
                 onClick={() => {
                   setEntryMode("multi");
                   sendAction({ action: "set-mode", mode: "online" });
                 }}
-                className="rounded-2xl border border-amber-300/35 bg-amber-400/10 p-6 text-left transition hover:bg-amber-400/15"
+                className="group rounded-3xl border border-white/25 bg-black/30 p-7 text-left backdrop-blur-sm transition hover:border-amber-300/40 hover:shadow-[0_0_20px_rgba(251,191,36,0.1)]"
               >
-                <p className="text-xl font-semibold text-amber-100">Multijoueur</p>
-                <p className="mt-2 text-sm text-white/75">Duel en ligne</p>
+                <p className="font-sans text-xl font-semibold text-white/90 transition group-hover:text-amber-300">
+                  Multijoueur
+                </p>
+                <p className="mt-2 font-sans text-sm text-white/40">Duel en ligne</p>
               </button>
             </div>
           )}
 
+          {/* Multiplayer time control */}
           {entryMode === "multi" && (
-            <section className="mt-5 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-              <p className="text-xs uppercase tracking-widest text-white/45">Cadence</p>
+            <section className="mt-6 rounded-2xl border border-white/25 bg-black/30 p-5 backdrop-blur-sm">
+              <p className="font-sans text-xs uppercase tracking-widest text-white/40">Cadence</p>
               <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
                 {TIME_OPTIONS.map((minutes) => (
                   <button
                     key={`multi-${minutes}`}
                     onClick={() => sendAction({ action: "set-time-control", minutes })}
                     className={cn(
-                      "rounded-lg border px-3 py-2 text-sm",
+                      "rounded-xl border px-3 py-2.5 font-mono text-sm transition",
                       (state?.timeControlMinutes ?? 15) === minutes
-                        ? "border-amber-300/50 bg-amber-300/15 text-amber-100"
-                        : "border-white/10 bg-white/[0.03] text-white/75"
+                        ? "border-amber-300/50 bg-amber-300/15 text-amber-200 shadow-[0_0_12px_rgba(251,191,36,0.15)]"
+                        : "border-white/10 bg-black/20 text-white/40 hover:border-white/25 hover:text-white/60"
                     )}
                   >
                     {minutes} min
@@ -943,12 +1070,18 @@ export default function ChessGame({ roomCode, playerId, playerName }: GameProps)
             </section>
           )}
 
+          {/* Multiplayer connected players */}
           {entryMode === "multi" && (
-            <section className="mt-4 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-              <p className="text-xs uppercase tracking-widest text-white/45">Joueurs connectes ({onlinePlayers.length})</p>
-              <div className="mt-2 flex flex-wrap gap-2">
+            <section className="mt-4 rounded-2xl border border-white/25 bg-black/30 p-5 backdrop-blur-sm">
+              <p className="font-sans text-xs uppercase tracking-widest text-white/40">
+                Joueurs connectes ({onlinePlayers.length})
+              </p>
+              <div className="mt-3 flex flex-wrap gap-2">
                 {onlinePlayers.map((p) => (
-                  <span key={p.id} className="rounded-full border border-white/20 px-3 py-1 text-xs text-white/80">
+                  <span
+                    key={p.id}
+                    className="rounded-full border border-white/25 bg-white/5 px-4 py-1.5 font-sans text-xs text-white/90"
+                  >
                     {p.name}
                     {p.id === playerId ? " (toi)" : ""}
                   </span>
@@ -957,17 +1090,20 @@ export default function ChessGame({ roomCode, playerId, playerName }: GameProps)
             </section>
           )}
 
+          {/* Local setup */}
           {entryMode === "local" && (
-            <section className="mt-4 rounded-2xl border border-emerald-300/20 bg-emerald-400/[0.04] p-4">
-              <p className="text-xs uppercase tracking-widest text-emerald-200/70">Mode local 1 telephone</p>
-              <div className="mt-3 grid grid-cols-2 gap-2">
+            <section className="mt-5 rounded-2xl border border-white/25 bg-black/30 p-5 backdrop-blur-sm">
+              <p className="font-sans text-xs uppercase tracking-widest text-white/40">Mode local 1 telephone</p>
+
+              {/* Local kind selector */}
+              <div className="mt-4 grid grid-cols-2 gap-2">
                 <button
                   onClick={() => setLocalKind("duel")}
                   className={cn(
-                    "rounded-lg border px-3 py-2 text-xs",
+                    "rounded-xl border px-3 py-2.5 font-sans text-xs transition",
                     localKind === "duel"
-                      ? "border-emerald-300/50 bg-emerald-300/10 text-emerald-200"
-                      : "border-white/10 bg-white/[0.03] text-white/70"
+                      ? "border-[#65dfb2]/50 bg-[#65dfb2]/15 text-[#65dfb2] shadow-[0_0_12px_rgba(101,223,178,0.12)]"
+                      : "border-white/10 bg-black/20 text-white/40 hover:border-white/25"
                   )}
                 >
                   Vs collegue (meme tel)
@@ -975,93 +1111,97 @@ export default function ChessGame({ roomCode, playerId, playerName }: GameProps)
                 <button
                   onClick={() => setLocalKind("bot")}
                   className={cn(
-                    "rounded-lg border px-3 py-2 text-xs",
+                    "rounded-xl border px-3 py-2.5 font-sans text-xs transition",
                     localKind === "bot"
-                      ? "border-emerald-300/50 bg-emerald-300/10 text-emerald-200"
-                      : "border-white/10 bg-white/[0.03] text-white/70"
+                      ? "border-[#65dfb2]/50 bg-[#65dfb2]/15 text-[#65dfb2] shadow-[0_0_12px_rgba(101,223,178,0.12)]"
+                      : "border-white/10 bg-black/20 text-white/40 hover:border-white/25"
                   )}
                 >
                   Vs bot
                 </button>
               </div>
-            <div className="mt-3 grid gap-3 sm:grid-cols-2">
-              <div className="space-y-2">
-                <p className="text-xs text-white/50">Temps par joueur</p>
-                <div className="grid grid-cols-2 gap-2">
-                  {TIME_OPTIONS.map((minutes) => (
-                    <button
-                      key={`local-${minutes}`}
-                      onClick={() => setLocalTimeMinutes(minutes)}
-                      className={cn(
-                        "rounded-lg border px-2 py-2 text-xs",
-                        localTimeMinutes === minutes
-                          ? "border-cyan-300/50 bg-cyan-300/10 text-cyan-200"
-                          : "border-white/10 bg-white/[0.03] text-white/70"
-                      )}
-                    >
-                      {minutes} min
-                    </button>
-                  ))}
-                </div>
-                {localKind === "bot" && (
-                  <div className="grid grid-cols-3 gap-2">
-                    {(["easy", "medium", "hard"] as BotLevel[]).map((level) => (
+
+              <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                <div className="space-y-3">
+                  <p className="font-sans text-xs text-white/40">Temps par joueur</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {TIME_OPTIONS.map((minutes) => (
                       <button
-                        key={level}
-                        onClick={() => setLocalBotLevel(level)}
+                        key={`local-${minutes}`}
+                        onClick={() => setLocalTimeMinutes(minutes)}
                         className={cn(
-                          "rounded-lg border px-2 py-2 text-xs capitalize",
-                          localBotLevel === level
-                            ? "border-cyan-300/50 bg-cyan-300/10 text-cyan-200"
-                            : "border-white/10 bg-white/[0.03] text-white/70"
+                          "rounded-xl border px-2 py-2.5 font-mono text-xs transition",
+                          localTimeMinutes === minutes
+                            ? "border-[#65dfb2]/50 bg-[#65dfb2]/15 text-[#65dfb2] shadow-[0_0_12px_rgba(101,223,178,0.12)]"
+                            : "border-white/10 bg-black/20 text-white/40 hover:border-white/25"
                         )}
                       >
-                        {level}
+                        {minutes} min
                       </button>
                     ))}
                   </div>
-                )}
+                  {localKind === "bot" && (
+                    <div className="grid grid-cols-3 gap-2">
+                      {(["easy", "medium", "hard"] as BotLevel[]).map((level) => (
+                        <button
+                          key={level}
+                          onClick={() => setLocalBotLevel(level)}
+                          className={cn(
+                            "rounded-xl border px-2 py-2.5 font-sans text-xs capitalize transition",
+                            localBotLevel === level
+                              ? "border-purple-400/50 bg-purple-400/15 text-purple-300 shadow-[0_0_12px_rgba(168,85,247,0.12)]"
+                              : "border-white/10 bg-black/20 text-white/40 hover:border-white/25"
+                          )}
+                        >
+                          {level}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <div className="space-y-3">
+                  <p className="font-sans text-xs text-white/40">Noms joueurs</p>
+                  <input
+                    value={localWhiteName}
+                    onChange={(e) => setLocalWhiteName(e.target.value)}
+                    className="w-full rounded-xl border border-white/15 bg-black/30 px-4 py-2.5 font-sans text-sm text-white/90 outline-none transition focus:border-white/30 focus:shadow-[0_0_12px_rgba(255,255,255,0.05)]"
+                    placeholder="Nom joueur blanc"
+                  />
+                  <input
+                    value={localBlackName}
+                    onChange={(e) => setLocalBlackName(e.target.value)}
+                    className="w-full rounded-xl border border-white/15 bg-black/30 px-4 py-2.5 font-sans text-sm text-white/90 outline-none transition focus:border-white/30 focus:shadow-[0_0_12px_rgba(255,255,255,0.05)]"
+                    placeholder={localKind === "bot" ? "Nom joueur" : "Nom joueur noir"}
+                  />
+                </div>
               </div>
-              <div className="space-y-2">
-                <p className="text-xs text-white/50">Noms joueurs</p>
-                <input
-                  value={localWhiteName}
-                  onChange={(e) => setLocalWhiteName(e.target.value)}
-                  className="w-full rounded-lg border border-white/15 bg-white/[0.04] px-3 py-2 text-sm text-white outline-none"
-                  placeholder="Nom joueur blanc"
-                />
-                <input
-                  value={localBlackName}
-                  onChange={(e) => setLocalBlackName(e.target.value)}
-                  className="w-full rounded-lg border border-white/15 bg-white/[0.04] px-3 py-2 text-sm text-white outline-none"
-                  placeholder={localKind === "bot" ? "Nom joueur" : "Nom joueur noir"}
-                />
-              </div>
-            </div>
-            <button
-              onClick={startLocalGame}
-              className="mt-3 rounded-xl border border-emerald-300/40 bg-emerald-500/80 px-4 py-3 text-sm font-medium text-white hover:bg-emerald-500"
-            >
-              Lancer en local
-            </button>
+
+              <button
+                onClick={startLocalGame}
+                className="mt-5 rounded-xl bg-gradient-to-r from-[#65dfb2] to-[#4ecf8a] px-6 py-3 font-sans text-sm font-semibold text-black shadow-[0_0_20px_rgba(78,207,138,0.25)] transition hover:shadow-[0_0_30px_rgba(78,207,138,0.4)]"
+              >
+                Lancer en local
+              </button>
             </section>
           )}
 
+          {/* Multiplayer start button */}
           {entryMode === "multi" && (
-            <div className="mt-5 flex gap-2">
+            <div className="mt-6 flex gap-3">
               <button
                 onClick={() => sendAction({ action: "start-game" })}
-                className="rounded-xl border border-amber-300/40 bg-gradient-to-r from-amber-500 to-orange-500 px-6 py-3 text-sm font-medium text-white hover:from-amber-400 hover:to-orange-400"
+                className="rounded-xl bg-gradient-to-r from-amber-400 to-orange-400 px-6 py-3 font-sans text-sm font-semibold text-black shadow-[0_0_20px_rgba(251,191,36,0.25)] transition hover:shadow-[0_0_30px_rgba(251,191,36,0.4)]"
               >
                 Lancer en multijoueur
               </button>
             </div>
           )}
 
+          {/* Back button */}
           {entryMode !== "choose" && (
             <button
               onClick={() => setEntryMode("choose")}
-              className="mt-3 w-fit rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-xs text-white/80"
+              className="mt-4 w-fit rounded-xl border border-white/25 bg-black/30 px-4 py-2 font-sans text-xs text-white/90 backdrop-blur-sm transition hover:bg-white/10"
             >
               Retour
             </button>
@@ -1071,6 +1211,9 @@ export default function ChessGame({ roomCode, playerId, playerName }: GameProps)
     );
   }
 
+  /* ════════════════════════════════════════════════════════
+     ONLINE PLAYING / GAME OVER
+     ════════════════════════════════════════════════════════ */
   const selectedTargets = selected !== null ? legalMovesByFrom.get(selected) ?? [] : [];
   const orientation: Color = myColor === "b" ? "b" : "w";
   const gamePlayers = state.players ?? [];
@@ -1085,25 +1228,32 @@ export default function ChessGame({ roomCode, playerId, playerName }: GameProps)
 
   if (isFocusView) {
     return (
-      <div className="fixed inset-0 z-[120] flex flex-col bg-[linear-gradient(155deg,#0f172a,#111827)] p-3 font-sans sm:p-5">
+      <div className="fixed inset-0 z-[120] flex flex-col bg-[radial-gradient(circle_at_50%_25%,rgba(251,191,36,0.12),transparent_40%),linear-gradient(155deg,#0a0a1a,#111827)] p-3 font-sans sm:p-5">
         <div className="mx-auto flex w-full max-w-[980px] flex-1 flex-col">
-          <div className="grid grid-cols-2 gap-2">
-            <div className="rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-white">
-              <p className="text-[11px] uppercase tracking-[0.12em] text-white/55">{whiteName}</p>
-              <p className="text-xl font-semibold">{formatClock(state.whiteTimeMs ?? 0)}</p>
-            </div>
-            <div className="rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-white">
-              <p className="text-[11px] uppercase tracking-[0.12em] text-white/55">{blackName}</p>
-              <p className="text-xl font-semibold">{formatClock(state.blackTimeMs ?? 0)}</p>
-            </div>
+          {/* Clocks */}
+          <div className="grid grid-cols-2 gap-3">
+            <ClockPanel
+              name={whiteName}
+              time={state.whiteTimeMs ?? 0}
+              isActive={state.phase === "playing" && state.turn === "w"}
+              color="white"
+            />
+            <ClockPanel
+              name={blackName}
+              time={state.blackTimeMs ?? 0}
+              isActive={state.phase === "playing" && state.turn === "b"}
+              color="black"
+            />
           </div>
 
-          <div className="mt-2 grid grid-cols-2 gap-2">
+          {/* Captured pieces */}
+          <div className="mt-3 grid grid-cols-2 gap-3">
             <CapturedPieces label={`${whiteName} a pris`} pieces={onlineCapturedBlack} />
             <CapturedPieces label={`${blackName} a pris`} pieces={onlineCapturedWhite} />
           </div>
 
-          <div className="mx-auto mt-3 w-full max-w-[min(98vw,940px)]">
+          {/* Board */}
+          <div className="mx-auto mt-4 w-full max-w-[min(98vw,940px)]">
             <ChessBoardView
               board={board}
               selectedSquare={selected}
@@ -1114,13 +1264,14 @@ export default function ChessGame({ roomCode, playerId, playerName }: GameProps)
             />
           </div>
 
-          <div className="mt-2 flex items-center justify-between gap-2">
-            <p className="text-xs text-white/75">{info}</p>
+          {/* Status bar */}
+          <div className="mt-3 flex items-center justify-between gap-2">
+            <p className="font-sans text-sm text-white/90">{info}</p>
             <div className="flex items-center gap-2">
               {state.phase === "playing" && (
                 <button
                   onClick={shareSpectatorLink}
-                  className="rounded-lg border border-emerald-300/35 bg-emerald-500/20 px-3 py-2 text-xs text-emerald-100 hover:bg-emerald-500/30"
+                  className="rounded-xl bg-gradient-to-r from-[#65dfb2] to-[#4ecf8a] px-4 py-2 font-sans text-xs font-semibold text-black shadow-[0_0_12px_rgba(78,207,138,0.2)] transition hover:shadow-[0_0_20px_rgba(78,207,138,0.35)]"
                 >
                   Inviter des spectateurs
                 </button>
@@ -1132,62 +1283,93 @@ export default function ChessGame({ roomCode, playerId, playerName }: GameProps)
                   }
                   setFocusMode(false);
                 }}
-                className="rounded-lg border border-cyan-300/35 bg-cyan-500/20 px-3 py-2 text-xs text-cyan-100 hover:bg-cyan-500/30"
+                className="rounded-xl border border-white/25 bg-black/30 px-4 py-2 font-sans text-xs text-white/90 backdrop-blur-sm transition hover:bg-white/10"
               >
                 Quitter plein ecran
               </button>
             </div>
           </div>
-          {inviteFeedback && <p className="mt-1 text-xs text-emerald-200/85">{inviteFeedback}</p>}
+          {inviteFeedback && (
+            <p className="mt-2 font-sans text-xs text-[#65dfb2]/90">{inviteFeedback}</p>
+          )}
         </div>
       </div>
     );
   }
 
   return (
-    <div
-      className="relative flex flex-1 flex-col overflow-hidden p-4 font-sans sm:p-6"
-    >
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_15%_15%,rgba(251,191,36,0.16),transparent_35%),radial-gradient(circle_at_85%_85%,rgba(59,130,246,0.14),transparent_35%),linear-gradient(145deg,#0f172a,#111827)]" />
-      <div className="relative mx-auto flex w-full max-w-4xl flex-1 flex-col rounded-3xl border border-white/10 bg-black/35 p-4 backdrop-blur-xl sm:p-6">
-        <div className="flex flex-wrap items-start justify-between gap-2">
-          <div>
-            <p className="text-[11px] uppercase tracking-[0.2em] text-amber-200/70">Echecs en ligne</p>
-            <p className="mt-1 text-sm text-white/85">{info}</p>
-            {state.phase === "playing" && state.inCheck && (
-              <p className="mt-1 text-xs text-red-300">Echec sur le roi {state.turn === "w" ? "blanc" : "noir"}.</p>
+    <div className="relative flex flex-1 flex-col overflow-hidden p-4 font-sans sm:p-6">
+      {/* Background gradient */}
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_25%,rgba(251,191,36,0.14),transparent_40%),radial-gradient(circle_at_80%_80%,rgba(139,92,246,0.12),transparent_40%),linear-gradient(145deg,#0a0a1a,#111827)]" />
+
+      {/* Main panel */}
+      <div className="relative mx-auto flex w-full max-w-4xl flex-1 flex-col rounded-3xl border border-white/25 bg-black/30 p-5 backdrop-blur-sm sm:p-7">
+        {/* Header */}
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="flex-1">
+            <p className="font-sans text-[11px] uppercase tracking-[0.2em] text-white/40">Echecs en ligne</p>
+
+            {/* Game status */}
+            {state.phase === "game-over" ? (
+              <div className="mt-3 rounded-2xl border border-amber-300/30 bg-amber-400/10 px-5 py-3 shadow-[0_0_20px_rgba(251,191,36,0.12)]">
+                <p className="font-sans text-lg font-semibold text-white/90">{info}</p>
+              </div>
+            ) : (
+              <p className="mt-2 font-sans text-lg font-semibold text-white/90">{info}</p>
             )}
-            <div className="mt-2 flex flex-wrap gap-2 text-sm">
-              <span className="rounded-full border border-white/20 bg-white/10 px-3 py-1 text-white">
-                Blanc {formatClock(state.whiteTimeMs ?? 0)}
-              </span>
-              <span className="rounded-full border border-white/20 bg-white/10 px-3 py-1 text-white">
-                Noir {formatClock(state.blackTimeMs ?? 0)}
-              </span>
+
+            {/* Check warning */}
+            {state.phase === "playing" && state.inCheck && (
+              <div className="mt-2 rounded-xl border border-red-400/30 bg-red-500/15 px-4 py-2 shadow-[0_0_15px_rgba(239,68,68,0.15)]">
+                <p className="font-sans text-sm font-semibold text-red-300">
+                  Echec sur le roi {state.turn === "w" ? "blanc" : "noir"}
+                </p>
+              </div>
+            )}
+
+            {/* Clocks */}
+            <div className="mt-3 grid grid-cols-2 gap-3">
+              <ClockPanel
+                name={whiteName}
+                time={state.whiteTimeMs ?? 0}
+                isActive={state.phase === "playing" && state.turn === "w"}
+                color="white"
+              />
+              <ClockPanel
+                name={blackName}
+                time={state.blackTimeMs ?? 0}
+                isActive={state.phase === "playing" && state.turn === "b"}
+                color="black"
+              />
             </div>
-            <div className="mt-2 grid grid-cols-1 gap-2 text-xs sm:grid-cols-2">
+
+            {/* Captured pieces */}
+            <div className="mt-3 grid grid-cols-2 gap-3">
               <CapturedPieces label={`${whiteName} a pris`} pieces={onlineCapturedBlack} />
               <CapturedPieces label={`${blackName} a pris`} pieces={onlineCapturedWhite} />
             </div>
           </div>
-          <div className="flex flex-col items-end gap-2 text-xs text-white/70">
+
+          {/* Side info */}
+          <div className="flex flex-col items-end gap-2">
             <button
               onClick={toggleFullscreen}
-              className="rounded-lg border border-cyan-300/35 bg-cyan-500/20 px-3 py-1.5 text-xs text-cyan-100 hover:bg-cyan-500/30"
+              className="rounded-xl border border-white/25 bg-black/30 px-4 py-2 font-sans text-xs text-white/90 backdrop-blur-sm transition hover:bg-white/10"
             >
               {isFullscreen ? "Quitter plein ecran" : "Plein ecran"}
             </button>
-            <span>{whiteName} (Blanc)</span>
-            <span>{blackName} (Noir)</span>
+            <span className="font-sans text-xs text-white/40">{whiteName} (Blanc)</span>
+            <span className="font-sans text-xs text-white/40">{blackName} (Noir)</span>
             {state.lastMove && (
-              <span className="text-white/50">
-                Dernier coup: {state.lastMove.fromSquare} → {state.lastMove.toSquare}
+              <span className="font-mono text-xs text-white/25">
+                {state.lastMove.fromSquare} → {state.lastMove.toSquare}
               </span>
             )}
           </div>
         </div>
 
-        <div className="mt-4 mx-auto w-full max-w-[min(92vw,820px)]">
+        {/* Board */}
+        <div className="mx-auto mt-5 w-full max-w-[min(92vw,820px)]">
           <ChessBoardView
             board={board}
             selectedSquare={selected}
@@ -1198,22 +1380,31 @@ export default function ChessGame({ roomCode, playerId, playerName }: GameProps)
           />
         </div>
 
-        <div className="mt-4 flex flex-wrap gap-2 text-xs text-white/65">
-          <span className="rounded-full border border-white/20 px-3 py-1">
+        {/* Player tags */}
+        <div className="mt-4 flex flex-wrap gap-2">
+          <span className="rounded-full border border-white/25 bg-white/5 px-4 py-1.5 font-sans text-xs text-white/90">
             Toi: {myColor ? (myColor === "w" ? "Blanc" : "Noir") : "Spectateur"}
           </span>
           {state.phase === "playing" && (
-            <span className="rounded-full border border-white/20 px-3 py-1">
+            <span
+              className={cn(
+                "rounded-full border px-4 py-1.5 font-sans text-xs",
+                canPlayOnline
+                  ? "border-[#65dfb2]/40 bg-[#65dfb2]/15 text-[#65dfb2]"
+                  : "border-white/15 bg-white/5 text-white/40"
+              )}
+            >
               {canPlayOnline ? "A toi de jouer" : "En attente"}
             </span>
           )}
         </div>
 
-        <div className="mt-4 flex gap-2">
+        {/* Action buttons */}
+        <div className="mt-5 flex flex-wrap gap-3">
           {state.phase === "playing" && (
             <button
               onClick={shareSpectatorLink}
-              className="rounded-xl border border-emerald-300/35 bg-emerald-500/25 px-4 py-3 text-sm font-medium text-emerald-100 hover:bg-emerald-500/35"
+              className="rounded-xl bg-gradient-to-r from-[#65dfb2] to-[#4ecf8a] px-5 py-3 font-sans text-sm font-semibold text-black shadow-[0_0_20px_rgba(78,207,138,0.25)] transition hover:shadow-[0_0_30px_rgba(78,207,138,0.4)]"
             >
               Inviter des spectateurs
             </button>
@@ -1221,7 +1412,7 @@ export default function ChessGame({ roomCode, playerId, playerName }: GameProps)
           {state.phase === "playing" && myColor && (
             <button
               onClick={() => sendAction({ action: "resign" })}
-              className="rounded-xl border border-red-300/35 bg-red-500/70 px-4 py-3 text-sm font-medium text-white hover:bg-red-500"
+              className="rounded-xl border border-red-400/30 bg-red-500/20 px-5 py-3 font-sans text-sm font-semibold text-red-300 transition hover:bg-red-500/30"
             >
               Abandonner
             </button>
@@ -1229,15 +1420,21 @@ export default function ChessGame({ roomCode, playerId, playerName }: GameProps)
           {state.phase === "game-over" && (
             <button
               onClick={() => sendAction({ action: "start-game" })}
-              className="rounded-xl border border-amber-300/40 bg-amber-500/80 px-4 py-3 text-sm font-medium text-white hover:bg-amber-500"
+              className="rounded-xl bg-gradient-to-r from-amber-400 to-orange-400 px-6 py-3 font-sans text-sm font-semibold text-black shadow-[0_0_20px_rgba(251,191,36,0.25)] transition hover:shadow-[0_0_30px_rgba(251,191,36,0.4)]"
             >
               Rejouer
             </button>
           )}
         </div>
-        {inviteFeedback && <p className="mt-2 text-xs text-emerald-200/85">{inviteFeedback}</p>}
 
-        {error && <p className="mt-3 text-sm text-red-300">{error}</p>}
+        {inviteFeedback && (
+          <p className="mt-3 font-sans text-xs text-[#65dfb2]/90">{inviteFeedback}</p>
+        )}
+        {error && (
+          <p className="mt-3 rounded-xl border border-red-400/20 bg-red-500/10 px-4 py-2 font-sans text-sm text-red-300">
+            {error}
+          </p>
+        )}
       </div>
     </div>
   );

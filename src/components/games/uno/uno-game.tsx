@@ -93,6 +93,33 @@ const ACTION_NAMES: Record<string, string> = {
   inverse: "Inverse",
 };
 
+// ── Radial gradient backgrounds per color ────────────────
+const COLOR_RADIALS: Record<CardColor, string> = {
+  rouge: "radial-gradient(circle at 50% 25%, rgba(239,68,68,0.25), transparent 40%)",
+  bleu: "radial-gradient(circle at 50% 25%, rgba(59,130,246,0.25), transparent 40%)",
+  vert: "radial-gradient(circle at 50% 25%, rgba(16,185,129,0.25), transparent 40%)",
+  jaune: "radial-gradient(circle at 50% 25%, rgba(250,204,21,0.2), transparent 40%)",
+};
+
+const COLOR_PICKER_STYLES: Record<CardColor, { gradient: string; shadow: string }> = {
+  rouge: {
+    gradient: "bg-gradient-to-br from-red-400 to-red-600",
+    shadow: "shadow-[0_0_20px_rgba(239,68,68,0.4)]",
+  },
+  bleu: {
+    gradient: "bg-gradient-to-br from-blue-400 to-blue-600",
+    shadow: "shadow-[0_0_20px_rgba(59,130,246,0.4)]",
+  },
+  vert: {
+    gradient: "bg-gradient-to-br from-emerald-400 to-emerald-600",
+    shadow: "shadow-[0_0_20px_rgba(16,185,129,0.4)]",
+  },
+  jaune: {
+    gradient: "bg-gradient-to-br from-yellow-300 to-yellow-500",
+    shadow: "shadow-[0_0_20px_rgba(250,204,21,0.4)]",
+  },
+};
+
 // ── Card display helpers ─────────────────────────────────
 function getCardLabel(card: CardData): string {
   if (card.type === "number") return String(card.value ?? 0);
@@ -106,6 +133,15 @@ function getCardName(card: CardData): string {
   if (card.type === "action") return `${card.color}-${card.action}`;
   if (card.wild === "plus4") return "plus4";
   return "joker";
+}
+
+// ── Determine ambient background based on top card ───────
+function getAmbientBackground(topCard?: CardData): string {
+  if (!topCard) return "#0a0a0f";
+  const color = topCard.type === "wild" ? topCard.chosenColor : topCard.color;
+  if (!color) return "#0a0a0f";
+  const radial = COLOR_RADIALS[color as CardColor];
+  return radial ? `${radial}, #0a0a0f` : "#0a0a0f";
 }
 
 // ══════════════════════════════════════════════════════════
@@ -181,10 +217,21 @@ export default function UnoGame({ roomCode, playerId, playerName }: GameProps) {
   // ── Waiting state ──────────────────────────────────────
   if (!state || state.status === "waiting") {
     return (
-      <div className="flex flex-1 items-center justify-center" style={{ background: "#060606" }}>
-        <p className="text-white/40 animate-pulse font-sans">
-          En attente des joueurs...
-        </p>
+      <div
+        className="flex flex-1 items-center justify-center"
+        style={{
+          background:
+            "radial-gradient(circle at 50% 25%, rgba(239,68,68,0.12), transparent 40%), radial-gradient(circle at 20% 70%, rgba(59,130,246,0.10), transparent 40%), radial-gradient(circle at 80% 70%, rgba(16,185,129,0.10), transparent 40%), #0a0a0f",
+        }}
+      >
+        <div className="rounded-3xl border border-white/25 bg-black/30 backdrop-blur-sm px-10 py-8 flex flex-col items-center gap-4 shadow-[0_0_40px_rgba(0,0,0,0.5)]">
+          <span className="text-4xl font-serif font-semibold text-white/90 tracking-tight">
+            UNO
+          </span>
+          <p className="text-white/40 animate-pulse font-sans text-sm">
+            En attente des joueurs...
+          </p>
+        </div>
       </div>
     );
   }
@@ -203,18 +250,18 @@ export default function UnoGame({ roomCode, playerId, playerName }: GameProps) {
 
     return (
       <div
-        className="flex flex-1 flex-col relative overflow-hidden select-none"
-        style={{ background: "#060606" }}
+        className="flex flex-1 flex-col relative overflow-hidden select-none transition-all duration-700"
+        style={{ background: getAmbientBackground(topCard) }}
       >
         {/* ── UNO Toast ──────────────────────────────── */}
         {unoToast && (
           <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50">
             <div
               className={cn(
-                "px-4 py-2 rounded-lg border font-sans text-sm font-medium animate-pulse",
+                "px-6 py-3 rounded-2xl border font-sans text-sm font-semibold animate-pulse backdrop-blur-md",
                 unoToast.type === "called"
-                  ? "bg-cyan-400/20 border-cyan-300/40 text-cyan-200"
-                  : "bg-red-500/20 border-red-500/40 text-red-300"
+                  ? "bg-cyan-400/15 border-cyan-300/30 text-cyan-200 shadow-[0_0_20px_rgba(80,216,255,0.25)]"
+                  : "bg-red-500/15 border-red-500/30 text-red-300 shadow-[0_0_20px_rgba(239,68,68,0.25)]"
               )}
             >
               {unoToast.type === "called"
@@ -226,21 +273,27 @@ export default function UnoGame({ roomCode, playerId, playerName }: GameProps) {
 
         {/* ── Color Picker Modal ─────────────────────── */}
         {colorPickerCard !== null && (
-          <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-            <div className="flex flex-col items-center gap-4">
-              <p className="text-white/70 font-sans text-sm">Choisis une couleur</p>
-              <div className="grid grid-cols-2 gap-3">
+          <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/70 backdrop-blur-md">
+            <div className="rounded-3xl border border-white/25 bg-black/30 backdrop-blur-sm p-8 flex flex-col items-center gap-6 shadow-[0_0_40px_rgba(0,0,0,0.5)]">
+              <p className="text-white/90 font-serif text-xl font-semibold">Choisis une couleur</p>
+              <div className="grid grid-cols-2 gap-4">
                 {(["rouge", "bleu", "vert", "jaune"] as CardColor[]).map((color) => (
                   <button
                     key={color}
                     onClick={() => handleChooseColor(color)}
                     className={cn(
-                      "w-20 h-20 rounded-xl transition-all hover:scale-110 active:scale-95",
-                      COLOR_MAP[color].bg,
-                      "shadow-lg"
+                      "w-24 h-24 rounded-2xl transition-all hover:scale-110 active:scale-95 border border-white/20",
+                      COLOR_PICKER_STYLES[color].gradient,
+                      COLOR_PICKER_STYLES[color].shadow,
+                      "hover:shadow-[0_0_30px_rgba(255,255,255,0.2)]"
                     )}
                   >
-                    <span className={cn("text-sm font-sans font-medium", COLOR_MAP[color].text)}>
+                    <span
+                      className={cn(
+                        "text-sm font-sans font-semibold",
+                        color === "jaune" ? "text-black/80" : "text-white/90"
+                      )}
+                    >
                       {color.charAt(0).toUpperCase() + color.slice(1)}
                     </span>
                   </button>
@@ -248,7 +301,7 @@ export default function UnoGame({ roomCode, playerId, playerName }: GameProps) {
               </div>
               <button
                 onClick={() => setColorPickerCard(null)}
-                className="text-xs text-white/30 hover:text-white/50 font-sans transition-colors mt-2"
+                className="text-xs text-white/25 hover:text-white/50 font-sans transition-colors mt-1"
               >
                 Annuler
               </button>
@@ -264,15 +317,15 @@ export default function UnoGame({ roomCode, playerId, playerName }: GameProps) {
               <div
                 key={p.id}
                 className={cn(
-                  "flex flex-col items-center gap-1 rounded-lg border px-3 py-2 min-w-[80px] transition-all",
+                  "flex flex-col items-center gap-1.5 rounded-2xl border px-4 py-2.5 min-w-[85px] transition-all",
                   p.isCurrentTurn
-                    ? "border-cyan-400/40 bg-cyan-400/5 shadow-[0_0_12px_rgba(251,191,36,0.15)]"
-                    : "border-white/[0.06] bg-white/[0.02]"
+                    ? "border-cyan-400/30 bg-cyan-400/8 shadow-[0_0_20px_rgba(80,216,255,0.15)] backdrop-blur-sm"
+                    : "border-white/[0.08] bg-white/[0.03] backdrop-blur-sm"
                 )}
               >
                 <span
                   className={cn(
-                    "text-xs font-medium font-sans truncate max-w-[70px]",
+                    "text-xs font-semibold font-sans truncate max-w-[70px]",
                     p.isCurrentTurn ? "text-cyan-300" : "text-white/50"
                   )}
                 >
@@ -282,28 +335,35 @@ export default function UnoGame({ roomCode, playerId, playerName }: GameProps) {
                   {Array.from({ length: Math.min(p.cardCount, 7) }).map((_, i) => (
                     <div
                       key={i}
-                      className="w-3 h-4 rounded-[2px] bg-white/10 border border-white/[0.08]"
+                      className={cn(
+                        "w-3 h-4 rounded-[3px] border",
+                        p.isCurrentTurn
+                          ? "bg-cyan-400/15 border-cyan-400/20"
+                          : "bg-white/8 border-white/[0.08]"
+                      )}
                       style={{
                         transform: `rotate(${(i - Math.min(p.cardCount, 7) / 2) * 4}deg)`,
                       }}
                     />
                   ))}
                   {p.cardCount > 7 && (
-                    <span className="text-[9px] text-white/30 font-mono ml-0.5">
+                    <span className="text-[9px] text-white/25 font-mono ml-0.5">
                       +{p.cardCount - 7}
                     </span>
                   )}
                 </div>
-                <span className="text-[10px] text-white/30 font-mono">
+                <span className="text-[10px] text-white/25 font-mono">
                   {p.cardCount} carte{p.cardCount !== 1 ? "s" : ""}
                 </span>
                 {p.calledUno && p.cardCount === 1 && (
-                  <span className="text-[9px] font-sans font-bold text-cyan-300">UNO</span>
+                  <span className="text-[9px] font-sans font-bold text-cyan-300 drop-shadow-[0_0_6px_rgba(80,216,255,0.5)]">
+                    UNO
+                  </span>
                 )}
                 {p.mustCallUno && !p.calledUno && p.id !== playerId && (
                   <button
                     onClick={() => handleCatchUno(p.id)}
-                    className="mt-0.5 px-2 py-0.5 rounded text-[9px] font-sans font-bold bg-red-500/20 border border-red-500/40 text-red-300 hover:bg-red-500/30 transition-all active:scale-95"
+                    className="mt-0.5 px-2.5 py-1 rounded-lg text-[9px] font-sans font-bold bg-red-500/15 border border-red-500/30 text-red-300 hover:bg-red-500/25 hover:shadow-[0_0_12px_rgba(239,68,68,0.2)] transition-all active:scale-95"
                   >
                     Attraper !
                   </button>
@@ -316,10 +376,10 @@ export default function UnoGame({ roomCode, playerId, playerName }: GameProps) {
         <div className="flex-1 flex items-center justify-center gap-6 relative">
           {/* Direction indicator */}
           <div className="absolute top-2 left-1/2 -translate-x-1/2 flex items-center gap-2">
-            <span className="text-[10px] text-white/20 font-sans uppercase tracking-wider">
+            <span className="text-[10px] text-white/20 font-sans uppercase tracking-widest">
               {state.direction === 1 ? "Sens horaire" : "Sens anti-horaire"}
             </span>
-            <span className="text-white/20 text-sm">
+            <span className="text-white/25 text-sm">
               {state.direction === 1 ? "\u21BB" : "\u21BA"}
             </span>
           </div>
@@ -330,7 +390,9 @@ export default function UnoGame({ roomCode, playerId, playerName }: GameProps) {
               <span
                 className={cn(
                   "text-sm font-mono font-bold",
-                  (state.timeLeft ?? 0) <= 5 ? "text-red-400" : "text-white/40"
+                  (state.timeLeft ?? 0) <= 5
+                    ? "text-red-400 drop-shadow-[0_0_8px_rgba(239,68,68,0.4)]"
+                    : "text-white/40"
                 )}
               >
                 {state.timeLeft ?? 0}s
@@ -341,11 +403,11 @@ export default function UnoGame({ roomCode, playerId, playerName }: GameProps) {
           {/* Turn indicator */}
           <div className="absolute top-2 left-4">
             {isMyTurn ? (
-              <span className="text-xs font-sans text-cyan-300 font-medium animate-pulse">
+              <span className="text-xs font-sans text-cyan-300 font-semibold animate-pulse drop-shadow-[0_0_8px_rgba(80,216,255,0.4)]">
                 Ton tour !
               </span>
             ) : (
-              <span className="text-xs font-sans text-white/20">
+              <span className="text-xs font-sans text-white/25">
                 Tour de {otherPlayers.find((p) => p.id === state.currentPlayerId)?.name ?? "..."}
               </span>
             )}
@@ -356,18 +418,18 @@ export default function UnoGame({ roomCode, playerId, playerName }: GameProps) {
             onClick={handleDraw}
             disabled={!state.canDraw}
             className={cn(
-              "relative w-[72px] h-[104px] rounded-xl border-2 transition-all",
+              "relative w-[76px] h-[110px] rounded-2xl border-2 transition-all",
               state.canDraw
-                ? "border-white/20 bg-white/[0.04] hover:border-white/30 hover:bg-white/[0.06] cursor-pointer active:scale-95"
-                : "border-white/[0.06] bg-white/[0.02] cursor-default opacity-40"
+                ? "border-white/15 bg-gradient-to-br from-white/[0.06] to-white/[0.02] hover:border-white/25 hover:shadow-[0_0_20px_rgba(255,255,255,0.08)] cursor-pointer active:scale-95 backdrop-blur-sm"
+                : "border-white/[0.06] bg-white/[0.02] cursor-default opacity-30"
             )}
           >
             <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <span className="text-2xl text-white/20">&#x1F0A0;</span>
+              <span className="text-3xl text-white/15">&#x1F0A0;</span>
               <span className="text-[9px] text-white/20 font-mono mt-1">{state.deckCount}</span>
             </div>
             {state.canDraw && (
-              <span className="absolute -bottom-5 left-1/2 -translate-x-1/2 text-[9px] text-white/30 font-sans whitespace-nowrap">
+              <span className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[10px] text-white/25 font-sans whitespace-nowrap font-medium">
                 Piocher
               </span>
             )}
@@ -380,7 +442,7 @@ export default function UnoGame({ roomCode, playerId, playerName }: GameProps) {
           {state.canPassAfterDraw && (
             <button
               onClick={handlePassAfterDraw}
-              className="absolute -bottom-2 left-1/2 -translate-x-1/2 px-4 py-1.5 rounded-lg border border-white/[0.12] bg-white/[0.05] text-white/60 font-sans text-xs hover:bg-white/[0.08] transition-all active:scale-95"
+              className="absolute -bottom-2 left-1/2 -translate-x-1/2 px-5 py-2 rounded-xl border border-white/[0.12] bg-white/[0.05] backdrop-blur-sm text-white/60 font-sans text-xs font-medium hover:bg-white/[0.08] hover:border-white/[0.2] transition-all active:scale-95"
             >
               Passer
             </button>
@@ -389,10 +451,10 @@ export default function UnoGame({ roomCode, playerId, playerName }: GameProps) {
 
         {/* ── UNO Button ─────────────────────────────── */}
         {showUnoButton && (
-          <div className="flex justify-center py-2">
+          <div className="flex justify-center py-3">
             <button
               onClick={handleUnoCall}
-              className="px-8 py-3 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-sans font-bold text-lg tracking-wide shadow-[0_0_30px_rgba(80,216,255,0.45)] hover:shadow-[0_0_40px_rgba(80,216,255,0.65)] transition-all active:scale-95 animate-pulse"
+              className="px-10 py-3.5 rounded-2xl bg-gradient-to-r from-[#65dfb2] to-[#4ecf8a] hover:from-[#75efbf] hover:to-[#5edf9a] text-slate-950 font-sans font-bold text-xl tracking-wide shadow-[0_0_30px_rgba(78,207,138,0.45)] hover:shadow-[0_0_40px_rgba(78,207,138,0.65)] transition-all active:scale-95 animate-pulse"
             >
               UNO !
             </button>
@@ -401,12 +463,12 @@ export default function UnoGame({ roomCode, playerId, playerName }: GameProps) {
 
         {/* ── Catch UNO buttons ──────────────────────── */}
         {catchablePlayers.length > 0 && !showUnoButton && (
-          <div className="flex justify-center gap-2 py-2">
+          <div className="flex justify-center gap-2 py-3">
             {catchablePlayers.map((p) => (
               <button
                 key={p.id}
                 onClick={() => handleCatchUno(p.id)}
-                className="px-4 py-2 rounded-lg bg-red-500/20 border border-red-500/40 text-red-300 font-sans text-xs font-bold hover:bg-red-500/30 transition-all active:scale-95"
+                className="px-5 py-2.5 rounded-xl bg-red-500/15 border border-red-500/30 text-red-300 font-sans text-xs font-bold hover:bg-red-500/25 hover:shadow-[0_0_15px_rgba(239,68,68,0.2)] transition-all active:scale-95 backdrop-blur-sm"
               >
                 Attraper {p.name} !
               </button>
@@ -416,12 +478,22 @@ export default function UnoGame({ roomCode, playerId, playerName }: GameProps) {
 
         {/* ── Bottom: My hand (fan spread) ───────────── */}
         <div className="relative pb-4 pt-2 px-2">
+          {/* Hand backdrop glow */}
+          {isMyTurn && (
+            <div
+              className="absolute inset-x-0 bottom-0 h-32 pointer-events-none"
+              style={{
+                background:
+                  "radial-gradient(ellipse at 50% 100%, rgba(80,216,255,0.06), transparent 70%)",
+              }}
+            />
+          )}
           {state.drewCard && (
-            <p className="text-center text-[10px] text-cyan-300/60 font-sans mb-1">
+            <p className="text-center text-[10px] text-cyan-300/60 font-sans mb-1 font-medium">
               Carte piochee ! Joue-la ou passe.
             </p>
           )}
-          <div className="flex justify-center items-end" style={{ minHeight: "130px" }}>
+          <div className="flex justify-center items-end relative" style={{ minHeight: "130px" }}>
             {myHand.map((card, index) => {
               const totalCards = myHand.length;
               const maxSpread = Math.min(totalCards * 48, 600);
@@ -468,8 +540,18 @@ export default function UnoGame({ roomCode, playerId, playerName }: GameProps) {
 
   // ── Fallback ───────────────────────────────────────────
   return (
-    <div className="flex flex-1 items-center justify-center" style={{ background: "#060606" }}>
-      {error && <p className="text-sm text-red-400 font-sans">{error}</p>}
+    <div
+      className="flex flex-1 items-center justify-center"
+      style={{
+        background:
+          "radial-gradient(circle at 50% 50%, rgba(239,68,68,0.08), transparent 40%), #0a0a0f",
+      }}
+    >
+      {error && (
+        <p className="text-sm text-red-400 font-sans drop-shadow-[0_0_8px_rgba(239,68,68,0.3)]">
+          {error}
+        </p>
+      )}
     </div>
   );
 }
@@ -491,9 +573,21 @@ function CardView({
   const colorStyle = color ? COLOR_MAP[color as CardColor] : null;
   const label = getCardLabel(card);
 
-  const sizeClasses = size === "large" ? "w-[88px] h-[128px]" : "w-[72px] h-[104px]";
-  const labelSize = size === "large" ? "text-3xl" : "text-2xl";
+  const sizeClasses = size === "large" ? "w-[92px] h-[134px]" : "w-[72px] h-[104px]";
+  const labelSize = size === "large" ? "text-4xl" : "text-2xl";
   const cornerSize = size === "large" ? "text-xs" : "text-[10px]";
+
+  // Build inline gradient for card background instead of flat color
+  const cardGradient = (() => {
+    if (isWild && !color) {
+      return "linear-gradient(135deg, #ef4444 0%, #3b82f6 33%, #10b981 66%, #facc15 100%)";
+    }
+    if (color === "rouge") return "linear-gradient(145deg, #f87171 0%, #dc2626 50%, #b91c1c 100%)";
+    if (color === "bleu") return "linear-gradient(145deg, #60a5fa 0%, #2563eb 50%, #1d4ed8 100%)";
+    if (color === "vert") return "linear-gradient(145deg, #34d399 0%, #059669 50%, #047857 100%)";
+    if (color === "jaune") return "linear-gradient(145deg, #fde047 0%, #eab308 50%, #ca8a04 100%)";
+    return undefined;
+  })();
 
   return (
     <div
@@ -502,15 +596,24 @@ function CardView({
         "rounded-xl border-2 relative overflow-hidden flex-shrink-0",
         "flex items-center justify-center",
         "transition-shadow duration-200",
-        isWild && !color
-          ? "bg-gradient-to-br from-red-500 via-blue-500 to-emerald-500 border-white/30"
-          : colorStyle
-            ? cn(colorStyle.bg, "border-white/20")
-            : "bg-gray-700 border-white/10",
+        // Use gradient backgrounds via style instead of solid Tailwind bg
+        !cardGradient && "bg-gray-700 border-white/10",
+        cardGradient && (isWild && !color ? "border-white/30" : "border-white/20"),
         playable && colorStyle && colorStyle.glow,
-        playable && isWild && !color && "shadow-[0_0_20px_rgba(255,255,255,0.3)]"
+        playable && isWild && !color && "shadow-[0_0_20px_rgba(255,255,255,0.3)]",
+        size === "large" && colorStyle && colorStyle.glow
       )}
+      style={cardGradient ? { background: cardGradient } : undefined}
     >
+      {/* Inner shine overlay */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background:
+            "linear-gradient(180deg, rgba(255,255,255,0.12) 0%, transparent 40%, rgba(0,0,0,0.15) 100%)",
+        }}
+      />
+
       {/* Oval center shape */}
       <div
         className="absolute inset-2 rounded-[40%] border border-white/20 bg-white/10"
@@ -521,7 +624,8 @@ function CardView({
       <span
         className={cn(
           labelSize,
-          "font-mono font-black relative z-10 drop-shadow-md",
+          "font-mono font-black relative z-10",
+          "drop-shadow-[0_2px_4px_rgba(0,0,0,0.4)]",
           isWild && !color ? "text-white" : colorStyle?.text ?? "text-white"
         )}
       >
@@ -533,6 +637,7 @@ function CardView({
         className={cn(
           cornerSize,
           "absolute top-1.5 left-2 font-mono font-bold z-10",
+          "drop-shadow-[0_1px_2px_rgba(0,0,0,0.3)]",
           isWild && !color ? "text-white" : colorStyle?.text ?? "text-white"
         )}
       >
@@ -544,6 +649,7 @@ function CardView({
         className={cn(
           cornerSize,
           "absolute bottom-1.5 right-2 font-mono font-bold z-10 rotate-180",
+          "drop-shadow-[0_1px_2px_rgba(0,0,0,0.3)]",
           isWild && !color ? "text-white" : colorStyle?.text ?? "text-white"
         )}
       >
@@ -554,9 +660,10 @@ function CardView({
       {isWild && color && (
         <div
           className={cn(
-            "absolute bottom-1 left-1/2 -translate-x-1/2 w-3 h-3 rounded-full z-10",
+            "absolute bottom-1.5 left-1/2 -translate-x-1/2 w-3.5 h-3.5 rounded-full z-10",
             COLOR_MAP[color as CardColor].bg,
-            "border border-white/30"
+            "border border-white/30",
+            "shadow-[0_0_6px_rgba(255,255,255,0.2)]"
           )}
         />
       )}
@@ -565,9 +672,9 @@ function CardView({
       {card.type === "action" && (
         <span
           className={cn(
-            "absolute bottom-2 left-1/2 -translate-x-1/2 text-[7px] font-sans font-medium uppercase tracking-wider z-10 whitespace-nowrap",
+            "absolute bottom-2 left-1/2 -translate-x-1/2 text-[7px] font-sans font-semibold uppercase tracking-wider z-10 whitespace-nowrap",
             colorStyle?.text ?? "text-white",
-            "opacity-70"
+            "opacity-70 drop-shadow-[0_1px_2px_rgba(0,0,0,0.3)]"
           )}
         >
           {ACTION_NAMES[card.action ?? ""] ?? ""}
@@ -576,7 +683,7 @@ function CardView({
 
       {/* Wild card subtext */}
       {isWild && (
-        <span className="absolute bottom-2 left-1/2 -translate-x-1/2 text-[7px] font-sans font-medium uppercase tracking-wider z-10 text-white/70 whitespace-nowrap">
+        <span className="absolute bottom-2 left-1/2 -translate-x-1/2 text-[7px] font-sans font-semibold uppercase tracking-wider z-10 text-white/70 whitespace-nowrap drop-shadow-[0_1px_2px_rgba(0,0,0,0.3)]">
           {card.wild === "plus4" ? "Pioche 4" : "Joker"}
         </span>
       )}

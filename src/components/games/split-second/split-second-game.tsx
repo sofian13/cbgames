@@ -48,106 +48,155 @@ export default function SplitSecondGame({ roomCode, playerId, playerName }: Game
     setAnswered(true);
   }, [sendAction]);
 
-  if (!state || state.status === "waiting") return <div className="flex flex-1 items-center justify-center"><p className="text-white/40 animate-pulse font-sans">En attente...</p></div>;
+  if (!state || state.status === "waiting") return (
+    <div className="relative flex flex-1 items-center justify-center overflow-hidden"
+      style={{ background: "radial-gradient(circle at 50% 25%, rgba(78,207,138,0.12), transparent 40%), #060606" }}>
+      <p className="text-3xl font-sans font-semibold text-white/40 animate-pulse">En attente...</p>
+    </div>
+  );
 
   const me = state.players?.find(p => p.id === playerId);
 
   if (state.status === "challenge" && state.challenge) {
     const ch = state.challenge;
+    const timerPct = (state.timeLeft / Math.ceil(state.timeLimit / 1000)) * 100;
+    const urgent = state.timeLeft <= 1;
     return (
-      <div className="flex flex-1 flex-col items-center justify-center p-4" style={{ background: "#060606" }}>
-        <div className="w-full max-w-md space-y-5">
-          <div className="flex justify-between items-center">
-            <span className="text-xs text-white/20 font-sans uppercase tracking-wider">Round {state.round}</span>
-            <span className={cn("text-lg font-mono font-bold", state.timeLeft <= 1 ? "text-red-400" : "text-ember")}>{state.timeLeft}s</span>
-          </div>
-          <div className="h-1.5 w-full rounded-full bg-white/[0.06] overflow-hidden">
-            <div className="h-full rounded-full bg-ember/60 transition-all duration-1000" style={{ width: `${(state.timeLeft / Math.ceil(state.timeLimit / 1000)) * 100}%` }} />
-          </div>
-          <h2 className="text-xl font-serif font-light text-white/90 text-center">{ch.instruction}</h2>
+      <div className="relative flex flex-1 flex-col items-center justify-center overflow-hidden p-4"
+        style={{ background: urgent
+          ? "radial-gradient(circle at 50% 25%, rgba(239,68,68,0.18), transparent 40%), #060606"
+          : "radial-gradient(circle at 50% 25%, rgba(78,207,138,0.12), transparent 40%), #060606" }}>
+        <div className="w-full max-w-md space-y-6">
 
+          {/* Round header */}
+          <div className="flex justify-between items-center">
+            <span className="text-sm text-white/25 font-sans uppercase tracking-widest">Round {state.round}</span>
+            <span className={cn(
+              "text-3xl font-mono font-bold",
+              urgent ? "text-red-400 shadow-[0_0_20px_rgba(239,68,68,0.25)]" : "text-[#65dfb2]"
+            )}>{state.timeLeft}s</span>
+          </div>
+
+          {/* Timer bar */}
+          <div className="h-2 w-full rounded-full bg-white/[0.06] overflow-hidden">
+            <div className={cn(
+              "h-full rounded-full transition-all duration-1000",
+              urgent ? "bg-red-400/70" : "bg-gradient-to-r from-[#65dfb2] to-[#4ecf8a]"
+            )} style={{ width: `${timerPct}%` }} />
+          </div>
+
+          {/* Instruction panel */}
+          <div className="rounded-3xl border border-white/25 bg-black/30 backdrop-blur-sm px-6 py-5">
+            <h2 className="text-2xl font-serif font-semibold text-white/90 text-center leading-relaxed">{ch.instruction}</h2>
+          </div>
+
+          {/* Challenge: click-color */}
           {ch.type === "click-color" && (
             <div className="grid grid-cols-2 gap-3">
               {(ch.data.buttons as string[]).map((color: string) => (
                 <button key={color} onClick={() => answer(color)} disabled={answered}
-                  className={cn("rounded-xl border p-4 text-center font-sans text-lg transition-all",
-                    answered ? "border-white/[0.04] text-white/30" : "border-white/[0.08] bg-white/[0.03] text-white/80 hover:border-ember/40 hover:bg-ember/5 active:scale-95")}>
+                  className={cn(
+                    "rounded-3xl border p-5 text-center font-sans text-xl font-semibold transition-all",
+                    answered
+                      ? "border-white/[0.06] text-white/25 bg-black/20"
+                      : "border-white/25 bg-black/30 backdrop-blur-sm text-white/90 hover:border-[#65dfb2]/50 hover:shadow-[0_0_20px_rgba(101,223,178,0.25)] active:scale-95"
+                  )}>
                   {color}
                 </button>
               ))}
             </div>
           )}
 
+          {/* Challenge: type-word */}
           {ch.type === "type-word" && (
-            <div className="flex gap-2">
+            <div className="flex gap-3">
               <input type="text" value={typedWord} onChange={e => setTypedWord(e.target.value)}
                 onKeyDown={e => { if (e.key === "Enter") answer(typedWord); }}
                 disabled={answered} autoFocus placeholder="Tape le mot..."
-                className="flex-1 rounded-lg border border-white/[0.08] bg-white/[0.03] px-4 py-3 text-lg text-white/80 font-mono placeholder:text-white/20 focus:outline-none focus:border-ember/30 uppercase" />
+                className="flex-1 rounded-2xl border border-white/25 bg-black/30 px-5 py-3.5 font-mono text-lg text-white/90 placeholder:text-white/25 outline-none backdrop-blur-sm focus:border-[#65dfb2]/50 focus:shadow-[0_0_20px_rgba(101,223,178,0.15)] uppercase transition-all" />
               <button onClick={() => answer(typedWord)} disabled={answered}
-                className="rounded-lg bg-ember/80 px-6 py-3 text-sm font-sans text-white hover:bg-ember transition-colors disabled:opacity-30">OK</button>
+                className="rounded-2xl bg-gradient-to-r from-[#65dfb2] to-[#4ecf8a] px-7 py-3.5 text-base font-sans font-semibold text-black shadow-[0_0_20px_rgba(101,223,178,0.25)] hover:shadow-[0_0_30px_rgba(101,223,178,0.35)] transition-all disabled:opacity-30 active:scale-95">OK</button>
             </div>
           )}
 
+          {/* Challenge: math */}
           {ch.type === "math" && (
-            <div className="flex gap-2">
+            <div className="flex gap-3">
               <input type="number" value={mathAnswer} onChange={e => setMathAnswer(e.target.value)}
                 onKeyDown={e => { if (e.key === "Enter") answer(mathAnswer); }}
                 disabled={answered} autoFocus placeholder="= ?"
-                className="flex-1 rounded-lg border border-white/[0.08] bg-white/[0.03] px-4 py-3 text-lg text-white/80 font-mono placeholder:text-white/20 focus:outline-none focus:border-ember/30" />
+                className="flex-1 rounded-2xl border border-white/25 bg-black/30 px-5 py-3.5 font-mono text-lg text-white/90 placeholder:text-white/25 outline-none backdrop-blur-sm focus:border-[#65dfb2]/50 focus:shadow-[0_0_20px_rgba(101,223,178,0.15)] transition-all" />
               <button onClick={() => answer(mathAnswer)} disabled={answered}
-                className="rounded-lg bg-ember/80 px-6 py-3 text-sm font-sans text-white hover:bg-ember transition-colors disabled:opacity-30">OK</button>
+                className="rounded-2xl bg-gradient-to-r from-[#65dfb2] to-[#4ecf8a] px-7 py-3.5 text-base font-sans font-semibold text-black shadow-[0_0_20px_rgba(101,223,178,0.25)] hover:shadow-[0_0_30px_rgba(101,223,178,0.35)] transition-all disabled:opacity-30 active:scale-95">OK</button>
             </div>
           )}
 
+          {/* Challenge: click-count */}
           {ch.type === "click-count" && (
-            <div className="text-center space-y-3">
+            <div className="text-center space-y-4">
               <button onClick={handleClick} disabled={answered}
-                className="w-32 h-32 rounded-full border-2 border-ember/40 bg-ember/10 text-3xl font-mono text-ember hover:bg-ember/20 active:scale-90 transition-all disabled:opacity-30 mx-auto block">
+                className="w-36 h-36 rounded-full border-2 border-[#65dfb2]/40 bg-[#65dfb2]/10 text-4xl font-mono font-bold text-[#65dfb2] shadow-[0_0_20px_rgba(101,223,178,0.25)] hover:bg-[#65dfb2]/20 hover:shadow-[0_0_30px_rgba(101,223,178,0.35)] active:scale-90 transition-all disabled:opacity-30 mx-auto block backdrop-blur-sm">
                 {clickCount}
               </button>
-              <p className="text-xs text-white/30 font-sans">Objectif : {ch.data.target as number}</p>
+              <p className="text-sm text-white/40 font-sans">Objectif : <span className="font-mono text-white/60">{ch.data.target as number}</span></p>
             </div>
           )}
 
+          {/* Challenge: dont-click */}
           {ch.type === "dont-click" && (
-            <div className="text-center space-y-3">
-              <div className={cn("w-40 h-40 rounded-full border-2 mx-auto flex items-center justify-center cursor-pointer transition-all",
-                answered ? "border-red-500/50 bg-red-500/10" : "border-red-500/30 bg-red-500/5 hover:bg-red-500/10")}
-                onClick={handleDontClick}>
-                <span className="text-4xl">🚫</span>
+            <div className="text-center space-y-4">
+              <div className={cn(
+                "w-44 h-44 rounded-full border-2 mx-auto flex items-center justify-center cursor-pointer transition-all backdrop-blur-sm",
+                answered
+                  ? "border-red-500/50 bg-red-500/15 shadow-[0_0_30px_rgba(239,68,68,0.3)]"
+                  : "border-red-500/30 bg-red-500/5 hover:bg-red-500/10 hover:shadow-[0_0_20px_rgba(239,68,68,0.2)]"
+              )} onClick={handleDontClick}>
+                <span className="text-5xl select-none">&#x1F6AB;</span>
               </div>
-              <p className={cn("text-sm font-sans", answered ? "text-red-400" : "text-white/40")}>
-                {answered ? "Tu as cliqué !" : "Ne touche à rien !"}
+              <p className={cn("text-lg font-sans font-semibold", answered ? "text-red-400" : "text-white/40")}>
+                {answered ? "Tu as clique !" : "Ne touche a rien !"}
               </p>
             </div>
           )}
 
+          {/* Challenge: biggest */}
           {ch.type === "biggest" && (
             <div className="grid grid-cols-2 gap-3">
               {(ch.data.numbers as number[]).map((num: number, i: number) => (
                 <button key={i} onClick={() => answer(String(num))} disabled={answered}
-                  className={cn("rounded-xl border p-4 text-center text-2xl font-mono transition-all",
-                    answered ? "border-white/[0.04] text-white/30" : "border-white/[0.08] bg-white/[0.03] text-white/80 hover:border-ember/40 hover:bg-ember/5 active:scale-95")}>
+                  className={cn(
+                    "rounded-3xl border p-5 text-center text-3xl font-mono font-bold transition-all",
+                    answered
+                      ? "border-white/[0.06] text-white/25 bg-black/20"
+                      : "border-white/25 bg-black/30 backdrop-blur-sm text-white/90 hover:border-[#65dfb2]/50 hover:shadow-[0_0_20px_rgba(101,223,178,0.25)] active:scale-95"
+                  )}>
                   {num}
                 </button>
               ))}
             </div>
           )}
 
+          {/* Challenge: odd-one-out */}
           {ch.type === "odd-one-out" && (
             <div className="grid grid-cols-4 gap-3">
               {(ch.data.items as string[]).map((item: string, i: number) => (
                 <button key={i} onClick={() => answer(i)} disabled={answered}
-                  className={cn("rounded-xl border p-4 text-center text-3xl transition-all",
-                    answered ? "border-white/[0.04] opacity-30" : "border-white/[0.08] bg-white/[0.03] hover:border-ember/40 hover:bg-ember/5 active:scale-95")}>
+                  className={cn(
+                    "rounded-3xl border p-4 text-center text-3xl transition-all",
+                    answered
+                      ? "border-white/[0.06] opacity-30 bg-black/20"
+                      : "border-white/25 bg-black/30 backdrop-blur-sm hover:border-[#65dfb2]/50 hover:shadow-[0_0_20px_rgba(101,223,178,0.25)] active:scale-95"
+                  )}>
                   {item}
                 </button>
               ))}
             </div>
           )}
 
-          {answered && <p className="text-xs text-white/20 text-center font-sans">Réponse envoyée</p>}
+          {/* Answered feedback */}
+          {answered && (
+            <p className="text-sm text-white/25 text-center font-sans tracking-wide animate-pulse">Reponse envoyee</p>
+          )}
         </div>
       </div>
     );
@@ -155,20 +204,50 @@ export default function SplitSecondGame({ roomCode, playerId, playerName }: Game
 
   if (state.status === "result") {
     const myResult = state.roundResults?.find(r => r.playerId === playerId);
+    const success = myResult?.success;
     return (
-      <div className="flex flex-1 flex-col items-center justify-center p-6" style={{ background: "#060606" }}>
-        <div className="w-full max-w-md text-center space-y-4">
-          <span className="text-5xl">{myResult?.success ? "✅" : "❌"}</span>
-          <h2 className={cn("text-2xl font-serif font-light", myResult?.success ? "text-emerald-300" : "text-red-300")}>
-            {myResult?.success ? "Bien joué !" : "Raté !"}
+      <div className="relative flex flex-1 flex-col items-center justify-center overflow-hidden p-6"
+        style={{ background: success
+          ? "radial-gradient(circle at 50% 25%, rgba(101,223,178,0.18), transparent 40%), #060606"
+          : "radial-gradient(circle at 50% 25%, rgba(239,68,68,0.18), transparent 40%), #060606" }}>
+        <div className="w-full max-w-md text-center space-y-6">
+
+          {/* Result icon */}
+          <span className={cn(
+            "inline-block text-5xl",
+            success ? "drop-shadow-[0_0_20px_rgba(101,223,178,0.5)]" : "drop-shadow-[0_0_20px_rgba(239,68,68,0.5)]"
+          )}>{success ? "\u2714" : "\u2718"}</span>
+
+          {/* Result text */}
+          <h2 className={cn(
+            "text-4xl font-serif font-semibold",
+            success ? "text-[#65dfb2]" : "text-red-400"
+          )}>
+            {success ? "Bien joue !" : "Rate !"}
           </h2>
+
+          {/* Players scoreboard */}
           <div className="flex gap-3 flex-wrap justify-center">
             {state.players.map(p => (
-              <div key={p.id} className={cn("text-center px-3 py-2 rounded-lg border", !p.isAlive ? "border-red-500/20 bg-red-500/5 opacity-40" : "border-white/[0.06] bg-white/[0.03]")}>
-                <span className="text-xs font-sans text-white/60 block">{p.name}</span>
-                <span className="text-xs font-mono text-white/30">{"❤️".repeat(p.lives)}</span>
-                <p className="text-sm font-mono text-ember">{p.score}</p>
-                {p.lastResult && <span className={cn("text-xs", p.lastResult === "success" ? "text-emerald-400" : "text-red-400")}>{p.lastResult === "success" ? "✓" : "✗"}</span>}
+              <div key={p.id} className={cn(
+                "text-center px-4 py-3 rounded-3xl border backdrop-blur-sm transition-all",
+                !p.isAlive
+                  ? "border-red-500/20 bg-red-500/5 opacity-40"
+                  : p.id === playerId
+                    ? "border-[#65dfb2]/30 bg-[#65dfb2]/5 shadow-[0_0_20px_rgba(101,223,178,0.15)]"
+                    : "border-white/25 bg-black/30"
+              )}>
+                <span className="text-sm font-sans text-white/60 block mb-1">{p.name}</span>
+                <span className="text-xs font-mono text-red-400/70 block mb-1">
+                  {Array.from({ length: p.lives }).map((_, i) => "\u2764").join("")}
+                </span>
+                <p className="text-xl font-mono font-bold text-[#65dfb2]">{p.score}</p>
+                {p.lastResult && (
+                  <span className={cn(
+                    "text-sm font-sans font-semibold mt-1 block",
+                    p.lastResult === "success" ? "text-[#65dfb2]" : "text-red-400"
+                  )}>{p.lastResult === "success" ? "\u2713" : "\u2717"}</span>
+                )}
               </div>
             ))}
           </div>
@@ -177,5 +256,10 @@ export default function SplitSecondGame({ roomCode, playerId, playerName }: Game
     );
   }
 
-  return <div className="flex flex-1 items-center justify-center"><p className="text-white/40 animate-pulse font-sans">Chargement...</p></div>;
+  return (
+    <div className="relative flex flex-1 items-center justify-center overflow-hidden"
+      style={{ background: "radial-gradient(circle at 50% 25%, rgba(78,207,138,0.12), transparent 40%), #060606" }}>
+      <p className="text-3xl font-sans font-semibold text-white/40 animate-pulse">Chargement...</p>
+    </div>
+  );
 }

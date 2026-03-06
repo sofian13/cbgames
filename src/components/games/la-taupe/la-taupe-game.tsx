@@ -53,20 +53,34 @@ export default function LaTaupeGame({ roomCode, playerId, playerName }: GameProp
   }, [voted, sendAction]);
 
   if (!state || state.status === "waiting") {
-    return <div className="flex flex-1 items-center justify-center"><p className="text-white/40 animate-pulse font-sans">En attente des joueurs...</p></div>;
+    return (
+      <div className="relative flex flex-1 items-center justify-center overflow-hidden"
+        style={{ background: "radial-gradient(circle at 50% 25%, rgba(78, 207, 138, 0.08), transparent 40%), #060606" }}>
+        <p className="text-3xl font-sans font-semibold text-white/40 animate-pulse">En attente des joueurs...</p>
+      </div>
+    );
   }
 
   // Role reveal
   if (state.status === "role-reveal") {
+    const isTaupe = state.myRole === "taupe";
     return (
-      <div className="flex flex-1 flex-col items-center justify-center p-6" style={{ background: "#060606" }}>
-        <div className="text-center space-y-4">
-          <span className="text-6xl">{state.myRole === "taupe" ? "🐀" : "✊"}</span>
-          <h2 className="text-3xl font-serif font-light text-white/90">
-            {state.myRole === "taupe" ? "Tu es la Taupe" : "Tu es Loyal"}
+      <div className="relative flex flex-1 flex-col items-center justify-center p-6 overflow-hidden"
+        style={{
+          background: isTaupe
+            ? "radial-gradient(circle at 50% 25%, rgba(239, 68, 68, 0.15), transparent 40%), #060606"
+            : "radial-gradient(circle at 50% 25%, rgba(78, 207, 138, 0.15), transparent 40%), #060606",
+        }}>
+        <div className={cn(
+          "rounded-3xl border border-white/25 bg-black/30 backdrop-blur-sm px-12 py-14 text-center space-y-6",
+          isTaupe ? "shadow-[0_0_20px_rgba(239,68,68,0.25)]" : "shadow-[0_0_20px_rgba(78,207,138,0.25)]"
+        )}>
+          <span className="block text-7xl">{isTaupe ? "\uD83D\uDC00" : "\u270A"}</span>
+          <h2 className="text-5xl font-serif font-semibold text-white/90">
+            {isTaupe ? "Tu es la Taupe" : "Tu es Loyal"}
           </h2>
-          <p className="text-sm text-white/40 font-sans">
-            {state.myRole === "taupe" ? "Sabote discrètement sans te faire repérer !" : "Coopère et démasque la Taupe !"}
+          <p className="text-lg text-white/40 font-sans max-w-xs mx-auto">
+            {isTaupe ? "Sabote discr\u00e8tement sans te faire rep\u00e9rer !" : "Coop\u00e8re et d\u00e9masque la Taupe !"}
           </p>
         </div>
       </div>
@@ -77,50 +91,93 @@ export default function LaTaupeGame({ roomCode, playerId, playerName }: GameProp
   if (state.status === "mission" && state.mission) {
     const me = state.players.find(p => p.id === playerId);
     return (
-      <div className="flex flex-1 flex-col items-center justify-center p-6" style={{ background: "#060606" }}>
+      <div className="relative flex flex-1 flex-col items-center justify-center p-6 overflow-hidden"
+        style={{ background: "radial-gradient(circle at 50% 25%, rgba(101, 223, 178, 0.1), transparent 40%), #060606" }}>
         <div className="w-full max-w-md space-y-6">
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-white/20 font-sans uppercase tracking-wider">Mission {state.round}/{state.totalRounds}</span>
-            <span className="text-sm font-mono text-ember">{state.timeLeft}s</span>
+          {/* Header bar */}
+          <div className="rounded-3xl border border-white/25 bg-black/30 backdrop-blur-sm px-6 py-4 flex items-center justify-between">
+            <span className="text-sm text-white/40 font-sans uppercase tracking-wider">Mission <span className="font-mono text-white/90">{state.round}/{state.totalRounds}</span></span>
+            <span className={cn(
+              "text-xl font-mono font-semibold",
+              state.timeLeft <= 5 ? "text-red-400 animate-pulse" : "text-white/90"
+            )}>{state.timeLeft}s</span>
           </div>
-          <div className="h-1 w-full rounded-full bg-white/[0.06] overflow-hidden">
-            <div className="h-full rounded-full bg-ember/60 transition-all duration-1000" style={{ width: `${(state.timeLeft / 20) * 100}%` }} />
-          </div>
-          {state.myRole === "taupe" && <p className="text-xs text-red-400/40 text-center font-sans">🐀 Tu es la Taupe — sabote subtilement</p>}
-          <h2 className="text-lg font-serif font-light text-white/90 text-center">{state.mission.question}</h2>
 
+          {/* Timer bar */}
+          <div className="h-1.5 w-full rounded-full bg-white/[0.06] overflow-hidden">
+            <div
+              className="h-full rounded-full transition-all duration-1000"
+              style={{
+                width: `${(state.timeLeft / 20) * 100}%`,
+                background: "linear-gradient(to right, #65dfb2, #4ecf8a)",
+                boxShadow: "0 0 12px rgba(78, 207, 138, 0.4)",
+              }}
+            />
+          </div>
+
+          {/* Taupe hint */}
+          {state.myRole === "taupe" && (
+            <div className="rounded-2xl border border-red-500/20 bg-red-500/5 px-4 py-2 text-center">
+              <p className="text-sm text-red-400/60 font-sans">\uD83D\uDC00 Tu es la Taupe — sabote subtilement</p>
+            </div>
+          )}
+
+          {/* Question card */}
+          <div className="rounded-3xl border border-white/25 bg-black/30 backdrop-blur-sm px-8 py-8 shadow-[0_0_20px_rgba(101,223,178,0.1)]">
+            <h2 className="text-3xl font-serif font-semibold text-white/90 text-center leading-snug">{state.mission.question}</h2>
+          </div>
+
+          {/* Input area */}
           {state.mission.type === "confiance" ? (
-            <div className="flex gap-3">
+            <div className="flex gap-4">
               <button onClick={() => handleConfiance("contribuer")} disabled={submitted}
-                className={cn("flex-1 rounded-lg border p-4 text-center font-sans transition-all", submitted ? "border-white/[0.04] text-white/30" : "border-emerald-500/30 bg-emerald-500/5 text-emerald-300 hover:bg-emerald-500/10")}>
-                ✊ Contribuer
+                className={cn(
+                  "flex-1 rounded-3xl border p-5 text-center font-sans text-lg font-semibold transition-all",
+                  submitted
+                    ? "border-white/[0.04] text-white/25"
+                    : "border-white/25 bg-black/30 backdrop-blur-sm text-emerald-300 hover:shadow-[0_0_20px_rgba(78,207,138,0.25)] hover:border-emerald-500/40"
+                )}>
+                \u270A Contribuer
               </button>
               <button onClick={() => handleConfiance("saboter")} disabled={submitted}
-                className={cn("flex-1 rounded-lg border p-4 text-center font-sans transition-all", submitted ? "border-white/[0.04] text-white/30" : "border-red-500/30 bg-red-500/5 text-red-300 hover:bg-red-500/10")}>
-                💀 Saboter
+                className={cn(
+                  "flex-1 rounded-3xl border p-5 text-center font-sans text-lg font-semibold transition-all",
+                  submitted
+                    ? "border-white/[0.04] text-white/25"
+                    : "border-white/25 bg-black/30 backdrop-blur-sm text-red-300 hover:shadow-[0_0_20px_rgba(239,68,68,0.25)] hover:border-red-500/40"
+                )}>
+                \uD83D\uDC80 Saboter
               </button>
             </div>
           ) : (
-            <div className="flex gap-2">
+            <div className="flex gap-3">
               <input
                 type={state.mission.type === "estimation" ? "number" : "text"}
                 value={input} onChange={e => setInput(e.target.value)}
                 onKeyDown={e => e.key === "Enter" && handleSubmit()}
                 disabled={submitted}
-                placeholder={state.mission.type === "estimation" ? "Ton estimation..." : "Ta réponse..."}
-                className="flex-1 rounded-lg border border-white/[0.08] bg-white/[0.03] px-4 py-3 text-sm text-white/80 font-sans placeholder:text-white/20 focus:outline-none focus:border-ember/30"
+                placeholder={state.mission.type === "estimation" ? "Ton estimation..." : "Ta r\u00e9ponse..."}
+                className="flex-1 rounded-2xl border border-white/25 bg-black/30 px-5 py-3.5 font-mono text-lg text-white/90 placeholder:text-white/25 outline-none backdrop-blur-sm focus:shadow-[0_0_20px_rgba(101,223,178,0.15)] focus:border-emerald-500/40 transition-all"
               />
               <button onClick={handleSubmit} disabled={submitted}
-                className="rounded-lg bg-ember/80 px-6 py-3 text-sm font-sans text-white hover:bg-ember transition-colors disabled:opacity-30">
+                className="rounded-2xl bg-gradient-to-r from-[#65dfb2] to-[#4ecf8a] px-8 py-3.5 text-lg font-sans font-semibold text-white shadow-[0_0_20px_rgba(78,207,138,0.25)] hover:shadow-[0_0_30px_rgba(78,207,138,0.4)] transition-all disabled:opacity-30">
                 OK
               </button>
             </div>
           )}
-          {submitted && <p className="text-xs text-white/20 text-center font-sans">En attente des autres...</p>}
+
+          {submitted && <p className="text-sm text-white/25 text-center font-sans animate-pulse">En attente des autres...</p>}
+
+          {/* Player status chips */}
           <div className="flex gap-2 flex-wrap justify-center">
             {state.players.map(p => (
-              <span key={p.id} className={cn("text-xs font-sans px-2 py-1 rounded", p.hasSubmitted ? "text-ember/60 bg-ember/5" : "text-white/20")}>
-                {p.name} {p.hasSubmitted ? "✓" : "..."}
+              <span key={p.id} className={cn(
+                "text-sm font-sans px-3 py-1.5 rounded-full border transition-all",
+                p.hasSubmitted
+                  ? "text-emerald-300/80 bg-emerald-500/10 border-emerald-500/20"
+                  : "text-white/25 bg-white/[0.03] border-white/[0.08]"
+              )}>
+                {p.name} {p.hasSubmitted ? "\u2713" : "..."}
               </span>
             ))}
           </div>
@@ -131,15 +188,26 @@ export default function LaTaupeGame({ roomCode, playerId, playerName }: GameProp
 
   // Mission result
   if (state.status === "mission-result" && state.missionResult) {
+    const success = state.missionResult.success;
     return (
-      <div className="flex flex-1 flex-col items-center justify-center p-6" style={{ background: "#060606" }}>
-        <div className="w-full max-w-md text-center space-y-4">
-          <span className="text-5xl">{state.missionResult.success ? "✅" : "❌"}</span>
-          <h2 className={cn("text-2xl font-serif font-light", state.missionResult.success ? "text-emerald-300" : "text-red-300")}>
-            {state.missionResult.success ? "Mission réussie !" : "Mission échouée"}
+      <div className="relative flex flex-1 flex-col items-center justify-center p-6 overflow-hidden"
+        style={{
+          background: success
+            ? "radial-gradient(circle at 50% 25%, rgba(78, 207, 138, 0.15), transparent 40%), #060606"
+            : "radial-gradient(circle at 50% 25%, rgba(239, 68, 68, 0.15), transparent 40%), #060606",
+        }}>
+        <div className={cn(
+          "w-full max-w-md rounded-3xl border border-white/25 bg-black/30 backdrop-blur-sm px-10 py-12 text-center space-y-6",
+          success ? "shadow-[0_0_20px_rgba(78,207,138,0.25)]" : "shadow-[0_0_20px_rgba(239,68,68,0.25)]"
+        )}>
+          <span className="block text-7xl">{success ? "\u2705" : "\u274C"}</span>
+          <h2 className={cn("text-4xl font-serif font-semibold", success ? "text-emerald-300" : "text-red-300")}>
+            {success ? "Mission r\u00e9ussie !" : "Mission \u00e9chou\u00e9e"}
           </h2>
-          <p className="text-sm text-white/60 font-sans">{state.missionResult.detail}</p>
-          <p className="text-xs text-white/30 font-sans">Score d'équipe : {state.missionResult.teamScore}</p>
+          <p className="text-lg text-white/60 font-sans">{state.missionResult.detail}</p>
+          <div className="inline-block rounded-2xl border border-white/[0.08] bg-white/[0.03] px-6 py-3">
+            <p className="text-sm text-white/40 font-sans">Score d&apos;\u00e9quipe : <span className="font-mono text-3xl text-white/90 font-semibold">{state.missionResult.teamScore}</span></p>
+          </div>
         </div>
       </div>
     );
@@ -149,23 +217,35 @@ export default function LaTaupeGame({ roomCode, playerId, playerName }: GameProp
   if (state.status === "vote") {
     const others = state.players.filter(p => p.id !== playerId && !p.isEliminated);
     return (
-      <div className="flex flex-1 flex-col items-center justify-center p-6" style={{ background: "#060606" }}>
+      <div className="relative flex flex-1 flex-col items-center justify-center p-6 overflow-hidden"
+        style={{ background: "radial-gradient(circle at 50% 25%, rgba(239, 68, 68, 0.1), transparent 40%), #060606" }}>
         <div className="w-full max-w-md space-y-6">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-serif font-light text-white/90">Qui est la Taupe ?</h2>
-            <span className="text-sm font-mono text-ember">{state.timeLeft}s</span>
+          {/* Vote header */}
+          <div className="rounded-3xl border border-white/25 bg-black/30 backdrop-blur-sm px-6 py-4 flex items-center justify-between">
+            <h2 className="text-3xl font-serif font-semibold text-white/90">Qui est la Taupe ?</h2>
+            <span className={cn(
+              "text-xl font-mono font-semibold",
+              state.timeLeft <= 5 ? "text-red-400 animate-pulse" : "text-white/90"
+            )}>{state.timeLeft}s</span>
           </div>
-          <div className="space-y-2">
+
+          {/* Player vote buttons */}
+          <div className="space-y-3">
             {others.map(p => (
               <button key={p.id} onClick={() => handleVote(p.id)} disabled={voted}
-                className={cn("w-full rounded-lg border p-4 text-left font-sans transition-all flex items-center justify-between",
-                  voted ? "border-white/[0.04] text-white/30" : "border-white/[0.08] bg-white/[0.03] text-white/70 hover:border-red-500/30 hover:bg-red-500/5")}>
-                <span>{p.name}</span>
-                <span className="text-xs text-white/20">{p.score} pts</span>
+                className={cn(
+                  "w-full rounded-3xl border p-5 text-left font-sans transition-all flex items-center justify-between",
+                  voted
+                    ? "border-white/[0.04] bg-black/20 text-white/25"
+                    : "border-white/25 bg-black/30 backdrop-blur-sm text-white/90 hover:border-red-500/40 hover:shadow-[0_0_20px_rgba(239,68,68,0.2)]"
+                )}>
+                <span className="text-lg font-semibold">{p.name}</span>
+                <span className="text-sm font-mono text-white/40">{p.score} pts</span>
               </button>
             ))}
           </div>
-          {voted && <p className="text-xs text-white/20 text-center font-sans">Vote enregistré</p>}
+
+          {voted && <p className="text-sm text-white/25 text-center font-sans animate-pulse">Vote enregistr\u00e9</p>}
         </div>
       </div>
     );
@@ -174,17 +254,24 @@ export default function LaTaupeGame({ roomCode, playerId, playerName }: GameProp
   // Vote result
   if (state.status === "vote-result" && state.voteResults) {
     return (
-      <div className="flex flex-1 flex-col items-center justify-center p-6" style={{ background: "#060606" }}>
-        <div className="w-full max-w-md space-y-4">
-          <h2 className="text-xl font-serif font-light text-white/90 text-center">Résultats du vote</h2>
-          {state.voteResults.map((v, i) => (
-            <div key={v.playerId} className={cn("flex items-center justify-between rounded-lg border p-3 font-sans",
-              i === 0 && v.votesReceived > 0 ? "border-red-500/30 bg-red-500/5" : "border-white/[0.06] bg-white/[0.03]")}>
-              <span className="text-sm text-white/70">{v.playerName}</span>
-              <span className="text-sm font-mono text-ember">{v.votesReceived} vote{v.votesReceived > 1 ? "s" : ""}</span>
-            </div>
-          ))}
-          <p className="text-xs text-white/20 text-center font-sans">La Taupe survit... Prochaine mission !</p>
+      <div className="relative flex flex-1 flex-col items-center justify-center p-6 overflow-hidden"
+        style={{ background: "radial-gradient(circle at 50% 25%, rgba(239, 68, 68, 0.1), transparent 40%), #060606" }}>
+        <div className="w-full max-w-md space-y-6">
+          <h2 className="text-4xl font-serif font-semibold text-white/90 text-center">R\u00e9sultats du vote</h2>
+          <div className="space-y-3">
+            {state.voteResults.map((v, i) => (
+              <div key={v.playerId} className={cn(
+                "flex items-center justify-between rounded-3xl border p-5 font-sans transition-all",
+                i === 0 && v.votesReceived > 0
+                  ? "border-red-500/30 bg-red-500/10 shadow-[0_0_20px_rgba(239,68,68,0.2)]"
+                  : "border-white/25 bg-black/30 backdrop-blur-sm"
+              )}>
+                <span className="text-lg text-white/90 font-semibold">{v.playerName}</span>
+                <span className="text-xl font-mono font-semibold text-white/90">{v.votesReceived} <span className="text-sm text-white/40">vote{v.votesReceived > 1 ? "s" : ""}</span></span>
+              </div>
+            ))}
+          </div>
+          <p className="text-sm text-white/25 text-center font-sans">La Taupe survit... Prochaine mission !</p>
         </div>
       </div>
     );
@@ -193,20 +280,36 @@ export default function LaTaupeGame({ roomCode, playerId, playerName }: GameProp
   // Game over
   if (state.status === "game-over") {
     const mole = state.players.find(p => p.id === state.eliminatedMoleId) ?? state.players.find(() => true);
+    const loyauxWin = state.winner === "loyaux";
     return (
-      <div className="flex flex-1 flex-col items-center justify-center p-6" style={{ background: "#060606" }}>
-        <div className="w-full max-w-md text-center space-y-4">
-          <span className="text-5xl">{state.winner === "loyaux" ? "🎉" : "🐀"}</span>
-          <h2 className="text-2xl font-serif font-light text-white/90">
-            {state.winner === "loyaux" ? "Les Loyaux gagnent !" : "La Taupe gagne !"}
+      <div className="relative flex flex-1 flex-col items-center justify-center p-6 overflow-hidden"
+        style={{
+          background: loyauxWin
+            ? "radial-gradient(circle at 50% 25%, rgba(78, 207, 138, 0.2), transparent 40%), #060606"
+            : "radial-gradient(circle at 50% 25%, rgba(239, 68, 68, 0.2), transparent 40%), #060606",
+        }}>
+        <div className={cn(
+          "w-full max-w-md rounded-3xl border border-white/25 bg-black/30 backdrop-blur-sm px-10 py-14 text-center space-y-6",
+          loyauxWin ? "shadow-[0_0_20px_rgba(78,207,138,0.25)]" : "shadow-[0_0_20px_rgba(239,68,68,0.25)]"
+        )}>
+          <span className="block text-7xl">{loyauxWin ? "\uD83C\uDF89" : "\uD83D\uDC00"}</span>
+          <h2 className="text-5xl font-serif font-semibold text-white/90">
+            {loyauxWin ? "Les Loyaux gagnent !" : "La Taupe gagne !"}
           </h2>
           {state.eliminatedMoleId && (
-            <p className="text-sm text-white/40 font-sans">La Taupe était : {state.players.find(p => p.id === state.eliminatedMoleId)?.name}</p>
+            <div className="inline-block rounded-2xl border border-white/[0.08] bg-white/[0.03] px-6 py-3">
+              <p className="text-lg text-white/40 font-sans">La Taupe \u00e9tait : <span className="font-semibold text-white/90">{state.players.find(p => p.id === state.eliminatedMoleId)?.name}</span></p>
+            </div>
           )}
         </div>
       </div>
     );
   }
 
-  return <div className="flex flex-1 items-center justify-center"><p className="text-white/40 animate-pulse font-sans">Chargement...</p></div>;
+  return (
+    <div className="relative flex flex-1 items-center justify-center overflow-hidden"
+      style={{ background: "radial-gradient(circle at 50% 25%, rgba(78, 207, 138, 0.08), transparent 40%), #060606" }}>
+      <p className="text-3xl font-sans font-semibold text-white/40 animate-pulse">Chargement...</p>
+    </div>
+  );
 }
