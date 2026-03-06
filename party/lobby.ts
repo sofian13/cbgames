@@ -225,6 +225,11 @@ export default class LobbyServer {
             roomCode: this.party.id,
           },
         });
+        // Strong sync after start in case some clients miss transient websocket events.
+        this.broadcast({
+          type: "lobby-state",
+          payload: this.getState(),
+        });
         break;
       }
 
