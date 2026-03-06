@@ -173,4 +173,48 @@
       0 0 24px rgba(80, 216, 255, 0.25),
       0 0 50px rgba(59, 130, 246, 0.15);
   }
+
+  /* Category accent colors */
+  .cat-words { --cat: 190, 100%, 65%; }
+  .cat-trivia { --cat: 270, 80%, 70%; }
+  .cat-speed { --cat: 35, 100%, 60%; }
+  .cat-strategy { --cat: 160, 80%, 55%; }
+  .cat-social { --cat: 340, 85%, 65%; }
+  .cat-cards { --cat: 45, 95%, 60%; }
+  .cat-party { --cat: 300, 75%, 65%; }
+  .cat-sport { --cat: 140, 80%, 55%; }
+
+  .game-card-hover {
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .game-card-hover:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3), 0 0 30px hsla(var(--cat, 200, 80%, 60%), 0.15);
+    border-color: hsla(var(--cat, 200, 80%, 60%), 0.45);
+  }
+
+  /* Section title style */
+  .section-title {
+    font-family: var(--font-orbitron);
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.45);
+  }
+
+  /* Smooth scrollbar */
+  .custom-scroll::-webkit-scrollbar {
+    width: 4px;
+  }
+  .custom-scroll::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .custom-scroll::-webkit-scrollbar-thumb {
+    background: rgba(80, 216, 255, 0.15);
+    border-radius: 999px;
+  }
+  .custom-scroll::-webkit-scrollbar-thumb:hover {
+    background: rgba(80, 216, 255, 0.3);
+  }
 }

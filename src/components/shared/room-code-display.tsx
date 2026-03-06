@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
 import { Copy, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -21,13 +20,21 @@ export function RoomCodeDisplay({ code, className }: RoomCodeDisplayProps) {
   };
 
   return (
-    <div className={cn("flex items-center gap-2", className)}>
-      <span className="rounded-lg border border-cyan-300/25 bg-cyan-300/10 px-2.5 py-1 font-mono text-xl font-bold tracking-[0.24em] text-cyan-200 premium-text-glow">
+    <button
+      onClick={copyToClipboard}
+      className={cn(
+        "group flex items-center gap-2 rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-1.5 transition-all hover:border-cyan-300/25 hover:bg-cyan-300/[0.06]",
+        className
+      )}
+    >
+      <span className="font-mono text-sm font-bold tracking-[0.2em] text-cyan-200/80 group-hover:text-cyan-200">
         {code}
       </span>
-      <Button variant="ghost" size="icon" onClick={copyToClipboard} className="h-8 w-8 border border-cyan-300/20 bg-cyan-300/10">
-        {copied ? <Check className="h-4 w-4 text-emerald-300" /> : <Copy className="h-4 w-4 text-cyan-200/80" />}
-      </Button>
-    </div>
+      {copied ? (
+        <Check className="h-3.5 w-3.5 text-emerald-300" />
+      ) : (
+        <Copy className="h-3.5 w-3.5 text-white/25 group-hover:text-cyan-200/60 transition-colors" />
+      )}
+    </button>
   );
 }

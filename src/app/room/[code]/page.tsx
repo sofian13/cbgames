@@ -9,7 +9,6 @@ import { ReadyCheck } from "@/components/lobby/ready-check";
 import { useRoom } from "@/lib/party/use-room";
 import { useRoomStore } from "@/lib/stores/room-store";
 import { getOrCreateGuest } from "@/lib/guest";
-import { getPartyKitHost } from "@/lib/party/host";
 import { EmberParticles, FilmGrain, EmberKeyframes } from "@/components/shared/ember";
 import { useRef } from "react";
 
@@ -55,8 +54,6 @@ export default function LobbyPage() {
     isConnected,
     sessionScores,
     error,
-    debugLastEvent,
-    debugEventCount,
   } = useRoomStore();
 
   const connectedPlayers = players.filter((p) => p.isConnected);
@@ -65,13 +62,11 @@ export default function LobbyPage() {
     hostId === playerId ||
     !!me?.isHost ||
     (connectedPlayers.length === 1 && connectedPlayers[0]?.id === playerId);
-  const debugHost = getPartyKitHost();
 
   const handleStartGame = (gameId?: string | null) => {
     const id = (gameId ?? selectedGameId)?.trim().toLowerCase();
     if (!id) return;
     startGame(id);
-    // Fallback navigation in case lobby websocket event is delayed/dropped.
     router.push(`/room/${code}/game/${id}`);
   };
 
@@ -90,48 +85,43 @@ export default function LobbyPage() {
       className="relative min-h-screen overflow-hidden"
       style={{
         background:
-          "radial-gradient(130% 85% at 50% -10%, rgba(90,160,255,0.22) 0%, transparent 60%), linear-gradient(180deg, #030710 0%, #040b1a 55%, #030710 100%)",
+          "radial-gradient(130% 85% at 50% -10%, rgba(90,160,255,0.18) 0%, transparent 60%), linear-gradient(180deg, #030710 0%, #040b1a 55%, #030710 100%)",
       }}
     >
       <FilmGrain />
-      <EmberParticles mouse={mouseRef} count={30} />
+      <EmberParticles mouse={mouseRef} count={25} />
       <EmberKeyframes />
 
       <div className="relative z-10 flex min-h-screen flex-col">
         <Header roomCode={code} isConnected={isConnected} />
         <main className="flex flex-1">
-          <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 p-6">
+          <div className="mx-auto flex w-full max-w-6xl flex-col gap-5 p-5 lg:p-6">
             {error && (
-              <div className="rounded-xl border border-red-500/25 bg-red-500/10 p-3 text-sm text-red-300 backdrop-blur-sm">
+              <div className="rounded-xl border border-red-500/25 bg-red-500/10 p-3 text-sm text-red-300 backdrop-blur-sm font-sans">
                 {error}
               </div>
             )}
-            <div className="rounded-xl border border-white/10 bg-white/[0.03] p-2 text-[11px] text-white/55">
-              debug: host={debugHost} | room={code} | me={playerId.slice(0, 12)} | hostId={hostId ?? "none"} | connected={connectedPlayers.length} | status={status} | game={selectedGameId ?? "none"} | last={debugLastEvent ?? "none"} | events={debugEventCount}
-            </div>
 
             {/* Session scores */}
             {Object.keys(sessionScores).length > 0 && (
-              <div className="premium-panel rounded-2xl p-4">
-                <h3 className="mb-2 text-sm font-semibold text-white/55 uppercase tracking-[0.16em] font-sans">
-                  Scores de session
-                </h3>
+              <div className="premium-panel-soft rounded-2xl p-4">
+                <h3 className="section-title mb-3">Scores de session</h3>
                 <div className="flex gap-4 flex-wrap">
                   {players
                     .sort((a, b) => (sessionScores[b.id] ?? 0) - (sessionScores[a.id] ?? 0))
                     .map((p) => (
-                      <span key={p.id} className="text-sm font-sans">
-                        <span className="font-medium text-white/80">{p.name}</span>
-                        <span className="ml-1 text-cyan-300">
-                          {sessionScores[p.id] ?? 0} pts
+                      <div key={p.id} className="flex items-center gap-2 rounded-lg bg-white/[0.03] px-3 py-1.5">
+                        <span className="text-sm font-medium text-white/75 font-sans">{p.name}</span>
+                        <span className="text-sm font-bold text-cyan-300 font-mono">
+                          {sessionScores[p.id] ?? 0}
                         </span>
-                      </span>
+                      </div>
                     ))}
                 </div>
               </div>
             )}
 
-            <div className="grid gap-6 lg:grid-cols-[1fr_300px]">
+            <div className="grid gap-5 lg:grid-cols-[1fr_280px]">
               <GamePicker
                 selectedGameId={selectedGameId}
                 isHost={isHost}

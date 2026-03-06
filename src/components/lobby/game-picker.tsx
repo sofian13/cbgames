@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
 import { GameCard } from "./game-card";
 import { GAMES, CATEGORIES } from "@/lib/games/registry";
 import { cn } from "@/lib/utils";
@@ -21,29 +20,30 @@ export function GamePicker({ selectedGameId, isHost, onSelectGame }: GamePickerP
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-white/55 uppercase tracking-[0.16em]">
-          {isHost ? "Choisis un jeu" : "En attente du choix du host..."}
-        </h3>
-      </div>
+      <h3 className="section-title">
+        {isHost ? "Choisis un jeu" : "En attente du choix du host..."}
+      </h3>
 
       {/* Category tabs */}
-      <div className="flex gap-1.5 flex-wrap rounded-xl border border-cyan-300/15 bg-cyan-300/[0.03] p-1.5">
+      <div className="flex gap-1 flex-wrap">
         {CATEGORIES.map((cat) => (
-          <Button
+          <button
             key={cat.id}
-            variant={activeCategory === cat.id ? "secondary" : "ghost"}
-            size="sm"
             onClick={() => setActiveCategory(cat.id)}
-            className={cn("text-xs", activeCategory === cat.id && "font-semibold border-cyan-300/35")}
+            className={cn(
+              "rounded-lg px-3 py-1.5 text-[12px] font-sans font-medium transition-all duration-300",
+              activeCategory === cat.id
+                ? "bg-cyan-400/15 text-cyan-200 border border-cyan-300/30 shadow-[0_0_15px_rgba(80,216,255,0.1)]"
+                : "text-white/35 border border-transparent hover:text-white/55 hover:bg-white/[0.04]"
+            )}
           >
             {cat.label}
-          </Button>
+          </button>
         ))}
       </div>
 
       {/* Game grid */}
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid gap-3 sm:grid-cols-2 custom-scroll">
         {filteredGames.map((game) => (
           <GameCard
             key={game.id}

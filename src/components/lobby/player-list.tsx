@@ -1,7 +1,6 @@
 "use client";
 
 import { AvatarCircle } from "@/components/shared/avatar-circle";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
 import type { Player } from "@/lib/party/message-types";
@@ -19,17 +18,20 @@ export function PlayerList({ players, currentPlayerId, isHost, onKick }: PlayerL
   const isSolo = connectedPlayers.length === 1 && connectedPlayers[0]?.id === currentPlayerId;
 
   return (
-    <div className="space-y-2">
-      <h3 className="text-sm font-semibold text-white/55 uppercase tracking-[0.16em]">
-        Joueurs ({players.length}/8)
-      </h3>
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <h3 className="section-title">Joueurs</h3>
+        <span className="text-[11px] font-mono text-white/25">{players.length}/8</span>
+      </div>
       <div className="grid gap-2">
         {players.map((player) => (
           <div
             key={player.id}
             className={cn(
-              "premium-panel-soft flex items-center gap-3 rounded-xl border p-3 transition-colors",
-              player.id === currentPlayerId && "border-cyan-300/50 bg-cyan-300/10"
+              "flex items-center gap-3 rounded-xl border p-3 transition-all duration-300",
+              player.id === currentPlayerId
+                ? "border-cyan-300/30 bg-cyan-300/[0.06]"
+                : "border-white/[0.06] bg-white/[0.02]"
             )}
           >
             <AvatarCircle
@@ -39,37 +41,32 @@ export function PlayerList({ players, currentPlayerId, isHost, onKick }: PlayerL
               isHost={player.isHost}
             />
             <div className="flex-1 min-w-0">
-              <p className="font-medium truncate">
+              <p className="font-sans font-medium text-sm text-white/80 truncate">
                 {player.name}
                 {player.id === currentPlayerId && (
-                  <span className="text-muted-foreground text-sm"> (toi)</span>
+                  <span className="text-white/30 text-xs ml-1">(toi)</span>
                 )}
               </p>
-              <div className="mt-1 flex gap-1">
+              <div className="mt-0.5 flex gap-1.5">
                 {(player.isHost || (isSolo && player.id === currentPlayerId)) && (
-                  <Badge variant="secondary" className="text-xs">
-                    {isSolo && player.id === currentPlayerId ? "Host (Solo)" : "Host"}
-                  </Badge>
-                )}
-                {player.isGuest && !(isSolo && player.id === currentPlayerId) && (
-                  <Badge variant="outline" className="text-xs">Compte invite</Badge>
+                  <span className="text-[10px] font-sans font-medium text-cyan-300/60">
+                    Host
+                  </span>
                 )}
               </div>
             </div>
             <div className="flex items-center gap-2">
               {player.isReady && (
-                <Badge className="border-emerald-400/35 bg-emerald-400/15 text-emerald-200">
-                  Pret
-                </Badge>
+                <span className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
               )}
               {isHost && !player.isHost && player.id !== currentPlayerId && onKick && (
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-7 w-7 border border-cyan-300/18 bg-cyan-300/8 text-white/45 hover:bg-red-500/15 hover:text-red-300"
+                  className="h-7 w-7 text-white/20 hover:bg-red-500/15 hover:text-red-300"
                   onClick={() => onKick(player.id)}
                 >
-                  <X className="h-4 w-4" />
+                  <X className="h-3.5 w-3.5" />
                 </Button>
               )}
             </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { Play, Check } from "lucide-react";
 import type { Player } from "@/lib/party/message-types";
 
 interface ReadyCheckProps {
@@ -29,13 +30,13 @@ export function ReadyCheck({
   const canStart = effectiveIsHost && !!selectedGameId && connectedPlayers.length >= 1;
 
   return (
-    <div className="premium-panel-soft flex flex-col gap-3 rounded-2xl border p-4">
-      <div className="flex items-center justify-between text-sm text-white/55">
-        <span>
-          {readyCount}/{connectedPlayers.length} joueurs prêts
+    <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4 space-y-3">
+      <div className="flex items-center justify-between text-xs font-sans">
+        <span className="text-white/35">
+          {readyCount}/{connectedPlayers.length} prets
         </span>
         {!selectedGameId && (
-          <span className="text-cyan-200/75">Aucun jeu sélectionné</span>
+          <span className="text-cyan-300/50">Aucun jeu choisi</span>
         )}
       </div>
 
@@ -44,9 +45,10 @@ export function ReadyCheck({
           <Button
             onClick={onToggleReady}
             variant={currentPlayer?.isReady ? "secondary" : "default"}
-            className="flex-1"
+            className="flex-1 gap-2"
           >
-            {currentPlayer?.isReady ? "Pas prêt" : "Prêt !"}
+            <Check className="h-4 w-4" />
+            {currentPlayer?.isReady ? "Pas pret" : "Pret !"}
           </Button>
         )}
 
@@ -54,15 +56,13 @@ export function ReadyCheck({
           <Button
             onClick={() => onStartGame(normalizedGameId)}
             disabled={!canStart}
-            className="flex-1"
+            className="flex-1 gap-2"
           >
-            {!selectedGameId
-              ? "Choisis un jeu"
-              : "Lancer la partie"}
+            <Play className="h-4 w-4" />
+            {!selectedGameId ? "Choisis un jeu" : "Lancer la partie"}
           </Button>
         )}
       </div>
     </div>
   );
 }
-
