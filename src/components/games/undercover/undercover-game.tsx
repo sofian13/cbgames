@@ -175,7 +175,7 @@ function getRoleColor(role: Role | null): string {
 }
 
 function getMaxUndercoverFor(playerCount: number): number {
-  return playerCount >= 5 ? 2 : 1;
+  return Math.floor(Math.max(0, playerCount) / 2);
 }
 
 function getMaxMrWhiteFor(playerCount: number): number {
@@ -183,7 +183,7 @@ function getMaxMrWhiteFor(playerCount: number): number {
 }
 
 function getMaxThreatsFor(playerCount: number): number {
-  return playerCount >= 5 ? 2 : 1;
+  return Math.floor(Math.max(0, playerCount) / 2);
 }
 
 function normalizeLocalRoleConfig(
@@ -196,7 +196,11 @@ function normalizeLocalRoleConfig(
   const maxMrWhite = Math.min(getMaxMrWhiteFor(safePlayers), safePlayers - 1);
   const maxThreats = Math.min(getMaxThreatsFor(safePlayers), safePlayers - 1);
 
-  const normalizedUndercover = Math.max(1, Math.min(undercoverCount, maxUndercover));
+  const minUndercover = safePlayers >= 2 ? 1 : 0;
+  const normalizedUndercover = Math.max(
+    minUndercover,
+    Math.min(undercoverCount, maxUndercover)
+  );
   let normalizedMrWhite = Math.max(0, Math.min(mrWhiteCount, maxMrWhite));
 
   if (normalizedUndercover + normalizedMrWhite > maxThreats) {
@@ -693,9 +697,6 @@ export default function UndercoverGame({
     };
 
     if (localPhase === "setup") {
-      const maxUndercover = getMaxUndercoverFor(localPlayerCount);
-      const maxMrWhite = getMaxMrWhiteFor(localPlayerCount);
-      const maxThreats = getMaxThreatsFor(localPlayerCount);
       const previewCivilians =
         localPlayerCount - localUndercoverCount - localMrWhiteCount;
 
@@ -865,22 +866,7 @@ export default function UndercoverGame({
               </div>
             </div>
 
-            <div className="mt-4 w-full rounded-3xl border border-black/15 bg-[#dde1e9] px-4 py-3 text-center text-black/75 shadow-[0_8px_28px_rgba(0,0,0,0.22)]">
-              <p className="text-xl font-sans font-semibold">Limites</p>
-              <p className="mt-1 text-sm font-sans">
-                Undercover max {maxUndercover} | Mr. White max {maxMrWhite}
-              </p>
-              <p className="text-sm font-sans">
-                Menaces totales max {maxThreats}
-              </p>
-            </div>
-
-            <div className="mt-4 w-[70%] rounded-2xl border border-black/20 bg-[#dde1e9] px-4 py-2 text-center text-black">
-              <p className="text-lg font-sans leading-tight">Words</p>
-              <p className="text-2xl font-sans font-semibold leading-tight">{localThemeLabel[localTheme]}</p>
-            </div>
-
-            <div className="mt-5 w-full rounded-2xl border border-white/20 bg-black/20 p-3">
+            <div className="mt-4 w-full rounded-2xl border border-white/20 bg-black/20 p-3">
               <p className="text-xs font-sans uppercase tracking-[0.2em] text-white/60">
                 Nombre de joueurs
               </p>
@@ -1091,12 +1077,12 @@ export default function UndercoverGame({
             {orderedPlayers.map((p, idx) => (
               <div
                 key={p.id}
-                className="rounded-2xl border border-white/15 bg-[linear-gradient(160deg,rgba(255,255,255,0.12),rgba(255,255,255,0.03))] px-3 py-4 text-center shadow-[0_10px_22px_rgba(0,0,0,0.26)]"
+                className="rounded-2xl border border-yellow-300/60 bg-[#ffc911] px-3 py-4 text-center text-black shadow-[0_10px_22px_rgba(0,0,0,0.26)]"
               >
-                <p className="mx-auto mb-2 w-fit rounded-full bg-cyan-400/20 px-2.5 py-0.5 text-[11px] font-sans uppercase tracking-widest text-cyan-200">
+                <p className="mx-auto mb-2 w-fit rounded-full bg-black/10 px-2.5 py-0.5 text-[11px] font-sans uppercase tracking-widest text-black/70">
                   {idx === 0 ? "Commence" : `Tour ${idx + 1}`}
                 </p>
-                <p className="truncate text-lg font-sans font-semibold text-white">
+                <p className="truncate text-lg font-sans font-semibold text-black">
                   {p.name}
                 </p>
               </div>
