@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useEffect, useCallback } from "react";
+import { useMemo, useState, useEffect, useCallback, useRef } from "react";
 import type { GameProps } from "@/lib/games/types";
 import { useGame } from "@/lib/party/use-game";
 import { useGameStore } from "@/lib/stores/game-store";
@@ -357,6 +357,66 @@ function formatClock(ms: number) {
   return `${m}:${String(s).padStart(2, "0")}`;
 }
 
+interface ChessBoardViewProps {
+  board: Array<Piece | null>;
+  selectedSquare: number | null;
+  onSquareClick: (idx: number) => void;
+  availableTargets: number[];
+  lastMove: ChessMove | null;
+  orientation?: Color;
+}
+
+function ChessBoardView({
+  board,
+  selectedSquare,
+  onSquareClick,
+  availableTargets,
+  lastMove,
+  orientation = "w",
+}: ChessBoardViewProps) {
+  const rows = orientation === "w" ? [...Array(8).keys()] : [...Array(8).keys()].reverse();
+  const cols = orientation === "w" ? [...Array(8).keys()] : [...Array(8).keys()].reverse();
+
+  return (
+    <div className="grid grid-cols-8 overflow-hidden rounded-2xl border border-amber-200/35 shadow-[0_10px_32px_rgba(0,0,0,0.4)]">
+      {rows.map((y) =>
+        cols.map((x) => {
+          const idx = makeIndex(x, y);
+          const isLight = (x + y) % 2 === 0;
+          const piece = board[idx];
+          const code = piece ? `${piece.color}${piece.type}` : "";
+          const isSelected = selectedSquare === idx;
+          const isTarget = availableTargets.includes(idx);
+          const isLastMove = !!lastMove && (lastMove.from === idx || lastMove.to === idx);
+
+          return (
+            <button
+              key={idx}
+              onClick={() => onSquareClick(idx)}
+              className={cn(
+                "relative flex aspect-square items-center justify-center text-4xl transition-all sm:text-5xl",
+                isLight ? "bg-[#f0d9b5]" : "bg-[#b58863]",
+                isLastMove && "ring-2 ring-yellow-300/70 ring-inset",
+                isSelected && "ring-2 ring-cyan-300 ring-inset",
+                isTarget && "after:absolute after:h-3 after:w-3 after:rounded-full after:bg-cyan-400/80"
+              )}
+            >
+              <span
+                className={cn(
+                  "select-none drop-shadow-[0_2px_2px_rgba(0,0,0,0.55)]",
+                  piece?.color === "w" ? "text-[#f8fafc]" : "text-[#111827]"
+                )}
+              >
+                {code ? PIECE_SYMBOL[code] ?? PIECE_GLYPH[code] : ""}
+              </span>
+            </button>
+          );
+        })
+      )}
+    </div>
+  );
+}
+
 export default function ChessGame({ roomCode, playerId, playerName }: GameProps) {
   const { sendAction } = useGame(roomCode, "chess", playerId, playerName);
   const { gameState, error } = useGameStore();
@@ -379,6 +439,9 @@ export default function ChessGame({ roomCode, playerId, playerName }: GameProps)
   const [localMoveCount, setLocalMoveCount] = useState(0);
   const [localWhiteTimeMs, setLocalWhiteTimeMs] = useState(15 * 60_000);
   const [localBlackTimeMs, setLocalBlackTimeMs] = useState(15 * 60_000);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const onlineLastMoveKeyRef = useRef<string | null>(null);
 
   const board = useMemo(() => (state?.board ? state.board.map(decodePiece) : []), [state]);
 
@@ -405,6 +468,47 @@ export default function ChessGame({ roomCode, playerId, playerName }: GameProps)
     return map;
   }, [localLegalMoves]);
 
+  const playMoveSound = useCallback(() => {
+    if (typeof window === "undefined") return;
+    const AudioCtx =
+      window.AudioContext ||
+      // @ts-expect-error vendor prefix fallback
+      window.webkitAudioContext;
+    if (!AudioCtx) return;
+    if (!audioContextRef.current) {
+      audioContextRef.current = new AudioCtx();
+    }
+    const ctx = audioContextRef.current;
+    const now = ctx.currentTime;
+
+    const oscA = ctx.createOscillator();
+    const oscB = ctx.createOscillator();
+    const gain = ctx.createGain();
+    oscA.type = "triangle";
+    oscB.type = "sine";
+    oscA.frequency.value = 720;
+    oscB.frequency.value = 980;
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(0.07, now + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.08);
+    oscA.connect(gain);
+    oscB.connect(gain);
+    gain.connect(ctx.destination);
+    oscA.start(now);
+    oscB.start(now);
+    oscA.stop(now + 0.08);
+    oscB.stop(now + 0.08);
+  }, []);
+
+  const toggleFullscreen = useCallback(async () => {
+    if (typeof document === "undefined") return;
+    if (!document.fullscreenElement) {
+      await document.documentElement.requestFullscreen?.();
+    } else {
+      await document.exitFullscreen?.();
+    }
+  }, []);
+
   const applyLocalMove = useCallback((move: ChessMove) => {
     const nextBoard = applyMove(localBoard, move);
     const nextTurn = otherColor(localTurn);
@@ -412,6 +516,7 @@ export default function ChessGame({ roomCode, playerId, playerName }: GameProps)
 
     setLocalBoard(nextBoard);
     setLocalLastMove(move);
+    playMoveSound();
     setLocalTurn(nextTurn);
     setLocalSelected(null);
     setLocalMoveCount((c) => c + 1);
@@ -431,7 +536,7 @@ export default function ChessGame({ roomCode, playerId, playerName }: GameProps)
         setLocalReason("stalemate");
       }
     }
-  }, [localBoard, localMoveCount, localTurn]);
+  }, [localBoard, localMoveCount, localTurn, playMoveSound]);
 
   useEffect(() => {
     if (!localMode || localWinner || localKind !== "bot" || localTurn !== "b") return;
@@ -469,6 +574,22 @@ export default function ChessGame({ roomCode, playerId, playerName }: GameProps)
     }, 1000);
     return () => clearInterval(timer);
   }, [localMode, localTurn, localWinner]);
+
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const onChange = () => setIsFullscreen(!!document.fullscreenElement);
+    document.addEventListener("fullscreenchange", onChange);
+    onChange();
+    return () => document.removeEventListener("fullscreenchange", onChange);
+  }, []);
+
+  useEffect(() => {
+    if (!state?.lastMove) return;
+    const key = `${state.lastMove.from}-${state.lastMove.to}-${state.phase}`;
+    if (onlineLastMoveKeyRef.current === key) return;
+    onlineLastMoveKeyRef.current = key;
+    playMoveSound();
+  }, [playMoveSound, state?.lastMove, state?.phase]);
 
   const handleOnlineClick = useCallback((index: number) => {
     if (!state || state.phase !== "playing" || !canPlayOnline) return;
@@ -525,57 +646,6 @@ export default function ChessGame({ roomCode, playerId, playerName }: GameProps)
     setLocalMode(true);
   }, [localTimeMinutes]);
 
-  const renderBoard = (
-    boardToRender: Array<Piece | null>,
-    selectedSquare: number | null,
-    onClick: (idx: number) => void,
-    availableTargets: number[],
-    lastMove: ChessMove | null,
-    orientation: Color = "w"
-  ) => {
-    const rows = orientation === "w" ? [...Array(8).keys()] : [...Array(8).keys()].reverse();
-    const cols = orientation === "w" ? [...Array(8).keys()] : [...Array(8).keys()].reverse();
-
-    return (
-      <div className="grid grid-cols-8 overflow-hidden rounded-2xl border border-amber-200/35 shadow-[0_10px_32px_rgba(0,0,0,0.4)]">
-        {rows.map((y) =>
-          cols.map((x) => {
-            const idx = makeIndex(x, y);
-            const isLight = (x + y) % 2 === 0;
-            const piece = boardToRender[idx];
-            const code = piece ? `${piece.color}${piece.type}` : "";
-            const isSelected = selectedSquare === idx;
-            const isTarget = availableTargets.includes(idx);
-            const isLastMove = !!lastMove && (lastMove.from === idx || lastMove.to === idx);
-
-            return (
-              <button
-                key={idx}
-                onClick={() => onClick(idx)}
-                className={cn(
-                  "relative flex aspect-square items-center justify-center text-4xl transition-all sm:text-5xl",
-                  isLight ? "bg-[#f0d9b5]" : "bg-[#b58863]",
-                  isLastMove && "ring-2 ring-yellow-300/70 ring-inset",
-                  isSelected && "ring-2 ring-cyan-300 ring-inset",
-                  isTarget && "after:absolute after:h-3 after:w-3 after:rounded-full after:bg-cyan-400/80"
-                )}
-              >
-                <span
-                  className={cn(
-                    "select-none drop-shadow-[0_2px_2px_rgba(0,0,0,0.55)]",
-                    piece?.color === "w" ? "text-[#f8fafc]" : "text-[#111827]"
-                  )}
-                >
-                  {code ? PIECE_SYMBOL[code] ?? PIECE_GLYPH[code] : ""}
-                </span>
-              </button>
-            );
-          })
-        )}
-      </div>
-    );
-  };
-
   if (localMode) {
     const localTargets = localSelected !== null ? localLegalByFrom.get(localSelected) ?? [] : [];
     const statusText = localWinner
@@ -598,12 +668,20 @@ export default function ChessGame({ roomCode, playerId, playerName }: GameProps)
               <p className="text-[11px] uppercase tracking-[0.2em] text-emerald-200/70">Echecs Local</p>
               <p className="text-sm text-white/80">{localKind === "bot" ? `vs Bot (${localBotLevel})` : "Duel 1 telephone"}</p>
             </div>
-            <button
-              onClick={() => setLocalMode(false)}
-              className="rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-xs text-white/80 hover:bg-white/15"
-            >
-              Quitter local
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={toggleFullscreen}
+                className="rounded-lg border border-cyan-300/35 bg-cyan-500/20 px-3 py-2 text-xs text-cyan-100 hover:bg-cyan-500/30"
+              >
+                {isFullscreen ? "Quitter plein ecran" : "Plein ecran"}
+              </button>
+              <button
+                onClick={() => setLocalMode(false)}
+                className="rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-xs text-white/80 hover:bg-white/15"
+              >
+                Quitter local
+              </button>
+            </div>
           </div>
 
           <p className="mt-3 text-sm text-white/85">{statusText}</p>
@@ -622,7 +700,14 @@ export default function ChessGame({ roomCode, playerId, playerName }: GameProps)
           )}
 
           <div className="mt-4 mx-auto w-full max-w-[min(92vw,820px)]">
-            {renderBoard(localBoard, localSelected, handleLocalClick, localTargets, localLastMove, "w")}
+            <ChessBoardView
+              board={localBoard}
+              selectedSquare={localSelected}
+              onSquareClick={handleLocalClick}
+              availableTargets={localTargets}
+              lastMove={localLastMove}
+              orientation="w"
+            />
           </div>
 
           <div className="mt-4 flex flex-wrap items-center gap-2 text-xs text-white/65">
@@ -879,7 +964,13 @@ export default function ChessGame({ roomCode, playerId, playerName }: GameProps)
               </span>
             </div>
           </div>
-          <div className="flex flex-col items-end gap-1 text-xs text-white/70">
+          <div className="flex flex-col items-end gap-2 text-xs text-white/70">
+            <button
+              onClick={toggleFullscreen}
+              className="rounded-lg border border-cyan-300/35 bg-cyan-500/20 px-3 py-1.5 text-xs text-cyan-100 hover:bg-cyan-500/30"
+            >
+              {isFullscreen ? "Quitter plein ecran" : "Plein ecran"}
+            </button>
             <span>{whiteName} (Blanc)</span>
             <span>{blackName} (Noir)</span>
             {state.lastMove && (
@@ -891,7 +982,14 @@ export default function ChessGame({ roomCode, playerId, playerName }: GameProps)
         </div>
 
         <div className="mt-4 mx-auto w-full max-w-[min(92vw,820px)]">
-          {renderBoard(board, selected, handleOnlineClick, selectedTargets, state.lastMove ? { from: state.lastMove.from, to: state.lastMove.to } : null, orientation)}
+          <ChessBoardView
+            board={board}
+            selectedSquare={selected}
+            onSquareClick={handleOnlineClick}
+            availableTargets={selectedTargets}
+            lastMove={state.lastMove ? { from: state.lastMove.from, to: state.lastMove.to } : null}
+            orientation={orientation}
+          />
         </div>
 
         <div className="mt-4 flex flex-wrap gap-2 text-xs text-white/65">
