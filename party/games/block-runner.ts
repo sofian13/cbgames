@@ -37,7 +37,7 @@ const ENEMY_H = 24;
 const MOVE_SPEED = 240;
 const GRAVITY = 1500;
 const JUMP_VELOCITY = 560;
-const TICK_MS = 50;
+const TICK_MS = 33;
 
 const COLOR_POOL = ["#ef4444", "#f59e0b", "#22c55e", "#3b82f6", "#a855f7"] as const;
 

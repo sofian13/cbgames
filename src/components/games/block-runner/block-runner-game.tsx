@@ -55,7 +55,9 @@ export default function BlockRunnerGame({ roomCode, playerId, playerName }: Game
 
   const [joystick, setJoystick] = useState({ x: 0, y: 0, active: false });
   const joystickRef = useRef<HTMLDivElement | null>(null);
-  const sendMoveRef = useRef<number>(0);
+  const joystickPointerIdRef = useRef<number | null>(null);
+  const moveXRef = useRef<number>(0);
+  const moveLoopRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const activePlayers = useMemo(() => state?.players ?? [], [state?.players]);
   const level = state?.level;
@@ -72,14 +74,10 @@ export default function BlockRunnerGame({ roomCode, playerId, playerName }: Game
     return clamp(myControlledPlayer.x - VIEW_W * 0.32, 0, maxCamera);
   }, [level, myControlledPlayer]);
 
-  const sendMove = useCallback(
-    (moveX: number) => {
-      sendAction({ action: "input", moveX });
-    },
-    [sendAction]
-  );
+  const sendMove = useCallback((moveX: number) => sendAction({ action: "input", moveX }), [sendAction]);
 
   const stopMove = useCallback(() => {
+    moveXRef.current = 0;
     sendMove(0);
     setJoystick((prev) => ({ ...prev, x: 0, y: 0, active: false }));
   }, [sendMove]);
@@ -100,21 +98,42 @@ export default function BlockRunnerGame({ roomCode, playerId, playerName }: Game
         dy *= scale;
       }
       const moveX = clamp(dx / JOY_RADIUS, -1, 1);
-      const now = Date.now();
-      if (now - sendMoveRef.current > 45) {
-        sendMove(moveX);
-        sendMoveRef.current = now;
-      }
+      moveXRef.current = moveX;
       setJoystick({ x: dx, y: dy, active: true });
     },
-    [sendMove]
+    []
   );
 
   useEffect(() => {
+    if (moveLoopRef.current) clearInterval(moveLoopRef.current);
+    moveLoopRef.current = setInterval(() => {
+      sendMove(moveXRef.current);
+    }, 33);
     return () => {
+      if (moveLoopRef.current) clearInterval(moveLoopRef.current);
       sendMove(0);
     };
   }, [sendMove]);
+
+  useEffect(() => {
+    const onGlobalMove = (e: PointerEvent) => {
+      if (joystickPointerIdRef.current === null || e.pointerId !== joystickPointerIdRef.current) return;
+      onJoystickPointer(e.clientX, e.clientY);
+    };
+    const onGlobalUp = (e: PointerEvent) => {
+      if (joystickPointerIdRef.current === null || e.pointerId !== joystickPointerIdRef.current) return;
+      joystickPointerIdRef.current = null;
+      stopMove();
+    };
+    window.addEventListener("pointermove", onGlobalMove);
+    window.addEventListener("pointerup", onGlobalUp);
+    window.addEventListener("pointercancel", onGlobalUp);
+    return () => {
+      window.removeEventListener("pointermove", onGlobalMove);
+      window.removeEventListener("pointerup", onGlobalUp);
+      window.removeEventListener("pointercancel", onGlobalUp);
+    };
+  }, [onJoystickPointer, stopMove]);
 
   if (!state || !level) {
     return (
@@ -129,6 +148,7 @@ export default function BlockRunnerGame({ roomCode, playerId, playerName }: Game
 
   return (
     <div className="fixed inset-0 z-[140] flex flex-col bg-[#070c16] font-sans text-white">
+      <div className="mx-auto flex h-full w-full max-w-[520px] flex-col">
       <div className="relative flex items-center justify-between p-3">
         <div className="text-xs text-white/85">
           Niveau {state.levelIndex + 1}/{state.levelCount} • Tentative {state.attempt}
@@ -217,14 +237,16 @@ export default function BlockRunnerGame({ roomCode, playerId, playerName }: Game
               return (
                 <div
                   key={`enemy-${i}`}
-                  className="absolute rounded-md bg-fuchsia-500 shadow-[0_0_16px_rgba(217,70,239,0.35)]"
+                  className="absolute flex items-center justify-center rounded-md bg-fuchsia-700 shadow-[0_0_16px_rgba(217,70,239,0.35)]"
                   style={{
                     left: `${left}%`,
                     bottom: `${GROUND_H}px`,
                     width: `${Math.max(16, enemy.w)}px`,
                     height: `${enemy.h}px`,
                   }}
-                />
+                >
+                  <span className="text-[16px] leading-none">👾</span>
+                </div>
               );
             })}
 
@@ -276,18 +298,16 @@ export default function BlockRunnerGame({ roomCode, playerId, playerName }: Game
       <div className="mx-3 mb-4 mt-auto flex items-end justify-between">
         <div
           ref={joystickRef}
-          className={`relative h-24 w-24 rounded-full border border-white/20 bg-white/5 ${isActivePlayer ? "" : "opacity-40"}`}
+          className={`relative h-28 w-28 touch-none rounded-full border border-white/20 bg-white/5 ${isActivePlayer ? "" : "opacity-40"}`}
           onPointerDown={(e) => {
             if (!isActivePlayer || state.phase !== "playing") return;
-            onJoystickPointer(e.clientX, e.clientY);
-          }}
-          onPointerMove={(e) => {
-            if (!isActivePlayer || state.phase !== "playing") return;
-            if (e.buttons !== 1) return;
+            joystickPointerIdRef.current = e.pointerId;
+            e.currentTarget.setPointerCapture(e.pointerId);
             onJoystickPointer(e.clientX, e.clientY);
           }}
           onPointerUp={() => {
             if (!isActivePlayer) return;
+            joystickPointerIdRef.current = null;
             stopMove();
           }}
           onPointerLeave={() => {
@@ -302,17 +322,19 @@ export default function BlockRunnerGame({ roomCode, playerId, playerName }: Game
         </div>
 
         <button
-          onClick={() => {
+          onPointerDown={(e) => {
+            e.preventDefault();
             if (!isActivePlayer || state.phase !== "playing") return;
             sendAction({ action: "jump" });
           }}
-          className={`h-20 w-20 rounded-full border border-amber-300/40 bg-amber-500/25 text-sm text-amber-100 ${isActivePlayer ? "" : "opacity-40"}`}
+          className={`h-24 w-24 touch-none rounded-full border border-amber-300/40 bg-amber-500/25 text-sm text-amber-100 ${isActivePlayer ? "" : "opacity-40"}`}
         >
           Saut
         </button>
       </div>
 
       {error && <p className="px-4 pb-2 text-xs text-red-300">{error}</p>}
+      </div>
     </div>
   );
 }
