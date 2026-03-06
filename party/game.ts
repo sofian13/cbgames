@@ -100,7 +100,7 @@ export default class GameServer {
       if (this.gameId === "undercover" || this.gameId === "chess" || this.gameId === "block-runner") {
         return;
       }
-      const minToStart = 1;
+      const minToStart = 2;
       if (this.game.players.size >= minToStart && !this.game.started) {
         this.game.start();
       }

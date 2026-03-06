@@ -917,7 +917,7 @@ export default function BattleshipGame({ roomCode, playerId, playerName, onRetur
         <div className="relative mx-auto flex w-full max-w-2xl flex-1 flex-col items-center gap-3 rounded-3xl border border-cyan-300/20 bg-black/35 p-3 backdrop-blur-xl sm:p-4">
           <div className="flex items-center justify-between w-full">
             <span className={cn("text-sm font-sans font-medium", state.isMyTurn ? "text-cyan-300" : "text-white/40")}>
-              {state.isMyTurn ? "A toi de tirer !" : `Tour de ${state.opponentName ?? "l'adversaire"}...`}
+              {state.isMyTurn ? "A toi de tirer !" : "En attente..."}
             </span>
             {state.lastShot && (
               <span className={cn("text-xs font-sans font-bold px-2 py-0.5 rounded",
@@ -929,7 +929,7 @@ export default function BattleshipGame({ roomCode, playerId, playerName, onRetur
             )}
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-4 items-center sm:items-start">
+          <div className={cn("flex flex-col sm:flex-row gap-4 items-center sm:items-start transition-opacity duration-300", !state.isMyTurn && "opacity-50")}>
             <BattleGrid
               grid={state.opponentGrid ?? makeEmptyGrid()}
               ships={state.opponentShipsSunk}
