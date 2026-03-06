@@ -28,7 +28,7 @@ export default class LobbyServer {
 
   getState(): LobbyState {
     const players = Array.from(this.players.values());
-    const host = players.find((p) => p.isHost);
+    const host = players.find((p) => p.isHost && p.isConnected) ?? players.find((p) => p.isConnected);
     return {
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       players: players.map(({ connectionId, ...rest }) => rest),
@@ -37,6 +37,21 @@ export default class LobbyServer {
       status: this.status,
       sessionScores: this.sessionScores,
     };
+  }
+
+  ensureConnectedHost() {
+    const connected = Array.from(this.players.values()).filter((p) => p.isConnected);
+    if (connected.length === 0) return;
+    const currentConnectedHost = connected.find((p) => p.isHost);
+    if (currentConnectedHost) return;
+    for (const [, p] of this.players) {
+      p.isHost = false;
+    }
+    connected[0].isHost = true;
+    this.broadcast({
+      type: "host-changed",
+      payload: { playerId: connected[0].id },
+    });
   }
 
   broadcast(msg: Record<string, unknown>, exclude?: string) {
@@ -107,14 +122,15 @@ export default class LobbyServer {
           return;
         }
 
-        const isFirst = this.players.size === 0;
+        const connectedCount = Array.from(this.players.values()).filter((p) => p.isConnected).length;
+        const isFirstConnected = connectedCount === 0;
         const existing = this.players.get(playerId);
 
         const player: Player = {
           id: playerId,
           name,
           avatar,
-          isHost: existing?.isHost ?? isFirst,
+          isHost: existing?.isHost ?? isFirstConnected,
           isReady: false,
           isConnected: true,
           isGuest,
@@ -122,6 +138,7 @@ export default class LobbyServer {
         };
 
         this.players.set(playerId, player);
+        this.ensureConnectedHost();
 
         // Send full state to the joining player
         this.sendTo(sender.id, {
@@ -265,6 +282,9 @@ export default class LobbyServer {
     if (!player) return;
 
     player.isConnected = false;
+    if (player.isHost) {
+      this.ensureConnectedHost();
+    }
 
     // Remove after timeout if they don't reconnect
     setTimeout(() => {
@@ -278,6 +298,8 @@ export default class LobbyServer {
 
         if (current.isHost) {
           this.promoteNewHost();
+        } else {
+          this.ensureConnectedHost();
         }
       }
     }, 15_000);
