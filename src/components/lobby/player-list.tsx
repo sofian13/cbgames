@@ -15,6 +15,9 @@ interface PlayerListProps {
 }
 
 export function PlayerList({ players, currentPlayerId, isHost, onKick }: PlayerListProps) {
+  const connectedPlayers = players.filter((p) => p.isConnected);
+  const isSolo = connectedPlayers.length === 1 && connectedPlayers[0]?.id === currentPlayerId;
+
   return (
     <div className="space-y-2">
       <h3 className="text-sm font-semibold text-white/55 uppercase tracking-[0.16em]">
@@ -42,26 +45,28 @@ export function PlayerList({ players, currentPlayerId, isHost, onKick }: PlayerL
                   <span className="text-muted-foreground text-sm"> (toi)</span>
                 )}
               </p>
-              <div className="flex gap-1 mt-1">
+              <div className="mt-1 flex gap-1">
                 {player.isHost && (
-                  <Badge variant="secondary" className="text-xs">Host</Badge>
+                  <Badge variant="secondary" className="text-xs">
+                    {isSolo && player.id === currentPlayerId ? "Host (Solo)" : "Host"}
+                  </Badge>
                 )}
-                {player.isGuest && (
-                  <Badge variant="outline" className="text-xs">Invité</Badge>
+                {player.isGuest && !(isSolo && player.id === currentPlayerId) && (
+                  <Badge variant="outline" className="text-xs">Compte invite</Badge>
                 )}
               </div>
             </div>
             <div className="flex items-center gap-2">
               {player.isReady && (
                 <Badge className="border-emerald-400/35 bg-emerald-400/15 text-emerald-200">
-                  Prêt
+                  Pret
                 </Badge>
               )}
               {isHost && !player.isHost && player.id !== currentPlayerId && onKick && (
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-7 w-7 border border-cyan-300/18 bg-cyan-300/8 text-white/45 hover:text-red-300 hover:bg-red-500/15"
+                  className="h-7 w-7 border border-cyan-300/18 bg-cyan-300/8 text-white/45 hover:bg-red-500/15 hover:text-red-300"
                   onClick={() => onKick(player.id)}
                 >
                   <X className="h-4 w-4" />
@@ -74,4 +79,3 @@ export function PlayerList({ players, currentPlayerId, isHost, onKick }: PlayerL
     </div>
   );
 }
-
