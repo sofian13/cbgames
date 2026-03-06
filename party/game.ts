@@ -20,6 +20,7 @@ import { BlackMarketGame } from "./games/black-market";
 import { KingHillGame } from "./games/king-hill";
 import { MotionTennisGame } from "./games/motion-tennis";
 import { ChessGame } from "./games/chess";
+import { BlockRunnerGame } from "./games/block-runner";
 
 // Registry of game constructors
 const GAME_REGISTRY: Record<string, () => BaseGame> = {
@@ -43,6 +44,7 @@ const GAME_REGISTRY: Record<string, () => BaseGame> = {
   "king-hill": () => new KingHillGame(),
   "motion-tennis": () => new MotionTennisGame(),
   "chess": () => new ChessGame(),
+  "block-runner": () => new BlockRunnerGame(),
 };
 
 export default class GameServer {
@@ -93,7 +95,7 @@ export default class GameServer {
 
       // Auto-start when enough players join and game hasn't started
       // Motion tennis can start solo (vs bot)
-      if (this.gameId === "undercover" || this.gameId === "chess") {
+      if (this.gameId === "undercover" || this.gameId === "chess" || this.gameId === "block-runner") {
         return;
       }
       const minToStart = 1;

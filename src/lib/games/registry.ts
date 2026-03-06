@@ -294,6 +294,24 @@ export const GAMES: GameMeta[] = [
     ],
     component: () => import("@/components/games/chess/chess-game"),
   },
+  {
+    id: "block-runner",
+    name: "Bloc Runner",
+    description: "Coop horizontal: avance, saute, ecrase les ennemis et passe tous les niveaux.",
+    category: "party",
+    minPlayers: 1,
+    maxPlayers: 5,
+    icon: "🧱",
+    implemented: true,
+    rules: [
+      "Choisis de 1 a 5 joueurs au debut.",
+      "Chaque bloc ne peut avancer que vers la droite et sauter.",
+      "Ecrase les ennemis par dessus pour les eliminer.",
+      "Evite les pieges: si un joueur meurt, le niveau recommence.",
+      "Finis tous les niveaux pour gagner.",
+    ],
+    component: () => import("@/components/games/block-runner/block-runner-game"),
+  },
   // â”€â”€ Cartes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   {
     id: "uno",

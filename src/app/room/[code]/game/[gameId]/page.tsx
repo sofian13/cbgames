@@ -91,6 +91,10 @@ const GameComponents = {
     () => import("@/components/games/chess/chess-game"),
     { ssr: false }
   ),
+  "block-runner": dynamic(
+    () => import("@/components/games/block-runner/block-runner-game"),
+    { ssr: false }
+  ),
 } as const;
 
 export default function GamePage() {
