@@ -218,13 +218,21 @@ export default class LobbyServer {
         }
 
         this.status = "in-game";
+        const startPayload = {
+          gameId: this.selectedGameId,
+          roomCode: this.party.id,
+        };
         this.broadcast({
           type: "game-starting",
-          payload: {
-            gameId: this.selectedGameId,
-            roomCode: this.party.id,
-          },
+          payload: startPayload,
         });
+        // Retry transient event once to improve mobile reliability.
+        setTimeout(() => {
+          this.broadcast({
+            type: "game-starting",
+            payload: startPayload,
+          });
+        }, 300);
         // Strong sync after start in case some clients miss transient websocket events.
         this.broadcast({
           type: "lobby-state",

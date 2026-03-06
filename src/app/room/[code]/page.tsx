@@ -55,6 +55,8 @@ export default function LobbyPage() {
     isConnected,
     sessionScores,
     error,
+    debugLastEvent,
+    debugEventCount,
   } = useRoomStore();
 
   const connectedPlayers = players.filter((p) => p.isConnected);
@@ -105,7 +107,7 @@ export default function LobbyPage() {
               </div>
             )}
             <div className="rounded-xl border border-white/10 bg-white/[0.03] p-2 text-[11px] text-white/55">
-              debug: host={debugHost} | room={code} | me={playerId.slice(0, 12)} | hostId={hostId ?? "none"} | connected={connectedPlayers.length}
+              debug: host={debugHost} | room={code} | me={playerId.slice(0, 12)} | hostId={hostId ?? "none"} | connected={connectedPlayers.length} | status={status} | game={selectedGameId ?? "none"} | last={debugLastEvent ?? "none"} | events={debugEventCount}
             </div>
 
             {/* Session scores */}

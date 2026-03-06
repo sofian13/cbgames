@@ -10,6 +10,8 @@ interface RoomStore {
   sessionScores: Record<string, number>;
   isConnected: boolean;
   error: string | null;
+  debugLastEvent: string | null;
+  debugEventCount: number;
 
   // Actions
   setLobbyState: (state: LobbyState) => void;
@@ -23,6 +25,7 @@ interface RoomStore {
   setError: (error: string | null) => void;
   setSessionScores: (scores: Record<string, number>) => void;
   setStatus: (status: "waiting" | "ready-check" | "in-game") => void;
+  setDebugEvent: (event: string) => void;
   reset: () => void;
 }
 
@@ -34,6 +37,8 @@ const initialState = {
   sessionScores: {},
   isConnected: false,
   error: null,
+  debugLastEvent: null,
+  debugEventCount: 0,
 };
 
 export const useRoomStore = create<RoomStore>((set) => ({
@@ -79,5 +84,10 @@ export const useRoomStore = create<RoomStore>((set) => ({
   setError: (error) => set({ error }),
   setSessionScores: (scores) => set({ sessionScores: scores }),
   setStatus: (status) => set({ status }),
+  setDebugEvent: (event) =>
+    set((s) => ({
+      debugLastEvent: event,
+      debugEventCount: s.debugEventCount + 1,
+    })),
   reset: () => set(initialState),
 }));

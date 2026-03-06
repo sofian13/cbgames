@@ -78,6 +78,7 @@ export function useRoom(
 
     socket.addEventListener("message", (event) => {
       const msg = JSON.parse(event.data) as LobbyServerMessage;
+      store.setDebugEvent(msg.type);
 
       switch (msg.type) {
         case "lobby-state":
