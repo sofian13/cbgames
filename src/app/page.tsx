@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useSession, signIn, signOut } from "next-auth/react";
 import { Plus, ArrowRight, Pencil, Check, LogOut } from "lucide-react";
@@ -157,13 +157,11 @@ export default function HomePage() {
   const router = useRouter();
   const { data: session } = useSession();
   const [code, setCode] = useState("");
-  const [guestName, setGuestNameState] = useState("");
+  const [guestName, setGuestNameState] = useState(() => {
+    if (typeof window === "undefined") return "";
+    return getOrCreateGuest().name;
+  });
   const subtitle = useTyping("Joue avec tes potes, sans pub, sans prise de tete.", 1800, 30);
-
-  useEffect(() => {
-    const guest = getOrCreateGuest();
-    setGuestNameState(guest.name);
-  }, []);
 
   const handleSaveName = useCallback((newName: string) => {
     setGuestName(newName);
@@ -172,7 +170,7 @@ export default function HomePage() {
 
   const handleCreate = useCallback(() => {
     const roomCode = generateRoomCode();
-    router.push(`/room/${roomCode}`);
+    router.push(`/room/${roomCode}?host=1`);
   }, [router]);
 
   const handleJoin = useCallback(() => {

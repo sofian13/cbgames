@@ -9,7 +9,14 @@ import type {
   LobbyServerMessage,
 } from "@/lib/party/message-types";
 
-export function useRoom(roomCode: string, playerId: string, playerName: string, avatar?: string, isGuest = true) {
+export function useRoom(
+  roomCode: string,
+  playerId: string,
+  playerName: string,
+  avatar?: string,
+  isGuest = true,
+  optimisticHost = false
+) {
   const socketRef = useRef<PartySocket | null>(null);
   const store = useRoomStore();
 
@@ -31,18 +38,19 @@ export function useRoom(roomCode: string, playerId: string, playerName: string, 
     socket.addEventListener("open", () => {
       store.setConnected(true);
       store.setError(null);
-      // Optimistic self registration to avoid "waiting for host" on solo startup
-      // when lobby-state message is delayed.
-      store.addPlayer({
-        id: playerId,
-        name: playerName,
-        avatar,
-        isHost: true,
-        isReady: false,
-        isConnected: true,
-        isGuest,
-      });
-      store.setHostId(playerId);
+      // Host fallback only for the room creator route (?host=1), not invite links.
+      if (optimisticHost) {
+        store.addPlayer({
+          id: playerId,
+          name: playerName,
+          avatar,
+          isHost: true,
+          isReady: false,
+          isConnected: true,
+          isGuest,
+        });
+        store.setHostId(playerId);
+      }
       // Send join message
       const msg: LobbyClientMessage = {
         type: "join",
@@ -116,7 +124,7 @@ export function useRoom(roomCode: string, playerId: string, playerName: string, 
       store.reset();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [roomCode, playerId, playerName]);
+  }, [roomCode, playerId, playerName, optimisticHost, avatar, isGuest]);
 
   const send = useCallback((msg: LobbyClientMessage) => {
     socketRef.current?.send(JSON.stringify(msg));

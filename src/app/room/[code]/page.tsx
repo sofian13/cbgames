@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { Header } from "@/components/layout/header";
 import { PlayerList } from "@/components/lobby/player-list";
@@ -15,6 +15,7 @@ import { useRef } from "react";
 
 export default function LobbyPage() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const router = useRouter();
   const { data: session } = useSession();
   const code = (params.code as string).toUpperCase();
@@ -46,7 +47,8 @@ export default function LobbyPage() {
     playerId,
     playerName,
     avatar,
-    isGuest
+    isGuest,
+    searchParams.get("host") === "1"
   );
 
   const {
