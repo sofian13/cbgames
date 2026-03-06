@@ -46,7 +46,7 @@ export function PlayerList({ players, currentPlayerId, isHost, onKick }: PlayerL
                 )}
               </p>
               <div className="mt-1 flex gap-1">
-                {player.isHost && (
+                {(player.isHost || (isSolo && player.id === currentPlayerId)) && (
                   <Badge variant="secondary" className="text-xs">
                     {isSolo && player.id === currentPlayerId ? "Host (Solo)" : "Host"}
                   </Badge>
