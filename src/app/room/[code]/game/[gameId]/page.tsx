@@ -94,6 +94,18 @@ const GameComponents = {
     () => import("@/components/games/block-runner/block-runner-game"),
     { ssr: false }
   ),
+  "battleship": dynamic(
+    () => import("@/components/games/battleship/battleship-game"),
+    { ssr: false }
+  ),
+  "guess-word": dynamic(
+    () => import("@/components/games/guess-word/guess-word-game"),
+    { ssr: false }
+  ),
+  "make-guess": dynamic(
+    () => import("@/components/games/make-guess/make-guess-game"),
+    { ssr: false }
+  ),
 } as const;
 
 export default function GamePage() {
