@@ -60,12 +60,12 @@ const PIECE_VALUES: Record<PieceType, number> = {
 };
 
 const PIECE_GLYPH: Record<string, string> = {
-  wp: "\u2659",
-  wn: "\u2658",
-  wb: "\u2657",
-  wr: "\u2656",
-  wq: "\u2655",
-  wk: "\u2654",
+  wp: "\u265F",
+  wn: "\u265E",
+  wb: "\u265D",
+  wr: "\u265C",
+  wq: "\u265B",
+  wk: "\u265A",
   bp: "\u265F",
   bn: "\u265E",
   bb: "\u265D",
@@ -601,12 +601,19 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [focusMode, setFocusMode] = useState(false);
   const [inviteFeedback, setInviteFeedback] = useState<string>("");
+  const [optimisticMove, setOptimisticMove] = useState<ChessMove | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const onlineLastMoveKeyRef = useRef<string | null>(null);
   const endSoundPlayedRef = useRef(false);
   const [showGameOverPopup, setShowGameOverPopup] = useState(false);
 
-  const board = useMemo(() => (state?.board ? state.board.map(decodePiece) : []), [state]);
+  const serverBoard = useMemo(() => (state?.board ? state.board.map(decodePiece) : []), [state]);
+  const board = useMemo(() => {
+    if (optimisticMove && serverBoard.length > 0) {
+      return applyMove(serverBoard, optimisticMove);
+    }
+    return serverBoard;
+  }, [serverBoard, optimisticMove]);
 
   const myColor = state?.myColor ?? null;
   const canPlayOnline = state?.phase === "playing" && myColor === state.turn;
@@ -856,8 +863,10 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
     return () => document.removeEventListener("fullscreenchange", onChange);
   }, []);
 
+  // Clear optimistic move when server confirms
   useEffect(() => {
     if (!state?.lastMove) return;
+    setOptimisticMove(null);
     const key = `${state.lastMove.from}-${state.lastMove.to}-${state.phase}`;
     if (onlineLastMoveKeyRef.current === key) return;
     onlineLastMoveKeyRef.current = key;
@@ -915,11 +924,14 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
 
   const handleOnlineClick = useCallback((index: number) => {
     if (!state || state.phase !== "playing" || !canPlayOnline) return;
-    const piece = board[index];
+    const piece = serverBoard[index];
 
     if (selected !== null) {
       const targets = legalMovesByFrom.get(selected) ?? [];
       if (targets.includes(index)) {
+        const move = { from: selected, to: index };
+        setOptimisticMove(move);
+        playMoveSound();
         sendAction({ action: "move", from: selected, to: index });
         setSelected(null);
         return;
@@ -932,7 +944,7 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
     } else {
       setSelected(null);
     }
-  }, [board, canPlayOnline, legalMovesByFrom, myColor, selected, sendAction, state]);
+  }, [serverBoard, canPlayOnline, legalMovesByFrom, myColor, selected, sendAction, state, playMoveSound]);
 
   const handleLocalClick = useCallback((index: number) => {
     if (localWinner) return;
