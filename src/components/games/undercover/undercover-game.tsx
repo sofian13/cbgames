@@ -376,20 +376,21 @@ export default function UndercoverGame({
 
   const buildDescribeOrder = useCallback((playersList: LocalPlayer[]) => {
     const aliveIds = playersList.filter((p) => p.alive).map((p) => p.id);
-    if (aliveIds.length <= 1) return aliveIds;
+    const randomized = shuffle(aliveIds);
+    if (randomized.length <= 1) return randomized;
 
-    const first = playersList.find((p) => p.id === aliveIds[0]);
-    if (first?.role !== "mrwhite") return aliveIds;
+    const first = playersList.find((p) => p.id === randomized[0]);
+    if (first?.role !== "mrwhite") return randomized;
 
-    const nextNonMrWhiteIndex = aliveIds.findIndex((id) => {
+    const nextNonMrWhiteIndex = randomized.findIndex((id) => {
       const player = playersList.find((p) => p.id === id);
       return player?.role !== "mrwhite";
     });
-    if (nextNonMrWhiteIndex <= 0) return aliveIds;
+    if (nextNonMrWhiteIndex <= 0) return randomized;
 
     return [
-      ...aliveIds.slice(nextNonMrWhiteIndex),
-      ...aliveIds.slice(0, nextNonMrWhiteIndex),
+      ...randomized.slice(nextNonMrWhiteIndex),
+      ...randomized.slice(0, nextNonMrWhiteIndex),
     ];
   }, []);
 
@@ -1047,7 +1048,7 @@ export default function UndercoverGame({
                       }}
                     >
                       <p className="text-3xl font-sans font-semibold text-cyan-300">
-                        {localCardReveal.role === "mrwhite" ? "Mr. White" : localCardReveal.role === "undercover" ? "Undercover" : "Civil"}
+                        {localCardReveal.role === "mrwhite" ? "Mr. White" : "Civil"}
                       </p>
                       <p className="mt-2 px-3 text-center text-4xl font-sans font-semibold text-white">
                         {localCardReveal.role === "mrwhite" ? "???" : localCardReveal.word}
@@ -1086,16 +1087,18 @@ export default function UndercoverGame({
             <p className="mt-1 text-sm text-white/55 font-sans">Indices a voix haute, dans cet ordre.</p>
           </div>
 
-          <div className="relative mx-auto w-full max-w-xl space-y-2 rounded-2xl border border-cyan-300/20 bg-[#070d17]/75 p-3">
+          <div className="relative mx-auto grid w-full max-w-2xl grid-cols-2 gap-3 rounded-2xl border border-cyan-300/20 bg-[#070d17]/75 p-3 sm:grid-cols-3">
             {orderedPlayers.map((p, idx) => (
               <div
                 key={p.id}
-                className="rounded-lg border border-white/[0.08] bg-white/[0.03] px-4 py-3 flex items-center justify-between"
+                className="rounded-2xl border border-white/15 bg-[linear-gradient(160deg,rgba(255,255,255,0.12),rgba(255,255,255,0.03))] px-3 py-4 text-center shadow-[0_10px_22px_rgba(0,0,0,0.26)]"
               >
-                <span className="text-white/85 font-sans">
-                  {idx + 1}. {p.name}
-                </span>
-                <span className="text-[11px] text-cyan-300/70 font-sans">{idx === 0 ? "commence" : "ensuite"}</span>
+                <p className="mx-auto mb-2 w-fit rounded-full bg-cyan-400/20 px-2.5 py-0.5 text-[11px] font-sans uppercase tracking-widest text-cyan-200">
+                  {idx === 0 ? "Commence" : `Tour ${idx + 1}`}
+                </p>
+                <p className="truncate text-lg font-sans font-semibold text-white">
+                  {p.name}
+                </p>
               </div>
             ))}
           </div>
@@ -1112,6 +1115,27 @@ export default function UndercoverGame({
               className="px-5 py-2.5 rounded-xl border border-cyan-300/35 bg-gradient-to-r from-cyan-600 to-blue-600 text-white text-sm font-sans font-medium"
             >
               Lancer le vote
+            </button>
+          </div>
+
+          <div className="relative flex flex-col sm:flex-row gap-2 justify-center">
+            <button
+              onClick={() => {
+                setLocalSetupStep("config");
+                setLocalCollectedNames([]);
+                setLocalNameIndex(0);
+                setLocalNameInput("");
+                setLocalPhase("setup");
+              }}
+              className="px-5 py-2.5 rounded-xl border border-cyan-300/35 bg-cyan-500/20 text-white text-sm font-sans"
+            >
+              Recommencer la partie
+            </button>
+            <button
+              onClick={handleBackToGamePicker}
+              className="px-5 py-2.5 rounded-xl border border-white/[0.2] bg-white/[0.06] text-white text-sm font-sans"
+            >
+              Retour a l&apos;ecran des jeux
             </button>
           </div>
 
