@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { useSession } from "next-auth/react";
 import { Header } from "@/components/layout/header";
 import { PlayerList } from "@/components/lobby/player-list";
 import { GamePicker } from "@/components/lobby/game-picker";
@@ -10,7 +9,6 @@ import { ReadyCheck } from "@/components/lobby/ready-check";
 import { useRoom } from "@/lib/party/use-room";
 import { useRoomStore } from "@/lib/stores/room-store";
 import { getOrCreateGuest } from "@/lib/guest";
-import { getSessionScopedPlayerId } from "@/lib/player-id";
 import { EmberParticles, FilmGrain, EmberKeyframes } from "@/components/shared/ember";
 import { useRef } from "react";
 
@@ -18,7 +16,6 @@ export default function LobbyPage() {
   const params = useParams();
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { data: session } = useSession();
   const code = (params.code as string).toUpperCase();
   const mouseRef = useRef<{ x: number; y: number }>({ x: -100, y: -100 });
 
@@ -31,17 +28,9 @@ export default function LobbyPage() {
   }, []);
 
   const { id: playerId, name: playerName, isGuest, avatar } = useMemo(() => {
-    if (session?.user) {
-      return {
-        id: getSessionScopedPlayerId(session.user.id),
-        name: session.user.name ?? "Joueur",
-        isGuest: false,
-        avatar: session.user.image ?? undefined,
-      };
-    }
     const guest = getOrCreateGuest();
     return { id: guest.id, name: guest.name, isGuest: true, avatar: undefined };
-  }, [session]);
+  }, []);
 
   const { selectGame, toggleReady, startGame, send } = useRoom(
     code,

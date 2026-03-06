@@ -1,12 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useSession, signIn, signOut } from "next-auth/react";
 import { Button } from "@/components/ui/button";
-import { AvatarCircle } from "@/components/shared/avatar-circle";
 import { RoomCodeDisplay } from "@/components/shared/room-code-display";
 import { ConnectionStatus } from "@/components/shared/connection-status";
-import { LogOut } from "lucide-react";
 
 interface HeaderProps {
   roomCode?: string;
@@ -14,8 +11,6 @@ interface HeaderProps {
 }
 
 export function Header({ roomCode, isConnected }: HeaderProps) {
-  const { data: session } = useSession();
-
   return (
     <header className="sticky top-0 z-40 border-b border-cyan-300/15 bg-[#030813]/76 backdrop-blur-xl">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
@@ -35,36 +30,13 @@ export function Header({ roomCode, isConnected }: HeaderProps) {
         <div className="flex items-center gap-4">
           {roomCode && <RoomCodeDisplay code={roomCode} />}
           {isConnected !== undefined && <ConnectionStatus isConnected={isConnected} />}
-
-          {session?.user ? (
-            <div className="flex items-center gap-2">
-              <AvatarCircle
-                name={session.user.name ?? ""}
-                avatar={session.user.image ?? undefined}
-                size="sm"
-              />
-              <span className="text-sm font-medium hidden sm:block text-white/70">
-                {session.user.name}
-              </span>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 border border-cyan-300/20 bg-cyan-300/10 text-cyan-100/45 hover:text-cyan-100 hover:bg-cyan-400/20"
-                onClick={() => signOut()}
-              >
-                <LogOut className="h-4 w-4" />
-              </Button>
-            </div>
-          ) : (
-            <Button
-              variant="outline"
-              size="sm"
-              className="border-cyan-300/25 bg-cyan-400/10 text-cyan-100/80 hover:text-white hover:bg-cyan-400/20 hover:border-cyan-300/45"
-              onClick={() => signIn("discord")}
-            >
-              Discord
-            </Button>
-          )}
+          <Button
+            variant="outline"
+            size="sm"
+            className="border-cyan-300/25 bg-cyan-400/10 text-cyan-100/80"
+          >
+            Mode lien
+          </Button>
         </div>
       </div>
     </header>
