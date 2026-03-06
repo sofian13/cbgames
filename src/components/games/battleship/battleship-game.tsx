@@ -119,6 +119,25 @@ function randomPlacement(): { grid: CellState[]; ships: Ship[] } {
   return { grid, ships };
 }
 
+// ── Ship shape helpers ──────────────────────────────────
+function getShipEdges(ships: Ship[], idx: number): { isShip: boolean; top: boolean; bottom: boolean; left: boolean; right: boolean } {
+  for (const s of ships) {
+    const pos = s.cells.indexOf(idx);
+    if (pos === -1) continue;
+    const x = idx % 10;
+    const y = Math.floor(idx / 10);
+    const isHoriz = s.cells.length > 1 && Math.abs(s.cells[0] - s.cells[1]) === 1;
+    return {
+      isShip: true,
+      top: isHoriz || pos === 0,
+      bottom: isHoriz || pos === s.cells.length - 1,
+      left: !isHoriz || pos === 0,
+      right: !isHoriz || pos === s.cells.length - 1,
+    };
+  }
+  return { isShip: false, top: false, bottom: false, left: false, right: false };
+}
+
 // ── Grid Component ──────────────────────────────────────
 function BattleGrid({
   grid,
@@ -129,6 +148,7 @@ function BattleGrid({
   highlightCells,
   label,
   small,
+  hideShips,
 }: {
   grid: CellState[];
   ships?: Ship[];
@@ -138,6 +158,7 @@ function BattleGrid({
   highlightCells?: Set<number>;
   label: string;
   small?: boolean;
+  hideShips?: boolean;
 }) {
   const sunkSet = useMemo(() => {
     if (!ships) return new Set<number>();
@@ -149,6 +170,13 @@ function BattleGrid({
     }
     return set;
   }, [ships, grid]);
+
+  const shipCells = useMemo(() => {
+    if (!ships) return new Set<number>();
+    const set = new Set<number>();
+    for (const s of ships) for (const c of s.cells) set.add(c);
+    return set;
+  }, [ships]);
 
   return (
     <div className={cn("flex flex-col items-center gap-1", small && "scale-[0.85] origin-top")}>
@@ -178,7 +206,8 @@ function BattleGrid({
               const isSunk = sunkSet.has(idx);
               const isHit = cell === "hit";
               const isMiss = cell === "miss";
-              const showShip = !isEnemy && cell === "ship";
+              const showShip = !isEnemy && !hideShips && (cell === "ship" || shipCells.has(idx));
+              const edges = showShip && ships ? getShipEdges(ships, idx) : null;
 
               return (
                 <button
@@ -186,14 +215,30 @@ function BattleGrid({
                   onClick={() => onCellClick?.(idx)}
                   disabled={disabled || (!isEnemy)}
                   className={cn(
-                    "w-[var(--cell)] h-[var(--cell)] border transition-all relative",
-                    showShip ? "bg-cyan-500/30 border-cyan-300/20" : CELL_COLORS[isEnemy && cell === "ship" ? "empty" : cell],
+                    "w-[var(--cell)] h-[var(--cell)] transition-all relative",
+                    // Base cell
+                    !showShip && CELL_COLORS[isEnemy && cell === "ship" ? "empty" : (isHit ? "hit" : isMiss ? "miss" : "empty")],
+                    // Ship styling with rounded edges
+                    showShip && !isHit && "bg-gradient-to-br from-cyan-500/50 to-blue-600/40 border-cyan-300/30",
+                    showShip && isHit && "bg-red-500/50 border-red-400/30",
+                    !showShip && "border border-cyan-300/8",
+                    // Ship border rounding
+                    showShip && edges?.top && "border-t-2 border-t-cyan-300/40",
+                    showShip && edges?.bottom && "border-b-2 border-b-cyan-300/40",
+                    showShip && edges?.left && "border-l-2 border-l-cyan-300/40",
+                    showShip && edges?.right && "border-r-2 border-r-cyan-300/40",
                     isHighlight && "bg-cyan-400/20 border-cyan-300/40",
                     isSunk && isHit && "bg-red-600/50 border-red-400/30",
                     isEnemy && !disabled && cell !== "hit" && cell !== "miss" && "hover:bg-cyan-300/15 cursor-crosshair",
                     disabled && isEnemy && "cursor-not-allowed",
                   )}
                 >
+                  {/* Ship dot marker */}
+                  {showShip && !isHit && (
+                    <span className="absolute inset-0 flex items-center justify-center">
+                      <span className="w-1.5 h-1.5 rounded-full bg-cyan-200/50" />
+                    </span>
+                  )}
                   {isHit && (
                     <span className="absolute inset-0 flex items-center justify-center text-red-400 font-bold text-sm">
                       X
@@ -292,8 +337,10 @@ function LocalBattleship({ onReturnToLobby }: { onReturnToLobby?: () => void }) 
     }
   }, [p2Ships.length]);
 
+  const [shotLocked, setShotLocked] = useState(false);
+
   const handleFire = useCallback((idx: number) => {
-    if (localPhase !== "playing") return;
+    if (localPhase !== "playing" || shotLocked) return;
     const cell = enemyGrid[idx];
     if (cell === "hit" || cell === "miss") return;
 
@@ -309,19 +356,21 @@ function LocalBattleship({ onReturnToLobby }: { onReturnToLobby?: () => void }) 
         setLocalPhase("game-over");
         return;
       }
-      // Hit = same player shoots again
+      // Hit = same player shoots again (no turn switch)
     } else {
       newGrid[idx] = "miss";
       setEnemyGrid(newGrid);
       setLastShotResult("miss");
-      // Switch turns after a delay
+      setShotLocked(true);
+      // Switch turns after a delay — show handoff screen
       setTimeout(() => {
         setCurrentPlayer((p) => (p === 1 ? 2 : 1));
         setShowingBoard(false);
         setLastShotResult(null);
-      }, 1200);
+        setShotLocked(false);
+      }, 1500);
     }
-  }, [localPhase, enemyGrid, setEnemyGrid, enemyShips, currentPlayer]);
+  }, [localPhase, enemyGrid, setEnemyGrid, enemyShips, currentPlayer, shotLocked]);
 
   const handleHover = useCallback((idx: number) => {
     if (!selectedShipId) { setHoverCells(new Set()); return; }
@@ -463,15 +512,26 @@ function LocalBattleship({ onReturnToLobby }: { onReturnToLobby?: () => void }) 
                     {currentGrid.map((cell, idx) => {
                       const isHover = hoverCells.has(idx);
                       const isShip = cell === "ship";
+                      const edges = isShip ? getShipEdges(currentShips, idx) : null;
                       return (
                         <button key={idx}
                           onClick={() => handlePlacementClick(idx)}
                           onMouseEnter={() => handleHover(idx)}
                           className={cn(
-                            "w-[var(--cell)] h-[var(--cell)] border transition-all",
-                            isShip ? "bg-cyan-500/35 border-cyan-300/25" : "bg-[#0c1a3a] border-cyan-300/8",
+                            "w-[var(--cell)] h-[var(--cell)] transition-all relative",
+                            isShip ? "bg-gradient-to-br from-cyan-500/50 to-blue-600/40" : "bg-[#0c1a3a] border border-cyan-300/8",
+                            isShip && edges?.top && "border-t-2 border-t-cyan-300/40",
+                            isShip && edges?.bottom && "border-b-2 border-b-cyan-300/40",
+                            isShip && edges?.left && "border-l-2 border-l-cyan-300/40",
+                            isShip && edges?.right && "border-r-2 border-r-cyan-300/40",
                             isHover && !isShip && "bg-cyan-400/20 border-cyan-300/35",
-                          )} />
+                          )}>
+                          {isShip && (
+                            <span className="absolute inset-0 flex items-center justify-center">
+                              <span className="w-1.5 h-1.5 rounded-full bg-cyan-200/50" />
+                            </span>
+                          )}
+                        </button>
                       );
                     })}
                   </div>
@@ -529,13 +589,9 @@ function LocalBattleship({ onReturnToLobby }: { onReturnToLobby?: () => void }) 
             )}
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-4 items-center sm:items-start">
-            {/* Enemy grid (attack) */}
-            <BattleGrid grid={enemyGrid} ships={enemyShips} onCellClick={handleFire}
-              isEnemy disabled={false} label={`Grille de ${otherName}`} />
-            {/* My grid (reference) */}
-            <BattleGrid grid={currentGrid} ships={currentShips} label="Ta flotte" small />
-          </div>
+          {/* Enemy grid only — no own grid shown in local to prevent cheating */}
+          <BattleGrid grid={enemyGrid} ships={enemyShips} onCellClick={handleFire}
+            isEnemy disabled={shotLocked} label={`Grille de ${otherName}`} />
         </div>
       </div>
     );
