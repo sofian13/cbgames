@@ -5,7 +5,6 @@ import type { GameProps } from "@/lib/games/types";
 import { useGame } from "@/lib/party/use-game";
 import { useGameStore } from "@/lib/stores/game-store";
 import { cn } from "@/lib/utils";
-import { ChessPieceIcon } from "./chess-piece-icon";
 
 type Color = "w" | "b";
 type PieceType = "p" | "n" | "b" | "r" | "q" | "k";
@@ -59,6 +58,23 @@ const PIECE_VALUES: Record<PieceType, number> = {
   q: 900,
   k: 0,
 };
+
+const PIECE_GLYPH: Record<string, string> = {
+  wp: "\u2659",
+  wn: "\u2658",
+  wb: "\u2657",
+  wr: "\u2656",
+  wq: "\u2655",
+  wk: "\u2654",
+  bp: "\u265F",
+  bn: "\u265E",
+  bb: "\u265D",
+  br: "\u265C",
+  bq: "\u265B",
+  bk: "\u265A",
+};
+
+const PIECE_SYMBOL = PIECE_GLYPH;
 
 const TIME_OPTIONS = [5, 10, 15, 30] as const;
 
@@ -337,40 +353,29 @@ const INITIAL_PIECE_COUNTS: Record<PieceType, number> = {
   k: 1,
 };
 
-function getCapturedPieces(board: Array<Piece | null>, color: Color) {
+function getCapturedPieceSymbols(board: Array<Piece | null>, color: Color) {
   const remaining: Record<PieceType, number> = { p: 0, n: 0, b: 0, r: 0, q: 0, k: 0 };
   for (const p of board) {
     if (!p || p.color !== color) continue;
     remaining[p.type] += 1;
   }
-  const captured: Piece[] = [];
+  const captured: string[] = [];
   (["q", "r", "b", "n", "p"] as PieceType[]).forEach((type) => {
     const missing = Math.max(0, INITIAL_PIECE_COUNTS[type] - remaining[type]);
     for (let i = 0; i < missing; i++) {
-      captured.push({ color, type });
+      captured.push(PIECE_SYMBOL[`${color}${type}`] ?? "");
     }
   });
   return captured;
 }
 
-function CapturedPieces({ label, pieces }: { label: string; pieces: Piece[] }) {
+function CapturedPieces({ label, pieces }: { label: string; pieces: string[] }) {
   return (
-    <div className="rounded-[1.4rem] border border-white/10 bg-black/28 px-4 py-3 backdrop-blur-sm">
+    <div className="rounded-2xl border border-white/15 bg-black/30 px-4 py-3 backdrop-blur-sm">
       <p className="font-sans text-[11px] uppercase tracking-[0.15em] text-white/40">{label}</p>
-      {pieces.length > 0 ? (
-        <div className="mt-2 flex min-h-9 flex-wrap items-center gap-1.5">
-          {pieces.map((piece, index) => (
-            <span
-              key={`${piece.color}-${piece.type}-${index}`}
-              className="flex h-8 w-8 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04]"
-            >
-              <ChessPieceIcon color={piece.color} type={piece.type} className="h-6 w-6" />
-            </span>
-          ))}
-        </div>
-      ) : (
-        <p className="mt-2 text-sm text-white/25">--</p>
-      )}
+      <p className="mt-1.5 min-h-7 font-sans text-lg leading-7 text-white/90">
+        {pieces.length > 0 ? pieces.join(" ") : <span className="text-white/25">--</span>}
+      </p>
     </div>
   );
 }
@@ -493,18 +498,18 @@ const ChessBoardView = memo(function ChessBoardView({
   }, [lastMove]);
 
   return (
-    <div className="relative mx-auto w-full">
+    <div className="relative">
       {/* File labels (bottom) */}
-      <div className="mt-2 grid grid-cols-8 px-4">
+      <div className="mt-1 grid grid-cols-8 px-0">
         {fileLabels.map((f, i) => (
           <span key={`file-${i}`} className="text-center font-mono text-[10px] text-white/25">
             {f}
           </span>
         ))}
       </div>
-      <div className="flex items-stretch gap-2">
+      <div className="flex">
         {/* Rank labels (left) */}
-        <div className="flex flex-col justify-around py-3">
+        <div className="mr-1 flex flex-col justify-around">
           {rankLabels.map((r, i) => (
             <span key={`rank-${i}`} className="font-mono text-[10px] leading-none text-white/25">
               {r}
@@ -512,13 +517,13 @@ const ChessBoardView = memo(function ChessBoardView({
           ))}
         </div>
         {/* Board */}
-        <div className="flex-1 rounded-[1.8rem] border border-white/12 bg-[#120e10]/72 p-2 shadow-[0_24px_54px_rgba(0,0,0,0.36)]">
-          <div className="grid grid-cols-8 overflow-hidden rounded-[1.2rem]" style={{ gap: 0, lineHeight: 0 }}>
+        <div className="grid flex-1 grid-cols-8 overflow-hidden rounded-2xl border border-white/20 shadow-[0_0_40px_rgba(0,0,0,0.5)]" style={{ gap: 0, lineHeight: 0 }}>
           {rows.map((y) =>
             cols.map((x) => {
               const idx = makeIndex(x, y);
               const isLight = (x + y) % 2 === 0;
               const piece = board[idx];
+              const code = piece ? `${piece.color}${piece.type}` : "";
               const isSelected = selectedSquare === idx;
               const isTarget = targetSet.has(idx);
               const isLastMove = lastMoveSet.has(idx);
@@ -530,34 +535,41 @@ const ChessBoardView = memo(function ChessBoardView({
                   key={idx}
                   onClick={() => onSquareClick(idx)}
                   className={cn(
-                    "relative flex aspect-square items-center justify-center overflow-hidden leading-none transition-colors",
-                    isLight ? "bg-[#f1dcb7]" : "bg-[#8f603e]",
-                    isLastMove && (isLight ? "bg-[#f1c47f]" : "bg-[#b07144]"),
-                    isSelected && "bg-[#72e4f7]/55",
+                    "relative flex aspect-square items-center justify-center leading-none",
+                    isLight ? "bg-[#e8dab2]" : "bg-[#7b6b4a]",
+                    isLastMove && (isLight ? "bg-[#c8b878]" : "bg-[#8a7a48]"),
+                    isSelected && "bg-[#6ecf6e]/50",
                     isCheck && "bg-red-500/70",
                   )}
+                  style={{ fontSize: "min(calc((100vw - 3rem) / 8 * 0.78), 3.2rem)" }}
                 >
                   {isTarget && !isCapture && (
-                    <span className="absolute h-[26%] w-[26%] rounded-full bg-black/18" />
+                    <span className="absolute h-[28%] w-[28%] rounded-full bg-black/20" />
                   )}
                   {isCapture && (
                     <span className="absolute inset-[5%] rounded-full border-[3px] border-red-500/60" />
                   )}
-                  {piece && (
-                    <ChessPieceIcon
-                      color={piece.color}
-                      type={piece.type}
+                  {code && (
+                    <span
                       className={cn(
-                        "relative z-10 h-[78%] w-[78%] transition-transform duration-100",
+                        "relative z-10 select-none transition-transform duration-100",
                         isSelected && "scale-110"
                       )}
-                    />
+                      style={{
+                        filter: piece?.color === "w"
+                          ? "drop-shadow(0 2px 3px rgba(0,0,0,0.45)) drop-shadow(0 0 1px rgba(0,0,0,0.3))"
+                          : "drop-shadow(0 2px 2px rgba(0,0,0,0.3)) drop-shadow(0 0 1px rgba(255,255,255,0.1))",
+                        color: piece?.color === "w" ? "#fff" : "#1a1a2e",
+                        WebkitTextStroke: piece?.color === "w" ? "0.3px rgba(0,0,0,0.15)" : "0.3px rgba(255,255,255,0.08)",
+                      }}
+                    >
+                      {PIECE_GLYPH[code]}
+                    </span>
                   )}
                 </button>
               );
             })
           )}
-          </div>
         </div>
       </div>
     </div>
@@ -618,14 +630,14 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
     }
     return map;
   }, [localLegalMoves]);
-  const localCapturedWhite = useMemo(() => getCapturedPieces(localBoard, "w"), [localBoard]);
-  const localCapturedBlack = useMemo(() => getCapturedPieces(localBoard, "b"), [localBoard]);
+  const localCapturedWhite = useMemo(() => getCapturedPieceSymbols(localBoard, "w"), [localBoard]);
+  const localCapturedBlack = useMemo(() => getCapturedPieceSymbols(localBoard, "b"), [localBoard]);
   const localInCheckSquare = useMemo(() => {
     if (isInCheck(localBoard, localTurn)) return findKingSquare(localBoard, localTurn);
     return null;
   }, [localBoard, localTurn]);
-  const onlineCapturedWhite = useMemo(() => getCapturedPieces(board, "w"), [board]);
-  const onlineCapturedBlack = useMemo(() => getCapturedPieces(board, "b"), [board]);
+  const onlineCapturedWhite = useMemo(() => getCapturedPieceSymbols(board, "w"), [board]);
+  const onlineCapturedBlack = useMemo(() => getCapturedPieceSymbols(board, "b"), [board]);
   const onlineInCheckSquare = useMemo(() => {
     if (state?.inCheck && state?.turn) return findKingSquare(board, state.turn);
     return null;
@@ -1000,7 +1012,7 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
             </div>
 
             {/* Board */}
-            <div className="mx-auto mt-4 w-full max-w-[min(96vw,940px)]">
+            <div className="mx-auto mt-4 w-full max-w-[min(98vw,940px)]">
               <ChessBoardView
                 board={localBoard}
                 selectedSquare={localSelected}
@@ -1013,9 +1025,9 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
             </div>
 
             {/* Status bar */}
-            <div className="mt-3 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div className="mt-3 flex items-center justify-between gap-2">
               <p className="font-sans text-sm text-white/90">{statusText}</p>
-              <div className="flex flex-wrap items-center gap-2 lg:justify-end">
+              <div className="flex items-center gap-2">
                 {!localWinner && (
                   <button
                     onClick={() => {
@@ -1125,7 +1137,7 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
           )}
 
           {/* Board */}
-          <div className="mx-auto mt-4 w-full max-w-[min(96vw,820px)]">
+          <div className="mx-auto mt-4 w-full max-w-[min(92vw,820px)]">
             <ChessBoardView
               board={localBoard}
               selectedSquare={localSelected}
@@ -1438,7 +1450,7 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
           </div>
 
           {/* Board */}
-          <div className="mx-auto mt-4 w-full max-w-[min(96vw,940px)]">
+          <div className="mx-auto mt-4 w-full max-w-[min(98vw,940px)]">
             <ChessBoardView
               board={board}
               selectedSquare={selected}
@@ -1451,9 +1463,9 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
           </div>
 
           {/* Status bar */}
-          <div className="mt-3 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="mt-3 flex items-center justify-between gap-2">
             <p className="font-sans text-sm text-white/90">{info}</p>
-            <div className="flex flex-wrap items-center gap-2 lg:justify-end">
+            <div className="flex items-center gap-2">
               {state.phase === "playing" && (
                 <button
                   onClick={shareSpectatorLink}
@@ -1562,7 +1574,7 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
           </div>
 
           {/* Side info */}
-          <div className="flex flex-col gap-2 sm:items-end">
+          <div className="flex flex-col items-end gap-2">
             <button
               onClick={toggleFullscreen}
               className="rounded-xl border border-white/25 bg-black/30 px-4 py-2 font-sans text-xs text-white/90 backdrop-blur-sm transition hover:bg-white/10"
@@ -1580,7 +1592,7 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
         </div>
 
         {/* Board */}
-        <div className="mx-auto mt-5 w-full max-w-[min(96vw,820px)]">
+        <div className="mx-auto mt-5 w-full max-w-[min(92vw,820px)]">
           <ChessBoardView
             board={board}
             selectedSquare={selected}

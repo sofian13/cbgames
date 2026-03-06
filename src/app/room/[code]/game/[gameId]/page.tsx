@@ -135,11 +135,8 @@ export default function GamePage() {
 
   if (!gameMeta?.implemented || !GameComponent) {
     return (
-      <div className="flex min-h-screen items-center justify-center px-4" style={{ background: "#05070f" }}>
-        <div className="premium-panel rounded-[2rem] px-6 py-8 text-center">
-          <p className="section-title">Erreur de chargement</p>
-          <p className="mt-3 text-lg font-semibold text-white/86">Jeu non trouve</p>
-        </div>
+      <div className="flex min-h-screen items-center justify-center" style={{ background: "#060606" }}>
+        <p className="text-white/40 font-sans">Jeu non trouve</p>
       </div>
     );
   }
@@ -148,11 +145,8 @@ export default function GamePage() {
     <GameShell roomCode={code} gameId={gameId} playerId={playerId} playerName={playerName} isGuest={isGuest} onReturnToLobby={handleReturnToLobby} onResetGame={handleResetGame}>
       <Suspense
         fallback={
-          <div className="flex flex-1 items-center justify-center px-4">
-            <div className="premium-panel rounded-[2rem] px-6 py-8 text-center">
-              <p className="section-title">Chargement</p>
-              <p className="mt-3 animate-pulse text-lg font-semibold text-white/86">Chargement du jeu...</p>
-            </div>
+          <div className="flex flex-1 items-center justify-center">
+            <p className="text-white/40 animate-pulse font-sans">Chargement du jeu...</p>
           </div>
         }
       >
