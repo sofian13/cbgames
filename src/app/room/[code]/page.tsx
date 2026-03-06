@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo } from "react";
-import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { Header } from "@/components/layout/header";
 import { PlayerList } from "@/components/lobby/player-list";
 import { GamePicker } from "@/components/lobby/game-picker";
@@ -9,12 +9,12 @@ import { ReadyCheck } from "@/components/lobby/ready-check";
 import { useRoom } from "@/lib/party/use-room";
 import { useRoomStore } from "@/lib/stores/room-store";
 import { getOrCreateGuest } from "@/lib/guest";
+import { getPartyKitHost } from "@/lib/party/host";
 import { EmberParticles, FilmGrain, EmberKeyframes } from "@/components/shared/ember";
 import { useRef } from "react";
 
 export default function LobbyPage() {
   const params = useParams();
-  const searchParams = useSearchParams();
   const router = useRouter();
   const code = (params.code as string).toUpperCase();
   const mouseRef = useRef<{ x: number; y: number }>({ x: -100, y: -100 });
@@ -32,13 +32,19 @@ export default function LobbyPage() {
     return { id: guest.id, name: guest.name, isGuest: true, avatar: undefined };
   }, []);
 
+  const optimisticHost = useMemo(() => {
+    if (typeof window === "undefined") return false;
+    const createdCode = sessionStorage.getItem("af-created-room-code");
+    return createdCode?.toUpperCase() === code;
+  }, [code]);
+
   const { selectGame, toggleReady, startGame, send } = useRoom(
     code,
     playerId,
     playerName,
     avatar,
     isGuest,
-    searchParams.get("host") === "1"
+    optimisticHost
   );
 
   const {
@@ -57,6 +63,7 @@ export default function LobbyPage() {
     hostId === playerId ||
     !!me?.isHost ||
     (connectedPlayers.length === 1 && connectedPlayers[0]?.id === playerId);
+  const debugHost = getPartyKitHost();
 
   const handleStartGame = (gameId?: string | null) => {
     const id = (gameId ?? selectedGameId)?.trim().toLowerCase();
@@ -97,6 +104,9 @@ export default function LobbyPage() {
                 {error}
               </div>
             )}
+            <div className="rounded-xl border border-white/10 bg-white/[0.03] p-2 text-[11px] text-white/55">
+              debug: host={debugHost} | room={code} | me={playerId.slice(0, 12)} | hostId={hostId ?? "none"} | connected={connectedPlayers.length}
+            </div>
 
             {/* Session scores */}
             {Object.keys(sessionScores).length > 0 && (

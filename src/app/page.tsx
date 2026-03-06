@@ -160,7 +160,10 @@ export default function HomePage() {
 
   const handleCreate = useCallback(() => {
     const roomCode = generateRoomCode();
-    router.push(`/room/${roomCode}?host=1`);
+    if (typeof window !== "undefined") {
+      sessionStorage.setItem("af-created-room-code", roomCode);
+    }
+    router.push(`/room/${roomCode}`);
   }, [router]);
 
   const handleJoin = useCallback(() => {

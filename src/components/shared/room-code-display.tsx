@@ -4,7 +4,6 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Copy, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { getPartyKitHost } from "@/lib/party/host";
 
 interface RoomCodeDisplayProps {
   code: string;
@@ -15,12 +14,8 @@ export function RoomCodeDisplay({ code, className }: RoomCodeDisplayProps) {
   const [copied, setCopied] = useState(false);
 
   const copyToClipboard = async () => {
-    const url = new URL(`${window.location.origin}/room/${code}`);
-    const partyHost = getPartyKitHost();
-    if (partyHost && !partyHost.startsWith("localhost") && !partyHost.startsWith("127.")) {
-      url.searchParams.set("pk", partyHost);
-    }
-    await navigator.clipboard.writeText(url.toString());
+    const url = `${window.location.origin}/room/${code}`;
+    await navigator.clipboard.writeText(url);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
