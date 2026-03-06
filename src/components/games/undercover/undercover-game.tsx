@@ -1073,56 +1073,58 @@ export default function UndercoverGame({
             <p className="mt-1 text-sm text-white/55 font-sans">Indices a voix haute, dans cet ordre.</p>
           </div>
 
-          <div className="relative mx-auto grid w-full max-w-2xl grid-cols-2 gap-3 rounded-2xl border border-cyan-300/20 bg-[#070d17]/75 p-3 sm:grid-cols-3">
+          <div className="relative mx-auto grid w-full max-w-2xl grid-cols-2 gap-4 rounded-2xl border border-cyan-300/20 bg-[#070d17]/75 p-4 sm:grid-cols-3">
             {orderedPlayers.map((p, idx) => (
               <div
                 key={p.id}
-                className="rounded-2xl border border-yellow-300/60 bg-[#ffc911] px-3 py-4 text-center text-black shadow-[0_10px_22px_rgba(0,0,0,0.26)]"
+                className="flex flex-col items-center"
               >
-                <p className="mx-auto mb-2 w-fit rounded-full bg-black/10 px-2.5 py-0.5 text-[11px] font-sans uppercase tracking-widest text-black/70">
+                <p className="mb-2 text-[11px] font-sans uppercase tracking-widest text-cyan-200/80">
                   {idx === 0 ? "Commence" : `Tour ${idx + 1}`}
                 </p>
-                <p className="truncate text-lg font-sans font-semibold text-black">
+                <div className="flex h-24 w-24 items-center justify-center rounded-full border border-cyan-200/60 bg-[radial-gradient(circle_at_30%_30%,#64f0a8,#26c8d9_65%,#0ea5e9)] text-5xl font-sans font-bold text-white shadow-[0_10px_24px_rgba(0,0,0,0.35)]">
+                  {p.name.charAt(0).toUpperCase()}
+                </div>
+                <div className="mt-2 w-24 rounded-md bg-white/65 px-2 py-1 text-center text-sm font-sans font-semibold text-black">
                   {p.name}
-                </p>
+                </div>
               </div>
             ))}
           </div>
 
-          <div className="relative flex flex-col sm:flex-row gap-2 justify-center">
-            <button
-              onClick={() => setLocalReviewOpen(true)}
-              className="px-5 py-2.5 rounded-xl border border-white/[0.12] bg-white/[0.04] text-white/80 text-sm font-sans hover:border-cyan-300/30 hover:bg-cyan-300/[0.06]"
-            >
-              Revoir le mot
-            </button>
-            <button
-              onClick={beginLocalVote}
-              className="px-5 py-2.5 rounded-xl border border-cyan-300/35 bg-gradient-to-r from-cyan-600 to-blue-600 text-white text-sm font-sans font-medium"
-            >
-              Lancer le vote
-            </button>
-          </div>
-
-          <div className="relative flex flex-col sm:flex-row gap-2 justify-center">
-            <button
-              onClick={() => {
-                setLocalSetupStep("config");
-                setLocalCollectedNames([]);
-                setLocalNameIndex(0);
-                setLocalNameInput("");
-                setLocalPhase("setup");
-              }}
-              className="px-5 py-2.5 rounded-xl border border-cyan-300/35 bg-cyan-500/20 text-white text-sm font-sans"
-            >
-              Recommencer la partie
-            </button>
-            <button
-              onClick={handleBackToGamePicker}
-              className="px-5 py-2.5 rounded-xl border border-white/[0.2] bg-white/[0.06] text-white text-sm font-sans"
-            >
-              Retour a l&apos;ecran des jeux
-            </button>
+          <div className="relative mt-auto mx-auto w-full max-w-md rounded-full border border-white/20 bg-black/35 px-3 py-2 backdrop-blur-sm">
+            <div className="grid grid-cols-4 gap-2">
+              <button
+                onClick={() => setLocalReviewOpen(true)}
+                className="flex h-14 w-14 items-center justify-center rounded-full border border-white/30 bg-gradient-to-b from-[#a855f7] to-[#7c3aed] text-xs font-sans font-semibold text-white"
+              >
+                Mot
+              </button>
+              <button
+                onClick={beginLocalVote}
+                className="flex h-14 w-14 items-center justify-center rounded-full border border-white/30 bg-gradient-to-b from-[#22c55e] to-[#16a34a] text-xs font-sans font-semibold text-white"
+              >
+                Vote
+              </button>
+              <button
+                onClick={() => {
+                  setLocalSetupStep("config");
+                  setLocalCollectedNames([]);
+                  setLocalNameIndex(0);
+                  setLocalNameInput("");
+                  setLocalPhase("setup");
+                }}
+                className="flex h-14 w-14 items-center justify-center rounded-full border border-white/30 bg-gradient-to-b from-[#f97316] to-[#ef4444] text-[10px] font-sans font-semibold text-white"
+              >
+                Reset
+              </button>
+              <button
+                onClick={handleBackToGamePicker}
+                className="flex h-14 w-14 items-center justify-center rounded-full border border-white/30 bg-gradient-to-b from-[#3b82f6] to-[#2563eb] text-xs font-sans font-semibold text-white"
+              >
+                Jeux
+              </button>
+            </div>
           </div>
 
           {localReviewOpen && (
