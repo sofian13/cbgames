@@ -25,9 +25,8 @@ export function ReadyCheck({
   const isSolo = connectedPlayers.length === 1 && connectedPlayers[0]?.id === currentPlayerId;
   const effectiveIsHost = isHost || !!currentPlayer?.isHost || isSolo;
   const readyCount = connectedPlayers.filter((p) => p.isReady || p.isHost).length;
-  const allReady = readyCount === connectedPlayers.length;
   const normalizedGameId = selectedGameId?.trim().toLowerCase() ?? null;
-  const canStart = effectiveIsHost && allReady && selectedGameId && connectedPlayers.length >= 1;
+  const canStart = effectiveIsHost && !!selectedGameId && connectedPlayers.length >= 1;
 
   return (
     <div className="premium-panel-soft flex flex-col gap-3 rounded-2xl border p-4">
@@ -59,9 +58,7 @@ export function ReadyCheck({
           >
             {!selectedGameId
               ? "Choisis un jeu"
-              : !allReady
-                ? "En attente..."
-                : "Lancer la partie"}
+              : "Lancer la partie"}
           </Button>
         )}
       </div>
