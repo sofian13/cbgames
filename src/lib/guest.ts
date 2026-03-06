@@ -1,5 +1,6 @@
 const GUEST_ID_KEY = "af-games-guest-id";
 const GUEST_NAME_KEY = "af-games-guest-name";
+const GUEST_SESSION_ID_KEY = "af-games-guest-session-id";
 
 const ADJECTIVES = [
   "Brave", "Rusé", "Rapide", "Malin", "Cool", "Fort", "Vif", "Agile",
@@ -27,11 +28,13 @@ export function getOrCreateGuest(): { id: string; name: string } {
     return { id: generateGuestId(), name: generateGuestName() };
   }
 
-  let id = localStorage.getItem(GUEST_ID_KEY);
+  let id = sessionStorage.getItem(GUEST_SESSION_ID_KEY);
   let name = localStorage.getItem(GUEST_NAME_KEY);
 
   if (!id) {
     id = generateGuestId();
+    sessionStorage.setItem(GUEST_SESSION_ID_KEY, id);
+    // Keep legacy key in sync for compatibility with old sessions.
     localStorage.setItem(GUEST_ID_KEY, id);
   }
 
