@@ -1485,8 +1485,8 @@ export default function UndercoverGame({
 
     return (
       <div className="relative flex flex-1 flex-col overflow-hidden p-4 sm:p-6">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_10%_10%,rgba(251,146,60,0.16),transparent_32%),radial-gradient(circle_at_85%_85%,rgba(239,68,68,0.12),transparent_38%),linear-gradient(145deg,#09090b,#111118_48%,#1b0f0f)]" />
-        <div className="relative mx-auto flex w-full max-w-lg flex-1 flex-col items-center justify-center rounded-3xl border border-orange-300/20 bg-black/35 p-6 shadow-[0_24px_70px_rgba(0,0,0,0.45)] backdrop-blur-xl sm:p-8" style={{ animation: "scaleIn 0.5s ease" }}>
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_20%,rgba(80,216,255,0.14),transparent_35%),radial-gradient(circle_at_82%_70%,rgba(99,102,241,0.14),transparent_35%),linear-gradient(145deg,#040424,#05113a_42%,#01072a)]" />
+        <div className="relative mx-auto flex w-full max-w-lg flex-1 flex-col items-center justify-center rounded-3xl border border-cyan-300/20 bg-black/35 p-6 shadow-[0_24px_70px_rgba(0,0,0,0.45)] backdrop-blur-xl sm:p-8" style={{ animation: "scaleIn 0.5s ease" }}>
           <span className="text-xs text-white/20 font-sans uppercase tracking-widest mb-8" style={{ animation: "fadeUp 0.5s ease 0.1s both" }}>
             Ton identite secrete
           </span>
@@ -1565,8 +1565,8 @@ export default function UndercoverGame({
 
     return (
       <div className="relative flex flex-1 flex-col overflow-hidden p-4 sm:p-6">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_10%_10%,rgba(251,146,60,0.16),transparent_32%),radial-gradient(circle_at_85%_85%,rgba(239,68,68,0.12),transparent_38%),linear-gradient(145deg,#09090b,#111118_48%,#1b0f0f)]" />
-        <div className="relative mx-auto flex w-full max-w-2xl flex-1 flex-col gap-4 rounded-3xl border border-orange-300/20 bg-black/35 p-4 shadow-[0_24px_70px_rgba(0,0,0,0.45)] backdrop-blur-xl sm:p-6" style={{ animation: "scaleIn 0.4s ease" }}>
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_20%,rgba(80,216,255,0.14),transparent_35%),radial-gradient(circle_at_82%_70%,rgba(99,102,241,0.14),transparent_35%),linear-gradient(145deg,#040424,#05113a_42%,#01072a)]" />
+        <div className="relative mx-auto flex w-full max-w-2xl flex-1 flex-col gap-4 rounded-3xl border border-cyan-300/20 bg-black/35 p-4 shadow-[0_24px_70px_rgba(0,0,0,0.45)] backdrop-blur-xl sm:p-6" style={{ animation: "scaleIn 0.4s ease" }}>
         {/* Header: round + timer */}
         <div className="w-full">
           <div className="flex items-center justify-between mb-2">
@@ -1576,7 +1576,7 @@ export default function UndercoverGame({
             <span
               className={cn(
                 "text-sm font-mono font-bold",
-                isTimeLow ? "text-red-400" : "text-orange-300"
+                isTimeLow ? "text-red-400" : "text-cyan-300"
               )}
             >
               {state.timeLeft}s
@@ -1586,7 +1586,7 @@ export default function UndercoverGame({
             <div
               className={cn(
                 "h-full rounded-full transition-all duration-1000 ease-linear",
-                isTimeLow ? "bg-red-500" : "bg-gradient-to-r from-orange-400 to-amber-400"
+                isTimeLow ? "bg-red-500" : "bg-gradient-to-r from-cyan-400 to-blue-400"
               )}
               style={{
                 width: `${((state.timeLeft ?? 0) / 30) * 100}%`,
@@ -1599,14 +1599,14 @@ export default function UndercoverGame({
         <div className="text-center">
           {isMyTurn ? (
             <h2
-              className="text-2xl font-serif font-light text-orange-200"
-              style={{ textShadow: "0 0 30px rgba(251,146,60,0.35)" }}
+              className="text-2xl font-serif font-light text-cyan-200"
+              style={{ textShadow: "0 0 30px rgba(80,216,255,0.35)" }}
             >
               C&apos;est ton tour !
             </h2>
           ) : (
             <h2 className="text-xl font-serif font-light text-white/70">
-              <span className="text-orange-300">{currentDescriber?.name}</span>{" "}
+              <span className="text-cyan-300">{currentDescriber?.name}</span>{" "}
               decrit son mot...
             </h2>
           )}
@@ -1627,12 +1627,12 @@ export default function UndercoverGame({
               placeholder="Ton indice..."
               autoFocus
               autoComplete="off"
-              className="flex-1 px-4 py-3 rounded-xl border border-orange-300/20 bg-white/[0.04] text-white font-sans text-sm placeholder:text-white/20 focus:outline-none focus:border-orange-300/40 focus:bg-white/[0.06] transition-all"
+              className="flex-1 px-4 py-3 rounded-xl border border-cyan-300/20 bg-white/[0.04] text-white font-sans text-sm placeholder:text-white/20 focus:outline-none focus:border-cyan-300/40 focus:bg-white/[0.06] transition-all"
             />
             <button
               onClick={handleSubmitClue}
               disabled={!clueInput.trim()}
-              className="px-6 py-3 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-400 hover:to-amber-400 disabled:bg-white/[0.06] disabled:from-transparent disabled:to-transparent disabled:text-white/20 text-white font-sans text-sm font-medium transition-all shadow-[0_0_20px_rgba(251,146,60,0.2)]"
+              className="px-6 py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 disabled:bg-white/[0.06] disabled:from-transparent disabled:to-transparent disabled:text-white/20 text-white font-sans text-sm font-medium transition-all shadow-[0_0_20px_rgba(80,216,255,0.2)]"
             >
               Envoyer
             </button>
@@ -1640,8 +1640,8 @@ export default function UndercoverGame({
         )}
         {isMyTurn && clueSubmitted && (
           <div className="max-w-md mx-auto text-center">
-            <div className="px-4 py-3 rounded-xl border border-orange-300/15 bg-orange-300/[0.06]">
-              <p className="text-sm text-orange-200/70 font-sans">
+            <div className="px-4 py-3 rounded-xl border border-cyan-300/15 bg-cyan-300/[0.06]">
+              <p className="text-sm text-cyan-200/70 font-sans">
                 Indice envoye !
               </p>
             </div>
@@ -1668,7 +1668,7 @@ export default function UndercoverGame({
                 className={cn(
                   "flex items-baseline gap-2 px-3 py-2 rounded-xl",
                   clue.playerId === playerId
-                    ? "bg-orange-300/[0.06] border border-orange-300/15"
+                    ? "bg-cyan-300/[0.06] border border-cyan-300/15"
                     : "bg-white/[0.02] border border-white/[0.06]"
                 )}
                 style={{ animation: `fadeUp 0.3s ease ${i * 0.05}s both` }}
@@ -1698,7 +1698,7 @@ export default function UndercoverGame({
                   "flex flex-col items-center gap-0.5 rounded-xl border px-3 py-2 min-w-[80px] transition-all",
                   !p.alive && "opacity-30",
                   isDescribing
-                    ? "border-orange-300/40 bg-orange-300/[0.08] shadow-[0_0_16px_rgba(251,146,60,0.15)]"
+                    ? "border-cyan-300/40 bg-cyan-300/[0.08] shadow-[0_0_16px_rgba(80,216,255,0.15)]"
                     : p.hasDescribed
                       ? "border-white/[0.12] bg-white/[0.05]"
                       : "border-white/[0.06] bg-white/[0.02]"
@@ -1708,7 +1708,7 @@ export default function UndercoverGame({
                 <span
                   className={cn(
                     "text-xs font-medium truncate max-w-[70px] font-sans",
-                    isDescribing ? "text-orange-200" : "text-white/60"
+                    isDescribing ? "text-cyan-200" : "text-white/60"
                   )}
                 >
                   {p.name}
@@ -1738,8 +1738,8 @@ export default function UndercoverGame({
 
     return (
       <div className="relative flex flex-1 flex-col overflow-hidden p-4 sm:p-6">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_10%_10%,rgba(251,146,60,0.16),transparent_32%),radial-gradient(circle_at_85%_85%,rgba(239,68,68,0.12),transparent_38%),linear-gradient(145deg,#09090b,#111118_48%,#1b0f0f)]" />
-        <div className="relative mx-auto flex w-full max-w-2xl flex-1 flex-col items-center gap-5 rounded-3xl border border-orange-300/20 bg-black/35 p-4 shadow-[0_24px_70px_rgba(0,0,0,0.45)] backdrop-blur-xl sm:p-6" style={{ animation: "scaleIn 0.4s ease" }}>
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_20%,rgba(80,216,255,0.14),transparent_35%),radial-gradient(circle_at_82%_70%,rgba(99,102,241,0.14),transparent_35%),linear-gradient(145deg,#040424,#05113a_42%,#01072a)]" />
+        <div className="relative mx-auto flex w-full max-w-2xl flex-1 flex-col items-center gap-5 rounded-3xl border border-cyan-300/20 bg-black/35 p-4 shadow-[0_24px_70px_rgba(0,0,0,0.45)] backdrop-blur-xl sm:p-6" style={{ animation: "scaleIn 0.4s ease" }}>
         {/* Header */}
         <div className="w-full">
           <div className="flex items-center justify-between mb-2">
@@ -1749,7 +1749,7 @@ export default function UndercoverGame({
             <span
               className={cn(
                 "text-sm font-mono font-bold",
-                isTimeLow ? "text-red-400" : "text-orange-300"
+                isTimeLow ? "text-red-400" : "text-cyan-300"
               )}
             >
               {state.timeLeft}s
@@ -1759,7 +1759,7 @@ export default function UndercoverGame({
             <div
               className={cn(
                 "h-full rounded-full transition-all duration-1000 ease-linear",
-                isTimeLow ? "bg-red-500" : "bg-gradient-to-r from-orange-400 to-amber-400"
+                isTimeLow ? "bg-red-500" : "bg-gradient-to-r from-cyan-400 to-blue-400"
               )}
               style={{
                 width: `${((state.timeLeft ?? 0) / 30) * 100}%`,
@@ -1771,7 +1771,7 @@ export default function UndercoverGame({
         <div className="text-center">
           <h2
             className="text-2xl font-serif font-light text-white/90"
-            style={{ textShadow: "0 0 30px rgba(251,146,60,0.2)" }}
+            style={{ textShadow: "0 0 30px rgba(80,216,255,0.2)" }}
           >
             Qui est l&apos;imposteur ?
           </h2>
@@ -1797,7 +1797,7 @@ export default function UndercoverGame({
                     "rounded-xl border p-4 text-center transition-all press-effect",
                     isSelected
                       ? "border-red-400/50 bg-red-400/10 shadow-[0_0_20px_rgba(239,68,68,0.15)]"
-                      : "border-white/[0.08] bg-white/[0.03] hover:border-orange-300/30 hover:bg-orange-300/[0.04]",
+                      : "border-white/[0.08] bg-white/[0.03] hover:border-cyan-300/30 hover:bg-cyan-300/[0.04]",
                     (voteConfirmed || !iAmAlive) &&
                       "opacity-50 cursor-not-allowed"
                   )}
@@ -1840,7 +1840,7 @@ export default function UndercoverGame({
               className={cn(
                 "flex flex-col items-center gap-0.5 rounded-xl border px-3 py-2 min-w-[80px] transition-all",
                 p.hasVoted
-                  ? "border-orange-300/20 bg-orange-300/[0.06]"
+                  ? "border-cyan-300/20 bg-cyan-300/[0.06]"
                   : "border-white/[0.06] bg-white/[0.02]"
               )}
               style={{ animation: `fadeUp 0.3s ease ${i * 0.05}s both` }}
@@ -1869,8 +1869,8 @@ export default function UndercoverGame({
 
     return (
       <div className="relative flex flex-1 flex-col overflow-hidden p-4 sm:p-6">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_10%_10%,rgba(251,146,60,0.16),transparent_32%),radial-gradient(circle_at_85%_85%,rgba(239,68,68,0.12),transparent_38%),linear-gradient(145deg,#09090b,#111118_48%,#1b0f0f)]" />
-        <div className="relative mx-auto flex w-full max-w-lg flex-1 flex-col items-center justify-center gap-6 rounded-3xl border border-orange-300/20 bg-black/35 p-6 shadow-[0_24px_70px_rgba(0,0,0,0.45)] backdrop-blur-xl sm:p-8" style={{ animation: "scaleIn 0.4s ease" }}>
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_20%,rgba(80,216,255,0.14),transparent_35%),radial-gradient(circle_at_82%_70%,rgba(99,102,241,0.14),transparent_35%),linear-gradient(145deg,#040424,#05113a_42%,#01072a)]" />
+        <div className="relative mx-auto flex w-full max-w-lg flex-1 flex-col items-center justify-center gap-6 rounded-3xl border border-cyan-300/20 bg-black/35 p-6 shadow-[0_24px_70px_rgba(0,0,0,0.45)] backdrop-blur-xl sm:p-8" style={{ animation: "scaleIn 0.4s ease" }}>
         <div className="text-center">
           <span className="text-xs text-white/20 font-sans uppercase tracking-widest" style={{ animation: "fadeUp 0.4s ease 0.1s both" }}>
             Mr. White elimine !
@@ -1890,7 +1890,7 @@ export default function UndercoverGame({
         <span
           className={cn(
             "text-sm font-mono font-bold",
-            isTimeLow ? "text-red-400" : "text-orange-300"
+            isTimeLow ? "text-red-400" : "text-cyan-300"
           )}
         >
           {state.timeLeft}s
@@ -1907,12 +1907,12 @@ export default function UndercoverGame({
               placeholder="Le mot des civils est..."
               autoFocus
               autoComplete="off"
-              className="flex-1 px-4 py-3 rounded-xl border border-orange-300/20 bg-white/[0.04] text-white font-sans text-sm placeholder:text-white/20 focus:outline-none focus:border-orange-300/40 focus:bg-white/[0.06] transition-all"
+              className="flex-1 px-4 py-3 rounded-xl border border-cyan-300/20 bg-white/[0.04] text-white font-sans text-sm placeholder:text-white/20 focus:outline-none focus:border-cyan-300/40 focus:bg-white/[0.06] transition-all"
             />
             <button
               onClick={handleMrWhiteGuess}
               disabled={!guessInput.trim()}
-              className="px-6 py-3 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-400 hover:to-amber-400 disabled:bg-white/[0.06] disabled:from-transparent disabled:to-transparent disabled:text-white/20 text-white font-sans text-sm font-medium transition-all shadow-[0_0_20px_rgba(251,146,60,0.2)] press-effect"
+              className="px-6 py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 disabled:bg-white/[0.06] disabled:from-transparent disabled:to-transparent disabled:text-white/20 text-white font-sans text-sm font-medium transition-all shadow-[0_0_20px_rgba(80,216,255,0.2)] press-effect"
             >
               Deviner
             </button>
@@ -1936,8 +1936,8 @@ export default function UndercoverGame({
 
     return (
       <div className="relative flex flex-1 flex-col overflow-hidden p-4 sm:p-6">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_10%_10%,rgba(251,146,60,0.16),transparent_32%),radial-gradient(circle_at_85%_85%,rgba(239,68,68,0.12),transparent_38%),linear-gradient(145deg,#09090b,#111118_48%,#1b0f0f)]" />
-        <div className="relative mx-auto flex w-full max-w-lg flex-1 flex-col items-center justify-center gap-6 rounded-3xl border border-orange-300/20 bg-black/35 p-6 shadow-[0_24px_70px_rgba(0,0,0,0.45)] backdrop-blur-xl sm:p-8" style={{ animation: "scaleIn 0.4s ease" }}>
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_20%,rgba(80,216,255,0.14),transparent_35%),radial-gradient(circle_at_82%_70%,rgba(99,102,241,0.14),transparent_35%),linear-gradient(145deg,#040424,#05113a_42%,#01072a)]" />
+        <div className="relative mx-auto flex w-full max-w-lg flex-1 flex-col items-center justify-center gap-6 rounded-3xl border border-cyan-300/20 bg-black/35 p-6 shadow-[0_24px_70px_rgba(0,0,0,0.45)] backdrop-blur-xl sm:p-8" style={{ animation: "scaleIn 0.4s ease" }}>
         {noElimination ? (
           <div className="text-center" style={{ animation: "fadeUp 0.5s ease" }}>
             <h2 className="text-3xl font-serif font-light text-white/60">
@@ -2040,8 +2040,8 @@ export default function UndercoverGame({
 
     return (
       <div className="relative flex flex-1 flex-col overflow-hidden p-4 sm:p-6">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_10%_10%,rgba(251,146,60,0.16),transparent_32%),radial-gradient(circle_at_85%_85%,rgba(239,68,68,0.12),transparent_38%),linear-gradient(145deg,#09090b,#111118_48%,#1b0f0f)]" />
-        <div className="relative mx-auto flex w-full max-w-lg flex-1 flex-col items-center justify-center gap-6 rounded-3xl border border-orange-300/20 bg-black/35 p-6 shadow-[0_24px_70px_rgba(0,0,0,0.45)] backdrop-blur-xl sm:p-8" style={{ animation: "scaleIn 0.4s ease" }}>
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_20%,rgba(80,216,255,0.14),transparent_35%),radial-gradient(circle_at_82%_70%,rgba(99,102,241,0.14),transparent_35%),linear-gradient(145deg,#040424,#05113a_42%,#01072a)]" />
+        <div className="relative mx-auto flex w-full max-w-lg flex-1 flex-col items-center justify-center gap-6 rounded-3xl border border-cyan-300/20 bg-black/35 p-6 shadow-[0_24px_70px_rgba(0,0,0,0.45)] backdrop-blur-xl sm:p-8" style={{ animation: "scaleIn 0.4s ease" }}>
         <div className="text-center" style={{ animation: "fadeUp 0.5s ease" }}>
           <span className="text-xs text-white/20 font-sans uppercase tracking-widest">
             Fin de la partie

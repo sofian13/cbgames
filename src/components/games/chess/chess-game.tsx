@@ -515,7 +515,7 @@ const ChessBoardView = memo(function ChessBoardView({
           ))}
         </div>
         {/* Board */}
-        <div className="grid flex-1 grid-cols-8 overflow-hidden rounded-2xl border border-white/25 shadow-[0_0_40px_rgba(0,0,0,0.5)]">
+        <div className="grid flex-1 grid-cols-8 overflow-hidden rounded-2xl border border-white/20 shadow-[0_0_40px_rgba(0,0,0,0.5)]" style={{ gap: 0, lineHeight: 0 }}>
           {rows.map((y) =>
             cols.map((x) => {
               const idx = makeIndex(x, y);
@@ -532,22 +532,23 @@ const ChessBoardView = memo(function ChessBoardView({
                   key={idx}
                   onClick={() => onSquareClick(idx)}
                   className={cn(
-                    "relative flex aspect-square items-center justify-center text-[clamp(1.5rem,8vw,3rem)]",
-                    isLight ? "bg-[#2a2a3e]" : "bg-[#1a1a2e]",
-                    isLastMove && "bg-[#3d3560]",
-                    isSelected && "bg-[#4ecf8a]/25",
+                    "relative flex aspect-square items-center justify-center leading-none",
+                    isLight ? "bg-[#b7c0d8]" : "bg-[#5b6a8a]",
+                    isLastMove && (isLight ? "bg-[#c8b878]" : "bg-[#8a7a48]"),
+                    isSelected && "bg-[#6ecf6e]/40",
                   )}
+                  style={{ fontSize: "min(calc((100vw - 3rem) / 8 * 0.7), 3rem)" }}
                 >
                   {isTarget && !isCapture && (
-                    <span className="absolute h-3 w-3 rounded-full bg-[#65dfb2]/50" />
+                    <span className="absolute h-[25%] w-[25%] rounded-full bg-black/25" />
                   )}
                   {isCapture && (
-                    <span className="absolute inset-1 rounded-full border-2 border-red-400/60" />
+                    <span className="absolute inset-[6%] rounded-full border-[3px] border-red-500/50" />
                   )}
                   <span
                     className={cn(
                       "relative z-10 select-none",
-                      piece?.color === "w" ? "text-[#e8e0f0]" : "text-[#8b7aab]",
+                      piece?.color === "w" ? "text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.5)]" : "text-[#1a1a2a] drop-shadow-[0_1px_1px_rgba(255,255,255,0.15)]",
                       isSelected && "scale-110"
                     )}
                   >

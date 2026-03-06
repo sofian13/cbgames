@@ -21,6 +21,7 @@ import { KingHillGame } from "./games/king-hill";
 import { MotionTennisGame } from "./games/motion-tennis";
 import { ChessGame } from "./games/chess";
 import { BlockRunnerGame } from "./games/block-runner";
+import { BattleshipGame } from "./games/battleship";
 
 // Registry of game constructors
 const GAME_REGISTRY: Record<string, () => BaseGame> = {
@@ -45,6 +46,7 @@ const GAME_REGISTRY: Record<string, () => BaseGame> = {
   "motion-tennis": () => new MotionTennisGame(),
   "chess": () => new ChessGame(),
   "block-runner": () => new BlockRunnerGame(),
+  "battleship": () => new BattleshipGame(),
 };
 
 export default class GameServer {
