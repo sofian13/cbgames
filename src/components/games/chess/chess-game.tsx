@@ -357,6 +357,42 @@ function formatClock(ms: number) {
   return `${m}:${String(s).padStart(2, "0")}`;
 }
 
+const INITIAL_PIECE_COUNTS: Record<PieceType, number> = {
+  p: 8,
+  n: 2,
+  b: 2,
+  r: 2,
+  q: 1,
+  k: 1,
+};
+
+function getCapturedPieceSymbols(board: Array<Piece | null>, color: Color) {
+  const remaining: Record<PieceType, number> = { p: 0, n: 0, b: 0, r: 0, q: 0, k: 0 };
+  for (const p of board) {
+    if (!p || p.color !== color) continue;
+    remaining[p.type] += 1;
+  }
+  const captured: string[] = [];
+  (["q", "r", "b", "n", "p"] as PieceType[]).forEach((type) => {
+    const missing = Math.max(0, INITIAL_PIECE_COUNTS[type] - remaining[type]);
+    for (let i = 0; i < missing; i++) {
+      captured.push(PIECE_SYMBOL[`${color}${type}`] ?? "");
+    }
+  });
+  return captured;
+}
+
+function CapturedPieces({ label, pieces }: { label: string; pieces: string[] }) {
+  return (
+    <div className="rounded-xl border border-white/15 bg-white/5 px-3 py-2">
+      <p className="text-[11px] uppercase tracking-[0.12em] text-white/55">{label}</p>
+      <p className="mt-1 min-h-6 text-lg leading-6 text-white/90">
+        {pieces.length > 0 ? pieces.join(" ") : "-"}
+      </p>
+    </div>
+  );
+}
+
 interface ChessBoardViewProps {
   board: Array<Piece | null>;
   selectedSquare: number | null;
@@ -440,6 +476,7 @@ export default function ChessGame({ roomCode, playerId, playerName }: GameProps)
   const [localWhiteTimeMs, setLocalWhiteTimeMs] = useState(15 * 60_000);
   const [localBlackTimeMs, setLocalBlackTimeMs] = useState(15 * 60_000);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [focusMode, setFocusMode] = useState(false);
   const audioContextRef = useRef<AudioContext | null>(null);
   const onlineLastMoveKeyRef = useRef<string | null>(null);
 
@@ -467,6 +504,11 @@ export default function ChessGame({ roomCode, playerId, playerName }: GameProps)
     }
     return map;
   }, [localLegalMoves]);
+  const localCapturedWhite = useMemo(() => getCapturedPieceSymbols(localBoard, "w"), [localBoard]);
+  const localCapturedBlack = useMemo(() => getCapturedPieceSymbols(localBoard, "b"), [localBoard]);
+  const onlineCapturedWhite = useMemo(() => getCapturedPieceSymbols(board, "w"), [board]);
+  const onlineCapturedBlack = useMemo(() => getCapturedPieceSymbols(board, "b"), [board]);
+  const isFocusView = isFullscreen || focusMode;
 
   const playMoveSound = useCallback(() => {
     if (typeof window === "undefined") return;
@@ -502,10 +544,21 @@ export default function ChessGame({ roomCode, playerId, playerName }: GameProps)
 
   const toggleFullscreen = useCallback(async () => {
     if (typeof document === "undefined") return;
-    if (!document.fullscreenElement) {
-      await document.documentElement.requestFullscreen?.();
-    } else {
+    if (document.fullscreenElement) {
       await document.exitFullscreen?.();
+      setFocusMode(false);
+      return;
+    }
+    try {
+      if (document.documentElement.requestFullscreen) {
+        await document.documentElement.requestFullscreen();
+        setFocusMode(true);
+      } else {
+        setFocusMode((prev) => !prev);
+      }
+    } catch {
+      // iOS and some Android browsers block fullscreen API: fallback to in-app focus mode.
+      setFocusMode((prev) => !prev);
     }
   }, []);
 
@@ -577,7 +630,11 @@ export default function ChessGame({ roomCode, playerId, playerName }: GameProps)
 
   useEffect(() => {
     if (typeof document === "undefined") return;
-    const onChange = () => setIsFullscreen(!!document.fullscreenElement);
+    const onChange = () => {
+      const active = !!document.fullscreenElement;
+      setIsFullscreen(active);
+      if (!active) setFocusMode(false);
+    };
     document.addEventListener("fullscreenchange", onChange);
     onChange();
     return () => document.removeEventListener("fullscreenchange", onChange);
@@ -656,10 +713,64 @@ export default function ChessGame({ roomCode, playerId, playerName }: GameProps)
           ? "Tour du bot"
           : `Tour des noirs (${localBlackName})`;
 
+    if (isFocusView) {
+      return (
+        <div className="fixed inset-0 z-[120] flex flex-col bg-[linear-gradient(155deg,#0f172a,#111827)] p-3 font-sans sm:p-5">
+          <div className="mx-auto flex w-full max-w-[980px] flex-1 flex-col">
+            <div className="grid grid-cols-2 gap-2">
+              <div className="rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-white">
+                <p className="text-[11px] uppercase tracking-[0.12em] text-white/55">{localWhiteName}</p>
+                <p className="text-xl font-semibold">{formatClock(localWhiteTimeMs)}</p>
+              </div>
+              <div className="rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-white">
+                <p className="text-[11px] uppercase tracking-[0.12em] text-white/55">
+                  {localKind === "bot" ? "Bot" : localBlackName}
+                </p>
+                <p className="text-xl font-semibold">{formatClock(localBlackTimeMs)}</p>
+              </div>
+            </div>
+
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              <CapturedPieces label={`${localWhiteName} a pris`} pieces={localCapturedBlack} />
+              <CapturedPieces
+                label={`${localKind === "bot" ? "Bot" : localBlackName} a pris`}
+                pieces={localCapturedWhite}
+              />
+            </div>
+
+            <div className="mx-auto mt-3 w-full max-w-[min(98vw,940px)]">
+              <ChessBoardView
+                board={localBoard}
+                selectedSquare={localSelected}
+                onSquareClick={handleLocalClick}
+                availableTargets={localTargets}
+                lastMove={localLastMove}
+                orientation="w"
+              />
+            </div>
+
+            <div className="mt-2 flex items-center justify-between gap-2">
+              <p className="text-xs text-white/75">{statusText}</p>
+              <button
+                onClick={() => {
+                  if (document.fullscreenElement) {
+                    void document.exitFullscreen?.();
+                  }
+                  setFocusMode(false);
+                }}
+                className="rounded-lg border border-cyan-300/35 bg-cyan-500/20 px-3 py-2 text-xs text-cyan-100 hover:bg-cyan-500/30"
+              >
+                Quitter plein ecran
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div
-        className="relative flex flex-1 flex-col overflow-hidden p-4 sm:p-6"
-        style={{ fontFamily: "\"Trebuchet MS\", Verdana, sans-serif" }}
+        className="relative flex flex-1 flex-col overflow-hidden p-4 font-sans sm:p-6"
       >
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_15%_15%,rgba(34,197,94,0.12),transparent_35%),radial-gradient(circle_at_85%_85%,rgba(249,115,22,0.15),transparent_35%),linear-gradient(145deg,#111827,#1f2937)]" />
         <div className="relative mx-auto flex w-full max-w-4xl flex-1 flex-col rounded-3xl border border-white/10 bg-black/35 p-4 backdrop-blur-xl sm:p-6">
@@ -745,8 +856,7 @@ export default function ChessGame({ roomCode, playerId, playerName }: GameProps)
     const onlinePlayers = state?.connectedPlayers ?? [];
     return (
       <div
-        className="relative flex flex-1 flex-col overflow-hidden p-4 sm:p-6"
-        style={{ fontFamily: "\"Trebuchet MS\", Verdana, sans-serif" }}
+        className="relative flex flex-1 flex-col overflow-hidden p-4 font-sans sm:p-6"
       >
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_15%_15%,rgba(251,191,36,0.16),transparent_35%),radial-gradient(circle_at_85%_85%,rgba(59,130,246,0.14),transparent_35%),linear-gradient(145deg,#0f172a,#111827)]" />
         <div className="relative mx-auto flex w-full max-w-4xl flex-1 flex-col rounded-3xl border border-amber-200/20 bg-black/35 p-4 backdrop-blur-xl sm:p-6">
@@ -941,10 +1051,59 @@ export default function ChessGame({ roomCode, playerId, playerName }: GameProps)
         ? `Tour des blancs (${whiteName})`
         : `Tour des noirs (${blackName})`;
 
+  if (isFocusView) {
+    return (
+      <div className="fixed inset-0 z-[120] flex flex-col bg-[linear-gradient(155deg,#0f172a,#111827)] p-3 font-sans sm:p-5">
+        <div className="mx-auto flex w-full max-w-[980px] flex-1 flex-col">
+          <div className="grid grid-cols-2 gap-2">
+            <div className="rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-white">
+              <p className="text-[11px] uppercase tracking-[0.12em] text-white/55">{whiteName}</p>
+              <p className="text-xl font-semibold">{formatClock(state.whiteTimeMs ?? 0)}</p>
+            </div>
+            <div className="rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-white">
+              <p className="text-[11px] uppercase tracking-[0.12em] text-white/55">{blackName}</p>
+              <p className="text-xl font-semibold">{formatClock(state.blackTimeMs ?? 0)}</p>
+            </div>
+          </div>
+
+          <div className="mt-2 grid grid-cols-2 gap-2">
+            <CapturedPieces label={`${whiteName} a pris`} pieces={onlineCapturedBlack} />
+            <CapturedPieces label={`${blackName} a pris`} pieces={onlineCapturedWhite} />
+          </div>
+
+          <div className="mx-auto mt-3 w-full max-w-[min(98vw,940px)]">
+            <ChessBoardView
+              board={board}
+              selectedSquare={selected}
+              onSquareClick={handleOnlineClick}
+              availableTargets={selectedTargets}
+              lastMove={state.lastMove ? { from: state.lastMove.from, to: state.lastMove.to } : null}
+              orientation={orientation}
+            />
+          </div>
+
+          <div className="mt-2 flex items-center justify-between gap-2">
+            <p className="text-xs text-white/75">{info}</p>
+            <button
+              onClick={() => {
+                if (document.fullscreenElement) {
+                  void document.exitFullscreen?.();
+                }
+                setFocusMode(false);
+              }}
+              className="rounded-lg border border-cyan-300/35 bg-cyan-500/20 px-3 py-2 text-xs text-cyan-100 hover:bg-cyan-500/30"
+            >
+              Quitter plein ecran
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
-      className="relative flex flex-1 flex-col overflow-hidden p-4 sm:p-6"
-      style={{ fontFamily: "\"Trebuchet MS\", Verdana, sans-serif" }}
+      className="relative flex flex-1 flex-col overflow-hidden p-4 font-sans sm:p-6"
     >
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_15%_15%,rgba(251,191,36,0.16),transparent_35%),radial-gradient(circle_at_85%_85%,rgba(59,130,246,0.14),transparent_35%),linear-gradient(145deg,#0f172a,#111827)]" />
       <div className="relative mx-auto flex w-full max-w-4xl flex-1 flex-col rounded-3xl border border-white/10 bg-black/35 p-4 backdrop-blur-xl sm:p-6">
@@ -962,6 +1121,10 @@ export default function ChessGame({ roomCode, playerId, playerName }: GameProps)
               <span className="rounded-full border border-white/20 bg-white/10 px-3 py-1 text-white">
                 Noir {formatClock(state.blackTimeMs ?? 0)}
               </span>
+            </div>
+            <div className="mt-2 grid grid-cols-1 gap-2 text-xs sm:grid-cols-2">
+              <CapturedPieces label={`${whiteName} a pris`} pieces={onlineCapturedBlack} />
+              <CapturedPieces label={`${blackName} a pris`} pieces={onlineCapturedWhite} />
             </div>
           </div>
           <div className="flex flex-col items-end gap-2 text-xs text-white/70">
