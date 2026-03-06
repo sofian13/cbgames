@@ -18,6 +18,7 @@ export function useRoom(
   optimisticHost = false
 ) {
   const socketRef = useRef<PartySocket | null>(null);
+  const hasLobbyStateRef = useRef(false);
   const store = useRoomStore();
 
   useEffect(() => {
@@ -34,6 +35,7 @@ export function useRoom(
     });
 
     socketRef.current = socket;
+    hasLobbyStateRef.current = false;
 
     socket.addEventListener("open", () => {
       store.setConnected(true);
@@ -57,6 +59,21 @@ export function useRoom(
         payload: { playerId, name: playerName, avatar, isGuest },
       };
       socket.send(JSON.stringify(msg));
+
+      // Mobile networks can occasionally drop the first message:
+      // retry join until lobby-state arrives.
+      const retry = setInterval(() => {
+        if (hasLobbyStateRef.current || socket.readyState !== WebSocket.OPEN) return;
+        socket.send(JSON.stringify(msg));
+      }, 1500);
+
+      socket.addEventListener(
+        "close",
+        () => {
+          clearInterval(retry);
+        },
+        { once: true }
+      );
     });
 
     socket.addEventListener("message", (event) => {
@@ -64,6 +81,7 @@ export function useRoom(
 
       switch (msg.type) {
         case "lobby-state":
+          hasLobbyStateRef.current = true;
           store.setLobbyState(msg.payload);
           break;
         case "player-joined":
@@ -119,6 +137,7 @@ export function useRoom(
     });
 
     return () => {
+      hasLobbyStateRef.current = false;
       socket.close();
       socketRef.current = null;
       store.reset();

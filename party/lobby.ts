@@ -154,6 +154,11 @@ export default class LobbyServer {
           },
           sender.id
         );
+        // Strong sync after joins to avoid stale/lost incremental events on mobile networks.
+        this.broadcast({
+          type: "lobby-state",
+          payload: this.getState(),
+        });
         break;
       }
 
