@@ -202,20 +202,6 @@ export default class LobbyServer {
           this.selectedGameId = normalizeGameId(payloadGameId);
         }
         if (!this.selectedGameId) return;
-        const connectedPlayers = Array.from(this.players.values()).filter(
-          (p) => p.isConnected
-        );
-
-        const allReady = connectedPlayers.every(
-          (p) => p.isReady || p.isHost
-        );
-        if (!allReady) {
-          this.sendTo(sender.id, {
-            type: "error",
-            payload: { message: "Tous les joueurs doivent être prêts" },
-          });
-          return;
-        }
 
         this.status = "in-game";
         const startPayload = {
@@ -327,3 +313,5 @@ export default class LobbyServer {
     return undefined;
   }
 }
+
+
