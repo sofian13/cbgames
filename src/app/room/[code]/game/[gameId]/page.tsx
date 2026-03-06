@@ -8,6 +8,7 @@ import { GameShell } from "@/components/game/game-shell";
 import { useRoom } from "@/lib/party/use-room";
 import { getOrCreateGuest } from "@/lib/guest";
 import { getGameById } from "@/lib/games/registry";
+import { getSessionScopedPlayerId } from "@/lib/player-id";
 
 // Static map of dynamically imported game components (declared at module level)
 const GameComponents = {
@@ -107,7 +108,7 @@ export default function GamePage() {
   const { id: playerId, name: playerName, isGuest, avatar } = useMemo(() => {
     if (session?.user) {
       return {
-        id: session.user.id,
+        id: getSessionScopedPlayerId(session.user.id),
         name: session.user.name ?? "Joueur",
         isGuest: false,
         avatar: session.user.image ?? undefined,

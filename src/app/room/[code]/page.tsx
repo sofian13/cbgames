@@ -10,6 +10,7 @@ import { ReadyCheck } from "@/components/lobby/ready-check";
 import { useRoom } from "@/lib/party/use-room";
 import { useRoomStore } from "@/lib/stores/room-store";
 import { getOrCreateGuest } from "@/lib/guest";
+import { getSessionScopedPlayerId } from "@/lib/player-id";
 import { EmberParticles, FilmGrain, EmberKeyframes } from "@/components/shared/ember";
 import { useRef } from "react";
 
@@ -32,7 +33,7 @@ export default function LobbyPage() {
   const { id: playerId, name: playerName, isGuest, avatar } = useMemo(() => {
     if (session?.user) {
       return {
-        id: session.user.id,
+        id: getSessionScopedPlayerId(session.user.id),
         name: session.user.name ?? "Joueur",
         isGuest: false,
         avatar: session.user.image ?? undefined,
