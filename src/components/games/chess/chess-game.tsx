@@ -477,6 +477,7 @@ export default function ChessGame({ roomCode, playerId, playerName }: GameProps)
   const [localBlackTimeMs, setLocalBlackTimeMs] = useState(15 * 60_000);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [focusMode, setFocusMode] = useState(false);
+  const [inviteFeedback, setInviteFeedback] = useState<string>("");
   const audioContextRef = useRef<AudioContext | null>(null);
   const onlineLastMoveKeyRef = useRef<string | null>(null);
 
@@ -559,6 +560,31 @@ export default function ChessGame({ roomCode, playerId, playerName }: GameProps)
     } catch {
       // iOS and some Android browsers block fullscreen API: fallback to in-app focus mode.
       setFocusMode((prev) => !prev);
+    }
+  }, []);
+
+  const shareSpectatorLink = useCallback(async () => {
+    if (typeof window === "undefined") return;
+    const url = window.location.href;
+    const title = "AF Games - Echecs";
+    const text = "Rejoins la partie en spectateur";
+    try {
+      if (navigator.share) {
+        await navigator.share({ title, text, url });
+        setInviteFeedback("Lien partage");
+      } else if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(url);
+        setInviteFeedback("Lien copie");
+      } else {
+        setInviteFeedback(url);
+      }
+    } catch (err) {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(url);
+        setInviteFeedback("Lien copie");
+      } else if ((err as Error)?.name !== "AbortError") {
+        setInviteFeedback("Partage impossible");
+      }
     }
   }, []);
 
@@ -647,6 +673,12 @@ export default function ChessGame({ roomCode, playerId, playerName }: GameProps)
     onlineLastMoveKeyRef.current = key;
     playMoveSound();
   }, [playMoveSound, state?.lastMove, state?.phase]);
+
+  useEffect(() => {
+    if (!inviteFeedback) return;
+    const timer = setTimeout(() => setInviteFeedback(""), 2600);
+    return () => clearTimeout(timer);
+  }, [inviteFeedback]);
 
   const handleOnlineClick = useCallback((index: number) => {
     if (!state || state.phase !== "playing" || !canPlayOnline) return;
@@ -1084,18 +1116,29 @@ export default function ChessGame({ roomCode, playerId, playerName }: GameProps)
 
           <div className="mt-2 flex items-center justify-between gap-2">
             <p className="text-xs text-white/75">{info}</p>
-            <button
-              onClick={() => {
-                if (document.fullscreenElement) {
-                  void document.exitFullscreen?.();
-                }
-                setFocusMode(false);
-              }}
-              className="rounded-lg border border-cyan-300/35 bg-cyan-500/20 px-3 py-2 text-xs text-cyan-100 hover:bg-cyan-500/30"
-            >
-              Quitter plein ecran
-            </button>
+            <div className="flex items-center gap-2">
+              {state.phase === "playing" && (
+                <button
+                  onClick={shareSpectatorLink}
+                  className="rounded-lg border border-emerald-300/35 bg-emerald-500/20 px-3 py-2 text-xs text-emerald-100 hover:bg-emerald-500/30"
+                >
+                  Inviter des spectateurs
+                </button>
+              )}
+              <button
+                onClick={() => {
+                  if (document.fullscreenElement) {
+                    void document.exitFullscreen?.();
+                  }
+                  setFocusMode(false);
+                }}
+                className="rounded-lg border border-cyan-300/35 bg-cyan-500/20 px-3 py-2 text-xs text-cyan-100 hover:bg-cyan-500/30"
+              >
+                Quitter plein ecran
+              </button>
+            </div>
           </div>
+          {inviteFeedback && <p className="mt-1 text-xs text-emerald-200/85">{inviteFeedback}</p>}
         </div>
       </div>
     );
@@ -1167,6 +1210,14 @@ export default function ChessGame({ roomCode, playerId, playerName }: GameProps)
         </div>
 
         <div className="mt-4 flex gap-2">
+          {state.phase === "playing" && (
+            <button
+              onClick={shareSpectatorLink}
+              className="rounded-xl border border-emerald-300/35 bg-emerald-500/25 px-4 py-3 text-sm font-medium text-emerald-100 hover:bg-emerald-500/35"
+            >
+              Inviter des spectateurs
+            </button>
+          )}
           {state.phase === "playing" && myColor && (
             <button
               onClick={() => sendAction({ action: "resign" })}
@@ -1184,6 +1235,7 @@ export default function ChessGame({ roomCode, playerId, playerName }: GameProps)
             </button>
           )}
         </div>
+        {inviteFeedback && <p className="mt-2 text-xs text-emerald-200/85">{inviteFeedback}</p>}
 
         {error && <p className="mt-3 text-sm text-red-300">{error}</p>}
       </div>
