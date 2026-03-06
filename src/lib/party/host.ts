@@ -1,4 +1,4 @@
-const DEFAULT_PROD_PARTYKIT_HOST = "af-games.rayanesabi.partykit.dev";
+const DEFAULT_PROD_PARTYKIT_HOST = "af-games.sofian13.partykit.dev";
 
 function isLocalHost(host: string) {
   return host.startsWith("localhost") || host.startsWith("127.");
@@ -13,6 +13,11 @@ function isPrivateNetworkHost(host: string) {
 }
 
 export function getPartyKitHost() {
+  if (typeof window !== "undefined") {
+    const forcedHost = new URLSearchParams(window.location.search).get("pk")?.trim();
+    if (forcedHost) return forcedHost;
+  }
+
   const configuredHost = process.env.NEXT_PUBLIC_PARTYKIT_HOST?.trim();
   if (configuredHost) return configuredHost;
 
