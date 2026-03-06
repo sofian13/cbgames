@@ -1,7 +1,6 @@
 "use client";
 
 import { useRef, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Header } from "@/components/layout/header";
 import { Scoreboard } from "./scoreboard";
@@ -10,7 +9,7 @@ import { EmberParticles, FilmGrain, EmberKeyframes } from "@/components/shared/e
 import { addGameResult, getLevel, type GlobalStats } from "@/lib/stores/global-points";
 import { getGameById } from "@/lib/games/registry";
 import { signIn } from "next-auth/react";
-import { ArrowLeft, BookOpen, X, LogIn, Home, Globe } from "lucide-react";
+import { ArrowLeft, BookOpen, X, LogIn, Home, RotateCcw } from "lucide-react";
 
 interface GameShellProps {
   roomCode: string;
@@ -20,10 +19,10 @@ interface GameShellProps {
   isGuest: boolean;
   children: React.ReactNode;
   onReturnToLobby: () => void;
+  onResetGame?: () => void;
 }
 
-export function GameShell({ roomCode, gameId, playerId, playerName, isGuest, children, onReturnToLobby }: GameShellProps) {
-  const router = useRouter();
+export function GameShell({ roomCode, gameId, playerId, playerName, isGuest, children, onReturnToLobby, onResetGame }: GameShellProps) {
   const { isGameOver, rankings, isConnected } = useGameStore();
   const mouseRef = useRef<{ x: number; y: number }>({ x: -100, y: -100 });
   const [pointsEarned, setPointsEarned] = useState<number | null>(null);
@@ -74,14 +73,16 @@ export function GameShell({ roomCode, gameId, playerId, playerName, isGuest, chi
         {/* Floating action buttons (during game, not game over) */}
         {!isGameOver && (
           <div className="fixed top-[4.2rem] right-4 z-50 flex items-center gap-2">
-            {/* Return to home page */}
-            <button
-              onClick={() => router.push("/")}
-              className="flex items-center gap-1.5 rounded-xl border border-white/[0.08] bg-black/40 px-3 py-1.5 text-xs text-white/50 backdrop-blur-md transition-all hover:border-white/[0.15] hover:text-white/75 hover:bg-black/60 font-sans"
-            >
-              <Globe className="h-3.5 w-3.5" />
-              Accueil
-            </button>
+            {/* Reset game to initial screen */}
+            {onResetGame && (
+              <button
+                onClick={onResetGame}
+                className="flex items-center gap-1.5 rounded-xl border border-white/[0.08] bg-black/40 px-3 py-1.5 text-xs text-white/50 backdrop-blur-md transition-all hover:border-white/[0.15] hover:text-white/75 hover:bg-black/60 font-sans"
+              >
+                <RotateCcw className="h-3.5 w-3.5" />
+                Relancer
+              </button>
+            )}
             {/* Return to lobby button */}
             <button
               onClick={onReturnToLobby}

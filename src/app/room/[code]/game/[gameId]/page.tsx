@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, Suspense } from "react";
+import { useMemo, useState, useCallback, Suspense } from "react";
 import dynamic from "next/dynamic";
 import { useParams, useRouter } from "next/navigation";
 import { GameShell } from "@/components/game/game-shell";
@@ -122,6 +122,9 @@ export default function GamePage() {
   // Keep lobby connection alive
   const { returnToLobby } = useRoom(code, playerId, playerName, avatar, isGuest);
 
+  const [resetKey, setResetKey] = useState(0);
+  const handleResetGame = useCallback(() => setResetKey((k) => k + 1), []);
+
   const gameMeta = getGameById(gameId);
   const GameComponent = GameComponents[gameId as keyof typeof GameComponents];
 
@@ -139,7 +142,7 @@ export default function GamePage() {
   }
 
   return (
-    <GameShell roomCode={code} gameId={gameId} playerId={playerId} playerName={playerName} isGuest={isGuest} onReturnToLobby={handleReturnToLobby}>
+    <GameShell roomCode={code} gameId={gameId} playerId={playerId} playerName={playerName} isGuest={isGuest} onReturnToLobby={handleReturnToLobby} onResetGame={handleResetGame}>
       <Suspense
         fallback={
           <div className="flex flex-1 items-center justify-center">
@@ -148,6 +151,7 @@ export default function GamePage() {
         }
       >
         <GameComponent
+          key={resetKey}
           roomCode={code}
           playerId={playerId}
           playerName={playerName}
