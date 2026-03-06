@@ -31,6 +31,18 @@ export function useRoom(roomCode: string, playerId: string, playerName: string, 
     socket.addEventListener("open", () => {
       store.setConnected(true);
       store.setError(null);
+      // Optimistic self registration to avoid "waiting for host" on solo startup
+      // when lobby-state message is delayed.
+      store.addPlayer({
+        id: playerId,
+        name: playerName,
+        avatar,
+        isHost: true,
+        isReady: false,
+        isConnected: true,
+        isGuest,
+      });
+      store.setHostId(playerId);
       // Send join message
       const msg: LobbyClientMessage = {
         type: "join",
