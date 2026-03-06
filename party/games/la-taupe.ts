@@ -5,24 +5,24 @@ import type { GameRanking } from "../shared/types";
 interface EstimationQ { question: string; answer: number; tolerance: number; }
 const ESTIMATIONS: EstimationQ[] = [
   { question: "Combien de pays y a-t-il en Afrique ?", answer: 54, tolerance: 5 },
-  { question: "Combien de km sépare Paris de New York (vol d'oiseau) ?", answer: 5836, tolerance: 500 },
-  { question: "En quelle année la Tour Eiffel a-t-elle été construite ?", answer: 1889, tolerance: 10 },
-  { question: "Combien de langues sont parlées dans le monde ?", answer: 7000, tolerance: 700 },
-  { question: "Combien pèse un éléphant d'Afrique en kg ?", answer: 6000, tolerance: 1000 },
-  { question: "Combien d'étoiles peut-on voir à l'œil nu ?", answer: 5000, tolerance: 1000 },
-  { question: "Quelle est la profondeur de la fosse des Mariannes en mètres ?", answer: 10994, tolerance: 1000 },
+  { question: "Combien de km separe Paris de New York (vol d'oiseau) ?", answer: 5836, tolerance: 500 },
+  { question: "En quelle annee la Tour Eiffel a-t-elle ete construite ?", answer: 1889, tolerance: 10 },
+  { question: "Combien de langues sont parlees dans le monde ?", answer: 7000, tolerance: 700 },
+  { question: "Combien pese un elephant d'Afrique en kg ?", answer: 6000, tolerance: 1000 },
+  { question: "Combien d'etoiles peut-on voir a l'oeil nu ?", answer: 5000, tolerance: 1000 },
+  { question: "Quelle est la profondeur de la fosse des Mariannes en metres ?", answer: 10994, tolerance: 1000 },
   { question: "Combien de muscles dans le corps humain ?", answer: 639, tolerance: 100 },
   { question: "Combien de films Marvel au total (MCU) ?", answer: 33, tolerance: 5 },
-  { question: "Quelle est la température du soleil en degrés Celsius ?", answer: 5500, tolerance: 1000 },
-  { question: "Combien de stations de métro à Paris ?", answer: 308, tolerance: 30 },
-  { question: "Combien de pays dans l'Union Européenne ?", answer: 27, tolerance: 3 },
+  { question: "Quelle est la temperature du soleil en degres Celsius ?", answer: 5500, tolerance: 1000 },
+  { question: "Combien de stations de metro a Paris ?", answer: 308, tolerance: 30 },
+  { question: "Combien de pays dans l'Union Europeenne ?", answer: 27, tolerance: 3 },
 ];
 
 const VOTE_TOPICS = [
   "Nommez une couleur", "Nommez un fruit", "Nommez un animal de compagnie",
   "Nommez un pays d'Europe", "Nommez un sport", "Nommez une marque de voiture",
-  "Nommez un super-héros", "Nommez un instrument de musique", "Nommez une saison",
-  "Nommez une planète",
+  "Nommez un super-heros", "Nommez un instrument de musique", "Nommez une saison",
+  "Nommez une planete",
 ];
 
 type MissionType = "estimation" | "vote-unanime" | "confiance";
@@ -113,12 +113,12 @@ export class LaTaupeGame extends BaseGame {
 
     if (type === "estimation") {
       const subs = active.filter(p => p.hasSubmitted).map(p => p.submission as number);
-      if (subs.length === 0) { detail = "Personne n'a répondu !"; }
+      if (subs.length === 0) { detail = "Personne n'a repondu !"; }
       else {
         const avg = subs.reduce((a, b) => a + b, 0) / subs.length;
         const diff = Math.abs(avg - (this.currentMission!.answer ?? 0));
         success = diff <= (this.currentMission!.tolerance ?? 0);
-        detail = `Moyenne: ${Math.round(avg)} (réponse: ${this.currentMission!.answer}). ${success ? "Assez proche !" : "Trop loin..."}`;
+        detail = `Moyenne: ${Math.round(avg)} (reponse: ${this.currentMission!.answer}). ${success ? "Assez proche !" : "Trop loin..."}`;
       }
     } else if (type === "vote-unanime") {
       const words = active.filter(p => p.hasSubmitted).map(p => (p.submission as string).toLowerCase().trim());
@@ -126,13 +126,13 @@ export class LaTaupeGame extends BaseGame {
       words.forEach(w => { freq[w] = (freq[w] || 0) + 1; });
       const sorted = Object.entries(freq).sort((a, b) => b[1] - a[1]);
       if (sorted[0] && sorted[0][1] > active.length / 2) {
-        success = true; detail = `Majorité sur "${sorted[0][0]}" (${sorted[0][1]}/${active.length})`;
-      } else { detail = "Pas de majorité ! Réponses trop variées."; }
+        success = true; detail = `Majorite sur "${sorted[0][0]}" (${sorted[0][1]}/${active.length})`;
+      } else { detail = "Pas de majorite ! Reponses trop variees."; }
     } else {
       let pot = 0;
       active.forEach(p => { pot += p.submission === "contribuer" ? 100 : -100; });
       success = pot > 0;
-      detail = `Pot: ${pot > 0 ? "+" : ""}${pot}. ${success ? "Le groupe a coopéré !" : "Trop de sabotage..."}`;
+      detail = `Pot: ${pot > 0 ? "+" : ""}${pot}. ${success ? "Le groupe a coopere !" : "Trop de sabotage..."}`;
     }
 
     if (success) { this.teamScore += 100; active.filter(p => p.role === "loyal").forEach(p => { p.score += 20; }); }

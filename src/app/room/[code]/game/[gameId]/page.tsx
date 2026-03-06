@@ -121,7 +121,7 @@ export default function GamePage() {
   if (!gameMeta?.implemented || !GameComponent) {
     return (
       <div className="flex min-h-screen items-center justify-center" style={{ background: "#060606" }}>
-        <p className="text-white/40 font-sans">Jeu non trouvé</p>
+        <p className="text-white/40 font-sans">Jeu non trouve</p>
       </div>
     );
   }

@@ -18,21 +18,22 @@ export function PlayerList({ players, currentPlayerId, isHost, onKick }: PlayerL
   const isSolo = connectedPlayers.length === 1 && connectedPlayers[0]?.id === currentPlayerId;
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3" style={{ animation: "slideInRight 0.5s ease" }}>
       <div className="flex items-center justify-between">
         <h3 className="section-title">Joueurs</h3>
         <span className="text-[11px] font-mono text-white/25">{players.length}/8</span>
       </div>
       <div className="grid gap-2">
-        {players.map((player) => (
+        {players.map((player, i) => (
           <div
             key={player.id}
             className={cn(
               "flex items-center gap-3 rounded-xl border p-3 transition-all duration-300",
               player.id === currentPlayerId
                 ? "border-cyan-300/30 bg-cyan-300/[0.06]"
-                : "border-white/[0.06] bg-white/[0.02]"
+                : "border-white/[0.06] bg-white/[0.02] hover:border-white/[0.12] hover:bg-white/[0.04]"
             )}
+            style={{ animation: `fadeUp 0.4s ease ${i * 0.08}s both` }}
           >
             <AvatarCircle
               name={player.name}
@@ -57,13 +58,16 @@ export function PlayerList({ players, currentPlayerId, isHost, onKick }: PlayerL
             </div>
             <div className="flex items-center gap-2">
               {player.isReady && (
-                <span className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+                <span
+                  className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.5)]"
+                  style={{ animation: "scaleIn 0.3s ease" }}
+                />
               )}
               {isHost && !player.isHost && player.id !== currentPlayerId && onKick && (
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-7 w-7 text-white/20 hover:bg-red-500/15 hover:text-red-300"
+                  className="h-7 w-7 text-white/20 hover:bg-red-500/15 hover:text-red-300 press-effect"
                   onClick={() => onKick(player.id)}
                 >
                   <X className="h-3.5 w-3.5" />

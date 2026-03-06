@@ -159,7 +159,7 @@ export default function WordChainGame({ roomCode, playerId, playerName }: GamePr
             value={input}
             onChange={e => setInput(e.target.value.toLowerCase())}
             disabled={!isMyTurn}
-            placeholder={isMyTurn ? `Mot commençant par ${state.requiredLetter}...` : "Attends ton tour..."}
+            placeholder={isMyTurn ? `Mot commencant par ${state.requiredLetter}...` : "Attends ton tour..."}
             className={cn(
               "flex-1 rounded-2xl border bg-black/30 px-5 py-3.5 font-mono text-lg text-white/90 placeholder:text-white/25 outline-none backdrop-blur-sm transition-all",
               isMyTurn

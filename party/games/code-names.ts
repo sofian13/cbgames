@@ -2,41 +2,41 @@ import type { Connection } from "partykit/server";
 import { BaseGame } from "./base-game";
 import type { GameRanking } from "../shared/types";
 
-// ── French word bank (200+ common nouns, varied topics) ──────────────
+// -- French word bank (200+ common nouns, varied topics) --------------
 const WORD_BANK: string[] = [
-  "SOLEIL", "BANANE", "DRAGON", "ÉTOILE", "CHÂTEAU", "PLAGE", "MONTAGNE",
-  "ROBOT", "FORÊT", "MIROIR", "FANTÔME", "DIAMANT", "PIRATE", "BALLON",
+  "SOLEIL", "BANANE", "DRAGON", "ETOILE", "CHATEAU", "PLAGE", "MONTAGNE",
+  "ROBOT", "FORET", "MIROIR", "FANTOME", "DIAMANT", "PIRATE", "BALLON",
   "MUSIQUE", "LUNE", "TIGRE", "FLAMME", "NUAGE", "ANCRE", "OISEAU",
-  "TEMPLE", "SIRÈNE", "MARTEAU", "CLOCHE", "PAPILLON", "VOLCAN", "PLUIE",
-  "SERPENT", "TRÉSOR", "HORLOGE", "CACTUS", "PHARE", "MASQUE", "ÉPÉE",
-  "BOUGIE", "CORAIL", "FOUDRE", "SAVANE", "TORTUE", "COMÈTE", "TOILE",
+  "TEMPLE", "SIRENE", "MARTEAU", "CLOCHE", "PAPILLON", "VOLCAN", "PLUIE",
+  "SERPENT", "TRESOR", "HORLOGE", "CACTUS", "PHARE", "MASQUE", "EPEE",
+  "BOUGIE", "CORAIL", "FOUDRE", "SAVANE", "TORTUE", "COMETE", "TOILE",
   "VIOLON", "REQUIN", "JUNGLE", "CERISE", "MOULIN", "RUBIS", "GLACIER",
-  "SABLE", "AIGLE", "FUSÉE", "COURONNE", "MÉDUSE", "BRIQUE", "ORAGE",
+  "SABLE", "AIGLE", "FUSEE", "COURONNE", "MEDUSE", "BRIQUE", "ORAGE",
   "HARPE", "LABYRINTHE", "PERLE", "ABRICOT", "RENARD", "NAVIRE", "PLUME",
   "GIRAFE", "ENCRE", "BROUILLARD", "COLOMBE", "CHAUDRON", "ATLAS",
-  "ÉMERAUDE", "CAFÉ", "TROMPETTE", "SAPHIR", "CITRON", "MAGICIEN",
-  "CHEVALIER", "FLÈCHE", "CASCADE", "HAMAC", "LICORNE", "OPÉRA",
-  "CRISTAL", "TAMBOUR", "ARAIGNÉE", "AURORE", "CANARI", "DRAPEAU",
-  "GRENADE", "LOTUS", "OMBRE", "PHÉNIX", "RADAR", "TONNERRE", "VAGUE",
-  "ZÉPHYR", "BAMBOU", "CARNAVAL", "DUNE", "EMBLÈME", "GALAXIE",
-  "ICEBERG", "JARDIN", "KAYAK", "LÉGENDE", "MÉTÉORE", "NECTAR",
-  "ODYSSÉE", "POTION", "QUARTZ", "RUCHE", "SPHINX", "TULIPE", "UNIVERS",
-  "VAMPIRE", "WAGON", "XYLOPHONE", "YACHT", "ZÈBRE", "ARMURE", "BISON",
+  "EMERAUDE", "CAFE", "TROMPETTE", "SAPHIR", "CITRON", "MAGICIEN",
+  "CHEVALIER", "FLECHE", "CASCADE", "HAMAC", "LICORNE", "OPERA",
+  "CRISTAL", "TAMBOUR", "ARAIGNEE", "AURORE", "CANARI", "DRAPEAU",
+  "GRENADE", "LOTUS", "OMBRE", "PHENIX", "RADAR", "TONNERRE", "VAGUE",
+  "ZEPHYR", "BAMBOU", "CARNAVAL", "DUNE", "EMBLEME", "GALAXIE",
+  "ICEBERG", "JARDIN", "KAYAK", "LEGENDE", "METEORE", "NECTAR",
+  "ODYSSEE", "POTION", "QUARTZ", "RUCHE", "SPHINX", "TULIPE", "UNIVERS",
+  "VAMPIRE", "WAGON", "XYLOPHONE", "YACHT", "ZEBRE", "ARMURE", "BISON",
   "CAPE", "DELTA", "FALAISE", "GROTTE", "HIBOU", "IVOIRE", "JADE",
   "KARMA", "LIBELLULE", "MANDARINE", "NIMBUS", "OASIS", "PANDA",
-  "ROSÉE", "SAFARI", "TITAN", "URANIUM", "VELOURS", "WOMBAT",
-  "ACROBATE", "BAGUETTE", "CAMÉLÉON", "DOMINO", "ESCARGOT", "FONTAINE",
+  "ROSEE", "SAFARI", "TITAN", "URANIUM", "VELOURS", "WOMBAT",
+  "ACROBATE", "BAGUETTE", "CAMELEON", "DOMINO", "ESCARGOT", "FONTAINE",
   "GRENOUILLE", "HARMONICA", "IGLOO", "JONGLEUR", "KOALA", "LANTERNE",
-  "MOSAÏQUE", "NÉNUPHAR", "ORCHIDÉE", "PALMIER", "ROULETTE", "SCORPION",
-  "TRIDENT", "VIOLETTE", "BLIZZARD", "COCON", "DIESEL", "ÉCHO",
+  "MOSAIQUE", "NENUPHAR", "ORCHIDEE", "PALMIER", "ROULETTE", "SCORPION",
+  "TRIDENT", "VIOLETTE", "BLIZZARD", "COCON", "DIESEL", "ECHO",
   "FAUCON", "GORILLE", "HORIZON", "INDIGO", "JASMIN", "KIWI",
-  "MAMMOUTH", "NARVAL", "ORIGAMI", "PÉLICAN", "SAUMON", "TOTEM",
+  "MAMMOUTH", "NARVAL", "ORIGAMI", "PELICAN", "SAUMON", "TOTEM",
   "ACACIA", "BOUSSOLE", "CRAYON", "DAUPHIN", "ERMITE", "FRESQUE",
   "GAZELLE", "HYDRE", "IMPALA", "JACKAL", "LYNX", "MIRAGE", "OPALE",
-  "PRISME", "SABRE", "TANGO", "VIPÈRE",
+  "PRISME", "SABRE", "TANGO", "VIPERE",
 ];
 
-// ── Card types ───────────────────────────────────────────────────────
+// -- Card types -------------------------------------------------------
 type CardColor = "red" | "blue" | "neutral" | "assassin";
 
 interface Card {
@@ -55,12 +55,12 @@ interface CodeNamesPlayer {
   isSpymaster: boolean;
 }
 
-// ── Constants ────────────────────────────────────────────────────────
+// -- Constants --------------------------------------------------------
 const GRID_SIZE = 25;
 const CLUE_TIMER = 60; // seconds
 const GUESS_TIMER = 90; // seconds
 
-// ── Helper: shuffle array (Fisher-Yates) ─────────────────────────────
+// -- Helper: shuffle array (Fisher-Yates) -----------------------------
 function shuffle<T>(arr: T[]): T[] {
   const a = [...arr];
   for (let i = a.length - 1; i > 0; i--) {
@@ -118,7 +118,7 @@ export class CodeNamesGame extends BaseGame {
     this.broadcastPersonalizedState();
   }
 
-  // ── Override addPlayer to track host ────────────────────────────────
+  // -- Override addPlayer to track host --------------------------------
   override addPlayer(id: string, name: string, conn: Connection) {
     super.addPlayer(id, name, conn);
 
@@ -147,7 +147,7 @@ export class CodeNamesGame extends BaseGame {
     }
   }
 
-  // ── Override removePlayer for disconnection handling ─────────────────
+  // -- Override removePlayer for disconnection handling -----------------
   override removePlayer(connectionId: string) {
     const removed = super.removePlayer(connectionId);
     if (removed) {
@@ -173,7 +173,7 @@ export class CodeNamesGame extends BaseGame {
     return removed;
   }
 
-  // ── Generate the board ──────────────────────────────────────────────
+  // -- Generate the board ----------------------------------------------
   generateBoard() {
     // Pick 25 random words
     const words = shuffle(WORD_BANK).slice(0, GRID_SIZE);
@@ -207,7 +207,7 @@ export class CodeNamesGame extends BaseGame {
     this.blueRemaining = this.cards.filter(c => c.color === "blue").length;
   }
 
-  // ── Auto-assign spymasters (first player in each team) ──────────────
+  // -- Auto-assign spymasters (first player in each team) --------------
   assignSpymasters() {
     // Reset all
     for (const p of this.cnPlayers.values()) {
@@ -230,7 +230,7 @@ export class CodeNamesGame extends BaseGame {
     }
   }
 
-  // ── Start the actual game (after team pick) ─────────────────────────
+  // -- Start the actual game (after team pick) -------------------------
   startGame() {
     this.assignSpymasters();
     this.generateBoard();
@@ -242,7 +242,7 @@ export class CodeNamesGame extends BaseGame {
     this.broadcastPersonalizedState();
   }
 
-  // ── Timer management ────────────────────────────────────────────────
+  // -- Timer management ------------------------------------------------
   startTimer(seconds: number) {
     this.clearTimer();
     this.timeLeft = seconds;
@@ -275,7 +275,7 @@ export class CodeNamesGame extends BaseGame {
     }
   }
 
-  // ── Switch turn to other team ───────────────────────────────────────
+  // -- Switch turn to other team ---------------------------------------
   switchTurn() {
     this.clearTimer();
     this.currentTeam = this.currentTeam === "red" ? "blue" : "red";
@@ -287,17 +287,17 @@ export class CodeNamesGame extends BaseGame {
     this.broadcastPersonalizedState();
   }
 
-  // ── Check win conditions ────────────────────────────────────────────
+  // -- Check win conditions --------------------------------------------
   checkWinCondition(): boolean {
     if (this.redRemaining === 0) {
       this.winner = "red";
-      this.winReason = "Tous les mots rouges ont été trouvés !";
+      this.winReason = "Tous les mots rouges ont ete trouves !";
       this.endCodeNames();
       return true;
     }
     if (this.blueRemaining === 0) {
       this.winner = "blue";
-      this.winReason = "Tous les mots bleus ont été trouvés !";
+      this.winReason = "Tous les mots bleus ont ete trouves !";
       this.endCodeNames();
       return true;
     }
@@ -306,11 +306,11 @@ export class CodeNamesGame extends BaseGame {
 
   triggerAssassinLoss(guessingTeam: Team) {
     this.winner = guessingTeam === "red" ? "blue" : "red";
-    this.winReason = `L'équipe ${guessingTeam === "red" ? "rouge" : "bleue"} a touché l'assassin !`;
+    this.winReason = `L'equipe ${guessingTeam === "red" ? "rouge" : "bleue"} a touche l'assassin !`;
     this.endCodeNames();
   }
 
-  // ── End game ────────────────────────────────────────────────────────
+  // -- End game --------------------------------------------------------
   endCodeNames() {
     this.clearTimer();
     this.phase = "game-over";
@@ -358,7 +358,7 @@ export class CodeNamesGame extends BaseGame {
     }, 5000);
   }
 
-  // ── Message handling ────────────────────────────────────────────────
+  // -- Message handling ------------------------------------------------
   onMessage(payload: Record<string, unknown>, sender: Connection) {
     const action = payload.action as string;
     const senderId = this.findPlayerIdByConnection(sender.id);
@@ -408,7 +408,7 @@ export class CodeNamesGame extends BaseGame {
     if (redTeam.length < 1 || blueTeam.length < 1) {
       this.sendToPlayer(senderId, {
         type: "game-error",
-        payload: { message: "Chaque équipe doit avoir au moins 1 joueur." },
+        payload: { message: "Chaque equipe doit avoir au moins 1 joueur." },
       });
       return;
     }
@@ -433,7 +433,7 @@ export class CodeNamesGame extends BaseGame {
     if (isGridWord) {
       this.sendToPlayer(player.id, {
         type: "game-error",
-        payload: { message: "L'indice ne peut pas être un mot de la grille." },
+        payload: { message: "L'indice ne peut pas etre un mot de la grille." },
       });
       return;
     }
@@ -495,7 +495,7 @@ export class CodeNamesGame extends BaseGame {
     this.switchTurn();
   }
 
-  // ── State serialization (personalized) ──────────────────────────────
+  // -- State serialization (personalized) ------------------------------
   getStateForPlayer(playerId: string): Record<string, unknown> {
     const cnPlayer = this.cnPlayers.get(playerId);
     const isSpymaster = cnPlayer?.isSpymaster ?? false;
@@ -582,7 +582,7 @@ export class CodeNamesGame extends BaseGame {
     }
   }
 
-  // ── Helpers ─────────────────────────────────────────────────────────
+  // -- Helpers ---------------------------------------------------------
   findPlayerIdByConnection(connectionId: string): string | null {
     for (const [id, player] of this.players) {
       if (player.connectionId === connectionId) return id;

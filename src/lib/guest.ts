@@ -3,13 +3,13 @@ const GUEST_NAME_KEY = "af-games-guest-name";
 const GUEST_SESSION_ID_KEY = "af-games-guest-session-id";
 
 const ADJECTIVES = [
-  "Brave", "Rusé", "Rapide", "Malin", "Cool", "Fort", "Vif", "Agile",
-  "Zen", "Épic", "Turbo", "Mega", "Ultra", "Super", "Hyper", "Max",
+  "Brave", "Ruse", "Rapide", "Malin", "Cool", "Fort", "Vif", "Agile",
+  "Zen", "Epic", "Turbo", "Mega", "Ultra", "Super", "Hyper", "Max",
 ];
 
 const ANIMALS = [
   "Renard", "Loup", "Aigle", "Ours", "Tigre", "Panda", "Lynx", "Faucon",
-  "Dragon", "Phénix", "Cobra", "Shark", "Lion", "Hawk", "Raven", "Wolf",
+  "Dragon", "Phenix", "Cobra", "Shark", "Lion", "Hawk", "Raven", "Wolf",
 ];
 
 function generateGuestName(): string {

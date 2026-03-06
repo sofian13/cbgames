@@ -16,18 +16,18 @@ const CARD_POOL: Omit<Card, "fakeValue">[] = [
   { name: "Pierre", emoji: "🪨", value: 5 },
   { name: "Bois", emoji: "🪵", value: 10 },
   { name: "Rubis", emoji: "♦️", value: 45 },
-  { name: "Émeraude", emoji: "🟢", value: 35 },
+  { name: "Emeraude", emoji: "🟢", value: 35 },
   { name: "Charbon", emoji: "⬛", value: 3 },
   { name: "Cuivre", emoji: "🟤", value: 15 },
   { name: "Poison", emoji: "☠️", value: -30 },
   { name: "Bombe", emoji: "💣", value: -20 },
   { name: "Maudit", emoji: "🔮", value: -15 },
-  { name: "Contrefaçon", emoji: "🃏", value: -10 },
+  { name: "Contrefacon", emoji: "🃏", value: -10 },
 ];
 
 function makeCard(): Card {
   const base = CARD_POOL[Math.floor(Math.random() * CARD_POOL.length)];
-  // Fake value can differ from real value — bluffing opportunity
+  // Fake value can differ from real value -- bluffing opportunity
   const offset = (Math.floor(Math.random() * 5) - 2) * 10;
   return { ...base, fakeValue: Math.max(-30, base.value + offset) };
 }

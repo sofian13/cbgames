@@ -294,7 +294,7 @@ function PlayerSeat({
       {/* Eliminated label */}
       {player.eliminated && (
         <span className="text-[10px] text-red-400/60 font-sans">
-          Eliminé
+          Elimine
         </span>
       )}
     </div>
@@ -416,7 +416,7 @@ export default function PokerGame({
         }}
       >
         <h2 className="text-3xl font-serif text-white/90 drop-shadow-[0_0_20px_rgba(251,191,36,0.25)]">
-          Partie terminée
+          Partie terminee
         </h2>
         <div className="w-full max-w-sm space-y-2.5">
           {sorted.map((p, i) => (
@@ -497,7 +497,7 @@ export default function PokerGame({
                 "border-white/[0.12] bg-white/[0.04] text-white/40"
             )}
           >
-            {state.phase === "pre-flop" && "Pré-flop"}
+            {state.phase === "pre-flop" && "Pre-flop"}
             {state.phase === "flop" && "Flop"}
             {state.phase === "turn" && "Turn"}
             {state.phase === "river" && "River"}
@@ -666,7 +666,7 @@ export default function PokerGame({
           )}
 
           {me.folded && (
-            <span className="text-xs text-red-400/50 font-sans italic">Couché</span>
+            <span className="text-xs text-red-400/50 font-sans italic">Couche</span>
           )}
 
           {/* Showdown result for me */}

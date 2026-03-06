@@ -63,12 +63,12 @@ export class KingHillGame extends BaseGame {
     for (const p of this.kPlayers.values()) {
       if (p.action === "defend") {
         p.shieldActive = true;
-        this.roundLog.push(`${p.name} se défend`);
+        this.roundLog.push(`${p.name} se defend`);
       }
       if (p.action === "charge") {
         p.chargeCount++;
         p.energy = Math.min(5, p.energy + 1);
-        this.roundLog.push(`${p.name} charge son énergie (${p.energy})`);
+        this.roundLog.push(`${p.name} charge son energie (${p.energy})`);
       }
     }
 
@@ -84,7 +84,7 @@ export class KingHillGame extends BaseGame {
         king.isKing = false;
         strongest.isKing = true;
         strongest.score += 15;
-        this.roundLog.push(`${strongest.name} détrône ${king.name} !`);
+        this.roundLog.push(`${strongest.name} detrone ${king.name} !`);
       } else {
         this.roundLog.push(`Attaque trop faible contre ${king.name}`);
       }

@@ -107,14 +107,14 @@ export async function getLeaderboard(limit = 20): Promise<GlobalStats[]> {
 
 export function getLevel(totalPoints: number): { level: number; title: string; nextLevelPoints: number; progress: number } {
   const levels = [
-    { threshold: 0, title: "Débutant" },
+    { threshold: 0, title: "Debutant" },
     { threshold: 100, title: "Apprenti" },
     { threshold: 300, title: "Joueur" },
-    { threshold: 600, title: "Confirmé" },
+    { threshold: 600, title: "Confirme" },
     { threshold: 1000, title: "Expert" },
-    { threshold: 1500, title: "Maître" },
-    { threshold: 2500, title: "Grand Maître" },
-    { threshold: 4000, title: "Légende" },
+    { threshold: 1500, title: "Maitre" },
+    { threshold: 2500, title: "Grand Maitre" },
+    { threshold: 4000, title: "Legende" },
     { threshold: 6000, title: "Mythique" },
     { threshold: 10000, title: "Divin" },
   ];

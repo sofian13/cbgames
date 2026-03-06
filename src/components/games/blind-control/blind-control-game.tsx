@@ -214,7 +214,7 @@ export default function BlindControlGame({ roomCode, playerId, playerName }: Gam
 
           {/* Direction voted */}
           <p className="text-lg text-white/40 font-sans">
-            Le groupe a voté <span className="text-white/90 font-semibold">{DIR_LABELS[r.direction]?.emoji} {DIR_LABELS[r.direction]?.label}</span>
+            Le groupe a vote <span className="text-white/90 font-semibold">{DIR_LABELS[r.direction]?.emoji} {DIR_LABELS[r.direction]?.label}</span>
           </p>
 
           {/* Score change */}

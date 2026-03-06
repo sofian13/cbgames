@@ -79,7 +79,7 @@ export default class GameServer {
         sender.send(
           JSON.stringify({
             type: "game-error",
-            payload: { message: "Jeu non trouvé" },
+            payload: { message: "Jeu non trouve" },
           })
         );
         return;

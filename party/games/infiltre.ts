@@ -2,7 +2,7 @@ import type { Connection } from "partykit/server";
 import { BaseGame } from "./base-game";
 import type { GameRanking } from "../shared/types";
 
-// ── Config ───────────────────────────────────────────────
+// -- Config -----------------------------------------------
 const WORD_REVEAL_TIME = 5000;
 const DESCRIBE_TIME = 20;
 const VOTE_TIME = 30;
@@ -10,55 +10,55 @@ const VOTE_RESULT_TIME = 4000;
 const GUESS_TIME = 15;
 const MIN_PLAYERS_END = 3;
 
-// ── Word bank (120+ French words) ────────────────────────
+// -- Word bank (120+ French words) ------------------------
 const WORD_BANK: string[] = [
   // Lieux
-  "Piscine", "Bibliothèque", "Aéroport", "Hôpital", "Restaurant",
-  "Boulangerie", "Cinéma", "Pharmacie", "Supermarché", "Gare",
-  "Stade", "Musée", "Zoo", "Aquarium", "Discothèque",
+  "Piscine", "Bibliotheque", "Aeroport", "Hopital", "Restaurant",
+  "Boulangerie", "Cinema", "Pharmacie", "Supermarche", "Gare",
+  "Stade", "Musee", "Zoo", "Aquarium", "Discotheque",
   "Laverie", "Commissariat", "Casino", "Spa", "Karting",
-  "Bowling", "Patinoire", "Crèche", "Lycée", "Cimetière",
-  // Événements
-  "Mariage", "Noël", "Halloween", "Anniversaire", "Festival",
-  "Camping", "Carnaval", "Enterrement", "Baptême", "Nouvel An",
-  "Rentrée scolaire", "Fête foraine", "Concert", "Ramadan",
-  // Métiers
+  "Bowling", "Patinoire", "Creche", "Lycee", "Cimetiere",
+  // Evenements
+  "Mariage", "Noel", "Halloween", "Anniversaire", "Festival",
+  "Camping", "Carnaval", "Enterrement", "Bapteme", "Nouvel An",
+  "Rentree scolaire", "Fete foraine", "Concert", "Ramadan",
+  // Metiers
   "Dentiste", "Pompier", "Boulanger", "Professeur", "Pilote",
   "Astronaute", "Plombier", "Coiffeur", "Boucher", "Chirurgien",
-  "Avocat", "Détective", "Facteur", "Magicien", "Vétérinaire",
+  "Avocat", "Detective", "Facteur", "Magicien", "Veterinaire",
   // Nourriture
   "Sushi", "Croissant", "Kebab", "Fondue", "Raclette",
-  "Couscous", "Pizza", "Hamburger", "Crêpe", "Tacos",
+  "Couscous", "Pizza", "Hamburger", "Crepe", "Tacos",
   "Tiramisu", "Paella", "Ramen", "Macaron", "Brioche",
-  // Jeux vidéo
-  "Fortnite", "Minecraft", "FIFA", "Mario", "Pokémon",
+  // Jeux video
+  "Fortnite", "Minecraft", "FIFA", "Mario", "Pokemon",
   "GTA", "Zelda", "Tetris", "Among Us", "Roblox",
   // Sports
   "Basketball", "Surf", "Boxe", "Escalade", "Ski",
   "Tennis", "Football", "Rugby", "Judo", "Natation",
-  "Ping-pong", "Pétanque", "Handball", "Escrime",
-  // Films / Séries
+  "Ping-pong", "Petanque", "Handball", "Escrime",
+  // Films / Series
   "Titanic", "Star Wars", "Harry Potter", "Jurassic Park", "Avatar",
   "Spider-Man", "Batman", "Le Roi Lion", "Inception", "Matrix",
   "Squid Game", "Stranger Things", "One Piece", "Naruto",
   // Villes
-  "Paris", "Tokyo", "New York", "Dubaï", "Marrakech",
+  "Paris", "Tokyo", "New York", "Dubai", "Marrakech",
   "Rome", "Londres", "Barcelone", "Moscou", "Sydney",
   "Rio de Janeiro", "Le Caire", "Amsterdam",
   // Instruments
   "Guitare", "Batterie", "Violon", "Saxophone", "DJ",
-  "Piano", "Trompette", "Flûte", "Harpe", "Accordéon",
+  "Piano", "Trompette", "Flute", "Harpe", "Accordeon",
   // Nature
-  "Plage", "Montagne", "Désert", "Jungle", "Grotte",
-  "Île", "Volcan", "Cascade", "Forêt", "Glacier",
-  "Récif corallien", "Savane", "Marais",
+  "Plage", "Montagne", "Desert", "Jungle", "Grotte",
+  "Ile", "Volcan", "Cascade", "Foret", "Glacier",
+  "Recif corallien", "Savane", "Marais",
   // Objets / Concepts
   "TikTok", "Netflix", "Uber", "Ikea", "McDonald's",
-  "Tinder", "Snapchat", "Photomaton", "Karaoké", "Escape Game",
+  "Tinder", "Snapchat", "Photomaton", "Karaoke", "Escape Game",
   "Trampoline", "Jacuzzi", "Sauna", "Limousine",
 ];
 
-// ── Player state ─────────────────────────────────────────
+// -- Player state -----------------------------------------
 interface InfiltrePlayer {
   id: string;
   name: string;
@@ -79,7 +79,7 @@ type GamePhase =
   | "round-end"
   | "game-over";
 
-// ══════════════════════════════════════════════════════════
+// ==========================================================
 export class InfiltreGame extends BaseGame {
   gamePlayers: Map<string, InfiltrePlayer> = new Map();
   phase: GamePhase = "waiting";
@@ -131,7 +131,7 @@ export class InfiltreGame extends BaseGame {
     this.startWordReveal();
   }
 
-  // ── Phase: Word Reveal ──────────────────────────────────
+  // -- Phase: Word Reveal ----------------------------------
   startWordReveal() {
     this.round++;
     this.phase = "word-reveal";
@@ -161,7 +161,7 @@ export class InfiltreGame extends BaseGame {
     }, WORD_REVEAL_TIME);
   }
 
-  // ── Phase: Describe ─────────────────────────────────────
+  // -- Phase: Describe -------------------------------------
   startDescribePhase() {
     this.phase = "describe";
     this.currentDescriberIndex = 0;
@@ -171,7 +171,7 @@ export class InfiltreGame extends BaseGame {
     this.startTimer();
   }
 
-  // ── Phase: Vote ─────────────────────────────────────────
+  // -- Phase: Vote -----------------------------------------
   startVotePhase() {
     this.stopTimer();
     this.phase = "vote";
@@ -188,7 +188,7 @@ export class InfiltreGame extends BaseGame {
     this.startTimer();
   }
 
-  // ── Phase: Vote Result ──────────────────────────────────
+  // -- Phase: Vote Result ----------------------------------
   resolveVotes() {
     this.stopTimer();
 
@@ -278,7 +278,7 @@ export class InfiltreGame extends BaseGame {
     this.startWordReveal();
   }
 
-  // ── Phase: Guess Word ───────────────────────────────────
+  // -- Phase: Guess Word -----------------------------------
   startGuessPhase(infiltreId: string) {
     this.phase = "guess-word";
     this.timeLeft = GUESS_TIME;
@@ -316,7 +316,7 @@ export class InfiltreGame extends BaseGame {
     }
   }
 
-  // ── End Game ────────────────────────────────────────────
+  // -- End Game --------------------------------------------
   endInfiltreGame(_reason: string) {
     this.stopTimer();
     this.phase = "game-over";
@@ -345,7 +345,7 @@ export class InfiltreGame extends BaseGame {
     this.broadcast({ type: "game-state", payload: base });
   }
 
-  // ── Timer ───────────────────────────────────────────────
+  // -- Timer -----------------------------------------------
   startTimer() {
     this.stopTimer();
     this.timer = setInterval(() => {
@@ -369,11 +369,11 @@ export class InfiltreGame extends BaseGame {
       const describerId = this.describeOrder[this.currentDescriberIndex];
       const describer = this.gamePlayers.get(describerId);
       if (describer && !describer.clue) {
-        describer.clue = "(temps écoulé)";
+        describer.clue = "(temps ecoule)";
         this.clueHistory.push({
           playerId: describer.id,
           playerName: describer.name,
-          clue: "(temps écoulé)",
+          clue: "(temps ecoule)",
           round: this.round,
         });
       }
@@ -411,7 +411,7 @@ export class InfiltreGame extends BaseGame {
     }
   }
 
-  // ── Message Handler ─────────────────────────────────────
+  // -- Message Handler -------------------------------------
   onMessage(payload: Record<string, unknown>, sender: Connection) {
     const action = payload.action as string;
     const senderPlayer = this.findPlayerByConnection(sender.id);
@@ -472,7 +472,7 @@ export class InfiltreGame extends BaseGame {
     }
   }
 
-  // ── Helpers ─────────────────────────────────────────────
+  // -- Helpers ---------------------------------------------
   getAlivePlayers(): InfiltrePlayer[] {
     return Array.from(this.gamePlayers.values()).filter((p) => !p.isEliminated);
   }
@@ -484,7 +484,7 @@ export class InfiltreGame extends BaseGame {
     return null;
   }
 
-  // ── Personalized State Broadcasting ─────────────────────
+  // -- Personalized State Broadcasting ---------------------
   broadcastPersonalizedState() {
     for (const [pid, player] of this.players) {
       this.sendTo(player.connectionId, {

@@ -7,18 +7,18 @@ const ITEMS: Item[] = [
   { name: "Diamant Noir", emoji: "💎", hint: "Un objet d'une valeur inestimable", value: 300 },
   { name: "Sceptre Royal", emoji: "👑", hint: "Symbole de pouvoir absolu", value: 250 },
   { name: "Coffre d'Or", emoji: "🪙", hint: "Rempli de richesses", value: 200 },
-  { name: "Potion Magique", emoji: "🧪", hint: "Un élixir aux propriétés étonnantes", value: 150 },
-  { name: "Amulette Antique", emoji: "📿", hint: "Un artefact ancien et mystérieux", value: 100 },
-  { name: "Couronne de Jade", emoji: "🟢", hint: "Bijou d'un empire oublié", value: 175 },
-  { name: "Épée Légendaire", emoji: "⚔️", hint: "Forgée par les dieux", value: 225 },
-  { name: "Relique Maudite", emoji: "💀", hint: "Quelque chose de sinistre émane de cet objet", value: -200 },
-  { name: "Piège Explosif", emoji: "💣", hint: "Attention, danger potentiel", value: -150 },
-  { name: "Poison Subtil", emoji: "🧫", hint: "Sentiments mitigés autour de cet artefact", value: -100 },
-  { name: "Malédiction Ancienne", emoji: "☠️", hint: "Les anciens ont scellé un terrible pouvoir", value: -250 },
-  { name: "Coffre Vide", emoji: "📦", hint: "Peut-être pas aussi précieux qu'il y paraît", value: -75 },
-  { name: "Artefact Mystère", emoji: "❓", hint: "Le destin seul connaît sa valeur", value: 0 },
-  { name: "Boîte de Pandore", emoji: "🎁", hint: "Un risque... ou une récompense ?", value: 0 },
-  { name: "Dé du Destin", emoji: "🎲", hint: "La fortune sourit aux audacieux", value: 0 },
+  { name: "Potion Magique", emoji: "🧪", hint: "Un elixir aux proprietes etonnantes", value: 150 },
+  { name: "Amulette Antique", emoji: "📿", hint: "Un artefact ancien et mysterieux", value: 100 },
+  { name: "Couronne de Jade", emoji: "🟢", hint: "Bijou d'un empire oublie", value: 175 },
+  { name: "Epee Legendaire", emoji: "⚔️", hint: "Forgee par les dieux", value: 225 },
+  { name: "Relique Maudite", emoji: "💀", hint: "Quelque chose de sinistre emane de cet objet", value: -200 },
+  { name: "Piege Explosif", emoji: "💣", hint: "Attention, danger potentiel", value: -150 },
+  { name: "Poison Subtil", emoji: "🧫", hint: "Sentiments mitiges autour de cet artefact", value: -100 },
+  { name: "Malediction Ancienne", emoji: "☠️", hint: "Les anciens ont scelle un terrible pouvoir", value: -250 },
+  { name: "Coffre Vide", emoji: "📦", hint: "Peut-etre pas aussi precieux qu'il y parait", value: -75 },
+  { name: "Artefact Mystere", emoji: "❓", hint: "Le destin seul connait sa valeur", value: 0 },
+  { name: "Boite de Pandore", emoji: "🎁", hint: "Un risque... ou une recompense ?", value: 0 },
+  { name: "De du Destin", emoji: "🎲", hint: "La fortune sourit aux audacieux", value: 0 },
 ];
 
 const TOTAL_ROUNDS = 10;
@@ -63,9 +63,9 @@ export class EnchereGame extends BaseGame {
     this.currentItem = this.pickItem();
     this.actualValue = this.currentItem.value;
     // Randomize mystery items
-    if (this.currentItem.name === "Artefact Mystère") this.actualValue = Math.floor(Math.random() * 400) - 150;
-    if (this.currentItem.name === "Boîte de Pandore") this.actualValue = Math.floor(Math.random() * 700) - 300;
-    if (this.currentItem.name === "Dé du Destin") this.actualValue = Math.floor(Math.random() * 500) - 200;
+    if (this.currentItem.name === "Artefact Mystere") this.actualValue = Math.floor(Math.random() * 400) - 150;
+    if (this.currentItem.name === "Boite de Pandore") this.actualValue = Math.floor(Math.random() * 700) - 300;
+    if (this.currentItem.name === "De du Destin") this.actualValue = Math.floor(Math.random() * 500) - 200;
     this.status = "bidding";
     this.timeLeft = Math.ceil(BID_TIME / 1000);
     this.broadcastState();

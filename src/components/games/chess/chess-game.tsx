@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useEffect, useCallback, useRef } from "react";
+import { useMemo, useState, useEffect, useCallback, useRef, memo } from "react";
 import type { GameProps } from "@/lib/games/types";
 import { useGame } from "@/lib/party/use-game";
 import { useGameStore } from "@/lib/stores/game-store";
@@ -74,20 +74,7 @@ const PIECE_GLYPH: Record<string, string> = {
   bk: "\u265A",
 };
 
-const PIECE_SYMBOL: Record<string, string> = {
-  wp: "\u2659",
-  wn: "\u2658",
-  wb: "\u2657",
-  wr: "\u2656",
-  wq: "\u2655",
-  wk: "\u2654",
-  bp: "\u265F",
-  bn: "\u265E",
-  bb: "\u265D",
-  br: "\u265C",
-  bq: "\u265B",
-  bk: "\u265A",
-};
+const PIECE_SYMBOL = PIECE_GLYPH;
 
 const TIME_OPTIONS = [5, 10, 15, 30] as const;
 
@@ -430,6 +417,57 @@ function ClockPanel({
   );
 }
 
+function GameOverPopup({
+  winnerName,
+  reason,
+  isDraw,
+  onClose,
+  onReplay,
+}: {
+  winnerName: string;
+  reason: EndReason | null;
+  isDraw: boolean;
+  onClose: () => void;
+  onReplay?: () => void;
+}) {
+  const reasonLabel = reason === "checkmate" ? "Echec et mat" : reason === "resign" ? "Abandon" : reason === "timeout" ? "Temps ecoule" : reason === "stalemate" ? "Pat" : "Match nul";
+
+  return (
+    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/70 backdrop-blur-sm" style={{ animation: "fadeIn 0.3s ease" }}>
+      <div className="mx-4 w-full max-w-sm rounded-3xl border border-white/25 bg-black/80 p-7 text-center backdrop-blur-md" style={{ animation: "scaleIn 0.3s ease" }}>
+        <p className="font-sans text-xs uppercase tracking-[0.2em] text-white/40">{reasonLabel}</p>
+        {isDraw ? (
+          <>
+            <p className="mt-4 font-serif text-3xl font-bold text-white/90">Match nul</p>
+            <p className="mt-2 font-sans text-sm text-white/50">Personne ne gagne</p>
+          </>
+        ) : (
+          <>
+            <p className="mt-4 font-serif text-3xl font-bold text-[#65dfb2]">{winnerName}</p>
+            <p className="mt-2 font-sans text-sm text-white/50">remporte la partie</p>
+          </>
+        )}
+        <div className="mt-6 flex flex-col gap-2">
+          {onReplay && (
+            <button
+              onClick={() => { onClose(); onReplay(); }}
+              className="rounded-xl bg-gradient-to-r from-[#65dfb2] to-[#4ecf8a] px-6 py-3 font-sans text-sm font-semibold text-black shadow-[0_0_20px_rgba(78,207,138,0.25)] transition hover:shadow-[0_0_30px_rgba(78,207,138,0.4)]"
+            >
+              Rejouer
+            </button>
+          )}
+          <button
+            onClick={onClose}
+            className="rounded-xl border border-white/25 bg-white/5 px-6 py-3 font-sans text-sm text-white/70 transition hover:bg-white/10"
+          >
+            Fermer
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 interface ChessBoardViewProps {
   board: Array<Piece | null>;
   selectedSquare: number | null;
@@ -439,7 +477,7 @@ interface ChessBoardViewProps {
   orientation?: Color;
 }
 
-function ChessBoardView({
+const ChessBoardView = memo(function ChessBoardView({
   board,
   selectedSquare,
   onSquareClick,
@@ -451,6 +489,11 @@ function ChessBoardView({
   const cols = orientation === "w" ? [...Array(8).keys()] : [...Array(8).keys()].reverse();
   const fileLabels = orientation === "w" ? ["a","b","c","d","e","f","g","h"] : ["h","g","f","e","d","c","b","a"];
   const rankLabels = orientation === "w" ? ["8","7","6","5","4","3","2","1"] : ["1","2","3","4","5","6","7","8"];
+  const targetSet = useMemo(() => new Set(availableTargets), [availableTargets]);
+  const lastMoveSet = useMemo(() => {
+    if (!lastMove) return new Set<number>();
+    return new Set([lastMove.from, lastMove.to]);
+  }, [lastMove]);
 
   return (
     <div className="relative">
@@ -472,7 +515,7 @@ function ChessBoardView({
           ))}
         </div>
         {/* Board */}
-        <div className="grid flex-1 grid-cols-8 overflow-hidden rounded-2xl border border-white/25 shadow-[0_0_40px_rgba(0,0,0,0.5),0_0_80px_rgba(139,92,246,0.08)]">
+        <div className="grid flex-1 grid-cols-8 overflow-hidden rounded-2xl border border-white/25 shadow-[0_0_40px_rgba(0,0,0,0.5)]">
           {rows.map((y) =>
             cols.map((x) => {
               const idx = makeIndex(x, y);
@@ -480,8 +523,8 @@ function ChessBoardView({
               const piece = board[idx];
               const code = piece ? `${piece.color}${piece.type}` : "";
               const isSelected = selectedSquare === idx;
-              const isTarget = availableTargets.includes(idx);
-              const isLastMove = !!lastMove && (lastMove.from === idx || lastMove.to === idx);
+              const isTarget = targetSet.has(idx);
+              const isLastMove = lastMoveSet.has(idx);
               const isCapture = isTarget && piece !== null;
 
               return (
@@ -489,38 +532,26 @@ function ChessBoardView({
                   key={idx}
                   onClick={() => onSquareClick(idx)}
                   className={cn(
-                    "relative flex aspect-square items-center justify-center text-4xl transition-all duration-150 sm:text-5xl",
-                    /* Dark theme board squares */
-                    isLight
-                      ? "bg-[#2a2a3e]"
-                      : "bg-[#1a1a2e]",
-                    /* Last move highlight */
+                    "relative flex aspect-square items-center justify-center text-[clamp(1.5rem,8vw,3rem)]",
+                    isLight ? "bg-[#2a2a3e]" : "bg-[#1a1a2e]",
                     isLastMove && "bg-[#3d3560]",
-                    /* Selected piece glow */
-                    isSelected && "bg-[#4ecf8a]/25 shadow-[inset_0_0_20px_rgba(78,207,138,0.3)]",
-                    /* Hover */
-                    !isSelected && "hover:brightness-125"
+                    isSelected && "bg-[#4ecf8a]/25",
                   )}
                 >
-                  {/* Available move dot */}
                   {isTarget && !isCapture && (
-                    <span className="absolute h-3.5 w-3.5 rounded-full bg-[#65dfb2]/50 shadow-[0_0_8px_rgba(101,223,178,0.4)]" />
+                    <span className="absolute h-3 w-3 rounded-full bg-[#65dfb2]/50" />
                   )}
-                  {/* Capture ring */}
                   {isCapture && (
-                    <span className="absolute inset-1 rounded-full border-2 border-red-400/60 shadow-[0_0_12px_rgba(248,113,113,0.3)]" />
+                    <span className="absolute inset-1 rounded-full border-2 border-red-400/60" />
                   )}
-                  {/* Piece */}
                   <span
                     className={cn(
                       "relative z-10 select-none",
-                      piece?.color === "w"
-                        ? "text-[#e8e0f0] drop-shadow-[0_0_8px_rgba(255,255,255,0.4)]"
-                        : "text-[#8b7aab] drop-shadow-[0_2px_4px_rgba(0,0,0,0.7)]",
-                      isSelected && "scale-110 drop-shadow-[0_0_16px_rgba(78,207,138,0.6)]"
+                      piece?.color === "w" ? "text-[#e8e0f0]" : "text-[#8b7aab]",
+                      isSelected && "scale-110"
                     )}
                   >
-                    {code ? PIECE_SYMBOL[code] ?? PIECE_GLYPH[code] : ""}
+                    {code ? PIECE_GLYPH[code] : ""}
                   </span>
                 </button>
               );
@@ -530,7 +561,7 @@ function ChessBoardView({
       </div>
     </div>
   );
-}
+});
 
 export default function ChessGame({ roomCode, playerId, playerName, onReturnToLobby }: GameProps) {
   const { sendAction } = useGame(roomCode, "chess", playerId, playerName);
@@ -559,6 +590,8 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
   const [inviteFeedback, setInviteFeedback] = useState<string>("");
   const audioContextRef = useRef<AudioContext | null>(null);
   const onlineLastMoveKeyRef = useRef<string | null>(null);
+  const endSoundPlayedRef = useRef(false);
+  const [showGameOverPopup, setShowGameOverPopup] = useState(false);
 
   const board = useMemo(() => (state?.board ? state.board.map(decodePiece) : []), [state]);
 
@@ -590,19 +623,20 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
   const onlineCapturedBlack = useMemo(() => getCapturedPieceSymbols(board, "b"), [board]);
   const isFocusView = isFullscreen || focusMode;
 
-  const playMoveSound = useCallback(() => {
-    if (typeof window === "undefined") return;
-    const AudioCtx =
-      window.AudioContext ||
+  const getAudioCtx = useCallback(() => {
+    if (typeof window === "undefined") return null;
+    const AudioCtx = window.AudioContext ||
       // @ts-expect-error vendor prefix fallback
       window.webkitAudioContext;
-    if (!AudioCtx) return;
-    if (!audioContextRef.current) {
-      audioContextRef.current = new AudioCtx();
-    }
-    const ctx = audioContextRef.current;
-    const now = ctx.currentTime;
+    if (!AudioCtx) return null;
+    if (!audioContextRef.current) audioContextRef.current = new AudioCtx();
+    return audioContextRef.current;
+  }, []);
 
+  const playMoveSound = useCallback(() => {
+    const ctx = getAudioCtx();
+    if (!ctx) return;
+    const now = ctx.currentTime;
     const oscA = ctx.createOscillator();
     const oscB = ctx.createOscillator();
     const gain = ctx.createGain();
@@ -620,7 +654,47 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
     oscB.start(now);
     oscA.stop(now + 0.08);
     oscB.stop(now + 0.08);
-  }, []);
+  }, [getAudioCtx]);
+
+  const playWinSound = useCallback(() => {
+    const ctx = getAudioCtx();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+    const notes = [523, 659, 784, 1047];
+    notes.forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0.0001, now + i * 0.12);
+      gain.gain.exponentialRampToValueAtTime(0.12, now + i * 0.12 + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + i * 0.12 + 0.3);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now + i * 0.12);
+      osc.stop(now + i * 0.12 + 0.3);
+    });
+  }, [getAudioCtx]);
+
+  const playLoseSound = useCallback(() => {
+    const ctx = getAudioCtx();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+    const notes = [392, 349, 311, 262];
+    notes.forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "triangle";
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0.0001, now + i * 0.15);
+      gain.gain.exponentialRampToValueAtTime(0.1, now + i * 0.15 + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + i * 0.15 + 0.35);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now + i * 0.15);
+      osc.stop(now + i * 0.15 + 0.35);
+    });
+  }, [getAudioCtx]);
 
   const toggleFullscreen = useCallback(async () => {
     if (typeof document === "undefined") return;
@@ -759,6 +833,49 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
     return () => clearTimeout(timer);
   }, [inviteFeedback]);
 
+  // Local game over sound + popup
+  useEffect(() => {
+    if (!localWinner || endSoundPlayedRef.current) return;
+    endSoundPlayedRef.current = true;
+    setShowGameOverPopup(true);
+    if (localWinner === "draw") {
+      playLoseSound();
+    } else if (localKind === "bot") {
+      localWinner === "w" ? playWinSound() : playLoseSound();
+    } else {
+      playWinSound();
+    }
+  }, [localWinner, localKind, playWinSound, playLoseSound]);
+
+  // Online game over sound + popup
+  useEffect(() => {
+    if (!state || state.phase !== "game-over" || endSoundPlayedRef.current) return;
+    endSoundPlayedRef.current = true;
+    setShowGameOverPopup(true);
+    if (!myColor || state.winner === "draw") {
+      playLoseSound();
+    } else if (state.winner === myColor) {
+      playWinSound();
+    } else {
+      playLoseSound();
+    }
+  }, [state, myColor, playWinSound, playLoseSound]);
+
+  // Reset end sound flag when starting new game
+  useEffect(() => {
+    if (localMode && !localWinner) {
+      endSoundPlayedRef.current = false;
+      setShowGameOverPopup(false);
+    }
+  }, [localMode, localWinner]);
+
+  useEffect(() => {
+    if (state?.phase === "playing") {
+      endSoundPlayedRef.current = false;
+      setShowGameOverPopup(false);
+    }
+  }, [state?.phase]);
+
   const handleOnlineClick = useCallback((index: number) => {
     if (!state || state.phase !== "playing" || !canPlayOnline) return;
     const piece = board[index];
@@ -826,6 +943,7 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
         : localKind === "bot"
           ? "Tour du bot"
           : `Tour des noirs (${localBlackName})`;
+    const localWinnerName = localWinner === "w" ? localWhiteName : localWinner === "b" ? (localKind === "bot" ? "Bot" : localBlackName) : "";
 
     if (isFocusView) {
       return (
@@ -872,6 +990,17 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
             <div className="mt-3 flex items-center justify-between gap-2">
               <p className="font-sans text-sm text-white/90">{statusText}</p>
               <div className="flex items-center gap-2">
+                {!localWinner && (
+                  <button
+                    onClick={() => {
+                      setLocalWinner(otherColor(localTurn));
+                      setLocalReason("resign");
+                    }}
+                    className="rounded-xl border border-red-400/30 bg-red-500/20 px-4 py-2 font-sans text-xs font-semibold text-red-300 transition hover:bg-red-500/30"
+                  >
+                    Abandonner
+                  </button>
+                )}
                 <button
                   onClick={() => {
                     if (document.fullscreenElement) {
@@ -894,6 +1023,15 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
               </div>
             </div>
           </div>
+          {showGameOverPopup && localWinner && (
+            <GameOverPopup
+              winnerName={localWinnerName}
+              reason={localReason}
+              isDraw={localWinner === "draw"}
+              onClose={() => setShowGameOverPopup(false)}
+              onReplay={startLocalGame}
+            />
+          )}
         </div>
       );
     }
@@ -1004,6 +1142,15 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
             )}
           </div>
         </div>
+        {showGameOverPopup && localWinner && (
+          <GameOverPopup
+            winnerName={localWinnerName}
+            reason={localReason}
+            isDraw={localWinner === "draw"}
+            onClose={() => setShowGameOverPopup(false)}
+            onReplay={startLocalGame}
+          />
+        )}
       </div>
     );
   }
@@ -1235,6 +1382,7 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
       : state.turn === "w"
         ? `Tour des blancs (${whiteName})`
         : `Tour des noirs (${blackName})`;
+  const onlineWinnerName = state.winner === "w" ? whiteName : state.winner === "b" ? blackName : "";
 
   if (isFocusView) {
     return (
@@ -1286,6 +1434,14 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
                   Inviter des spectateurs
                 </button>
               )}
+              {state.phase === "playing" && myColor && (
+                <button
+                  onClick={() => sendAction({ action: "resign" })}
+                  className="rounded-xl border border-red-400/30 bg-red-500/20 px-4 py-2 font-sans text-xs font-semibold text-red-300 transition hover:bg-red-500/30"
+                >
+                  Abandonner
+                </button>
+              )}
               <button
                 onClick={() => {
                   if (document.fullscreenElement) {
@@ -1311,6 +1467,15 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
             <p className="mt-2 font-sans text-xs text-[#65dfb2]/90">{inviteFeedback}</p>
           )}
         </div>
+        {showGameOverPopup && state.phase === "game-over" && (
+          <GameOverPopup
+            winnerName={onlineWinnerName}
+            reason={state.reason}
+            isDraw={state.winner === "draw"}
+            onClose={() => setShowGameOverPopup(false)}
+            onReplay={() => sendAction({ action: "start-game" })}
+          />
+        )}
       </div>
     );
   }
@@ -1454,6 +1619,15 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
           </p>
         )}
       </div>
+      {showGameOverPopup && state.phase === "game-over" && (
+        <GameOverPopup
+          winnerName={onlineWinnerName}
+          reason={state.reason}
+          isDraw={state.winner === "draw"}
+          onClose={() => setShowGameOverPopup(false)}
+          onReplay={() => sendAction({ action: "start-game" })}
+        />
+      )}
     </div>
   );
 }

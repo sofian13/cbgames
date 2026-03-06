@@ -108,7 +108,7 @@ export default function ControllerPage() {
       try {
         const result = await DME.requestPermission();
         if (result !== "granted") {
-          alert("L'accès au gyroscope est nécessaire pour jouer !");
+          alert("L'acces au gyroscope est necessaire pour jouer !");
           return;
         }
       } catch {
@@ -197,7 +197,7 @@ export default function ControllerPage() {
         <div className="flex flex-col items-center gap-6 text-center">
           <div className="text-6xl">🎾</div>
           <h1 className="text-2xl font-bold">Motion Tennis</h1>
-          <p className="text-white/60 text-sm">Ton téléphone = ta raquette !</p>
+          <p className="text-white/60 text-sm">Ton telephone = ta raquette !</p>
           <p className="text-xs text-white/40">Room : {code}</p>
 
           <input
@@ -216,7 +216,7 @@ export default function ControllerPage() {
           </button>
 
           <p className="text-[10px] text-white/30 max-w-xs">
-            Autorisation nécessaire sur iPhone. Tiens ton téléphone comme une raquette !
+            Autorisation necessaire sur iPhone. Tiens ton telephone comme une raquette !
           </p>
         </div>
       )}
@@ -224,7 +224,7 @@ export default function ControllerPage() {
       {phase === "connecting" && (
         <div className="flex flex-col items-center gap-4">
           <div className="h-8 w-8 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-          <p>Connexion à la room {code}...</p>
+          <p>Connexion a la room {code}...</p>
         </div>
       )}
 
@@ -247,7 +247,7 @@ export default function ControllerPage() {
             ))}
           </div>
           <p className="text-xs text-white/40">
-            Tiens ton téléphone comme une raquette et frappe l&apos;air
+            Tiens ton telephone comme une raquette et frappe l&apos;air
           </p>
         </div>
       )}
@@ -255,8 +255,8 @@ export default function ControllerPage() {
       {phase === "ready" && (
         <div className="flex flex-col items-center gap-4 text-center">
           <div className="text-5xl">✅</div>
-          <h2 className="text-xl font-bold">Prêt !</h2>
-          <p className="text-white/60">En attente du début de la partie...</p>
+          <h2 className="text-xl font-bold">Pret !</h2>
+          <p className="text-white/60">En attente du debut de la partie...</p>
         </div>
       )}
 
@@ -297,14 +297,14 @@ export default function ControllerPage() {
             </>
           )}
 
-          <p className="text-xs text-white/30 mt-4">{swingCount} coups joués</p>
+          <p className="text-xs text-white/30 mt-4">{swingCount} coups joues</p>
         </div>
       )}
 
       {phase === "disconnected" && (
         <div className="flex flex-col items-center gap-4 text-center">
           <div className="text-5xl">❌</div>
-          <h2 className="text-xl font-bold">Déconnecté</h2>
+          <h2 className="text-xl font-bold">Deconnecte</h2>
           <button
             onClick={() => window.location.reload()}
             className="rounded-xl bg-white/10 px-6 py-3 text-sm active:scale-95"

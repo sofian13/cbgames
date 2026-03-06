@@ -10,38 +10,38 @@ interface Question {
 }
 
 const QUESTIONS: Question[] = [
-  { text: "Quelle est la capitale de l'Australie ?", choices: ["Sydney", "Melbourne", "Canberra", "Perth"], correctIndex: 2, category: "Géographie" },
-  { text: "En quelle année l'homme a-t-il marché sur la Lune ?", choices: ["1965", "1969", "1971", "1973"], correctIndex: 1, category: "Histoire" },
-  { text: "Quel est l'élément chimique le plus abondant dans l'univers ?", choices: ["Oxygène", "Carbone", "Hélium", "Hydrogène"], correctIndex: 3, category: "Sciences" },
-  { text: "Qui a peint 'La Nuit étoilée' ?", choices: ["Monet", "Van Gogh", "Picasso", "Dali"], correctIndex: 1, category: "Culture" },
-  { text: "Combien d'os possède le corps humain adulte ?", choices: ["186", "206", "226", "246"], correctIndex: 1, category: "Sciences" },
-  { text: "Quel pays a remporté la Coupe du Monde 2022 ?", choices: ["France", "Brésil", "Argentine", "Croatie"], correctIndex: 2, category: "Sport" },
-  { text: "Quel est le plus long fleuve du monde ?", choices: ["Amazone", "Nil", "Mississippi", "Yangtsé"], correctIndex: 1, category: "Géographie" },
-  { text: "Qui a écrit 'Les Misérables' ?", choices: ["Zola", "Hugo", "Balzac", "Flaubert"], correctIndex: 1, category: "Culture" },
-  { text: "Quelle planète est surnommée 'la planète rouge' ?", choices: ["Vénus", "Jupiter", "Mars", "Saturne"], correctIndex: 2, category: "Sciences" },
-  { text: "En quelle année a eu lieu la Révolution française ?", choices: ["1776", "1789", "1799", "1815"], correctIndex: 1, category: "Histoire" },
-  { text: "Quel groupe a chanté 'Bohemian Rhapsody' ?", choices: ["The Beatles", "Led Zeppelin", "Queen", "Pink Floyd"], correctIndex: 2, category: "Musique" },
-  { text: "Quel est le plus petit pays du monde ?", choices: ["Monaco", "Vatican", "San Marin", "Liechtenstein"], correctIndex: 1, category: "Géographie" },
-  { text: "Combien de joueurs composent une équipe de rugby ?", choices: ["11", "13", "15", "18"], correctIndex: 2, category: "Sport" },
+  { text: "Quelle est la capitale de l'Australie ?", choices: ["Sydney", "Melbourne", "Canberra", "Perth"], correctIndex: 2, category: "Geographie" },
+  { text: "En quelle annee l'homme a-t-il marche sur la Lune ?", choices: ["1965", "1969", "1971", "1973"], correctIndex: 1, category: "Histoire" },
+  { text: "Quel est l'element chimique le plus abondant dans l'univers ?", choices: ["Oxygene", "Carbone", "Helium", "Hydrogene"], correctIndex: 3, category: "Sciences" },
+  { text: "Qui a peint 'La Nuit etoilee' ?", choices: ["Monet", "Van Gogh", "Picasso", "Dali"], correctIndex: 1, category: "Culture" },
+  { text: "Combien d'os possede le corps humain adulte ?", choices: ["186", "206", "226", "246"], correctIndex: 1, category: "Sciences" },
+  { text: "Quel pays a remporte la Coupe du Monde 2022 ?", choices: ["France", "Bresil", "Argentine", "Croatie"], correctIndex: 2, category: "Sport" },
+  { text: "Quel est le plus long fleuve du monde ?", choices: ["Amazone", "Nil", "Mississippi", "Yangtse"], correctIndex: 1, category: "Geographie" },
+  { text: "Qui a ecrit 'Les Miserables' ?", choices: ["Zola", "Hugo", "Balzac", "Flaubert"], correctIndex: 1, category: "Culture" },
+  { text: "Quelle planete est surnommee 'la planete rouge' ?", choices: ["Venus", "Jupiter", "Mars", "Saturne"], correctIndex: 2, category: "Sciences" },
+  { text: "En quelle annee a eu lieu la Revolution francaise ?", choices: ["1776", "1789", "1799", "1815"], correctIndex: 1, category: "Histoire" },
+  { text: "Quel groupe a chante 'Bohemian Rhapsody' ?", choices: ["The Beatles", "Led Zeppelin", "Queen", "Pink Floyd"], correctIndex: 2, category: "Musique" },
+  { text: "Quel est le plus petit pays du monde ?", choices: ["Monaco", "Vatican", "San Marin", "Liechtenstein"], correctIndex: 1, category: "Geographie" },
+  { text: "Combien de joueurs composent une equipe de rugby ?", choices: ["11", "13", "15", "18"], correctIndex: 2, category: "Sport" },
   { text: "Quel est le symbole chimique de l'or ?", choices: ["Or", "Au", "Ag", "Fe"], correctIndex: 1, category: "Sciences" },
-  { text: "Qui a réalisé le film 'Inception' ?", choices: ["Spielberg", "Nolan", "Scorsese", "Tarantino"], correctIndex: 1, category: "Culture" },
-  { text: "Quelle est la monnaie du Japon ?", choices: ["Yuan", "Won", "Yen", "Ringgit"], correctIndex: 2, category: "Géographie" },
-  { text: "En quelle année est tombé le mur de Berlin ?", choices: ["1987", "1989", "1991", "1993"], correctIndex: 1, category: "Histoire" },
-  { text: "Quel rappeur français a sorti 'Civilisation' ?", choices: ["Booba", "PNL", "Orelsan", "Jul"], correctIndex: 2, category: "Musique" },
-  { text: "Combien de dents possède un adulte ?", choices: ["28", "30", "32", "34"], correctIndex: 2, category: "Sciences" },
-  { text: "Quel est le plus grand océan du monde ?", choices: ["Atlantique", "Indien", "Arctique", "Pacifique"], correctIndex: 3, category: "Géographie" },
-  { text: "Qui a inventé la théorie de la relativité ?", choices: ["Newton", "Einstein", "Hawking", "Bohr"], correctIndex: 1, category: "Sciences" },
-  { text: "Quel joueur détient le record de Ballons d'Or ?", choices: ["Ronaldo", "Messi", "Pelé", "Maradona"], correctIndex: 1, category: "Sport" },
-  { text: "Quelle est la langue la plus parlée au monde ?", choices: ["Anglais", "Espagnol", "Hindi", "Mandarin"], correctIndex: 3, category: "Culture" },
-  { text: "Quel animal est le plus rapide sur terre ?", choices: ["Lion", "Guépard", "Antilope", "Lévrier"], correctIndex: 1, category: "Sciences" },
-  { text: "Qui a composé 'Les Quatre Saisons' ?", choices: ["Bach", "Mozart", "Vivaldi", "Beethoven"], correctIndex: 2, category: "Musique" },
-  { text: "Combien y a-t-il de continents ?", choices: ["5", "6", "7", "8"], correctIndex: 2, category: "Géographie" },
-  { text: "Quel est le nom du créateur de Facebook ?", choices: ["Elon Musk", "Jeff Bezos", "Mark Zuckerberg", "Bill Gates"], correctIndex: 2, category: "Culture" },
-  { text: "En quelle année a commencé la Première Guerre mondiale ?", choices: ["1912", "1914", "1916", "1918"], correctIndex: 1, category: "Histoire" },
+  { text: "Qui a realise le film 'Inception' ?", choices: ["Spielberg", "Nolan", "Scorsese", "Tarantino"], correctIndex: 1, category: "Culture" },
+  { text: "Quelle est la monnaie du Japon ?", choices: ["Yuan", "Won", "Yen", "Ringgit"], correctIndex: 2, category: "Geographie" },
+  { text: "En quelle annee est tombe le mur de Berlin ?", choices: ["1987", "1989", "1991", "1993"], correctIndex: 1, category: "Histoire" },
+  { text: "Quel rappeur francais a sorti 'Civilisation' ?", choices: ["Booba", "PNL", "Orelsan", "Jul"], correctIndex: 2, category: "Musique" },
+  { text: "Combien de dents possede un adulte ?", choices: ["28", "30", "32", "34"], correctIndex: 2, category: "Sciences" },
+  { text: "Quel est le plus grand ocean du monde ?", choices: ["Atlantique", "Indien", "Arctique", "Pacifique"], correctIndex: 3, category: "Geographie" },
+  { text: "Qui a invente la theorie de la relativite ?", choices: ["Newton", "Einstein", "Hawking", "Bohr"], correctIndex: 1, category: "Sciences" },
+  { text: "Quel joueur detient le record de Ballons d'Or ?", choices: ["Ronaldo", "Messi", "Pele", "Maradona"], correctIndex: 1, category: "Sport" },
+  { text: "Quelle est la langue la plus parlee au monde ?", choices: ["Anglais", "Espagnol", "Hindi", "Mandarin"], correctIndex: 3, category: "Culture" },
+  { text: "Quel animal est le plus rapide sur terre ?", choices: ["Lion", "Guepard", "Antilope", "Levrier"], correctIndex: 1, category: "Sciences" },
+  { text: "Qui a compose 'Les Quatre Saisons' ?", choices: ["Bach", "Mozart", "Vivaldi", "Beethoven"], correctIndex: 2, category: "Musique" },
+  { text: "Combien y a-t-il de continents ?", choices: ["5", "6", "7", "8"], correctIndex: 2, category: "Geographie" },
+  { text: "Quel est le nom du createur de Facebook ?", choices: ["Elon Musk", "Jeff Bezos", "Mark Zuckerberg", "Bill Gates"], correctIndex: 2, category: "Culture" },
+  { text: "En quelle annee a commence la Premiere Guerre mondiale ?", choices: ["1912", "1914", "1916", "1918"], correctIndex: 1, category: "Histoire" },
   { text: "Quelle vitamine est produite par exposition au soleil ?", choices: ["A", "B12", "C", "D"], correctIndex: 3, category: "Sciences" },
-  { text: "Quel est le désert le plus grand du monde ?", choices: ["Sahara", "Gobi", "Antarctique", "Kalahari"], correctIndex: 2, category: "Géographie" },
+  { text: "Quel est le desert le plus grand du monde ?", choices: ["Sahara", "Gobi", "Antarctique", "Kalahari"], correctIndex: 2, category: "Geographie" },
   { text: "Combien de cordes a une guitare classique ?", choices: ["4", "5", "6", "8"], correctIndex: 2, category: "Musique" },
-  { text: "Quel est le métal le plus conducteur ?", choices: ["Or", "Cuivre", "Argent", "Aluminium"], correctIndex: 2, category: "Sciences" },
+  { text: "Quel est le metal le plus conducteur ?", choices: ["Or", "Cuivre", "Argent", "Aluminium"], correctIndex: 2, category: "Sciences" },
 ];
 
 const TOTAL_ROUNDS = 10;
@@ -99,7 +99,7 @@ export class RoastQuizGame extends BaseGame {
   }
 
   getQuestionTime(): number {
-    // check if any player has speed malus — that player gets half time but we use global timer
+    // check if any player has speed malus -- that player gets half time but we use global timer
     return QUESTION_TIME;
   }
 

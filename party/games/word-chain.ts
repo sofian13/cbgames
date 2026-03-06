@@ -420,7 +420,7 @@ export class WordChainGame extends BaseGame {
       if (this.usedWords.has(word)) {
         this.sendTo(sender.id, {
           type: "game-error",
-          payload: { message: "Ce mot a déjà été utilisé !" },
+          payload: { message: "Ce mot a deja ete utilise !" },
         });
         return;
       }

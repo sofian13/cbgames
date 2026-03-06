@@ -969,7 +969,7 @@ export default function UndercoverGame({
 
           <div className="relative mx-auto flex w-full max-w-md gap-2">
             <div className="flex-1 rounded-3xl bg-white/35 px-4 py-3 text-center text-black/80 backdrop-blur-[1px]">
-              <p className="text-xl font-sans">Nombre infiltrés</p>
+              <p className="text-xl font-sans">Nombre infiltres</p>
               <p className="text-3xl font-semibold">{infiltratedCount}</p>
             </div>
             <div className="flex-1 rounded-3xl bg-white/35 px-4 py-3 text-center text-black/80 backdrop-blur-[1px]">
@@ -1484,71 +1484,73 @@ export default function UndercoverGame({
     const myWord = state.myWord;
 
     return (
-      <div className="flex flex-1 flex-col items-center justify-center p-6">
-        <span className="text-xs text-white/20 font-sans uppercase tracking-widest mb-8">
-          Ton identite secrete
-        </span>
-
-        <div
-          className={cn(
-            "rounded-2xl border p-8 text-center max-w-sm w-full",
-            myRole ? ROLE_BG[myRole] : "border-white/[0.06] bg-white/[0.03]"
-          )}
-        >
-          {/* Role badge */}
-          <span
-            className={cn(
-              "text-sm font-sans font-medium uppercase tracking-wider",
-              getRoleColor(myRole)
-            )}
-          >
-            {getRoleLabel(myRole)}
+      <div className="relative flex flex-1 flex-col overflow-hidden p-4 sm:p-6">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_10%_10%,rgba(251,146,60,0.16),transparent_32%),radial-gradient(circle_at_85%_85%,rgba(239,68,68,0.12),transparent_38%),linear-gradient(145deg,#09090b,#111118_48%,#1b0f0f)]" />
+        <div className="relative mx-auto flex w-full max-w-lg flex-1 flex-col items-center justify-center rounded-3xl border border-orange-300/20 bg-black/35 p-6 shadow-[0_24px_70px_rgba(0,0,0,0.45)] backdrop-blur-xl sm:p-8" style={{ animation: "scaleIn 0.5s ease" }}>
+          <span className="text-xs text-white/20 font-sans uppercase tracking-widest mb-8" style={{ animation: "fadeUp 0.5s ease 0.1s both" }}>
+            Ton identite secrete
           </span>
 
-          {/* Word or special message */}
-          <div className="mt-6 mb-4">
-            {myRole === "mrwhite" ? (
-              <p
-                className="text-3xl font-serif font-light text-white/90"
-                style={{ textShadow: ROLE_GLOW.mrwhite }}
-              >
-                ???
+          <div
+            className={cn(
+              "rounded-2xl border p-8 text-center max-w-sm w-full",
+              myRole ? ROLE_BG[myRole] : "border-white/[0.06] bg-white/[0.03]"
+            )}
+            style={{ animation: "scaleIn 0.6s cubic-bezier(0.16,1,0.3,1) 0.2s both" }}
+          >
+            <span
+              className={cn(
+                "text-sm font-sans font-medium uppercase tracking-wider",
+                getRoleColor(myRole)
+              )}
+            >
+              {getRoleLabel(myRole)}
+            </span>
+
+            <div className="mt-6 mb-4">
+              {myRole === "mrwhite" ? (
+                <p
+                  className="text-3xl font-serif font-light text-white/90"
+                  style={{ textShadow: ROLE_GLOW.mrwhite }}
+                >
+                  ???
+                </p>
+              ) : (
+                <p
+                  className={cn(
+                    "text-4xl font-serif font-light",
+                    getRoleColor(myRole)
+                  )}
+                  style={{
+                    textShadow: myRole ? ROLE_GLOW[myRole] : undefined,
+                  }}
+                >
+                  {myWord}
+                </p>
+              )}
+            </div>
+
+            {myRole === "mrwhite" && (
+              <p className="text-xs text-white/30 font-sans mt-2">
+                Tu n&apos;as pas de mot. Ecoute les indices et bluff !
               </p>
-            ) : (
-              <p
-                className={cn(
-                  "text-4xl font-serif font-light",
-                  getRoleColor(myRole)
-                )}
-                style={{
-                  textShadow: myRole ? ROLE_GLOW[myRole] : undefined,
-                }}
-              >
-                {myWord}
+            )}
+            {myRole === "undercover" && (
+              <p className="text-xs text-white/30 font-sans mt-2">
+                Ton mot est different des autres. Sois discret !
+              </p>
+            )}
+            {myRole === "civilian" && (
+              <p className="text-xs text-white/30 font-sans mt-2">
+                Decris ton mot sans te devoiler. Trouve l&apos;imposteur !
               </p>
             )}
           </div>
 
-          {myRole === "mrwhite" && (
-            <p className="text-xs text-white/30 font-sans mt-2">
-              Tu n&apos;as pas de mot. Ecoute les indices et bluff !
-            </p>
-          )}
-          {myRole === "undercover" && (
-            <p className="text-xs text-white/30 font-sans mt-2">
-              Ton mot est different des autres. Sois discret !
-            </p>
-          )}
-          {myRole === "civilian" && (
-            <p className="text-xs text-white/30 font-sans mt-2">
-              Decris ton mot sans te devoiler. Trouve l&apos;imposteur !
-            </p>
-          )}
+          <p className="text-xs text-white/20 font-sans mt-6 animate-pulse">
+            Memorise ton mot...
+          </p>
         </div>
-
-        <p className="text-xs text-white/20 font-sans mt-6 animate-pulse">
-          Memorise ton mot...
-        </p>
       </div>
     );
   }
@@ -1562,9 +1564,11 @@ export default function UndercoverGame({
     const iAmAlive = me?.alive ?? false;
 
     return (
-      <div className="flex flex-1 flex-col p-6 gap-4">
+      <div className="relative flex flex-1 flex-col overflow-hidden p-4 sm:p-6">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_10%_10%,rgba(251,146,60,0.16),transparent_32%),radial-gradient(circle_at_85%_85%,rgba(239,68,68,0.12),transparent_38%),linear-gradient(145deg,#09090b,#111118_48%,#1b0f0f)]" />
+        <div className="relative mx-auto flex w-full max-w-2xl flex-1 flex-col gap-4 rounded-3xl border border-orange-300/20 bg-black/35 p-4 shadow-[0_24px_70px_rgba(0,0,0,0.45)] backdrop-blur-xl sm:p-6" style={{ animation: "scaleIn 0.4s ease" }}>
         {/* Header: round + timer */}
-        <div className="w-full max-w-2xl mx-auto">
+        <div className="w-full">
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs text-white/20 font-sans">
               Manche {state.round}
@@ -1572,7 +1576,7 @@ export default function UndercoverGame({
             <span
               className={cn(
                 "text-sm font-mono font-bold",
-                isTimeLow ? "text-red-400" : "text-ember"
+                isTimeLow ? "text-red-400" : "text-orange-300"
               )}
             >
               {state.timeLeft}s
@@ -1582,7 +1586,7 @@ export default function UndercoverGame({
             <div
               className={cn(
                 "h-full rounded-full transition-all duration-1000 ease-linear",
-                isTimeLow ? "bg-red-500" : "bg-ember"
+                isTimeLow ? "bg-red-500" : "bg-gradient-to-r from-orange-400 to-amber-400"
               )}
               style={{
                 width: `${((state.timeLeft ?? 0) / 30) * 100}%`,
@@ -1592,17 +1596,17 @@ export default function UndercoverGame({
         </div>
 
         {/* Current describer */}
-        <div className="text-center max-w-2xl mx-auto">
+        <div className="text-center">
           {isMyTurn ? (
             <h2
-              className="text-2xl font-serif font-light text-ember"
-              style={{ textShadow: "0 0 30px rgba(80,216,255,0.35)" }}
+              className="text-2xl font-serif font-light text-orange-200"
+              style={{ textShadow: "0 0 30px rgba(251,146,60,0.35)" }}
             >
               C&apos;est ton tour !
             </h2>
           ) : (
             <h2 className="text-xl font-serif font-light text-white/70">
-              <span className="text-ember">{currentDescriber?.name}</span>{" "}
+              <span className="text-orange-300">{currentDescriber?.name}</span>{" "}
               decrit son mot...
             </h2>
           )}
@@ -1623,12 +1627,12 @@ export default function UndercoverGame({
               placeholder="Ton indice..."
               autoFocus
               autoComplete="off"
-              className="flex-1 px-4 py-3 rounded-lg border border-white/[0.1] bg-white/[0.04] text-white font-sans text-sm placeholder:text-white/20 focus:outline-none focus:border-ember/50 focus:bg-white/[0.06] transition-all"
+              className="flex-1 px-4 py-3 rounded-xl border border-orange-300/20 bg-white/[0.04] text-white font-sans text-sm placeholder:text-white/20 focus:outline-none focus:border-orange-300/40 focus:bg-white/[0.06] transition-all"
             />
             <button
               onClick={handleSubmitClue}
               disabled={!clueInput.trim()}
-              className="px-6 py-3 rounded-lg bg-ember hover:bg-ember-glow disabled:bg-white/[0.06] disabled:text-white/20 text-white font-sans text-sm font-medium transition-all"
+              className="px-6 py-3 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-400 hover:to-amber-400 disabled:bg-white/[0.06] disabled:from-transparent disabled:to-transparent disabled:text-white/20 text-white font-sans text-sm font-medium transition-all shadow-[0_0_20px_rgba(251,146,60,0.2)]"
             >
               Envoyer
             </button>
@@ -1636,8 +1640,8 @@ export default function UndercoverGame({
         )}
         {isMyTurn && clueSubmitted && (
           <div className="max-w-md mx-auto text-center">
-            <div className="px-4 py-3 rounded-lg border border-white/[0.08] bg-white/[0.03]">
-              <p className="text-sm text-white/50 font-sans">
+            <div className="px-4 py-3 rounded-xl border border-orange-300/15 bg-orange-300/[0.06]">
+              <p className="text-sm text-orange-200/70 font-sans">
                 Indice envoye !
               </p>
             </div>
@@ -1645,8 +1649,8 @@ export default function UndercoverGame({
         )}
 
         {/* Clue history */}
-        <div className="flex-1 max-w-2xl mx-auto w-full flex flex-col min-h-0">
-          <span className="text-xs text-white/20 font-sans mb-2">
+        <div className="flex-1 w-full flex flex-col min-h-0">
+          <span className="text-xs text-white/25 font-sans mb-2">
             Indices donnes
           </span>
           <div
@@ -1662,11 +1666,12 @@ export default function UndercoverGame({
               <div
                 key={`${clue.playerId}-${clue.round}-${i}`}
                 className={cn(
-                  "flex items-baseline gap-2 px-3 py-2 rounded-lg",
+                  "flex items-baseline gap-2 px-3 py-2 rounded-xl",
                   clue.playerId === playerId
-                    ? "bg-ember/5 border border-ember/10"
-                    : "bg-white/[0.02] border border-white/[0.04]"
+                    ? "bg-orange-300/[0.06] border border-orange-300/15"
+                    : "bg-white/[0.02] border border-white/[0.06]"
                 )}
+                style={{ animation: `fadeUp 0.3s ease ${i * 0.05}s both` }}
               >
                 <span className="text-[10px] text-white/20 font-mono shrink-0">
                   R{clue.round}
@@ -1683,26 +1688,27 @@ export default function UndercoverGame({
         </div>
 
         {/* Player grid */}
-        <div className="flex flex-wrap justify-center gap-2 max-w-2xl mx-auto">
-          {state.players?.map((p) => {
+        <div className="flex flex-wrap justify-center gap-2">
+          {state.players?.map((p, i) => {
             const isDescribing = p.id === state.currentDescriberId;
             return (
               <div
                 key={p.id}
                 className={cn(
-                  "flex flex-col items-center gap-0.5 rounded-lg border px-3 py-2 min-w-[80px] transition-all",
+                  "flex flex-col items-center gap-0.5 rounded-xl border px-3 py-2 min-w-[80px] transition-all",
                   !p.alive && "opacity-30",
                   isDescribing
-                    ? "border-ember/40 bg-ember/5"
+                    ? "border-orange-300/40 bg-orange-300/[0.08] shadow-[0_0_16px_rgba(251,146,60,0.15)]"
                     : p.hasDescribed
                       ? "border-white/[0.12] bg-white/[0.05]"
                       : "border-white/[0.06] bg-white/[0.02]"
                 )}
+                style={{ animation: `fadeUp 0.3s ease ${i * 0.05}s both` }}
               >
                 <span
                   className={cn(
                     "text-xs font-medium truncate max-w-[70px] font-sans",
-                    isDescribing ? "text-ember" : "text-white/60"
+                    isDescribing ? "text-orange-200" : "text-white/60"
                   )}
                 >
                   {p.name}
@@ -1721,6 +1727,7 @@ export default function UndercoverGame({
             );
           })}
         </div>
+        </div>
       </div>
     );
   }
@@ -1730,9 +1737,11 @@ export default function UndercoverGame({
     const iAmAlive = me?.alive ?? false;
 
     return (
-      <div className="flex flex-1 flex-col items-center p-6 gap-5">
+      <div className="relative flex flex-1 flex-col overflow-hidden p-4 sm:p-6">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_10%_10%,rgba(251,146,60,0.16),transparent_32%),radial-gradient(circle_at_85%_85%,rgba(239,68,68,0.12),transparent_38%),linear-gradient(145deg,#09090b,#111118_48%,#1b0f0f)]" />
+        <div className="relative mx-auto flex w-full max-w-2xl flex-1 flex-col items-center gap-5 rounded-3xl border border-orange-300/20 bg-black/35 p-4 shadow-[0_24px_70px_rgba(0,0,0,0.45)] backdrop-blur-xl sm:p-6" style={{ animation: "scaleIn 0.4s ease" }}>
         {/* Header */}
-        <div className="w-full max-w-2xl">
+        <div className="w-full">
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs text-white/20 font-sans">
               Vote — Manche {state.round}
@@ -1740,7 +1749,7 @@ export default function UndercoverGame({
             <span
               className={cn(
                 "text-sm font-mono font-bold",
-                isTimeLow ? "text-red-400" : "text-ember"
+                isTimeLow ? "text-red-400" : "text-orange-300"
               )}
             >
               {state.timeLeft}s
@@ -1750,7 +1759,7 @@ export default function UndercoverGame({
             <div
               className={cn(
                 "h-full rounded-full transition-all duration-1000 ease-linear",
-                isTimeLow ? "bg-red-500" : "bg-ember"
+                isTimeLow ? "bg-red-500" : "bg-gradient-to-r from-orange-400 to-amber-400"
               )}
               style={{
                 width: `${((state.timeLeft ?? 0) / 30) * 100}%`,
@@ -1762,7 +1771,7 @@ export default function UndercoverGame({
         <div className="text-center">
           <h2
             className="text-2xl font-serif font-light text-white/90"
-            style={{ textShadow: "0 0 30px rgba(255,255,255,0.1)" }}
+            style={{ textShadow: "0 0 30px rgba(251,146,60,0.2)" }}
           >
             Qui est l&apos;imposteur ?
           </h2>
@@ -1775,7 +1784,7 @@ export default function UndercoverGame({
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 max-w-lg w-full">
           {alivePlayers
             .filter((p) => p.id !== playerId)
-            .map((p) => {
+            .map((p, i) => {
               const isSelected = voteTarget === p.id;
               return (
                 <button
@@ -1785,13 +1794,14 @@ export default function UndercoverGame({
                   }}
                   disabled={voteConfirmed || !iAmAlive}
                   className={cn(
-                    "rounded-lg border p-4 text-center transition-all",
+                    "rounded-xl border p-4 text-center transition-all press-effect",
                     isSelected
-                      ? "border-red-400/50 bg-red-400/10 ring-1 ring-red-400/20"
-                      : "border-white/[0.06] bg-white/[0.03] hover:border-white/[0.15] hover:bg-white/[0.05]",
+                      ? "border-red-400/50 bg-red-400/10 shadow-[0_0_20px_rgba(239,68,68,0.15)]"
+                      : "border-white/[0.08] bg-white/[0.03] hover:border-orange-300/30 hover:bg-orange-300/[0.04]",
                     (voteConfirmed || !iAmAlive) &&
                       "opacity-50 cursor-not-allowed"
                   )}
+                  style={{ animation: `fadeUp 0.3s ease ${i * 0.06}s both` }}
                 >
                   <span
                     className={cn(
@@ -1810,7 +1820,8 @@ export default function UndercoverGame({
         {iAmAlive && !voteConfirmed && voteTarget && (
           <button
             onClick={handleVote}
-            className="px-8 py-3 rounded-lg bg-red-500/80 hover:bg-red-500 text-white font-sans text-sm font-medium transition-all"
+            className="px-8 py-3 rounded-xl bg-gradient-to-r from-red-500 to-rose-500 hover:from-red-400 hover:to-rose-400 text-white font-sans text-sm font-medium transition-all shadow-[0_0_20px_rgba(239,68,68,0.25)] press-effect"
+            style={{ animation: "scaleIn 0.3s ease" }}
           >
             Confirmer le vote
           </button>
@@ -1823,15 +1834,16 @@ export default function UndercoverGame({
 
         {/* Vote status */}
         <div className="flex flex-wrap justify-center gap-2 mt-auto">
-          {alivePlayers.map((p) => (
+          {alivePlayers.map((p, i) => (
             <div
               key={p.id}
               className={cn(
-                "flex flex-col items-center gap-0.5 rounded-lg border px-3 py-2 min-w-[80px]",
+                "flex flex-col items-center gap-0.5 rounded-xl border px-3 py-2 min-w-[80px] transition-all",
                 p.hasVoted
-                  ? "border-white/[0.12] bg-white/[0.05]"
+                  ? "border-orange-300/20 bg-orange-300/[0.06]"
                   : "border-white/[0.06] bg-white/[0.02]"
               )}
+              style={{ animation: `fadeUp 0.3s ease ${i * 0.05}s both` }}
             >
               <span className="text-xs text-white/60 font-sans truncate max-w-[70px]">
                 {p.name}
@@ -1842,6 +1854,7 @@ export default function UndercoverGame({
               </span>
             </div>
           ))}
+        </div>
         </div>
       </div>
     );
@@ -1855,14 +1868,16 @@ export default function UndercoverGame({
     );
 
     return (
-      <div className="flex flex-1 flex-col items-center justify-center p-6 gap-6">
+      <div className="relative flex flex-1 flex-col overflow-hidden p-4 sm:p-6">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_10%_10%,rgba(251,146,60,0.16),transparent_32%),radial-gradient(circle_at_85%_85%,rgba(239,68,68,0.12),transparent_38%),linear-gradient(145deg,#09090b,#111118_48%,#1b0f0f)]" />
+        <div className="relative mx-auto flex w-full max-w-lg flex-1 flex-col items-center justify-center gap-6 rounded-3xl border border-orange-300/20 bg-black/35 p-6 shadow-[0_24px_70px_rgba(0,0,0,0.45)] backdrop-blur-xl sm:p-8" style={{ animation: "scaleIn 0.4s ease" }}>
         <div className="text-center">
-          <span className="text-xs text-white/20 font-sans uppercase tracking-widest">
+          <span className="text-xs text-white/20 font-sans uppercase tracking-widest" style={{ animation: "fadeUp 0.4s ease 0.1s both" }}>
             Mr. White elimine !
           </span>
           <h2
             className="text-3xl font-serif font-light text-white mt-3"
-            style={{ textShadow: ROLE_GLOW.mrwhite }}
+            style={{ textShadow: ROLE_GLOW.mrwhite, animation: "scaleIn 0.5s ease 0.2s both" }}
           >
             {eliminatedPlayer?.name ?? "Mr. White"}
           </h2>
@@ -1875,7 +1890,7 @@ export default function UndercoverGame({
         <span
           className={cn(
             "text-sm font-mono font-bold",
-            isTimeLow ? "text-red-400" : "text-ember"
+            isTimeLow ? "text-red-400" : "text-orange-300"
           )}
         >
           {state.timeLeft}s
@@ -1892,12 +1907,12 @@ export default function UndercoverGame({
               placeholder="Le mot des civils est..."
               autoFocus
               autoComplete="off"
-              className="flex-1 px-4 py-3 rounded-lg border border-white/[0.1] bg-white/[0.04] text-white font-sans text-sm placeholder:text-white/20 focus:outline-none focus:border-white/30 focus:bg-white/[0.06] transition-all"
+              className="flex-1 px-4 py-3 rounded-xl border border-orange-300/20 bg-white/[0.04] text-white font-sans text-sm placeholder:text-white/20 focus:outline-none focus:border-orange-300/40 focus:bg-white/[0.06] transition-all"
             />
             <button
               onClick={handleMrWhiteGuess}
               disabled={!guessInput.trim()}
-              className="px-6 py-3 rounded-lg bg-white/10 hover:bg-white/20 disabled:bg-white/[0.04] disabled:text-white/20 text-white font-sans text-sm font-medium transition-all"
+              className="px-6 py-3 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-400 hover:to-amber-400 disabled:bg-white/[0.06] disabled:from-transparent disabled:to-transparent disabled:text-white/20 text-white font-sans text-sm font-medium transition-all shadow-[0_0_20px_rgba(251,146,60,0.2)] press-effect"
             >
               Deviner
             </button>
@@ -1907,6 +1922,7 @@ export default function UndercoverGame({
             Mr. White tente de deviner le mot...
           </p>
         )}
+        </div>
       </div>
     );
   }
@@ -1919,9 +1935,11 @@ export default function UndercoverGame({
     const noElimination = !state.eliminatedPlayerId;
 
     return (
-      <div className="flex flex-1 flex-col items-center justify-center p-6 gap-6">
+      <div className="relative flex flex-1 flex-col overflow-hidden p-4 sm:p-6">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_10%_10%,rgba(251,146,60,0.16),transparent_32%),radial-gradient(circle_at_85%_85%,rgba(239,68,68,0.12),transparent_38%),linear-gradient(145deg,#09090b,#111118_48%,#1b0f0f)]" />
+        <div className="relative mx-auto flex w-full max-w-lg flex-1 flex-col items-center justify-center gap-6 rounded-3xl border border-orange-300/20 bg-black/35 p-6 shadow-[0_24px_70px_rgba(0,0,0,0.45)] backdrop-blur-xl sm:p-8" style={{ animation: "scaleIn 0.4s ease" }}>
         {noElimination ? (
-          <div className="text-center">
+          <div className="text-center" style={{ animation: "fadeUp 0.5s ease" }}>
             <h2 className="text-3xl font-serif font-light text-white/60">
               Egalite !
             </h2>
@@ -1930,7 +1948,7 @@ export default function UndercoverGame({
             </p>
           </div>
         ) : (
-          <div className="text-center">
+          <div className="text-center" style={{ animation: "fadeUp 0.5s ease" }}>
             <span className="text-xs text-white/20 font-sans uppercase tracking-widest">
               Elimine
             </span>
@@ -1945,6 +1963,7 @@ export default function UndercoverGame({
                 textShadow: state.eliminatedRole
                   ? ROLE_GLOW[state.eliminatedRole]
                   : undefined,
+                animation: "scaleIn 0.5s ease 0.2s both",
               }}
             >
               {eliminatedPlayer?.name}
@@ -1955,6 +1974,7 @@ export default function UndercoverGame({
                 state.eliminatedRole ? ROLE_BG[state.eliminatedRole] : "",
                 getRoleColor(state.eliminatedRole)
               )}
+              style={{ animation: "scaleIn 0.4s ease 0.35s both" }}
             >
               {getRoleLabel(state.eliminatedRole)}
             </div>
@@ -1965,11 +1985,12 @@ export default function UndercoverGame({
         {state.mrWhiteGuessCorrect !== null && (
           <div
             className={cn(
-              "rounded-lg border p-4 text-center max-w-sm",
+              "rounded-xl border p-4 text-center max-w-sm",
               state.mrWhiteGuessCorrect
                 ? "border-emerald-400/30 bg-emerald-400/5"
                 : "border-red-400/30 bg-red-400/5"
             )}
+            style={{ animation: "scaleIn 0.4s ease 0.3s both" }}
           >
             {state.mrWhiteGuessCorrect ? (
               <>
@@ -1996,6 +2017,7 @@ export default function UndercoverGame({
         <p className="text-xs text-white/20 font-sans animate-pulse">
           La partie continue...
         </p>
+        </div>
       </div>
     );
   }
@@ -2017,22 +2039,24 @@ export default function UndercoverGame({
     const winnerGlow = state.winners ? ROLE_GLOW[state.winners] : undefined;
 
     return (
-      <div className="flex flex-1 flex-col items-center justify-center p-6 gap-6">
-        <div className="text-center">
+      <div className="relative flex flex-1 flex-col overflow-hidden p-4 sm:p-6">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_10%_10%,rgba(251,146,60,0.16),transparent_32%),radial-gradient(circle_at_85%_85%,rgba(239,68,68,0.12),transparent_38%),linear-gradient(145deg,#09090b,#111118_48%,#1b0f0f)]" />
+        <div className="relative mx-auto flex w-full max-w-lg flex-1 flex-col items-center justify-center gap-6 rounded-3xl border border-orange-300/20 bg-black/35 p-6 shadow-[0_24px_70px_rgba(0,0,0,0.45)] backdrop-blur-xl sm:p-8" style={{ animation: "scaleIn 0.4s ease" }}>
+        <div className="text-center" style={{ animation: "fadeUp 0.5s ease" }}>
           <span className="text-xs text-white/20 font-sans uppercase tracking-widest">
             Fin de la partie
           </span>
           <h2
             className={cn("text-4xl font-serif font-light mt-3", winnerColor)}
-            style={{ textShadow: winnerGlow }}
+            style={{ textShadow: winnerGlow, animation: "scaleIn 0.6s cubic-bezier(0.16,1,0.3,1) 0.2s both" }}
           >
             {winnerLabel} gagnent !
           </h2>
         </div>
 
         {/* Word reveal */}
-        <div className="flex gap-6 mt-2">
-          <div className="text-center">
+        <div className="flex gap-6 mt-2" style={{ animation: "fadeUp 0.4s ease 0.3s both" }}>
+          <div className="text-center rounded-xl border border-blue-400/20 bg-blue-400/[0.06] px-4 py-3">
             <span className="text-[10px] text-blue-400/60 font-sans uppercase tracking-wider">
               Mot civil
             </span>
@@ -2040,7 +2064,7 @@ export default function UndercoverGame({
               {state.civilianWord}
             </p>
           </div>
-          <div className="text-center">
+          <div className="text-center rounded-xl border border-red-400/20 bg-red-400/[0.06] px-4 py-3">
             <span className="text-[10px] text-red-400/60 font-sans uppercase tracking-wider">
               Mot undercover
             </span>
@@ -2051,19 +2075,20 @@ export default function UndercoverGame({
         </div>
 
         {/* All players with roles revealed */}
-        <div className="w-full max-w-md space-y-2 mt-4">
-          {state.players?.map((p) => {
+        <div className="w-full max-w-md space-y-2 mt-2">
+          {state.players?.map((p, i) => {
             const role = p.role;
             return (
               <div
                 key={p.id}
                 className={cn(
-                  "flex items-center justify-between rounded-lg border p-3",
+                  "flex items-center justify-between rounded-xl border p-3 transition-all",
                   role
                     ? ROLE_BG[role]
                     : "border-white/[0.06] bg-white/[0.03]",
                   !p.alive && "opacity-60"
                 )}
+                style={{ animation: `fadeUp 0.3s ease ${0.35 + i * 0.06}s both` }}
               >
                 <div className="flex items-center gap-3">
                   <span
@@ -2097,6 +2122,7 @@ export default function UndercoverGame({
         <p className="text-xs text-white/20 font-sans animate-pulse mt-4">
           Retour au lobby...
         </p>
+        </div>
       </div>
     );
   }

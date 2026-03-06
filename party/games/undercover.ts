@@ -2,7 +2,7 @@ import type { Connection } from "partykit/server";
 import { BaseGame } from "./base-game";
 import type { GameRanking } from "../shared/types";
 
-// ── Config ──────────────────────────────────────────────────
+// -- Config --------------------------------------------------
 const REVEAL_DURATION = 5000;
 const DESCRIBE_TIMEOUT = 30000;
 const VOTE_TIMEOUT = 30000;
@@ -19,7 +19,7 @@ const BOT_NAME_POOL = [
   "Bot Foxtrot",
 ];
 
-// ── Word Pairs (70 pairs) ───────────────────────────────────
+// -- Word Pairs (70 pairs) -----------------------------------
 const CLASSIC_WORD_PAIRS: [string, string][] = [
   ["Chat", "Chien"],
   ["Coca-Cola", "Pepsi"],
@@ -123,31 +123,56 @@ const ADULT_WORD_PAIRS: [string, string][] = [
   ["Strip-tease", "Lap dance"],
   ["Fantasme", "Roleplay"],
   ["Soumis", "Dominant"],
-  ["chaine", "Menottes"],
   ["Latex", "Cuir"],
   ["message mignon", "Nude"],
   ["OnlyFans", "MYM"],
- ["Johnny Sins", "Manuel Ferrara"],                                                                                                                                   
-  ["Mia Khalifa", "Angela White"],                                                                                                                                     
-  ["Lana Rhoades", "Abella Danger"],                                                                                                                                   
-["Riley Reid", "Adriana Chechik"],                                                                                                                                   
-   ["Pornhub", "Xvideos"],                                                                                                                                              
-    ["XHamster", "YouPorn"],                                                                                                                                             
-    ["Brazzers", "xnxx"],                                                                                                                                                                                                                                                                         
-    ["Jacquie et Michel", "youporn"],                                                                                                                                                                                                                                                                                
-    ["MYM", "OnlyFans"],                                                                                                                                                 
-["Tinder", "Bumble"],
-  ["Date", "Plan d'un soir"],
-  ["Crush", "Ex"],
   ["18+", "Tout public"],
   ["Sensuel", "Sexuel"],
   ["Tease", "Provoc"],
   ["Kiss", "French kiss"],
   ["Preliminaires", "Baiser"],
-["Infidele", "Fidele"],
+  ["Infidele", "Fidele"],
   ["Desir", "Tentation"],
-
-
+  ["Clara Morgane", "Lana Rhoades"],
+  ["Khalamite", "Mia Khalifa"],
+  ["Johnny Sins", "Manuel Ferrara"],
+  ["Missionnaire", "Levrette"],
+  ["Chatte", "Seins"],
+  ["Cunnilingus", "Pipe"],
+  ["Echangisme", "Partouze"],
+  ["Levre", "Clito"],
+  ["Sperme", "Jus"],
+  ["Gorge profonde", "Sodomie"],
+  ["Fellation", "Cunnilingus"],
+  ["Penetration", "Ejaculation"],
+  ["Fetichisme", "Voyeurisme"],
+  ["Plug anal", "Gode ceinture"],
+  ["Domination", "Soumission"],
+  ["Nymphomane", "Puceau"],
+  ["Menottes", "Chaines"],
+  ["Masque", "Ouvre-bouche"],
+  ["Soumis", "Dominateur"],
+  ["Poil", "Rase"],
+  ["Urine", "Cyprine"],
+  ["Gorge", "Oesophage"],
+  ["69", "Ciseaux"],
+  ["Golden Shower", "Snowballing"],
+  ["Lubrifiant", "Salive"],
+  ["BDSM", "Soft Dom"],
+  ["Cuckolding", "Echangiste"],
+  ["Footjob", "Handjob"],
+  ["Prepuce", "Clitoris"],
+  ["Pornhub", "Xvideos"],
+  ["Lingerie", "String troue"],
+  ["Date", "Plan cul"],
+  ["Formicophilie", "Zoophilie"],
+  ["Pedophilie", "Gerontophilie"],
+  ["Brazzers", "xnxx"],
+  ["Jacquie et Michel", "YouPorn"],
+  ["XHamster", "RedTube"],
+  ["Riley Reid", "Adriana Chechik"],
+  ["Mia Khalifa", "Angela White"],
+  ["Lana Rhoades", "Abella Danger"],
 ];
 
 type ThemeId = "classic" | "manga" | "adult" | "mixed";
@@ -183,7 +208,7 @@ function getWordPairsForTheme(themeId: ThemeId): [string, string][] {
   return THEME_PAIR_MAP[themeId];
 }
 
-// ── Types ───────────────────────────────────────────────────
+// -- Types ---------------------------------------------------
 
 type Role = "civilian" | "undercover" | "mrwhite";
 
@@ -224,7 +249,7 @@ interface RoleDistributionOption extends RoleDistributionConfig {
   civilianCount: number;
 }
 
-// ── Game Class ──────────────────────────────────────────────
+// -- Game Class ----------------------------------------------
 
 export class UndercoverGame extends BaseGame {
   ucPlayers: Map<string, UndercoverPlayer> = new Map();
@@ -311,7 +336,7 @@ export class UndercoverGame extends BaseGame {
     if (humanPlayerCount < 1) {
       this.broadcast({
         type: "game-error",
-        payload: { message: "Aucun joueur connecté." },
+        payload: { message: "Aucun joueur connecte." },
       });
       return;
     }
@@ -399,7 +424,7 @@ export class UndercoverGame extends BaseGame {
     }, REVEAL_DURATION);
   }
 
-  // ── Phase transitions ─────────────────────────────────────
+  // -- Phase transitions -------------------------------------
 
   startDescribePhase() {
     this.clearTimers();
@@ -655,7 +680,7 @@ export class UndercoverGame extends BaseGame {
     }, GAME_END_DISPLAY_TIME);
   }
 
-  // ── Message handling ──────────────────────────────────────
+  // -- Message handling --------------------------------------
 
   isBot(playerId: string): boolean {
     return this.botIds.has(playerId);
@@ -914,7 +939,7 @@ export class UndercoverGame extends BaseGame {
     }
   }
 
-  // ── Personalized state ────────────────────────────────────
+  // -- Personalized state ------------------------------------
 
   broadcastPersonalizedState() {
     for (const [playerId, player] of this.players) {
@@ -1062,7 +1087,7 @@ export class UndercoverGame extends BaseGame {
     };
   }
 
-  // ── Utilities ─────────────────────────────────────────────
+  // -- Utilities ---------------------------------------------
 
   findPlayerByConnection(connectionId: string) {
     for (const [, player] of this.players) {
