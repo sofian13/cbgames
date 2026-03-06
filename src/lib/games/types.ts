@@ -17,6 +17,7 @@ export interface GameProps {
   roomCode: string;
   playerId: string;
   playerName: string;
+  onReturnToLobby?: () => void;
 }
 
 export interface SessionScore {

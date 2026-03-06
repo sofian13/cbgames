@@ -139,6 +139,7 @@ export default function GamePage() {
           roomCode={code}
           playerId={playerId}
           playerName={playerName}
+          onReturnToLobby={handleReturnToLobby}
         />
       </Suspense>
     </GameShell>

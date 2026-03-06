@@ -222,7 +222,7 @@ function GoalFlag() {
   );
 }
 
-export default function BlockRunnerGame({ roomCode, playerId, playerName }: GameProps) {
+export default function BlockRunnerGame({ roomCode, playerId, playerName, onReturnToLobby }: GameProps) {
   const router = useRouter();
   const { sendAction } = useGame(roomCode, "block-runner", playerId, playerName);
   const { gameState, error } = useGameStore();
@@ -378,7 +378,7 @@ export default function BlockRunnerGame({ roomCode, playerId, playerName }: Game
             </button>
           )}
           <button
-            onClick={() => router.push(`/room/${roomCode}`)}
+            onClick={() => onReturnToLobby ? onReturnToLobby() : router.push(`/room/${roomCode}`)}
             className="rounded-lg border border-white/15 bg-white/5 px-3 py-1.5 text-[10px] font-semibold text-white/50 transition-all hover:bg-white/10 hover:text-white/80"
           >
             Quitter

@@ -532,7 +532,7 @@ function ChessBoardView({
   );
 }
 
-export default function ChessGame({ roomCode, playerId, playerName }: GameProps) {
+export default function ChessGame({ roomCode, playerId, playerName, onReturnToLobby }: GameProps) {
   const { sendAction } = useGame(roomCode, "chess", playerId, playerName);
   const { gameState, error } = useGameStore();
   const state = gameState as unknown as ChessState | null;
@@ -871,17 +871,27 @@ export default function ChessGame({ roomCode, playerId, playerName }: GameProps)
             {/* Status bar */}
             <div className="mt-3 flex items-center justify-between gap-2">
               <p className="font-sans text-sm text-white/90">{statusText}</p>
-              <button
-                onClick={() => {
-                  if (document.fullscreenElement) {
-                    void document.exitFullscreen?.();
-                  }
-                  setFocusMode(false);
-                }}
-                className="rounded-xl border border-white/25 bg-black/30 px-4 py-2 font-sans text-xs text-white/90 backdrop-blur-sm transition hover:bg-white/10"
-              >
-                Quitter plein ecran
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    if (document.fullscreenElement) {
+                      void document.exitFullscreen?.();
+                    }
+                    setFocusMode(false);
+                  }}
+                  className="rounded-xl border border-white/25 bg-black/30 px-4 py-2 font-sans text-xs text-white/90 backdrop-blur-sm transition hover:bg-white/10"
+                >
+                  Quitter plein ecran
+                </button>
+                {onReturnToLobby && (
+                  <button
+                    onClick={onReturnToLobby}
+                    className="rounded-xl border border-white/15 bg-white/5 px-3 py-2 font-sans text-xs text-white/50 transition hover:bg-white/10 hover:text-white/80"
+                  >
+                    Menu des jeux
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -1287,6 +1297,14 @@ export default function ChessGame({ roomCode, playerId, playerName }: GameProps)
               >
                 Quitter plein ecran
               </button>
+              {onReturnToLobby && (
+                <button
+                  onClick={onReturnToLobby}
+                  className="rounded-xl border border-white/15 bg-white/5 px-3 py-2 font-sans text-xs text-white/50 transition hover:bg-white/10 hover:text-white/80"
+                >
+                  Menu des jeux
+                </button>
+              )}
             </div>
           </div>
           {inviteFeedback && (
