@@ -360,6 +360,10 @@ export default function UndercoverGame({
     [handleMrWhiteGuess]
   );
 
+  const handleBackToGamePicker = useCallback(() => {
+    window.location.href = `/room/${roomCode}`;
+  }, [roomCode]);
+
   const getLocalCurrentPlayer = useCallback(() => {
     const id = localTurnOrder[localCurrentIndex];
     return localPlayers.find((p) => p.id === id) ?? null;
@@ -488,7 +492,7 @@ export default function UndercoverGame({
 
   const handleSubmitLocalName = useCallback(() => {
     const raw = localNameInput.trim();
-    const nextName = raw || `Player ${localNameIndex + 1}`;
+    const nextName = raw || `Joueur ${localNameIndex + 1}`;
     const nextNames = [...localCollectedNames, nextName];
 
     if (nextNames.length >= localPlayerCount) {
@@ -738,7 +742,7 @@ export default function UndercoverGame({
                       handleSubmitLocalName();
                     }
                   }}
-                  placeholder={`Player ${localNameIndex + 1}`}
+                  placeholder={`Joueur ${localNameIndex + 1}`}
                   autoFocus
                   className="mt-2 w-full rounded-xl border border-white/20 bg-black/35 px-4 py-3 text-lg text-white placeholder:text-white/35 focus:outline-none focus:border-cyan-300/50"
                 />
@@ -794,7 +798,7 @@ export default function UndercoverGame({
               Etape 1/2
             </p>
             <p className="mt-3 text-4xl font-sans font-semibold">
-              Players: {localPlayerCount}
+              Joueurs: {localPlayerCount}
             </p>
             <div className="mt-4 h-[3px] w-[92%] rounded-full bg-white/85" />
 
@@ -861,11 +865,9 @@ export default function UndercoverGame({
             </div>
 
             <div className="mt-4 w-full rounded-3xl border border-black/15 bg-[#dde1e9] px-4 py-3 text-center text-black/75 shadow-[0_8px_28px_rgba(0,0,0,0.22)]">
-              <p className="text-xl font-sans font-semibold">
-                Limites
-              </p>
+              <p className="text-xl font-sans font-semibold">Limites</p>
               <p className="mt-1 text-sm font-sans">
-                Undercover max {maxUndercover} | Mr.White max {maxMrWhite}
+                Undercover max {maxUndercover} | Mr. White max {maxMrWhite}
               </p>
               <p className="text-sm font-sans">
                 Menaces totales max {maxThreats}
@@ -930,15 +932,15 @@ export default function UndercoverGame({
             >
               Suivant
             </button>
-            <button
-              onClick={() => setLocalMode(false)}
-              className="mt-3 text-sm font-sans text-white/75 underline-offset-4 hover:underline"
-            >
-              Revenir au mode en ligne
-            </button>
-          </div>
-        </div>
-      );
+                <button
+                  onClick={handleBackToGamePicker}
+                  className="mt-3 text-sm font-sans text-white/75 underline-offset-4 hover:underline"
+                >
+                  Retour a l&apos;ecran des jeux
+                </button>
+              </div>
+            </div>
+          );
     }
 
     if (localPhase === "cards") {
@@ -957,7 +959,7 @@ export default function UndercoverGame({
               <div className="relative w-full max-w-lg rounded-3xl border border-white/35 bg-black/35 p-7 text-center shadow-[0_20px_70px_rgba(0,0,0,0.4)] backdrop-blur-sm">
                 <p className="text-[11px] font-sans uppercase tracking-[0.24em] text-cyan-300/80">Passe le telephone</p>
                 <p className="mt-3 text-5xl font-sans font-semibold text-cyan-300">{passPlayer.name}</p>
-                <p className="mt-3 text-base font-sans text-white/85">Please pick a card</p>
+                <p className="mt-3 text-base font-sans text-white/85">Pioche une carte</p>
                 <button
                   onClick={() => setLocalPassToId(null)}
                   className="mt-6 rounded-full bg-gradient-to-r from-[#65dfb2] to-[#4ecf8a] px-8 py-2.5 text-lg font-sans font-semibold text-white"
@@ -974,18 +976,18 @@ export default function UndercoverGame({
         <div className="relative flex min-h-[100svh] flex-1 flex-col gap-5 overflow-hidden bg-[#040824] p-4 pb-8 text-white">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_25%,rgba(149,60,101,0.35),transparent_40%),radial-gradient(circle_at_50%_62%,rgba(36,224,224,0.3),transparent_34%),linear-gradient(180deg,#040424_0%,#05113a_42%,#01072a_100%)]" />
           <div className="relative mt-6 text-center">
-            <h2 className="text-5xl font-sans font-semibold text-cyan-300">Player {localCardTurnIndex + 1}</h2>
-            <p className="mt-1 text-3xl font-sans text-white/90">Please pick a card</p>
+            <h2 className="text-5xl font-sans font-semibold text-cyan-300">Joueur {localCardTurnIndex + 1}</h2>
+            <p className="mt-1 text-3xl font-sans text-white/90">Pioche une carte</p>
           </div>
 
           <div className="relative mx-auto flex w-full max-w-md gap-2">
             <div className="flex-1 rounded-3xl bg-white/35 px-4 py-3 text-center text-black/80 backdrop-blur-[1px]">
-              <p className="text-xl font-sans">Remaining infiltrators</p>
+              <p className="text-xl font-sans">Infiltrateurs restants</p>
               <p className="text-3xl font-semibold">{remainingInfiltrators}</p>
             </div>
             <div className="flex-1 rounded-3xl bg-white/35 px-4 py-3 text-center text-black/80 backdrop-blur-[1px]">
-              <p className="text-xl font-sans">Special Roles</p>
-              <p className="text-3xl font-semibold">{remainingMrWhite === 0 ? "None" : `${remainingMrWhite} Mr. White`}</p>
+              <p className="text-xl font-sans">Roles speciaux</p>
+              <p className="text-3xl font-semibold">{remainingMrWhite === 0 ? "Aucun" : `${remainingMrWhite} Mr. White`}</p>
             </div>
           </div>
 
@@ -1021,8 +1023,8 @@ export default function UndercoverGame({
           {localCardReveal && (
             <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/70 backdrop-blur-sm p-5">
               <div className="w-full max-w-md rounded-3xl border border-white/65 bg-[rgba(8,19,58,0.55)] p-6 text-center shadow-[0_20px_90px_rgba(0,0,0,0.55)]">
-                <p className="text-5xl font-sans font-semibold text-cyan-300">Player {localCardTurnIndex + 1}</p>
-                <p className="mt-1 text-3xl font-sans text-white/95">Please pick a card</p>
+                <p className="text-5xl font-sans font-semibold text-cyan-300">Joueur {localCardTurnIndex + 1}</p>
+                <p className="mt-1 text-3xl font-sans text-white/95">Pioche une carte</p>
                 <div className="mx-auto mt-5 h-56 w-40 [perspective:1000px]">
                   <div
                     className="relative h-full w-full transition-transform duration-500"
@@ -1057,7 +1059,7 @@ export default function UndercoverGame({
                   onClick={confirmLocalCard}
                   className="mt-6 w-[78%] rounded-full bg-gradient-to-r from-[#65dfb2] to-[#4ecf8a] py-2.5 text-2xl font-sans font-semibold text-white"
                 >
-                  OK
+                  Valider
                 </button>
               </div>
             </div>
@@ -1303,18 +1305,26 @@ export default function UndercoverGame({
           <p className="text-3xl font-serif text-cyan-300">
             {localWinners === "civilian" ? "Les Civils gagnent" : "Undercover / Mr.White gagnent"}
           </p>
-          <button
-            onClick={() => {
-              setLocalSetupStep("config");
-              setLocalCollectedNames([]);
-              setLocalNameIndex(0);
-              setLocalNameInput("");
-              setLocalPhase("setup");
-            }}
-            className="rounded-xl border border-cyan-300/40 bg-gradient-to-r from-cyan-600 to-blue-600 px-6 py-2 text-sm font-sans text-white"
-          >
-            Rejouer
-          </button>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <button
+              onClick={() => {
+                setLocalSetupStep("config");
+                setLocalCollectedNames([]);
+                setLocalNameIndex(0);
+                setLocalNameInput("");
+                setLocalPhase("setup");
+              }}
+              className="rounded-xl border border-cyan-300/40 bg-gradient-to-r from-cyan-600 to-blue-600 px-6 py-2 text-sm font-sans text-white"
+            >
+              Recommencer la partie
+            </button>
+            <button
+              onClick={handleBackToGamePicker}
+              className="rounded-xl border border-white/25 bg-white/10 px-6 py-2 text-sm font-sans text-white"
+            >
+              Retour a l&apos;ecran des jeux
+            </button>
+          </div>
         </div>
       );
     }
