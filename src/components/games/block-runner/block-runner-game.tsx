@@ -122,8 +122,9 @@ export default function BlockRunnerGame({ roomCode, playerId, playerName }: Game
     window.addEventListener("resize", updateOrientation);
     window.addEventListener("orientationchange", updateOrientation);
     try {
-      if (screen.orientation?.lock) {
-        void screen.orientation.lock("landscape").catch(() => {});
+      const orientationApi = (screen.orientation as { lock?: (o: "landscape") => Promise<void> } | undefined);
+      if (orientationApi?.lock) {
+        void orientationApi.lock("landscape").catch(() => {});
       }
     } catch {}
     return () => {
