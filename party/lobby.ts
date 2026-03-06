@@ -28,7 +28,7 @@ export default class LobbyServer {
 
   getState(): LobbyState {
     const players = Array.from(this.players.values());
-    const host = players.find((p) => p.isHost && p.isConnected) ?? players.find((p) => p.isConnected);
+    const host = players.find((p) => p.isHost) ?? players.find((p) => p.isConnected);
     return {
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       players: players.map(({ connectionId, ...rest }) => rest),
@@ -40,10 +40,10 @@ export default class LobbyServer {
   }
 
   ensureConnectedHost() {
+    const anyHost = Array.from(this.players.values()).find((p) => p.isHost);
+    if (anyHost) return;
     const connected = Array.from(this.players.values()).filter((p) => p.isConnected);
     if (connected.length === 0) return;
-    const currentConnectedHost = connected.find((p) => p.isHost);
-    if (currentConnectedHost) return;
     for (const [, p] of this.players) {
       p.isHost = false;
     }
@@ -287,9 +287,6 @@ export default class LobbyServer {
     if (!player) return;
 
     player.isConnected = false;
-    if (player.isHost) {
-      this.ensureConnectedHost();
-    }
 
     // Remove after timeout if they don't reconnect
     setTimeout(() => {
