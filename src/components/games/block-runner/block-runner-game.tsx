@@ -54,6 +54,7 @@ export default function BlockRunnerGame({ roomCode, playerId, playerName }: Game
   const state = gameState as unknown as BlockRunnerState | null;
 
   const [joystick, setJoystick] = useState({ x: 0, y: 0, active: false });
+  const [isLandscape, setIsLandscape] = useState(false);
   const joystickRef = useRef<HTMLDivElement | null>(null);
   const joystickPointerIdRef = useRef<number | null>(null);
   const moveXRef = useRef<number>(0);
@@ -116,6 +117,22 @@ export default function BlockRunnerGame({ roomCode, playerId, playerName }: Game
   }, [sendMove]);
 
   useEffect(() => {
+    const updateOrientation = () => setIsLandscape(window.innerWidth > window.innerHeight);
+    updateOrientation();
+    window.addEventListener("resize", updateOrientation);
+    window.addEventListener("orientationchange", updateOrientation);
+    try {
+      if (screen.orientation?.lock) {
+        void screen.orientation.lock("landscape").catch(() => {});
+      }
+    } catch {}
+    return () => {
+      window.removeEventListener("resize", updateOrientation);
+      window.removeEventListener("orientationchange", updateOrientation);
+    };
+  }, []);
+
+  useEffect(() => {
     const onGlobalMove = (e: PointerEvent) => {
       if (joystickPointerIdRef.current === null || e.pointerId !== joystickPointerIdRef.current) return;
       onJoystickPointer(e.clientX, e.clientY);
@@ -148,7 +165,6 @@ export default function BlockRunnerGame({ roomCode, playerId, playerName }: Game
 
   return (
     <div className="fixed inset-0 z-[140] flex flex-col bg-[#070c16] font-sans text-white">
-      <div className="mx-auto flex h-full w-full max-w-[520px] flex-col">
       <div className="relative flex items-center justify-between p-3">
         <div className="text-xs text-white/85">
           Niveau {state.levelIndex + 1}/{state.levelCount} • Tentative {state.attempt}
@@ -212,7 +228,7 @@ export default function BlockRunnerGame({ roomCode, playerId, playerName }: Game
         </div>
       )}
 
-      <div className="mx-3 mt-3 flex-1 overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-b from-sky-300/25 to-emerald-300/10">
+      <div className="mx-2 mt-2 flex-1 overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-b from-sky-300/25 to-emerald-300/10">
         <div className="relative h-full w-full">
           <div className="absolute bottom-0 left-0 right-0" style={{ height: `${GROUND_H}px`, background: "rgba(26,109,39,0.8)" }} />
 
@@ -295,46 +311,57 @@ export default function BlockRunnerGame({ roomCode, playerId, playerName }: Game
         </div>
       )}
 
-      <div className="mx-3 mb-4 mt-auto flex items-end justify-between">
-        <div
-          ref={joystickRef}
-          className={`relative h-28 w-28 touch-none rounded-full border border-white/20 bg-white/5 ${isActivePlayer ? "" : "opacity-40"}`}
-          onPointerDown={(e) => {
-            if (!isActivePlayer || state.phase !== "playing") return;
-            joystickPointerIdRef.current = e.pointerId;
-            e.currentTarget.setPointerCapture(e.pointerId);
-            onJoystickPointer(e.clientX, e.clientY);
-          }}
-          onPointerUp={() => {
-            if (!isActivePlayer) return;
-            joystickPointerIdRef.current = null;
-            stopMove();
-          }}
-          onPointerLeave={() => {
-            if (!isActivePlayer) return;
-            stopMove();
-          }}
-        >
+      <div className="mx-2 mb-3 mt-auto grid grid-cols-[1fr_2fr_1fr] gap-2">
+        <div className="flex items-end justify-center rounded-2xl border border-white/10 bg-white/[0.03] p-2">
           <div
-            className="absolute left-1/2 top-1/2 h-10 w-10 -translate-x-1/2 -translate-y-1/2 rounded-full bg-cyan-300/80"
-            style={{ transform: `translate(calc(-50% + ${joystick.x}px), calc(-50% + ${joystick.y}px))` }}
-          />
+            ref={joystickRef}
+            className={`relative h-28 w-28 touch-none rounded-full border border-white/20 bg-white/5 ${isActivePlayer ? "" : "opacity-40"}`}
+            onPointerDown={(e) => {
+              if (!isActivePlayer || state.phase !== "playing") return;
+              joystickPointerIdRef.current = e.pointerId;
+              e.currentTarget.setPointerCapture(e.pointerId);
+              onJoystickPointer(e.clientX, e.clientY);
+            }}
+            onPointerUp={() => {
+              if (!isActivePlayer) return;
+              joystickPointerIdRef.current = null;
+              stopMove();
+            }}
+            onPointerLeave={() => {
+              if (!isActivePlayer) return;
+              stopMove();
+            }}
+          >
+            <div
+              className="absolute left-1/2 top-1/2 h-10 w-10 -translate-x-1/2 -translate-y-1/2 rounded-full bg-cyan-300/80"
+              style={{ transform: `translate(calc(-50% + ${joystick.x}px), calc(-50% + ${joystick.y}px))` }}
+            />
+          </div>
         </div>
-
-        <button
-          onPointerDown={(e) => {
-            e.preventDefault();
-            if (!isActivePlayer || state.phase !== "playing") return;
-            sendAction({ action: "jump" });
-          }}
-          className={`h-24 w-24 touch-none rounded-full border border-amber-300/40 bg-amber-500/25 text-sm text-amber-100 ${isActivePlayer ? "" : "opacity-40"}`}
-        >
-          Saut
-        </button>
+        <div />
+        <div className="flex items-end justify-center rounded-2xl border border-white/10 bg-white/[0.03] p-2">
+          <button
+            onPointerDown={(e) => {
+              e.preventDefault();
+              if (!isActivePlayer || state.phase !== "playing") return;
+              sendAction({ action: "jump" });
+            }}
+            className={`h-24 w-24 touch-none rounded-full border border-amber-300/40 bg-amber-500/25 text-sm text-amber-100 ${isActivePlayer ? "" : "opacity-40"}`}
+          >
+            Saut
+          </button>
+        </div>
       </div>
 
       {error && <p className="px-4 pb-2 text-xs text-red-300">{error}</p>}
-      </div>
+
+      {!isLandscape && (
+        <div className="absolute inset-0 z-[180] flex items-center justify-center bg-black/82 p-6 text-center">
+          <div className="rounded-2xl border border-white/20 bg-white/10 p-5">
+            <p className="text-base text-white">Tourne le telephone en mode paysage pour jouer comme sur Switch.</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
