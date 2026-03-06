@@ -6,7 +6,7 @@ type Color = "w" | "b";
 type PieceType = "p" | "n" | "b" | "r" | "q" | "k";
 type BotLevel = "easy" | "medium" | "hard";
 type ChessMode = "online" | "bot";
-type EndReason = "checkmate" | "stalemate" | "resign" | "draw";
+type EndReason = "checkmate" | "stalemate" | "resign" | "draw" | "timeout";
 
 interface Piece {
   color: Color;
@@ -21,6 +21,8 @@ interface ChessMove {
 
 const BOT_PLAYER_ID = "bot-chess";
 const BOT_PLAYER_NAME = "Bot Chess";
+const TIME_OPTIONS_MINUTES = [5, 10, 15, 30] as const;
+const DEFAULT_TIME_CONTROL_MINUTES = 15;
 
 const FILES = "abcdefgh";
 const PIECE_VALUES: Record<PieceType, number> = {
@@ -267,6 +269,11 @@ export class ChessGame extends BaseGame {
   reason: EndReason | null = null;
   lastMove: ChessMove | null = null;
   botTimeout: ReturnType<typeof setTimeout> | null = null;
+  clockInterval: ReturnType<typeof setInterval> | null = null;
+  timeControlMinutes = DEFAULT_TIME_CONTROL_MINUTES;
+  whiteTimeMs = DEFAULT_TIME_CONTROL_MINUTES * 60_000;
+  blackTimeMs = DEFAULT_TIME_CONTROL_MINUTES * 60_000;
+  turnStartedAt = 0;
   moveCount = 0;
 
   start() {
@@ -278,6 +285,9 @@ export class ChessGame extends BaseGame {
     this.reason = null;
     this.lastMove = null;
     this.moveCount = 0;
+    this.whiteTimeMs = this.timeControlMinutes * 60_000;
+    this.blackTimeMs = this.timeControlMinutes * 60_000;
+    this.turnStartedAt = Date.now();
 
     const ids = Array.from(this.players.keys());
     if (ids.length < 1) {
@@ -301,8 +311,48 @@ export class ChessGame extends BaseGame {
 
     this.phase = "playing";
     this.broadcastState();
+    this.startClock();
 
     this.maybePlayBot();
+  }
+
+  getRemainingMs(color: Color, now = Date.now()) {
+    const base = color === "w" ? this.whiteTimeMs : this.blackTimeMs;
+    if (this.phase !== "playing" || this.turn !== color || this.turnStartedAt <= 0) {
+      return Math.max(0, base);
+    }
+    return Math.max(0, base - (now - this.turnStartedAt));
+  }
+
+  applyTurnElapsed(now = Date.now()) {
+    if (this.phase !== "playing" || this.turnStartedAt <= 0) return;
+    const elapsed = Math.max(0, now - this.turnStartedAt);
+    if (this.turn === "w") {
+      this.whiteTimeMs = Math.max(0, this.whiteTimeMs - elapsed);
+    } else {
+      this.blackTimeMs = Math.max(0, this.blackTimeMs - elapsed);
+    }
+    this.turnStartedAt = now;
+  }
+
+  startClock() {
+    this.stopClock();
+    this.clockInterval = setInterval(() => {
+      if (this.phase !== "playing") return;
+      const remaining = this.getRemainingMs(this.turn);
+      if (remaining <= 0) {
+        this.finishGame(otherColor(this.turn), "timeout");
+        return;
+      }
+      this.broadcastState();
+    }, 1000);
+  }
+
+  stopClock() {
+    if (this.clockInterval) {
+      clearInterval(this.clockInterval);
+      this.clockInterval = null;
+    }
   }
 
   maybePlayBot() {
@@ -401,6 +451,15 @@ export class ChessGame extends BaseGame {
         this.broadcastState();
         return;
       }
+      if (action === "set-time-control") {
+        const minutes = Number(payload.minutes);
+        if (!TIME_OPTIONS_MINUTES.includes(minutes as (typeof TIME_OPTIONS_MINUTES)[number])) return;
+        this.timeControlMinutes = minutes;
+        this.whiteTimeMs = minutes * 60_000;
+        this.blackTimeMs = minutes * 60_000;
+        this.broadcastState();
+        return;
+      }
       if (action === "start-game") {
         this.start();
       }
@@ -434,10 +493,18 @@ export class ChessGame extends BaseGame {
   }
 
   applyValidatedMove(move: ChessMove) {
+    const now = Date.now();
+    this.applyTurnElapsed(now);
+    if ((this.turn === "w" ? this.whiteTimeMs : this.blackTimeMs) <= 0) {
+      this.finishGame(otherColor(this.turn), "timeout");
+      return;
+    }
+
     this.board = applyMove(this.board, move);
     this.lastMove = move;
     this.moveCount += 1;
     this.turn = otherColor(this.turn);
+    this.turnStartedAt = now;
 
     if (this.moveCount >= 220) {
       this.finishGame("draw", "draw");
@@ -459,6 +526,7 @@ export class ChessGame extends BaseGame {
   }
 
   finishGame(winner: Color | "draw", reason: EndReason) {
+    this.stopClock();
     this.phase = "game-over";
     this.winner = winner;
     this.reason = reason;
@@ -554,8 +622,11 @@ export class ChessGame extends BaseGame {
       phase: this.phase,
       mode: this.mode,
       botLevel: this.botLevel,
+      timeControlMinutes: this.timeControlMinutes,
       board: this.board.map(pieceToCode),
       turn: this.turn,
+      whiteTimeMs: this.getRemainingMs("w"),
+      blackTimeMs: this.getRemainingMs("b"),
       winner: this.winner,
       reason: this.reason,
       lastMove: this.lastMove
@@ -607,6 +678,7 @@ export class ChessGame extends BaseGame {
   }
 
   cleanup() {
+    this.stopClock();
     if (this.botTimeout) {
       clearTimeout(this.botTimeout);
       this.botTimeout = null;

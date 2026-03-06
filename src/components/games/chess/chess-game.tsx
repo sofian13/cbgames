@@ -10,7 +10,7 @@ type Color = "w" | "b";
 type PieceType = "p" | "n" | "b" | "r" | "q" | "k";
 type BotLevel = "easy" | "medium" | "hard";
 type ChessMode = "online" | "bot";
-type EndReason = "checkmate" | "stalemate" | "resign" | "draw";
+type EndReason = "checkmate" | "stalemate" | "resign" | "draw" | "timeout";
 
 interface Piece {
   color: Color;
@@ -33,8 +33,11 @@ interface ChessState {
   phase: "waiting" | "playing" | "game-over";
   mode: ChessMode;
   botLevel: BotLevel;
+  timeControlMinutes: number;
   board: Array<string | null>;
   turn: Color;
+  whiteTimeMs: number;
+  blackTimeMs: number;
   winner: Color | "draw" | null;
   reason: EndReason | null;
   lastMove: { from: number; to: number; fromSquare: string; toSquare: string } | null;
@@ -70,6 +73,23 @@ const PIECE_GLYPH: Record<string, string> = {
   bq: "♛",
   bk: "♚",
 };
+
+const PIECE_SYMBOL: Record<string, string> = {
+  wp: "\u2659",
+  wn: "\u2658",
+  wb: "\u2657",
+  wr: "\u2656",
+  wq: "\u2655",
+  wk: "\u2654",
+  bp: "\u265F",
+  bn: "\u265E",
+  bb: "\u265D",
+  br: "\u265C",
+  bq: "\u265B",
+  bk: "\u265A",
+};
+
+const TIME_OPTIONS = [5, 10, 15, 30] as const;
 
 function inside(x: number, y: number) {
   return x >= 0 && x < 8 && y >= 0 && y < 8;
@@ -325,7 +345,16 @@ function gameOverLabel(winner: Color | "draw" | null, reason: EndReason | null) 
   const who = winner === "w" ? "Blancs" : "Noirs";
   if (reason === "checkmate") return `${who} gagnent par echec et mat`;
   if (reason === "resign") return `${who} gagnent par abandon`;
+  if (reason === "timeout") return `${who} gagnent au temps`;
   return `${who} gagnent`;
+}
+
+function formatClock(ms: number) {
+  const safe = Math.max(0, ms);
+  const total = Math.ceil(safe / 1000);
+  const m = Math.floor(total / 60);
+  const s = total % 60;
+  return `${m}:${String(s).padStart(2, "0")}`;
 }
 
 export default function ChessGame({ roomCode, playerId, playerName }: GameProps) {
@@ -335,8 +364,10 @@ export default function ChessGame({ roomCode, playerId, playerName }: GameProps)
 
   const [selected, setSelected] = useState<number | null>(null);
   const [localMode, setLocalMode] = useState(false);
+  const [entryMode, setEntryMode] = useState<"choose" | "local" | "multi">("choose");
   const [localKind, setLocalKind] = useState<"duel" | "bot">("duel");
   const [localBotLevel, setLocalBotLevel] = useState<BotLevel>("medium");
+  const [localTimeMinutes, setLocalTimeMinutes] = useState<number>(15);
   const [localWhiteName, setLocalWhiteName] = useState("Joueur 1");
   const [localBlackName, setLocalBlackName] = useState("Joueur 2");
   const [localBoard, setLocalBoard] = useState<Array<Piece | null>>(() => initialBoard());
@@ -346,6 +377,8 @@ export default function ChessGame({ roomCode, playerId, playerName }: GameProps)
   const [localSelected, setLocalSelected] = useState<number | null>(null);
   const [localLastMove, setLocalLastMove] = useState<ChessMove | null>(null);
   const [localMoveCount, setLocalMoveCount] = useState(0);
+  const [localWhiteTimeMs, setLocalWhiteTimeMs] = useState(15 * 60_000);
+  const [localBlackTimeMs, setLocalBlackTimeMs] = useState(15 * 60_000);
 
   const board = useMemo(() => (state?.board ? state.board.map(decodePiece) : []), [state]);
 
@@ -411,6 +444,32 @@ export default function ChessGame({ roomCode, playerId, playerName }: GameProps)
     return () => clearTimeout(timer);
   }, [applyLocalMove, localBoard, localBotLevel, localKind, localMode, localTurn, localWinner]);
 
+  useEffect(() => {
+    if (!localMode || localWinner) return;
+    const timer = setInterval(() => {
+      if (localTurn === "w") {
+        setLocalWhiteTimeMs((prev) => {
+          const next = Math.max(0, prev - 1000);
+          if (next === 0) {
+            setLocalWinner("b");
+            setLocalReason("timeout");
+          }
+          return next;
+        });
+      } else {
+        setLocalBlackTimeMs((prev) => {
+          const next = Math.max(0, prev - 1000);
+          if (next === 0) {
+            setLocalWinner("w");
+            setLocalReason("timeout");
+          }
+          return next;
+        });
+      }
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [localMode, localTurn, localWinner]);
+
   const handleOnlineClick = useCallback((index: number) => {
     if (!state || state.phase !== "playing" || !canPlayOnline) return;
     const piece = board[index];
@@ -461,8 +520,10 @@ export default function ChessGame({ roomCode, playerId, playerName }: GameProps)
     setLocalSelected(null);
     setLocalLastMove(null);
     setLocalMoveCount(0);
+    setLocalWhiteTimeMs(localTimeMinutes * 60_000);
+    setLocalBlackTimeMs(localTimeMinutes * 60_000);
     setLocalMode(true);
-  }, []);
+  }, [localTimeMinutes]);
 
   const renderBoard = (
     boardToRender: Array<Piece | null>,
@@ -492,15 +553,20 @@ export default function ChessGame({ roomCode, playerId, playerName }: GameProps)
                 key={idx}
                 onClick={() => onClick(idx)}
                 className={cn(
-                  "relative flex aspect-square items-center justify-center text-2xl transition-all sm:text-3xl",
+                  "relative flex aspect-square items-center justify-center text-4xl transition-all sm:text-5xl",
                   isLight ? "bg-[#f0d9b5]" : "bg-[#b58863]",
                   isLastMove && "ring-2 ring-yellow-300/70 ring-inset",
                   isSelected && "ring-2 ring-cyan-300 ring-inset",
                   isTarget && "after:absolute after:h-3 after:w-3 after:rounded-full after:bg-cyan-400/80"
                 )}
               >
-                <span className={cn("select-none", piece?.color === "w" ? "text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]" : "text-black")}>
-                  {code ? PIECE_GLYPH[code] : ""}
+                <span
+                  className={cn(
+                    "select-none drop-shadow-[0_2px_2px_rgba(0,0,0,0.55)]",
+                    piece?.color === "w" ? "text-[#f8fafc]" : "text-[#111827]"
+                  )}
+                >
+                  {code ? PIECE_SYMBOL[code] ?? PIECE_GLYPH[code] : ""}
                 </span>
               </button>
             );
@@ -521,7 +587,10 @@ export default function ChessGame({ roomCode, playerId, playerName }: GameProps)
           : `Tour des noirs (${localBlackName})`;
 
     return (
-      <div className="relative flex flex-1 flex-col overflow-hidden p-4 sm:p-6">
+      <div
+        className="relative flex flex-1 flex-col overflow-hidden p-4 sm:p-6"
+        style={{ fontFamily: "\"Trebuchet MS\", Verdana, sans-serif" }}
+      >
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_15%_15%,rgba(34,197,94,0.12),transparent_35%),radial-gradient(circle_at_85%_85%,rgba(249,115,22,0.15),transparent_35%),linear-gradient(145deg,#111827,#1f2937)]" />
         <div className="relative mx-auto flex w-full max-w-4xl flex-1 flex-col rounded-3xl border border-white/10 bg-black/35 p-4 backdrop-blur-xl sm:p-6">
           <div className="flex items-center justify-between gap-2">
@@ -538,13 +607,21 @@ export default function ChessGame({ roomCode, playerId, playerName }: GameProps)
           </div>
 
           <p className="mt-3 text-sm text-white/85">{statusText}</p>
+          <div className="mt-2 flex flex-wrap gap-2 text-sm">
+            <span className="rounded-full border border-white/20 bg-white/10 px-3 py-1 text-white">
+              Blanc {formatClock(localWhiteTimeMs)}
+            </span>
+            <span className="rounded-full border border-white/20 bg-white/10 px-3 py-1 text-white">
+              Noir {formatClock(localBlackTimeMs)}
+            </span>
+          </div>
           {!localWinner && localKind === "duel" && (
             <p className="mt-1 text-xs text-white/55">
               Passe le telephone au joueur {localTurn === "w" ? "Blanc" : "Noir"}.
             </p>
           )}
 
-          <div className="mt-4 mx-auto w-full max-w-[540px]">
+          <div className="mt-4 mx-auto w-full max-w-[min(92vw,820px)]">
             {renderBoard(localBoard, localSelected, handleLocalClick, localTargets, localLastMove, "w")}
           </div>
 
@@ -582,104 +659,122 @@ export default function ChessGame({ roomCode, playerId, playerName }: GameProps)
   if (!state || state.phase === "waiting") {
     const onlinePlayers = state?.connectedPlayers ?? [];
     return (
-      <div className="relative flex flex-1 flex-col overflow-hidden p-4 sm:p-6">
+      <div
+        className="relative flex flex-1 flex-col overflow-hidden p-4 sm:p-6"
+        style={{ fontFamily: "\"Trebuchet MS\", Verdana, sans-serif" }}
+      >
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_15%_15%,rgba(251,191,36,0.16),transparent_35%),radial-gradient(circle_at_85%_85%,rgba(59,130,246,0.14),transparent_35%),linear-gradient(145deg,#0f172a,#111827)]" />
         <div className="relative mx-auto flex w-full max-w-4xl flex-1 flex-col rounded-3xl border border-amber-200/20 bg-black/35 p-4 backdrop-blur-xl sm:p-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <p className="text-[11px] uppercase tracking-[0.2em] text-amber-200/70">Nouveau jeu</p>
+              <p className="text-[11px] uppercase tracking-[0.2em] text-amber-200/70">Mode de jeu</p>
               <h2 className="mt-1 text-3xl font-serif text-white">Echecs</h2>
             </div>
           </div>
 
-          <div className="mt-5 grid gap-4 sm:grid-cols-2">
-            <section className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-              <p className="text-xs uppercase tracking-widest text-white/45">Mode online</p>
-              <div className="mt-3 grid gap-2">
-                {(["online", "bot"] as ChessMode[]).map((mode) => {
-                  const active = (state?.mode ?? "online") === mode;
-                  return (
-                    <button
-                      key={mode}
-                      onClick={() => sendAction({ action: "set-mode", mode })}
-                      className={cn(
-                        "rounded-xl border px-3 py-3 text-left",
-                        active
-                          ? "border-amber-300/45 bg-amber-300/10 text-amber-100"
-                          : "border-white/10 bg-white/[0.03] text-white/75 hover:border-white/20"
-                      )}
-                    >
-                      <p className="text-sm">{mode === "online" ? "Duel en ligne 1v1" : "Jouer contre un bot"}</p>
-                    </button>
-                  );
-                })}
-              </div>
-            </section>
-
-            <section className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-              <p className="text-xs uppercase tracking-widest text-white/45">Niveau bot</p>
-              <div className="mt-3 grid grid-cols-3 gap-2">
-                {(["easy", "medium", "hard"] as BotLevel[]).map((level) => {
-                  const active = (state?.botLevel ?? "medium") === level;
-                  return (
-                    <button
-                      key={level}
-                      onClick={() => sendAction({ action: "set-bot-level", level })}
-                      className={cn(
-                        "rounded-lg border px-2 py-2 text-xs capitalize",
-                        active
-                          ? "border-cyan-300/50 bg-cyan-300/10 text-cyan-200"
-                          : "border-white/10 bg-white/[0.03] text-white/70 hover:border-white/20"
-                      )}
-                    >
-                      {level}
-                    </button>
-                  );
-                })}
-              </div>
-            </section>
-          </div>
-
-          <section className="mt-4 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-            <p className="text-xs uppercase tracking-widest text-white/45">Joueurs connectes ({onlinePlayers.length})</p>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {onlinePlayers.map((p) => (
-                <span key={p.id} className="rounded-full border border-white/20 px-3 py-1 text-xs text-white/80">
-                  {p.name}
-                  {p.id === playerId ? " (toi)" : ""}
-                </span>
-              ))}
+          {entryMode === "choose" && (
+            <div className="mt-6 grid gap-4 sm:grid-cols-2">
+              <button
+                onClick={() => setEntryMode("local")}
+                className="rounded-2xl border border-emerald-300/35 bg-emerald-400/10 p-6 text-left transition hover:bg-emerald-400/15"
+              >
+                <p className="text-xl font-semibold text-emerald-200">Local</p>
+                <p className="mt-2 text-sm text-white/75">Sur le meme telephone: vs bot ou vs collegue</p>
+              </button>
+              <button
+                onClick={() => {
+                  setEntryMode("multi");
+                  sendAction({ action: "set-mode", mode: "online" });
+                }}
+                className="rounded-2xl border border-amber-300/35 bg-amber-400/10 p-6 text-left transition hover:bg-amber-400/15"
+              >
+                <p className="text-xl font-semibold text-amber-100">Multijoueur</p>
+                <p className="mt-2 text-sm text-white/75">Duel en ligne</p>
+              </button>
             </div>
-          </section>
+          )}
 
-          <section className="mt-4 rounded-2xl border border-emerald-300/20 bg-emerald-400/[0.04] p-4">
-            <p className="text-xs uppercase tracking-widest text-emerald-200/70">Mode local 1 telephone</p>
+          {entryMode === "multi" && (
+            <section className="mt-5 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+              <p className="text-xs uppercase tracking-widest text-white/45">Cadence</p>
+              <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                {TIME_OPTIONS.map((minutes) => (
+                  <button
+                    key={`multi-${minutes}`}
+                    onClick={() => sendAction({ action: "set-time-control", minutes })}
+                    className={cn(
+                      "rounded-lg border px-3 py-2 text-sm",
+                      (state?.timeControlMinutes ?? 15) === minutes
+                        ? "border-amber-300/50 bg-amber-300/15 text-amber-100"
+                        : "border-white/10 bg-white/[0.03] text-white/75"
+                    )}
+                  >
+                    {minutes} min
+                  </button>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {entryMode === "multi" && (
+            <section className="mt-4 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+              <p className="text-xs uppercase tracking-widest text-white/45">Joueurs connectes ({onlinePlayers.length})</p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {onlinePlayers.map((p) => (
+                  <span key={p.id} className="rounded-full border border-white/20 px-3 py-1 text-xs text-white/80">
+                    {p.name}
+                    {p.id === playerId ? " (toi)" : ""}
+                  </span>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {entryMode === "local" && (
+            <section className="mt-4 rounded-2xl border border-emerald-300/20 bg-emerald-400/[0.04] p-4">
+              <p className="text-xs uppercase tracking-widest text-emerald-200/70">Mode local 1 telephone</p>
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => setLocalKind("duel")}
+                  className={cn(
+                    "rounded-lg border px-3 py-2 text-xs",
+                    localKind === "duel"
+                      ? "border-emerald-300/50 bg-emerald-300/10 text-emerald-200"
+                      : "border-white/10 bg-white/[0.03] text-white/70"
+                  )}
+                >
+                  Vs collegue (meme tel)
+                </button>
+                <button
+                  onClick={() => setLocalKind("bot")}
+                  className={cn(
+                    "rounded-lg border px-3 py-2 text-xs",
+                    localKind === "bot"
+                      ? "border-emerald-300/50 bg-emerald-300/10 text-emerald-200"
+                      : "border-white/10 bg-white/[0.03] text-white/70"
+                  )}
+                >
+                  Vs bot
+                </button>
+              </div>
             <div className="mt-3 grid gap-3 sm:grid-cols-2">
               <div className="space-y-2">
-                <p className="text-xs text-white/50">Type de partie</p>
+                <p className="text-xs text-white/50">Temps par joueur</p>
                 <div className="grid grid-cols-2 gap-2">
-                  <button
-                    onClick={() => setLocalKind("duel")}
-                    className={cn(
-                      "rounded-lg border px-3 py-2 text-xs",
-                      localKind === "duel"
-                        ? "border-emerald-300/50 bg-emerald-300/10 text-emerald-200"
-                        : "border-white/10 bg-white/[0.03] text-white/70"
-                    )}
-                  >
-                    Duel local
-                  </button>
-                  <button
-                    onClick={() => setLocalKind("bot")}
-                    className={cn(
-                      "rounded-lg border px-3 py-2 text-xs",
-                      localKind === "bot"
-                        ? "border-emerald-300/50 bg-emerald-300/10 text-emerald-200"
-                        : "border-white/10 bg-white/[0.03] text-white/70"
-                    )}
-                  >
-                    Vs bot
-                  </button>
+                  {TIME_OPTIONS.map((minutes) => (
+                    <button
+                      key={`local-${minutes}`}
+                      onClick={() => setLocalTimeMinutes(minutes)}
+                      className={cn(
+                        "rounded-lg border px-2 py-2 text-xs",
+                        localTimeMinutes === minutes
+                          ? "border-cyan-300/50 bg-cyan-300/10 text-cyan-200"
+                          : "border-white/10 bg-white/[0.03] text-white/70"
+                      )}
+                    >
+                      {minutes} min
+                    </button>
+                  ))}
                 </div>
                 {localKind === "bot" && (
                   <div className="grid grid-cols-3 gap-2">
@@ -712,7 +807,7 @@ export default function ChessGame({ roomCode, playerId, playerName }: GameProps)
                   value={localBlackName}
                   onChange={(e) => setLocalBlackName(e.target.value)}
                   className="w-full rounded-lg border border-white/15 bg-white/[0.04] px-3 py-2 text-sm text-white outline-none"
-                  placeholder={localKind === "bot" ? "Nom joueur humain" : "Nom joueur noir"}
+                  placeholder={localKind === "bot" ? "Nom joueur" : "Nom joueur noir"}
                 />
               </div>
             </div>
@@ -722,16 +817,28 @@ export default function ChessGame({ roomCode, playerId, playerName }: GameProps)
             >
               Lancer en local
             </button>
-          </section>
+            </section>
+          )}
 
-          <div className="mt-5 flex gap-2">
+          {entryMode === "multi" && (
+            <div className="mt-5 flex gap-2">
+              <button
+                onClick={() => sendAction({ action: "start-game" })}
+                className="rounded-xl border border-amber-300/40 bg-gradient-to-r from-amber-500 to-orange-500 px-6 py-3 text-sm font-medium text-white hover:from-amber-400 hover:to-orange-400"
+              >
+                Lancer en multijoueur
+              </button>
+            </div>
+          )}
+
+          {entryMode !== "choose" && (
             <button
-              onClick={() => sendAction({ action: "start-game" })}
-              className="rounded-xl border border-amber-300/40 bg-gradient-to-r from-amber-500 to-orange-500 px-6 py-3 text-sm font-medium text-white hover:from-amber-400 hover:to-orange-400"
+              onClick={() => setEntryMode("choose")}
+              className="mt-3 w-fit rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-xs text-white/80"
             >
-              Lancer la partie
+              Retour
             </button>
-          </div>
+          )}
         </div>
       </div>
     );
@@ -750,7 +857,10 @@ export default function ChessGame({ roomCode, playerId, playerName }: GameProps)
         : `Tour des noirs (${blackName})`;
 
   return (
-    <div className="relative flex flex-1 flex-col overflow-hidden p-4 sm:p-6">
+    <div
+      className="relative flex flex-1 flex-col overflow-hidden p-4 sm:p-6"
+      style={{ fontFamily: "\"Trebuchet MS\", Verdana, sans-serif" }}
+    >
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_15%_15%,rgba(251,191,36,0.16),transparent_35%),radial-gradient(circle_at_85%_85%,rgba(59,130,246,0.14),transparent_35%),linear-gradient(145deg,#0f172a,#111827)]" />
       <div className="relative mx-auto flex w-full max-w-4xl flex-1 flex-col rounded-3xl border border-white/10 bg-black/35 p-4 backdrop-blur-xl sm:p-6">
         <div className="flex flex-wrap items-start justify-between gap-2">
@@ -760,6 +870,14 @@ export default function ChessGame({ roomCode, playerId, playerName }: GameProps)
             {state.phase === "playing" && state.inCheck && (
               <p className="mt-1 text-xs text-red-300">Echec sur le roi {state.turn === "w" ? "blanc" : "noir"}.</p>
             )}
+            <div className="mt-2 flex flex-wrap gap-2 text-sm">
+              <span className="rounded-full border border-white/20 bg-white/10 px-3 py-1 text-white">
+                Blanc {formatClock(state.whiteTimeMs ?? 0)}
+              </span>
+              <span className="rounded-full border border-white/20 bg-white/10 px-3 py-1 text-white">
+                Noir {formatClock(state.blackTimeMs ?? 0)}
+              </span>
+            </div>
           </div>
           <div className="flex flex-col items-end gap-1 text-xs text-white/70">
             <span>{whiteName} (Blanc)</span>
@@ -772,7 +890,7 @@ export default function ChessGame({ roomCode, playerId, playerName }: GameProps)
           </div>
         </div>
 
-        <div className="mt-4 mx-auto w-full max-w-[540px]">
+        <div className="mt-4 mx-auto w-full max-w-[min(92vw,820px)]">
           {renderBoard(board, selected, handleOnlineClick, selectedTargets, state.lastMove ? { from: state.lastMove.from, to: state.lastMove.to } : null, orientation)}
         </div>
 
