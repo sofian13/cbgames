@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Copy, Check } from "lucide-react";
+import { Check, Copy } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface RoomCodeDisplayProps {
@@ -23,17 +23,18 @@ export function RoomCodeDisplay({ code, className }: RoomCodeDisplayProps) {
     <button
       onClick={copyToClipboard}
       className={cn(
-        "group flex items-center gap-2 rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-1.5 transition-all hover:border-cyan-300/25 hover:bg-cyan-300/[0.06]",
+        "group flex items-center gap-3 rounded-2xl border border-white/10 bg-white/6 px-4 py-2.5 text-left transition-all duration-300 hover:border-[#72e4f7]/28 hover:bg-[#72e4f7]/10",
         className
       )}
     >
-      <span className="font-mono text-sm font-bold tracking-[0.2em] text-cyan-200/80 group-hover:text-cyan-200">
-        {code}
-      </span>
+      <div>
+        <p className="text-[10px] uppercase tracking-[0.22em] text-white/34">Room code</p>
+        <p className="mt-1 font-mono text-sm font-bold tracking-[0.28em] text-white/88">{code}</p>
+      </div>
       {copied ? (
-        <Check className="h-3.5 w-3.5 text-emerald-300" />
+        <Check className="h-4 w-4 text-[#8ff2bb]" />
       ) : (
-        <Copy className="h-3.5 w-3.5 text-white/25 group-hover:text-cyan-200/60 transition-colors" />
+        <Copy className="h-4 w-4 text-white/28 transition-colors group-hover:text-[#72e4f7]" />
       )}
     </button>
   );

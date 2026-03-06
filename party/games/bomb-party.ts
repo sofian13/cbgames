@@ -290,6 +290,139 @@ const MIN_TIME = 4; // minimum time per turn (decreases over rounds)
 const LIVES = 3;
 const MIN_WORD_LENGTH = 3;
 
+const EXTRA_FRENCH_WORDS = [
+  "abricot", "acteurice", "adaptable", "adoration", "adrenaline", "agenda", "agrumes",
+  "airbag", "algorithme", "ambulance", "animation", "anniversaire", "antivirus", "appstore",
+  "aquarium", "architecte", "arduino", "atelier", "athlete", "attraction", "autoradio",
+  "avionneur", "baguette", "barista", "basket", "batterie", "berline", "bibliophile",
+  "biere", "biscuit", "blender", "blogueur", "boisson", "brasserie", "brocoli",
+  "brunch", "cablage", "cafetiere", "camembert", "camionette", "camping", "capsule",
+  "caramel", "caravane", "casquette", "cereale", "chargeur", "charniere", "chaton",
+  "chaussette", "cheesecake", "chauffage", "chronometre", "circuit", "classeur", "clavier",
+  "climatisation", "coequipier", "collation", "colocation", "combinaison", "compresseur",
+  "congelateur", "connecteur", "console", "coquillage", "cosmonaute", "covoiturage",
+  "croissant", "cuillere", "cupcake", "cybercafe", "dashboard", "decorateur", "depannage",
+  "desserte", "disquette", "doudoune", "dragibus", "dribble", "enceinte", "endurance",
+  "energetique", "epinard", "escalade", "esport", "estivale", "eurostar", "explorateur",
+  "fakir", "festivalier", "feutre", "ficelle", "fintech", "flocon", "focaccia",
+  "fromagerie", "fusee", "galette", "garage", "garderie", "gaufre", "gobelet",
+  "gourmandise", "graphisme", "grenadine", "grignotage", "guichet", "guitare", "habillage",
+  "hamburger", "handball", "hautparleur", "helicoptere", "hologramme", "hotdog", "iceberg",
+  "illustration", "imprimante", "influenceur", "informatique", "instagram", "interface",
+  "interphone", "internet", "itineraire", "jambon", "joystick", "journaling", "judo",
+  "kayak", "kimono", "kiosque", "lactose", "laser", "lessive", "limonade",
+  "logiciel", "longboard", "lunaison", "macaron", "magnetique", "maillot", "marathon",
+  "mascara", "mecanicien", "microphone", "milkshake", "mozzarella", "multijoueur",
+  "musculation", "myrtille", "navette", "newsletter", "numerique", "nuancier", "omelette",
+  "ordinateur", "oreiller", "orientation", "origami", "pancarte", "panier", "paprika",
+  "parapluie", "patinoire", "patisserie", "pavlova", "peluche", "pendule", "pepites",
+  "periscope", "photobooth", "pirouette", "pistache", "pizza", "planificateur", "playlist",
+  "plomberie", "podcast", "popcorn", "portfolio", "powerbank", "prefecture", "progresser",
+  "projecteur", "promenade", "protection", "pull", "puzzler", "raccourci", "radiateur",
+  "raquette", "raviole", "reaction", "recharge", "reconstruction", "refrigerateur",
+  "reportage", "reseau", "restaurantier", "retrogaming", "robotique", "roller", "sablier",
+  "sacoche", "sandwich", "satellite", "scanner", "scenario", "scoreur", "scratch",
+  "serveur", "shake", "showroom", "signalisation", "simulateur", "skateboard", "smartphone",
+  "smoothie", "snacking", "snowboard", "sorbet", "soundtrack", "spaghetti", "sprinter",
+  "stadium", "stationnement", "stream", "streamer", "stylet", "subwoofer", "superette",
+  "surprise", "tablette", "tactique", "tapisserie", "technicien", "telecommande", "televiseur",
+  "terrarium", "thermos", "tourisme", "tournesol", "tramway", "trottinette", "tutoriel",
+  "ukulele", "ultraviolet", "vacancier", "vaporisateur", "vegetarien", "ventilateur",
+  "vermicelle", "vignette", "vintage", "vitamine", "vlogueur", "voyagiste", "wagon",
+  "webcam", "weekend", "wifi", "yaourt", "youtuber", "zapping", "zebre",
+];
+
+function normalizeFrenchWord(input: string) {
+  return input
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/['\u2019\-\s]/g, "")
+    .replace(/[^a-z]/g, "");
+}
+
+function addVariant(target: Set<string>, value: string) {
+  const normalized = normalizeFrenchWord(value);
+  if (normalized.length >= MIN_WORD_LENGTH) {
+    target.add(normalized);
+  }
+}
+
+function addCommonNominalVariants(target: Set<string>, word: string) {
+  addVariant(target, `${word}s`);
+
+  if (word.endsWith("eau") || word.endsWith("au") || word.endsWith("eu")) {
+    addVariant(target, `${word}x`);
+  }
+
+  if (!word.endsWith("e")) {
+    addVariant(target, `${word}e`);
+  }
+
+  if (word.endsWith("teur")) {
+    addVariant(target, `${word}s`);
+    addVariant(target, `${word.slice(0, -4)}trice`);
+    addVariant(target, `${word.slice(0, -4)}trices`);
+  }
+
+  if (word.endsWith("if")) {
+    addVariant(target, `${word.slice(0, -2)}ive`);
+    addVariant(target, `${word.slice(0, -2)}ives`);
+  }
+
+  if (word.endsWith("eux")) {
+    addVariant(target, `${word.slice(0, -3)}euse`);
+    addVariant(target, `${word.slice(0, -3)}euses`);
+  }
+}
+
+function addVerbVariants(target: Set<string>, word: string) {
+  if (word.endsWith("er")) {
+    const stem = word.slice(0, -2);
+    [
+      "e", "es", "ent", "ons", "ez", "ais", "ait", "aient", "ant",
+      "era", "eras", "erai", "erais", "erait", "erons", "erez", "eront",
+    ].forEach((ending) => addVariant(target, `${stem}${ending}`));
+    return;
+  }
+
+  if (word.endsWith("ir")) {
+    const stem = word.slice(0, -2);
+    [
+      "is", "it", "issons", "issez", "issent", "issant",
+      "ira", "iras", "irons", "irez", "iront",
+    ].forEach((ending) => addVariant(target, `${stem}${ending}`));
+    return;
+  }
+
+  if (word.endsWith("re")) {
+    const stem = word.slice(0, -2);
+    ["s", "ons", "ez", "ent", "ant", "rai", "ras", "rons", "rez", "ront"].forEach((ending) =>
+      addVariant(target, `${stem}${ending}`)
+    );
+  }
+}
+
+function buildAcceptedFrenchWords(words: Iterable<string>) {
+  const accepted = new Set<string>();
+
+  for (const rawWord of words) {
+    const word = normalizeFrenchWord(rawWord);
+    if (word.length < MIN_WORD_LENGTH) continue;
+
+    accepted.add(word);
+    addCommonNominalVariants(accepted, word);
+    addVerbVariants(accepted, word);
+  }
+
+  return accepted;
+}
+
+const ACCEPTED_FRENCH_WORDS = buildAcceptedFrenchWords([
+  ...FRENCH_WORDS,
+  ...EXTRA_FRENCH_WORDS,
+]);
+
 interface BombPartyPlayer {
   id: string;
   name: string;
@@ -434,7 +567,8 @@ export class BombPartyGame extends BaseGame {
     const action = payload.action as string;
 
     if (action === "submit-word") {
-      const word = (payload.word as string || "").toLowerCase().trim();
+      const submittedWord = (payload.word as string || "").toLowerCase().trim();
+      const word = normalizeFrenchWord(submittedWord);
       const senderPlayer = this.findGamePlayerByConnection(sender.id);
       if (!senderPlayer) return;
 
@@ -456,7 +590,7 @@ export class BombPartyGame extends BaseGame {
         return;
       }
 
-      if (!word.toUpperCase().includes(this.currentSyllable)) {
+      if (!word.includes(normalizeFrenchWord(this.currentSyllable))) {
         this.sendTo(sender.id, {
           type: "game-error",
           payload: { message: `Le mot doit contenir "${this.currentSyllable}"` },
@@ -472,7 +606,7 @@ export class BombPartyGame extends BaseGame {
         return;
       }
 
-      if (!FRENCH_WORDS.has(word)) {
+      if (!ACCEPTED_FRENCH_WORDS.has(word)) {
         this.sendTo(sender.id, {
           type: "game-error",
           payload: { message: "Ce mot n'est pas dans le dictionnaire" },

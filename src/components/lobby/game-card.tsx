@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { BookOpen, CheckCircle2, Users, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { GameMeta } from "@/lib/games/types";
-import { BookOpen, CheckCircle2, X, Users } from "lucide-react";
 
 interface GameCardProps {
   game: GameMeta;
@@ -23,15 +23,15 @@ const CATEGORY_CLASSES: Record<string, string> = {
   sport: "cat-sport",
 };
 
-const CATEGORY_COLORS: Record<string, string> = {
-  words: "from-cyan-400/20 to-cyan-600/5",
-  trivia: "from-violet-400/20 to-violet-600/5",
-  speed: "from-orange-400/20 to-orange-600/5",
-  strategy: "from-emerald-400/20 to-emerald-600/5",
-  social: "from-pink-400/20 to-pink-600/5",
-  cards: "from-amber-400/20 to-amber-600/5",
-  party: "from-fuchsia-400/20 to-fuchsia-600/5",
-  sport: "from-green-400/20 to-green-600/5",
+const CATEGORY_LABELS: Record<string, string> = {
+  words: "Mots",
+  trivia: "Culture",
+  speed: "Rapide",
+  strategy: "Strategie",
+  social: "Bluff",
+  cards: "Cartes",
+  party: "Party",
+  sport: "Sport",
 };
 
 export function GameCard({ game, isSelected, isHost, onSelect }: GameCardProps) {
@@ -41,105 +41,119 @@ export function GameCard({ game, isSelected, isHost, onSelect }: GameCardProps) 
   return (
     <>
       <div
+        role="button"
+        tabIndex={disabled ? -1 : 0}
         className={cn(
-          "press-effect relative cursor-pointer rounded-2xl border p-4 transition-all duration-400",
+          "group game-card-hover relative w-full overflow-hidden rounded-[1.75rem] border p-4 text-left",
           CATEGORY_CLASSES[game.category],
           isSelected
-            ? "border-cyan-300/60 bg-cyan-300/[0.12] ring-1 ring-cyan-300/40 shadow-[0_0_30px_rgba(80,216,255,0.15)]"
-            : "border-white/[0.08] bg-white/[0.03] hover:border-white/[0.15] hover:bg-white/[0.05]",
-          disabled && "opacity-40 cursor-not-allowed !transform-none",
-          !disabled && !isSelected && "hover:shadow-[0_8px_30px_rgba(0,0,0,0.2)]"
+            ? "border-white/22 bg-white/[0.08] shadow-[0_22px_44px_rgba(0,0,0,0.3)]"
+            : "border-white/[0.08] bg-white/[0.04] hover:bg-white/[0.06]",
+          disabled && "cursor-not-allowed opacity-45"
         )}
         onClick={() => !disabled && onSelect()}
+        onKeyDown={(event) => {
+          if (disabled) return;
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            onSelect();
+          }
+        }}
       >
-        {/* Subtle gradient overlay on hover */}
-        <div className={cn(
-          "absolute inset-0 rounded-2xl bg-gradient-to-br opacity-0 transition-opacity duration-500",
-          CATEGORY_COLORS[game.category] ?? "from-cyan-400/20 to-cyan-600/5",
-          !disabled && !isSelected && "group-hover:opacity-100",
-          isSelected && "opacity-100"
-        )} />
+        <div className="absolute inset-0 opacity-80" style={{ background: "linear-gradient(145deg, hsla(var(--cat, 200, 90%, 60%), 0.22), transparent 55%)" }} />
+        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent" />
 
-        {/* Selected indicator */}
-        {isSelected && (
-          <div className="absolute right-3 top-3 z-10 inline-flex items-center gap-1 rounded-full border border-cyan-300/50 bg-cyan-300/15 px-2 py-0.5 text-[10px] font-bold tracking-wide text-cyan-200"
-            style={{ animation: "scaleIn 0.3s ease" }}
-          >
-            <CheckCircle2 className="h-3 w-3" />
-            Actif
-          </div>
-        )}
-
-        <div className="relative z-[1] flex items-start gap-3.5">
-          <div className={cn(
-            "flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-2xl transition-transform duration-300",
-            isSelected ? "bg-cyan-300/10 scale-110" : "bg-white/[0.05]",
-            !disabled && "group-hover:scale-105"
-          )}>
-            {game.icon}
-          </div>
-          <div className="flex-1 min-w-0">
-            <h4 className="font-serif font-semibold text-[15px] text-white/90 leading-tight">
-              {game.name}
-            </h4>
-            <p className="text-[12px] text-white/40 mt-1 leading-relaxed line-clamp-2 font-sans">
-              {game.description}
-            </p>
-            <div className="flex items-center justify-between mt-2.5">
-              <div className="flex items-center gap-1 text-[11px] text-white/25 font-sans">
-                <Users className="h-3 w-3" />
-                {game.minPlayers}-{game.maxPlayers}
-              </div>
-              {game.rules.length > 0 && (
-                <button
-                  onClick={(e) => { e.stopPropagation(); setShowRules(true); }}
-                  className="flex items-center gap-1 text-[11px] text-white/25 hover:text-cyan-200/70 transition-colors font-sans press-effect"
-                >
-                  <BookOpen className="h-3 w-3" />
-                  Regles
-                </button>
-              )}
+        <div className="relative z-10 flex h-full flex-col gap-4">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-white/10 bg-black/20 text-3xl shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
+              {game.icon}
             </div>
+            {isSelected ? (
+              <span className="inline-flex items-center gap-1 rounded-full border border-white/18 bg-white/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-white/88">
+                <CheckCircle2 className="h-3.5 w-3.5 text-[#8ff2bb]" />
+                Actif
+              </span>
+            ) : (
+              <span className="rounded-full border border-white/10 bg-black/20 px-2.5 py-1 text-[10px] uppercase tracking-[0.18em] text-white/42">
+                {CATEGORY_LABELS[game.category] ?? game.category}
+              </span>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <h4 className="text-lg font-black text-white/92">{game.name}</h4>
+            <p className="text-sm leading-6 text-white/58">{game.description}</p>
+          </div>
+
+          <div className="mt-auto flex items-center justify-between gap-3 text-xs text-white/45">
+            <span className="inline-flex items-center gap-1.5">
+              <Users className="h-3.5 w-3.5" />
+              {game.minPlayers}-{game.maxPlayers} joueurs
+            </span>
+            {game.rules.length > 0 && (
+              <span className="inline-flex items-center gap-1.5 text-white/60">
+                <BookOpen className="h-3.5 w-3.5" />
+                Regles
+              </span>
+            )}
           </div>
         </div>
+
+        {game.rules.length > 0 && (
+          <div className="absolute inset-x-4 bottom-4 translate-y-10 rounded-2xl border border-white/10 bg-black/35 px-3 py-2 opacity-0 backdrop-blur-sm transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100">
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-[11px] uppercase tracking-[0.18em] text-white/34">Apercu des regles</p>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowRules(true);
+                }}
+                className="text-xs font-semibold text-[#ffe2cd] transition hover:text-white"
+              >
+                Ouvrir
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Rules modal */}
       {showRules && (
         <div
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-md"
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/72 p-4 backdrop-blur-md"
           onClick={() => setShowRules(false)}
           style={{ animation: "fadeIn 0.2s ease" }}
         >
           <div
-            className="relative w-full max-w-md mx-4 rounded-3xl border border-white/[0.12] p-7 shadow-2xl"
-            style={{
-              background: "linear-gradient(135deg, rgba(7,16,35,0.97) 0%, rgba(4,8,20,0.98) 100%)",
-              backdropFilter: "blur(24px)",
-              animation: "scaleIn 0.3s cubic-bezier(0.16, 1, 0.3, 1)",
-            }}
+            className="premium-panel mesh-surface relative w-full max-w-lg rounded-[2rem] p-6"
+            style={{ animation: "scaleIn 0.3s cubic-bezier(0.16, 1, 0.3, 1)" }}
             onClick={(e) => e.stopPropagation()}
           >
-            <button onClick={() => setShowRules(false)} className="absolute top-5 right-5 text-white/25 hover:text-white/60 transition-colors press-effect">
-              <X className="h-5 w-5" />
+            <button
+              onClick={() => setShowRules(false)}
+              className="absolute right-5 top-5 flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/6 text-white/45 transition hover:bg-white/10 hover:text-white"
+            >
+              <X className="h-4 w-4" />
             </button>
-            <div className="flex items-center gap-3.5 mb-6">
-              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/[0.05] text-3xl">
+
+            <div className="flex items-start gap-4 pr-12">
+              <div className="flex h-16 w-16 items-center justify-center rounded-[1.4rem] border border-white/10 bg-white/8 text-4xl">
                 {game.icon}
               </div>
               <div>
-                <h3 className="text-lg font-serif font-semibold text-white/90">{game.name}</h3>
-                <p className="text-[11px] text-white/30 font-sans mt-0.5">{game.minPlayers}-{game.maxPlayers} joueurs</p>
+                <p className="section-title">{CATEGORY_LABELS[game.category] ?? game.category}</p>
+                <h3 className="mt-2 text-2xl font-black text-white/94">{game.name}</h3>
+                <p className="mt-1 text-sm text-white/46">{game.minPlayers}-{game.maxPlayers} joueurs</p>
               </div>
             </div>
-            <ul className="space-y-3">
-              {game.rules.map((rule, i) => (
+
+            <ul className="mt-6 space-y-3">
+              {game.rules.map((rule, index) => (
                 <li
-                  key={i}
-                  className="flex items-start gap-3 text-[13px] text-white/55 font-sans leading-relaxed"
-                  style={{ animation: `fadeUp 0.4s ease ${i * 0.06}s both` }}
+                  key={index}
+                  className="flex items-start gap-3 rounded-2xl border border-white/8 bg-white/[0.03] px-4 py-3 text-sm leading-6 text-white/68"
                 >
-                  <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-cyan-400/50" />
+                  <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#72e4f7]" />
                   {rule}
                 </li>
               ))}

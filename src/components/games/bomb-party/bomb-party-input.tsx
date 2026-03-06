@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-import { Send } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface BombPartyInputProps {
@@ -20,44 +20,45 @@ export function BombPartyInput({ isMyTurn, syllable, onSubmit }: BombPartyInputP
     }
   }, [isMyTurn, syllable]);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = (event: React.FormEvent) => {
+    event.preventDefault();
     if (!word.trim() || !isMyTurn) return;
     onSubmit(word.trim());
     setWord("");
   };
 
   return (
-    <form onSubmit={handleSubmit} className="flex w-full max-w-md gap-2">
-      <div className="relative flex-1">
+    <form onSubmit={handleSubmit} className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_64px]">
+      <div className="relative">
         <input
           ref={inputRef}
           value={word}
-          onChange={(e) => setWord(e.target.value.toLowerCase())}
-          placeholder={isMyTurn ? `Mot avec "${syllable}"...` : "Attends ton tour..."}
+          onChange={(event) => setWord(event.target.value.toLowerCase())}
+          placeholder={isMyTurn ? `Tape un mot avec \"${syllable}\"` : "Attends ton tour"}
           disabled={!isMyTurn}
           className={cn(
-            "w-full rounded-2xl border bg-black/30 px-5 py-3.5 font-mono text-lg text-white/90 placeholder:text-white/25 outline-none transition-all backdrop-blur-sm",
+            "sunrise-input h-14 w-full rounded-2xl px-5 text-base font-semibold text-white outline-none transition-all",
             isMyTurn
-              ? "border-cyan-300/25 shadow-[0_0_20px_rgba(34,211,238,0.08)] focus:border-cyan-300/40 focus:shadow-[0_0_25px_rgba(34,211,238,0.15)]"
-              : "border-white/[0.08] opacity-60"
+              ? "border-[#ffb98c]/28 bg-white/[0.06] focus:border-[#ff8a3d]/42 focus:shadow-[0_0_0_1px_rgba(255,138,61,0.22),0_0_30px_rgba(255,138,61,0.12)]"
+              : "opacity-60"
           )}
           autoComplete="off"
           autoCapitalize="off"
           spellCheck={false}
         />
       </div>
+
       <button
         type="submit"
         disabled={!isMyTurn || !word.trim()}
         className={cn(
-          "flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-2xl border transition-all",
+          "press-effect flex h-14 w-full items-center justify-center rounded-2xl border transition-all",
           isMyTurn && word.trim()
-            ? "border-emerald-400/30 bg-gradient-to-r from-[#65dfb2] to-[#4ecf8a] text-black shadow-[0_0_20px_rgba(78,207,138,0.25)] hover:shadow-[0_0_30px_rgba(78,207,138,0.4)] active:scale-95"
-            : "border-white/[0.08] bg-white/[0.04] text-white/20"
+            ? "border-[#ffb98c]/35 bg-gradient-to-r from-[#ff8a3d] via-[#ff7a48] to-[#ff5d67] text-[#190b04] shadow-[0_18px_34px_rgba(255,118,63,0.28)]"
+            : "border-white/10 bg-white/[0.04] text-white/24"
         )}
       >
-        <Send className="h-5 w-5" />
+        <ArrowRight className="h-5 w-5" />
       </button>
     </form>
   );
