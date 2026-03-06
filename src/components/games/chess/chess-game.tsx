@@ -59,19 +59,20 @@ const PIECE_VALUES: Record<PieceType, number> = {
   k: 0,
 };
 
+// \uFE0E = text variation selector — forces text rendering on iOS (not emoji)
 const PIECE_GLYPH: Record<string, string> = {
-  wp: "\u265F",
-  wn: "\u265E",
-  wb: "\u265D",
-  wr: "\u265C",
-  wq: "\u265B",
-  wk: "\u265A",
-  bp: "\u265F",
-  bn: "\u265E",
-  bb: "\u265D",
-  br: "\u265C",
-  bq: "\u265B",
-  bk: "\u265A",
+  wp: "\u265F\uFE0E",
+  wn: "\u265E\uFE0E",
+  wb: "\u265D\uFE0E",
+  wr: "\u265C\uFE0E",
+  wq: "\u265B\uFE0E",
+  wk: "\u265A\uFE0E",
+  bp: "\u265F\uFE0E",
+  bn: "\u265E\uFE0E",
+  bb: "\u265D\uFE0E",
+  br: "\u265C\uFE0E",
+  bq: "\u265B\uFE0E",
+  bk: "\u265A\uFE0E",
 };
 
 const PIECE_SYMBOL = PIECE_GLYPH;
