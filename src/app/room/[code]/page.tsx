@@ -59,7 +59,12 @@ export default function LobbyPage() {
     error,
   } = useRoomStore();
 
-  const isHost = hostId === playerId;
+  const connectedPlayers = players.filter((p) => p.isConnected);
+  const me = players.find((p) => p.id === playerId);
+  const isHost =
+    hostId === playerId ||
+    !!me?.isHost ||
+    (connectedPlayers.length === 1 && connectedPlayers[0]?.id === playerId);
 
   const handleStartGame = (gameId?: string | null) => {
     const id = (gameId ?? selectedGameId)?.trim().toLowerCase();

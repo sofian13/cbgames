@@ -319,7 +319,9 @@ export default function BlockRunnerGame({ roomCode, playerId, playerName }: Game
             onPointerDown={(e) => {
               if (!isActivePlayer || state.phase !== "playing") return;
               joystickPointerIdRef.current = e.pointerId;
-              e.currentTarget.setPointerCapture(e.pointerId);
+              try {
+                e.currentTarget.setPointerCapture(e.pointerId);
+              } catch {}
               onJoystickPointer(e.clientX, e.clientY);
             }}
             onPointerUp={() => {
