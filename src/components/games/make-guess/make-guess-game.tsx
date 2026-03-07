@@ -11,6 +11,10 @@ const WORDS_OBJECTS = [
   "Boussole", "Hamac", "Toboggan", "Marionnette", "Sablier",
   "Cerf-volant", "Monocle", "Catapulte", "Periscope", "Sifflet",
   "Echasses", "Kaleidoscope", "Metronome", "Pendule", "Entonnoir",
+  "Briquet", "Ciseau", "Ampoule", "Cravate", "Lunettes",
+  "Réveil", "Cadenas", "Extincteur", "Bouée", "Dé",
+  "Jumelles", "Baguette", "Pansement", "Stéthoscope", "Antenne",
+  "Hameçon", "Échelle", "Loupe", "Boomerang", "Haltère",
 ];
 
 const WORDS_ANIMALS = [
@@ -22,6 +26,10 @@ const WORDS_ANIMALS = [
   "Pingouin", "Cheval", "Crocodile", "Panda", "Loup",
   "Tigre", "Araignée", "Scorpion", "Souris", "Rat",
   "Crevette", "Homard", "Hibou", "Chouette",
+  "Aigle", "Requin", "Baleine", "Tortue", "Perroquet",
+  "Renard", "Cerf", "Ours", "Phoque", "Méduse",
+  "Papillon", "Mouche", "Fourmi", "Escargot", "Grenouille",
+  "Sanglier", "Bison", "Autruche", "Pieuvre", "Corbeau",
 ];
 
 const WORDS_FAMOUS = [
@@ -29,6 +37,9 @@ const WORDS_FAMOUS = [
   "Shakespeare", "Mandela", "Chaplin", "Gandhi", "Marie Curie",
   "Jules Cesar", "Marco Polo", "Beethoven", "Van Gogh", "Darwin",
   "Aristote", "Da Vinci", "Moliere", "Voltaire", "Pasteur",
+  "Zidane", "Ronaldo", "Messi", "Mbappé", "Beyoncé",
+  "Rihanna", "Drake", "Eminem", "Kanye", "Elon Musk",
+  "Steve Jobs", "Neymar", "Maradona", "Pelé", "Federer",
 ];
 
 const WORDS_ACTIONS = [
@@ -38,6 +49,9 @@ const WORDS_ACTIONS = [
   "Tricoter", "Souder", "Pecher", "Demenager", "Negocier",
   "Courir", "Dormir", "Chanter", "Sauter", "Cuisiner",
   "Nager", "Pleurer", "Danser", "Conduire",
+  "Voler", "Trébucher", "Embrasser", "Draguer", "Tricher",
+  "Mentir", "Vomir", "Accoucher", "Hacker", "Cambrioler",
+  "Kidnapper", "Hypnotiser", "Exorciser", "Ressusciter", "Twerker",
 ];
 
 const WORDS_PLACES = [
@@ -48,6 +62,9 @@ const WORDS_PLACES = [
   "École", "Plage", "Hôpital", "Cinéma", "Forêt",
   "Restaurant", "Aéroport", "Montagne", "Supermarché", "Musée",
   "Paris", "Londres", "Bretagne", "Normandie",
+  "Marseille", "Berlin", "Ibiza", "Amsterdam", "Bangkok",
+  "Bali", "Mexique", "Maroc", "Égypte", "Japon",
+  "Prison", "Casino", "Discothèque", "Stade", "Cimetière",
 ];
 
 const WORDS_EXPRESSIONS = [
@@ -75,6 +92,9 @@ const WORDS_FOOD = [
   "Café", "Thé", "Bière", "Vin", "Caramel",
   "Pomme", "Poire", "Ananas", "Fraise", "Framboise",
   "Beurre", "Tarte", "Mars", "Snickers",
+  "Kebab", "Tacos", "Nutella", "Popcorn", "Donut",
+  "Pancake", "Omelette", "Steak", "Jambon", "Mozzarella",
+  "Wasabi", "Tabasco", "Ketchup", "Mayonnaise", "Moutarde",
 ];
 
 const WORDS_SIMPLE = [
@@ -90,12 +110,17 @@ const WORDS_SIMPLE = [
   "Jardin", "Bureau", "Bateau", "Fusée", "Robot",
   "Magicien", "Pirate", "Chevalier", "Couronne", "Trésor",
   "Carte", "Vélo", "Train", "Avion",
+  "Piscine", "Douche", "Cendrier", "Tatouage", "Piercing",
+  "Cicatrice", "Béquille", "Alarme", "Sonnette", "Micro",
+  "Enceinte", "Télévision", "Manette", "Casquette", "Écharpe",
 ];
 
 const WORDS_JOBS = [
   "Médecin", "Pompier", "Professeur", "Policier", "Cuisinier",
   "Pilote", "Coiffeur", "Avocat", "Boulanger", "Journaliste",
-  "Dentiste",
+  "Dentiste", "Plombier", "Facteur", "Astronaute", "Arbitre",
+  "Barman", "DJ", "Tatoueur", "Boucher", "Pharmacien",
+  "Notaire", "Architecte", "Vétérinaire", "Éboueur", "Chauffeur",
 ];
 
 const WORDS_FUN = [
@@ -103,6 +128,9 @@ const WORDS_FUN = [
   "Vampire", "Trottinette", "Embouteillage", "Anniversaire", "Fantôme",
   "Loup-garou", "Camping", "Glamping", "Moustache", "Barbe",
   "Rire", "Dessiner", "Écrire",
+  "Divorce", "Héritage", "Procès", "Amende", "Contravention",
+  "Grève", "Manifestation", "Panique", "Cauchemar", "Insomnie",
+  "Gueule de bois", "Karma", "Complot", "Rumeur", "Scandale",
 ];
 
 const WORDS_BRANDS = [
@@ -119,6 +147,8 @@ const WORDS_CULTURE = [
   "Football", "Rugby", "Tennis", "Badminton", "Ski", "Snowboard",
   "Karaté", "Judo", "Opéra", "Ballet", "Guitare", "Piano",
   "Violon", "Trompette", "Saxophone",
+  "Pokémon", "Zelda", "Mario", "Minecraft", "Fortnite",
+  "GTA", "FIFA", "Tetris", "Pac-Man", "Sonic",
 ];
 
 const WORDS_ADULT = [
