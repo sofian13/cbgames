@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useDeferredValue, useMemo, useState } from "react";
 import { Search } from "lucide-react";
 import { GameCard } from "./game-card";
-import { GAMES, CATEGORIES } from "@/lib/games/registry";
+import { CATEGORIES, GAMES } from "@/lib/games/registry";
 import { cn } from "@/lib/utils";
 
 interface GamePickerProps {
@@ -15,62 +15,69 @@ interface GamePickerProps {
 export function GamePicker({ selectedGameId, isHost, onSelectGame }: GamePickerProps) {
   const [activeCategory, setActiveCategory] = useState("all");
   const [search, setSearch] = useState("");
+  const deferredSearch = useDeferredValue(search);
 
   const filteredGames = useMemo(() => {
-    let games = activeCategory === "all"
-      ? GAMES
-      : GAMES.filter((g) => g.category === activeCategory);
+    const normalizedSearch = deferredSearch.trim().toLowerCase();
+    const games =
+      activeCategory === "all"
+        ? GAMES
+        : GAMES.filter((game) => game.category === activeCategory);
 
-    if (search.trim()) {
-      const q = search.trim().toLowerCase();
-      games = games.filter(
-        (g) =>
-          g.name.toLowerCase().includes(q) ||
-          g.description.toLowerCase().includes(q)
-      );
-    }
+    if (!normalizedSearch) return games;
 
-    return games;
-  }, [activeCategory, search]);
+    return games.filter(
+      (game) =>
+        game.name.toLowerCase().includes(normalizedSearch) ||
+        game.description.toLowerCase().includes(normalizedSearch)
+    );
+  }, [activeCategory, deferredSearch]);
 
   return (
-    <div className="space-y-4">
-      <h3 className="section-title">
-        {isHost ? "Choisis un jeu" : "En attente du choix du host..."}
-      </h3>
-
-      {/* Search bar */}
-      <div className="relative">
-        <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-white/25 pointer-events-none" />
-        <input
-          type="text"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Rechercher un jeu..."
-          className="w-full rounded-xl border border-white/[0.1] bg-white/[0.04] py-2.5 pl-10 pr-4 text-sm text-white/80 placeholder:text-white/20 outline-none font-sans transition-all duration-300 focus:border-cyan-300/40 focus:bg-cyan-300/[0.04] focus:shadow-[0_0_20px_rgba(80,216,255,0.08)]"
-        />
+    <section className="site-panel rounded-[1.8rem] p-4 sm:p-5">
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <div>
+          <p className="section-title">{isHost ? "Choisis un jeu" : "Catalogue"}</p>
+          <p className="mt-1 text-sm text-white/55">
+            {isHost ? "Selectionne le prochain jeu." : "Le host choisit la prochaine partie."}
+          </p>
+        </div>
+        <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1 text-xs text-white/45">
+          {filteredGames.length} jeu{filteredGames.length > 1 ? "x" : ""}
+        </span>
       </div>
 
-      {/* Category tabs */}
-      <div className="flex gap-1.5 flex-wrap">
-        {CATEGORIES.map((cat) => (
-          <button
-            key={cat.id}
-            onClick={() => setActiveCategory(cat.id)}
-            className={cn(
-              "rounded-lg px-3 py-1.5 text-[12px] font-sans font-medium transition-all duration-300",
-              activeCategory === cat.id
-                ? "bg-cyan-400/15 text-cyan-200 border border-cyan-300/30 shadow-[0_0_15px_rgba(80,216,255,0.1)]"
-                : "text-white/35 border border-transparent hover:text-white/55 hover:bg-white/[0.04]"
-            )}
-          >
-            {cat.label}
-          </button>
-        ))}
+      <div className="mb-4 space-y-3">
+        <label className="relative block">
+          <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-white/28" />
+          <input
+            type="text"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Rechercher un jeu"
+            className="h-12 w-full rounded-2xl border border-white/10 bg-white/[0.04] pl-11 pr-4 text-sm text-white/85 outline-none transition placeholder:text-white/24 focus:border-cyan-300/28 focus:bg-white/[0.06]"
+          />
+        </label>
+
+        <div className="flex gap-2 overflow-x-auto pb-1">
+          {CATEGORIES.map((category) => (
+            <button
+              key={category.id}
+              onClick={() => setActiveCategory(category.id)}
+              className={cn(
+                "shrink-0 rounded-full border px-3 py-2 text-xs font-semibold uppercase tracking-[0.16em] transition",
+                activeCategory === category.id
+                  ? "border-cyan-300/30 bg-cyan-300/[0.12] text-cyan-100"
+                  : "border-white/10 bg-white/[0.04] text-white/45 hover:text-white/72"
+              )}
+            >
+              {category.label}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* Game grid */}
-      <div className="grid gap-3 sm:grid-cols-2 custom-scroll card-stagger" key={`${activeCategory}-${search}`}>
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
         {filteredGames.length > 0 ? (
           filteredGames.map((game) => (
             <GameCard
@@ -82,11 +89,11 @@ export function GamePicker({ selectedGameId, isHost, onSelectGame }: GamePickerP
             />
           ))
         ) : (
-          <div className="col-span-2 flex items-center justify-center py-12">
-            <p className="text-sm text-white/25 font-sans">Aucun jeu trouve</p>
+          <div className="site-panel-soft col-span-full rounded-[1.5rem] px-5 py-10 text-center">
+            <p className="text-sm text-white/42">Aucun jeu ne correspond a la recherche.</p>
           </div>
         )}
       </div>
-    </div>
+    </section>
   );
 }

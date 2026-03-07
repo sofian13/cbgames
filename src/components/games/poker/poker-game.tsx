@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef, useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import { useGame } from "@/lib/party/use-game";
 import { useGameStore } from "@/lib/stores/game-store";
 import type { GameProps } from "@/lib/games/types";
 import { cn } from "@/lib/utils";
+import { useKeyedState } from "@/lib/use-keyed-state";
 
 // ── Types ───────────────────────────────────────────────
 type Suit = "spades" | "hearts" | "diamonds" | "clubs";
@@ -310,23 +311,11 @@ export default function PokerGame({
   const { sendAction } = useGame(roomCode, "poker", playerId, playerName);
   const { gameState, error } = useGameStore();
   const state = gameState as unknown as PokerState;
-  const [raiseAmount, setRaiseAmount] = useState(0);
-  const prevHandRef = useRef(0);
-
-  // Reset raise when hand changes
-  useEffect(() => {
-    if (state?.handNumber && state.handNumber !== prevHandRef.current) {
-      prevHandRef.current = state.handNumber;
-      setRaiseAmount(0);
-    }
-  }, [state?.handNumber]);
-
-  // Set default raise amount when available actions change
-  useEffect(() => {
-    if (state?.availableActions?.minRaiseTotal) {
-      setRaiseAmount(state.availableActions.minRaiseTotal);
-    }
-  }, [state?.availableActions?.minRaiseTotal]);
+  const raiseKey = `${state?.handNumber ?? 0}-${state?.availableActions?.minRaiseTotal ?? 0}`;
+  const [raiseAmount, setRaiseAmount] = useKeyedState<number>(
+    raiseKey,
+    () => state?.availableActions?.minRaiseTotal ?? 0
+  );
 
   const handleFold = useCallback(() => {
     sendAction({ action: "fold" });

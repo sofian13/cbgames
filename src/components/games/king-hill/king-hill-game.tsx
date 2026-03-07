@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useCallback } from "react";
 import { useGame } from "@/lib/party/use-game";
 import { useGameStore } from "@/lib/stores/game-store";
 import type { GameProps } from "@/lib/games/types";
 import { cn } from "@/lib/utils";
+import { useKeyedState } from "@/lib/use-keyed-state";
 
 interface KHPlayer { id: string; name: string; score: number; energy: number; isKing: boolean; hasActed: boolean; }
 interface KHState {
@@ -28,22 +29,14 @@ const KING_ACTIONS = {
 export default function KingHillGame({ roomCode, playerId, playerName }: GameProps) {
   const { sendAction } = useGame(roomCode, "king-hill", playerId, playerName);
   const { gameState } = useGameStore();
-  const [acted, setActed] = useState(false);
-  const prevRoundRef = useRef(0);
   const state = gameState as unknown as KHState;
-
-  useEffect(() => {
-    if (state?.round !== prevRoundRef.current) {
-      prevRoundRef.current = state?.round ?? 0;
-      setActed(false);
-    }
-  }, [state?.round]);
+  const [acted, setActed] = useKeyedState<boolean>(state?.round ?? 0, false);
 
   const handleAction = useCallback((choice: string) => {
     if (acted) return;
     setActed(true);
     sendAction({ action: "choose", choice });
-  }, [acted, sendAction]);
+  }, [acted, sendAction, setActed]);
 
   if (!state || state.status === "waiting") return (
     <div className="flex flex-1 items-center justify-center min-h-screen"

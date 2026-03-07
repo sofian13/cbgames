@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { ballStore } from "./tennis-store";
@@ -15,7 +15,14 @@ export function TennisBall() {
   const shadowRef = useRef<THREE.Mesh>(null);
   const shadowMatRef = useRef<THREE.MeshStandardMaterial>(null);
   const trailRef = useRef<THREE.Points>(null);
-  const trailPositions = useRef<Float32Array>(new Float32Array(TRAIL_LENGTH * 3));
+  const trailGeometry = useMemo(() => {
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute(
+      "position",
+      new THREE.BufferAttribute(new Float32Array(TRAIL_LENGTH * 3), 3)
+    );
+    return geometry;
+  }, []);
   const trailIndex = useRef(0);
   const currentPos = useRef(new THREE.Vector3(0, 0, 0));
   const visibleRef = useRef(false);
@@ -69,15 +76,14 @@ export function TennisBall() {
     }
 
     // Update trail ring buffer
+    const positionAttribute = trailGeometry.getAttribute("position") as THREE.BufferAttribute;
+    const trailPositions = positionAttribute.array as Float32Array;
     const idx = (trailIndex.current % TRAIL_LENGTH) * 3;
-    trailPositions.current[idx] = currentPos.current.x;
-    trailPositions.current[idx + 1] = currentPos.current.y;
-    trailPositions.current[idx + 2] = currentPos.current.z;
+    trailPositions[idx] = currentPos.current.x;
+    trailPositions[idx + 1] = currentPos.current.y;
+    trailPositions[idx + 2] = currentPos.current.z;
     trailIndex.current++;
-
-    if (trail) {
-      trail.geometry.attributes.position.needsUpdate = true;
-    }
+    positionAttribute.needsUpdate = true;
   });
 
   return (
@@ -110,13 +116,7 @@ export function TennisBall() {
       </mesh>
 
       {/* Trail effect */}
-      <points ref={trailRef} visible={false}>
-        <bufferGeometry>
-          <bufferAttribute
-            attach="attributes-position"
-            args={[trailPositions.current, 3]}
-          />
-        </bufferGeometry>
+      <points ref={trailRef} visible={false} geometry={trailGeometry}>
         <pointsMaterial
           color={TRAIL_COLOR}
           size={TRAIL_SIZE}

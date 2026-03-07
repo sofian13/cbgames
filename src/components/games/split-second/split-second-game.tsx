@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useCallback } from "react";
 import { useGame } from "@/lib/party/use-game";
 import { useGameStore } from "@/lib/stores/game-store";
 import type { GameProps } from "@/lib/games/types";
 import { cn } from "@/lib/utils";
+import { useKeyedState } from "@/lib/use-keyed-state";
 
 interface SSPlayer { id: string; name: string; lives: number; score: number; isAlive: boolean; lastResult: "success" | "fail" | null; }
 interface SSChallenge { type: string; instruction: string; data: Record<string, unknown>; }
@@ -17,36 +18,28 @@ interface SSState {
 export default function SplitSecondGame({ roomCode, playerId, playerName }: GameProps) {
   const { sendAction } = useGame(roomCode, "split-second", playerId, playerName);
   const { gameState } = useGameStore();
-  const [answered, setAnswered] = useState(false);
-  const [typedWord, setTypedWord] = useState("");
-  const [mathAnswer, setMathAnswer] = useState("");
-  const [clickCount, setClickCount] = useState(0);
-  const prevRoundRef = useRef(0);
   const state = gameState as unknown as SSState;
-
-  useEffect(() => {
-    if (state?.round !== prevRoundRef.current) {
-      prevRoundRef.current = state?.round ?? 0;
-      setAnswered(false); setTypedWord(""); setMathAnswer(""); setClickCount(0);
-    }
-  }, [state?.round]);
+  const roundKey = state?.round ?? 0;
+  const [answered, setAnswered] = useKeyedState<boolean>(roundKey, false);
+  const [typedWord, setTypedWord] = useKeyedState<string>(roundKey, "");
+  const [mathAnswer, setMathAnswer] = useKeyedState<string>(roundKey, "");
+  const [clickCount, setClickCount] = useKeyedState<number>(roundKey, 0);
 
   const answer = useCallback((value: unknown) => {
     if (answered) return;
     setAnswered(true);
     sendAction({ action: "answer", value: String(value) });
-  }, [answered, sendAction]);
+  }, [answered, sendAction, setAnswered]);
 
   const handleClick = useCallback(() => {
-    const newCount = clickCount + 1;
-    setClickCount(newCount);
+    setClickCount((count) => count + 1);
     sendAction({ action: "click" });
-  }, [clickCount, sendAction]);
+  }, [sendAction, setClickCount]);
 
   const handleDontClick = useCallback(() => {
     sendAction({ action: "clicked" });
     setAnswered(true);
-  }, [sendAction]);
+  }, [sendAction, setAnswered]);
 
   if (!state || state.status === "waiting") return (
     <div className="relative flex flex-1 items-center justify-center overflow-hidden"

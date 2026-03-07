@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { useGame } from "@/lib/party/use-game";
 import { useGameStore } from "@/lib/stores/game-store";
 import type { GameProps } from "@/lib/games/types";
 import { cn } from "@/lib/utils";
+import { useKeyedState } from "@/lib/use-keyed-state";
 
 // ── Types ─────────────────────────────────────────────────
 interface InfiltrePlayerState {
@@ -54,55 +55,27 @@ interface InfiltreState {
 export default function InfiltreGame({ roomCode, playerId, playerName }: GameProps) {
   const { sendAction } = useGame(roomCode, "infiltre", playerId, playerName);
   const { gameState, error } = useGameStore();
-
-  const [clueInput, setClueInput] = useState("");
-  const [clueSubmitted, setClueSubmitted] = useState(false);
-  const [voteTarget, setVoteTarget] = useState<string | null>(null);
-  const [voteSubmitted, setVoteSubmitted] = useState(false);
-  const [guessInput, setGuessInput] = useState("");
-  const [guessSubmitted, setGuessSubmitted] = useState(false);
-
-  const prevRoundRef = useRef(0);
-  const prevPhaseRef = useRef("");
+  const state = gameState as unknown as InfiltreState;
+  const clueKey = `${state?.round ?? 0}-${state?.phase === "describe" ? "describe" : state?.phase ?? "waiting"}`;
+  const voteKey = `${state?.round ?? 0}-${state?.phase === "vote" ? "vote" : state?.phase ?? "waiting"}`;
+  const guessKey = `${state?.round ?? 0}-${state?.phase === "guess-word" ? "guess-word" : state?.phase ?? "waiting"}`;
+  const [clueInput, setClueInput] = useKeyedState<string>(clueKey, "");
+  const [clueSubmitted, setClueSubmitted] = useKeyedState<boolean>(clueKey, false);
+  const [voteTarget, setVoteTarget] = useKeyedState<string | null>(voteKey, null);
+  const [voteSubmitted, setVoteSubmitted] = useKeyedState<boolean>(voteKey, false);
+  const [guessInput, setGuessInput] = useKeyedState<string>(guessKey, "");
+  const [guessSubmitted, setGuessSubmitted] = useKeyedState<boolean>(guessKey, false);
   const clueInputRef = useRef<HTMLInputElement>(null);
   const guessInputRef = useRef<HTMLInputElement>(null);
 
-  const state = gameState as unknown as InfiltreState;
-
-  // Reset local state on round / phase transitions
   useEffect(() => {
-    if (!state) return;
-    const round = state.round ?? 0;
-    const phase = state.phase ?? "";
-
-    if (round !== prevRoundRef.current) {
-      prevRoundRef.current = round;
-      setClueInput("");
-      setClueSubmitted(false);
-      setVoteTarget(null);
-      setVoteSubmitted(false);
-      setGuessInput("");
-      setGuessSubmitted(false);
+    if (state?.phase === "describe") {
+      setTimeout(() => clueInputRef.current?.focus(), 100);
     }
-
-    if (phase !== prevPhaseRef.current) {
-      prevPhaseRef.current = phase;
-      if (phase === "describe") {
-        setClueInput("");
-        setClueSubmitted(false);
-        setTimeout(() => clueInputRef.current?.focus(), 100);
-      }
-      if (phase === "vote") {
-        setVoteTarget(null);
-        setVoteSubmitted(false);
-      }
-      if (phase === "guess-word") {
-        setGuessInput("");
-        setGuessSubmitted(false);
-        setTimeout(() => guessInputRef.current?.focus(), 100);
-      }
+    if (state?.phase === "guess-word") {
+      setTimeout(() => guessInputRef.current?.focus(), 100);
     }
-  }, [state?.round, state?.phase, state]);
+  }, [state?.phase]);
 
   // ── Actions ─────────────────────────────────────────────
   const handleSubmitClue = useCallback(() => {
@@ -110,7 +83,7 @@ export default function InfiltreGame({ roomCode, playerId, playerName }: GamePro
     if (!trimmed || clueSubmitted) return;
     setClueSubmitted(true);
     sendAction({ action: "describe", clue: trimmed });
-  }, [clueInput, clueSubmitted, sendAction]);
+  }, [clueInput, clueSubmitted, sendAction, setClueSubmitted]);
 
   const handleVote = useCallback(
     (targetId: string) => {
@@ -119,7 +92,7 @@ export default function InfiltreGame({ roomCode, playerId, playerName }: GamePro
       setVoteSubmitted(true);
       sendAction({ action: "vote", targetId });
     },
-    [voteSubmitted, playerId, sendAction]
+    [playerId, sendAction, setVoteSubmitted, setVoteTarget, voteSubmitted]
   );
 
   const handleGuessWord = useCallback(() => {
@@ -127,7 +100,7 @@ export default function InfiltreGame({ roomCode, playerId, playerName }: GamePro
     if (!trimmed || guessSubmitted) return;
     setGuessSubmitted(true);
     sendAction({ action: "guess-word", word: trimmed });
-  }, [guessInput, guessSubmitted, sendAction]);
+  }, [guessInput, guessSubmitted, sendAction, setGuessSubmitted]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent, handler: () => void) => {

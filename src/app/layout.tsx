@@ -25,8 +25,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "AF Games | Cosmic Arcade",
-  description: "Arcade multijoueur futuriste entre potes",
+  title: "AF Games | Party Arcade",
+  description: "Mini-jeux multijoueur pensés pour le mobile et les soirees entre potes",
 };
 
 export default function RootLayout({

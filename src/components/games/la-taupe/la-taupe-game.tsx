@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useCallback } from "react";
 import { useGame } from "@/lib/party/use-game";
 import { useGameStore } from "@/lib/stores/game-store";
 import type { GameProps } from "@/lib/games/types";
 import { cn } from "@/lib/utils";
+import { useKeyedState } from "@/lib/use-keyed-state";
 
 interface LaTaupeState {
   status: "waiting" | "role-reveal" | "mission" | "mission-result" | "vote" | "vote-result" | "game-over";
@@ -19,38 +20,31 @@ interface LaTaupeState {
 export default function LaTaupeGame({ roomCode, playerId, playerName }: GameProps) {
   const { sendAction } = useGame(roomCode, "la-taupe", playerId, playerName);
   const { gameState } = useGameStore();
-  const [input, setInput] = useState("");
-  const [submitted, setSubmitted] = useState(false);
-  const [voted, setVoted] = useState(false);
-  const prevRoundRef = useRef(0);
-
   const state = gameState as unknown as LaTaupeState;
-
-  useEffect(() => {
-    if (state?.round !== prevRoundRef.current) {
-      prevRoundRef.current = state?.round ?? 0;
-      setInput(""); setSubmitted(false); setVoted(false);
-    }
-  }, [state?.round]);
+  const mission = state?.mission ?? null;
+  const roundKey = state?.round ?? 0;
+  const [input, setInput] = useKeyedState<string>(roundKey, "");
+  const [submitted, setSubmitted] = useKeyedState<boolean>(roundKey, false);
+  const [voted, setVoted] = useKeyedState<boolean>(roundKey, false);
 
   const handleSubmit = useCallback(() => {
-    if (submitted || !state?.mission) return;
+    if (submitted || !mission) return;
     setSubmitted(true);
-    if (state.mission.type === "estimation") sendAction({ action: "submit-estimation", value: Number(input) || 0 });
-    else if (state.mission.type === "vote-unanime") sendAction({ action: "submit-vote-unanime", word: input });
-  }, [submitted, input, state?.mission, sendAction]);
+    if (mission.type === "estimation") sendAction({ action: "submit-estimation", value: Number(input) || 0 });
+    else if (mission.type === "vote-unanime") sendAction({ action: "submit-vote-unanime", word: input });
+  }, [input, mission, sendAction, setSubmitted, submitted]);
 
   const handleConfiance = useCallback((choice: string) => {
     if (submitted) return;
     setSubmitted(true);
     sendAction({ action: "submit-confiance", choice });
-  }, [submitted, sendAction]);
+  }, [sendAction, setSubmitted, submitted]);
 
   const handleVote = useCallback((targetId: string) => {
     if (voted) return;
     setVoted(true);
     sendAction({ action: "vote-suspect", targetId });
-  }, [voted, sendAction]);
+  }, [sendAction, setVoted, voted]);
 
   if (!state || state.status === "waiting") {
     return (

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { useGame } from "@/lib/party/use-game";
 import { useGameStore } from "@/lib/stores/game-store";
 import type { GameProps } from "@/lib/games/types";
@@ -10,6 +10,7 @@ import type {
   SpeedQuizAnswer,
 } from "@/lib/party/message-types";
 import { cn } from "@/lib/utils";
+import { useKeyedState } from "@/lib/use-keyed-state";
 
 const DIFF_COLORS = {
   easy: { bg: "bg-emerald-500/10", border: "border-emerald-500/30", text: "text-emerald-400", label: "Facile" },
@@ -24,20 +25,15 @@ export default function SpeedQuizGame({
 }: GameProps) {
   const { sendAction } = useGame(roomCode, "speed-quiz", playerId, playerName);
   const { gameState, error } = useGameStore();
-  const [input, setInput] = useState("");
-  const [submitted, setSubmitted] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const prevRoundRef = useRef(0);
-
   const state = gameState as unknown as SpeedQuizState;
+  const roundKey = state?.round ?? 0;
+  const [input, setInput] = useKeyedState<string>(roundKey, "");
+  const [submitted, setSubmitted] = useKeyedState<boolean>(roundKey, false);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   // Reset input when a new question starts
   useEffect(() => {
-    const round = state?.round ?? 0;
-    if (state?.status === "question" && round !== prevRoundRef.current) {
-      prevRoundRef.current = round;
-      setInput("");
-      setSubmitted(false);
+    if (state?.status === "question") {
       setTimeout(() => inputRef.current?.focus(), 100);
     }
   }, [state?.status, state?.round]);
@@ -47,7 +43,7 @@ export default function SpeedQuizGame({
     if (!trimmed || submitted) return;
     setSubmitted(true);
     sendAction({ action: "answer", answer: trimmed });
-  }, [input, submitted, sendAction]);
+  }, [input, sendAction, setSubmitted, submitted]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -161,11 +157,13 @@ export default function SpeedQuizGame({
         <div className="w-full max-w-2xl text-center mt-2">
           {state.currentQuestion.image && (
             <div className="mb-8 flex justify-center">
-              <img
-                src={state.currentQuestion.image}
-                alt=""
-                className="max-h-64 rounded-2xl border border-white/[0.12] object-contain shadow-[0_0_30px_rgba(139,92,246,0.15)]"
-              />
+              <picture>
+                <img
+                  src={state.currentQuestion.image}
+                  alt=""
+                  className="max-h-64 rounded-2xl border border-white/[0.12] object-contain shadow-[0_0_30px_rgba(139,92,246,0.15)]"
+                />
+              </picture>
             </div>
           )}
           <h2
@@ -255,8 +253,6 @@ export default function SpeedQuizGame({
   // ── VALIDATING PHASE ───────────────────────────────────
   if (state.status === "validating" && state.currentQuestion && state.answers) {
     const currentIdx = state.currentValidationIndex ?? 0;
-    const currentAnswer = state.answers[currentIdx];
-
     return (
       <div
         className="relative flex min-h-screen flex-1 flex-col items-center gap-8 overflow-hidden px-6 py-8"

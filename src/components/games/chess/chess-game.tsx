@@ -5,6 +5,7 @@ import type { GameProps } from "@/lib/games/types";
 import { useGame } from "@/lib/party/use-game";
 import { useGameStore } from "@/lib/stores/game-store";
 import { cn } from "@/lib/utils";
+import { useKeyedState } from "@/lib/use-keyed-state";
 
 type Color = "w" | "b";
 type PieceType = "p" | "n" | "b" | "r" | "q" | "k";
@@ -602,11 +603,23 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [focusMode, setFocusMode] = useState(false);
   const [inviteFeedback, setInviteFeedback] = useState<string>("");
-  const [optimisticMove, setOptimisticMove] = useState<ChessMove | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const onlineLastMoveKeyRef = useRef<string | null>(null);
   const endSoundPlayedRef = useRef(false);
-  const [showGameOverPopup, setShowGameOverPopup] = useState(false);
+  const onlineMoveKey = state?.lastMove
+    ? `${state.lastMove.from}-${state.lastMove.to}-${state.phase}`
+    : `phase-${state?.phase ?? "waiting"}`;
+  const [optimisticMove, setOptimisticMove] = useKeyedState<ChessMove | null>(
+    onlineMoveKey,
+    null
+  );
+  const gameOverPopupKey = localMode
+    ? `local-${localWinner ?? "active"}-${localReason ?? "none"}`
+    : `online-${state?.phase ?? "waiting"}-${state?.winner ?? "none"}-${state?.reason ?? "none"}`;
+  const [showGameOverPopup, setShowGameOverPopup] = useKeyedState<boolean>(
+    gameOverPopupKey,
+    () => (localMode ? !!localWinner : state?.phase === "game-over")
+  );
 
   const serverBoard = useMemo(() => (state?.board ? state.board.map(decodePiece) : []), [state]);
   const board = useMemo(() => {
@@ -646,10 +659,8 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
   }, [localBoard, localTurn]);
   const onlineCapturedWhite = useMemo(() => getCapturedPieceSymbols(board, "w"), [board]);
   const onlineCapturedBlack = useMemo(() => getCapturedPieceSymbols(board, "b"), [board]);
-  const onlineInCheckSquare = useMemo(() => {
-    if (state?.inCheck && state?.turn) return findKingSquare(board, state.turn);
-    return null;
-  }, [board, state?.inCheck, state?.turn]);
+  const onlineInCheckSquare =
+    state?.inCheck && state?.turn ? findKingSquare(board, state.turn) : null;
   const isFocusView = isFullscreen || focusMode;
 
   const getAudioCtx = useCallback(() => {
@@ -867,7 +878,6 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
   // Clear optimistic move when server confirms
   useEffect(() => {
     if (!state?.lastMove) return;
-    setOptimisticMove(null);
     const key = `${state.lastMove.from}-${state.lastMove.to}-${state.phase}`;
     if (onlineLastMoveKeyRef.current === key) return;
     onlineLastMoveKeyRef.current = key;
@@ -884,11 +894,14 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
   useEffect(() => {
     if (!localWinner || endSoundPlayedRef.current) return;
     endSoundPlayedRef.current = true;
-    setShowGameOverPopup(true);
     if (localWinner === "draw") {
       playLoseSound();
     } else if (localKind === "bot") {
-      localWinner === "w" ? playWinSound() : playLoseSound();
+      if (localWinner === "w") {
+        playWinSound();
+      } else {
+        playLoseSound();
+      }
     } else {
       playWinSound();
     }
@@ -898,7 +911,6 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
   useEffect(() => {
     if (!state || state.phase !== "game-over" || endSoundPlayedRef.current) return;
     endSoundPlayedRef.current = true;
-    setShowGameOverPopup(true);
     if (!myColor || state.winner === "draw") {
       playLoseSound();
     } else if (state.winner === myColor) {
@@ -912,14 +924,12 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
   useEffect(() => {
     if (localMode && !localWinner) {
       endSoundPlayedRef.current = false;
-      setShowGameOverPopup(false);
     }
   }, [localMode, localWinner]);
 
   useEffect(() => {
     if (state?.phase === "playing") {
       endSoundPlayedRef.current = false;
-      setShowGameOverPopup(false);
     }
   }, [state?.phase]);
 
@@ -945,7 +955,7 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
     } else {
       setSelected(null);
     }
-  }, [serverBoard, canPlayOnline, legalMovesByFrom, myColor, selected, sendAction, state, playMoveSound]);
+  }, [serverBoard, canPlayOnline, legalMovesByFrom, myColor, selected, sendAction, setOptimisticMove, state, playMoveSound]);
 
   const handleLocalClick = useCallback((index: number) => {
     if (localWinner) return;

@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useCallback } from "react";
 import { useGame } from "@/lib/party/use-game";
 import { useGameStore } from "@/lib/stores/game-store";
 import type { GameProps } from "@/lib/games/types";
 import { cn } from "@/lib/utils";
+import { useKeyedState } from "@/lib/use-keyed-state";
 
 interface RoastQuizState {
   status: "waiting" | "question" | "malus-choice" | "reveal" | "game-over";
@@ -28,31 +29,24 @@ const MALUS_TYPES = [
 export default function RoastQuizGame({ roomCode, playerId, playerName }: GameProps) {
   const { sendAction } = useGame(roomCode, "roast-quiz", playerId, playerName);
   const { gameState } = useGameStore();
-  const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
-  const [malusSent, setMalusSent] = useState(false);
-  const prevRoundRef = useRef(0);
-
   const state = gameState as unknown as RoastQuizState;
-
-  useEffect(() => {
-    if (state?.round !== prevRoundRef.current) {
-      prevRoundRef.current = state?.round ?? 0;
-      setSelectedAnswer(null);
-      setMalusSent(false);
-    }
-  }, [state?.round]);
+  const roundKey = state?.round ?? 0;
+  const malusKey = `${state?.round ?? 0}-${state?.status ?? "waiting"}`;
+  const [selectedAnswer, setSelectedAnswer] = useKeyedState<number | null>(roundKey, null);
+  const [malusSent, setMalusSent] = useKeyedState<boolean>(malusKey, false);
+  const [selectedTarget, setTarget] = useKeyedState<string | null>(malusKey, null);
 
   const handleAnswer = useCallback((idx: number) => {
     if (selectedAnswer !== null) return;
     setSelectedAnswer(idx);
     sendAction({ action: "answer", choiceIndex: idx });
-  }, [selectedAnswer, sendAction]);
+  }, [selectedAnswer, sendAction, setSelectedAnswer]);
 
   const handleMalus = useCallback((targetId: string, malusType: string) => {
     if (malusSent) return;
     setMalusSent(true);
     sendAction({ action: "send-malus", targetId, malusType });
-  }, [malusSent, sendAction]);
+  }, [malusSent, sendAction, setMalusSent]);
 
   if (!state || state.status === "waiting") {
     return (
@@ -266,7 +260,6 @@ export default function RoastQuizGame({ roomCode, playerId, playerName }: GamePr
   if (state.status === "malus-choice") {
     const isChooser = state.malusChooser === playerId;
     const otherPlayers = state.players?.filter(p => p.id !== playerId) ?? [];
-    const [selectedTarget, setTarget] = useState<string | null>(null);
 
     if (!isChooser) {
       return (

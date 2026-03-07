@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { ChevronLeft, Gamepad2 } from "lucide-react";
 import { RoomCodeDisplay } from "@/components/shared/room-code-display";
 import { ConnectionStatus } from "@/components/shared/connection-status";
 
@@ -11,32 +12,30 @@ interface HeaderProps {
 
 export function Header({ roomCode, isConnected }: HeaderProps) {
   return (
-    <header
-      className="sticky top-0 z-40 border-b border-white/[0.06] backdrop-blur-2xl"
-      style={{
-        background: "linear-gradient(180deg, rgba(3,8,19,0.92) 0%, rgba(3,8,19,0.82) 100%)",
-      }}
-    >
-      <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-5">
-        <Link href="/" className="flex items-center gap-2.5 group press-effect">
-          <div
-            className="h-6 w-6 rounded-lg transition-all duration-500 group-hover:scale-110 flex items-center justify-center"
-            style={{
-              background: "linear-gradient(135deg, rgba(80,216,255,0.2), rgba(99,102,241,0.15))",
-              border: "1px solid rgba(80,216,255,0.35)",
-              boxShadow: "0 0 16px rgba(64,170,255,0.25), inset 0 0 8px rgba(80,216,255,0.1)",
-            }}
-          >
-            <span className="text-[8px] font-bold text-cyan-200/90 font-serif">AF</span>
+    <header className="sticky top-0 z-40 border-b border-white/6 bg-[#08111acc]/90 backdrop-blur-2xl">
+      <div className="mx-auto flex min-h-16 max-w-6xl items-center justify-between gap-3 px-4 py-3 sm:px-5">
+        <Link href="/" className="group flex items-center gap-3 press-effect">
+          <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.06] shadow-[0_10px_25px_rgba(0,0,0,0.25)] transition-transform duration-300 group-hover:scale-105">
+            <Gamepad2 className="h-5 w-5 text-[#ffb68c]" />
           </div>
-          <span className="text-xs font-bold tracking-[0.18em] text-cyan-100/85 font-serif premium-text-glow group-hover:text-cyan-100 transition-colors">
-            AF GAMES
-          </span>
+          <div>
+            <span className="block text-[11px] font-semibold uppercase tracking-[0.22em] text-white/42">
+              AF Games
+            </span>
+            <span className="block text-sm text-white/72">Party arcade</span>
+          </div>
         </Link>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           {roomCode && <RoomCodeDisplay code={roomCode} />}
           {isConnected !== undefined && <ConnectionStatus isConnected={isConnected} />}
+          <Link
+            href="/"
+            className="hidden items-center gap-2 rounded-full border border-white/10 bg-white/[0.05] px-3 py-2 text-xs font-medium text-white/62 transition hover:border-cyan-300/28 hover:text-white sm:flex"
+          >
+            <ChevronLeft className="h-3.5 w-3.5" />
+            Accueil
+          </Link>
         </div>
       </div>
     </header>

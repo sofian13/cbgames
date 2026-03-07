@@ -83,11 +83,10 @@ export default function MotionTennisGame({ roomCode, playerId, playerName }: Gam
   const [timingMessage, setTimingMessage] = useState<{ text: string; color: string } | null>(null);
   const [swingAnimations, setSwingAnimations] = useState<Record<string, { active: boolean; type: string | null }>>({});
   const [showServePrompt, setShowServePrompt] = useState(false);
-
-  // Character list: set ONCE from the first game state that contains characters, used to render TennisPlayer components
-  const characterListRef = useRef<CharacterState[]>(DEFAULT_CHARACTERS);
-  const [characterList, setCharacterList] = useState<CharacterState[]>(DEFAULT_CHARACTERS);
-  const characterListInitialized = useRef(false);
+  const characterList = useMemo(
+    () => (state.characters && state.characters.length > 0 ? state.characters : DEFAULT_CHARACTERS),
+    [state.characters]
+  );
 
   const ambientStopRef = useRef<(() => void) | null>(null);
 
@@ -127,17 +126,10 @@ export default function MotionTennisGame({ roomCode, playerId, playerName }: Gam
     };
   }, [state.status]);
 
-  // Initialize character list from first game state that has characters
   useEffect(() => {
-    if (!characterListInitialized.current && state.characters && state.characters.length > 0) {
-      characterListRef.current = state.characters;
-      setCharacterList(state.characters);
-      characterListInitialized.current = true;
-
-      // Seed charTargets with initial positions
-      for (const char of state.characters) {
-        charTargets[char.id] = { x: char.x, z: char.z };
-      }
+    if (!state.characters || state.characters.length === 0) return;
+    for (const char of state.characters) {
+      charTargets[char.id] = { x: char.x, z: char.z };
     }
   }, [state.characters]);
 
@@ -314,7 +306,7 @@ export default function MotionTennisGame({ roomCode, playerId, playerName }: Gam
         sendAction({ action: "swing", swingType, power: 0.7, swingTimestamp: Date.now() });
 
         // Immediate visual: animate nearest "near" character (no server round-trip)
-        const nearChars = characterListRef.current.filter((c) => c.side === "near");
+        const nearChars = characterList.filter((c) => c.side === "near");
         const animChar = nearChars[0]?.id;
         if (animChar) {
           setSwingAnimations((prev) => ({

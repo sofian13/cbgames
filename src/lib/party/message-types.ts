@@ -163,3 +163,29 @@ export interface ReactionRoundResult {
   time: number;
   penalty: boolean;
 }
+
+// ===== Tap Rush Specific =====
+export interface TapRushState {
+  players: TapRushPlayer[];
+  status: "waiting" | "countdown" | "playing" | "results" | "game-over";
+  round: number;
+  totalRounds: number;
+  timeLeftMs: number;
+  phaseDurationMs: number;
+  roundResults?: TapRushRoundResult[];
+}
+
+export interface TapRushPlayer {
+  id: string;
+  name: string;
+  totalScore: number;
+  roundTaps: number;
+  bestRound: number;
+}
+
+export interface TapRushRoundResult {
+  playerId: string;
+  taps: number;
+  totalScore: number;
+  rank: number;
+}

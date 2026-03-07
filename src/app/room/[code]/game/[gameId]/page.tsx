@@ -26,6 +26,10 @@ const GameComponents = {
     () => import("@/components/games/reaction-time/reaction-time-game"),
     { ssr: false }
   ),
+  "tap-rush": dynamic(
+    () => import("@/components/games/tap-rush/tap-rush-game"),
+    { ssr: false }
+  ),
   "loup-garou": dynamic(
     () => import("@/components/games/loup-garou/loup-garou-game"),
     { ssr: false }

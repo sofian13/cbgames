@@ -1,29 +1,20 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useCallback } from "react";
 import { useGame } from "@/lib/party/use-game";
 import { useGameStore } from "@/lib/stores/game-store";
 import type { GameProps } from "@/lib/games/types";
 import type { ReactionTimeState, ReactionTimePlayer, ReactionRoundResult } from "@/lib/party/message-types";
 import { cn } from "@/lib/utils";
+import { useKeyedState } from "@/lib/use-keyed-state";
 
 export default function ReactionTimeGame({ roomCode, playerId, playerName }: GameProps) {
   const { sendAction } = useGame(roomCode, "reaction-time", playerId, playerName);
   const { gameState, error } = useGameStore();
-  const [tooEarly, setTooEarly] = useState(false);
-  const [hasClicked, setHasClicked] = useState(false);
-  const prevRoundRef = useRef(0);
-
   const state = gameState as unknown as ReactionTimeState;
-
-  // Reset click state when round changes to red phase
-  useEffect(() => {
-    if (state?.status === "red" && state.round !== prevRoundRef.current) {
-      prevRoundRef.current = state.round;
-      setHasClicked(false);
-      setTooEarly(false);
-    }
-  }, [state?.status, state?.round]);
+  const roundKey = state?.round ?? 0;
+  const [tooEarly, setTooEarly] = useKeyedState<boolean>(roundKey, false);
+  const [hasClicked, setHasClicked] = useKeyedState<boolean>(roundKey, false);
 
   const handleClick = useCallback(() => {
     if (hasClicked) return;
@@ -37,7 +28,7 @@ export default function ReactionTimeGame({ roomCode, playerId, playerName }: Gam
       setHasClicked(true);
       sendAction({ action: "click" });
     }
-  }, [state?.status, hasClicked, sendAction]);
+  }, [hasClicked, sendAction, setHasClicked, setTooEarly, state?.status]);
 
   if (!state || state.status === "waiting") {
     return (

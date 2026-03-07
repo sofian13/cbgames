@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { useGame } from "@/lib/party/use-game";
 import { useGameStore } from "@/lib/stores/game-store";
 import type { GameProps } from "@/lib/games/types";
 import { cn } from "@/lib/utils";
+import { useKeyedState } from "@/lib/use-keyed-state";
 
 // ── Types matching server state ──────────────────────────────────────
 type Team = "red" | "blue";
@@ -98,12 +99,11 @@ function SkullIcon({ className }: { className?: string }) {
 export default function CodeNamesGame({ roomCode, playerId, playerName }: GameProps) {
   const { sendAction } = useGame(roomCode, "code-names", playerId, playerName);
   const { gameState, error } = useGameStore();
-
-  const [clueWord, setClueWord] = useState("");
-  const [clueCount, setClueCount] = useState(1);
-  const clueInputRef = useRef<HTMLInputElement>(null);
-
   const state = gameState as unknown as CodeNamesState;
+  const currentTeamKey = state?.currentTeam ?? "none";
+  const [clueWord, setClueWord] = useKeyedState<string>(currentTeamKey, "");
+  const [clueCount, setClueCount] = useKeyedState<number>(currentTeamKey, 1);
+  const clueInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (
@@ -114,15 +114,6 @@ export default function CodeNamesGame({ roomCode, playerId, playerName }: GamePr
       setTimeout(() => clueInputRef.current?.focus(), 200);
     }
   }, [state?.phase, state?.isSpymaster, state?.currentTeam, playerId, state?.players]);
-
-  const prevTeamRef = useRef<Team | null>(null);
-  useEffect(() => {
-    if (state?.currentTeam && state.currentTeam !== prevTeamRef.current) {
-      prevTeamRef.current = state.currentTeam;
-      setClueWord("");
-      setClueCount(1);
-    }
-  }, [state?.currentTeam]);
 
   const joinTeam = useCallback(
     (team: Team) => sendAction({ action: "join-team", team }),
@@ -140,7 +131,7 @@ export default function CodeNamesGame({ roomCode, playerId, playerName }: GamePr
     sendAction({ action: "give-clue", word: trimmed, count: clueCount });
     setClueWord("");
     setClueCount(1);
-  }, [clueWord, clueCount, sendAction]);
+  }, [clueCount, clueWord, sendAction, setClueCount, setClueWord]);
 
   const guess = useCallback(
     (wordIndex: number) => sendAction({ action: "guess", wordIndex }),

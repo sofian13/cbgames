@@ -5,6 +5,7 @@ import { useGame } from "@/lib/party/use-game";
 import { useGameStore } from "@/lib/stores/game-store";
 import type { GameProps } from "@/lib/games/types";
 import { cn } from "@/lib/utils";
+import { useKeyedState } from "@/lib/use-keyed-state";
 
 // ── Types ────────────────────────────────────────────────
 type Phase =
@@ -184,24 +185,14 @@ export default function LoupGarouGame({
 }: GameProps) {
   const { sendAction } = useGame(roomCode, "loup-garou", playerId, playerName);
   const { gameState, error } = useGameStore();
-  const [chatInput, setChatInput] = useState("");
-  const chatEndRef = useRef<HTMLDivElement>(null);
-  const prevPhaseRef = useRef<string>("");
-
   const state = gameState as unknown as LoupGarouState;
+  const [chatInput, setChatInput] = useKeyedState<string>(state?.phase ?? "waiting", "");
+  const chatEndRef = useRef<HTMLDivElement>(null);
 
   // Scroll chat to bottom on new messages
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [state?.chatMessages?.length]);
-
-  // Reset chat input on phase change
-  useEffect(() => {
-    if (state?.phase && state.phase !== prevPhaseRef.current) {
-      prevPhaseRef.current = state.phase;
-      setChatInput("");
-    }
-  }, [state?.phase]);
 
   // ── Action handlers ────────────────────────────────────
   const handleWolfVote = useCallback(
@@ -244,7 +235,7 @@ export default function LoupGarouGame({
     if (!msg) return;
     sendAction({ action: "chat", message: msg });
     setChatInput("");
-  }, [chatInput, sendAction]);
+  }, [chatInput, sendAction, setChatInput]);
 
   const handleChatKeyDown = useCallback(
     (e: React.KeyboardEvent) => {

@@ -5,6 +5,7 @@ import { useGame } from "@/lib/party/use-game";
 import { useGameStore } from "@/lib/stores/game-store";
 import type { GameProps } from "@/lib/games/types";
 import { cn } from "@/lib/utils";
+import { useKeyedState } from "@/lib/use-keyed-state";
 
 // ── Types ───────────────────────────────────────────────
 type CardColor = "rouge" | "bleu" | "vert" | "jaune";
@@ -148,31 +149,32 @@ function getAmbientBackground(topCard?: CardData): string {
 export default function UnoGame({ roomCode, playerId, playerName }: GameProps) {
   const { sendAction } = useGame(roomCode, "uno", playerId, playerName);
   const { gameState, error } = useGameStore();
+  const state = gameState as unknown as UnoState;
   const [colorPickerCard, setColorPickerCard] = useState<number | null>(null);
-  const [unoToast, setUnoToast] = useState<UnoEvent | null>(null);
   const [playedCardAnim, setPlayedCardAnim] = useState<number | null>(null);
-  const [selectedCardIndex, setSelectedCardIndex] = useState<number | null>(null);
-  const prevUnoEventRef = useRef<string>("");
   const drawLockRef = useRef(false);
 
-  const state = gameState as unknown as UnoState;
-
-  // Reset selected card when hand changes
-  useEffect(() => {
-    setSelectedCardIndex(null);
-  }, [state?.myHand?.length]);
+  const handKey =
+    state?.myHand
+      ?.map((card, index) =>
+        `${index}-${getCardName(card)}-${card.playable ? 1 : 0}-${card.chosenColor ?? "none"}`
+      )
+      .join("|") ?? "empty";
+  const unoEventKey = state?.unoEvent
+    ? `${state.unoEvent.type}-${state.unoEvent.playerId}-${state.unoEvent.catcherName ?? ""}`
+    : "none";
+  const [selectedCardIndex, setSelectedCardIndex] = useKeyedState<number | null>(handKey, null);
+  const [unoToast, setUnoToast] = useKeyedState<UnoEvent | null>(
+    unoEventKey,
+    () => state?.unoEvent ?? null
+  );
 
   // ── UNO event toast ────────────────────────────────────
   useEffect(() => {
-    if (!state?.unoEvent) return;
-    const key = `${state.unoEvent.type}-${state.unoEvent.playerId}-${Date.now()}`;
-    if (prevUnoEventRef.current === key) return;
-    prevUnoEventRef.current = key;
-
-    setUnoToast(state.unoEvent);
+    if (!unoToast) return;
     const timeout = setTimeout(() => setUnoToast(null), 3000);
     return () => clearTimeout(timeout);
-  }, [state?.unoEvent]);
+  }, [setUnoToast, unoToast]);
 
   // ── Actions ────────────────────────────────────────────
   const handlePlayCard = useCallback(

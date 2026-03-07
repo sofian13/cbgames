@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useCallback } from "react";
 import { useGame } from "@/lib/party/use-game";
 import { useGameStore } from "@/lib/stores/game-store";
 import type { GameProps } from "@/lib/games/types";
 import { cn } from "@/lib/utils";
+import { useKeyedState } from "@/lib/use-keyed-state";
 
 interface RPS { id: string; name: string; points: number; isAlive: boolean; hasBet: boolean; }
 interface RRes { hit: boolean; playerId: string; playerName: string; action: string; }
@@ -48,24 +49,17 @@ function BarrelVisual({ chambers, bullets }: { chambers: number; bullets: number
 export default function RouletteGame({ roomCode, playerId, playerName }: GameProps) {
   const { sendAction } = useGame(roomCode, "roulette", playerId, playerName);
   const { gameState } = useGameStore();
-  const [betPrediction, setBetPrediction] = useState<"bang" | "safe" | null>(null);
-  const [betAmount, setBetAmount] = useState<number>(25);
-  const [hasBet, setHasBet] = useState(false);
-  const prevTurnRef = useRef(0);
   const state = gameState as unknown as RS;
-
-  useEffect(() => {
-    if (state?.turn !== prevTurnRef.current) {
-      prevTurnRef.current = state?.turn ?? 0;
-      setBetPrediction(null); setBetAmount(25); setHasBet(false);
-    }
-  }, [state?.turn]);
+  const turnKey = state?.turn ?? 0;
+  const [betPrediction, setBetPrediction] = useKeyedState<"bang" | "safe" | null>(turnKey, null);
+  const [betAmount, setBetAmount] = useKeyedState<number>(turnKey, 25);
+  const [hasBet, setHasBet] = useKeyedState<boolean>(turnKey, false);
 
   const handleBet = useCallback(() => {
     if (hasBet || !betPrediction) return;
     setHasBet(true);
     sendAction({ action: "bet", prediction: betPrediction, amount: betAmount });
-  }, [hasBet, betPrediction, betAmount, sendAction]);
+  }, [betAmount, betPrediction, hasBet, sendAction, setHasBet]);
 
   if (!state || state.status === "waiting") return (
     <div className="flex flex-1 items-center justify-center" style={{ background: "radial-gradient(circle at 50% 25%, rgba(101,223,178,0.06), transparent 40%), #060606" }}>

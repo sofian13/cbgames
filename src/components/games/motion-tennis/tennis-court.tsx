@@ -1,8 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
 import { Sky } from "@react-three/drei";
-import * as THREE from "three";
 
 const COURT_LENGTH = 36;
 const COURT_WIDTH = 20;
@@ -18,27 +16,39 @@ function CourtLine({ position, size }: { position: [number, number, number]; siz
   );
 }
 
+function createBleacherSpectators(seed: number) {
+  const colors = ["#e74c3c", "#3498db", "#f39c12", "#2ecc71", "#9b59b6", "#1abc9c", "#e67e22", "#ecf0f1"];
+  const spectators: { x: number; y: number; z: number; color: string }[] = [];
+  let current = seed;
+
+  const next = () => {
+    current = (current * 1664525 + 1013904223) % 4294967296;
+    return current / 4294967296;
+  };
+
+  const rows = 4;
+  const cols = 18;
+
+  for (let row = 0; row < rows; row++) {
+    for (let col = 0; col < cols; col++) {
+      if (next() <= 0.15) continue;
+      spectators.push({
+        x: (col - cols / 2) * 0.5 + (next() - 0.5) * 0.1,
+        y: row * 0.6 + 0.3,
+        z: row * 0.4,
+        color: colors[Math.floor(next() * colors.length)],
+      });
+    }
+  }
+
+  return spectators;
+}
+
+const BLEACHER_SPECTATORS = createBleacherSpectators(20260307);
+
 /** Bleacher section with colorful dot spectators */
 function Bleacher({ position, rotation }: { position: [number, number, number]; rotation?: [number, number, number] }) {
-  const spectators = useMemo(() => {
-    const seats: { x: number; y: number; z: number; color: string }[] = [];
-    const colors = ["#e74c3c", "#3498db", "#f39c12", "#2ecc71", "#9b59b6", "#1abc9c", "#e67e22", "#ecf0f1"];
-    const rows = 4;
-    const cols = 18;
-    for (let r = 0; r < rows; r++) {
-      for (let c = 0; c < cols; c++) {
-        if (Math.random() > 0.15) { // some empty seats
-          seats.push({
-            x: (c - cols / 2) * 0.5 + (Math.random() - 0.5) * 0.1,
-            y: r * 0.6 + 0.3,
-            z: r * 0.4,
-            color: colors[Math.floor(Math.random() * colors.length)],
-          });
-        }
-      }
-    }
-    return seats;
-  }, []);
+  const spectators = BLEACHER_SPECTATORS;
 
   return (
     <group position={position} rotation={rotation}>

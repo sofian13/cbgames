@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useCallback } from "react";
 import { useGame } from "@/lib/party/use-game";
 import { useGameStore } from "@/lib/stores/game-store";
 import type { GameProps } from "@/lib/games/types";
 import { cn } from "@/lib/utils";
+import { useKeyedState } from "@/lib/use-keyed-state";
 
 interface BCPlayer { id: string; name: string; score: number; hasSubmitted: boolean; }
 interface VisibleCell { x: number; y: number; type: string; }
@@ -28,22 +29,14 @@ const CELL_EMOJI: Record<string, string> = { empty: "·", coin: "🪙", trap: "�
 export default function BlindControlGame({ roomCode, playerId, playerName }: GameProps) {
   const { sendAction } = useGame(roomCode, "blind-control", playerId, playerName);
   const { gameState } = useGameStore();
-  const [submitted, setSubmitted] = useState(false);
-  const prevRoundRef = useRef(0);
   const state = gameState as unknown as BCState;
-
-  useEffect(() => {
-    if (state?.round !== prevRoundRef.current) {
-      prevRoundRef.current = state?.round ?? 0;
-      setSubmitted(false);
-    }
-  }, [state?.round]);
+  const [submitted, setSubmitted] = useKeyedState<boolean>(state?.round ?? 0, false);
 
   const handleMove = useCallback((dir: string) => {
     if (submitted) return;
     setSubmitted(true);
     sendAction({ action: "move", direction: dir });
-  }, [submitted, sendAction]);
+  }, [sendAction, setSubmitted, submitted]);
 
   if (!state || state.status === "waiting") return (
     <div

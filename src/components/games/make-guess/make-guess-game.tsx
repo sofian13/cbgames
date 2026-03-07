@@ -171,19 +171,15 @@ export default function MakeGuessGame({
   }, [stopTimer]);
 
   useEffect(() => {
-    if (phase === "playing" && timeLeft <= 0) {
-      endTurn();
-    }
-  }, [phase, timeLeft, endTurn]);
-
-  useEffect(() => {
     if (phase === "playing") {
       timerRef.current = setInterval(() => {
-        setTimeLeft((t) => {
-          if (t <= 1) {
-            return 0;
+        setTimeLeft((time) => {
+          const next = Math.max(0, time - 1);
+          if (next === 0) {
+            stopTimer();
+            setPhase("turn-result");
           }
-          return t - 1;
+          return next;
         });
       }, 1000);
       return () => stopTimer();

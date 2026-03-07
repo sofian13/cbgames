@@ -1,6 +1,6 @@
 "use client";
 
-import { Play, Check } from "lucide-react";
+import { Check, Play } from "lucide-react";
 import type { Player } from "@/lib/party/message-types";
 import { cn } from "@/lib/utils";
 
@@ -21,54 +21,50 @@ export function ReadyCheck({
   onToggleReady,
   onStartGame,
 }: ReadyCheckProps) {
-  const currentPlayer = players.find((p) => p.id === currentPlayerId);
-  const connectedPlayers = players.filter((p) => p.isConnected);
+  const currentPlayer = players.find((player) => player.id === currentPlayerId);
+  const connectedPlayers = players.filter((player) => player.isConnected);
   const isSolo = connectedPlayers.length === 1 && connectedPlayers[0]?.id === currentPlayerId;
   const effectiveIsHost = isHost || !!currentPlayer?.isHost || isSolo;
-  const readyCount = connectedPlayers.filter((p) => p.isReady || p.isHost).length;
+  const readyCount = connectedPlayers.filter((player) => player.isReady || player.isHost).length;
   const normalizedGameId = selectedGameId?.trim().toLowerCase() ?? null;
   const canStart = effectiveIsHost && !!selectedGameId && connectedPlayers.length >= 1;
+  const progress =
+    connectedPlayers.length > 0 ? (readyCount / connectedPlayers.length) * 100 : 0;
 
   return (
-    <div
-      className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-4 space-y-3 backdrop-blur-sm"
-      style={{ animation: "fadeUp 0.5s ease 0.3s both" }}
-    >
-      {/* Progress bar */}
-      <div className="space-y-2">
-        <div className="flex items-center justify-between text-xs font-sans">
-          <span className="text-white/35">
-            {readyCount}/{connectedPlayers.length} prets
-          </span>
-          {!selectedGameId && (
-            <span className="text-cyan-300/50">Aucun jeu choisi</span>
-          )}
+    <section className="site-panel rounded-[1.8rem] p-4 sm:p-5">
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <div>
+          <p className="section-title">Lancement</p>
+          <p className="mt-1 text-sm text-white/55">
+            {selectedGameId ? "Le jeu est choisi." : "Selectionne un jeu pour continuer."}
+          </p>
         </div>
-        <div className="h-1 w-full overflow-hidden rounded-full bg-white/[0.06]">
-          <div
-            className="h-full rounded-full bg-gradient-to-r from-cyan-400 to-blue-400 transition-all duration-500 ease-out"
-            style={{
-              width: connectedPlayers.length > 0
-                ? `${(readyCount / connectedPlayers.length) * 100}%`
-                : "0%",
-            }}
-          />
-        </div>
+        <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1 text-xs text-white/45">
+          {readyCount}/{connectedPlayers.length} prets
+        </span>
       </div>
 
-      <div className="flex gap-2">
+      <div className="mb-4 h-2 overflow-hidden rounded-full bg-white/[0.06]">
+        <div
+          className="h-full rounded-full bg-gradient-to-r from-cyan-300 via-cyan-400 to-[#ff8755] transition-all duration-500"
+          style={{ width: `${progress}%` }}
+        />
+      </div>
+
+      <div className="space-y-3">
         {!effectiveIsHost && (
           <button
             onClick={onToggleReady}
             className={cn(
-              "flex-1 flex items-center justify-center gap-2 rounded-xl py-3 font-sans text-sm font-semibold transition-all duration-300 press-effect",
+              "flex w-full items-center justify-center gap-2 rounded-[1.2rem] px-4 py-3 text-sm font-semibold transition",
               currentPlayer?.isReady
-                ? "border border-white/15 bg-white/[0.06] text-white/60 hover:bg-white/[0.1]"
-                : "bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-[0_0_20px_rgba(80,216,255,0.2)] hover:shadow-[0_0_30px_rgba(80,216,255,0.35)]"
+                ? "border border-white/10 bg-white/[0.05] text-white/68 hover:text-white"
+                : "bg-gradient-to-r from-cyan-400 to-[#ff8755] text-slate-950 shadow-[0_18px_35px_rgba(0,0,0,0.22)]"
             )}
           >
             <Check className="h-4 w-4" />
-            {currentPlayer?.isReady ? "Pas pret" : "Pret !"}
+            {currentPlayer?.isReady ? "Retirer mon ready" : "Je suis pret"}
           </button>
         )}
 
@@ -77,17 +73,17 @@ export function ReadyCheck({
             onClick={() => onStartGame(normalizedGameId)}
             disabled={!canStart}
             className={cn(
-              "flex-1 flex items-center justify-center gap-2 rounded-xl py-3 font-sans text-sm font-semibold transition-all duration-300 press-effect",
+              "flex w-full items-center justify-center gap-2 rounded-[1.2rem] px-4 py-3 text-sm font-semibold transition",
               canStart
-                ? "bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-[0_0_20px_rgba(80,216,255,0.2)] hover:shadow-[0_0_30px_rgba(80,216,255,0.35)]"
-                : "border border-white/[0.08] bg-white/[0.03] text-white/25 cursor-not-allowed"
+                ? "bg-gradient-to-r from-cyan-400 to-[#ff8755] text-slate-950 shadow-[0_18px_35px_rgba(0,0,0,0.22)]"
+                : "border border-white/10 bg-white/[0.04] text-white/28"
             )}
           >
             <Play className="h-4 w-4" />
-            {!selectedGameId ? "Choisis un jeu" : "Lancer la partie"}
+            {!selectedGameId ? "Choisir un jeu" : "Lancer la partie"}
           </button>
         )}
       </div>
-    </div>
+    </section>
   );
 }

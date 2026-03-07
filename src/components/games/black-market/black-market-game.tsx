@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useCallback } from "react";
 import { useGame } from "@/lib/party/use-game";
 import { useGameStore } from "@/lib/stores/game-store";
 import type { GameProps } from "@/lib/games/types";
 import { cn } from "@/lib/utils";
+import { useKeyedState } from "@/lib/use-keyed-state";
 
 interface BMCard { name: string; emoji: string; value: number; fakeValue: number; }
 interface BMPlayer { id: string; name: string; score?: number; cardCount: number; }
@@ -20,24 +21,17 @@ interface BMState {
 export default function BlackMarketGame({ roomCode, playerId, playerName }: GameProps) {
   const { sendAction } = useGame(roomCode, "black-market", playerId, playerName);
   const { gameState } = useGameStore();
-  const [selectedCard, setSelectedCard] = useState<number | null>(null);
-  const [selectedTarget, setSelectedTarget] = useState<string | null>(null);
-  const [claimedValue, setClaimedValue] = useState(20);
-  const prevRoundRef = useRef(0);
   const state = gameState as unknown as BMState;
-
-  useEffect(() => {
-    if (state?.round !== prevRoundRef.current) {
-      prevRoundRef.current = state?.round ?? 0;
-      setSelectedCard(null); setSelectedTarget(null); setClaimedValue(20);
-    }
-  }, [state?.round]);
+  const roundKey = state?.round ?? 0;
+  const [selectedCard, setSelectedCard] = useKeyedState<number | null>(roundKey, null);
+  const [selectedTarget, setSelectedTarget] = useKeyedState<string | null>(roundKey, null);
+  const [claimedValue, setClaimedValue] = useKeyedState<number>(roundKey, 20);
 
   const handleOffer = useCallback(() => {
     if (selectedCard === null || !selectedTarget) return;
     sendAction({ action: "offer-trade", cardIndex: selectedCard, targetId: selectedTarget, claimedValue });
     setSelectedCard(null); setSelectedTarget(null);
-  }, [selectedCard, selectedTarget, claimedValue, sendAction]);
+  }, [claimedValue, selectedCard, selectedTarget, sendAction, setSelectedCard, setSelectedTarget]);
 
   const handleAccept = useCallback((tradeIndex: number, myCardIndex: number) => {
     sendAction({ action: "accept-trade", tradeIndex, myCardIndex });

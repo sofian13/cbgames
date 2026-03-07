@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useCallback } from "react";
 import { useGame } from "@/lib/party/use-game";
 import { useGameStore } from "@/lib/stores/game-store";
 import type { GameProps } from "@/lib/games/types";
 import { cn } from "@/lib/utils";
+import { useKeyedState } from "@/lib/use-keyed-state";
 
 interface EnchereState {
   status: "waiting" | "bidding" | "poison-choice" | "reveal" | "game-over";
@@ -20,24 +21,17 @@ interface EnchereState {
 export default function EnchereGame({ roomCode, playerId, playerName }: GameProps) {
   const { sendAction } = useGame(roomCode, "enchere", playerId, playerName);
   const { gameState } = useGameStore();
-  const [bidAmount, setBidAmount] = useState(100);
-  const [hasBid, setHasBid] = useState(false);
-  const [poisonDecided, setPoisonDecided] = useState(false);
-  const prevRoundRef = useRef(0);
   const state = gameState as unknown as EnchereState;
-
-  useEffect(() => {
-    if (state?.round !== prevRoundRef.current) {
-      prevRoundRef.current = state?.round ?? 0;
-      setBidAmount(100); setHasBid(false); setPoisonDecided(false);
-    }
-  }, [state?.round]);
+  const roundKey = state?.round ?? 0;
+  const [bidAmount, setBidAmount] = useKeyedState<number>(roundKey, 100);
+  const [hasBid, setHasBid] = useKeyedState<boolean>(roundKey, false);
+  const [poisonDecided, setPoisonDecided] = useKeyedState<boolean>(roundKey, false);
 
   const handleBid = useCallback((amount: number) => {
     if (hasBid) return;
     setHasBid(true);
     sendAction({ action: "bid", amount });
-  }, [hasBid, sendAction]);
+  }, [hasBid, sendAction, setHasBid]);
 
   if (!state || state.status === "waiting") return (
     <div className="relative flex flex-1 items-center justify-center overflow-hidden" style={{ background: "#060606" }}>
@@ -170,7 +164,7 @@ export default function EnchereGame({ roomCode, playerId, playerName }: GameProp
           {isPoisoner && !poisonDecided ? (
             <div className="rounded-3xl border border-purple-500/25 bg-black/30 backdrop-blur-sm p-8 space-y-5 shadow-[0_0_20px_rgba(168,85,247,0.15)]">
               <p className="text-3xl font-serif font-semibold text-white/90">
-                Empoisonner l'objet ?
+                Empoisonner l&apos;objet ?
               </p>
               <p className="text-sm text-white/40 font-sans leading-relaxed">
                 Co&ucirc;t : <span className="font-mono text-amber-400/70">50🪙</span> — la valeur sera divis&eacute;e par 2

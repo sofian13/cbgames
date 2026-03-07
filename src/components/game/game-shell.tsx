@@ -1,15 +1,22 @@
 "use client";
 
-import { useRef, useEffect, useState } from "react";
-import { Button } from "@/components/ui/button";
+import { useEffect, useRef, useState } from "react";
+import { signIn } from "next-auth/react";
+import {
+  ArrowLeft,
+  BookOpen,
+  Home,
+  LogIn,
+  RotateCcw,
+  X,
+} from "lucide-react";
 import { Header } from "@/components/layout/header";
 import { Scoreboard } from "./scoreboard";
-import { useGameStore } from "@/lib/stores/game-store";
-import { EmberParticles, FilmGrain, EmberKeyframes } from "@/components/shared/ember";
-import { addGameResult, getLevel, type GlobalStats } from "@/lib/stores/global-points";
+import { Button } from "@/components/ui/button";
 import { getGameById } from "@/lib/games/registry";
-import { signIn } from "next-auth/react";
-import { ArrowLeft, BookOpen, X, LogIn, Home, RotateCcw } from "lucide-react";
+import { addGameResult, getLevel, type GlobalStats } from "@/lib/stores/global-points";
+import { useGameStore } from "@/lib/stores/game-store";
+import { useKeyedState } from "@/lib/use-keyed-state";
 
 interface GameShellProps {
   roomCode: string;
@@ -22,195 +29,230 @@ interface GameShellProps {
   onResetGame?: () => void;
 }
 
-export function GameShell({ roomCode, gameId, playerId, playerName, isGuest, children, onReturnToLobby, onResetGame }: GameShellProps) {
+export function GameShell({
+  roomCode,
+  gameId,
+  playerId,
+  playerName,
+  isGuest,
+  children,
+  onReturnToLobby,
+  onResetGame,
+}: GameShellProps) {
   const { isGameOver, rankings, isConnected } = useGameStore();
-  const mouseRef = useRef<{ x: number; y: number }>({ x: -100, y: -100 });
-  const [pointsEarned, setPointsEarned] = useState<number | null>(null);
-  const [stats, setStats] = useState<GlobalStats | null>(null);
   const [showRules, setShowRules] = useState(false);
-  const pointsRecordedRef = useRef(false);
+  const pointsRecordKey = isGameOver
+    ? rankings.map((entry) => `${entry.playerId}:${entry.rank}:${entry.score}`).join("|")
+    : "active";
+  const [pointsEarned, setPointsEarned] = useKeyedState<number | null>(pointsRecordKey, null);
+  const [stats, setStats] = useKeyedState<GlobalStats | null>(pointsRecordKey, null);
+  const recordedResultRef = useRef<string>("");
 
   const gameMeta = getGameById(gameId);
-
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      mouseRef.current = { x: e.clientX, y: e.clientY };
-    };
-    window.addEventListener("mousemove", handler);
-    return () => window.removeEventListener("mousemove", handler);
-  }, []);
-
-  // Record global points when game ends
-  useEffect(() => {
-    if (isGameOver && rankings.length > 0 && playerId && !pointsRecordedRef.current) {
-      pointsRecordedRef.current = true;
-      const myRanking = rankings.find((r) => r.playerId === playerId);
-      if (myRanking) {
-        addGameResult(playerId, playerName, myRanking.rank, myRanking.score).then((result) => {
-          setPointsEarned(result.earnedPoints);
-          setStats(result.stats);
-        });
-      }
-    }
-  }, [isGameOver, rankings, playerId, playerName]);
-
   const level = stats ? getLevel(stats.totalPoints) : null;
 
+  useEffect(() => {
+    if (!isGameOver || rankings.length === 0 || !playerId) return;
+    if (recordedResultRef.current === pointsRecordKey) return;
+
+    const ranking = rankings.find((entry) => entry.playerId === playerId);
+    if (!ranking) return;
+
+    recordedResultRef.current = pointsRecordKey;
+    addGameResult(playerId, playerName, ranking.rank, ranking.score).then((result) => {
+      setPointsEarned(result.earnedPoints);
+      setStats(result.stats);
+    });
+  }, [isGameOver, playerId, playerName, pointsRecordKey, rankings, setPointsEarned, setStats]);
+
+  useEffect(() => {
+    if (!isGameOver) {
+      recordedResultRef.current = "";
+    }
+  }, [isGameOver]);
+
   return (
-    <div
-      className="relative min-h-screen overflow-hidden"
-      style={{
-        background:
-          "radial-gradient(130% 85% at 50% -10%, rgba(90,160,255,0.16) 0%, transparent 60%), linear-gradient(180deg, #030710 0%, #040b1a 55%, #030710 100%)",
-      }}
-    >
-      <FilmGrain />
-      <EmberParticles mouse={mouseRef} count={isGameOver ? 30 : 15} />
-      <EmberKeyframes />
+    <div className="site-shell">
+      <div
+        className="site-orb h-72 w-72 bg-[#ff8755]/30"
+        style={{ left: "-5rem", top: "8rem" }}
+      />
+      <div
+        className="site-orb h-80 w-80 bg-cyan-300/20"
+        style={{ right: "-6rem", top: "12rem", animationDelay: "-6s" }}
+      />
+
       <div className="relative z-10 flex min-h-screen flex-col">
         <Header roomCode={roomCode} isConnected={isConnected} />
 
-        {/* Floating action buttons (during game, not game over) */}
-        {!isGameOver && (
-          <div className="fixed top-[4.2rem] right-4 z-50 flex items-center gap-2">
-            {/* Reset game to initial screen */}
-            {onResetGame && (
-              <button
-                onClick={onResetGame}
-                className="flex items-center gap-1.5 rounded-xl border border-white/[0.08] bg-black/40 px-3 py-1.5 text-xs text-white/50 backdrop-blur-md transition-all hover:border-white/[0.15] hover:text-white/75 hover:bg-black/60 font-sans"
-              >
-                <RotateCcw className="h-3.5 w-3.5" />
-                Relancer
-              </button>
-            )}
-            {/* Return to lobby button */}
-            <button
-              onClick={onReturnToLobby}
-              className="flex items-center gap-1.5 rounded-xl border border-white/[0.08] bg-black/40 px-3 py-1.5 text-xs text-white/50 backdrop-blur-md transition-all hover:border-white/[0.15] hover:text-white/75 hover:bg-black/60 font-sans"
-            >
-              <Home className="h-3.5 w-3.5" />
-              Menu des jeux
-            </button>
-            {/* Rules button */}
-            {gameMeta?.rules && (
-              <button
-                onClick={() => setShowRules(true)}
-                className="flex items-center gap-1.5 rounded-xl border border-white/[0.08] bg-black/40 px-3 py-1.5 text-xs text-white/50 backdrop-blur-md transition-all hover:border-white/[0.15] hover:text-white/75 hover:bg-black/60 font-sans"
-              >
-                <BookOpen className="h-3.5 w-3.5" />
-                Regles
-              </button>
-            )}
-          </div>
-        )}
-
-        {/* Rules modal */}
-        {showRules && gameMeta && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/65 backdrop-blur-md" onClick={() => setShowRules(false)}>
-            <div
-              className="relative w-full max-w-md mx-4 rounded-2xl border border-white/[0.1] p-6 shadow-2xl"
-              style={{
-                background: "linear-gradient(135deg, rgba(7,16,35,0.97) 0%, rgba(4,8,20,0.98) 100%)",
-                backdropFilter: "blur(20px)",
-              }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <button onClick={() => setShowRules(false)} className="absolute top-4 right-4 text-white/25 hover:text-white/60 transition-colors">
-                <X className="h-5 w-5" />
-              </button>
-              <div className="flex items-center gap-3 mb-5">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/[0.05] text-3xl">
-                  {gameMeta.icon}
+        <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-4 py-4 sm:px-5">
+          {!isGameOver && gameMeta && (
+            <section className="site-panel mb-4 rounded-[1.8rem] p-4 sm:p-5">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.05] text-3xl">
+                    {gameMeta.icon}
+                  </div>
+                  <div>
+                    <p className="section-title">Jeu en cours</p>
+                    <h1 className="mt-1 text-2xl font-semibold tracking-[-0.03em] text-white">
+                      {gameMeta.name}
+                    </h1>
+                    <p className="mt-1 text-sm text-white/48">{gameMeta.description}</p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-lg font-serif font-semibold text-white/90">{gameMeta.name}</h3>
-                  <p className="text-[11px] text-white/30 font-sans">{gameMeta.minPlayers}-{gameMeta.maxPlayers} joueurs</p>
+
+                <div className="flex flex-wrap gap-2">
+                  <span className="site-chip rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em]">
+                    {playerName}
+                  </span>
+                  <span className="site-chip-cool rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em]">
+                    mobile first
+                  </span>
                 </div>
               </div>
-              <ul className="space-y-3">
-                {gameMeta.rules.map((rule, i) => (
-                  <li key={i} className="flex items-start gap-3 text-[13px] text-white/55 font-sans leading-relaxed">
-                    <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-cyan-400/50" />
-                    {rule}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        )}
+            </section>
+          )}
 
-        {isGameOver && (
-          <main className="flex flex-1 items-center justify-center p-4">
-            <div
-              className="w-full max-w-md space-y-6"
-              style={{ animation: "fadeUp 0.6s cubic-bezier(0.16,1,0.3,1)" }}
-            >
-              <div className="text-center space-y-1">
-                <h2 className="text-3xl font-serif font-bold text-white/90 premium-text-glow">
-                  Partie terminee !
-                </h2>
-                {gameMeta && (
-                  <p className="text-sm text-white/30 font-sans">{gameMeta.icon} {gameMeta.name}</p>
+          {isGameOver ? (
+            <main className="flex flex-1 items-center justify-center py-6">
+              <div className="site-panel w-full max-w-lg rounded-[2rem] p-5 sm:p-6">
+                <div className="mb-6 text-center">
+                  <p className="section-title">Fin de partie</p>
+                  <h2 className="mt-2 text-3xl font-semibold tracking-[-0.03em] text-white">
+                    Partie terminee
+                  </h2>
+                  {gameMeta && (
+                    <p className="mt-2 text-sm text-white/45">
+                      {gameMeta.icon} {gameMeta.name}
+                    </p>
+                  )}
+                </div>
+
+                <Scoreboard rankings={rankings} />
+
+                {pointsEarned != null && level && (
+                  <div className="site-panel-soft mt-5 rounded-[1.6rem] p-5 text-center">
+                    <p className="text-2xl font-semibold text-cyan-100">+{pointsEarned} points</p>
+                    <p className="mt-1 text-sm text-white/45">
+                      Niveau {level.level} · {level.title}
+                    </p>
+                    <div className="mt-4 h-2 overflow-hidden rounded-full bg-white/[0.06]">
+                      <div
+                        className="h-full rounded-full bg-gradient-to-r from-cyan-300 via-cyan-400 to-[#ff8755]"
+                        style={{ width: `${level.progress}%` }}
+                      />
+                    </div>
+                    <p className="mt-2 text-xs text-white/34">
+                      {stats?.totalPoints} / {level.nextLevelPoints} pts
+                    </p>
+                  </div>
+                )}
+
+                {isGuest && (
+                  <button
+                    onClick={() => signIn("discord")}
+                    className="mt-5 w-full rounded-[1.4rem] border border-[#5865F2]/20 bg-[#5865F2]/10 px-4 py-4 text-center transition hover:bg-[#5865F2]/14"
+                  >
+                    <div className="flex items-center justify-center gap-2 text-[#d9ddff]">
+                      <LogIn className="h-4 w-4" />
+                      <span className="text-sm font-medium">Connecter Discord</span>
+                    </div>
+                    <p className="mt-1 text-xs text-white/35">pour garder les points</p>
+                  </button>
+                )}
+
+                <Button onClick={onReturnToLobby} className="mt-5 w-full gap-2" size="lg">
+                  <ArrowLeft className="h-4 w-4" />
+                  Retour au lobby
+                </Button>
+              </div>
+            </main>
+          ) : (
+            <div className="safe-bottom flex flex-1 flex-col pb-24 lg:pb-6">{children}</div>
+          )}
+        </div>
+
+        {!isGameOver && (
+          <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 px-4 pb-4 lg:bottom-auto lg:left-auto lg:right-5 lg:top-24 lg:w-auto lg:px-0 lg:pb-0">
+            <div className="pointer-events-auto mx-auto flex max-w-6xl justify-end">
+              <div className="site-panel flex w-full max-w-lg items-center gap-2 rounded-[1.5rem] p-2 lg:max-w-none">
+                {onResetGame && (
+                  <button
+                    onClick={onResetGame}
+                    className="flex flex-1 items-center justify-center gap-2 rounded-[1rem] border border-white/10 bg-white/[0.05] px-3 py-3 text-sm font-medium text-white/72 transition hover:text-white"
+                  >
+                    <RotateCcw className="h-4 w-4" />
+                    Relancer
+                  </button>
+                )}
+
+                <button
+                  onClick={onReturnToLobby}
+                  className="flex flex-1 items-center justify-center gap-2 rounded-[1rem] border border-white/10 bg-white/[0.05] px-3 py-3 text-sm font-medium text-white/72 transition hover:text-white"
+                >
+                  <Home className="h-4 w-4" />
+                  Lobby
+                </button>
+
+                {gameMeta?.rules && (
+                  <button
+                    onClick={() => setShowRules(true)}
+                    className="flex flex-1 items-center justify-center gap-2 rounded-[1rem] border border-cyan-300/18 bg-cyan-300/[0.08] px-3 py-3 text-sm font-medium text-cyan-100 transition hover:bg-cyan-300/[0.12]"
+                  >
+                    <BookOpen className="h-4 w-4" />
+                    Regles
+                  </button>
                 )}
               </div>
-
-              <Scoreboard rankings={rankings} />
-
-              {/* Global points earned */}
-              {pointsEarned != null && level && (
-                <div className="rounded-2xl border border-cyan-300/15 bg-cyan-300/[0.04] p-5 text-center space-y-3">
-                  <p className="text-lg font-serif font-bold text-cyan-300">
-                    +{pointsEarned} points
-                  </p>
-                  <div className="flex items-center justify-center gap-2">
-                    <span className="text-xs text-white/30 font-sans">Niv. {level.level}</span>
-                    <span className="text-xs font-semibold text-white/60 font-sans">{level.title}</span>
-                  </div>
-                  <div className="h-1.5 w-full rounded-full bg-white/[0.06] overflow-hidden">
-                    <div
-                      className="h-full rounded-full bg-gradient-to-r from-cyan-500/70 to-blue-500/70 transition-all duration-1000"
-                      style={{ width: `${level.progress}%` }}
-                    />
-                  </div>
-                  <p className="text-[10px] text-white/20 font-mono">
-                    {stats?.totalPoints} / {level.nextLevelPoints} pts
-                  </p>
-                </div>
-              )}
-
-              {/* Guest warning */}
-              {isGuest && (
-                <button
-                  onClick={() => signIn("discord")}
-                  className="w-full rounded-xl border border-[#5865F2]/20 bg-[#5865F2]/[0.06] p-3 text-center transition-all hover:bg-[#5865F2]/[0.12] group"
-                >
-                  <div className="flex items-center justify-center gap-2">
-                    <LogIn className="h-4 w-4 text-[#5865F2]/60 group-hover:text-[#5865F2]/90" />
-                    <span className="text-sm text-[#5865F2]/70 font-sans group-hover:text-[#5865F2]/90">
-                      Connecte-toi avec Discord
-                    </span>
-                  </div>
-                  <p className="text-[10px] text-white/20 font-sans mt-1">
-                    pour sauvegarder tes points
-                  </p>
-                </button>
-              )}
-
-              <Button
-                onClick={onReturnToLobby}
-                className="w-full gap-2"
-                size="lg"
-              >
-                <ArrowLeft className="h-4 w-4" />
-                Retour au menu des jeux
-              </Button>
             </div>
-          </main>
+          </div>
         )}
-        {/* Always render children to keep useGame hook mounted */}
-        <div className={`flex flex-1 flex-col ${isGameOver ? "hidden" : ""}`}>
-          {children}
-        </div>
+
+        {showRules && gameMeta && (
+          <div
+            className="fixed inset-0 z-[100] flex items-end justify-center bg-black/72 p-4 backdrop-blur-md sm:items-center"
+            onClick={() => setShowRules(false)}
+          >
+            <div
+              className="site-panel w-full max-w-lg rounded-[2rem] p-6 sm:p-7"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className="mb-6 flex items-start justify-between gap-4">
+                <div className="flex items-start gap-4">
+                  <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.05] text-3xl">
+                    {gameMeta.icon}
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-semibold text-white">{gameMeta.name}</h3>
+                    <p className="mt-1 text-sm text-white/45">
+                      {gameMeta.minPlayers}-{gameMeta.maxPlayers} joueurs
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => setShowRules(false)}
+                  className="rounded-full border border-white/10 bg-white/[0.05] p-2 text-white/42 transition hover:text-white"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              <div className="space-y-3">
+                {gameMeta.rules.map((rule, index) => (
+                  <div
+                    key={index}
+                    className="flex items-start gap-3 rounded-2xl border border-white/8 bg-white/[0.03] px-4 py-3 text-sm leading-6 text-white/72"
+                  >
+                    <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-cyan-300/70" />
+                    {rule}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
