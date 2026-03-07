@@ -114,27 +114,6 @@ export default function LobbyPage() {
                     Un jeu selectionne, des joueurs prets, puis la partie part.
                   </p>
                 </div>
-
-                <div className="grid gap-3 sm:grid-cols-3">
-                  <div className="site-panel-soft rounded-[1.4rem] p-4">
-                    <p className="text-xs uppercase tracking-[0.18em] text-white/35">
-                      Flow
-                    </p>
-                    <p className="mt-2 text-lg font-semibold text-white">Choisir</p>
-                  </div>
-                  <div className="site-panel-soft rounded-[1.4rem] p-4">
-                    <p className="text-xs uppercase tracking-[0.18em] text-white/35">
-                      Flow
-                    </p>
-                    <p className="mt-2 text-lg font-semibold text-white">Valider</p>
-                  </div>
-                  <div className="site-panel-soft rounded-[1.4rem] p-4">
-                    <p className="text-xs uppercase tracking-[0.18em] text-white/35">
-                      Flow
-                    </p>
-                    <p className="mt-2 text-lg font-semibold text-white">Lancer</p>
-                  </div>
-                </div>
               </div>
 
               <div className="grid min-w-0 gap-3 sm:grid-cols-2 xl:grid-cols-1">
