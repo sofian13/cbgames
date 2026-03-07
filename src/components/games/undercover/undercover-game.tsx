@@ -354,6 +354,7 @@ export default function UndercoverGame({
   const [guessInput, setGuessInput] = useState("");
   const [voteTarget, setVoteTarget] = useState<string | null>(null);
   const [voteConfirmed, setVoteConfirmed] = useState(false);
+  const [revealedRoleCards, setRevealedRoleCards] = useState<string[]>([]);
   const [clueSubmitted, setClueSubmitted] = useState(false);
   const clueInputRef = useRef<HTMLInputElement>(null);
   const guessInputRef = useRef<HTMLInputElement>(null);
@@ -419,6 +420,9 @@ export default function UndercoverGame({
       if (state.phase === "vote") {
         setVoteTarget(null);
         setVoteConfirmed(false);
+      }
+      if (state.phase !== "vote-result") {
+        setRevealedRoleCards([]);
       }
       if (state.phase === "mrwhite-guess") {
         setGuessInput("");
@@ -1374,30 +1378,38 @@ export default function UndercoverGame({
     if (localPhase === "vote") {
       const aliveTargets = getLocalAlive();
       return (
-        <div className="relative flex flex-1 flex-col items-center gap-4 p-6">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_15%_20%,rgba(80,216,255,0.14),transparent_35%),radial-gradient(circle_at_85%_80%,rgba(14,165,233,0.12),transparent_35%)]" />
-          <p className="relative text-xs text-white/30 font-sans">Vote oral de groupe</p>
-          <h2 className="relative text-3xl text-white/90 font-serif">Qui eliminer ?</h2>
-          <div className="relative grid w-full max-w-lg grid-cols-2 gap-2 sm:grid-cols-3">
-            {aliveTargets.map((p) => (
+        <div className="relative flex flex-1 flex-col gap-4 p-6">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_20%,rgba(80,216,255,0.12),transparent_28%),radial-gradient(circle_at_82%_78%,rgba(255,96,96,0.14),transparent_34%),linear-gradient(180deg,#050714,#050916_58%,#04050d)]" />
+          <p className="relative text-xs uppercase tracking-[0.22em] text-cyan-200/45 font-sans">Vote oral de groupe</p>
+          <h2 className="relative text-3xl text-white font-serif">Qui eliminer ?</h2>
+          <div className="relative grid w-full gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {aliveTargets.map((p, index) => (
               <button
                 key={p.id}
                 onClick={() => setLocalSelectedTarget(p.id)}
                 className={cn(
-                  "rounded-xl border px-3 py-3 text-sm font-sans transition-all",
+                  "rounded-[1.5rem] border p-4 text-left transition-all press-effect",
                   localSelectedTarget === p.id
-                    ? "border-cyan-300/50 bg-cyan-300/[0.12] text-cyan-200 shadow-[0_0_25px_rgba(80,216,255,0.2)]"
-                    : "border-white/[0.1] bg-white/[0.03] text-white/75 hover:border-cyan-300/35"
+                    ? "border-[#ff7a66]/70 bg-[linear-gradient(180deg,rgba(255,122,102,0.16),rgba(255,122,102,0.06))] text-white shadow-[0_0_30px_rgba(255,122,102,0.18)]"
+                    : "border-white/[0.1] bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02))] text-white/80 hover:border-cyan-300/35"
                 )}
+                style={{ animation: `cardReveal 0.35s ease ${index * 0.05}s both` }}
               >
-                {p.name}
+                <p className="text-[11px] uppercase tracking-[0.22em] text-white/26">Carte joueur</p>
+                <p className="mt-3 text-xl font-semibold">{p.name}</p>
+                <div className="mt-10 flex items-center justify-between">
+                  <span className="rounded-full border border-white/10 bg-black/20 px-3 py-1 text-xs text-white/44">
+                    {localSelectedTarget === p.id ? "Selectionne" : "Appuyer pour voter"}
+                  </span>
+                  <span className="text-xs uppercase tracking-[0.22em] text-white/18">Suspect</span>
+                </div>
               </button>
             ))}
           </div>
           <button
             onClick={submitLocalVote}
             disabled={!localSelectedTarget}
-            className="relative rounded-xl border border-cyan-300/40 bg-gradient-to-r from-cyan-600 to-blue-600 px-6 py-2.5 text-sm font-sans font-medium text-white disabled:border-white/[0.12] disabled:bg-white/[0.05] disabled:text-white/20"
+            className="relative self-center rounded-[1.35rem] bg-gradient-to-r from-[#ff8d52] via-[#ff6b3d] to-[#ff3d3d] px-6 py-4 text-sm font-semibold text-white shadow-[0_0_30px_rgba(255,107,61,0.24)] disabled:border-white/[0.12] disabled:bg-white/[0.05] disabled:text-white/20"
           >
             Eliminer ce joueur
           </button>
@@ -1408,22 +1420,43 @@ export default function UndercoverGame({
     if (localPhase === "vote-result") {
       const eliminated = localPlayers.find((p) => p.id === localEliminatedId) ?? null;
       return (
-        <div className="flex flex-1 flex-col items-center justify-center p-6 gap-4">
-          {!eliminated ? (
-            <p className="text-white/60 font-serif text-2xl">Egalite, personne elimine.</p>
-          ) : (
-            <>
-              <p className="text-xs text-white/30 font-sans">Elimine</p>
-              <p className="text-3xl text-white font-serif">{eliminated.name}</p>
-              <p className="text-sm text-cyan-200/85 font-sans">
-                Role: {localEliminatedRole === "undercover" ? "Undercover" : localEliminatedRole === "mrwhite" ? "Mr. White" : "Civil"}
-              </p>
-            </>
-          )}
-          <p className="text-xs text-white/25 font-sans">Le mot n&apos;est jamais revele ici.</p>
+        <div className="relative flex flex-1 flex-col gap-4 p-6">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_18%,rgba(80,216,255,0.12),transparent_28%),radial-gradient(circle_at_80%_75%,rgba(255,122,80,0.14),transparent_34%),linear-gradient(180deg,#050714,#050916_58%,#04050d)]" />
+          <div className="relative text-center">
+            <p className="text-xs uppercase tracking-[0.22em] text-cyan-200/45 font-sans">Resultat du vote</p>
+            <h2 className="mt-2 text-3xl text-white font-serif">
+              {!eliminated ? "Egalite" : `${eliminated.name} elimine`}
+            </h2>
+            <p className="mt-2 text-sm text-white/42">La carte se retourne pour reveler le role.</p>
+          </div>
+          <div className="relative mx-auto w-full max-w-sm [perspective:1200px]">
+            <div className="relative min-h-[200px] rounded-[1.7rem] transition-transform duration-500 [transform-style:preserve-3d] [transform:rotateY(180deg)]">
+              <div className="absolute inset-0 rounded-[1.7rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.02))] p-5 [backface-visibility:hidden]">
+                <p className="text-[11px] uppercase tracking-[0.22em] text-white/24">Carte joueur</p>
+                <p className="mt-6 text-2xl font-semibold text-white/92">{eliminated?.name ?? "Egalite"}</p>
+              </div>
+              <div
+                className={cn(
+                  "absolute inset-0 flex rounded-[1.7rem] border p-5 [backface-visibility:hidden] [transform:rotateY(180deg)]",
+                  localEliminatedRole ? ROLE_BG[localEliminatedRole] : "border-white/10 bg-white/[0.04]"
+                )}
+              >
+                <div className="flex h-full w-full flex-col justify-between">
+                  <div>
+                    <p className="text-[11px] uppercase tracking-[0.22em] text-white/30">Role revele</p>
+                    <p className={cn("mt-6 text-2xl font-semibold", getRoleColor(localEliminatedRole))}>
+                      {localEliminatedRole ? getRoleLabel(localEliminatedRole) : "Aucune elimination"}
+                    </p>
+                  </div>
+                  <p className="text-xs text-white/42">{eliminated?.name ?? "Tour nul"}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          <p className="relative text-center text-xs text-white/25 font-sans">Le mot n&apos;est jamais revele ici.</p>
           <button
             onClick={continueAfterLocalVoteResult}
-            className="rounded-xl border border-cyan-300/40 bg-gradient-to-r from-cyan-600 to-blue-600 px-6 py-2 text-sm font-sans text-white"
+            className="relative self-center rounded-[1.3rem] bg-gradient-to-r from-[#ff8d52] via-[#ff6b3d] to-[#ff3d3d] px-6 py-3 text-sm font-semibold text-white shadow-[0_0_26px_rgba(255,107,61,0.2)]"
           >
             Continuer
           </button>
@@ -1466,37 +1499,51 @@ export default function UndercoverGame({
     const onlineCount = state?.players?.length ?? 0;
     const expectedCount = state?.expectedPlayerCount ?? onlineCount;
     const selectedDist = state?.selectedRoleDistribution;
+    const readyText = selectedDist
+      ? `${selectedDist.civilianCount} civil${selectedDist.civilianCount > 1 ? "s" : ""}`
+      : "Aucune repartition";
 
     return (
-      <div className="relative flex flex-1 flex-col overflow-hidden p-4 sm:p-6">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_10%_10%,rgba(251,146,60,0.16),transparent_32%),radial-gradient(circle_at_85%_85%,rgba(239,68,68,0.12),transparent_38%),linear-gradient(145deg,#09090b,#111118_48%,#1b0f0f)]" />
-        <div className="relative mx-auto flex w-full max-w-4xl flex-1 flex-col rounded-3xl border border-orange-300/20 bg-black/35 p-4 shadow-[0_24px_70px_rgba(0,0,0,0.45)] backdrop-blur-xl sm:p-6">
-          <div className="flex flex-wrap items-center justify-between gap-2">
+      <div className="relative flex flex-1 flex-col overflow-hidden px-4 py-5 sm:px-6 sm:py-7">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_18%,rgba(77,237,255,0.12),transparent_30%),radial-gradient(circle_at_80%_72%,rgba(255,125,80,0.14),transparent_34%),linear-gradient(180deg,#050714,#050916_52%,#04050d)]" />
+        <div className="relative mx-auto flex w-full max-w-3xl flex-1 flex-col rounded-[2rem] border border-white/10 bg-black/35 p-4 shadow-[0_30px_90px_rgba(0,0,0,0.48)] backdrop-blur-xl sm:p-6">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <p className="text-[11px] font-sans uppercase tracking-[0.22em] text-orange-200/65">
+              <p className="text-[11px] font-sans uppercase tracking-[0.3em] text-cyan-200/55">
                 Undercover
               </p>
-              <h2 className="mt-1 text-2xl font-serif text-white sm:text-3xl">
+              <h2 className="mt-2 text-3xl font-serif text-white sm:text-4xl">
                 Preparer la partie
               </h2>
             </div>
-            <div className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-right">
-              <p className="text-[10px] font-sans uppercase tracking-widest text-white/35">
-                Joueurs
-              </p>
-              <p className="text-sm font-sans text-white/85">
-                {onlineCount} connectes
-                {expectedCount > onlineCount && ` + ${expectedCount - onlineCount} bot`}
-              </p>
+            <div className="grid grid-cols-2 gap-2 self-start sm:self-auto">
+              <div className="rounded-[1.3rem] border border-white/10 bg-white/[0.04] px-4 py-3">
+                <p className="text-[10px] uppercase tracking-[0.22em] text-white/35">Joueurs</p>
+                <p className="mt-1 text-lg font-semibold text-white">{expectedCount}</p>
+              </div>
+              <div className="rounded-[1.3rem] border border-cyan-300/14 bg-cyan-300/[0.08] px-4 py-3">
+                <p className="text-[10px] uppercase tracking-[0.22em] text-cyan-100/45">Session</p>
+                <p className="mt-1 text-sm font-semibold text-cyan-50">
+                  {onlineCount} en ligne{expectedCount > onlineCount && ` + ${expectedCount - onlineCount} bot`}
+                </p>
+              </div>
             </div>
           </div>
 
-          <div className="mt-4 grid flex-1 gap-4 overflow-y-auto pr-1 sm:mt-6">
-            <section className="rounded-2xl border border-white/10 bg-white/[0.03] p-3 sm:p-4">
-              <p className="text-xs font-sans uppercase tracking-widest text-white/45">
-                Theme des mots
-              </p>
-              <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <div className="mt-5 grid gap-4">
+            <section className="rounded-[1.7rem] border border-white/10 bg-white/[0.03] p-4 sm:p-5">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-[11px] uppercase tracking-[0.22em] text-white/38">
+                    Theme
+                  </p>
+                  <p className="mt-1 text-sm text-white/55">Choix rapide du paquet de mots.</p>
+                </div>
+                <div className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs text-white/45">
+                  {state?.selectedThemeId ?? "mixed"}
+                </div>
+              </div>
+              <div className="mt-4 grid grid-cols-2 gap-3">
                 {state?.availableThemes?.map((theme) => {
                   const active = theme.id === state.selectedThemeId;
                   return (
@@ -1504,27 +1551,37 @@ export default function UndercoverGame({
                       key={theme.id}
                       onClick={() => sendAction({ action: "set-theme", themeId: theme.id })}
                       className={cn(
-                        "rounded-xl border px-4 py-3 text-left transition-all",
+                        "rounded-[1.2rem] border px-4 py-4 text-left transition-all",
                         active
-                          ? "border-orange-300/45 bg-orange-300/10 shadow-[0_0_24px_rgba(251,146,60,0.16)]"
-                          : "border-white/[0.08] bg-white/[0.03] hover:border-orange-300/30 hover:bg-orange-300/[0.06]"
+                          ? "border-cyan-300/60 bg-cyan-300/[0.14] shadow-[0_0_28px_rgba(80,216,255,0.18)]"
+                          : "border-white/[0.09] bg-white/[0.03] hover:border-cyan-300/24 hover:bg-white/[0.05]"
                       )}
                     >
-                      <p className={cn("text-sm font-sans", active ? "text-orange-200" : "text-white/80")}>
+                      <p className={cn("text-sm font-semibold", active ? "text-cyan-100" : "text-white/88")}>
                         {theme.label}
                       </p>
-                      <p className="text-xs text-white/35 font-sans">{theme.description}</p>
+                      <p className="mt-1 text-xs leading-5 text-white/38">{theme.description}</p>
                     </button>
                   );
                 })}
               </div>
             </section>
 
-            <section className="rounded-2xl border border-white/10 bg-white/[0.03] p-3 sm:p-4">
-              <p className="text-xs font-sans uppercase tracking-widest text-white/45">
-                Repartition des roles ({expectedCount} joueurs)
-              </p>
-              <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <section className="rounded-[1.7rem] border border-white/10 bg-white/[0.03] p-4 sm:p-5">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="text-[11px] uppercase tracking-[0.22em] text-white/38">
+                    Repartition
+                  </p>
+                  <p className="mt-1 text-sm text-white/55">{readyText}</p>
+                </div>
+                {selectedDist && (
+                  <div className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs text-white/55">
+                    {selectedDist.undercoverCount} undercover · {selectedDist.mrWhiteCount} Mr. White
+                  </div>
+                )}
+              </div>
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
                 {state?.availableRoleDistributions?.map((option, idx) => {
                   const active =
                     selectedDist?.undercoverCount === option.undercoverCount &&
@@ -1540,20 +1597,17 @@ export default function UndercoverGame({
                         })
                       }
                       className={cn(
-                        "rounded-xl border p-3 text-left transition-all",
+                        "rounded-[1.35rem] border px-4 py-4 text-left transition-all",
                         active
-                          ? "border-emerald-300/45 bg-emerald-300/10 shadow-[0_0_24px_rgba(52,211,153,0.14)]"
-                          : "border-white/[0.08] bg-white/[0.03] hover:border-emerald-300/30 hover:bg-emerald-300/[0.06]"
+                          ? "border-[#ff9f68]/70 bg-[#ff9f68]/10 shadow-[0_0_30px_rgba(255,159,104,0.18)]"
+                          : "border-white/[0.09] bg-white/[0.03] hover:border-[#ff9f68]/30 hover:bg-white/[0.05]"
                       )}
                     >
-                      <p className="text-sm font-sans text-white/90">
-                        {option.undercoverCount} Undercover
-                        {option.undercoverCount > 1 ? "s" : ""} • {option.mrWhiteCount} Mr. White
-                        {option.mrWhiteCount > 1 ? "s" : ""}
+                      <p className="text-base font-semibold text-white/92">
+                        {option.civilianCount} civil{option.civilianCount > 1 ? "s" : ""}
                       </p>
-                      <p className="mt-1 text-xs font-sans text-white/40">
-                        {option.civilianCount} civil
-                        {option.civilianCount > 1 ? "s" : ""}
+                      <p className="mt-1 text-sm text-white/52">
+                        {option.undercoverCount} undercover{option.undercoverCount > 1 ? "s" : ""} · {option.mrWhiteCount} Mr. White
                       </p>
                     </button>
                   );
@@ -1562,33 +1616,29 @@ export default function UndercoverGame({
             </section>
           </div>
 
-          <div className="mt-4 flex flex-col items-center gap-3 sm:flex-row sm:justify-between">
-            <p className="text-xs font-sans text-white/45">
-              {selectedDist
-                ? `Selection: ${selectedDist.undercoverCount} Undercover / ${selectedDist.mrWhiteCount} Mr. White / ${selectedDist.civilianCount} civils`
-                : "Choisis les roles puis lance la partie"}
+          <div className="mt-5 flex flex-col gap-3">
+            <button
+              onClick={() => sendAction({ action: "start-game" })}
+              className="w-full rounded-[1.4rem] bg-gradient-to-r from-[#ff8d52] via-[#ff6b3d] to-[#ff3d3d] px-6 py-4 text-base font-semibold text-white shadow-[0_0_35px_rgba(255,107,61,0.28)] transition hover:brightness-105"
+            >
+              Lancer la partie en ligne
+            </button>
+            <button
+              onClick={() => {
+                setLocalMode(true);
+                setLocalSetupStep("config");
+                setLocalCollectedNames([]);
+                setLocalNameIndex(0);
+                setLocalNameInput("");
+                setLocalPhase("setup");
+              }}
+              className="w-full rounded-[1.3rem] border border-white/14 bg-white/[0.04] px-5 py-3.5 text-sm font-medium text-white/76 transition hover:bg-white/[0.07] hover:text-white"
+            >
+              Jouer sur un seul telephone
+            </button>
+            <p className="text-center text-xs text-white/36">
+              Configuration courte, ecran plus propre, puis lancement direct.
             </p>
-            <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
-              <button
-                onClick={() => {
-                  setLocalMode(true);
-                  setLocalSetupStep("config");
-                  setLocalCollectedNames([]);
-                  setLocalNameIndex(0);
-                  setLocalNameInput("");
-                  setLocalPhase("setup");
-                }}
-                className="w-full rounded-xl border border-white/15 bg-white/[0.03] px-5 py-3 text-sm font-sans text-white/70 transition-colors hover:text-white sm:w-auto"
-              >
-                Jouer sur 1 telephone
-              </button>
-              <button
-                onClick={() => sendAction({ action: "start-game" })}
-                className="w-full rounded-xl border border-orange-300/40 bg-gradient-to-r from-orange-500 to-red-500 px-6 py-3 text-sm font-sans font-medium text-white transition-all hover:from-orange-400 hover:to-red-400 sm:w-auto"
-              >
-                Lancer la partie en ligne
-              </button>
-            </div>
           </div>
         </div>
       </div>
@@ -1598,6 +1648,224 @@ export default function UndercoverGame({
   const me = state.players?.find((p) => p.id === playerId);
   const alivePlayers = state.players?.filter((p) => p.alive) ?? [];
   const isTimeLow = (state.timeLeft ?? 0) <= 5;
+
+  if (false) {
+    const iAmAlive = me?.alive ?? false;
+    const voteOptions = alivePlayers.filter((p) => p.id !== playerId);
+
+    return (
+      <div className="relative flex flex-1 flex-col overflow-hidden px-4 py-5 sm:px-6 sm:py-7">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_20%,rgba(80,216,255,0.12),transparent_28%),radial-gradient(circle_at_80%_78%,rgba(255,96,96,0.14),transparent_34%),linear-gradient(180deg,#050714,#050916_58%,#04050d)]" />
+        <div className="relative mx-auto flex w-full max-w-4xl flex-1 flex-col rounded-[2rem] border border-white/10 bg-black/35 p-4 shadow-[0_30px_90px_rgba(0,0,0,0.48)] backdrop-blur-xl sm:p-6">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="text-[11px] uppercase tracking-[0.28em] text-cyan-200/48">
+                Vote · manche {state.round}
+              </p>
+              <h2 className="mt-2 text-3xl font-serif text-white sm:text-4xl">
+                Qui eliminer ?
+              </h2>
+              <p className="mt-2 text-sm text-white/45">
+                Selectionne une carte, puis confirme ton vote.
+              </p>
+            </div>
+            <div className="w-full max-w-xs">
+              <div className="mb-2 flex items-center justify-between text-xs text-white/34">
+                <span>Temps restant</span>
+                <span className={cn("font-mono text-sm font-bold", isTimeLow ? "text-red-400" : "text-cyan-300")}>
+                  {state.timeLeft}s
+                </span>
+              </div>
+              <div className="h-2 overflow-hidden rounded-full bg-white/[0.06]">
+                <div
+                  className={cn(
+                    "h-full rounded-full transition-all duration-1000 ease-linear",
+                    isTimeLow ? "bg-red-500" : "bg-gradient-to-r from-cyan-400 via-sky-400 to-blue-500"
+                  )}
+                  style={{ width: `${((state.timeLeft ?? 0) / 30) * 100}%` }}
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {voteOptions.map((p, i) => {
+              const isSelected = voteTarget === p.id;
+              return (
+                <button
+                  key={p.id}
+                  onClick={() => {
+                    if (!voteConfirmed && iAmAlive) setVoteTarget(p.id);
+                  }}
+                  disabled={voteConfirmed || !iAmAlive}
+                  className={cn(
+                    "group rounded-[1.6rem] border p-4 text-left transition-all press-effect",
+                    isSelected
+                      ? "border-[#ff7a66]/70 bg-[linear-gradient(180deg,rgba(255,122,102,0.16),rgba(255,122,102,0.06))] shadow-[0_0_34px_rgba(255,122,102,0.18)]"
+                      : "border-white/[0.09] bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02))] hover:border-cyan-300/32 hover:bg-white/[0.05]",
+                    (voteConfirmed || !iAmAlive) && "cursor-not-allowed opacity-55"
+                  )}
+                  style={{ animation: `cardReveal 0.38s ease ${i * 0.05}s both` }}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-[11px] uppercase tracking-[0.22em] text-white/26">
+                        Carte joueur
+                      </p>
+                      <p className={cn("mt-3 truncate text-xl font-semibold", isSelected ? "text-white" : "text-white/88")}>
+                        {p.name}
+                      </p>
+                    </div>
+                    <div
+                      className={cn(
+                        "mt-1 h-3 w-3 rounded-full transition-all",
+                        isSelected ? "bg-[#ff7a66] shadow-[0_0_18px_rgba(255,122,102,0.9)]" : "bg-white/12 group-hover:bg-cyan-300/60"
+                      )}
+                    />
+                  </div>
+                  <div className="mt-10 flex items-center justify-between">
+                    <span className="rounded-full border border-white/10 bg-black/20 px-3 py-1 text-xs text-white/42">
+                      {isSelected ? "Selectionne" : "Appuyer pour voter"}
+                    </span>
+                    <span className="text-xs uppercase tracking-[0.22em] text-white/18">Suspect</span>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="mt-auto flex flex-col gap-4 pt-5">
+            {iAmAlive && !voteConfirmed && voteTarget && (
+              <button
+                onClick={handleVote}
+                className="w-full rounded-[1.35rem] bg-gradient-to-r from-[#ff8d52] via-[#ff6b3d] to-[#ff3d3d] px-6 py-4 text-sm font-semibold text-white shadow-[0_0_30px_rgba(255,107,61,0.24)] transition hover:brightness-105 sm:w-auto sm:self-center"
+              >
+                Confirmer le vote pour {voteOptions.find((player) => player.id === voteTarget)?.name}
+              </button>
+            )}
+            {voteConfirmed && (
+              <p className="text-center text-sm text-white/42">
+                Vote enregistre. En attente des autres joueurs.
+              </p>
+            )}
+            <div className="flex flex-wrap justify-center gap-2">
+              {alivePlayers.map((p) => (
+                <div
+                  key={p.id}
+                  className={cn(
+                    "rounded-full border px-3 py-2 text-xs transition-all",
+                    p.hasVoted
+                      ? "border-cyan-300/26 bg-cyan-300/[0.08] text-cyan-100"
+                      : "border-white/[0.08] bg-white/[0.03] text-white/38"
+                  )}
+                >
+                  {p.name}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (false) {
+    const eliminatedPlayer = state.players?.find(
+      (p) => p.id === state.eliminatedPlayerId
+    );
+    const noElimination = !state.eliminatedPlayerId;
+    const revealedPlayers =
+      state.players?.filter((player) => player.alive || player.id === state.eliminatedPlayerId) ?? [];
+
+    return (
+      <div className="relative flex flex-1 flex-col overflow-hidden px-4 py-5 sm:px-6 sm:py-7">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_18%,rgba(80,216,255,0.12),transparent_28%),radial-gradient(circle_at_80%_75%,rgba(255,122,80,0.14),transparent_34%),linear-gradient(180deg,#050714,#050916_58%,#04050d)]" />
+        <div className="relative mx-auto flex w-full max-w-4xl flex-1 flex-col rounded-[2rem] border border-white/10 bg-black/35 p-4 shadow-[0_30px_90px_rgba(0,0,0,0.48)] backdrop-blur-xl sm:p-6">
+          <div className="text-center">
+            <p className="text-[11px] uppercase tracking-[0.28em] text-cyan-200/48">Resultat du vote</p>
+            <h2 className="mt-2 text-3xl font-serif text-white sm:text-4xl">
+              {noElimination ? "Egalite" : `${eliminatedPlayer?.name} elimine`}
+            </h2>
+            <p className="mt-2 text-sm text-white/44">
+              Appuie sur une carte pour reveler le role.
+            </p>
+          </div>
+
+          <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {revealedPlayers.map((player, index) => {
+              const isRevealed = revealedRoleCards.includes(player.id);
+              const role = player.role;
+              return (
+                <button
+                  key={player.id}
+                  onClick={() =>
+                    setRevealedRoleCards((current) =>
+                      current.includes(player.id)
+                        ? current.filter((id) => id !== player.id)
+                        : [...current, player.id]
+                    )
+                  }
+                  className="group [perspective:1200px] text-left"
+                  style={{ animation: `cardReveal 0.38s ease ${index * 0.06}s both` }}
+                >
+                  <div
+                    className={cn(
+                      "relative min-h-[180px] rounded-[1.6rem] transition-transform duration-500 [transform-style:preserve-3d]",
+                      isRevealed && "[transform:rotateY(180deg)]"
+                    )}
+                  >
+                    <div className="absolute inset-0 rounded-[1.6rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.02))] p-5 [backface-visibility:hidden]">
+                      <p className="text-[11px] uppercase tracking-[0.22em] text-white/24">Carte joueur</p>
+                      <p className="mt-6 text-2xl font-semibold text-white/92">{player.name}</p>
+                      <div className="pt-14">
+                        <span className="rounded-full border border-white/10 bg-black/20 px-3 py-1 text-xs text-white/44">
+                          Toucher pour retourner
+                        </span>
+                      </div>
+                    </div>
+                    <div
+                      className={cn(
+                        "absolute inset-0 flex rounded-[1.6rem] border p-5 [backface-visibility:hidden] [transform:rotateY(180deg)]",
+                        role ? ROLE_BG[role] : "border-white/10 bg-white/[0.04]"
+                      )}
+                    >
+                      <div className="flex h-full w-full flex-col justify-between">
+                        <div>
+                          <p className="text-[11px] uppercase tracking-[0.22em] text-white/30">Role revele</p>
+                          <p className={cn("mt-6 text-2xl font-semibold", getRoleColor(role))}>
+                            {getRoleLabel(role)}
+                          </p>
+                        </div>
+                        <p className="text-xs text-white/44">{player.name}</p>
+                      </div>
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="mt-auto pt-5 text-center">
+            {state.mrWhiteGuessCorrect !== null && (
+              <div
+                className={cn(
+                  "mx-auto mb-4 max-w-sm rounded-[1.4rem] border p-4 text-center",
+                  state.mrWhiteGuessCorrect
+                    ? "border-emerald-400/30 bg-emerald-400/8"
+                    : "border-red-400/30 bg-red-400/8"
+                )}
+              >
+                <p className={cn("text-base font-semibold", state.mrWhiteGuessCorrect ? "text-emerald-300" : "text-red-300")}>
+                  {state.mrWhiteGuessCorrect ? "Mr. White a trouve le mot" : "Mr. White s'est trompe"}
+                </p>
+              </div>
+            )}
+            <p className="text-sm text-white/40">La suite arrive automatiquement.</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // ── Role Reveal ───────────────────────────────────────────
   if (state.phase === "role-reveal") {

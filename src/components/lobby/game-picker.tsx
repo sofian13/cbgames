@@ -38,8 +38,8 @@ export function GamePicker({ selectedGameId, isHost, onSelectGame }: GamePickerP
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
           <p className="section-title">{isHost ? "Choisis un jeu" : "Catalogue"}</p>
-          <p className="mt-1 text-sm text-white/55">
-            {isHost ? "Selectionne le prochain jeu." : "Le host choisit la prochaine partie."}
+          <p className="mt-1 text-sm text-white/50">
+            {isHost ? "Selection rapide du prochain jeu." : "Le host choisit la prochaine partie."}
           </p>
         </div>
         <span className="w-fit rounded-full border border-white/10 bg-white/[0.05] px-3 py-1 text-xs text-white/45">
@@ -77,7 +77,7 @@ export function GamePicker({ selectedGameId, isHost, onSelectGame }: GamePickerP
         </div>
       </div>
 
-      <div className="grid min-w-0 gap-3 md:grid-cols-2 xl:grid-cols-3">
+      <div className="grid min-w-0 gap-3 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
         {filteredGames.length > 0 ? (
           filteredGames.map((game) => (
             <GameCard

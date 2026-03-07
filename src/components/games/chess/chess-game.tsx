@@ -500,7 +500,7 @@ const ChessBoardView = memo(function ChessBoardView({
   }, [lastMove]);
 
   return (
-    <div className="relative">
+    <div className="relative w-full">
       {/* File labels (bottom) */}
       <div className="mt-1 grid grid-cols-8 px-0">
         {fileLabels.map((f, i) => (
@@ -543,7 +543,7 @@ const ChessBoardView = memo(function ChessBoardView({
                     isSelected && "bg-[#6ecf6e]/50",
                     isCheck && "bg-red-500/70",
                   )}
-                  style={{ fontSize: "min(calc((100vw - 3rem) / 8 * 0.78), 3.2rem)" }}
+                  style={{ fontSize: "clamp(1rem, 6vw, 2.8rem)" }}
                 >
                   {isTarget && !isCapture && (
                     <span className="absolute h-[28%] w-[28%] rounded-full bg-black/20" />
@@ -992,12 +992,12 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
   }, [localTimeMinutes]);
 
   const focusBoardStyle = {
-    width: "min(calc(100vw - 1rem), calc(100svh - 14.5rem))",
-    maxWidth: "940px",
+    width: "min(calc(100vw - 1.25rem), calc(100svh - 13.5rem), 940px)",
+    maxWidth: "100%",
   };
   const normalBoardStyle = {
-    width: "min(calc(100vw - 1.25rem), 820px)",
-    maxWidth: "820px",
+    width: "min(calc(100vw - 4rem), calc(100svh - 20rem), 820px)",
+    maxWidth: "100%",
   };
 
   /* ════════════════════════════════════════════════════════

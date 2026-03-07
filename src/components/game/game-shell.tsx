@@ -70,8 +70,15 @@ export function GameShell({
     }
   }, [isGameOver]);
 
+  useEffect(() => {
+    document.body.classList.add("game-shell-active");
+    return () => {
+      document.body.classList.remove("game-shell-active");
+    };
+  }, []);
+
   return (
-    <div className="relative min-h-[100svh] overflow-hidden bg-transparent">
+    <div className="relative min-h-[100svh] overflow-hidden bg-[#050812]">
       <div className="relative z-10 flex min-h-[100svh] flex-col">
         {!isGameOver && gameMeta && (
           <div className="pointer-events-none fixed inset-x-0 top-0 z-40 px-3 pt-[calc(env(safe-area-inset-top,0px)+0.75rem)] sm:px-5">
@@ -124,34 +131,7 @@ export function GameShell({
           </div>
         )}
 
-        <div className="flex w-full flex-1 flex-col px-0 pb-[calc(env(safe-area-inset-bottom,0px)+5.6rem)] pt-18 sm:pb-28 sm:pt-22">
-          {!isGameOver && gameMeta && (
-            <section className="site-panel-soft mx-auto mb-4 hidden w-full max-w-[1100px] rounded-[1.7rem] px-4 py-3 md:block">
-              <div className="flex items-center justify-between gap-4">
-                <div className="flex min-w-0 items-center gap-3">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.05] text-2xl">
-                    {gameMeta.icon}
-                  </div>
-                  <div className="min-w-0">
-                    <p className="section-title">Session</p>
-                    <p className="truncate text-base font-semibold text-white">
-                      {gameMeta.name}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <span className="site-chip rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em]">
-                    {playerName}
-                  </span>
-                  <span className="site-chip-cool rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em]">
-                    plein ecran mobile
-                  </span>
-                </div>
-              </div>
-            </section>
-          )}
-
+        <div className="flex w-full flex-1 flex-col px-0 pb-[calc(env(safe-area-inset-bottom,0px)+5.6rem)] pt-18 sm:pb-28 sm:pt-20">
           {isGameOver ? (
             <main className="flex flex-1 items-center justify-center py-6">
               <div className="site-panel w-full max-w-lg rounded-[2rem] p-5 sm:p-6">
@@ -207,7 +187,9 @@ export function GameShell({
               </div>
             </main>
           ) : (
-            <div className="safe-bottom flex flex-1 flex-col pb-24 sm:pb-28">{children}</div>
+            <div className="safe-bottom flex min-h-0 flex-1 flex-col pb-24 sm:pb-28">
+              {children}
+            </div>
           )}
         </div>
 

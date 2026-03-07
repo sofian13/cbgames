@@ -137,6 +137,10 @@
     min-height: 100vh;
     color-scheme: dark;
   }
+  body.game-shell-active {
+    background: #040711;
+    background-image: none;
+  }
   ::selection {
     background: rgba(79, 209, 255, 0.32);
     color: #fbfeff;
