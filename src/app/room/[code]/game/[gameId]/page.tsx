@@ -106,6 +106,10 @@ const GameComponents = {
     () => import("@/components/games/guess-word/guess-word-game"),
     { ssr: false }
   ),
+  "category-chrono": dynamic(
+    () => import("@/components/games/category-chrono/category-chrono-game"),
+    { ssr: false }
+  ),
   "make-guess": dynamic(
     () => import("@/components/games/make-guess/make-guess-game"),
     { ssr: false }
