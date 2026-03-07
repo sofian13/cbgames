@@ -23,6 +23,7 @@ import { ChessGame } from "./games/chess";
 import { BlockRunnerGame } from "./games/block-runner";
 import { BattleshipGame } from "./games/battleship";
 import { TapRushGame } from "./games/tap-rush";
+import { LocalGame } from "./games/local-game";
 
 // Registry of game constructors
 const GAME_REGISTRY: Record<string, () => BaseGame> = {
@@ -49,6 +50,9 @@ const GAME_REGISTRY: Record<string, () => BaseGame> = {
   "block-runner": () => new BlockRunnerGame(),
   "battleship": () => new BattleshipGame(),
   "tap-rush": () => new TapRushGame(),
+  "guess-word": () => new LocalGame(),
+  "make-guess": () => new LocalGame(),
+  "category-chrono": () => new LocalGame(),
 };
 
 export default class GameServer {
@@ -99,7 +103,7 @@ export default class GameServer {
 
       // Auto-start when enough players join and game hasn't started
       // Motion tennis can start solo (vs bot)
-      if (this.gameId === "undercover" || this.gameId === "chess" || this.gameId === "block-runner") {
+      if (this.gameId === "undercover" || this.gameId === "chess" || this.gameId === "block-runner" || this.gameId === "guess-word" || this.gameId === "make-guess" || this.gameId === "category-chrono") {
         return;
       }
       const minToStart = 2;
