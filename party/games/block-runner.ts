@@ -51,22 +51,48 @@ type Hazard = {
   maxY: number;
 };
 
+type ButtonSwitch = {
+  id: string;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  active: boolean;
+  oneShot: boolean;
+};
+
+type Platform = {
+  id: string;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  minY: number;
+  maxY: number;
+  speed: number;
+  triggerId?: string;
+};
+
 type Level = {
   id: number;
   goalX: number;
+  hint: string;
   traps: Trap[];
   gaps: Gap[];
   enemies: Enemy[];
   hazards: Hazard[];
+  switches: ButtonSwitch[];
+  platforms: Platform[];
 };
 
 const MAX_PLAYERS = 5;
 const PLAYER_W = 28;
 const PLAYER_H = 28;
 const ENEMY_H = 24;
-const MOVE_SPEED = 240;
-const GRAVITY = 1500;
-const JUMP_VELOCITY = 560;
+const PLATFORM_H = 16;
+const MOVE_SPEED = 178;
+const GRAVITY = 1180;
+const JUMP_VELOCITY = 495;
 const TICK_MS = 33;
 const FALL_LIMIT = -170;
 
@@ -88,334 +114,160 @@ function levelTemplate(): Level[] {
   return [
     {
       id: 1,
-      goalX: 2050,
-      gaps: [
-        { x: 420, w: 150 },
-        { x: 980, w: 130 },
-        { x: 1540, w: 170 },
-      ],
-      traps: [
-        { x: 730, w: 90 },
-        { x: 1240, w: 88 },
-        { x: 1810, w: 96 },
-      ],
+      goalX: 1780,
+      hint: "Prends le rythme. Les collisions sont plus propres, mais les trous punissent toujours.",
+      gaps: [{ x: 430, w: 126 }, { x: 1080, w: 142 }],
+      traps: [{ x: 760, w: 80 }, { x: 1460, w: 84 }],
       enemies: [
-        { x: 250, y: 0, w: 34, h: ENEMY_H, alive: true, vx: 70, minX: 210, maxX: 330 },
-        { x: 880, y: 0, w: 34, h: ENEMY_H, alive: true, vx: 80, minX: 840, maxX: 950 },
-        { x: 1380, y: 0, w: 34, h: ENEMY_H, alive: true, vx: 85, minX: 1330, maxX: 1460 },
+        { x: 260, y: 0, w: 34, h: ENEMY_H, alive: true, vx: 44, minX: 220, maxX: 330 },
+        { x: 905, y: 0, w: 34, h: ENEMY_H, alive: true, vx: 52, minX: 850, maxX: 980 },
       ],
       hazards: [
         {
           kind: "saw",
-          x: 520,
-          y: 84,
+          x: 608,
+          y: 74,
           w: 28,
           h: 28,
-          vx: 130,
+          vx: 74,
           vy: 0,
-          minX: 460,
-          maxX: 620,
-          minY: 84,
-          maxY: 84,
+          minX: 560,
+          maxX: 700,
+          minY: 74,
+          maxY: 74,
         },
         {
           kind: "orb",
-          x: 1080,
-          y: 60,
+          x: 1315,
+          y: 54,
           w: 22,
           h: 22,
           vx: 0,
-          vy: 95,
-          minX: 1080,
-          maxX: 1080,
-          minY: 28,
-          maxY: 102,
-        },
-        {
-          kind: "saw",
-          x: 1630,
-          y: 92,
-          w: 30,
-          h: 30,
-          vx: 145,
-          vy: 0,
-          minX: 1560,
-          maxX: 1750,
-          minY: 92,
-          maxY: 92,
+          vy: 62,
+          minX: 1315,
+          maxX: 1315,
+          minY: 26,
+          maxY: 90,
         },
       ],
+      switches: [],
+      platforms: [],
     },
     {
       id: 2,
-      goalX: 2360,
-      gaps: [
-        { x: 330, w: 110 },
-        { x: 760, w: 150 },
-        { x: 1260, w: 120 },
-        { x: 1820, w: 180 },
-      ],
-      traps: [
-        { x: 540, w: 104 },
-        { x: 1040, w: 86 },
-        { x: 1540, w: 110 },
-        { x: 2110, w: 90 },
-      ],
+      goalX: 2220,
+      hint: "Empilez-vous sous le relais pour lever le pont. Seul, personne ne passe.",
+      gaps: [{ x: 1050, w: 286 }, { x: 1815, w: 150 }],
+      traps: [{ x: 1540, w: 74 }],
       enemies: [
-        { x: 210, y: 0, w: 34, h: ENEMY_H, alive: true, vx: 90, minX: 180, maxX: 280 },
-        { x: 640, y: 0, w: 34, h: ENEMY_H, alive: true, vx: 96, minX: 600, maxX: 720 },
-        { x: 1450, y: 0, w: 34, h: ENEMY_H, alive: true, vx: 100, minX: 1400, maxX: 1530 },
-        { x: 2050, y: 0, w: 34, h: ENEMY_H, alive: true, vx: 110, minX: 2000, maxX: 2140 },
+        { x: 1685, y: 0, w: 34, h: ENEMY_H, alive: true, vx: 56, minX: 1620, maxX: 1760 },
       ],
       hazards: [
         {
           kind: "orb",
-          x: 385,
-          y: 72,
-          w: 22,
-          h: 22,
-          vx: 0,
-          vy: 110,
-          minX: 385,
-          maxX: 385,
-          minY: 24,
-          maxY: 104,
-        },
-        {
-          kind: "saw",
-          x: 830,
-          y: 90,
-          w: 30,
-          h: 30,
-          vx: 165,
-          vy: 0,
-          minX: 760,
-          maxX: 930,
-          minY: 90,
-          maxY: 90,
-        },
-        {
-          kind: "orb",
-          x: 1320,
-          y: 66,
+          x: 1465,
+          y: 56,
           w: 24,
           h: 24,
           vx: 0,
-          vy: 120,
-          minX: 1320,
-          maxX: 1320,
+          vy: 66,
+          minX: 1465,
+          maxX: 1465,
           minY: 22,
-          maxY: 112,
+          maxY: 92,
         },
+      ],
+      switches: [
         {
-          kind: "saw",
-          x: 1895,
-          y: 88,
-          w: 30,
-          h: 30,
-          vx: 150,
-          vy: 0,
-          minX: 1820,
-          maxX: 2030,
-          minY: 88,
-          maxY: 88,
+          id: "relay-bridge",
+          x: 760,
+          y: 136,
+          w: 34,
+          h: 34,
+          active: false,
+          oneShot: true,
+        },
+      ],
+      platforms: [
+        {
+          id: "bridge-platform",
+          x: 1134,
+          y: -112,
+          w: 144,
+          h: PLATFORM_H,
+          minY: -112,
+          maxY: 6,
+          speed: 128,
+          triggerId: "relay-bridge",
         },
       ],
     },
     {
       id: 3,
-      goalX: 2640,
+      goalX: 2480,
+      hint: "Derniere run: tempo lent, mais il faut lire le terrain et l’espace entre les pieges.",
       gaps: [
-        { x: 380, w: 160 },
-        { x: 870, w: 120 },
-        { x: 1280, w: 160 },
-        { x: 1760, w: 130 },
-        { x: 2190, w: 170 },
+        { x: 540, w: 136 },
+        { x: 1260, w: 160 },
+        { x: 1980, w: 156 },
       ],
-      traps: [
-        { x: 640, w: 118 },
-        { x: 1090, w: 90 },
-        { x: 1540, w: 120 },
-        { x: 1980, w: 92 },
-        { x: 2470, w: 90 },
-      ],
+      traps: [{ x: 870, w: 88 }, { x: 1650, w: 94 }],
       enemies: [
-        { x: 220, y: 0, w: 34, h: ENEMY_H, alive: true, vx: 100, minX: 170, maxX: 310 },
-        { x: 710, y: 0, w: 34, h: ENEMY_H, alive: true, vx: 112, minX: 660, maxX: 810 },
-        { x: 1470, y: 0, w: 34, h: ENEMY_H, alive: true, vx: 116, minX: 1410, maxX: 1560 },
-        { x: 2060, y: 0, w: 34, h: ENEMY_H, alive: true, vx: 124, minX: 1990, maxX: 2130 },
+        { x: 330, y: 0, w: 34, h: ENEMY_H, alive: true, vx: 48, minX: 260, maxX: 410 },
+        { x: 1488, y: 0, w: 34, h: ENEMY_H, alive: true, vx: 58, minX: 1440, maxX: 1560 },
       ],
       hazards: [
         {
           kind: "saw",
-          x: 470,
-          y: 92,
+          x: 710,
+          y: 78,
           w: 30,
           h: 30,
-          vx: 175,
+          vx: 84,
           vy: 0,
-          minX: 400,
-          maxX: 570,
-          minY: 92,
-          maxY: 92,
+          minX: 650,
+          maxX: 820,
+          minY: 78,
+          maxY: 78,
         },
         {
           kind: "orb",
-          x: 930,
-          y: 58,
+          x: 1150,
+          y: 62,
           w: 24,
           h: 24,
           vx: 0,
-          vy: 130,
-          minX: 930,
-          maxX: 930,
-          minY: 20,
-          maxY: 110,
-        },
-        {
-          kind: "saw",
-          x: 1350,
-          y: 95,
-          w: 30,
-          h: 30,
-          vx: 180,
-          vy: 0,
-          minX: 1285,
-          maxX: 1455,
-          minY: 95,
-          maxY: 95,
-        },
-        {
-          kind: "orb",
-          x: 1825,
-          y: 54,
-          w: 24,
-          h: 24,
-          vx: 0,
-          vy: 135,
-          minX: 1825,
-          maxX: 1825,
-          minY: 18,
-          maxY: 118,
-        },
-        {
-          kind: "saw",
-          x: 2270,
-          y: 94,
-          w: 32,
-          h: 32,
-          vx: 190,
-          vy: 0,
-          minX: 2200,
-          maxX: 2390,
-          minY: 94,
+          vy: 68,
+          minX: 1150,
+          maxX: 1150,
+          minY: 26,
           maxY: 94,
         },
-      ],
-    },
-    {
-      id: 4,
-      goalX: 2940,
-      gaps: [
-        { x: 300, w: 130 },
-        { x: 690, w: 180 },
-        { x: 1180, w: 150 },
-        { x: 1660, w: 120 },
-        { x: 2080, w: 180 },
-        { x: 2540, w: 150 },
-      ],
-      traps: [
-        { x: 510, w: 86 },
-        { x: 980, w: 108 },
-        { x: 1450, w: 102 },
-        { x: 1910, w: 94 },
-        { x: 2340, w: 108 },
-        { x: 2780, w: 90 },
-      ],
-      enemies: [
-        { x: 180, y: 0, w: 34, h: ENEMY_H, alive: true, vx: 110, minX: 130, maxX: 270 },
-        { x: 910, y: 0, w: 34, h: ENEMY_H, alive: true, vx: 118, minX: 860, maxX: 1010 },
-        { x: 1560, y: 0, w: 34, h: ENEMY_H, alive: true, vx: 126, minX: 1500, maxX: 1640 },
-        { x: 2430, y: 0, w: 34, h: ENEMY_H, alive: true, vx: 134, minX: 2370, maxX: 2520 },
-      ],
-      hazards: [
-        {
-          kind: "orb",
-          x: 365,
-          y: 60,
-          w: 22,
-          h: 22,
-          vx: 0,
-          vy: 140,
-          minX: 365,
-          maxX: 365,
-          minY: 18,
-          maxY: 114,
-        },
         {
           kind: "saw",
-          x: 770,
-          y: 92,
+          x: 1788,
+          y: 78,
           w: 30,
           h: 30,
-          vx: 200,
+          vx: 92,
           vy: 0,
-          minX: 700,
-          maxX: 880,
-          minY: 92,
-          maxY: 92,
+          minX: 1720,
+          maxX: 1880,
+          minY: 78,
+          maxY: 78,
         },
+      ],
+      switches: [],
+      platforms: [
         {
-          kind: "orb",
-          x: 1250,
-          y: 50,
-          w: 24,
-          h: 24,
-          vx: 0,
-          vy: 145,
-          minX: 1250,
-          maxX: 1250,
-          minY: 14,
-          maxY: 120,
-        },
-        {
-          kind: "saw",
-          x: 1710,
-          y: 96,
-          w: 30,
-          h: 30,
-          vx: 210,
-          vy: 0,
-          minX: 1650,
-          maxX: 1805,
-          minY: 96,
-          maxY: 96,
-        },
-        {
-          kind: "orb",
-          x: 2165,
-          y: 56,
-          w: 24,
-          h: 24,
-          vx: 0,
-          vy: 150,
-          minX: 2165,
-          maxX: 2165,
-          minY: 16,
-          maxY: 118,
-        },
-        {
-          kind: "saw",
-          x: 2610,
-          y: 94,
-          w: 32,
-          h: 32,
-          vx: 220,
-          vy: 0,
-          minX: 2555,
-          maxX: 2710,
-          minY: 94,
-          maxY: 94,
+          id: "final-step",
+          x: 2136,
+          y: 44,
+          w: 84,
+          h: PLATFORM_H,
+          minY: 44,
+          maxY: 44,
+          speed: 0,
         },
       ],
     },
@@ -429,12 +281,27 @@ function cloneLevel(level: Level): Level {
     gaps: level.gaps.map((gap) => ({ ...gap })),
     enemies: level.enemies.map((enemy) => ({ ...enemy })),
     hazards: level.hazards.map((hazard) => ({ ...hazard })),
+    switches: level.switches.map((button) => ({ ...button })),
+    platforms: level.platforms.map((platform) => ({ ...platform })),
   };
 }
 
 function isOverGap(level: Level, playerX: number) {
   const supportX = playerX + PLAYER_W / 2;
   return level.gaps.some((gap) => supportX >= gap.x && supportX <= gap.x + gap.w);
+}
+
+function overlapsRect(
+  aX: number,
+  aY: number,
+  aW: number,
+  aH: number,
+  bX: number,
+  bY: number,
+  bW: number,
+  bH: number
+) {
+  return overlaps(aX, aW, bX, bW) && overlapsY(aY, aH, bY, bH);
 }
 
 export class BlockRunnerGame extends BaseGame {
@@ -497,15 +364,15 @@ export class BlockRunnerGame extends BaseGame {
   }
 
   resetPlayersForLevel() {
-    for (const player of this.getActivePlayers()) {
-      player.x = 0;
+    this.getActivePlayers().forEach((player, index) => {
+      player.x = index * (PLAYER_W + 6);
       player.y = 0;
       player.vy = 0;
       player.alive = true;
       player.finished = false;
       player.inputX = 0;
       player.jumpQueued = false;
-    }
+    });
   }
 
   currentLevel() {
@@ -565,6 +432,36 @@ export class BlockRunnerGame extends BaseGame {
     const activePlayers = this.getActivePlayers();
     if (activePlayers.length === 0) return;
 
+    for (const button of level.switches) {
+      if (button.active) continue;
+      button.active = activePlayers.some((player) =>
+        overlapsRect(
+          player.x + 5,
+          player.y + 4,
+          PLAYER_W - 10,
+          PLAYER_H - 8,
+          button.x,
+          button.y,
+          button.w,
+          button.h
+        )
+      );
+    }
+
+    for (const platform of level.platforms) {
+      const targetY =
+        platform.triggerId &&
+        level.switches.some((button) => button.id === platform.triggerId && button.active)
+          ? platform.maxY
+          : platform.minY;
+
+      if (platform.y < targetY) {
+        platform.y = Math.min(targetY, platform.y + platform.speed * dt);
+      } else if (platform.y > targetY) {
+        platform.y = Math.max(targetY, platform.y - platform.speed * dt);
+      }
+    }
+
     for (const enemy of level.enemies) {
       if (!enemy.alive) continue;
       enemy.x += enemy.vx * dt;
@@ -589,17 +486,32 @@ export class BlockRunnerGame extends BaseGame {
     }
 
     let failureMessage: string | null = null;
+    const previousBottoms = new Map(activePlayers.map((player) => [player.id, player.y] as const));
 
     for (const player of activePlayers) {
       if (!player.alive || player.finished) continue;
 
       const prevY = player.y;
-      const prevBottom = player.y;
-
       player.x = clamp(player.x + player.inputX * MOVE_SPEED * dt, 0, level.goalX);
 
+      const standingOnPlatform = level.platforms.some(
+        (platform) =>
+          overlaps(player.x + 6, PLAYER_W - 12, platform.x, platform.w) &&
+          Math.abs(player.y - (platform.y + platform.h)) <= 4
+      );
+      const standingOnPlayer = activePlayers.some(
+        (other) =>
+          other.id !== player.id &&
+          other.alive &&
+          overlaps(player.x + 5, PLAYER_W - 10, other.x + 4, PLAYER_W - 8) &&
+          Math.abs(player.y - (other.y + PLAYER_H)) <= 4
+      );
       const gapBeforeJump = isOverGap(level, player.x);
-      if (player.jumpQueued && player.y <= 0.5 && !gapBeforeJump) {
+      if (
+        player.jumpQueued &&
+        (player.y <= 0.5 || standingOnPlatform || standingOnPlayer) &&
+        (!gapBeforeJump || standingOnPlatform || standingOnPlayer)
+      ) {
         player.vy = JUMP_VELOCITY;
       }
       player.jumpQueued = false;
@@ -607,10 +519,36 @@ export class BlockRunnerGame extends BaseGame {
       player.vy -= GRAVITY * dt;
       player.y += player.vy * dt;
 
+      const prevBottom = previousBottoms.get(player.id) ?? prevY;
+      let supportTop: number | null = null;
+
       const gapAfterMove = isOverGap(level, player.x);
-      if (!gapAfterMove && player.y <= 0) {
-        player.y = 0;
-        if (player.vy < 0) player.vy = 0;
+      if (!gapAfterMove) {
+        supportTop = 0;
+      }
+
+      for (const platform of level.platforms) {
+        const platformTop = platform.y + platform.h;
+        if (!overlaps(player.x + 4, PLAYER_W - 8, platform.x, platform.w)) continue;
+        if (prevBottom < platformTop - 10) continue;
+        if (player.y > platformTop + 10) continue;
+        supportTop = Math.max(supportTop ?? -Infinity, platformTop);
+      }
+
+      const sortedOthers = [...activePlayers]
+        .filter((other) => other.id !== player.id && other.alive)
+        .sort((a, b) => a.y - b.y);
+      for (const other of sortedOthers) {
+        const otherTop = other.y + PLAYER_H;
+        if (!overlaps(player.x + 5, PLAYER_W - 10, other.x + 4, PLAYER_W - 8)) continue;
+        if (prevBottom < otherTop - 8) continue;
+        if (player.y > otherTop + 10) continue;
+        supportTop = Math.max(supportTop ?? -Infinity, otherTop);
+      }
+
+      if (supportTop !== null && player.vy <= 0 && player.y <= supportTop + 10) {
+        player.y = supportTop;
+        player.vy = 0;
       }
 
       if (gapAfterMove && player.y < FALL_LIMIT) {
@@ -620,7 +558,7 @@ export class BlockRunnerGame extends BaseGame {
       }
 
       const trapHit = level.traps.some(
-        (trap) => overlaps(player.x + 4, PLAYER_W - 8, trap.x, trap.w) && player.y <= 6
+        (trap) => overlaps(player.x + 7, PLAYER_W - 14, trap.x + 5, trap.w - 10) && player.y <= 4
       );
       if (trapHit) {
         player.alive = false;
@@ -630,8 +568,8 @@ export class BlockRunnerGame extends BaseGame {
 
       for (const hazard of level.hazards) {
         if (
-          overlaps(player.x + 2, PLAYER_W - 4, hazard.x, hazard.w) &&
-          overlapsY(player.y, PLAYER_H, hazard.y, hazard.h)
+          overlaps(player.x + 6, PLAYER_W - 12, hazard.x + 4, Math.max(6, hazard.w - 8)) &&
+          overlapsY(player.y + 4, PLAYER_H - 8, hazard.y + 4, Math.max(6, hazard.h - 8))
         ) {
           player.alive = false;
           failureMessage ??=
@@ -645,19 +583,19 @@ export class BlockRunnerGame extends BaseGame {
 
       for (const enemy of level.enemies) {
         if (!enemy.alive) continue;
-        if (!overlaps(player.x, PLAYER_W, enemy.x, enemy.w)) continue;
-        if (!overlapsY(player.y, PLAYER_H, enemy.y, enemy.h)) continue;
+        if (!overlaps(player.x + 5, PLAYER_W - 10, enemy.x + 4, enemy.w - 8)) continue;
+        if (!overlapsY(player.y + 3, PLAYER_H - 6, enemy.y + 2, enemy.h - 4)) continue;
 
         const enemyTop = enemy.y + enemy.h;
         const stomped =
-          prevBottom >= enemyTop - 2 &&
-          player.y <= enemyTop + 6 &&
+          prevBottom >= enemyTop - 4 &&
+          player.y <= enemyTop + 4 &&
           player.vy < 0 &&
           prevY > player.y;
 
         if (stomped) {
           enemy.alive = false;
-          player.vy = JUMP_VELOCITY * 0.68;
+          player.vy = JUMP_VELOCITY * 0.52;
         } else {
           player.alive = false;
           failureMessage ??= "Une bete patrouille bloquait le passage.";
@@ -665,6 +603,24 @@ export class BlockRunnerGame extends BaseGame {
         }
       }
       if (!player.alive) continue;
+
+      for (const button of level.switches) {
+        if (button.active) continue;
+        if (
+          overlapsRect(
+            player.x + 5,
+            player.y + 4,
+            PLAYER_W - 10,
+            PLAYER_H - 8,
+            button.x,
+            button.y,
+            button.w,
+            button.h
+          )
+        ) {
+          button.active = true;
+        }
+      }
 
       if (player.x + PLAYER_W >= level.goalX) {
         player.finished = true;
@@ -790,6 +746,7 @@ export class BlockRunnerGame extends BaseGame {
       level: {
         id: level.id,
         goalX: level.goalX,
+        hint: level.hint,
         traps: level.traps.map((trap) => ({ ...trap })),
         gaps: level.gaps.map((gap) => ({ ...gap })),
         enemies: level.enemies.map((enemy) => ({
@@ -805,6 +762,24 @@ export class BlockRunnerGame extends BaseGame {
           y: hazard.y,
           w: hazard.w,
           h: hazard.h,
+        })),
+        switches: level.switches.map((button) => ({
+          id: button.id,
+          x: button.x,
+          y: button.y,
+          w: button.w,
+          h: button.h,
+          active: button.active,
+        })),
+        platforms: level.platforms.map((platform) => ({
+          id: platform.id,
+          x: platform.x,
+          y: platform.y,
+          w: platform.w,
+          h: platform.h,
+          active:
+            !platform.triggerId ||
+            level.switches.some((button) => button.id === platform.triggerId && button.active),
         })),
       },
       palette: [...COLOR_POOL],

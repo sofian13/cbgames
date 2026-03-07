@@ -36,10 +36,13 @@ type HazardState = {
 type LevelState = {
   id: number;
   goalX: number;
+  hint?: string;
   traps: Array<{ x: number; w: number }>;
   gaps: Array<{ x: number; w: number }>;
   enemies: EnemyState[];
   hazards: HazardState[];
+  switches?: Array<{ id: string; x: number; y: number; w: number; h: number; active: boolean }>;
+  platforms?: Array<{ id: string; x: number; y: number; w: number; h: number; active: boolean }>;
 };
 
 type BlockRunnerState = {
@@ -288,6 +291,56 @@ function GoalGate() {
   );
 }
 
+function RelaySwitch({
+  active,
+}: {
+  active: boolean;
+}) {
+  return (
+    <div className="absolute -translate-x-1/2" style={{ width: "40px", height: "40px" }}>
+      <div
+        className={cn(
+          "absolute inset-0 rounded-[14px] border transition",
+          active
+            ? "border-emerald-200/70 bg-emerald-300/30 shadow-[0_0_22px_rgba(52,211,153,0.38)]"
+            : "border-cyan-200/40 bg-cyan-300/12 shadow-[0_0_18px_rgba(34,211,238,0.18)]"
+        )}
+      />
+      <div className="absolute inset-[9px] rounded-[10px] border border-white/20 bg-slate-950/40" />
+      <div
+        className={cn(
+          "absolute left-1/2 top-1/2 h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full transition",
+          active ? "bg-emerald-300" : "bg-cyan-200"
+        )}
+      />
+    </div>
+  );
+}
+
+function SupportPlatform({
+  width,
+  active,
+}: {
+  width: number;
+  active: boolean;
+}) {
+  return (
+    <div className="absolute inset-0 overflow-hidden rounded-[12px] border border-white/14 bg-[linear-gradient(180deg,#94a3b8_0%,#334155_100%)]">
+      <div
+        className={cn(
+          "absolute inset-x-0 top-0 h-[5px] transition",
+          active ? "bg-emerald-300/90" : "bg-cyan-200/70"
+        )}
+      />
+      <div className="absolute inset-x-[10%] top-[5px] h-[6px] rounded-full bg-white/14" />
+      <div
+        className="absolute bottom-0 left-0 h-[7px] rounded-t-[8px] bg-slate-950/30"
+        style={{ width: `${width}px` }}
+      />
+    </div>
+  );
+}
+
 export default function BlockRunnerGame({
   roomCode,
   playerId,
@@ -301,6 +354,7 @@ export default function BlockRunnerGame({
 
   const [joystick, setJoystick] = useState({ x: 0, y: 0, active: false });
   const [isPortraitMobile, setIsPortraitMobile] = useState(false);
+  const [isLandscapeMobile, setIsLandscapeMobile] = useState(false);
   const joystickRef = useRef<HTMLDivElement | null>(null);
   const joystickPointerIdRef = useRef<number | null>(null);
   const moveXRef = useRef(0);
@@ -316,6 +370,8 @@ export default function BlockRunnerGame({
         gaps: Array.isArray(state.level.gaps) ? state.level.gaps : [],
         enemies: Array.isArray(state.level.enemies) ? state.level.enemies : [],
         hazards: Array.isArray(state.level.hazards) ? state.level.hazards : [],
+        switches: Array.isArray(state.level.switches) ? state.level.switches : [],
+        platforms: Array.isArray(state.level.platforms) ? state.level.platforms : [],
       }
     : null;
   const myPlayer = useMemo(
@@ -389,6 +445,7 @@ export default function BlockRunnerGame({
     const updateOrientation = () => {
       const portrait = window.innerHeight > window.innerWidth;
       setIsPortraitMobile(window.innerWidth < 960 && portrait);
+      setIsLandscapeMobile(window.innerWidth < 960 && !portrait);
     };
 
     updateOrientation();
@@ -460,6 +517,7 @@ export default function BlockRunnerGame({
 
   const isFailed = state.phase === "failed";
   const isPlaying = state.phase === "playing";
+  const compactLandscapeHud = isLandscapeMobile && state.phase !== "waiting";
 
   return (
     <div className="fixed inset-0 z-[140] flex flex-col overflow-hidden bg-[radial-gradient(circle_at_50%_0%,#1a2c67_0%,#0c1637_38%,#040b1d_100%)] text-white select-none">
@@ -469,8 +527,18 @@ export default function BlockRunnerGame({
         <div className="absolute -right-[12%] bottom-[10%] h-[240px] w-[240px] rounded-full bg-cyan-400/10 blur-3xl" />
       </div>
 
-      <div className="relative z-10 px-3 pb-2 pt-3 md:px-5">
-        <div className="flex items-start justify-between gap-3 rounded-[24px] border border-white/10 bg-slate-950/45 px-3 py-3 backdrop-blur-md md:px-4">
+      <div
+        className={cn(
+          "relative z-10 px-3 pb-2 pt-3 md:px-5",
+          compactLandscapeHud && "absolute inset-x-0 top-0 px-2 pb-0 pt-2 md:px-2"
+        )}
+      >
+        <div
+          className={cn(
+            "flex items-start justify-between gap-3 rounded-[24px] border border-white/10 bg-slate-950/45 px-3 py-3 backdrop-blur-md md:px-4",
+            compactLandscapeHud && "rounded-[18px] px-2.5 py-2"
+          )}
+        >
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               <span className="rounded-full border border-cyan-300/18 bg-cyan-400/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.24em] text-cyan-200/72">
@@ -483,10 +551,10 @@ export default function BlockRunnerGame({
                 Essai {state.attempt}
               </span>
             </div>
-            <p className="mt-3 text-lg font-semibold text-white/92 md:text-xl">
+            <p className={cn("mt-3 text-lg font-semibold text-white/92 md:text-xl", compactLandscapeHud && "mt-1 text-sm md:text-sm")}>
               Course precise, pieges vicieux, zero marge.
             </p>
-            <p className="mt-1 text-xs text-white/48 md:text-sm">
+            <p className={cn("mt-1 text-xs text-white/48 md:text-sm", compactLandscapeHud && "hidden")}>
               Evite les trous, saute au bon timing et garde toute l&apos;equipe en vie.
             </p>
           </div>
@@ -494,7 +562,10 @@ export default function BlockRunnerGame({
           <div className="flex shrink-0 items-center gap-2">
             <button
               onClick={() => sendAction({ action: "restart-level" })}
-              className="rounded-full border border-white/10 bg-white/6 px-3 py-2 text-[11px] font-semibold text-white/75 transition hover:border-white/20 hover:bg-white/10 disabled:opacity-40"
+              className={cn(
+                "rounded-full border border-white/10 bg-white/6 px-3 py-2 text-[11px] font-semibold text-white/75 transition hover:border-white/20 hover:bg-white/10 disabled:opacity-40",
+                compactLandscapeHud && "px-2.5 py-1.5 text-[10px]"
+              )}
               disabled={!isPlaying && !isFailed}
             >
               Rejouer
@@ -503,7 +574,10 @@ export default function BlockRunnerGame({
               onClick={() =>
                 onReturnToLobby ? onReturnToLobby() : router.push(`/room/${roomCode}`)
               }
-              className="rounded-full border border-cyan-300/18 bg-cyan-400/10 px-3 py-2 text-[11px] font-semibold text-cyan-100/85 transition hover:border-cyan-200/30 hover:bg-cyan-300/16"
+              className={cn(
+                "rounded-full border border-cyan-300/18 bg-cyan-400/10 px-3 py-2 text-[11px] font-semibold text-cyan-100/85 transition hover:border-cyan-200/30 hover:bg-cyan-300/16",
+                compactLandscapeHud && "px-2.5 py-1.5 text-[10px]"
+              )}
             >
               Quitter
             </button>
@@ -640,8 +714,18 @@ export default function BlockRunnerGame({
         </div>
       ) : (
         <>
-          <div className="relative z-10 px-3 md:px-5">
-            <div className="rounded-[22px] border border-white/10 bg-slate-950/38 px-3 py-2.5 backdrop-blur-md md:px-4">
+          <div
+            className={cn(
+              "relative z-10 px-3 md:px-5",
+              compactLandscapeHud && "absolute left-2 right-2 top-[58px] px-0 md:px-0"
+            )}
+          >
+            <div
+              className={cn(
+                "rounded-[22px] border border-white/10 bg-slate-950/38 px-3 py-2.5 backdrop-blur-md md:px-4",
+                compactLandscapeHud && "rounded-[16px] px-2.5 py-2"
+              )}
+            >
               <div className="flex items-center justify-between gap-3">
                 <div className="flex min-w-0 flex-wrap items-center gap-2">
                   {players.map((player) => (
@@ -663,7 +747,9 @@ export default function BlockRunnerGame({
                             : undefined,
                         }}
                       />
-                      <span className="max-w-[82px] truncate">{player.name}</span>
+                      <span className={cn("max-w-[82px] truncate", compactLandscapeHud && "max-w-[60px]")}>
+                        {player.name}
+                      </span>
                     </div>
                   ))}
                 </div>
@@ -679,14 +765,25 @@ export default function BlockRunnerGame({
                   />
                 </div>
               ) : null}
+              {level.hint ? (
+                <p className={cn("mt-2 text-xs text-white/50", compactLandscapeHud && "hidden")}>
+                  {level.hint}
+                </p>
+              ) : null}
             </div>
           </div>
 
-          <div className="relative z-10 flex min-h-0 flex-1 px-2 pb-2 pt-2 md:px-5 md:pb-4">
+          <div
+            className={cn(
+              "relative z-10 flex min-h-0 flex-1 px-2 pb-2 pt-2 md:px-5 md:pb-4",
+              compactLandscapeHud && "px-0 pb-0 pt-0 md:px-0 md:pb-0"
+            )}
+          >
             <div
               className={cn(
                 "relative min-h-0 flex-1 overflow-hidden rounded-[28px] border",
-                isFailed ? "border-red-400/25" : "border-white/10"
+                isFailed ? "border-red-400/25" : "border-white/10",
+                compactLandscapeHud && "rounded-none border-x-0 border-b-0 border-t-0"
               )}
               style={{
                 background:
@@ -775,6 +872,45 @@ export default function BlockRunnerGame({
                     }}
                   >
                     <TrapSpikes width={Math.max(28, Math.floor(trap.w))} />
+                  </div>
+                );
+              })}
+
+              {level.platforms.map((platform) => {
+                const left = worldPercent(platform.x, cameraX);
+                const width = (platform.w / VIEW_W) * 100;
+                if (left + width < -20 || left > 120) return null;
+
+                return (
+                  <div
+                    key={platform.id}
+                    className="absolute"
+                    style={{
+                      left: `${left}%`,
+                      width: `${width}%`,
+                      bottom: `${GROUND_H + platform.y}px`,
+                      height: `${platform.h}px`,
+                    }}
+                  >
+                    <SupportPlatform width={Math.max(20, Math.floor(platform.w))} active={platform.active} />
+                  </div>
+                );
+              })}
+
+              {level.switches.map((button) => {
+                const left = worldPercent(button.x + button.w / 2, cameraX);
+                if (left < -20 || left > 120) return null;
+
+                return (
+                  <div
+                    key={button.id}
+                    className="absolute"
+                    style={{
+                      left: `${left}%`,
+                      bottom: `${GROUND_H + button.y}px`,
+                    }}
+                  >
+                    <RelaySwitch active={button.active} />
                   </div>
                 );
               })}
@@ -879,9 +1015,24 @@ export default function BlockRunnerGame({
             </div>
           </div>
 
-          <div className="relative z-10 px-2 pb-2 md:px-5 md:pb-4">
-            <div className="grid grid-cols-[1fr_auto] gap-2 md:grid-cols-[1fr_auto_auto]">
-              <div className="rounded-[28px] border border-white/10 bg-slate-950/42 px-3 py-2.5 backdrop-blur-md">
+          <div
+            className={cn(
+              "relative z-10 px-2 pb-2 md:px-5 md:pb-4",
+              compactLandscapeHud && "absolute inset-x-0 bottom-0 px-2 pb-2 md:px-2 md:pb-2"
+            )}
+          >
+            <div
+              className={cn(
+                "grid grid-cols-[1fr_auto] gap-2 md:grid-cols-[1fr_auto_auto]",
+                compactLandscapeHud && "grid-cols-[auto_1fr_auto]"
+              )}
+            >
+              <div
+                className={cn(
+                  "rounded-[28px] border border-white/10 bg-slate-950/42 px-3 py-2.5 backdrop-blur-md",
+                  compactLandscapeHud && "hidden"
+                )}
+              >
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-white/34">
