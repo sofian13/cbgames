@@ -31,7 +31,7 @@ export function GameCard({ game, isSelected, isHost, onSelect }: GameCardProps) 
     <>
       <article
         className={cn(
-          "site-panel-soft site-card-hover relative overflow-hidden rounded-[1.6rem] border p-4 sm:p-5",
+          "site-panel-soft site-card-hover relative min-w-0 overflow-hidden rounded-[1.6rem] border p-4 sm:p-5",
           CATEGORY_CLASSES[game.category],
           isSelected
             ? "border-cyan-300/34 bg-cyan-300/[0.08] shadow-[0_20px_40px_rgba(0,0,0,0.25),0_0_28px_rgba(79,209,255,0.08)]"
@@ -73,12 +73,12 @@ export function GameCard({ game, isSelected, isHost, onSelect }: GameCardProps) 
                   </span>
                 )}
               </div>
-              <p className="mt-2 text-sm leading-6 text-white/56">{game.description}</p>
+              <p className="mt-2 text-sm leading-5 text-white/56">{game.description}</p>
             </div>
           </div>
         </div>
 
-        <div className="mt-4 flex items-center justify-between gap-3">
+        <div className="mt-4 flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-2 text-xs text-white/42">
             <Users className="h-3.5 w-3.5 text-cyan-200/70" />
             {game.minPlayers}-{game.maxPlayers} joueurs

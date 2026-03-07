@@ -82,17 +82,17 @@ export default function LobbyPage() {
         style={{ right: "-6rem", top: "8rem", animationDelay: "-5s" }}
       />
 
-      <div className="relative z-10 flex min-h-screen flex-col">
+      <div className="relative z-10 flex min-h-screen flex-col overflow-x-clip">
         <Header roomCode={code} isConnected={isConnected} />
 
-        <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-4 px-4 py-4 sm:px-5 sm:py-6">
+        <main className="mx-auto flex w-full max-w-6xl min-w-0 flex-1 flex-col gap-4 overflow-x-clip px-3 py-3 sm:px-5 sm:py-6">
           {error && (
             <div className="rounded-[1.4rem] border border-red-400/20 bg-red-400/[0.06] px-4 py-3 text-sm text-red-200/92">
               {error}
             </div>
           )}
 
-          <section className="site-panel rounded-[1.8rem] p-4 sm:p-5">
+          <section className="site-panel overflow-hidden rounded-[1.8rem] p-4 sm:p-5">
             <div className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
               <div className="space-y-3">
                 <div className="flex flex-wrap gap-2">
@@ -104,19 +104,19 @@ export default function LobbyPage() {
                   </span>
                 </div>
 
-                <div>
-                  <h1 className="text-balance text-2xl font-semibold tracking-[-0.03em] text-white sm:text-3xl">
+                <div className="min-w-0">
+                  <h1 className="text-balance text-xl font-semibold tracking-[-0.03em] text-white sm:text-3xl">
                     {selectedGame
                       ? `${selectedGame.name} est pret a partir.`
                       : "Choisis le prochain jeu pour la room."}
                   </h1>
                   <p className="mt-2 max-w-2xl text-sm leading-6 text-white/58">
-                    Interface plus courte, plus mobile, et plus directe pour lancer une partie.
+                    Choisis, valide, lance.
                   </p>
                 </div>
               </div>
 
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
+              <div className="grid min-w-0 gap-3 sm:grid-cols-2 lg:grid-cols-1">
                 <div className="site-panel-soft rounded-[1.5rem] p-4">
                   <p className="text-xs uppercase tracking-[0.18em] text-white/35">
                     Jeu selectionne
@@ -172,7 +172,7 @@ export default function LobbyPage() {
             </div>
           </section>
 
-          <div className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
+          <div className="grid min-w-0 gap-4 xl:grid-cols-[1.2fr_0.8fr]">
             <GamePicker
               selectedGameId={selectedGameId}
               isHost={isHost}

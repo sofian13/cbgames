@@ -71,22 +71,11 @@ export function GameShell({
   }, [isGameOver]);
 
   return (
-    <div className="site-shell">
-      <div className="arcade-ridge arcade-ridge-back" />
-      <div className="arcade-ridge arcade-ridge-front" />
-      <div
-        className="site-orb h-72 w-72 bg-[#ff8755]/30"
-        style={{ left: "-5rem", top: "8rem" }}
-      />
-      <div
-        className="site-orb h-80 w-80 bg-cyan-300/20"
-        style={{ right: "-6rem", top: "12rem", animationDelay: "-6s" }}
-      />
-
+    <div className="relative min-h-[100svh] overflow-hidden bg-transparent">
       <div className="relative z-10 flex min-h-[100svh] flex-col">
         {!isGameOver && gameMeta && (
           <div className="pointer-events-none fixed inset-x-0 top-0 z-40 px-3 pt-[calc(env(safe-area-inset-top,0px)+0.75rem)] sm:px-5">
-            <div className="pointer-events-auto mx-auto flex max-w-6xl items-center justify-between gap-3">
+            <div className="pointer-events-auto mx-auto flex w-full max-w-[1100px] items-center justify-between gap-3">
               <button
                 onClick={onReturnToLobby}
                 className="arcade-float-button shrink-0"
@@ -135,9 +124,9 @@ export function GameShell({
           </div>
         )}
 
-        <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-3 pb-[calc(env(safe-area-inset-bottom,0px)+5.6rem)] pt-20 sm:px-5 sm:pb-28 sm:pt-24">
+        <div className="flex w-full flex-1 flex-col px-0 pb-[calc(env(safe-area-inset-bottom,0px)+5.6rem)] pt-18 sm:pb-28 sm:pt-22">
           {!isGameOver && gameMeta && (
-            <section className="site-panel-soft mb-4 hidden rounded-[1.7rem] px-4 py-3 md:block">
+            <section className="site-panel-soft mx-auto mb-4 hidden w-full max-w-[1100px] rounded-[1.7rem] px-4 py-3 md:block">
               <div className="flex items-center justify-between gap-4">
                 <div className="flex min-w-0 items-center gap-3">
                   <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.05] text-2xl">
@@ -224,7 +213,7 @@ export function GameShell({
 
         {!isGameOver && (
           <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 px-4 pb-[calc(env(safe-area-inset-bottom,0px)+0.95rem)]">
-            <div className="pointer-events-auto mx-auto flex max-w-6xl justify-center">
+            <div className="pointer-events-auto mx-auto flex w-full max-w-[1100px] justify-center">
               <div className="arcade-dock">
                 {onResetGame && (
                   <button
