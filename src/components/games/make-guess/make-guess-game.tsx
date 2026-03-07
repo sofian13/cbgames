@@ -18,6 +18,10 @@ const WORDS_ANIMALS = [
   "Paresseux", "Tatou", "Colibri", "Narval", "Capybara",
   "Salamandre", "Poulpe", "Toucan", "Iguane", "Scarabee",
   "Koala", "Okapi", "Axolotl", "Pangolin", "Suricate",
+  "Lion", "Dauphin", "Lapin", "Girafe", "Serpent",
+  "Pingouin", "Cheval", "Crocodile", "Panda", "Loup",
+  "Tigre", "Araignée", "Scorpion", "Souris", "Rat",
+  "Crevette", "Homard", "Hibou", "Chouette",
 ];
 
 const WORDS_FAMOUS = [
@@ -32,6 +36,8 @@ const WORDS_ACTIONS = [
   "Surfer", "Patiner", "Galoper", "Danser le tango", "Faire du mime",
   "Siffler", "Applaudir", "Ramper", "Mediter", "Bailler",
   "Tricoter", "Souder", "Pecher", "Demenager", "Negocier",
+  "Courir", "Dormir", "Chanter", "Sauter", "Cuisiner",
+  "Nager", "Pleurer", "Danser", "Conduire",
 ];
 
 const WORDS_PLACES = [
@@ -39,6 +45,9 @@ const WORDS_PLACES = [
   "Taj Mahal", "Statue de la Liberte", "Big Ben", "Acropole", "Niagara",
   "Mont Blanc", "Sahara", "Amazonie", "Antarctique", "Hollywood",
   "Las Vegas", "Venise", "Tokyo", "Dubai", "Tombouctou",
+  "École", "Plage", "Hôpital", "Cinéma", "Forêt",
+  "Restaurant", "Aéroport", "Montagne", "Supermarché", "Musée",
+  "Paris", "Londres", "Bretagne", "Normandie",
 ];
 
 const WORDS_EXPRESSIONS = [
@@ -61,6 +70,62 @@ const WORDS_FOOD = [
   "Guacamole", "Pretzel", "Churros", "Bruschetta", "Macaron",
   "Creme brulee", "Tartare", "Raclette", "Pain au chocolat", "Eclair",
   "Mille-feuille", "Profiterole", "Galette des rois", "Crepe Suzette", "Baba au rhum",
+  "Pizza", "Banane", "Chocolat", "Burger", "Fromage",
+  "Pastèque", "Bonbon", "Gâteau", "Coca-Cola", "Pepsi",
+  "Café", "Thé", "Bière", "Vin", "Caramel",
+  "Pomme", "Poire", "Ananas", "Fraise", "Framboise",
+  "Beurre", "Tarte", "Mars", "Snickers",
+];
+
+const WORDS_SIMPLE = [
+  "Chat", "Voiture", "Soleil", "Bébé", "Porte",
+  "Eau", "Main", "Livre", "Lit", "Ballon",
+  "Chaise", "Téléphone", "Miroir", "Valise", "Montre",
+  "Bougie", "Casque", "Stylo", "Oreiller", "Parapluie",
+];
+
+const WORDS_JOBS = [
+  "Médecin", "Pompier", "Professeur", "Policier", "Cuisinier",
+  "Pilote", "Coiffeur", "Avocat", "Boulanger", "Journaliste",
+  "Dentiste",
+];
+
+const WORDS_FUN = [
+  "GPS", "Photocopieuse", "Mariage", "Dragon", "Selfie",
+  "Vampire", "Trottinette", "Embouteillage", "Anniversaire", "Fantôme",
+  "Loup-garou", "Camping", "Glamping", "Moustache", "Barbe",
+];
+
+const WORDS_BRANDS = [
+  "Netflix", "YouTube", "iPhone", "Samsung", "Instagram",
+  "TikTok", "McDonald's", "Burger King", "Spotify", "Deezer",
+  "WhatsApp", "Telegram", "Google", "Bing", "Tinder", "Bumble",
+  "OnlyFans", "MYM", "Pornhub", "Xvideos", "Brazzers",
+  "Jacquie et Michel", "YouPorn", "XHamster", "RedTube",
+];
+
+const WORDS_CULTURE = [
+  "Batman", "Superman", "Naruto", "Sasuke", "Goku", "Vegeta",
+  "Luffy", "Zoro", "One Piece", "Bleach", "Manga", "Comics",
+  "Football", "Rugby", "Tennis", "Badminton", "Ski", "Snowboard",
+  "Karaté", "Judo", "Opéra", "Ballet", "Guitare", "Piano",
+  "Violon", "Trompette", "Saxophone",
+];
+
+const WORDS_ADULT = [
+  "Strip-tease", "Lap dance", "Fantasme", "Roleplay",
+  "Latex", "Cuir", "Corset", "Porte-jarretelles",
+  "String", "Culotte", "Lingerie", "Menottes",
+  "Clara Morgane", "Lana Rhoades", "Mia Khalifa", "Angela White",
+  "Riley Reid", "Adriana Chechik", "Abella Danger",
+  "Johnny Sins", "Manuel Ferrara",
+  "Missionnaire", "Levrette", "69", "Ciseaux",
+  "Fellation", "Cunnilingus", "Sodomie", "Pénétration",
+  "Domination", "Soumission", "BDSM", "Fétichisme", "Voyeurisme",
+  "Échangisme", "Cuckolding", "Lubrifiant",
+  "Plug anal", "Gode ceinture", "Masque",
+  "Nymphomane", "Puceau", "Préliminaires",
+  "Golden Shower", "Snowballing", "Footjob", "Handjob",
 ];
 
 const ALL_WORDS = [
@@ -72,6 +137,12 @@ const ALL_WORDS = [
   ...WORDS_EXPRESSIONS,
   ...WORDS_MOVIES,
   ...WORDS_FOOD,
+  ...WORDS_SIMPLE,
+  ...WORDS_JOBS,
+  ...WORDS_FUN,
+  ...WORDS_BRANDS,
+  ...WORDS_CULTURE,
+  ...WORDS_ADULT,
 ];
 
 // ── Types ──────────────────────────────────────────────────
