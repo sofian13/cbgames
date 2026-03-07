@@ -10,7 +10,6 @@ import {
   RotateCcw,
   X,
 } from "lucide-react";
-import { Header } from "@/components/layout/header";
 import { Scoreboard } from "./scoreboard";
 import { Button } from "@/components/ui/button";
 import { getGameById } from "@/lib/games/registry";
@@ -73,6 +72,8 @@ export function GameShell({
 
   return (
     <div className="site-shell">
+      <div className="arcade-ridge arcade-ridge-back" />
+      <div className="arcade-ridge arcade-ridge-front" />
       <div
         className="site-orb h-72 w-72 bg-[#ff8755]/30"
         style={{ left: "-5rem", top: "8rem" }}
@@ -82,32 +83,80 @@ export function GameShell({
         style={{ right: "-6rem", top: "12rem", animationDelay: "-6s" }}
       />
 
-      <div className="relative z-10 flex min-h-screen flex-col">
-        <Header roomCode={roomCode} isConnected={isConnected} />
+      <div className="relative z-10 flex min-h-[100svh] flex-col">
+        {!isGameOver && gameMeta && (
+          <div className="pointer-events-none fixed inset-x-0 top-0 z-40 px-3 pt-[calc(env(safe-area-inset-top,0px)+0.75rem)] sm:px-5">
+            <div className="pointer-events-auto mx-auto flex max-w-6xl items-center justify-between gap-3">
+              <button
+                onClick={onReturnToLobby}
+                className="arcade-float-button shrink-0"
+                aria-label="Retour au lobby"
+              >
+                <ArrowLeft className="h-4 w-4" />
+              </button>
 
-        <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-4 py-4 sm:px-5">
+              <div className="arcade-header-pill min-w-0 flex-1">
+                <div className="min-w-0">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-white/34">
+                    En jeu
+                  </p>
+                  <p className="truncate text-sm font-semibold text-white">
+                    {gameMeta.name}
+                  </p>
+                </div>
+
+                <div className="flex shrink-0 items-center gap-2">
+                  <span className="arcade-meta-chip font-mono text-[11px] font-semibold tracking-[0.22em]">
+                    {roomCode}
+                  </span>
+                  <span
+                    className={`h-2.5 w-2.5 rounded-full ${
+                      isConnected
+                        ? "bg-emerald-400 shadow-[0_0_14px_rgba(74,222,128,0.8)]"
+                        : "bg-red-400 shadow-[0_0_12px_rgba(248,113,113,0.55)]"
+                    }`}
+                    aria-hidden="true"
+                  />
+                </div>
+              </div>
+
+              {gameMeta.rules ? (
+                <button
+                  onClick={() => setShowRules(true)}
+                  className="arcade-float-button shrink-0"
+                  aria-label="Voir les regles"
+                >
+                  <BookOpen className="h-4 w-4" />
+                </button>
+              ) : (
+                <div className="h-12 w-12 shrink-0" />
+              )}
+            </div>
+          </div>
+        )}
+
+        <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-3 pb-[calc(env(safe-area-inset-bottom,0px)+5.6rem)] pt-20 sm:px-5 sm:pb-28 sm:pt-24">
           {!isGameOver && gameMeta && (
-            <section className="site-panel mb-4 rounded-[1.8rem] p-4 sm:p-5">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.05] text-3xl">
+            <section className="site-panel-soft mb-4 hidden rounded-[1.7rem] px-4 py-3 md:block">
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex min-w-0 items-center gap-3">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.05] text-2xl">
                     {gameMeta.icon}
                   </div>
-                  <div>
-                    <p className="section-title">Jeu en cours</p>
-                    <h1 className="mt-1 text-2xl font-semibold tracking-[-0.03em] text-white">
+                  <div className="min-w-0">
+                    <p className="section-title">Session</p>
+                    <p className="truncate text-base font-semibold text-white">
                       {gameMeta.name}
-                    </h1>
-                    <p className="mt-1 text-sm text-white/48">{gameMeta.description}</p>
+                    </p>
                   </div>
                 </div>
 
-                <div className="flex flex-wrap gap-2">
+                <div className="flex items-center gap-2">
                   <span className="site-chip rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em]">
                     {playerName}
                   </span>
                   <span className="site-chip-cool rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em]">
-                    mobile first
+                    plein ecran mobile
                   </span>
                 </div>
               </div>
@@ -135,7 +184,7 @@ export function GameShell({
                   <div className="site-panel-soft mt-5 rounded-[1.6rem] p-5 text-center">
                     <p className="text-2xl font-semibold text-cyan-100">+{pointsEarned} points</p>
                     <p className="mt-1 text-sm text-white/45">
-                      Niveau {level.level} · {level.title}
+                      Niveau {level.level} - {level.title}
                     </p>
                     <div className="mt-4 h-2 overflow-hidden rounded-full bg-white/[0.06]">
                       <div
@@ -169,39 +218,42 @@ export function GameShell({
               </div>
             </main>
           ) : (
-            <div className="safe-bottom flex flex-1 flex-col pb-24 lg:pb-6">{children}</div>
+            <div className="safe-bottom flex flex-1 flex-col pb-24 sm:pb-28">{children}</div>
           )}
         </div>
 
         {!isGameOver && (
-          <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 px-4 pb-4 lg:bottom-auto lg:left-auto lg:right-5 lg:top-24 lg:w-auto lg:px-0 lg:pb-0">
-            <div className="pointer-events-auto mx-auto flex max-w-6xl justify-end">
-              <div className="site-panel flex w-full max-w-lg items-center gap-2 rounded-[1.5rem] p-2 lg:max-w-none">
+          <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 px-4 pb-[calc(env(safe-area-inset-bottom,0px)+0.95rem)]">
+            <div className="pointer-events-auto mx-auto flex max-w-6xl justify-center">
+              <div className="arcade-dock">
                 {onResetGame && (
                   <button
                     onClick={onResetGame}
-                    className="flex flex-1 items-center justify-center gap-2 rounded-[1rem] border border-white/10 bg-white/[0.05] px-3 py-3 text-sm font-medium text-white/72 transition hover:text-white"
+                    className="arcade-dock-button bg-[linear-gradient(180deg,rgba(169,101,255,0.92),rgba(127,72,236,0.9))] text-white"
+                    aria-label="Relancer"
+                    title="Relancer"
                   >
                     <RotateCcw className="h-4 w-4" />
-                    Relancer
                   </button>
                 )}
 
                 <button
                   onClick={onReturnToLobby}
-                  className="flex flex-1 items-center justify-center gap-2 rounded-[1rem] border border-white/10 bg-white/[0.05] px-3 py-3 text-sm font-medium text-white/72 transition hover:text-white"
+                  className="arcade-dock-button bg-[linear-gradient(180deg,rgba(253,205,55,0.98),rgba(239,168,18,0.92))] text-slate-950"
+                  aria-label="Retour au lobby"
+                  title="Lobby"
                 >
                   <Home className="h-4 w-4" />
-                  Lobby
                 </button>
 
                 {gameMeta?.rules && (
                   <button
                     onClick={() => setShowRules(true)}
-                    className="flex flex-1 items-center justify-center gap-2 rounded-[1rem] border border-cyan-300/18 bg-cyan-300/[0.08] px-3 py-3 text-sm font-medium text-cyan-100 transition hover:bg-cyan-300/[0.12]"
+                    className="arcade-dock-button bg-[linear-gradient(180deg,rgba(71,109,255,0.96),rgba(55,76,211,0.92))] text-white"
+                    aria-label="Voir les regles"
+                    title="Regles"
                   >
                     <BookOpen className="h-4 w-4" />
-                    Regles
                   </button>
                 )}
               </div>
@@ -215,7 +267,7 @@ export function GameShell({
             onClick={() => setShowRules(false)}
           >
             <div
-              className="site-panel w-full max-w-lg rounded-[2rem] p-6 sm:p-7"
+              className="arcade-sheet w-full max-w-lg rounded-[2rem] p-6 sm:p-7"
               onClick={(event) => event.stopPropagation()}
             >
               <div className="mb-6 flex items-start justify-between gap-4">
@@ -233,7 +285,7 @@ export function GameShell({
 
                 <button
                   onClick={() => setShowRules(false)}
-                  className="rounded-full border border-white/10 bg-white/[0.05] p-2 text-white/42 transition hover:text-white"
+                  className="arcade-float-button h-10 w-10 text-white/72"
                 >
                   <X className="h-4 w-4" />
                 </button>

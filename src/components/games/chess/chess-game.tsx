@@ -991,6 +991,15 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
     setLocalMode(true);
   }, [localTimeMinutes]);
 
+  const focusBoardStyle = {
+    width: "min(calc(100vw - 1rem), calc(100svh - 14.5rem))",
+    maxWidth: "940px",
+  };
+  const normalBoardStyle = {
+    width: "min(calc(100vw - 1.25rem), 820px)",
+    maxWidth: "820px",
+  };
+
   /* ════════════════════════════════════════════════════════
      LOCAL MODE
      ════════════════════════════════════════════════════════ */
@@ -1007,10 +1016,10 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
 
     if (isFocusView) {
       return (
-        <div className="fixed inset-0 z-[120] flex flex-col bg-[radial-gradient(circle_at_50%_25%,rgba(139,92,246,0.15),transparent_40%),linear-gradient(155deg,#0a0a1a,#111827)] p-3 font-sans sm:p-5">
-          <div className="mx-auto flex w-full max-w-[980px] flex-1 flex-col">
-            {/* Clocks */}
-            <div className="grid grid-cols-2 gap-3">
+      <div className="fixed inset-0 z-[120] flex flex-col overflow-hidden bg-[radial-gradient(circle_at_50%_100%,rgba(45,236,255,0.24),transparent_34%),radial-gradient(circle_at_50%_12%,rgba(120,102,255,0.18),transparent_38%),linear-gradient(180deg,#2e2b56,#0a153c_58%,#010816)] px-2 pb-[calc(env(safe-area-inset-bottom,0px)+0.9rem)] pt-[calc(env(safe-area-inset-top,0px)+0.7rem)] font-sans sm:p-5">
+        <div className="mx-auto flex w-full max-w-[980px] flex-1 flex-col">
+          {/* Clocks */}
+          <div className="grid grid-cols-2 gap-2 sm:gap-3">
               <ClockPanel
                 name={localWhiteName}
                 time={localWhiteTimeMs}
@@ -1026,7 +1035,7 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
             </div>
 
             {/* Captured pieces */}
-            <div className="mt-3 grid grid-cols-2 gap-3">
+            <div className="mt-2 hidden grid-cols-2 gap-3 sm:grid">
               <CapturedPieces label={`${localWhiteName} a pris`} pieces={localCapturedBlack} />
               <CapturedPieces
                 label={`${localKind === "bot" ? "Bot" : localBlackName} a pris`}
@@ -1035,7 +1044,7 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
             </div>
 
             {/* Board */}
-            <div className="mx-auto mt-4 w-full max-w-[min(98vw,940px)]">
+            <div className="mx-auto mt-3" style={focusBoardStyle}>
               <ChessBoardView
                 board={localBoard}
                 selectedSquare={localSelected}
@@ -1048,9 +1057,9 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
             </div>
 
             {/* Status bar */}
-            <div className="mt-3 flex items-center justify-between gap-2">
-              <p className="font-sans text-sm text-white/90">{statusText}</p>
-              <div className="flex items-center gap-2">
+            <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-center font-sans text-xs text-white/80 sm:text-left sm:text-sm">{statusText}</p>
+              <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-end">
                 {!localWinner && (
                   <button
                     onClick={() => {
@@ -1103,16 +1112,16 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_25%,rgba(78,207,138,0.12),transparent_40%),radial-gradient(circle_at_85%_85%,rgba(139,92,246,0.1),transparent_40%),linear-gradient(145deg,#0a0a1a,#111827)]" />
 
         {/* Main panel */}
-        <div className="relative mx-auto flex w-full max-w-4xl flex-1 flex-col rounded-3xl border border-white/25 bg-black/30 p-5 backdrop-blur-sm sm:p-7">
+        <div className="relative mx-auto flex w-full max-w-4xl flex-1 flex-col rounded-3xl border border-white/18 bg-black/28 p-4 backdrop-blur-xl sm:p-7">
           {/* Header */}
-          <div className="flex items-center justify-between gap-3">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="font-sans text-[11px] uppercase tracking-[0.2em] text-white/40">Echecs Local</p>
               <p className="mt-0.5 font-sans text-sm text-white/90">
                 {localKind === "bot" ? `vs Bot (${localBotLevel})` : "Duel 1 telephone"}
               </p>
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <button
                 onClick={toggleFullscreen}
                 className="rounded-xl border border-white/25 bg-black/30 px-3 py-2 font-sans text-xs text-white/90 backdrop-blur-sm transition hover:bg-white/10"
@@ -1138,7 +1147,7 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
           )}
 
           {/* Clocks */}
-          <div className="mt-3 grid grid-cols-2 gap-3">
+          <div className="mt-3 grid grid-cols-2 gap-2 sm:gap-3">
             <ClockPanel
               name={localWhiteName}
               time={localWhiteTimeMs}
@@ -1160,7 +1169,7 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
           )}
 
           {/* Board */}
-          <div className="mx-auto mt-4 w-full max-w-[min(92vw,820px)]">
+          <div className="mx-auto mt-4" style={normalBoardStyle}>
             <ChessBoardView
               board={localBoard}
               selectedSquare={localSelected}
@@ -1173,7 +1182,7 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
           </div>
 
           {/* Captured pieces */}
-          <div className="mt-4 grid grid-cols-2 gap-3">
+          <div className="mt-4 hidden grid-cols-2 gap-3 sm:grid">
             <CapturedPieces label={`${localWhiteName} a pris`} pieces={localCapturedBlack} />
             <CapturedPieces
               label={`${localKind === "bot" ? "Bot" : localBlackName} a pris`}
@@ -1228,7 +1237,7 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_25%,rgba(251,191,36,0.14),transparent_40%),radial-gradient(circle_at_80%_80%,rgba(139,92,246,0.12),transparent_40%),linear-gradient(145deg,#0a0a1a,#111827)]" />
 
         {/* Main panel */}
-        <div className="relative mx-auto flex w-full max-w-4xl flex-1 flex-col rounded-3xl border border-white/25 bg-black/30 p-5 backdrop-blur-sm sm:p-7">
+        <div className="relative mx-auto flex w-full max-w-4xl flex-1 flex-col rounded-3xl border border-white/18 bg-black/28 p-4 backdrop-blur-xl sm:p-7">
           {/* Title */}
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
@@ -1448,10 +1457,10 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
 
   if (isFocusView) {
     return (
-      <div className="fixed inset-0 z-[120] flex flex-col bg-[radial-gradient(circle_at_50%_25%,rgba(251,191,36,0.12),transparent_40%),linear-gradient(155deg,#0a0a1a,#111827)] p-3 font-sans sm:p-5">
+      <div className="fixed inset-0 z-[120] flex flex-col overflow-hidden bg-[radial-gradient(circle_at_50%_100%,rgba(45,236,255,0.24),transparent_34%),radial-gradient(circle_at_50%_12%,rgba(120,102,255,0.18),transparent_38%),linear-gradient(180deg,#2e2b56,#0a153c_58%,#010816)] px-2 pb-[calc(env(safe-area-inset-bottom,0px)+0.9rem)] pt-[calc(env(safe-area-inset-top,0px)+0.7rem)] font-sans sm:p-5">
         <div className="mx-auto flex w-full max-w-[980px] flex-1 flex-col">
           {/* Clocks */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-2 sm:gap-3">
             <ClockPanel
               name={whiteName}
               time={state.whiteTimeMs ?? 0}
@@ -1467,13 +1476,13 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
           </div>
 
           {/* Captured pieces */}
-          <div className="mt-3 grid grid-cols-2 gap-3">
+          <div className="mt-2 hidden grid-cols-2 gap-3 sm:grid">
             <CapturedPieces label={`${whiteName} a pris`} pieces={onlineCapturedBlack} />
             <CapturedPieces label={`${blackName} a pris`} pieces={onlineCapturedWhite} />
           </div>
 
           {/* Board */}
-          <div className="mx-auto mt-4 w-full max-w-[min(98vw,940px)]">
+          <div className="mx-auto mt-3" style={focusBoardStyle}>
             <ChessBoardView
               board={board}
               selectedSquare={selected}
@@ -1486,9 +1495,9 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
           </div>
 
           {/* Status bar */}
-          <div className="mt-3 flex items-center justify-between gap-2">
-            <p className="font-sans text-sm text-white/90">{info}</p>
-            <div className="flex items-center gap-2">
+          <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-center font-sans text-xs text-white/80 sm:text-left sm:text-sm">{info}</p>
+            <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-end">
               {state.phase === "playing" && (
                 <button
                   onClick={shareSpectatorLink}
@@ -1549,9 +1558,9 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_25%,rgba(251,191,36,0.14),transparent_40%),radial-gradient(circle_at_80%_80%,rgba(139,92,246,0.12),transparent_40%),linear-gradient(145deg,#0a0a1a,#111827)]" />
 
       {/* Main panel */}
-      <div className="relative mx-auto flex w-full max-w-4xl flex-1 flex-col rounded-3xl border border-white/25 bg-black/30 p-5 backdrop-blur-sm sm:p-7">
+      <div className="relative mx-auto flex w-full max-w-4xl flex-1 flex-col rounded-3xl border border-white/18 bg-black/28 p-4 backdrop-blur-xl sm:p-7">
         {/* Header */}
-        <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex-1">
             <p className="font-sans text-[11px] uppercase tracking-[0.2em] text-white/40">Echecs en ligne</p>
 
@@ -1574,7 +1583,7 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
             )}
 
             {/* Clocks */}
-            <div className="mt-3 grid grid-cols-2 gap-3">
+            <div className="mt-3 grid grid-cols-2 gap-2 sm:gap-3">
               <ClockPanel
                 name={whiteName}
                 time={state.whiteTimeMs ?? 0}
@@ -1590,22 +1599,22 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
             </div>
 
             {/* Captured pieces */}
-            <div className="mt-3 grid grid-cols-2 gap-3">
+            <div className="mt-3 hidden grid-cols-2 gap-3 sm:grid">
               <CapturedPieces label={`${whiteName} a pris`} pieces={onlineCapturedBlack} />
               <CapturedPieces label={`${blackName} a pris`} pieces={onlineCapturedWhite} />
             </div>
           </div>
 
           {/* Side info */}
-          <div className="flex flex-col items-end gap-2">
+          <div className="flex flex-wrap items-center gap-2 sm:flex-col sm:items-end">
             <button
               onClick={toggleFullscreen}
               className="rounded-xl border border-white/25 bg-black/30 px-4 py-2 font-sans text-xs text-white/90 backdrop-blur-sm transition hover:bg-white/10"
             >
               {isFullscreen ? "Quitter plein ecran" : "Plein ecran"}
             </button>
-            <span className="font-sans text-xs text-white/40">{whiteName} (Blanc)</span>
-            <span className="font-sans text-xs text-white/40">{blackName} (Noir)</span>
+            <span className="hidden font-sans text-xs text-white/40 sm:inline">{whiteName} (Blanc)</span>
+            <span className="hidden font-sans text-xs text-white/40 sm:inline">{blackName} (Noir)</span>
             {state.lastMove && (
               <span className="font-mono text-xs text-white/25">
                 {state.lastMove.fromSquare} → {state.lastMove.toSquare}
@@ -1615,7 +1624,7 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
         </div>
 
         {/* Board */}
-        <div className="mx-auto mt-5 w-full max-w-[min(92vw,820px)]">
+        <div className="mx-auto mt-4" style={normalBoardStyle}>
           <ChessBoardView
             board={board}
             selectedSquare={selected}
@@ -1647,7 +1656,7 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
         </div>
 
         {/* Action buttons */}
-        <div className="mt-5 flex flex-wrap gap-3">
+        <div className="mt-5 grid grid-cols-2 gap-3 sm:flex sm:flex-wrap">
           {state.phase === "playing" && (
             <button
               onClick={shareSpectatorLink}
