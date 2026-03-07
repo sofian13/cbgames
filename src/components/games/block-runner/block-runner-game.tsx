@@ -385,7 +385,10 @@ export default function BlockRunnerGame({
       const orientationApi = screen.orientation as {
         lock?: (orientation: "landscape") => Promise<void>;
       };
-      void orientationApi.lock?.("landscape").catch(() => {});
+      const lockPromise = orientationApi.lock?.("landscape");
+      if (lockPromise) {
+        void lockPromise.catch(() => {});
+      }
     } catch {}
 
     return () => {
