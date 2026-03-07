@@ -4,7 +4,6 @@ import { useState } from "react";
 import { BookOpen, CheckCircle2, Users, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { GameMeta } from "@/lib/games/types";
-import { GameCover } from "@/components/shared/game-cover";
 
 interface GameCardProps {
   game: GameMeta;
@@ -32,14 +31,16 @@ export function GameCard({ game, isSelected, isHost, onSelect }: GameCardProps) 
     <>
       <article
         className={cn(
-          "site-card-hover relative min-w-0 overflow-hidden rounded-[1.75rem] border border-slate-800/90 bg-[#d7dfeb] p-2 shadow-[0_12px_0_rgba(15,23,42,0.92)]",
+          "site-panel-soft site-card-hover relative min-w-0 overflow-hidden rounded-[1.6rem] border p-4 sm:p-5",
           CATEGORY_CLASSES[game.category],
           isSelected
-            ? "ring-4 ring-cyan-300/45"
-            : "",
+            ? "border-cyan-300/34 bg-cyan-300/[0.08] shadow-[0_20px_40px_rgba(0,0,0,0.25),0_0_28px_rgba(79,209,255,0.08)]"
+            : "border-white/8",
           disabled && "opacity-60"
         )}
       >
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/18 to-transparent" />
+
         <div
           role={disabled ? undefined : "button"}
           tabIndex={disabled ? -1 : 0}
@@ -52,48 +53,44 @@ export function GameCard({ game, isSelected, isHost, onSelect }: GameCardProps) 
           }}
           className={cn("cursor-pointer outline-none", disabled && "cursor-default")}
         >
-          <div className="space-y-3">
-            <GameCover
-              gameId={game.id}
-              name={game.name}
-              category={game.category}
-              className="w-full"
-            />
+          <div className="flex items-start gap-4">
+            <div
+              className={cn(
+                "flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-white/10 text-3xl shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]",
+                isSelected ? "bg-cyan-300/[0.08]" : "bg-white/[0.04]"
+              )}
+            >
+              {game.icon}
+            </div>
 
-            <div className="rounded-[1.25rem] bg-[#31385b] px-3 py-3 text-white">
-              <div className="flex flex-wrap items-start gap-2">
-                <div className="min-w-0 flex-1">
-                  <h4 className="line-clamp-2 text-sm font-black leading-5 tracking-[-0.02em] text-white">
-                    {game.name}
-                  </h4>
-                  <p className="mt-1 line-clamp-2 text-xs leading-4 text-white/68">
-                    {game.description}
-                  </p>
-                </div>
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <h4 className="text-base font-semibold text-white/92">{game.name}</h4>
                 {isSelected && (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-cyan-300 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-slate-900">
+                  <span className="inline-flex items-center gap-1 rounded-full border border-cyan-300/28 bg-cyan-300/[0.12] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-cyan-100">
                     <CheckCircle2 className="h-3 w-3" />
                     Actif
                   </span>
                 )}
               </div>
-
-              <div className="mt-3 flex items-center justify-between gap-2">
-                <div className="flex items-center gap-1.5 text-[11px] font-semibold text-cyan-100/80">
-                  <Users className="h-3.5 w-3.5 text-cyan-200/80" />
-                  {game.minPlayers}-{game.maxPlayers}
-                </div>
-
-                <button
-                  onClick={() => setShowRules(true)}
-                  className="flex shrink-0 items-center gap-1.5 rounded-full border border-white/12 bg-white/8 px-2.5 py-1.5 text-[11px] font-semibold text-white/74 transition hover:border-white/24 hover:text-white"
-                >
-                  <BookOpen className="h-3.5 w-3.5" />
-                  Regles
-                </button>
-              </div>
+              <p className="mt-2 text-sm leading-5 text-white/56">{game.description}</p>
             </div>
           </div>
+        </div>
+
+        <div className="mt-4 flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-2 text-xs text-white/42">
+            <Users className="h-3.5 w-3.5 text-cyan-200/70" />
+            {game.minPlayers}-{game.maxPlayers} joueurs
+          </div>
+
+          <button
+            onClick={() => setShowRules(true)}
+            className="flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3 py-2 text-xs font-medium text-white/62 transition hover:border-cyan-300/28 hover:text-white"
+          >
+            <BookOpen className="h-3.5 w-3.5" />
+            Regles
+          </button>
         </div>
       </article>
 

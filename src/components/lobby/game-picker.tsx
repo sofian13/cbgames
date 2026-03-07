@@ -77,7 +77,7 @@ export function GamePicker({ selectedGameId, isHost, onSelectGame }: GamePickerP
         </div>
       </div>
 
-      <div className="grid min-w-0 grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-4">
+      <div className="grid min-w-0 gap-3 md:grid-cols-2 xl:grid-cols-3">
         {filteredGames.length > 0 ? (
           filteredGames.map((game) => (
             <GameCard

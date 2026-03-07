@@ -7,8 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "party:dev": "npx partykit dev --port 1999",
-    "generate:game-covers": "node scripts/generate-game-covers.mjs"
+    "party:dev": "npx partykit dev --port 1999"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.7",

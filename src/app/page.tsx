@@ -6,7 +6,6 @@ import { ArrowRight, Gamepad2, Plus, Smartphone, Sparkles, Users2 } from "lucide
 import { generateRoomCode, ROOM_CODE_LENGTH } from "@/lib/party/constants";
 import { getOrCreateGuest, setGuestName } from "@/lib/guest";
 import { GAMES } from "@/lib/games/registry";
-import { GameCover } from "@/components/shared/game-cover";
 
 function UsernameEditor({
   initialName,
@@ -73,24 +72,30 @@ function UsernameEditor({
 }
 
 function PreviewCard({
-  gameId,
+  icon,
   name,
   category,
   index,
 }: {
-  gameId: string;
+  icon: string;
   name: string;
   category: string;
   index: number;
 }) {
   return (
     <article
-      className="site-card-hover rounded-[1.55rem] border border-slate-800/90 bg-[#d7dfeb] p-2 shadow-[0_10px_0_rgba(15,23,42,0.92)]"
+      className="site-panel-soft site-card-hover rounded-[1.4rem] p-4"
       style={{
         animationDelay: `${0.14 + index * 0.06}s`,
       }}
     >
-      <GameCover gameId={gameId} name={name} category={category} compact />
+      <div className="mb-4 flex items-center justify-between">
+        <span className="text-3xl leading-none">{icon}</span>
+        <span className="rounded-full border border-white/10 bg-white/[0.06] px-2.5 py-1 text-[10px] uppercase tracking-[0.18em] text-white/35">
+          {category}
+        </span>
+      </div>
+      <h3 className="text-sm font-semibold text-white/88">{name}</h3>
     </article>
   );
 }
@@ -278,7 +283,7 @@ export default function HomePage() {
                 {featuredGames.map((game, index) => (
                   <PreviewCard
                     key={game.id}
-                    gameId={game.id}
+                    icon={game.icon}
                     name={game.name}
                     category={game.category}
                     index={index}
