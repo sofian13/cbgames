@@ -77,8 +77,12 @@ function worldPercent(worldX: number, cameraX: number) {
   return ((worldX - cameraX) / VIEW_W) * 100;
 }
 
-function buildGroundSegments(goalX: number, gaps: Array<{ x: number; w: number }>) {
-  const ordered = [...gaps].sort((a, b) => a.x - b.x);
+function buildGroundSegments(
+  goalX: number,
+  gaps: Array<{ x: number; w: number }> | null | undefined
+) {
+  const safeGaps = Array.isArray(gaps) ? gaps : [];
+  const ordered = [...safeGaps].sort((a, b) => a.x - b.x);
   const segments: Array<{ x: number; w: number }> = [];
   let cursor = 0;
 
@@ -302,8 +306,18 @@ export default function BlockRunnerGame({
   const moveXRef = useRef(0);
   const moveLoopRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const players = useMemo(() => state?.players ?? [], [state?.players]);
-  const level = state?.level ?? null;
+  const players = Array.isArray(state?.players) ? state.players : [];
+  const palette = Array.isArray(state?.palette) ? state.palette : Object.keys(COLOR_INFO);
+  const spectators = Array.isArray(state?.spectators) ? state.spectators : [];
+  const level = state?.level
+    ? {
+        ...state.level,
+        traps: Array.isArray(state.level.traps) ? state.level.traps : [],
+        gaps: Array.isArray(state.level.gaps) ? state.level.gaps : [],
+        enemies: Array.isArray(state.level.enemies) ? state.level.enemies : [],
+        hazards: Array.isArray(state.level.hazards) ? state.level.hazards : [],
+      }
+    : null;
   const myPlayer = useMemo(
     () => players.find((player) => player.id === state?.myPlayerId) ?? null,
     [players, state?.myPlayerId]
@@ -542,7 +556,7 @@ export default function BlockRunnerGame({
                     Couleur
                   </p>
                   <div className="mt-4 flex flex-wrap gap-3">
-                    {state.palette.map((color) => {
+                    {palette.map((color) => {
                       const mine = myPlayer?.color === color;
                       const colorInfo = COLOR_INFO[color];
                       return (
@@ -576,9 +590,9 @@ export default function BlockRunnerGame({
                   <p className="mt-1 text-sm font-semibold text-white/88">
                     {players.length}/{state.playerCount} joueurs en piste
                   </p>
-                  {state.spectators.length > 0 ? (
+                  {spectators.length > 0 ? (
                     <p className="mt-1 text-xs text-white/42">
-                      Spectateurs: {state.spectators.map((spectator) => spectator.name).join(", ")}
+                      Spectateurs: {spectators.map((spectator) => spectator.name).join(", ")}
                     </p>
                   ) : null}
                 </div>
