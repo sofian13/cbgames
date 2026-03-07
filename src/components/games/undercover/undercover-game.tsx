@@ -288,12 +288,304 @@ const ROLE_GLOW: Record<Role, string> = {
   mrwhite: "0 0 40px rgba(255,255,255,0.3), 0 0 80px rgba(255,255,255,0.15)",
 };
 
+const PLAYER_ORB_THEMES = [
+  "from-[#64f0a8] via-[#44d7aa] to-[#23b6d9]",
+  "from-[#49d6ff] via-[#31b1f2] to-[#1477eb]",
+  "from-[#6ef59a] via-[#56e4ab] to-[#2dc2d8]",
+  "from-[#6ce4ff] via-[#38bdf8] to-[#2563eb]",
+];
+
+const ROLE_REVEAL_LABELS: Record<Role, string> = {
+  civilian: "Civil",
+  undercover: "Undercover",
+  mrwhite: "Mr. White",
+};
+
+function getPlayerInitial(name: string) {
+  return name.trim().charAt(0).toUpperCase() || "?";
+}
+
+function getWinnerHeadline(role: Role | null) {
+  if (role === "civilian") return "Les civils gagnent";
+  if (role === "mrwhite") return "Mr. White gagne";
+  return "Les imposteurs gagnent";
+}
+
+function getWinnerSubline(role: Role | null) {
+  if (role === "civilian") return "Tous les menaces ont ete sorties";
+  if (role === "mrwhite") return "Mr. White a retourne la partie";
+  return "Les Undercover ont pris le controle";
+}
+
 function getRoleLabel(role: Role | null): string {
   return role ? ROLE_LABELS[role] : "???";
 }
 
 function getRoleColor(role: Role | null): string {
   return role ? ROLE_COLORS[role] : "text-white/40";
+}
+
+function UndercoverPlayerCard({
+  name,
+  accentIndex,
+  badge,
+  badgeTone = "neutral",
+  selected = false,
+  eliminated = false,
+  revealedRole = null,
+  disabled = false,
+  overlayLabel = null,
+  onClick,
+}: {
+  name: string;
+  accentIndex: number;
+  badge?: string | null;
+  badgeTone?: "neutral" | "danger" | "success" | "order";
+  selected?: boolean;
+  eliminated?: boolean;
+  revealedRole?: Role | null;
+  disabled?: boolean;
+  overlayLabel?: string | null;
+  onClick?: () => void;
+}) {
+  const gradient = PLAYER_ORB_THEMES[accentIndex % PLAYER_ORB_THEMES.length];
+  const badgeClass =
+    badgeTone === "danger"
+      ? "bg-[#ff9c52] text-white shadow-[0_6px_18px_rgba(255,140,66,0.35)]"
+      : badgeTone === "success"
+        ? "bg-[#65dfb2] text-white shadow-[0_6px_18px_rgba(80,214,154,0.35)]"
+        : badgeTone === "order"
+          ? "bg-[linear-gradient(180deg,#fb7185,#ec4899)] text-white shadow-[0_6px_18px_rgba(236,72,153,0.3)]"
+          : "bg-white/14 text-white/82";
+
+  const content = (
+    <div
+      className={cn(
+        "relative flex flex-col items-center pb-1 pt-5 transition-all",
+        selected && "scale-[1.02]",
+        disabled && "opacity-70"
+      )}
+    >
+      {badge ? (
+        <span
+          className={cn(
+            "absolute left-1/2 top-0 z-10 -translate-x-1/2 rounded-full px-3 py-1 text-[11px] font-semibold leading-none",
+            badgeClass
+          )}
+        >
+          {badge}
+        </span>
+      ) : null}
+
+      <div
+        className={cn(
+          "relative flex h-24 w-24 items-center justify-center rounded-full border text-5xl font-bold text-white shadow-[0_18px_28px_rgba(0,0,0,0.3)] transition-all",
+          `bg-gradient-to-b ${gradient}`,
+          selected ? "border-white/85 ring-4 ring-cyan-300/22" : "border-white/35",
+          eliminated && "grayscale opacity-55"
+        )}
+      >
+        <span>{getPlayerInitial(name)}</span>
+        {revealedRole ? (
+          <span className="absolute -right-1 top-1 rounded-full border-2 border-white/80 bg-slate-950/70 px-2 py-1 text-[10px] font-semibold text-white">
+            {ROLE_REVEAL_LABELS[revealedRole]}
+          </span>
+        ) : null}
+        {overlayLabel ? (
+          <span className="absolute inset-0 flex items-center justify-center rounded-full bg-slate-950/42 text-[11px] font-semibold uppercase tracking-[0.2em] text-white/82">
+            {overlayLabel}
+          </span>
+        ) : null}
+      </div>
+
+      <div className="mt-2 min-h-[34px] w-28 rounded-md bg-white/65 px-2 py-1 text-center text-sm font-semibold text-black shadow-[0_10px_20px_rgba(0,0,0,0.16)]">
+        {name}
+      </div>
+    </div>
+  );
+
+  if (!onClick) return content;
+
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className={cn("rounded-[22px] transition-all press-effect", disabled && "cursor-not-allowed")}
+    >
+      {content}
+    </button>
+  );
+}
+
+function VoteConfirmModal({
+  targetName,
+  onCancel,
+  onConfirm,
+}: {
+  targetName: string;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/55 p-4 backdrop-blur-sm">
+      <div className="w-full max-w-xs overflow-hidden rounded-[22px] border border-white/14 bg-[#1d2731]/96 shadow-[0_20px_45px_rgba(0,0,0,0.42)]">
+        <div className="px-5 py-6 text-center">
+          <p className="text-lg font-semibold text-white/92">Eliminer {targetName} ?</p>
+        </div>
+        <div className="grid grid-cols-2 border-t border-white/10">
+          <button
+            onClick={onCancel}
+            className="px-4 py-3 text-sm font-medium text-cyan-300 transition hover:bg-white/5"
+          >
+            Annuler
+          </button>
+          <button
+            onClick={onConfirm}
+            className="border-l border-white/10 px-4 py-3 text-sm font-semibold text-red-300 transition hover:bg-red-500/10"
+          >
+            Eliminer
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function EliminationRevealCard({
+  playerName,
+  role,
+  onConfirm,
+}: {
+  playerName: string | null;
+  role: Role | null;
+  onConfirm?: () => void;
+}) {
+  return (
+    <div className="w-full max-w-sm rounded-[28px] border border-white/55 bg-[linear-gradient(180deg,rgba(16,22,56,0.96),rgba(7,12,36,0.96))] p-5 shadow-[0_24px_60px_rgba(0,0,0,0.45)] backdrop-blur-xl">
+      <div className="text-center">
+        <h3 className="text-3xl font-semibold leading-tight text-white">
+          {role === "civilian"
+            ? "Un civil a ete elimine"
+            : role === "undercover"
+              ? "Un Undercover a ete elimine"
+              : role === "mrwhite"
+                ? "Mr. White a ete elimine"
+                : "Personne n'a ete elimine"}
+        </h3>
+      </div>
+      <div className="mt-8 flex justify-center">
+        <UndercoverPlayerCard
+          name={playerName ?? "Egalite"}
+          accentIndex={0}
+          eliminated={false}
+          revealedRole={role}
+        />
+      </div>
+      {onConfirm ? (
+        <button
+          onClick={onConfirm}
+          className="mx-auto mt-6 block w-full max-w-[210px] rounded-full bg-gradient-to-r from-[#65dfb2] to-[#35d7d0] px-6 py-3 text-lg font-semibold text-white shadow-[0_10px_24px_rgba(80,214,154,0.35)]"
+        >
+          OK
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
+function WinnerSplash({
+  winnerRole,
+  civilianWord,
+  undercoverWord,
+  players,
+  playerId,
+  local = false,
+  onRestart,
+  onExit,
+}: {
+  winnerRole: Role | null;
+  civilianWord: string | null;
+  undercoverWord: string | null;
+  players: Array<{ id: string; name: string; role: Role | null; alive: boolean }>;
+  playerId: string;
+  local?: boolean;
+  onRestart?: () => void;
+  onExit?: () => void;
+}) {
+  const winnerLabel = getWinnerHeadline(winnerRole);
+  const winnerSubline = getWinnerSubline(winnerRole);
+  const winnerColor =
+    winnerRole === "civilian"
+      ? "from-[#65dfb2] to-[#35d7d0]"
+      : winnerRole === "mrwhite"
+        ? "from-[#d9dee8] to-[#9aa7bd]"
+        : "from-[#ff9c52] to-[#ff5b57]";
+
+  return (
+    <div className="relative mx-auto flex w-full max-w-md flex-1 flex-col items-center justify-center px-4 py-6">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_35%,rgba(255,215,64,0.18),transparent_26%),radial-gradient(circle_at_20%_20%,rgba(80,216,255,0.12),transparent_28%),radial-gradient(circle_at_80%_75%,rgba(255,95,109,0.14),transparent_32%)]" />
+      <div className="relative w-full rounded-[28px] border border-white/18 bg-[linear-gradient(180deg,rgba(10,14,36,0.9),rgba(6,10,24,0.96))] px-5 py-6 text-center shadow-[0_30px_90px_rgba(0,0,0,0.45)] backdrop-blur-xl">
+        <div className="pointer-events-none absolute inset-x-0 top-4 flex justify-center">
+          <div className="h-16 w-16 rounded-full bg-yellow-300/18 blur-xl" />
+        </div>
+        <div className="relative mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-[radial-gradient(circle_at_30%_30%,#ffe68a,#f7c948_65%,#d97706)] text-5xl shadow-[0_12px_30px_rgba(247,201,72,0.4)] animate-[winnerPulse_1.6s_ease-in-out_infinite]">
+          T
+        </div>
+        <div className={cn("relative mx-auto mt-4 w-fit rounded-full bg-gradient-to-r px-5 py-2 text-base font-bold text-white shadow-[0_10px_26px_rgba(0,0,0,0.22)]", winnerColor)}>
+          {winnerLabel}
+        </div>
+        <p className="relative mt-3 text-sm text-white/55">{winnerSubline}</p>
+
+        <div className="mt-5 grid grid-cols-2 gap-3">
+          <div className="rounded-2xl border border-blue-300/16 bg-blue-400/[0.06] px-3 py-3">
+            <p className="text-[10px] uppercase tracking-[0.22em] text-blue-200/55">Mot civil</p>
+            <p className="mt-1 text-xl font-semibold text-blue-200">{civilianWord ?? "?"}</p>
+          </div>
+          <div className="rounded-2xl border border-orange-300/16 bg-orange-400/[0.06] px-3 py-3">
+            <p className="text-[10px] uppercase tracking-[0.22em] text-orange-200/55">Mot undercover</p>
+            <p className="mt-1 text-xl font-semibold text-orange-200">{undercoverWord ?? "?"}</p>
+          </div>
+        </div>
+
+        <div className="mt-5 grid grid-cols-2 gap-3">
+          {players.map((player, index) => (
+            <UndercoverPlayerCard
+              key={player.id}
+              name={`${player.name}${player.id === playerId ? " (toi)" : ""}`}
+              accentIndex={index}
+              eliminated={!player.alive}
+              revealedRole={player.role}
+              badge={!player.alive ? "Out" : "In"}
+              badgeTone={!player.alive ? "danger" : "success"}
+            />
+          ))}
+        </div>
+
+        {(local || onRestart || onExit) ? (
+          <div className="mt-6 flex flex-col gap-3">
+            {onRestart ? (
+              <button
+                onClick={onRestart}
+                className="rounded-full bg-gradient-to-r from-[#65dfb2] to-[#35d7d0] px-6 py-3 text-sm font-semibold text-white shadow-[0_10px_22px_rgba(80,214,154,0.28)]"
+              >
+                Rejouer
+              </button>
+            ) : null}
+            {onExit ? (
+              <button
+                onClick={onExit}
+                className="rounded-full border border-white/16 bg-white/[0.04] px-6 py-3 text-sm font-semibold text-white/85"
+              >
+                Retour aux jeux
+              </button>
+            ) : null}
+          </div>
+        ) : (
+          <p className="mt-6 text-xs text-white/28 animate-pulse">Retour au lobby...</p>
+        )}
+      </div>
+    </div>
+  );
 }
 
 function getMaxUndercoverFor(playerCount: number): number {
@@ -1377,42 +1669,41 @@ export default function UndercoverGame({
 
     if (localPhase === "vote") {
       const aliveTargets = getLocalAlive();
+      const selectedLocalTarget = aliveTargets.find((p) => p.id === localSelectedTarget) ?? null;
       return (
         <div className="relative flex flex-1 flex-col gap-4 p-6">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_20%,rgba(80,216,255,0.12),transparent_28%),radial-gradient(circle_at_82%_78%,rgba(255,96,96,0.14),transparent_34%),linear-gradient(180deg,#050714,#050916_58%,#04050d)]" />
-          <p className="relative text-xs uppercase tracking-[0.22em] text-cyan-200/45 font-sans">Vote oral de groupe</p>
-          <h2 className="relative text-3xl text-white font-serif">Qui eliminer ?</h2>
-          <div className="relative grid w-full gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          <p className="relative text-center text-sm font-semibold text-[#ff9c52]">Elimination Time</p>
+          <p className="relative text-center text-lg font-medium leading-snug text-white/72">
+            Discutez puis votez tous ensemble pour sortir un joueur.
+          </p>
+          <div className="relative grid w-full grid-cols-2 justify-items-center gap-x-2 gap-y-4 sm:grid-cols-3">
             {aliveTargets.map((p, index) => (
-              <button
+              <UndercoverPlayerCard
                 key={p.id}
+                name={p.name}
+                accentIndex={index}
+                badge="Eliminate"
+                badgeTone="danger"
+                selected={localSelectedTarget === p.id}
                 onClick={() => setLocalSelectedTarget(p.id)}
-                className={cn(
-                  "rounded-[1.5rem] border p-4 text-left transition-all press-effect",
-                  localSelectedTarget === p.id
-                    ? "border-[#ff7a66]/70 bg-[linear-gradient(180deg,rgba(255,122,102,0.16),rgba(255,122,102,0.06))] text-white shadow-[0_0_30px_rgba(255,122,102,0.18)]"
-                    : "border-white/[0.1] bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02))] text-white/80 hover:border-cyan-300/35"
-                )}
-                style={{ animation: `cardReveal 0.35s ease ${index * 0.05}s both` }}
-              >
-                <p className="text-[11px] uppercase tracking-[0.22em] text-white/26">Carte joueur</p>
-                <p className="mt-3 text-xl font-semibold">{p.name}</p>
-                <div className="mt-10 flex items-center justify-between">
-                  <span className="rounded-full border border-white/10 bg-black/20 px-3 py-1 text-xs text-white/44">
-                    {localSelectedTarget === p.id ? "Selectionne" : "Appuyer pour voter"}
-                  </span>
-                  <span className="text-xs uppercase tracking-[0.22em] text-white/18">Suspect</span>
-                </div>
-              </button>
+              />
             ))}
           </div>
           <button
-            onClick={submitLocalVote}
-            disabled={!localSelectedTarget}
-            className="relative self-center rounded-[1.35rem] bg-gradient-to-r from-[#ff8d52] via-[#ff6b3d] to-[#ff3d3d] px-6 py-4 text-sm font-semibold text-white shadow-[0_0_30px_rgba(255,107,61,0.24)] disabled:border-white/[0.12] disabled:bg-white/[0.05] disabled:text-white/20"
+            onClick={() => selectedLocalTarget && submitLocalVote()}
+            disabled={!selectedLocalTarget}
+            className="relative self-center rounded-full bg-gradient-to-r from-[#ff9c52] to-[#ff6b3d] px-8 py-3 text-lg font-semibold text-white shadow-[0_0_30px_rgba(255,107,61,0.24)] disabled:bg-white/[0.08] disabled:text-white/24"
           >
-            Eliminer ce joueur
+            Aller au vote
           </button>
+          {selectedLocalTarget ? (
+            <VoteConfirmModal
+              targetName={selectedLocalTarget.name}
+              onCancel={() => setLocalSelectedTarget(null)}
+              onConfirm={submitLocalVote}
+            />
+          ) : null}
         </div>
       );
     }
@@ -1420,77 +1711,55 @@ export default function UndercoverGame({
     if (localPhase === "vote-result") {
       const eliminated = localPlayers.find((p) => p.id === localEliminatedId) ?? null;
       return (
-        <div className="relative flex flex-1 flex-col gap-4 p-6">
+        <div className="relative flex flex-1 flex-col items-center justify-center gap-4 p-6">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_18%,rgba(80,216,255,0.12),transparent_28%),radial-gradient(circle_at_80%_75%,rgba(255,122,80,0.14),transparent_34%),linear-gradient(180deg,#050714,#050916_58%,#04050d)]" />
-          <div className="relative text-center">
-            <p className="text-xs uppercase tracking-[0.22em] text-cyan-200/45 font-sans">Resultat du vote</p>
-            <h2 className="mt-2 text-3xl text-white font-serif">
-              {!eliminated ? "Egalite" : `${eliminated.name} elimine`}
-            </h2>
-            <p className="mt-2 text-sm text-white/42">La carte se retourne pour reveler le role.</p>
-          </div>
-          <div className="relative mx-auto w-full max-w-sm [perspective:1200px]">
-            <div className="relative min-h-[200px] rounded-[1.7rem] transition-transform duration-500 [transform-style:preserve-3d] [transform:rotateY(180deg)]">
-              <div className="absolute inset-0 rounded-[1.7rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.02))] p-5 [backface-visibility:hidden]">
-                <p className="text-[11px] uppercase tracking-[0.22em] text-white/24">Carte joueur</p>
-                <p className="mt-6 text-2xl font-semibold text-white/92">{eliminated?.name ?? "Egalite"}</p>
-              </div>
-              <div
-                className={cn(
-                  "absolute inset-0 flex rounded-[1.7rem] border p-5 [backface-visibility:hidden] [transform:rotateY(180deg)]",
-                  localEliminatedRole ? ROLE_BG[localEliminatedRole] : "border-white/10 bg-white/[0.04]"
-                )}
+          {!eliminated ? (
+            <div className="relative rounded-[24px] border border-white/16 bg-black/35 px-8 py-6 text-center">
+              <p className="text-3xl font-semibold text-white">Egalite</p>
+              <p className="mt-2 text-sm text-white/48">Aucune elimination ce tour.</p>
+              <button
+                onClick={continueAfterLocalVoteResult}
+                className="mx-auto mt-6 block rounded-full bg-gradient-to-r from-[#65dfb2] to-[#35d7d0] px-8 py-3 text-lg font-semibold text-white"
               >
-                <div className="flex h-full w-full flex-col justify-between">
-                  <div>
-                    <p className="text-[11px] uppercase tracking-[0.22em] text-white/30">Role revele</p>
-                    <p className={cn("mt-6 text-2xl font-semibold", getRoleColor(localEliminatedRole))}>
-                      {localEliminatedRole ? getRoleLabel(localEliminatedRole) : "Aucune elimination"}
-                    </p>
-                  </div>
-                  <p className="text-xs text-white/42">{eliminated?.name ?? "Tour nul"}</p>
-                </div>
-              </div>
+                OK
+              </button>
             </div>
-          </div>
-          <p className="relative text-center text-xs text-white/25 font-sans">Le mot n&apos;est jamais revele ici.</p>
-          <button
-            onClick={continueAfterLocalVoteResult}
-            className="relative self-center rounded-[1.3rem] bg-gradient-to-r from-[#ff8d52] via-[#ff6b3d] to-[#ff3d3d] px-6 py-3 text-sm font-semibold text-white shadow-[0_0_26px_rgba(255,107,61,0.2)]"
-          >
-            Continuer
-          </button>
+          ) : (
+            <EliminationRevealCard
+              playerName={eliminated.name}
+              role={localEliminatedRole}
+              onConfirm={continueAfterLocalVoteResult}
+            />
+          )}
         </div>
       );
     }
 
     if (localPhase === "game-over") {
       return (
-        <div className="flex flex-1 flex-col items-center justify-center p-6 gap-4">
-          <p className="text-xs text-white/30 font-sans">Fin de partie locale</p>
-          <p className="text-3xl font-serif text-cyan-300">
-            {localWinners === "civilian" ? "Les Civils gagnent" : "Undercover / Mr.White gagnent"}
-          </p>
-          <div className="flex flex-col gap-2 sm:flex-row">
-            <button
-              onClick={() => {
-                setLocalSetupStep("config");
-                setLocalCollectedNames([]);
-                setLocalNameIndex(0);
-                setLocalNameInput("");
-                setLocalPhase("setup");
-              }}
-              className="rounded-xl border border-cyan-300/40 bg-gradient-to-r from-cyan-600 to-blue-600 px-6 py-2 text-sm font-sans text-white"
-            >
-              Recommencer la partie
-            </button>
-            <button
-              onClick={handleBackToGamePicker}
-              className="rounded-xl border border-white/25 bg-white/10 px-6 py-2 text-sm font-sans text-white"
-            >
-              Retour a l&apos;ecran des jeux
-            </button>
-          </div>
+        <div className="relative flex flex-1 overflow-hidden">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_18%,rgba(80,216,255,0.12),transparent_28%),radial-gradient(circle_at_80%_75%,rgba(255,122,80,0.14),transparent_34%),linear-gradient(180deg,#050714,#050916_58%,#04050d)]" />
+          <WinnerSplash
+            local
+            winnerRole={localWinners}
+            civilianWord={localPlayers.find((p) => p.role === "civilian")?.word ?? null}
+            undercoverWord={localPlayers.find((p) => p.role === "undercover")?.word ?? null}
+            players={localPlayers.map((player) => ({
+              id: player.id,
+              name: player.name,
+              role: player.role,
+              alive: player.alive,
+            }))}
+            playerId={playerId}
+            onRestart={() => {
+              setLocalSetupStep("config");
+              setLocalCollectedNames([]);
+              setLocalNameIndex(0);
+              setLocalNameInput("");
+              setLocalPhase("setup");
+            }}
+            onExit={handleBackToGamePicker}
+          />
         </div>
       );
     }
@@ -2076,43 +2345,27 @@ export default function UndercoverGame({
           </div>
         </div>
 
-        {/* Player grid */}
-        <div className="flex flex-wrap justify-center gap-2">
+        <div className="grid grid-cols-2 justify-items-center gap-x-2 gap-y-4 sm:grid-cols-3">
           {state.players?.map((p, i) => {
             const isDescribing = p.id === state.currentDescriberId;
+            const turnIndex = state.turnOrder?.indexOf(p.id) ?? -1;
             return (
-              <div
+              <UndercoverPlayerCard
                 key={p.id}
-                className={cn(
-                  "flex flex-col items-center gap-0.5 rounded-xl border px-3 py-2 min-w-[80px] transition-all",
-                  !p.alive && "opacity-30",
-                  isDescribing
-                    ? "border-cyan-300/40 bg-cyan-300/[0.08] shadow-[0_0_16px_rgba(80,216,255,0.15)]"
-                    : p.hasDescribed
-                      ? "border-white/[0.12] bg-white/[0.05]"
-                      : "border-white/[0.06] bg-white/[0.02]"
-                )}
-                style={{ animation: `fadeUp 0.3s ease ${i * 0.05}s both` }}
-              >
-                <span
-                  className={cn(
-                    "text-xs font-medium truncate max-w-[70px] font-sans",
-                    isDescribing ? "text-cyan-200" : "text-white/60"
-                  )}
-                >
-                  {p.name}
-                  {p.id === playerId && " (toi)"}
-                </span>
-                <span className="text-[10px] text-white/25 font-sans">
-                  {!p.alive
-                    ? "Elimine"
-                    : p.hasDescribed
-                      ? "Fait"
-                      : isDescribing
-                        ? "Parle..."
-                        : "En attente"}
-                </span>
-              </div>
+                name={p.name}
+                accentIndex={i}
+                badge={
+                  !p.alive
+                    ? getRoleLabel(p.role)
+                    : turnIndex >= 0
+                      ? String(turnIndex + 1)
+                      : null
+                }
+                badgeTone={!p.alive ? "danger" : isDescribing ? "success" : turnIndex >= 0 ? "order" : "neutral"}
+                eliminated={!p.alive}
+                revealedRole={!p.alive ? p.role : null}
+                overlayLabel={isDescribing && p.alive ? "Tour" : !p.alive ? "Out" : null}
+              />
             );
           })}
         </div>
@@ -2124,6 +2377,8 @@ export default function UndercoverGame({
   // ── Vote Phase ────────────────────────────────────────────
   if (state.phase === "vote") {
     const iAmAlive = me?.alive ?? false;
+    const voteOptions = alivePlayers.filter((p) => p.id !== playerId);
+    const selectedVoteTarget = voteOptions.find((p) => p.id === voteTarget) ?? null;
 
     return (
       <div className="relative flex flex-1 flex-col overflow-hidden p-4 sm:p-6">
@@ -2159,62 +2414,33 @@ export default function UndercoverGame({
 
         <div className="text-center">
           <h2
-            className="text-2xl font-serif font-light text-white/90"
-            style={{ textShadow: "0 0 30px rgba(80,216,255,0.2)" }}
+            className="text-2xl font-serif font-light text-[#ff9c52]"
+            style={{ textShadow: "0 0 30px rgba(255,156,82,0.2)" }}
           >
-            Qui est l&apos;imposteur ?
+            Elimination Time
           </h2>
-          <p className="text-xs text-white/30 font-sans mt-1">
-            Votez pour eliminer un joueur suspect
+          <p className="text-sm text-white/52 font-sans mt-1 text-center">
+            Discutez puis choisissez simultanement qui sortir.
           </p>
         </div>
 
-        {/* Vote cards */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 max-w-lg w-full">
-          {alivePlayers
-            .filter((p) => p.id !== playerId)
-            .map((p, i) => {
-              const isSelected = voteTarget === p.id;
-              return (
-                <button
-                  key={p.id}
-                  onClick={() => {
-                    if (!voteConfirmed && iAmAlive) setVoteTarget(p.id);
-                  }}
-                  disabled={voteConfirmed || !iAmAlive}
-                  className={cn(
-                    "rounded-xl border p-4 text-center transition-all press-effect",
-                    isSelected
-                      ? "border-red-400/50 bg-red-400/10 shadow-[0_0_20px_rgba(239,68,68,0.15)]"
-                      : "border-white/[0.08] bg-white/[0.03] hover:border-cyan-300/30 hover:bg-cyan-300/[0.04]",
-                    (voteConfirmed || !iAmAlive) &&
-                      "opacity-50 cursor-not-allowed"
-                  )}
-                  style={{ animation: `fadeUp 0.3s ease ${i * 0.06}s both` }}
-                >
-                  <span
-                    className={cn(
-                      "text-sm font-sans font-medium",
-                      isSelected ? "text-red-400" : "text-white/70"
-                    )}
-                  >
-                    {p.name}
-                  </span>
-                </button>
-              );
-            })}
+        <div className="grid w-full max-w-lg grid-cols-2 justify-items-center gap-x-2 gap-y-4 sm:grid-cols-3">
+          {voteOptions.map((p, i) => (
+            <UndercoverPlayerCard
+              key={p.id}
+              name={p.name}
+              accentIndex={i}
+              badge="Eliminate"
+              badgeTone="danger"
+              selected={voteTarget === p.id}
+              disabled={voteConfirmed || !iAmAlive}
+              onClick={() => {
+                if (!voteConfirmed && iAmAlive) setVoteTarget(p.id);
+              }}
+            />
+          ))}
         </div>
 
-        {/* Confirm vote */}
-        {iAmAlive && !voteConfirmed && voteTarget && (
-          <button
-            onClick={handleVote}
-            className="px-8 py-3 rounded-xl bg-gradient-to-r from-red-500 to-rose-500 hover:from-red-400 hover:to-rose-400 text-white font-sans text-sm font-medium transition-all shadow-[0_0_20px_rgba(239,68,68,0.25)] press-effect"
-            style={{ animation: "scaleIn 0.3s ease" }}
-          >
-            Confirmer le vote
-          </button>
-        )}
         {voteConfirmed && (
           <p className="text-xs text-white/20 font-sans animate-pulse">
             Vote enregistre. En attente des autres...
@@ -2244,6 +2470,13 @@ export default function UndercoverGame({
             </div>
           ))}
         </div>
+        {iAmAlive && !voteConfirmed && selectedVoteTarget ? (
+          <VoteConfirmModal
+            targetName={selectedVoteTarget.name}
+            onCancel={() => setVoteTarget(null)}
+            onConfirm={handleVote}
+          />
+        ) : null}
         </div>
       </div>
     );
@@ -2326,9 +2559,9 @@ export default function UndercoverGame({
     return (
       <div className="relative flex flex-1 flex-col overflow-hidden p-4 sm:p-6">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_20%,rgba(80,216,255,0.14),transparent_35%),radial-gradient(circle_at_82%_70%,rgba(99,102,241,0.14),transparent_35%),linear-gradient(145deg,#040424,#05113a_42%,#01072a)]" />
-        <div className="relative mx-auto flex w-full max-w-lg flex-1 flex-col items-center justify-center gap-6 rounded-3xl border border-cyan-300/20 bg-black/35 p-6 shadow-[0_24px_70px_rgba(0,0,0,0.45)] backdrop-blur-xl sm:p-8" style={{ animation: "scaleIn 0.4s ease" }}>
+        <div className="relative mx-auto flex w-full max-w-lg flex-1 flex-col items-center justify-center gap-6" style={{ animation: "scaleIn 0.4s ease" }}>
         {noElimination ? (
-          <div className="text-center" style={{ animation: "fadeUp 0.5s ease" }}>
+          <div className="w-full rounded-[28px] border border-white/18 bg-black/35 px-6 py-8 text-center shadow-[0_24px_70px_rgba(0,0,0,0.45)] backdrop-blur-xl" style={{ animation: "fadeUp 0.5s ease" }}>
             <h2 className="text-3xl font-serif font-light text-white/60">
               Egalite !
             </h2>
@@ -2337,37 +2570,10 @@ export default function UndercoverGame({
             </p>
           </div>
         ) : (
-          <div className="text-center" style={{ animation: "fadeUp 0.5s ease" }}>
-            <span className="text-xs text-white/20 font-sans uppercase tracking-widest">
-              Elimine
-            </span>
-            <h2
-              className={cn(
-                "text-3xl font-serif font-light mt-3",
-                state.eliminatedRole
-                  ? ROLE_COLORS[state.eliminatedRole]
-                  : "text-white/90"
-              )}
-              style={{
-                textShadow: state.eliminatedRole
-                  ? ROLE_GLOW[state.eliminatedRole]
-                  : undefined,
-                animation: "scaleIn 0.5s ease 0.2s both",
-              }}
-            >
-              {eliminatedPlayer?.name}
-            </h2>
-            <div
-              className={cn(
-                "inline-block mt-3 px-4 py-1.5 rounded-full border text-sm font-sans font-medium",
-                state.eliminatedRole ? ROLE_BG[state.eliminatedRole] : "",
-                getRoleColor(state.eliminatedRole)
-              )}
-              style={{ animation: "scaleIn 0.4s ease 0.35s both" }}
-            >
-              {getRoleLabel(state.eliminatedRole)}
-            </div>
-          </div>
+          <EliminationRevealCard
+            playerName={eliminatedPlayer?.name ?? null}
+            role={state.eliminatedRole}
+          />
         )}
 
         {/* Mr. White guess result */}
@@ -2413,105 +2619,23 @@ export default function UndercoverGame({
 
   // ── Game Over ─────────────────────────────────────────────
   if (state.phase === "game-over") {
-    const winnerLabel =
-      state.winners === "civilian"
-        ? "Les Civils"
-        : state.winners === "mrwhite"
-          ? "Mr. White"
-          : "Les Undercovers";
-    const winnerColor =
-      state.winners === "civilian"
-        ? "text-blue-400"
-        : state.winners === "mrwhite"
-          ? "text-white"
-          : "text-red-400";
-    const winnerGlow = state.winners ? ROLE_GLOW[state.winners] : undefined;
-
     return (
       <div className="relative flex flex-1 flex-col overflow-hidden p-4 sm:p-6">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_20%,rgba(80,216,255,0.14),transparent_35%),radial-gradient(circle_at_82%_70%,rgba(99,102,241,0.14),transparent_35%),linear-gradient(145deg,#040424,#05113a_42%,#01072a)]" />
-        <div className="relative mx-auto flex w-full max-w-lg flex-1 flex-col items-center justify-center gap-6 rounded-3xl border border-cyan-300/20 bg-black/35 p-6 shadow-[0_24px_70px_rgba(0,0,0,0.45)] backdrop-blur-xl sm:p-8" style={{ animation: "scaleIn 0.4s ease" }}>
-        <div className="text-center" style={{ animation: "fadeUp 0.5s ease" }}>
-          <span className="text-xs text-white/20 font-sans uppercase tracking-widest">
-            Fin de la partie
-          </span>
-          <h2
-            className={cn("text-4xl font-serif font-light mt-3", winnerColor)}
-            style={{ textShadow: winnerGlow, animation: "scaleIn 0.6s cubic-bezier(0.16,1,0.3,1) 0.2s both" }}
-          >
-            {winnerLabel} gagnent !
-          </h2>
-        </div>
-
-        {/* Word reveal */}
-        <div className="flex gap-6 mt-2" style={{ animation: "fadeUp 0.4s ease 0.3s both" }}>
-          <div className="text-center rounded-xl border border-blue-400/20 bg-blue-400/[0.06] px-4 py-3">
-            <span className="text-[10px] text-blue-400/60 font-sans uppercase tracking-wider">
-              Mot civil
-            </span>
-            <p className="text-xl font-serif text-blue-400 mt-1">
-              {state.civilianWord}
-            </p>
-          </div>
-          <div className="text-center rounded-xl border border-red-400/20 bg-red-400/[0.06] px-4 py-3">
-            <span className="text-[10px] text-red-400/60 font-sans uppercase tracking-wider">
-              Mot undercover
-            </span>
-            <p className="text-xl font-serif text-red-400 mt-1">
-              {state.undercoverWord}
-            </p>
-          </div>
-        </div>
-
-        {/* All players with roles revealed */}
-        <div className="w-full max-w-md space-y-2 mt-2">
-          {state.players?.map((p, i) => {
-            const role = p.role;
-            return (
-              <div
-                key={p.id}
-                className={cn(
-                  "flex items-center justify-between rounded-xl border p-3 transition-all",
-                  role
-                    ? ROLE_BG[role]
-                    : "border-white/[0.06] bg-white/[0.03]",
-                  !p.alive && "opacity-60"
-                )}
-                style={{ animation: `fadeUp 0.3s ease ${0.35 + i * 0.06}s both` }}
-              >
-                <div className="flex items-center gap-3">
-                  <span
-                    className={cn(
-                      "text-sm font-sans font-medium",
-                      role ? ROLE_COLORS[role] : "text-white/60"
-                    )}
-                  >
-                    {p.name}
-                    {p.id === playerId && " (toi)"}
-                  </span>
-                  {!p.alive && (
-                    <span className="text-[10px] text-white/20 font-sans">
-                      elimine
-                    </span>
-                  )}
-                </div>
-                <span
-                  className={cn(
-                    "text-xs font-sans font-medium uppercase tracking-wider",
-                    getRoleColor(role)
-                  )}
-                >
-                  {getRoleLabel(role)}
-                </span>
-              </div>
-            );
-          })}
-        </div>
-
-        <p className="text-xs text-white/20 font-sans animate-pulse mt-4">
-          Retour au lobby...
-        </p>
-        </div>
+        <WinnerSplash
+          winnerRole={state.winners}
+          civilianWord={state.civilianWord}
+          undercoverWord={state.undercoverWord}
+          players={
+            state.players?.map((player) => ({
+              id: player.id,
+              name: player.name,
+              role: player.role,
+              alive: player.alive,
+            })) ?? []
+          }
+          playerId={playerId}
+        />
       </div>
     );
   }
