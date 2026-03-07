@@ -22,6 +22,8 @@ export function GamePicker({ selectedGameId, isHost, onSelectGame }: GamePickerP
     const games =
       activeCategory === "all"
         ? GAMES
+        : activeCategory === "local"
+        ? GAMES.filter((game) => game.local)
         : GAMES.filter((game) => game.category === activeCategory);
 
     if (!normalizedSearch) return games;

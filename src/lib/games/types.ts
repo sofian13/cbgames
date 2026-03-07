@@ -9,6 +9,7 @@ export interface GameMeta {
   maxPlayers: number;
   icon: string;
   implemented: boolean;
+  local?: boolean;
   rules: string[];
   component: () => Promise<{ default: ComponentType<GameProps> }>;
 }

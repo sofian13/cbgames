@@ -176,6 +176,7 @@ export const GAMES: GameMeta[] = [
     maxPlayers: 8,
     icon: "🕶️",
     implemented: true,
+    local: true,
     rules: [
       "Chaque joueur recoit un mot - certains ont un mot legerement different",
       "A tour de role, donne un indice sur ton mot (sans le dire !)",
@@ -303,6 +304,7 @@ export const GAMES: GameMeta[] = [
     maxPlayers: 2,
     icon: "♟️",
     implemented: true,
+    local: true,
     rules: [
       "Mode en ligne: duel 1v1.",
       "Mode bot: choisis le niveau (facile, moyen, difficile).",
@@ -321,6 +323,7 @@ export const GAMES: GameMeta[] = [
     maxPlayers: 5,
     icon: "🧱",
     implemented: true,
+    local: true,
     rules: [
       "Choisis de 1 a 5 joueurs au debut.",
       "Chaque bloc ne peut avancer que vers la droite et sauter.",
@@ -416,6 +419,7 @@ export const GAMES: GameMeta[] = [
     maxPlayers: 2,
     icon: "🚢",
     implemented: true,
+    local: true,
     rules: [
       "Place tes 5 navires sur ta grille 10x10",
       "Navires : Porte-avions (5), Cuirasse (4), Croiseur (3), Sous-marin (3), Torpilleur (2)",
@@ -434,6 +438,7 @@ export const GAMES: GameMeta[] = [
     maxPlayers: 8,
     icon: "🤔",
     implemented: true,
+    local: true,
     rules: [
       "Choisis une categorie et un timer",
       "Le telephone affiche un mot que tu ne vois pas",
@@ -452,6 +457,7 @@ export const GAMES: GameMeta[] = [
     maxPlayers: 8,
     icon: "⏱️",
     implemented: true,
+    local: true,
     rules: [
       "Une catégorie est annoncée (marques de voiture, positions sexuelles...)",
       "Chacun son tour, dis un mot qui correspond a la catégorie",
@@ -470,6 +476,7 @@ export const GAMES: GameMeta[] = [
     maxPlayers: 8,
     icon: "🗣️",
     implemented: true,
+    local: true,
     rules: [
       "Formez des equipes de 2 joueurs",
       "Un joueur decrit, l'autre devine",
@@ -491,6 +498,7 @@ export function getGamesByCategory(category: string): GameMeta[] {
 
 export const CATEGORIES = [
   { id: "all", label: "Tous" },
+  { id: "local", label: "Jeu local" },
   { id: "words", label: "Mots" },
   { id: "trivia", label: "Culture" },
   { id: "speed", label: "Rapidite" },
