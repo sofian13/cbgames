@@ -82,6 +82,14 @@ const WORDS_SIMPLE = [
   "Eau", "Main", "Livre", "Lit", "Ballon",
   "Chaise", "Téléphone", "Miroir", "Valise", "Montre",
   "Bougie", "Casque", "Stylo", "Oreiller", "Parapluie",
+  "Chien", "Maison", "Lune", "École", "Table",
+  "Ordinateur", "Fenêtre", "Clé", "Musique", "Danse",
+  "Film", "Caméra", "Famille", "Ami", "Amour",
+  "Vacances", "Cadeau", "Neige", "Pluie", "Orage",
+  "Fleur", "Arbre", "Poisson", "Café", "Glace",
+  "Jardin", "Bureau", "Bateau", "Fusée", "Robot",
+  "Magicien", "Pirate", "Chevalier", "Couronne", "Trésor",
+  "Carte", "Vélo", "Train", "Avion",
 ];
 
 const WORDS_JOBS = [
@@ -94,6 +102,7 @@ const WORDS_FUN = [
   "GPS", "Photocopieuse", "Mariage", "Dragon", "Selfie",
   "Vampire", "Trottinette", "Embouteillage", "Anniversaire", "Fantôme",
   "Loup-garou", "Camping", "Glamping", "Moustache", "Barbe",
+  "Rire", "Dessiner", "Écrire",
 ];
 
 const WORDS_BRANDS = [
@@ -113,19 +122,33 @@ const WORDS_CULTURE = [
 ];
 
 const WORDS_ADULT = [
-  "Strip-tease", "Lap dance", "Fantasme", "Roleplay",
-  "Latex", "Cuir", "Corset", "Porte-jarretelles",
-  "String", "Culotte", "Lingerie", "Menottes",
-  "Clara Morgane", "Lana Rhoades", "Mia Khalifa", "Angela White",
-  "Riley Reid", "Adriana Chechik", "Abella Danger",
-  "Johnny Sins", "Manuel Ferrara",
-  "Missionnaire", "Levrette", "69", "Ciseaux",
-  "Fellation", "Cunnilingus", "Sodomie", "Pénétration",
-  "Domination", "Soumission", "BDSM", "Fétichisme", "Voyeurisme",
-  "Échangisme", "Cuckolding", "Lubrifiant",
-  "Plug anal", "Gode ceinture", "Masque",
-  "Nymphomane", "Puceau", "Préliminaires",
-  "Golden Shower", "Snowballing", "Footjob", "Handjob",
+  "Sexe", "Pénis", "Vagin", "Seins", "Tétons",
+  "Fesses", "Cul", "Bite", "Chatte", "Queue",
+  "Érection", "Mouillé", "Lubrifiant", "Capote", "Orgasme",
+  "Jouir", "Gémissement", "Préliminaires", "Nudité", "Suçon",
+  "Baiser", "Caresse", "Lécher", "Sucer", "Avaler",
+  "Pénétration", "Levrette", "Missionnaire", "Cowgirl",
+  "Fantasme", "Fétiche", "Domination", "Soumission", "Menottes",
+  "Fouet", "Strip-tease", "Vibromasseur", "Gode",
+  "Lingerie", "String", "Caleçon",
+  "Interdit", "Tromperie", "Adultère", "Amante", "Amant",
+  "Jalousie", "Tentation", "Désir", "Chaleur", "Sueur",
+  "Soupir", "Morsure", "Griffure", "Secret", "Alibi",
+  "Nude", "Sexto", "Webcam", "Sauna", "Jacuzzi",
+  "Balcon", "Canapé", "Cuisine", "Ascenseur", "Vestiaire",
+  "Hôtel", "Patron", "Collègue", "Voisin", "Voisine",
+  "Infirmière", "Policier", "Prof", "Serveur",
+  "Position", "Rapidité", "Endurance", "Excitation",
+  "Pulsion", "Obsession", "Addiction", "Humiliation",
+  "Provocation", "Perversion", "Obscène", "Indécent",
+  "Brûlant", "Torride", "Salope", "Salaud", "Coquin",
+  "Cochonne", "Dévergondé", "Pervers", "Libertin",
+  "Échangiste", "Trio", "Quatuor", "Orgie",
+  "Fellation", "Cunnilingus", "Sodomie", "BDSM",
+  "Fétichisme", "Voyeurisme", "Cuckolding",
+  "Footjob", "Handjob", "Nymphomane", "Puceau",
+  "Roleplay", "Latex", "Cuir", "Corset", "Culotte",
+  "Masque", "69", "Ciseaux", "Snowballing",
 ];
 
 const ALL_WORDS = [
