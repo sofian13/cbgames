@@ -181,22 +181,29 @@ const WORDS_ADULT = [
   "Masque", "69", "Ciseaux", "Snowballing",
 ];
 
-const ALL_WORDS = [
-  ...WORDS_OBJECTS,
-  ...WORDS_ANIMALS,
-  ...WORDS_FAMOUS,
-  ...WORDS_ACTIONS,
-  ...WORDS_PLACES,
-  ...WORDS_EXPRESSIONS,
-  ...WORDS_MOVIES,
-  ...WORDS_FOOD,
-  ...WORDS_SIMPLE,
-  ...WORDS_JOBS,
-  ...WORDS_FUN,
-  ...WORDS_BRANDS,
-  ...WORDS_CULTURE,
-  ...WORDS_ADULT,
+const THEMES: { id: string; label: string; emoji: string; words: string[] }[] = [
+  { id: "simple", label: "Facile", emoji: "🟢", words: WORDS_SIMPLE },
+  { id: "objects", label: "Objets", emoji: "🔧", words: WORDS_OBJECTS },
+  { id: "animals", label: "Animaux", emoji: "🐾", words: WORDS_ANIMALS },
+  { id: "famous", label: "Célébrités", emoji: "⭐", words: WORDS_FAMOUS },
+  { id: "actions", label: "Actions", emoji: "🏃", words: WORDS_ACTIONS },
+  { id: "places", label: "Lieux", emoji: "📍", words: WORDS_PLACES },
+  { id: "expressions", label: "Expressions", emoji: "💬", words: WORDS_EXPRESSIONS },
+  { id: "movies", label: "Films/Séries", emoji: "🎬", words: WORDS_MOVIES },
+  { id: "food", label: "Nourriture", emoji: "🍕", words: WORDS_FOOD },
+  { id: "jobs", label: "Métiers", emoji: "👷", words: WORDS_JOBS },
+  { id: "fun", label: "Drôle", emoji: "😂", words: WORDS_FUN },
+  { id: "brands", label: "Marques", emoji: "🏷️", words: WORDS_BRANDS },
+  { id: "culture", label: "Culture Pop", emoji: "🎮", words: WORDS_CULTURE },
+  { id: "adult", label: "18+", emoji: "🔞", words: WORDS_ADULT },
 ];
+
+const ALL_THEME_IDS = THEMES.map((t) => t.id);
+
+function getWordsForThemes(selectedIds: string[]): string[] {
+  if (selectedIds.length === 0) return THEMES.flatMap((t) => t.words);
+  return THEMES.filter((t) => selectedIds.includes(t.id)).flatMap((t) => t.words);
+}
 
 // ── Types ──────────────────────────────────────────────────
 
@@ -251,6 +258,7 @@ export default function MakeGuessGame({
   ]);
   const [timerDuration, setTimerDuration] = useState(60);
   const [totalRounds, setTotalRounds] = useState(1);
+  const [selectedThemes, setSelectedThemes] = useState<string[]>([]);
 
   // ── Game state ──
   const [phase, setPhase] = useState<Phase>("setup");
@@ -341,15 +349,25 @@ export default function MakeGuessGame({
     teams.length >= 2 &&
     teams.every((t) => t.name.trim() && t.player1.trim() && t.player2.trim());
 
+  const toggleTheme = useCallback((id: string) => {
+    setSelectedThemes((prev) =>
+      prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id]
+    );
+  }, []);
+
+  const selectAllThemes = useCallback(() => {
+    setSelectedThemes([]);
+  }, []);
+
   const startGame = useCallback(() => {
-    const shuffled = shuffleArray(ALL_WORDS);
+    const shuffled = shuffleArray(getWordsForThemes(selectedThemes));
     setWordPool(shuffled);
     setWordIndex(0);
     setCurrentRound(1);
     setCurrentTeamIndex(0);
     setAllResults([]);
     setPhase("pre-turn");
-  }, []);
+  }, [selectedThemes]);
 
   // ── Turn handlers ──
   const startTurn = useCallback(() => {
@@ -545,6 +563,57 @@ export default function MakeGuessGame({
           >
             + Ajouter une equipe
           </button>
+
+          {/* Themes */}
+          <div
+            className="mb-6 w-full rounded-2xl border border-cyan-300/20 bg-black/35 p-5 backdrop-blur-xl"
+            style={{ animation: "fadeUp 0.65s ease-out" }}
+          >
+            <div className="mb-3 flex items-center justify-between">
+              <label className="font-sans text-xs uppercase tracking-wider text-cyan-200/50">
+                Thèmes
+              </label>
+              <button
+                onClick={selectAllThemes}
+                className={cn(
+                  "rounded-lg px-3 py-1 font-sans text-xs transition-colors",
+                  selectedThemes.length === 0
+                    ? "bg-cyan-500/20 text-cyan-100"
+                    : "text-cyan-300/50 hover:text-cyan-300/80"
+                )}
+              >
+                Tout mélanger
+              </button>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {THEMES.map((theme) => {
+                const isSelected =
+                  selectedThemes.length === 0 || selectedThemes.includes(theme.id);
+                return (
+                  <button
+                    key={theme.id}
+                    onClick={() => toggleTheme(theme.id)}
+                    className={cn(
+                      "rounded-xl px-3 py-2 font-sans text-xs transition-all",
+                      isSelected
+                        ? "border border-cyan-300/30 bg-cyan-500/15 text-cyan-100"
+                        : "border border-white/8 bg-black/20 text-white/30"
+                    )}
+                  >
+                    {theme.emoji} {theme.label}
+                    <span className="ml-1 text-[10px] text-white/30">
+                      {theme.words.length}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+            <p className="mt-2 font-sans text-[11px] text-cyan-200/30">
+              {selectedThemes.length === 0
+                ? `Tous les thèmes (${THEMES.reduce((s, t) => s + t.words.length, 0)} mots)`
+                : `${getWordsForThemes(selectedThemes).length} mots sélectionnés`}
+            </p>
+          </div>
 
           {/* Options */}
           <div
