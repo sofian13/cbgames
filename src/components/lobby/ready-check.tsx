@@ -52,12 +52,25 @@ export function ReadyCheck({
         />
       </div>
 
+      <div className="mb-4 rounded-[1.35rem] border border-white/8 bg-white/[0.03] p-4">
+        <p className="text-xs uppercase tracking-[0.18em] text-white/34">Statut</p>
+        <p className="mt-2 text-lg font-semibold text-white">
+          {effectiveIsHost
+            ? selectedGameId
+              ? "Tu peux lancer la partie"
+              : "Choisis un jeu pour lancer"
+            : currentPlayer?.isReady
+              ? "Tu es pret"
+              : "Signale quand tu es pret"}
+        </p>
+      </div>
+
       <div className="space-y-3">
         {!effectiveIsHost && (
           <button
             onClick={onToggleReady}
             className={cn(
-              "flex w-full items-center justify-center gap-2 rounded-[1.2rem] px-4 py-3 text-sm font-semibold transition",
+              "flex w-full items-center justify-center gap-2 rounded-[1.3rem] px-4 py-3.5 text-sm font-semibold transition",
               currentPlayer?.isReady
                 ? "border border-white/10 bg-white/[0.05] text-white/68 hover:text-white"
                 : "bg-gradient-to-r from-cyan-400 to-[#ff8755] text-slate-950 shadow-[0_18px_35px_rgba(0,0,0,0.22)]"
@@ -73,7 +86,7 @@ export function ReadyCheck({
             onClick={() => onStartGame(normalizedGameId)}
             disabled={!canStart}
             className={cn(
-              "flex w-full items-center justify-center gap-2 rounded-[1.2rem] px-4 py-3 text-sm font-semibold transition",
+              "flex w-full items-center justify-center gap-2 rounded-[1.3rem] px-4 py-3.5 text-sm font-semibold transition",
               canStart
                 ? "bg-gradient-to-r from-cyan-400 to-[#ff8755] text-slate-950 shadow-[0_18px_35px_rgba(0,0,0,0.22)]"
                 : "border border-white/10 bg-white/[0.04] text-white/28"

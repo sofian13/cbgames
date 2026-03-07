@@ -92,9 +92,9 @@ export default function LobbyPage() {
             </div>
           )}
 
-          <section className="site-panel overflow-hidden rounded-[1.8rem] p-4 sm:p-5">
-            <div className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
-              <div className="space-y-3">
+          <section className="site-panel overflow-hidden rounded-[1.9rem] p-4 sm:p-6">
+            <div className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
+              <div className="space-y-4">
                 <div className="flex flex-wrap gap-2">
                   <span className="site-chip rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em]">
                     Room {code}
@@ -105,28 +105,49 @@ export default function LobbyPage() {
                 </div>
 
                 <div className="min-w-0">
-                  <h1 className="text-balance text-xl font-semibold tracking-[-0.03em] text-white sm:text-3xl">
+                  <h1 className="text-balance text-2xl font-semibold tracking-[-0.04em] text-white sm:text-4xl">
                     {selectedGame
                       ? `${selectedGame.name} est pret a partir.`
                       : "Choisis le prochain jeu pour la room."}
                   </h1>
-                  <p className="mt-2 max-w-2xl text-sm leading-6 text-white/58">
-                    Choisis, valide, lance.
+                  <p className="mt-2 max-w-2xl text-sm leading-6 text-white/56">
+                    Un jeu selectionne, des joueurs prets, puis la partie part.
                   </p>
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <div className="site-panel-soft rounded-[1.4rem] p-4">
+                    <p className="text-xs uppercase tracking-[0.18em] text-white/35">
+                      Flow
+                    </p>
+                    <p className="mt-2 text-lg font-semibold text-white">Choisir</p>
+                  </div>
+                  <div className="site-panel-soft rounded-[1.4rem] p-4">
+                    <p className="text-xs uppercase tracking-[0.18em] text-white/35">
+                      Flow
+                    </p>
+                    <p className="mt-2 text-lg font-semibold text-white">Valider</p>
+                  </div>
+                  <div className="site-panel-soft rounded-[1.4rem] p-4">
+                    <p className="text-xs uppercase tracking-[0.18em] text-white/35">
+                      Flow
+                    </p>
+                    <p className="mt-2 text-lg font-semibold text-white">Lancer</p>
+                  </div>
                 </div>
               </div>
 
-              <div className="grid min-w-0 gap-3 sm:grid-cols-2 lg:grid-cols-1">
-                <div className="site-panel-soft rounded-[1.5rem] p-4">
+              <div className="grid min-w-0 gap-3 sm:grid-cols-2 xl:grid-cols-1">
+                <div className="site-panel-soft rounded-[1.6rem] p-4">
                   <p className="text-xs uppercase tracking-[0.18em] text-white/35">
                     Jeu selectionne
                   </p>
                   <div className="mt-3 flex items-center gap-3">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.05] text-2xl">
+                    <div className="flex h-14 w-14 items-center justify-center rounded-[1.2rem] border border-white/10 bg-white/[0.05] text-3xl">
                       {selectedGame?.icon ?? "?"}
                     </div>
                     <div>
-                      <p className="text-base font-semibold text-white/90">
+                      <p className="text-lg font-semibold text-white/92">
                         {selectedGame?.name ?? "Aucun"}
                       </p>
                       <p className="text-sm text-white/45">
@@ -138,7 +159,7 @@ export default function LobbyPage() {
                   </div>
                 </div>
 
-                <div className="site-panel-soft rounded-[1.5rem] p-4">
+                <div className="site-panel-soft rounded-[1.6rem] p-4">
                   <p className="text-xs uppercase tracking-[0.18em] text-white/35">
                     Score session
                   </p>

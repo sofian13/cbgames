@@ -264,7 +264,10 @@ export default function CategoryChronoGame({
   // Auto-fail when timer reaches 0
   useEffect(() => {
     if (phase === "playing" && timeLeft === 0) {
-      handleFail();
+      const timeoutId = setTimeout(() => {
+        handleFail();
+      }, 0);
+      return () => clearTimeout(timeoutId);
     }
   }, [phase, timeLeft, handleFail]);
 

@@ -36,8 +36,9 @@ export function PlayerList({ players, currentPlayerId, isHost, onKick }: PlayerL
           <article
             key={player.id}
             className={cn(
-              "site-panel-soft rounded-[1.4rem] p-3",
-              player.id === currentPlayerId && "border-cyan-300/24 bg-cyan-300/[0.06]"
+              "site-panel-soft rounded-[1.45rem] p-3.5",
+              player.id === currentPlayerId &&
+                "border-cyan-300/34 bg-cyan-300/[0.08] shadow-[0_0_0_1px_rgba(103,232,249,0.14)]"
             )}
           >
             <div className="flex items-center gap-3">
@@ -49,7 +50,7 @@ export function PlayerList({ players, currentPlayerId, isHost, onKick }: PlayerL
               />
 
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-semibold text-white/88">
+                <p className="truncate text-sm font-semibold text-white/92">
                   {player.name}
                   {player.id === currentPlayerId && (
                     <span className="ml-1 text-white/34">(toi)</span>
