@@ -7,9 +7,13 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-space-grotesk);
-  --font-serif: var(--font-orbitron);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-body);
+  --font-serif: var(--font-display);
+  --font-mono: var(--font-mono-face);
+  /* Alias anciens (compat composants existants) */
+  --font-orbitron: var(--font-display);
+  --font-space-grotesk: var(--font-body);
+  --font-geist-mono: var(--font-mono-face);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -345,7 +349,7 @@
   }
 
   .section-title {
-    font-family: var(--font-space-grotesk);
+    font-family: var(--font-body);
     font-size: 0.6875rem;
     font-weight: 700;
     letter-spacing: 0.22em;
@@ -490,33 +494,36 @@
 
   /* ----- Typography premium rules ----- */
   .heading-display {
-    font-family: var(--font-orbitron);
-    font-weight: 800;
-    font-size: clamp(2.5rem, 6.4vw, 6rem);
-    line-height: 0.94;
-    letter-spacing: -0.04em;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: clamp(2.5rem, 6.6vw, 6.25rem);
+    line-height: 0.92;
+    letter-spacing: -0.035em;
     text-wrap: balance;
+    font-optical-sizing: auto;
   }
 
   .heading-h2 {
-    font-family: var(--font-orbitron);
-    font-weight: 700;
-    font-size: clamp(2rem, 4.5vw, 4.5rem);
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: clamp(2rem, 4.6vw, 4.5rem);
     line-height: 0.96;
-    letter-spacing: -0.035em;
+    letter-spacing: -0.03em;
     text-wrap: balance;
+    font-optical-sizing: auto;
   }
 
   .heading-h3 {
-    font-family: var(--font-orbitron);
+    font-family: var(--font-display);
     font-weight: 600;
     font-size: clamp(1.375rem, 2.4vw, 2rem);
     line-height: 1.04;
-    letter-spacing: -0.025em;
+    letter-spacing: -0.02em;
+    font-optical-sizing: auto;
   }
 
   .label-xs {
-    font-family: var(--font-space-grotesk);
+    font-family: var(--font-body);
     font-size: 0.6875rem;
     font-weight: 600;
     letter-spacing: 0.22em;
@@ -525,7 +532,7 @@
   }
 
   .label-accent {
-    font-family: var(--font-space-grotesk);
+    font-family: var(--font-body);
     font-size: 0.6875rem;
     font-weight: 700;
     letter-spacing: 0.26em;
@@ -534,7 +541,7 @@
   }
 
   .label-violet {
-    font-family: var(--font-space-grotesk);
+    font-family: var(--font-body);
     font-size: 0.6875rem;
     font-weight: 700;
     letter-spacing: 0.26em;
@@ -612,14 +619,15 @@
     will-change: transform;
   }
   .marquee-item {
-    font-family: var(--font-orbitron);
-    font-weight: 700;
+    font-family: var(--font-display);
+    font-weight: 600;
     font-style: italic;
     font-size: clamp(2.5rem, 7vw, 6rem);
     line-height: 1;
-    letter-spacing: -0.03em;
+    letter-spacing: -0.025em;
     color: var(--text-strong);
     white-space: nowrap;
+    font-optical-sizing: auto;
   }
   .marquee-sep {
     display: inline-flex;
@@ -708,10 +716,10 @@
     gap: 0.625rem;
     padding: 1rem 1.75rem;
     border-radius: 9999px;
-    font-family: var(--font-space-grotesk);
+    font-family: var(--font-body);
     font-weight: 600;
     font-size: 0.9375rem;
-    letter-spacing: 0.04em;
+    letter-spacing: 0.02em;
     color: #040814;
     background: linear-gradient(135deg, var(--brand-light), var(--brand) 55%, var(--brand-2));
     box-shadow:
@@ -750,10 +758,10 @@
     gap: 0.5rem;
     padding: 1rem 1.75rem;
     border-radius: 9999px;
-    font-family: var(--font-space-grotesk);
+    font-family: var(--font-body);
     font-weight: 600;
     font-size: 0.9375rem;
-    letter-spacing: 0.04em;
+    letter-spacing: 0.02em;
     color: var(--text-strong);
     border: 1px solid rgba(245, 247, 250, 0.14);
     background: rgba(245, 247, 250, 0.03);

@@ -1,28 +1,29 @@
 import type { Metadata } from "next";
-import { Orbitron, Space_Grotesk } from "next/font/google";
-import { Geist_Mono } from "next/font/google";
+import { Bricolage_Grotesque, Geist, JetBrains_Mono } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
 import { SessionProvider } from "next-auth/react";
 import { SmoothScroll } from "@/components/layout/smooth-scroll";
 import "./globals.css";
 
-const orbitron = Orbitron({
-  variable: "--font-orbitron",
+const bricolage = Bricolage_Grotesque({
+  variable: "--font-display",
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800", "900"],
+  weight: ["300", "400", "500", "600", "700", "800"],
   display: "swap",
 });
 
-const spaceGrotesk = Space_Grotesk({
-  variable: "--font-space-grotesk",
+const geist = Geist({
+  variable: "--font-body",
   subsets: ["latin"],
-  weight: ["300", "400", "500", "600", "700"],
+  weight: ["300", "400", "500", "600", "700", "800"],
   display: "swap",
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const jetbrainsMono = JetBrains_Mono({
+  variable: "--font-mono-face",
   subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -38,7 +39,7 @@ export default function RootLayout({
   return (
     <html lang="fr" className="dark">
       <body
-        className={`${orbitron.variable} ${spaceGrotesk.variable} ${geistMono.variable} antialiased`}
+        className={`${bricolage.variable} ${geist.variable} ${jetbrainsMono.variable} antialiased`}
       >
         <SessionProvider>
           <SmoothScroll>{children}</SmoothScroll>
