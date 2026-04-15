@@ -154,8 +154,8 @@ export default function HomePage() {
             )}
           </header>
 
-          <div className="flex flex-1 flex-col justify-center gap-10 py-16 lg:grid lg:grid-cols-[1.15fr_0.85fr] lg:gap-16 lg:py-24">
-            <div className="flex flex-col gap-8">
+          <div className="flex flex-1 flex-col justify-center gap-10 py-10 lg:grid lg:grid-cols-[1.15fr_0.85fr] lg:gap-16 lg:py-16">
+            <div className="flex flex-col gap-6 lg:gap-8">
               <div className="flex flex-wrap gap-2">
                 <span className="inline-flex items-center gap-2 rounded-full border border-[color:var(--line-brand)] bg-[rgba(56,201,255,0.06)] px-3 py-1">
                   <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[color:var(--brand-2)] shadow-[0_0_8px_var(--brand-2)]" />

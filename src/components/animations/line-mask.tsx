@@ -1,7 +1,6 @@
 "use client";
 
-import { useRef, type ReactNode } from "react";
-import { useGSAP } from "@gsap/react";
+import { useEffect, useRef, type ReactNode } from "react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 
@@ -30,38 +29,56 @@ export function LineMask({
 }: LineMaskProps) {
   const ref = useRef<HTMLSpanElement & HTMLDivElement>(null);
 
-  useGSAP(
-    () => {
-      if (!ref.current) return;
-      const rows = ref.current.querySelectorAll(".line-mask-inner");
-      if (!rows.length) return;
+  useEffect(() => {
+    if (!ref.current) return;
+    const el = ref.current;
+    const rows = el.querySelectorAll<HTMLElement>(".line-mask-inner");
+    if (!rows.length) return;
 
-      const anim = gsap.fromTo(
-        rows,
-        { yPercent: 110, opacity: 0, filter: "blur(10px)" },
-        {
-          yPercent: 0,
-          opacity: 1,
-          filter: "blur(0px)",
-          duration: 0.9,
-          ease: "expo.out",
-          stagger,
-          delay,
-          paused: trigger === "scroll",
-        }
-      );
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduce) {
+      rows.forEach((row) => {
+        row.style.transform = "none";
+        row.style.filter = "none";
+        row.style.opacity = "1";
+      });
+      return;
+    }
 
-      if (trigger === "scroll") {
-        ScrollTrigger.create({
-          trigger: ref.current,
-          start: "top 88%",
-          once: true,
-          onEnter: () => anim.play(),
-        });
-      }
-    },
-    { scope: ref }
-  );
+    gsap.set(rows, { yPercent: 110, opacity: 0, filter: "blur(10px)" });
+
+    const anim = gsap.to(rows, {
+      yPercent: 0,
+      opacity: 1,
+      filter: "blur(0px)",
+      duration: 0.9,
+      ease: "expo.out",
+      stagger,
+      delay,
+      overwrite: "auto",
+      paused: true,
+    });
+
+    let st: ScrollTrigger | undefined;
+    let raf = 0;
+
+    if (trigger === "load") {
+      raf = requestAnimationFrame(() => anim.play());
+    } else {
+      st = ScrollTrigger.create({
+        trigger: el,
+        start: "top 88%",
+        once: true,
+        onEnter: () => anim.play(),
+      });
+    }
+
+    return () => {
+      if (raf) cancelAnimationFrame(raf);
+      if (st) st.kill();
+      anim.kill();
+    };
+  }, [delay, stagger, trigger]);
 
   const content =
     typeof children === "string"

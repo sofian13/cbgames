@@ -492,8 +492,8 @@
   .heading-display {
     font-family: var(--font-orbitron);
     font-weight: 800;
-    font-size: clamp(2.75rem, 7.6vw, 7.25rem);
-    line-height: 0.92;
+    font-size: clamp(2.5rem, 6.4vw, 6rem);
+    line-height: 0.94;
     letter-spacing: -0.04em;
     text-wrap: balance;
   }
