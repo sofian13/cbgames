@@ -19,17 +19,17 @@ export function CountdownTimer({ timeLeft, maxTime, className }: CountdownTimerP
           className={cn(
             "h-full rounded-full transition-all duration-1000 ease-linear",
             isUrgent
-              ? "bg-gradient-to-r from-red-500 to-orange-400 shadow-[0_0_12px_rgba(239,68,68,0.5)]"
+              ? "bg-gradient-to-r from-red-500 to-pink-500 shadow-[0_0_12px_rgba(239,68,68,0.5)]"
               : percentage < 50
-                ? "bg-gradient-to-r from-amber-400 to-yellow-300 shadow-[0_0_8px_rgba(251,191,36,0.3)]"
-                : "bg-gradient-to-r from-emerald-400 to-cyan-300 shadow-[0_0_8px_rgba(52,211,153,0.3)]"
+                ? "bg-gradient-to-r from-[color:var(--brand-accent)] to-[color:var(--brand-3)] shadow-[0_0_10px_rgba(139,92,246,0.35)]"
+                : "bg-gradient-to-r from-[color:var(--brand)] to-[color:var(--brand-2)] shadow-[0_0_10px_rgba(46,124,255,0.38)]"
           )}
           style={{ width: `${percentage}%` }}
         />
       </div>
       <span
         className={cn(
-          "text-2xl font-mono font-bold tabular-nums min-w-[3ch] text-right text-white/70",
+          "text-2xl font-mono font-bold tabular-nums min-w-[3ch] text-right text-white/80",
           isUrgent && "text-red-400 animate-pulse"
         )}
       >

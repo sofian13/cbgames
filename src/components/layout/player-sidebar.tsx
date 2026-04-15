@@ -29,7 +29,7 @@ export function PlayerSidebar({
             key={player.id}
             className={cn(
               "premium-panel-soft flex items-center gap-3 rounded-xl p-2.5 transition-colors",
-              player.id === currentPlayerId && "border-cyan-300/50 bg-cyan-300/12"
+              player.id === currentPlayerId && "border-[color:var(--brand)] bg-[rgba(46,124,255,0.12)]"
             )}
           >
             <AvatarCircle
@@ -45,7 +45,7 @@ export function PlayerSidebar({
                 {player.id === currentPlayerId && <span className="text-white/45"> (toi)</span>}
               </p>
               {sessionScores[player.id] !== undefined && (
-                <p className="text-xs text-cyan-300/80">{sessionScores[player.id]} pts</p>
+                <p className="text-xs font-mono font-semibold text-[color:var(--brand-light)]">{sessionScores[player.id]} pts</p>
               )}
             </div>
             {player.isReady && (

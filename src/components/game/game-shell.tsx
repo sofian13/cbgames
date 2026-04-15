@@ -157,7 +157,7 @@ export function GameShell({
                     </p>
                     <div className="mt-4 h-2 overflow-hidden rounded-full bg-white/[0.06]">
                       <div
-                        className="h-full rounded-full bg-gradient-to-r from-cyan-300 via-cyan-400 to-[#ff8755]"
+                        className="h-full rounded-full bg-gradient-to-r from-[color:var(--brand)] via-[color:var(--brand-accent)] to-[color:var(--brand-2)] shadow-[0_0_12px_var(--glow-brand)]"
                         style={{ width: `${level.progress}%` }}
                       />
                     </div>
@@ -268,7 +268,7 @@ export function GameShell({
                     key={index}
                     className="flex items-start gap-3 rounded-2xl border border-white/8 bg-white/[0.03] px-4 py-3 text-sm leading-6 text-white/72"
                   >
-                    <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-cyan-300/70" />
+                    <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[color:var(--brand)] shadow-[0_0_8px_var(--glow-brand)]" />
                     {rule}
                   </div>
                 ))}

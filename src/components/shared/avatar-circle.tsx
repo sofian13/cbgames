@@ -39,12 +39,12 @@ export function AvatarCircle({
       <Avatar
         className={cn(
           sizeClasses[size],
-          "ring-1 ring-white/10 shadow-[0_10px_25px_rgba(0,0,0,0.22)]",
+          "ring-1 ring-[color:var(--line-brand)] shadow-[0_10px_25px_rgba(0,0,0,0.28)]",
           !isConnected && "opacity-45 grayscale"
         )}
       >
         {avatar && <AvatarImage src={avatar} alt={name} />}
-        <AvatarFallback className="bg-gradient-to-br from-cyan-300/18 to-[#ff8755]/14 text-xs font-bold text-white">
+        <AvatarFallback className="bg-gradient-to-br from-[rgba(46,124,255,0.22)] to-[rgba(139,92,246,0.18)] text-xs font-bold text-white">
           {initials}
         </AvatarFallback>
       </Avatar>
@@ -59,7 +59,7 @@ export function AvatarCircle({
       />
 
       {isHost && (
-        <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full border border-amber-200/20 bg-amber-300/12 text-amber-200 shadow-[0_0_12px_rgba(251,191,36,0.18)]">
+        <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full border border-[color:var(--line-violet)] bg-[rgba(139,92,246,0.18)] text-[color:var(--brand-accent)] shadow-[0_0_12px_rgba(139,92,246,0.3)]">
           <Crown className="h-3 w-3" />
         </span>
       )}

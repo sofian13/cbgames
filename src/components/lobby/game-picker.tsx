@@ -36,15 +36,15 @@ export function GamePicker({ selectedGameId, isHost, onSelectGame }: GamePickerP
   }, [activeCategory, deferredSearch]);
 
   return (
-    <section className="site-panel min-w-0 overflow-hidden rounded-[1.8rem] p-4 sm:p-5">
+    <section className="site-panel min-w-0 overflow-hidden rounded-[1.6rem] p-4 sm:p-5">
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
           <p className="section-title">{isHost ? "Choisis un jeu" : "Catalogue"}</p>
-          <p className="mt-1 text-sm text-white/50">
+          <p className="mt-1 text-sm text-[color:var(--text-dim)]">
             {isHost ? "Selection rapide du prochain jeu." : "Le host choisit la prochaine partie."}
           </p>
         </div>
-        <span className="w-fit rounded-full border border-white/10 bg-white/[0.05] px-3 py-1 text-xs text-white/45">
+        <span className="w-fit rounded-full border border-[color:var(--line-brand)] bg-[rgba(46,124,255,0.08)] px-3 py-1 text-xs font-mono font-semibold text-[color:var(--brand-light)]">
           {filteredGames.length} jeu{filteredGames.length > 1 ? "x" : ""}
         </span>
       </div>
@@ -57,7 +57,7 @@ export function GamePicker({ selectedGameId, isHost, onSelectGame }: GamePickerP
             value={search}
             onChange={(event) => setSearch(event.target.value)}
             placeholder="Rechercher un jeu"
-            className="h-12 w-full rounded-2xl border border-white/10 bg-white/[0.04] pl-11 pr-4 text-sm text-white/85 outline-none transition placeholder:text-white/24 focus:border-cyan-300/28 focus:bg-white/[0.06]"
+            className="h-12 w-full rounded-2xl border border-white/10 bg-white/[0.04] pl-11 pr-4 text-sm text-white/90 outline-none transition placeholder:text-white/24 focus:border-[color:var(--brand)] focus:bg-[rgba(46,124,255,0.06)]"
           />
         </label>
 
@@ -67,10 +67,10 @@ export function GamePicker({ selectedGameId, isHost, onSelectGame }: GamePickerP
               key={category.id}
               onClick={() => setActiveCategory(category.id)}
               className={cn(
-                "shrink-0 rounded-full border px-3 py-2 text-xs font-semibold uppercase tracking-[0.16em] transition",
+                "shrink-0 rounded-full border px-3 py-2 text-xs font-semibold uppercase tracking-[0.18em] transition",
                 activeCategory === category.id
-                  ? "border-cyan-300/30 bg-cyan-300/[0.12] text-cyan-100"
-                  : "border-white/10 bg-white/[0.04] text-white/45 hover:text-white/72"
+                  ? "border-[color:var(--brand)] bg-[rgba(46,124,255,0.14)] text-white shadow-[0_0_0_1px_rgba(46,124,255,0.3),0_8px_24px_rgba(46,124,255,0.18)]"
+                  : "border-white/10 bg-white/[0.04] text-white/45 hover:border-[color:var(--line-brand)] hover:text-white/85"
               )}
             >
               {category.label}
@@ -91,7 +91,7 @@ export function GamePicker({ selectedGameId, isHost, onSelectGame }: GamePickerP
             />
           ))
         ) : (
-          <div className="site-panel-soft col-span-full rounded-[1.5rem] px-5 py-10 text-center">
+          <div className="site-panel-soft col-span-full rounded-[1.4rem] px-5 py-10 text-center">
             <p className="text-sm text-white/42">Aucun jeu ne correspond a la recherche.</p>
           </div>
         )}

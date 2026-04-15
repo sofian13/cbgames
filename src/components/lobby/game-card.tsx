@@ -31,15 +31,15 @@ export function GameCard({ game, isSelected, isHost, onSelect }: GameCardProps) 
     <>
       <article
         className={cn(
-          "site-panel-soft site-card-hover relative min-w-0 overflow-hidden rounded-[1.7rem] border p-4 sm:p-5",
+          "site-panel-soft site-card-hover relative min-w-0 overflow-hidden rounded-[1.5rem] border p-4 sm:p-5",
           CATEGORY_CLASSES[game.category],
           isSelected
-            ? "border-cyan-300/75 bg-cyan-300/[0.09] shadow-[0_20px_40px_rgba(0,0,0,0.25),0_0_0_2px_rgba(103,232,249,0.24),0_0_34px_rgba(79,209,255,0.16)]"
+            ? "border-[color:var(--brand)] bg-[rgba(46,124,255,0.08)] shadow-[0_20px_44px_rgba(0,0,0,0.35),0_0_0_2px_rgba(46,124,255,0.32),0_0_34px_rgba(139,92,246,0.18)]"
             : "border-white/8",
           disabled && "opacity-60"
         )}
       >
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/18 to-transparent" />
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[color:var(--brand)]/40 to-transparent" />
 
         <div
           role={disabled ? undefined : "button"}
@@ -56,8 +56,8 @@ export function GameCard({ game, isSelected, isHost, onSelect }: GameCardProps) 
           <div className="flex items-start gap-4">
             <div
               className={cn(
-                "flex h-14 w-14 shrink-0 items-center justify-center rounded-[1.2rem] border border-white/10 text-3xl shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]",
-                isSelected ? "bg-cyan-300/[0.08]" : "bg-white/[0.04]"
+                "flex h-14 w-14 shrink-0 items-center justify-center rounded-[1.1rem] border border-white/10 text-3xl shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]",
+                isSelected ? "bg-[rgba(46,124,255,0.12)] border-[color:var(--line-brand)]" : "bg-white/[0.04]"
               )}
             >
               {game.icon}
@@ -65,28 +65,29 @@ export function GameCard({ game, isSelected, isHost, onSelect }: GameCardProps) 
 
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2">
-                <h4 className="text-base font-semibold text-white/92">{game.name}</h4>
+                <h4 className="text-base font-semibold text-white/95">{game.name}</h4>
                 {isSelected && (
-                  <span className="inline-flex items-center gap-1 rounded-full border border-cyan-300/45 bg-cyan-300/[0.16] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-cyan-100">
+                  <span className="inline-flex items-center gap-1 rounded-full border border-[color:var(--brand)] bg-[rgba(46,124,255,0.16)] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-[color:var(--brand-light)]">
                     <CheckCircle2 className="h-3 w-3" />
                     Actif
                   </span>
                 )}
               </div>
-              <p className="mt-2 line-clamp-3 text-sm leading-5 text-white/52">{game.description}</p>
+              <p className="mt-2 line-clamp-3 text-sm leading-5 text-white/56">{game.description}</p>
             </div>
           </div>
         </div>
 
         <div className="mt-4 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2 text-xs text-white/42">
-            <Users className="h-3.5 w-3.5 text-cyan-200/70" />
-            {game.minPlayers}-{game.maxPlayers} joueurs
+          <div className="flex items-center gap-2 text-xs text-white/48">
+            <Users className="h-3.5 w-3.5 text-[color:var(--brand-accent)]" />
+            <span className="font-mono">{game.minPlayers}-{game.maxPlayers}</span>
+            <span className="tracking-[0.14em] uppercase">joueurs</span>
           </div>
 
           <button
             onClick={() => setShowRules(true)}
-            className="flex shrink-0 items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3 py-2 text-xs font-medium text-white/62 transition hover:border-cyan-300/28 hover:text-white"
+            className="flex shrink-0 items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3 py-2 text-xs font-medium text-white/65 transition hover:border-[color:var(--brand)] hover:bg-[rgba(46,124,255,0.08)] hover:text-white"
           >
             <BookOpen className="h-3.5 w-3.5" />
             Regles
@@ -96,21 +97,21 @@ export function GameCard({ game, isSelected, isHost, onSelect }: GameCardProps) 
 
       {showRules && (
         <div
-          className="fixed inset-0 z-[100] flex items-end justify-center bg-black/70 p-4 backdrop-blur-md sm:items-center"
+          className="fixed inset-0 z-[100] flex items-end justify-center bg-black/80 p-4 backdrop-blur-lg sm:items-center"
           onClick={() => setShowRules(false)}
         >
           <div
-            className="site-panel w-full max-w-lg rounded-[2rem] p-6 sm:p-7"
+            className="site-panel w-full max-w-lg rounded-[1.8rem] p-6 sm:p-7"
             onClick={(event) => event.stopPropagation()}
           >
             <div className="mb-6 flex items-start justify-between gap-4">
               <div className="flex items-start gap-4">
-                <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.05] text-3xl">
+                <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-[color:var(--line-brand)] bg-[rgba(46,124,255,0.08)] text-3xl">
                   {game.icon}
                 </div>
                 <div>
                   <h3 className="text-xl font-semibold text-white">{game.name}</h3>
-                  <p className="mt-1 text-sm text-white/48">
+                  <p className="mt-1 text-sm text-white/50 font-mono">
                     {game.minPlayers}-{game.maxPlayers} joueurs
                   </p>
                 </div>
@@ -118,7 +119,7 @@ export function GameCard({ game, isSelected, isHost, onSelect }: GameCardProps) 
 
               <button
                 onClick={() => setShowRules(false)}
-                className="rounded-full border border-white/10 bg-white/[0.05] p-2 text-white/42 transition hover:text-white"
+                className="rounded-full border border-white/10 bg-white/[0.05] p-2 text-white/45 transition hover:border-[color:var(--brand)] hover:text-white"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -128,9 +129,9 @@ export function GameCard({ game, isSelected, isHost, onSelect }: GameCardProps) 
               {game.rules.map((rule, index) => (
                 <div
                   key={index}
-                  className="flex items-start gap-3 rounded-2xl border border-white/8 bg-white/[0.03] px-4 py-3 text-sm leading-6 text-white/72"
+                  className="flex items-start gap-3 rounded-xl border border-white/8 bg-white/[0.03] px-4 py-3 text-sm leading-6 text-white/75"
                 >
-                  <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-cyan-300/70" />
+                  <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[color:var(--brand)] shadow-[0_0_8px_var(--glow-brand)]" />
                   {rule}
                 </div>
               ))}

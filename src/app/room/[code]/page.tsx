@@ -74,12 +74,16 @@ export default function LobbyPage() {
   return (
     <div className="site-shell">
       <div
-        className="site-orb h-72 w-72 bg-[#ff8755]/35"
+        className="site-orb h-72 w-72 bg-[color:var(--brand)]/30"
         style={{ left: "-5rem", top: "10rem" }}
       />
       <div
-        className="site-orb h-80 w-80 bg-cyan-300/25"
+        className="site-orb h-80 w-80 bg-[color:var(--brand-2)]/26"
         style={{ right: "-6rem", top: "8rem", animationDelay: "-5s" }}
+      />
+      <div
+        className="site-orb h-64 w-64 bg-[color:var(--brand-3)]/14"
+        style={{ bottom: "-3rem", left: "38%", animationDelay: "-11s" }}
       />
 
       <div className="relative z-10 flex min-h-screen flex-col overflow-x-clip">
@@ -87,49 +91,50 @@ export default function LobbyPage() {
 
         <main className="mx-auto flex w-full max-w-6xl min-w-0 flex-1 flex-col gap-4 overflow-x-clip px-3 py-3 sm:px-5 sm:py-6">
           {error && (
-            <div className="rounded-[1.4rem] border border-red-400/20 bg-red-400/[0.06] px-4 py-3 text-sm text-red-200/92">
+            <div className="rounded-[1.2rem] border border-red-400/25 bg-red-400/[0.06] px-4 py-3 text-sm text-red-200/92">
               {error}
             </div>
           )}
 
-          <section className="site-panel overflow-hidden rounded-[1.9rem] p-4 sm:p-6">
+          <section className="site-panel overflow-hidden rounded-[1.6rem] p-4 sm:p-6">
             <div className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
               <div className="space-y-4">
                 <div className="flex flex-wrap gap-2">
-                  <span className="site-chip rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em]">
-                    Room {code}
+                  <span className="site-chip rounded-full px-3 py-1 text-[10px] font-mono font-semibold uppercase tracking-[0.22em]">
+                    Room · {code}
                   </span>
-                  <span className="site-chip-cool rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em]">
+                  <span className="site-chip-cool rounded-full px-3 py-1 text-[10px] font-mono font-semibold uppercase tracking-[0.22em]">
                     {connectedPlayers.length} joueur{connectedPlayers.length > 1 ? "s" : ""}
                   </span>
                 </div>
 
                 <div className="min-w-0">
-                  <h1 className="text-balance text-2xl font-semibold tracking-[-0.04em] text-white sm:text-4xl">
+                  <p className="label-accent">
+                    {selectedGame ? "Jeu verrouille" : "En attente"}
+                  </p>
+                  <h1 className="heading-h2 mt-2 text-white">
                     {selectedGame
                       ? `${selectedGame.name} est pret a partir.`
-                      : "Choisis le prochain jeu pour la room."}
+                      : "Choisis le prochain jeu."}
                   </h1>
-                  <p className="mt-2 max-w-2xl text-sm leading-6 text-white/56">
+                  <p className="mt-3 max-w-2xl text-sm leading-6 text-[color:var(--text-dim)]">
                     Un jeu selectionne, des joueurs prets, puis la partie part.
                   </p>
                 </div>
               </div>
 
               <div className="grid min-w-0 gap-3 sm:grid-cols-2 xl:grid-cols-1">
-                <div className="site-panel-soft rounded-[1.6rem] p-4">
-                  <p className="text-xs uppercase tracking-[0.18em] text-white/35">
-                    Jeu selectionne
-                  </p>
+                <div className="site-panel-soft rounded-[1.2rem] p-4">
+                  <p className="label-xs">Jeu selectionne</p>
                   <div className="mt-3 flex items-center gap-3">
-                    <div className="flex h-14 w-14 items-center justify-center rounded-[1.2rem] border border-white/10 bg-white/[0.05] text-3xl">
+                    <div className="flex h-14 w-14 items-center justify-center rounded-[1rem] border border-[color:var(--line-brand)] bg-[rgba(46,124,255,0.08)] text-3xl">
                       {selectedGame?.icon ?? "?"}
                     </div>
                     <div>
-                      <p className="text-lg font-semibold text-white/92">
+                      <p className="text-lg font-semibold text-white">
                         {selectedGame?.name ?? "Aucun"}
                       </p>
-                      <p className="text-sm text-white/45">
+                      <p className="text-sm font-mono text-white/48">
                         {selectedGame
                           ? `${selectedGame.minPlayers}-${selectedGame.maxPlayers} joueurs`
                           : "Selection du host"}
@@ -138,10 +143,8 @@ export default function LobbyPage() {
                   </div>
                 </div>
 
-                <div className="site-panel-soft rounded-[1.6rem] p-4">
-                  <p className="text-xs uppercase tracking-[0.18em] text-white/35">
-                    Score session
-                  </p>
+                <div className="site-panel-soft rounded-[1.2rem] p-4">
+                  <p className="label-xs">Score session</p>
                   {Object.keys(sessionScores).length > 0 ? (
                     <div className="mt-3 flex flex-wrap gap-2">
                       {players
@@ -156,14 +159,14 @@ export default function LobbyPage() {
                             className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-2 text-xs text-white/72"
                           >
                             <span>{player.name}</span>
-                            <span className="ml-2 font-mono text-cyan-100">
+                            <span className="ml-2 font-mono text-[color:var(--brand-light)]">
                               {sessionScores[player.id] ?? 0}
                             </span>
                           </div>
                         ))}
                     </div>
                   ) : (
-                    <p className="mt-3 text-sm text-white/42">
+                    <p className="mt-3 text-sm text-white/45">
                       La session commence. Les points apparaissent apres la premiere partie.
                     </p>
                   )}

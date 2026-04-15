@@ -10,15 +10,15 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default:
-          "border border-cyan-300/40 bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-[0_10px_26px_rgba(38,133,255,0.28)] hover:from-cyan-500 hover:to-blue-500 hover:shadow-[0_14px_30px_rgba(38,133,255,0.35)]",
+          "border border-[color:var(--brand)]/45 bg-gradient-to-r from-[color:var(--brand)] to-[color:var(--brand-2)] text-white shadow-[0_10px_26px_rgba(46,124,255,0.34)] hover:from-[color:var(--brand-light)] hover:to-[color:var(--brand-accent)] hover:shadow-[0_14px_32px_rgba(139,92,246,0.4)]",
         destructive:
           "border border-red-400/40 bg-red-500/75 text-white hover:bg-red-500/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/60",
         outline:
-          "border border-cyan-300/24 bg-[#081126]/78 text-cyan-100/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] hover:border-cyan-300/45 hover:bg-cyan-400/10 dark:bg-input/30 dark:border-input dark:hover:bg-input/50",
+          "border border-[color:var(--line-brand)] bg-[rgba(11,16,40,0.78)] text-[color:var(--brand-light)] shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] hover:border-[color:var(--brand)] hover:bg-[rgba(46,124,255,0.10)] hover:text-white",
         secondary:
-          "border border-cyan-300/24 bg-cyan-400/12 text-cyan-100/90 hover:bg-cyan-400/20",
+          "border border-[color:var(--line-violet)] bg-[rgba(139,92,246,0.10)] text-[color:var(--brand-accent)] hover:bg-[rgba(139,92,246,0.18)] hover:text-white",
         ghost:
-          "text-white/70 hover:bg-cyan-400/10 hover:text-cyan-100 dark:hover:bg-accent/50",
+          "text-white/70 hover:bg-[rgba(46,124,255,0.10)] hover:text-white",
         link: "text-primary underline-offset-4 hover:underline",
       },
       size: {
