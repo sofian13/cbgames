@@ -563,10 +563,32 @@
   }
   .line-mask > .line-mask-inner {
     display: inline-block;
+    will-change: transform, opacity, filter;
+  }
+  /* Scroll-triggered: initial hidden, GSAP anime */
+  .line-mask > .line-mask-inner-scroll {
     transform: translateY(110%);
     filter: blur(10px);
     opacity: 0;
-    will-change: transform, opacity, filter;
+  }
+  /* Load-triggered: pure CSS — animation-delay inline */
+  .line-mask > .line-mask-inner-load {
+    transform: translateY(110%);
+    filter: blur(10px);
+    opacity: 0;
+    animation: lineMaskReveal 0.9s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+  @keyframes lineMaskReveal {
+    from {
+      transform: translateY(110%);
+      filter: blur(10px);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      filter: blur(0);
+      opacity: 1;
+    }
   }
 
   /* ----- Marquee primitive ----- */
@@ -914,10 +936,13 @@
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
-  .line-mask > .line-mask-inner {
+  .line-mask > .line-mask-inner,
+  .line-mask > .line-mask-inner-load,
+  .line-mask > .line-mask-inner-scroll {
     transform: none !important;
     filter: none !important;
     opacity: 1 !important;
+    animation: none !important;
   }
   .reveal-up, .reveal-in {
     opacity: 1 !important;

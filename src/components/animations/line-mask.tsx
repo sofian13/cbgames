@@ -30,23 +30,16 @@ export function LineMask({
   const ref = useRef<HTMLSpanElement & HTMLDivElement>(null);
 
   useEffect(() => {
+    if (trigger !== "scroll") return;
     if (!ref.current) return;
     const el = ref.current;
     const rows = el.querySelectorAll<HTMLElement>(".line-mask-inner");
     if (!rows.length) return;
 
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (reduce) {
-      rows.forEach((row) => {
-        row.style.transform = "none";
-        row.style.filter = "none";
-        row.style.opacity = "1";
-      });
-      return;
-    }
+    if (reduce) return;
 
     gsap.set(rows, { yPercent: 110, opacity: 0, filter: "blur(10px)" });
-
     const anim = gsap.to(rows, {
       yPercent: 0,
       opacity: 1,
@@ -59,43 +52,48 @@ export function LineMask({
       paused: true,
     });
 
-    let st: ScrollTrigger | undefined;
-    let raf = 0;
-
-    if (trigger === "load") {
-      raf = requestAnimationFrame(() => anim.play());
-    } else {
-      st = ScrollTrigger.create({
-        trigger: el,
-        start: "top 88%",
-        once: true,
-        onEnter: () => anim.play(),
-      });
-    }
+    const st = ScrollTrigger.create({
+      trigger: el,
+      start: "top 88%",
+      once: true,
+      onEnter: () => anim.play(),
+    });
 
     return () => {
-      if (raf) cancelAnimationFrame(raf);
-      if (st) st.kill();
+      st.kill();
       anim.kill();
     };
   }, [delay, stagger, trigger]);
 
+  const isLoad = trigger === "load";
+  const innerClass = isLoad
+    ? "line-mask-inner line-mask-inner-load"
+    : "line-mask-inner line-mask-inner-scroll";
+
+  const wrap = (part: string, wordIndex: number) => {
+    const itemDelay = delay + wordIndex * stagger;
+    return (
+      <span className="line-mask">
+        <span
+          className={innerClass}
+          style={isLoad ? { animationDelay: `${itemDelay}s` } : undefined}
+        >
+          {part}
+        </span>
+      </span>
+    );
+  };
+
+  let wordCounter = 0;
   const content =
     typeof children === "string"
-      ? children.split(splitBy === "word" ? /(\s+)/ : /(\n)/).map((part, i) =>
-          part.match(/^\s+$/) ? (
-            <span key={i}>{part}</span>
-          ) : (
-            <span key={i} className="line-mask">
-              <span className="line-mask-inner">{part}</span>
-            </span>
-          )
-        )
-      : (
-          <span className="line-mask">
-            <span className="line-mask-inner">{children}</span>
-          </span>
-        );
+      ? children.split(splitBy === "word" ? /(\s+)/ : /(\n)/).map((part, i) => {
+          if (part.match(/^\s+$/)) return <span key={i}>{part}</span>;
+          const node = wrap(part, wordCounter);
+          wordCounter += 1;
+          return <span key={i}>{node}</span>;
+        })
+      : wrap(String(children), 0);
 
   if (as === "div") {
     return (
