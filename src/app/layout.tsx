@@ -3,6 +3,7 @@ import { Orbitron, Space_Grotesk } from "next/font/google";
 import { Geist_Mono } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
 import { SessionProvider } from "next-auth/react";
+import { SmoothScroll } from "@/components/layout/smooth-scroll";
 import "./globals.css";
 
 const orbitron = Orbitron({
@@ -40,7 +41,7 @@ export default function RootLayout({
         className={`${orbitron.variable} ${spaceGrotesk.variable} ${geistMono.variable} antialiased`}
       >
         <SessionProvider>
-          {children}
+          <SmoothScroll>{children}</SmoothScroll>
           <Toaster />
         </SessionProvider>
       </body>

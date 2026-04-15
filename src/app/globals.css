@@ -593,11 +593,337 @@
   transform: scale(0.97);
 }
 
+/* =========================================================
+   PREMIUM UPGRADE — Neon Arcade Editorial
+   Design tokens + utilities added for the home refonte.
+   Existing tokens above are preserved (used by 26 games).
+   ========================================================= */
+
+:root {
+  --brand: #ff6a3d;
+  --brand-light: #ff8a5f;
+  --brand-dim: #c44a26;
+  --brand-2: #38c9ff;
+  --brand-3: #ffd166;
+  --text-strong: #fafdff;
+  --text-dim: rgba(246, 251, 255, 0.62);
+  --text-muted: rgba(246, 251, 255, 0.38);
+  --line-soft: rgba(246, 251, 255, 0.08);
+  --line-brand: rgba(56, 201, 255, 0.16);
+  --glow-brand: rgba(255, 106, 61, 0.32);
+  --glow-accent: rgba(56, 201, 255, 0.28);
+}
+
+@layer utilities {
+  /* ----- Typography premium rules ----- */
+  .heading-display {
+    font-family: var(--font-orbitron);
+    font-weight: 800;
+    font-size: clamp(2.75rem, 7.6vw, 7.25rem);
+    line-height: 0.92;
+    letter-spacing: -0.04em;
+    text-wrap: balance;
+  }
+
+  .heading-h2 {
+    font-family: var(--font-orbitron);
+    font-weight: 700;
+    font-size: clamp(2rem, 4.5vw, 4.5rem);
+    line-height: 0.96;
+    letter-spacing: -0.035em;
+    text-wrap: balance;
+  }
+
+  .heading-h3 {
+    font-family: var(--font-orbitron);
+    font-weight: 600;
+    font-size: clamp(1.375rem, 2.4vw, 2rem);
+    line-height: 1.04;
+    letter-spacing: -0.025em;
+  }
+
+  .label-xs {
+    font-family: var(--font-space-grotesk);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+
+  .label-accent {
+    font-family: var(--font-space-grotesk);
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.26em;
+    text-transform: uppercase;
+    color: var(--brand-2);
+  }
+
+  /* ----- Grain overlay (SVG noise) ----- */
+  .grain-overlay::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 60;
+    opacity: 0.055;
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml;utf8,<svg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.55 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+  }
+
+  /* ----- Line-mask reveal primitive (wraps the word/line) ----- */
+  .line-mask {
+    display: inline-block;
+    overflow: hidden;
+    vertical-align: bottom;
+    padding-bottom: 0.08em;
+  }
+  .line-mask > .line-mask-inner {
+    display: inline-block;
+    transform: translateY(110%);
+    filter: blur(10px);
+    opacity: 0;
+    will-change: transform, opacity, filter;
+  }
+
+  /* ----- Text gradient wipe (scroll-linked brand sweep) ----- */
+  .text-gradient-wipe {
+    background: linear-gradient(
+      100deg,
+      var(--text-strong) 0%,
+      var(--text-strong) 40%,
+      var(--brand) 50%,
+      var(--brand-2) 60%,
+      var(--text-strong) 72%,
+      var(--text-strong) 100%
+    );
+    background-size: 220% 100%;
+    background-position: 100% 50%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+  }
+
+  /* ----- Marquee primitive ----- */
+  .marquee-viewport {
+    position: relative;
+    width: 100%;
+    overflow: hidden;
+    mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+    -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+  }
+  .marquee-track {
+    display: flex;
+    align-items: center;
+    gap: 3.5rem;
+    width: max-content;
+    will-change: transform;
+  }
+  .marquee-item {
+    font-family: var(--font-orbitron);
+    font-weight: 700;
+    font-style: italic;
+    font-size: clamp(2.5rem, 7vw, 6rem);
+    line-height: 1;
+    letter-spacing: -0.03em;
+    color: var(--text-strong);
+    white-space: nowrap;
+  }
+  .marquee-sep {
+    display: inline-flex;
+    height: 0.7em;
+    width: 0.7em;
+    border-radius: 9999px;
+    background: var(--brand);
+    box-shadow: 0 0 24px var(--glow-brand);
+    flex-shrink: 0;
+  }
+  .marquee-item-outline {
+    color: transparent;
+    -webkit-text-stroke: 2px var(--brand-2);
+  }
+
+  /* ----- Section reveal base (for GSAP ScrollTrigger) ----- */
+  .reveal-up {
+    opacity: 0;
+    transform: translate3d(0, 36px, 0);
+    will-change: transform, opacity;
+  }
+  .reveal-in {
+    opacity: 0;
+    transform: translate3d(0, 24px, 0) scale(0.985);
+    will-change: transform, opacity;
+  }
+
+  /* ----- Bento category card ----- */
+  .bento-card {
+    position: relative;
+    overflow: hidden;
+    border-radius: 1.5rem;
+    border: 1px solid var(--line-soft);
+    background:
+      radial-gradient(120% 120% at 0% 0%, rgba(255, 106, 61, 0.08), transparent 55%),
+      radial-gradient(120% 120% at 100% 100%, rgba(56, 201, 255, 0.08), transparent 55%),
+      rgba(14, 17, 48, 0.72);
+    backdrop-filter: blur(20px);
+    transition:
+      transform 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+      border-color 0.5s ease,
+      box-shadow 0.5s ease;
+  }
+  .bento-card::before {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(135deg, transparent 55%, rgba(56, 201, 255, 0.35) 75%, transparent 100%);
+    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    opacity: 0;
+    transition: opacity 0.5s ease;
+    pointer-events: none;
+  }
+  .bento-card:hover {
+    transform: translateY(-4px);
+    border-color: rgba(56, 201, 255, 0.28);
+    box-shadow: 0 22px 60px rgba(0, 0, 0, 0.38), 0 0 40px rgba(56, 201, 255, 0.08);
+  }
+  .bento-card:hover::before {
+    opacity: 1;
+  }
+
+  /* ----- Premium primary CTA ----- */
+  .btn-brand {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.625rem;
+    padding: 1rem 1.75rem;
+    border-radius: 9999px;
+    font-family: var(--font-space-grotesk);
+    font-weight: 600;
+    font-size: 0.9375rem;
+    letter-spacing: 0.04em;
+    color: #1a0802;
+    background: linear-gradient(140deg, var(--brand-light), var(--brand));
+    box-shadow:
+      0 18px 44px var(--glow-brand),
+      inset 0 1px 0 rgba(255, 255, 255, 0.28);
+    overflow: hidden;
+    isolation: isolate;
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    will-change: transform;
+  }
+  .btn-brand::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(140deg, #ffffff, var(--brand-2));
+    opacity: 0;
+    transition: opacity 0.35s ease;
+    z-index: -1;
+  }
+  .btn-brand:hover::before {
+    opacity: 0.18;
+  }
+
+  .btn-ghost {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 1rem 1.75rem;
+    border-radius: 9999px;
+    font-family: var(--font-space-grotesk);
+    font-weight: 600;
+    font-size: 0.9375rem;
+    letter-spacing: 0.04em;
+    color: var(--text-strong);
+    border: 1px solid rgba(246, 251, 255, 0.16);
+    background: rgba(246, 251, 255, 0.04);
+    backdrop-filter: blur(14px);
+    transition:
+      border-color 0.3s ease,
+      background-color 0.3s ease,
+      transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .btn-ghost:hover {
+    border-color: var(--brand-2);
+    background: rgba(56, 201, 255, 0.08);
+  }
+
+  /* ----- Scroll indicator ----- */
+  .scroll-pulse {
+    position: relative;
+    width: 1px;
+    height: 48px;
+    background: linear-gradient(180deg, transparent, var(--brand-2), transparent);
+    overflow: hidden;
+  }
+  .scroll-pulse::after {
+    content: "";
+    position: absolute;
+    top: -20%;
+    left: 0;
+    right: 0;
+    height: 40%;
+    background: var(--brand);
+    box-shadow: 0 0 12px var(--brand);
+    animation: scrollPulse 2.2s cubic-bezier(0.5, 0, 0.5, 1) infinite;
+  }
+  @keyframes scrollPulse {
+    0% { top: -40%; opacity: 0; }
+    30% { opacity: 1; }
+    70% { opacity: 1; }
+    100% { top: 120%; opacity: 0; }
+  }
+
+  /* ----- Step connector SVG wrapper ----- */
+  .step-connector path {
+    stroke-dasharray: 1;
+    stroke-dashoffset: 1;
+    stroke: var(--brand-2);
+    fill: none;
+  }
+
+  /* ----- Noise spotlight (used behind hero) ----- */
+  .spotlight {
+    position: absolute;
+    inset: -20% auto auto -10%;
+    width: 80vmax;
+    height: 80vmax;
+    border-radius: 9999px;
+    background: radial-gradient(circle, var(--glow-brand) 0%, transparent 55%);
+    filter: blur(40px);
+    pointer-events: none;
+    z-index: 0;
+  }
+  .spotlight-cool {
+    background: radial-gradient(circle, var(--glow-accent) 0%, transparent 55%);
+    inset: auto -10% -20% auto;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+  .line-mask > .line-mask-inner {
+    transform: none !important;
+    filter: none !important;
+    opacity: 1 !important;
+  }
+  .reveal-up, .reveal-in {
+    opacity: 1 !important;
+    transform: none !important;
   }
 }
