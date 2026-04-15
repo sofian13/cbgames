@@ -1,12 +1,6 @@
 "use client";
 
 import { useEffect, useRef, type ReactNode } from "react";
-import { gsap } from "gsap";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
-
-if (typeof window !== "undefined") {
-  gsap.registerPlugin(ScrollTrigger);
-}
 
 type RevealProps = {
   children: ReactNode;
@@ -31,49 +25,41 @@ export function Reveal({
     if (!ref.current) return;
     const el = ref.current;
 
-    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const targets: HTMLElement[] =
+      stagger && staggerSelector
+        ? Array.from(el.querySelectorAll<HTMLElement>(staggerSelector))
+        : [el];
 
-    const targets = stagger && staggerSelector
-      ? el.querySelectorAll<HTMLElement>(staggerSelector)
-      : [el];
+    targets.forEach((t, i) => {
+      t.style.setProperty("--reveal-delay", `${delay + (stagger ?? 0) * i}s`);
+      t.style.setProperty("--reveal-y", `${y}px`);
+      t.classList.add("reveal-target");
+    });
 
-    if (!targets.length) return;
+    const play = () => {
+      targets.forEach((t) => t.classList.add("in-view"));
+    };
 
-    if (reduce) {
+    const rect = el.getBoundingClientRect();
+    if (rect.top < window.innerHeight && rect.bottom > 0) {
+      play();
       return;
     }
 
-    gsap.set(targets, { opacity: 0, y, scale: 0.985 });
+    const io = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            play();
+            io.disconnect();
+          }
+        });
+      },
+      { rootMargin: "0px 0px -10% 0px", threshold: 0.1 }
+    );
+    io.observe(el);
 
-    const anim = gsap.to(targets, {
-      opacity: 1,
-      y: 0,
-      scale: 1,
-      duration: 1,
-      ease: "expo.out",
-      stagger: stagger ?? 0,
-      delay,
-      overwrite: "auto",
-      paused: true,
-    });
-
-    const st = ScrollTrigger.create({
-      trigger: el,
-      start: "top 90%",
-      once: true,
-      onEnter: () => anim.play(),
-    });
-
-    // Fallback: if already in view (above the fold), play after mount
-    const rect = el.getBoundingClientRect();
-    if (rect.top < window.innerHeight * 0.9) {
-      requestAnimationFrame(() => anim.play());
-    }
-
-    return () => {
-      st.kill();
-      anim.kill();
-    };
+    return () => io.disconnect();
   }, [delay, y, stagger, staggerSelector]);
 
   return (

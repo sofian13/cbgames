@@ -1,12 +1,6 @@
 "use client";
 
 import { useEffect, useRef, type ReactNode } from "react";
-import { gsap } from "gsap";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
-
-if (typeof window !== "undefined") {
-  gsap.registerPlugin(ScrollTrigger);
-}
 
 type LineMaskProps = {
   as?: "span" | "div";
@@ -33,37 +27,31 @@ export function LineMask({
     if (trigger !== "scroll") return;
     if (!ref.current) return;
     const el = ref.current;
-    const rows = el.querySelectorAll<HTMLElement>(".line-mask-inner");
-    if (!rows.length) return;
 
-    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (reduce) return;
+    const play = () => el.classList.add("in-view");
 
-    gsap.set(rows, { yPercent: 110, opacity: 0, filter: "blur(10px)" });
-    const anim = gsap.to(rows, {
-      yPercent: 0,
-      opacity: 1,
-      filter: "blur(0px)",
-      duration: 0.9,
-      ease: "expo.out",
-      stagger,
-      delay,
-      overwrite: "auto",
-      paused: true,
-    });
+    // Already in view on mount? Play immediately.
+    const rect = el.getBoundingClientRect();
+    if (rect.top < window.innerHeight && rect.bottom > 0) {
+      play();
+      return;
+    }
 
-    const st = ScrollTrigger.create({
-      trigger: el,
-      start: "top 88%",
-      once: true,
-      onEnter: () => anim.play(),
-    });
+    const io = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            play();
+            io.disconnect();
+          }
+        });
+      },
+      { rootMargin: "0px 0px -12% 0px", threshold: 0.1 }
+    );
+    io.observe(el);
 
-    return () => {
-      st.kill();
-      anim.kill();
-    };
-  }, [delay, stagger, trigger]);
+    return () => io.disconnect();
+  }, [trigger]);
 
   const isLoad = trigger === "load";
   const innerClass = isLoad
@@ -76,7 +64,7 @@ export function LineMask({
       <span className="line-mask">
         <span
           className={innerClass}
-          style={isLoad ? { animationDelay: `${itemDelay}s` } : undefined}
+          style={{ animationDelay: `${itemDelay}s` }}
         >
           {part}
         </span>
