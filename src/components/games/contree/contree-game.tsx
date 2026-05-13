@@ -27,6 +27,8 @@ interface ContreeState {
   currentBid: Bid | null;
   timeLeft: number;
   trick: { card: { rank: Rank; suit: Suit }; seat: number }[];
+  trickLeadSuit: Suit | null;
+  lastTrickWinnerSeat: number | null;
   trumpSuit: Suit | null;
   pliCounts: [number, number];
   matchScore: [number, number];
@@ -38,6 +40,20 @@ interface ContreeState {
 
 const palette = ["#5BA3FF","#FF6A3D","#7E66FF","#E63CA0","#18A957","#E89A2B","#00B3A6","#E23434"];
 const SUIT_RED = (s: Suit) => s === "♥" || s === "♦";
+
+function isLegalLocal(
+  card: { rank: Rank; suit: Suit },
+  state: ContreeState,
+  hand: { rank: Rank; suit: Suit }[],
+): boolean {
+  if (state.phase !== "playing") return false;
+  if (state.trick.length === 0) return true;
+  const lead = state.trickLeadSuit ?? state.trick[0].card.suit;
+  if (card.suit === lead) return true;
+  const hasLead = hand.some((c) => c.suit === lead);
+  if (hasLead) return false;
+  return true;
+}
 
 // ─── Shared layout helpers — navy table look (Belote.com style) ─────────────
 function BoardBackground({ children }: { children: React.ReactNode }) {
@@ -210,55 +226,115 @@ function getBubble(seatId: string | undefined, state: ContreeState): string | nu
 }
 
 function BottomHand({
-  hand, onPlay, canPlay,
+  hand, onPlay, canPlay, isLegal, zIndex = 40,
 }: {
   hand: { rank: Rank; suit: Suit }[];
   onPlay: (idx: number) => void;
   canPlay: boolean;
+  isLegal?: (card: { rank: Rank; suit: Suit }) => boolean;
+  zIndex?: number;
 }) {
+  const [zoomIdx, setZoomIdx] = useState<number | null>(null);
+  const [pressTimer, setPressTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
+
+  const startPress = (idx: number) => {
+    if (pressTimer) clearTimeout(pressTimer);
+    const t = setTimeout(() => setZoomIdx(idx), 350);
+    setPressTimer(t);
+  };
+  const endPress = () => {
+    if (pressTimer) { clearTimeout(pressTimer); setPressTimer(null); }
+    setTimeout(() => setZoomIdx(null), 80);
+  };
+
   return (
-    <div className="pointer-events-none absolute bottom-0 left-0 right-0 z-40">
-      <div className="pointer-events-auto relative mx-auto" style={{ width: "100%", maxWidth: 820, height: 168 }}>
-        {hand.length === 0 && (
-          <div className="absolute left-1/2 bottom-6 -translate-x-1/2 text-[10px] uppercase tracking-[0.18em]"
-               style={{ color: "rgba(255,255,255,0.3)", fontFamily: "var(--font-display)" }}>
-            en attente de distribution
-          </div>
-        )}
-        {hand.map((c, i) => {
-          const n = hand.length;
-          const mid = (n - 1) / 2;
-          const offset = i - mid;
-          const spacing = Math.min(60, 640 / Math.max(1, n));
-          const rot = offset * Math.min(4, 16 / Math.max(1, n - 1));
-          const x = offset * spacing;
-          const y = Math.abs(offset) * 2;
-          return (
-            <button
-              key={`${c.rank}${c.suit}-${i}`}
-              onClick={() => canPlay && onPlay(i)}
-              disabled={!canPlay}
-              className="absolute outline-none transition-all duration-300 ease-out hover:-translate-y-4 focus-visible:-translate-y-4"
-              style={{
-                left: "50%", bottom: 16,
-                transform: `translateX(${x - 32}px) translateY(${-y}px) rotate(${rot}deg)`,
-                transformOrigin: "center 140px",
-                zIndex: i,
-                cursor: canPlay ? "pointer" : "default",
-              }}
-            >
-              <PlayingCard
-                value={c.rank as Rank}
-                suit={c.suit as Suit}
-                size="lg"
-                dim={!canPlay}
-                raised={canPlay}
-              />
-            </button>
-          );
-        })}
+    <>
+      <div
+        className="pointer-events-none absolute bottom-0 left-0 right-0"
+        style={{ zIndex }}
+      >
+        <div
+          className="relative mx-auto"
+          style={{
+            width: "100%",
+            maxWidth: 820,
+            height: 168,
+            pointerEvents: canPlay || isLegal ? "auto" : "none",
+          }}
+        >
+          {hand.length === 0 && (
+            <div className="absolute left-1/2 bottom-6 -translate-x-1/2 text-[10px] uppercase tracking-[0.18em]"
+                 style={{ color: "rgba(255,255,255,0.3)", fontFamily: "var(--font-display)" }}>
+              en attente de distribution
+            </div>
+          )}
+          {hand.map((c, i) => {
+            const n = hand.length;
+            const mid = (n - 1) / 2;
+            const offset = i - mid;
+            const spacing = Math.min(58, 620 / Math.max(1, n));
+            const rot = offset * Math.min(4, 16 / Math.max(1, n - 1));
+            const x = offset * spacing;
+            const y = Math.abs(offset) * 2;
+            const playable = canPlay && (isLegal ? isLegal(c) : true);
+            const dim = !playable;
+            return (
+              <button
+                key={`${c.rank}${c.suit}-${i}`}
+                onClick={() => playable && onPlay(i)}
+                onPointerDown={() => startPress(i)}
+                onPointerUp={endPress}
+                onPointerLeave={endPress}
+                onContextMenu={(e) => e.preventDefault()}
+                disabled={!playable}
+                className="absolute outline-none transition-all duration-300 ease-out hover:-translate-y-4 focus-visible:-translate-y-4"
+                style={{
+                  left: "50%", bottom: 16,
+                  transform: `translateX(${x - 32}px) translateY(${-y}px) rotate(${rot}deg)`,
+                  transformOrigin: "center 140px",
+                  zIndex: i,
+                  cursor: playable ? "pointer" : "default",
+                  touchAction: "manipulation",
+                  filter: playable
+                    ? "drop-shadow(0 0 10px rgba(140,255,170,0.45))"
+                    : (canPlay ? "saturate(0.4) brightness(0.7)" : "none"),
+                }}
+              >
+                <PlayingCard
+                  value={c.rank as Rank}
+                  suit={c.suit as Suit}
+                  size="lg"
+                  dim={dim && canPlay}
+                  raised={playable}
+                />
+              </button>
+            );
+          })}
+        </div>
       </div>
-    </div>
+
+      {zoomIdx !== null && hand[zoomIdx] && (
+        <div
+          className="pointer-events-none fixed inset-0 z-[100] flex items-center justify-center"
+          style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(4px)" }}
+        >
+          <div
+            style={{
+              transform: "scale(2.2)",
+              filter: "drop-shadow(0 20px 40px rgba(0,0,0,0.5))",
+              transition: "transform 200ms ease-out",
+            }}
+          >
+            <PlayingCard
+              value={hand[zoomIdx].rank as Rank}
+              suit={hand[zoomIdx].suit as Suit}
+              size="lg"
+              raised
+            />
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 
@@ -437,27 +513,29 @@ export default function ContreeGame({ roomCode, playerId, playerName }: GameProp
         <SeatAvatar seat={leftOpp}     position="left"  isTurn={state.currentBidder === leftOpp?.id}     myTeam={myTeam} dealerSeat={state.dealer} bubble={getBubble(leftOpp?.id, state)} />
         <SeatAvatar seat={rightOpp}    position="right" isTurn={state.currentBidder === rightOpp?.id}    myTeam={myTeam} dealerSeat={state.dealer} bubble={getBubble(rightOpp?.id, state)} />
 
-        {/* Bidding modal */}
+        {/* Bidding modal — compact mobile-first */}
         <div
-          className="absolute left-1/2 top-1/2 z-30 w-[92%] max-w-xl -translate-x-1/2 -translate-y-1/2 rounded-2xl p-6"
+          className="absolute left-1/2 z-[55] w-[88%] max-w-md -translate-x-1/2 rounded-2xl p-4 sm:p-5"
           style={{
-            background: "linear-gradient(180deg, rgba(40,70,150,0.55), rgba(20,38,90,0.7))",
+            top: "44%",
+            transform: "translate(-50%, -50%)",
+            background: "linear-gradient(180deg, rgba(40,70,150,0.65), rgba(20,38,90,0.78))",
             border: "1.5px solid rgba(120,170,255,0.35)",
             boxShadow: "0 0 60px rgba(80,140,255,0.25), 0 30px 80px rgba(0,0,0,0.5)",
-            backdropFilter: "blur(8px)",
+            backdropFilter: "blur(10px)",
           }}
         >
           {/* Header — current top bid or "Enchères" */}
-          <div className="mb-4 flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-[0.18em]" style={{ color: "rgba(255,255,255,0.65)", fontFamily: "var(--font-display)" }}>
-              {state.currentBid ? `enchère par ${state.seats.find((s) => s.id === state.currentBid?.bidder)?.name ?? "?"}` : "à toi d'ouvrir"}
+          <div className="mb-3 flex items-center justify-between">
+            <span className="text-[10px] font-bold uppercase tracking-[0.18em]" style={{ color: "rgba(255,255,255,0.65)", fontFamily: "var(--font-display)" }}>
+              {state.currentBid ? `par ${state.seats.find((s) => s.id === state.currentBid?.bidder)?.name ?? "?"}` : "à toi d'ouvrir"}
             </span>
             {state.currentBid && (
-              <span className="flex items-center gap-1.5 text-sm font-black text-white" style={{ fontFamily: "var(--font-display)" }}>
+              <span className="flex items-center gap-1 text-xs font-black text-white" style={{ fontFamily: "var(--font-display)" }}>
                 {state.currentBid.amount}
                 <span style={{ color: SUIT_RED(state.currentBid.suit) ? "#FF8C8C" : "#FFFFFF" }}>{state.currentBid.suit}</span>
                 {state.currentBid.multiplier > 1 && (
-                  <span className="ml-1 rounded px-1.5 py-0.5 text-[10px] font-bold" style={{ background: "var(--cb-social)" }}>
+                  <span className="ml-1 rounded px-1 py-0.5 text-[9px] font-bold" style={{ background: "var(--cb-social)" }}>
                     ×{state.currentBid.multiplier}
                   </span>
                 )}
@@ -468,18 +546,18 @@ export default function ContreeGame({ roomCode, playerId, playerName }: GameProp
           {/* Amount stepper */}
           {isMyBid ? (
             <>
-              <div className="flex items-center justify-center gap-3">
+              <div className="flex items-center justify-center gap-2">
                 <button
                   onClick={() => stepAmount(-1)}
                   disabled={curIdx <= 0}
-                  className="flex h-10 w-10 items-center justify-center rounded-full text-xl text-white transition-all disabled:opacity-30"
+                  className="flex h-9 w-9 items-center justify-center rounded-full text-lg text-white transition-all disabled:opacity-30"
                   style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.15)" }}
                   aria-label="Montant inférieur"
                 >
                   ‹
                 </button>
                 <div
-                  className="flex h-14 w-28 items-center justify-center rounded-2xl text-3xl font-black text-white"
+                  className="flex h-12 w-20 items-center justify-center rounded-2xl text-2xl font-black text-white"
                   style={{
                     background: "linear-gradient(180deg, rgba(255,255,255,0.18), rgba(255,255,255,0.05))",
                     border: "1.5px solid rgba(180,210,255,0.4)",
@@ -492,7 +570,7 @@ export default function ContreeGame({ roomCode, playerId, playerName }: GameProp
                 <button
                   onClick={() => stepAmount(1)}
                   disabled={curIdx >= validAmounts.length - 1 || curIdx < 0}
-                  className="flex h-10 w-10 items-center justify-center rounded-full text-xl text-white transition-all disabled:opacity-30"
+                  className="flex h-9 w-9 items-center justify-center rounded-full text-lg text-white transition-all disabled:opacity-30"
                   style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.15)" }}
                   aria-label="Montant supérieur"
                 >
@@ -500,12 +578,12 @@ export default function ContreeGame({ roomCode, playerId, playerName }: GameProp
                 </button>
                 <button
                   onClick={() => setBidAmount(250)}
-                  className="ml-2 rounded-full px-3 py-2 text-[11px] font-black"
+                  className="ml-1 rounded-full px-2.5 py-1.5 text-[10px] font-black"
                   style={{
                     background: bidAmount === 250 ? "var(--cb-cards)" : "rgba(255,255,255,0.08)",
                     color: "#fff",
                     fontFamily: "var(--font-display)",
-                    letterSpacing: "0.06em",
+                    letterSpacing: "0.04em",
                     border: bidAmount === 250 ? "1.5px solid transparent" : "1px solid rgba(255,255,255,0.15)",
                   }}
                 >
@@ -513,21 +591,21 @@ export default function ContreeGame({ roomCode, playerId, playerName }: GameProp
                 </button>
                 <button
                   onClick={() => setBidAmount(500)}
-                  className="rounded-full px-3 py-2 text-[11px] font-black"
+                  className="rounded-full px-2.5 py-1.5 text-[10px] font-black"
                   style={{
                     background: bidAmount === 500 ? "var(--cb-brand)" : "rgba(255,255,255,0.08)",
                     color: "#fff",
                     fontFamily: "var(--font-display)",
-                    letterSpacing: "0.06em",
+                    letterSpacing: "0.04em",
                     border: bidAmount === 500 ? "1.5px solid transparent" : "1px solid rgba(255,255,255,0.15)",
                   }}
                 >
-                  GÉNÉRALE
+                  GÉN.
                 </button>
               </div>
 
               {/* Suit cards */}
-              <div className="mt-5 flex justify-center gap-3">
+              <div className="mt-4 flex justify-center gap-2">
                 {(["♦","♠","♥","♣"] as Suit[]).map((s) => {
                   const active = bidSuit === s;
                   const red = SUIT_RED(s);
@@ -535,14 +613,14 @@ export default function ContreeGame({ roomCode, playerId, playerName }: GameProp
                     <button
                       key={s}
                       onClick={() => setBidSuit(s)}
-                      className="flex h-16 w-12 items-center justify-center rounded-lg transition-transform hover:-translate-y-0.5"
+                      className="flex h-12 w-10 items-center justify-center rounded-md transition-transform active:scale-95"
                       style={{
                         background: "#FAFAF9",
                         border: active ? "3px solid #6BB1FF" : "2px solid transparent",
-                        boxShadow: active ? "0 0 20px rgba(107,177,255,0.5)" : "0 3px 8px rgba(0,0,0,0.25)",
+                        boxShadow: active ? "0 0 16px rgba(107,177,255,0.5)" : "0 2px 6px rgba(0,0,0,0.25)",
                       }}
                     >
-                      <span className="text-3xl font-black" style={{ color: red ? "#E23434" : "#0A0A0A" }}>
+                      <span className="text-2xl font-black" style={{ color: red ? "#E23434" : "#0A0A0A" }}>
                         {s}
                       </span>
                     </button>
@@ -551,40 +629,40 @@ export default function ContreeGame({ roomCode, playerId, playerName }: GameProp
               </div>
 
               {/* Actions */}
-              <div className="mt-6 flex gap-3">
+              <div className="mt-4 flex gap-2">
                 <button
                   onClick={pass}
-                  className="flex-1 rounded-2xl py-3 text-sm font-black tracking-widest transition-transform hover:-translate-y-0.5"
+                  className="flex-1 rounded-xl py-2.5 text-xs font-black tracking-widest transition-transform active:scale-95"
                   style={{
                     background: "linear-gradient(180deg, #3B82F6, #1D4ED8)",
                     color: "#fff",
                     border: "1.5px solid rgba(180,210,255,0.5)",
                     fontFamily: "var(--font-display)",
-                    boxShadow: "0 0 24px rgba(59,130,246,0.35), inset 0 1px 0 rgba(255,255,255,0.2)",
+                    boxShadow: "0 0 18px rgba(59,130,246,0.35), inset 0 1px 0 rgba(255,255,255,0.2)",
                   }}
                 >
-                  JE PASSE
+                  PASSE
                 </button>
                 {state.currentBid ? (
                   <>
                     <button
                       onClick={placeBid}
-                      className="flex-1 rounded-2xl py-3 text-sm font-black tracking-widest transition-transform hover:-translate-y-0.5"
+                      className="flex-1 rounded-xl py-2.5 text-xs font-black tracking-widest transition-transform active:scale-95"
                       style={{
                         background: "linear-gradient(180deg, #22C55E, #15803D)",
                         color: "#fff",
                         border: "1.5px solid rgba(180,255,200,0.4)",
                         fontFamily: "var(--font-display)",
-                        boxShadow: "0 0 24px rgba(34,197,94,0.35), inset 0 1px 0 rgba(255,255,255,0.2)",
+                        boxShadow: "0 0 18px rgba(34,197,94,0.35), inset 0 1px 0 rgba(255,255,255,0.2)",
                       }}
                     >
                       ENCHÉRIR
                     </button>
                     <button
                       onClick={coincher}
-                      className="flex-1 rounded-2xl py-3 text-sm font-black tracking-widest transition-transform hover:-translate-y-0.5"
+                      className="flex-1 rounded-xl py-2.5 text-xs font-black tracking-widest transition-transform active:scale-95"
                       style={{
-                        background: "linear-gradient(180deg, #7F1D1D, #450A0A)",
+                        background: "linear-gradient(180deg, #B91C1C, #7F1D1D)",
                         color: "#fff",
                         border: "1.5px solid rgba(255,150,150,0.4)",
                         fontFamily: "var(--font-display)",
@@ -597,13 +675,13 @@ export default function ContreeGame({ roomCode, playerId, playerName }: GameProp
                 ) : (
                   <button
                     onClick={placeBid}
-                    className="flex-1 rounded-2xl py-3 text-sm font-black tracking-widest transition-transform hover:-translate-y-0.5"
+                    className="flex-1 rounded-xl py-2.5 text-xs font-black tracking-widest transition-transform active:scale-95"
                     style={{
                       background: "linear-gradient(180deg, #22C55E, #15803D)",
                       color: "#fff",
                       border: "1.5px solid rgba(180,255,200,0.4)",
                       fontFamily: "var(--font-display)",
-                      boxShadow: "0 0 24px rgba(34,197,94,0.35), inset 0 1px 0 rgba(255,255,255,0.2)",
+                      boxShadow: "0 0 18px rgba(34,197,94,0.35), inset 0 1px 0 rgba(255,255,255,0.2)",
                     }}
                   >
                     ANNONCER
@@ -612,17 +690,17 @@ export default function ContreeGame({ roomCode, playerId, playerName }: GameProp
               </div>
             </>
           ) : (
-            <div className="py-8 text-center">
+            <div className="py-5 text-center">
               <span className="cb-eyebrow" style={{ color: "rgba(255,255,255,0.5)" }}>en cours</span>
-              <div className="mt-2 text-base text-white" style={{ fontFamily: "var(--font-display)" }}>
+              <div className="mt-1 text-sm text-white" style={{ fontFamily: "var(--font-display)" }}>
                 {state.seats.find((s) => s.id === state.currentBidder)?.name} réfléchit…
               </div>
             </div>
           )}
         </div>
 
-        {/* Hand at the bottom */}
-        <BottomHand hand={myHand} onPlay={() => {}} canPlay={false} />
+        {/* Hand at the bottom — z-30 (below modal z-55) */}
+        <BottomHand hand={myHand} onPlay={() => {}} canPlay={false} zIndex={30} />
       </BoardBackground>
     );
   }
@@ -714,28 +792,42 @@ export default function ContreeGame({ roomCode, playerId, playerName }: GameProp
             {isMyTurn ? "à toi de jouer" : "en attente"}
           </span>
         )}
-        {state.trick.map((t, i) => (
-          <div
-            key={i}
-            style={{
-              position: "absolute",
-              left: "50%", top: "50%",
-              ...trickPosStyle(t.seat),
-              zIndex: 10 + i,
-              filter: "drop-shadow(0 8px 16px rgba(0,0,0,0.45))",
-            }}
-          >
-            <PlayingCard
-              value={t.card.rank as Rank}
-              suit={t.card.suit as Suit}
-              size="lg"
-              raised
-            />
-          </div>
-        ))}
+        {state.trick.map((t, i) => {
+          const winnerSeat = state.lastTrickWinnerSeat;
+          const collected = winnerSeat !== null;
+          const finalStyle = collected
+            ? trickPosStyle(winnerSeat)
+            : trickPosStyle(t.seat);
+          return (
+            <div
+              key={`${t.card.rank}${t.card.suit}-${t.seat}`}
+              style={{
+                position: "absolute",
+                left: "50%", top: "50%",
+                ...finalStyle,
+                zIndex: 10 + i,
+                filter: "drop-shadow(0 8px 16px rgba(0,0,0,0.45))",
+                opacity: collected ? 0 : 1,
+                transition: "transform 700ms cubic-bezier(0.34, 1.2, 0.64, 1), opacity 700ms ease-out 200ms",
+              }}
+            >
+              <PlayingCard
+                value={t.card.rank as Rank}
+                suit={t.card.suit as Suit}
+                size="lg"
+                raised
+              />
+            </div>
+          );
+        })}
       </div>
 
-      <BottomHand hand={myHand} onPlay={playCard} canPlay={isMyTurn} />
+      <BottomHand
+        hand={myHand}
+        onPlay={playCard}
+        canPlay={isMyTurn && state.lastTrickWinnerSeat === null}
+        isLegal={(c) => isLegalLocal(c, state, myHand)}
+      />
     </BoardBackground>
   );
 }

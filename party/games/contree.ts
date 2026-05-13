@@ -85,6 +85,7 @@ export class ContreeGame extends BaseGame {
   currentTurn = 0; // seat index whose turn
   trick: { card: Card; seat: number }[] = [];
   trickLeadSuit: Suit | null = null;
+  lastTrickWinnerSeat: number | null = null;
   trumpSuit: Suit | null = null;
   pliCounts: [number, number] = [0, 0]; // tricks won by team A, B
   trickPoints: [number, number] = [0, 0]; // raw card points won this hand
@@ -400,21 +401,29 @@ export class ContreeGame extends BaseGame {
     }
     this.trickPoints[winnerTeam] += pts;
 
-    // Check if hand over (8 tricks)
-    const totalTricks = this.pliCounts[0] + this.pliCounts[1];
-    if (totalTricks === 8) {
-      // Add "10 de der" (last trick bonus)
-      this.trickPoints[winnerTeam] += 10;
-      this.endHand();
-      return;
-    }
-
-    // Next trick: winner leads
-    this.currentTurn = winnerSeat;
-    this.trick = [];
-    this.trickLeadSuit = null;
-    this.startTurnTimer();
+    // Pause + animate: keep trick visible, mark winner
+    this.stopTurnTimer();
+    this.lastTrickWinnerSeat = winnerSeat;
     this.broadcastState();
+
+    setTimeout(() => {
+      this.lastTrickWinnerSeat = null;
+
+      // Check if hand over (8 tricks)
+      const totalTricks = this.pliCounts[0] + this.pliCounts[1];
+      if (totalTricks === 8) {
+        this.trickPoints[winnerTeam] += 10;
+        this.endHand();
+        return;
+      }
+
+      // Next trick: winner leads
+      this.currentTurn = winnerSeat;
+      this.trick = [];
+      this.trickLeadSuit = null;
+      this.startTurnTimer();
+      this.broadcastState();
+    }, 1500);
   }
 
   endHand() {
@@ -515,6 +524,7 @@ export class ContreeGame extends BaseGame {
       timeLeft: this.timeLeft,
       trick: this.trick,
       trickLeadSuit: this.trickLeadSuit,
+      lastTrickWinnerSeat: this.lastTrickWinnerSeat,
       trumpSuit: this.trumpSuit,
       pliCounts: this.pliCounts,
       trickPoints: this.trickPoints,
