@@ -47,7 +47,7 @@ export default function ContreeGame({ roomCode, playerId, playerName }: GameProp
   const [bidSuit, setBidSuit] = useState<Suit>("♥");
 
   const myHand = state?.hands?.[playerId] ?? [];
-  const me = state?.seats.find((s) => s.id === playerId);
+  const me = state?.seats?.find((s) => s.id === playerId);
   const isMyTurn = state?.currentPlayerId === playerId;
   const isMyBid = state?.currentBidder === playerId;
 
