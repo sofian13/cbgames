@@ -42,8 +42,9 @@ const SUIT_RED = (s: Suit) => s === "♥" || s === "♦";
 function BoardBackground({ children }: { children: React.ReactNode }) {
   return (
     <div
-      className="relative flex h-full w-full overflow-hidden"
+      className="relative w-full flex-1 self-stretch overflow-hidden"
       style={{
+        minHeight: "min(560px, calc(100svh - 180px))",
         background: "radial-gradient(120% 80% at 50% 40%, #1B2C6B 0%, #0A1230 70%, #060A1E 100%)",
       }}
     >
@@ -68,6 +69,8 @@ function BoardBackground({ children }: { children: React.ReactNode }) {
 }
 
 function Scoreboard({ state, myTeam }: { state: ContreeState; myTeam: 0 | 1 }) {
+  const pli = state.pliCounts ?? [0, 0];
+  const score = state.matchScore ?? [0, 0];
   return (
     <div className="absolute left-4 top-4 z-30 rounded-2xl px-4 py-3"
          style={{
@@ -81,12 +84,12 @@ function Scoreboard({ state, myTeam }: { state: ContreeState; myTeam: 0 | 1 }) {
         <span className="text-[10px] font-bold uppercase tracking-[0.18em]" style={{ color: "rgba(255,255,255,0.55)", fontFamily: "var(--font-display)" }}>total</span>
 
         <span className="h-3 w-3 rounded-full" style={{ background: myTeam === 0 ? "#5BA3FF" : "#E23434", boxShadow: `0 0 8px ${myTeam === 0 ? "#5BA3FF" : "#E23434"}` }} />
-        <span className="text-lg font-black text-white" style={{ fontFamily: "var(--font-display)" }}>{state.pliCounts[0]}</span>
-        <span className="text-lg font-black text-white" style={{ fontFamily: "var(--font-display)" }}>{state.matchScore[0]}</span>
+        <span className="text-lg font-black text-white" style={{ fontFamily: "var(--font-display)" }}>{pli[0]}</span>
+        <span className="text-lg font-black text-white" style={{ fontFamily: "var(--font-display)" }}>{score[0]}</span>
 
         <span className="h-3 w-3 rounded-full" style={{ background: myTeam === 1 ? "#5BA3FF" : "#E23434", boxShadow: `0 0 8px ${myTeam === 1 ? "#5BA3FF" : "#E23434"}` }} />
-        <span className="text-lg font-black text-white" style={{ fontFamily: "var(--font-display)" }}>{state.pliCounts[1]}</span>
-        <span className="text-lg font-black text-white" style={{ fontFamily: "var(--font-display)" }}>{state.matchScore[1]}</span>
+        <span className="text-lg font-black text-white" style={{ fontFamily: "var(--font-display)" }}>{pli[1]}</span>
+        <span className="text-lg font-black text-white" style={{ fontFamily: "var(--font-display)" }}>{score[1]}</span>
       </div>
       {state.currentBid && (
         <div className="mt-2 border-t pt-2 text-[10px] font-bold tracking-wider"
