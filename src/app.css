@@ -1,0 +1,313 @@
+/* ===========================================================
+   CB Games — Custom tokens layered on top of Focus DS
+   Light + Dark + category accents + arcade flourishes.
+   =========================================================== */
+
+@import url("https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800;900&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap");
+
+/* ---------- Theme: light (default, Focus-flavored) ---------- */
+:root,
+[data-theme="light"] {
+  /* Base ink + surface — straight from Focus DS */
+  --color-ink:            #0A0A0A;
+  --color-ink-soft:       #1A1A1A;
+  --color-ink-muted:      #525252;
+  --color-ink-subtle:     #8A8A8A;
+
+  --color-canvas:         #F4F4F3;
+  --color-surface:        #FFFFFF;
+  --color-surface-sunken: #EDEDEB;
+  --color-surface-raised: #FFFFFF;
+  --color-hairline:       #E5E5E2;
+  --color-hairline-soft:  #F0F0EE;
+
+  /* Semantic */
+  --color-live:    #E23434;
+  --color-success: #18A957;
+  --color-warning: #E89A2B;
+  --color-info:    #2B6DE8;
+  --color-vip:     #C9A227;
+  --color-premium: #6B4FE8;
+
+  /* CB game category accents (bent to feel slightly arcade) */
+  --cb-words:    #2B6DE8;
+  --cb-trivia:   #E89A2B;
+  --cb-speed:    #FF6A3D;
+  --cb-strategy: #18A957;
+  --cb-social:   #E23434;
+  --cb-cards:    #6B4FE8;
+  --cb-party:    #E63CA0;
+  --cb-sport:    #00B3A6;
+
+  /* Brand chip — a single warm "soirée" accent that ties the product together */
+  --cb-brand:       #FF6A3D;          /* sunset orange — bar / soirée */
+  --cb-brand-tint:  #FFE7DE;
+  --cb-brand-ink:   #0A0A0A;          /* button ink color on brand */
+
+  /* Type */
+  --font-display: "Archivo", "Arial Black", system-ui, sans-serif;
+  --font-sans:    "Inter", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --font-mono:    "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+  --fs-display-xl: 48px;  --lh-display-xl: 0.94;  --tr-display-xl: -0.035em;
+  --fs-display-lg: 36px;  --lh-display-lg: 0.98;  --tr-display-lg: -0.03em;
+  --fs-display-md: 26px;  --lh-display-md: 1.04;  --tr-display-md: -0.02em;
+  --fs-display-sm: 18px;  --lh-display-sm: 1.15;  --tr-display-sm: -0.01em;
+
+  --fs-body-lg: 16px;  --lh-body-lg: 1.45;
+  --fs-body:    14px;  --lh-body:    1.45;
+  --fs-body-sm: 12px;  --lh-body-sm: 1.4;
+  --fs-caption: 10px;  --lh-caption: 1.25;   --tr-caption: 0.12em;
+
+  /* Spacing */
+  --s-1: 4px;  --s-2: 8px;  --s-3: 12px;  --s-4: 16px;
+  --s-5: 20px; --s-6: 24px; --s-7: 32px;  --s-8: 40px;
+
+  /* Radii (CB knob) */
+  --r-xs: 6px; --r-sm: 10px; --r-md: 14px; --r-lg: 18px;
+  --r-xl: 22px; --r-2xl: 28px; --r-pill: 999px;
+
+  /* Shadows */
+  --shadow-xs: 0 1px 2px rgba(10,10,10,0.05);
+  --shadow-sm: 0 1px 2px rgba(10,10,10,0.04), 0 2px 6px rgba(10,10,10,0.05);
+  --shadow-md: 0 2px 4px rgba(10,10,10,0.04), 0 10px 22px rgba(10,10,10,0.07);
+  --shadow-lg: 0 6px 12px rgba(10,10,10,0.05), 0 24px 48px rgba(10,10,10,0.10);
+  --shadow-focus-ring: 0 0 0 3px rgba(10,10,10,0.12);
+
+  /* Motion */
+  --ease-out: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --dur-fast: 120ms; --dur-base: 200ms; --dur-slow: 320ms;
+}
+
+/* ---------- Theme: dark ---------- */
+[data-theme="dark"] {
+  --color-ink:            #FAFAF9;
+  --color-ink-soft:       #E8E8E6;
+  --color-ink-muted:      #9C9C97;
+  --color-ink-subtle:     #6E6E69;
+
+  --color-canvas:         #0B0B0C;
+  --color-surface:        #16161A;
+  --color-surface-sunken: #08080A;
+  --color-surface-raised: #1E1E22;
+  --color-hairline:       rgba(255,255,255,0.10);
+  --color-hairline-soft:  rgba(255,255,255,0.05);
+
+  --color-live:    #FF4D4D;
+  --color-success: #1FCB6E;
+  --color-warning: #FFB347;
+  --color-info:    #4F8DFF;
+  --color-vip:     #E3B83A;
+  --color-premium: #8A72FF;
+
+  --cb-words:    #4F8DFF;
+  --cb-trivia:   #FFB347;
+  --cb-speed:    #FF8157;
+  --cb-strategy: #1FCB6E;
+  --cb-social:   #FF4D4D;
+  --cb-cards:    #8A72FF;
+  --cb-party:    #FF5BB3;
+  --cb-sport:    #2FD8C8;
+
+  --cb-brand:       #FF8157;
+  --cb-brand-tint:  rgba(255,129,87,0.14);
+  --cb-brand-ink:   #0A0A0A;
+
+  --shadow-xs: 0 1px 2px rgba(0,0,0,0.4);
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.4), 0 2px 6px rgba(0,0,0,0.4);
+  --shadow-md: 0 4px 8px rgba(0,0,0,0.45), 0 12px 28px rgba(0,0,0,0.5);
+  --shadow-lg: 0 8px 16px rgba(0,0,0,0.5), 0 24px 60px rgba(0,0,0,0.6);
+  --shadow-focus-ring: 0 0 0 3px rgba(255,255,255,0.20);
+}
+
+/* ===========================================================
+   Base typography on .cb-app — never applied globally so the
+   canvas chrome stays neutral.
+   =========================================================== */
+.cb-app {
+  font-family: var(--font-sans);
+  color: var(--color-ink);
+  background: var(--color-canvas);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+  letter-spacing: -0.005em;
+  height: 100%;
+}
+
+.cb-app * { box-sizing: border-box; }
+.cb-app button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; padding: 0; }
+.cb-app input, .cb-app textarea { font: inherit; color: inherit; }
+
+/* Display headings */
+.cb-display-xl { font-family: var(--font-display); font-weight: 900; font-size: var(--fs-display-xl); line-height: var(--lh-display-xl); letter-spacing: var(--tr-display-xl); }
+.cb-display-lg { font-family: var(--font-display); font-weight: 900; font-size: var(--fs-display-lg); line-height: var(--lh-display-lg); letter-spacing: var(--tr-display-lg); }
+.cb-display-md { font-family: var(--font-display); font-weight: 800; font-size: var(--fs-display-md); line-height: var(--lh-display-md); letter-spacing: var(--tr-display-md); }
+.cb-display-sm { font-family: var(--font-display); font-weight: 800; font-size: var(--fs-display-sm); line-height: var(--lh-display-sm); letter-spacing: var(--tr-display-sm); }
+.cb-eyebrow { font-family: var(--font-display); font-weight: 700; font-size: var(--fs-caption); line-height: var(--lh-caption); letter-spacing: var(--tr-caption); text-transform: uppercase; color: var(--color-ink-muted); }
+.cb-mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+
+/* ===========================================================
+   Common components
+   =========================================================== */
+
+.cb-card {
+  background: var(--color-surface);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--color-hairline);
+}
+
+.cb-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  gap: 8px;
+  height: 48px; padding: 0 22px;
+  border-radius: var(--r-pill);
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 14px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  transition: transform var(--dur-fast) var(--ease-out),
+              box-shadow var(--dur-base) var(--ease-out),
+              background var(--dur-base) var(--ease-out);
+  user-select: none;
+  white-space: nowrap;
+}
+.cb-btn:active { transform: scale(0.97); }
+
+.cb-btn-primary {
+  background: var(--color-ink);
+  color: var(--color-canvas);
+  box-shadow: var(--shadow-md);
+}
+[data-theme="dark"] .cb-btn-primary {
+  background: var(--cb-brand);
+  color: var(--cb-brand-ink);
+}
+.cb-btn-brand {
+  background: var(--cb-brand);
+  color: var(--cb-brand-ink);
+  box-shadow: var(--shadow-md);
+}
+.cb-btn-ghost {
+  background: transparent;
+  color: var(--color-ink);
+  border: 1px solid var(--color-hairline);
+}
+.cb-btn-soft {
+  background: var(--color-surface-raised);
+  color: var(--color-ink);
+  border: 1px solid var(--color-hairline);
+}
+.cb-btn-sm { height: 36px; padding: 0 14px; font-size: 11px; }
+.cb-btn-lg { height: 56px; padding: 0 28px; font-size: 15px; }
+
+.cb-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 24px; padding: 0 10px;
+  border-radius: var(--r-pill);
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-hairline);
+  font-family: var(--font-display); font-weight: 700;
+  font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--color-ink-muted);
+}
+.cb-chip-solid {
+  background: var(--color-ink);
+  color: var(--color-canvas);
+  border-color: transparent;
+}
+.cb-chip-live {
+  background: var(--color-live);
+  color: #fff;
+  border-color: transparent;
+}
+.cb-chip-live::before {
+  content: ""; width: 6px; height: 6px; border-radius: 50%;
+  background: #fff; box-shadow: 0 0 0 0 rgba(255,255,255,0.7);
+  animation: cb-pulse 1.4s infinite;
+}
+@keyframes cb-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(255,255,255,0.7); }
+  60% { box-shadow: 0 0 0 6px rgba(255,255,255,0); }
+  100% { box-shadow: 0 0 0 0 rgba(255,255,255,0); }
+}
+
+/* dot dot dot for online status */
+.cb-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+
+/* Input */
+.cb-input {
+  width: 100%;
+  height: 52px;
+  border-radius: var(--r-md);
+  background: var(--color-surface);
+  border: 1px solid var(--color-hairline);
+  padding: 0 16px;
+  font-family: var(--font-display); font-weight: 700;
+  font-size: 18px; letter-spacing: 0.4em;
+  color: var(--color-ink);
+  outline: none;
+  transition: border-color var(--dur-base) var(--ease-out),
+              box-shadow var(--dur-base) var(--ease-out);
+}
+.cb-input::placeholder { color: var(--color-ink-subtle); letter-spacing: 0.4em; }
+.cb-input:focus { border-color: var(--color-ink); box-shadow: var(--shadow-focus-ring); }
+
+/* Avatar */
+.cb-avatar {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-family: var(--font-display); font-weight: 800;
+  font-size: 13px; color: #fff;
+  flex-shrink: 0;
+  position: relative;
+}
+.cb-avatar-ring::after {
+  content: "";
+  position: absolute; inset: -3px;
+  border-radius: 50%;
+  border: 2px solid var(--color-ink);
+}
+
+/* Section eyebrow + number combos used everywhere */
+.cb-section-head {
+  display: flex; align-items: baseline; justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+/* ===========================================================
+   Scrollbar (subtle in cards)
+   =========================================================== */
+.cb-scroll::-webkit-scrollbar { width: 0; height: 0; }
+.cb-scroll { scrollbar-width: none; }
+
+/* ===========================================================
+   Misc decorative
+   =========================================================== */
+
+/* Hatched / sticker tape, used as a "soirée" texture */
+.cb-tape {
+  background: repeating-linear-gradient(
+    -45deg,
+    var(--cb-brand) 0 6px,
+    transparent 6px 12px
+  );
+}
+
+/* Animated bomb pulse halo */
+@keyframes cb-bomb-shake {
+  0%, 100% { transform: translate(0,0) rotate(0); }
+  20% { transform: translate(-1px,1px) rotate(-1deg); }
+  40% { transform: translate(2px,-1px) rotate(1deg); }
+  60% { transform: translate(-2px,-1px) rotate(-1deg); }
+  80% { transform: translate(1px,2px) rotate(1deg); }
+}
+
+@keyframes cb-fuse {
+  0% { stroke-dashoffset: 0; }
+  100% { stroke-dashoffset: 200; }
+}

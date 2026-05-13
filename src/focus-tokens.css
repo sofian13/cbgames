@@ -1,0 +1,152 @@
+/* Focus Design System — Tokens
+   Brand: Focus (Mentalité Focus) — business community app
+   Aesthetic: white canvas, soft gray depth, pure-black accents, bold type.
+*/
+
+/* ---------- Fonts ----------
+   The website uses a bold, condensed-sans display (close to Archivo / Inter Black).
+   Body uses a clean neutral sans. We use Inter + Archivo from Google Fonts as the
+   closest open-source match.  FLAG: confirm with brand team whether a custom face
+   is licensed.  Swap @font-face / CSS var to update. */
+@import url('https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800;900&family=Inter:wght@400;500;600;700&display=swap');
+
+:root {
+  /* ---------- Colors — Core ---------- */
+  --color-ink:            #0A0A0A;   /* Pure near-black — logo, primary text, CTAs */
+  --color-ink-soft:       #1A1A1A;
+  --color-ink-muted:      #525252;   /* Secondary text */
+  --color-ink-subtle:     #8A8A8A;   /* Tertiary / placeholders */
+
+  --color-canvas:         #FFFFFF;   /* Main canvas background */
+  --color-surface:        #FFFFFF;   /* Cards */
+  --color-surface-sunken: #F4F4F3;   /* The "gray depth" — app background behind cards */
+  --color-surface-raised: #FAFAF9;
+  --color-hairline:       #E8E8E6;   /* Borders & dividers */
+  --color-hairline-soft:  #F0F0EE;
+
+  /* ---------- Colors — Semantic ---------- */
+  --color-live:           #E23434;   /* LIVE dot / recording indicator */
+  --color-success:        #18A957;   /* Paiement reçu, ROAS up */
+  --color-warning:        #E89A2B;
+  --color-info:           #2B6DE8;
+  --color-vip:            #C9A227;   /* VIP gold accent (tier marker) */
+  --color-premium:        #6B4FE8;   /* Focus Membre accent */
+
+  /* ---------- Status ring ---------- */
+  --status-online:        #18A957;
+  --status-idle:          #E89A2B;
+  --status-dnd:           #E23434;
+  --status-offline:       #BDBDBD;
+
+  /* ---------- Type ---------- */
+  --font-display: 'Archivo', 'Arial Black', system-ui, sans-serif;
+  --font-sans:    'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono:    ui-monospace, 'SF Mono', Menlo, monospace;
+
+  /* Type scale — display (headings, section eyebrows) is bold + tight */
+  --fs-display-xl: 56px;  --lh-display-xl: 0.95;  --tr-display-xl: -0.04em;
+  --fs-display-lg: 40px;  --lh-display-lg: 1.0;   --tr-display-lg: -0.03em;
+  --fs-display-md: 28px;  --lh-display-md: 1.05;  --tr-display-md: -0.02em;
+  --fs-display-sm: 20px;  --lh-display-sm: 1.15;  --tr-display-sm: -0.01em;
+
+  --fs-body-lg:   17px;   --lh-body-lg:   1.5;
+  --fs-body:      15px;   --lh-body:      1.5;
+  --fs-body-sm:   13px;   --lh-body-sm:   1.45;
+  --fs-caption:   11px;   --lh-caption:   1.3;    --tr-caption: 0.08em;  /* uppercase eyebrow */
+
+  /* ---------- Spacing ---------- */
+  --s-0:  0;
+  --s-1:  4px;
+  --s-2:  8px;
+  --s-3:  12px;
+  --s-4:  16px;
+  --s-5:  20px;
+  --s-6:  24px;
+  --s-7:  32px;
+  --s-8:  40px;
+  --s-9:  56px;
+  --s-10: 72px;
+
+  /* ---------- Radii ---------- */
+  --r-xs:   4px;
+  --r-sm:   8px;
+  --r-md:   12px;
+  --r-lg:   16px;
+  --r-xl:   20px;
+  --r-2xl:  24px;
+  --r-pill: 999px;
+
+  /* ---------- Shadows — depth on white ---------- */
+  --shadow-xs: 0 1px 2px rgba(10,10,10,0.04);
+  --shadow-sm: 0 1px 2px rgba(10,10,10,0.04), 0 2px 6px rgba(10,10,10,0.04);
+  --shadow-md: 0 2px 4px rgba(10,10,10,0.04), 0 8px 20px rgba(10,10,10,0.06);
+  --shadow-lg: 0 4px 8px rgba(10,10,10,0.04), 0 16px 40px rgba(10,10,10,0.08);
+  --shadow-focus-ring: 0 0 0 3px rgba(10,10,10,0.12);
+
+  /* ---------- Motion ---------- */
+  --ease-out:   cubic-bezier(0.2, 0.7, 0.2, 1);
+  --ease-inout: cubic-bezier(0.4, 0, 0.2, 1);
+  --dur-fast:   120ms;
+  --dur-base:   200ms;
+  --dur-slow:   320ms;
+}
+
+/* ---------- Semantic element styles ---------- */
+html, body {
+  font-family: var(--font-sans);
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+  color: var(--color-ink);
+  background: var(--color-surface-sunken);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+h1, .h1 {
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: var(--fs-display-xl);
+  line-height: var(--lh-display-xl);
+  letter-spacing: var(--tr-display-xl);
+  color: var(--color-ink);
+  margin: 0;
+}
+h2, .h2 {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: var(--fs-display-lg);
+  line-height: var(--lh-display-lg);
+  letter-spacing: var(--tr-display-lg);
+  margin: 0;
+}
+h3, .h3 {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: var(--fs-display-md);
+  line-height: var(--lh-display-md);
+  letter-spacing: var(--tr-display-md);
+  margin: 0;
+}
+h4, .h4 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--fs-display-sm);
+  line-height: var(--lh-display-sm);
+  margin: 0;
+}
+p { margin: 0; }
+
+.eyebrow {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--fs-caption);
+  line-height: var(--lh-caption);
+  letter-spacing: var(--tr-caption);
+  text-transform: uppercase;
+  color: var(--color-ink-muted);
+}
+
+code, pre, .mono {
+  font-family: var(--font-mono);
+  font-size: 13px;
+}
