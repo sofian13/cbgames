@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useGame } from "@/lib/party/use-game";
 import { useGameStore } from "@/lib/stores/game-store";
 import type { GameProps } from "@/lib/games/types";
@@ -42,9 +43,8 @@ const SUIT_RED = (s: Suit) => s === "♥" || s === "♦";
 function BoardBackground({ children }: { children: React.ReactNode }) {
   return (
     <div
-      className="relative w-full flex-1 self-stretch overflow-hidden"
+      className="fixed inset-0 z-50 overflow-hidden"
       style={{
-        minHeight: "min(560px, calc(100svh - 180px))",
         background: "radial-gradient(120% 80% at 50% 40%, #1B2C6B 0%, #0A1230 70%, #060A1E 100%)",
       }}
     >
@@ -217,28 +217,34 @@ function BottomHand({
   canPlay: boolean;
 }) {
   return (
-    <div className="absolute bottom-0 left-0 right-0 z-20 h-36">
-      <div className="relative mx-auto" style={{ width: "100%", maxWidth: 820, height: 140 }}>
+    <div className="pointer-events-none absolute bottom-0 left-0 right-0 z-40">
+      <div className="pointer-events-auto relative mx-auto" style={{ width: "100%", maxWidth: 820, height: 168 }}>
+        {hand.length === 0 && (
+          <div className="absolute left-1/2 bottom-6 -translate-x-1/2 text-[10px] uppercase tracking-[0.18em]"
+               style={{ color: "rgba(255,255,255,0.3)", fontFamily: "var(--font-display)" }}>
+            en attente de distribution
+          </div>
+        )}
         {hand.map((c, i) => {
           const n = hand.length;
           const mid = (n - 1) / 2;
           const offset = i - mid;
-          const spacing = Math.min(58, 600 / Math.max(1, n));
+          const spacing = Math.min(60, 640 / Math.max(1, n));
           const rot = offset * Math.min(4, 16 / Math.max(1, n - 1));
           const x = offset * spacing;
           const y = Math.abs(offset) * 2;
           return (
             <button
-              key={i}
+              key={`${c.rank}${c.suit}-${i}`}
               onClick={() => canPlay && onPlay(i)}
               disabled={!canPlay}
-              className="absolute outline-none transition-all duration-200 hover:-translate-y-3"
+              className="absolute outline-none transition-all duration-300 ease-out hover:-translate-y-4 focus-visible:-translate-y-4"
               style={{
-                left: "50%", bottom: 8,
+                left: "50%", bottom: 16,
                 transform: `translateX(${x - 32}px) translateY(${-y}px) rotate(${rot}deg)`,
-                transformOrigin: "center 120px",
+                transformOrigin: "center 140px",
                 zIndex: i,
-                cursor: canPlay ? "pointer" : "not-allowed",
+                cursor: canPlay ? "pointer" : "default",
               }}
             >
               <PlayingCard
@@ -256,9 +262,76 @@ function BottomHand({
   );
 }
 
+function SettingsMenu({ onLeave, onReplay }: { onLeave: () => void; onReplay?: () => void }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="absolute right-4 top-4 z-50">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        aria-label="paramètres"
+        className="flex h-11 w-11 items-center justify-center rounded-full transition-transform hover:scale-105"
+        style={{
+          background: "rgba(8,14,40,0.85)",
+          border: "1.5px solid rgba(120,170,255,0.3)",
+          boxShadow: "0 6px 16px rgba(0,0,0,0.4)",
+        }}
+      >
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+        </svg>
+      </button>
+      {open && (
+        <>
+          <button
+            onClick={() => setOpen(false)}
+            aria-label="fermer"
+            className="fixed inset-0 z-0"
+            style={{ background: "transparent" }}
+          />
+          <div
+            className="absolute right-0 top-12 z-10 w-48 overflow-hidden rounded-xl"
+            style={{
+              background: "rgba(8,14,40,0.95)",
+              border: "1px solid rgba(120,170,255,0.3)",
+              boxShadow: "0 12px 32px rgba(0,0,0,0.5)",
+              backdropFilter: "blur(12px)",
+            }}
+          >
+            {onReplay && (
+              <button
+                onClick={() => { setOpen(false); onReplay(); }}
+                className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm text-white transition-colors hover:bg-white/10"
+                style={{ fontFamily: "var(--font-display)" }}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>
+                </svg>
+                Rejouer
+              </button>
+            )}
+            <button
+              onClick={() => { setOpen(false); onLeave(); }}
+              className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm transition-colors hover:bg-white/10"
+              style={{ color: "#FF8E70", fontFamily: "var(--font-display)" }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
+              </svg>
+              Quitter la partie
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 export default function ContreeGame({ roomCode, playerId, playerName }: GameProps) {
+  const router = useRouter();
   const { sendAction, sendRaw } = useGame(roomCode, "contree", playerId, playerName);
   const state = useGameStore((s) => s.gameState) as unknown as ContreeState | null;
+  const leaveGame = () => router.push(`/room/${roomCode}`);
 
   // Bidding UI state
   const [bidAmount, setBidAmount] = useState(80);
@@ -294,34 +367,46 @@ export default function ContreeGame({ roomCode, playerId, playerName }: GameProp
 
   if (!state || !state.phase || state.phase === "waiting") {
     return (
-      <div className="flex h-full flex-col items-center justify-center px-6 text-center text-white">
-        <span className="cb-eyebrow" style={{ color: "rgba(255,255,255,0.5)" }}>en attente</span>
-        <h2 className="cb-display-lg mt-2">Distribution…</h2>
-        <p className="mt-3 text-sm" style={{ color: "rgba(255,255,255,0.55)" }}>
-          4 joueurs nécessaires · 2v2
-        </p>
-        <button
-          onClick={() => sendRaw({ type: "start-with-bots" })}
-          className="mt-6 rounded-xl px-5 py-3 text-sm font-black"
-          style={{ background: "var(--cb-brand)", color: "var(--cb-brand-ink)", fontFamily: "var(--font-display)", letterSpacing: "0.04em" }}
-        >
-          Lancer avec bots
-        </button>
-      </div>
+      <BoardBackground>
+        <SettingsMenu onLeave={leaveGame} />
+        <div className="absolute inset-0 flex flex-col items-center justify-center px-6 text-center text-white">
+          <span className="cb-eyebrow" style={{ color: "rgba(255,255,255,0.5)" }}>en attente</span>
+          <h2 className="cb-display-lg mt-2">Distribution…</h2>
+          <p className="mt-3 text-sm" style={{ color: "rgba(255,255,255,0.55)" }}>
+            4 joueurs nécessaires · 2v2
+          </p>
+          <button
+            onClick={() => sendRaw({ type: "start-with-bots" })}
+            className="mt-8 rounded-2xl px-6 py-3 text-sm font-black tracking-widest transition-transform hover:-translate-y-0.5"
+            style={{
+              background: "linear-gradient(180deg, #3B82F6, #1D4ED8)",
+              color: "#fff",
+              border: "1.5px solid rgba(180,210,255,0.5)",
+              fontFamily: "var(--font-display)",
+              boxShadow: "0 0 24px rgba(59,130,246,0.4), inset 0 1px 0 rgba(255,255,255,0.2)",
+            }}
+          >
+            LANCER AVEC BOTS
+          </button>
+        </div>
+      </BoardBackground>
     );
   }
 
   if (state.phase === "match-over") {
     return (
-      <div className="flex h-full flex-col items-center justify-center px-6 text-center text-white">
-        <span className="cb-eyebrow" style={{ color: "rgba(255,255,255,0.5)" }}>partie terminée</span>
-        <h2 className="cb-display-lg mt-2">
-          {state.matchScore[0] > state.matchScore[1] ? "Équipe A gagne" : "Équipe B gagne"}
-        </h2>
-        <p className="mt-3 cb-mono text-sm" style={{ color: "rgba(255,255,255,0.55)" }}>
-          {state.matchScore[0]} – {state.matchScore[1]}
-        </p>
-      </div>
+      <BoardBackground>
+        <SettingsMenu onLeave={leaveGame} />
+        <div className="absolute inset-0 flex flex-col items-center justify-center px-6 text-center text-white">
+          <span className="cb-eyebrow" style={{ color: "rgba(255,255,255,0.5)" }}>partie terminée</span>
+          <h2 className="cb-display-lg mt-2" style={{ fontFamily: "var(--font-display)" }}>
+            {state.matchScore[0] > state.matchScore[1] ? "Équipe A gagne" : "Équipe B gagne"}
+          </h2>
+          <p className="mt-3 cb-mono text-sm" style={{ color: "rgba(255,255,255,0.55)" }}>
+            {state.matchScore[0]} – {state.matchScore[1]}
+          </p>
+        </div>
+      </BoardBackground>
     );
   }
 
@@ -345,6 +430,7 @@ export default function ContreeGame({ roomCode, playerId, playerName }: GameProp
 
     return (
       <BoardBackground>
+        <SettingsMenu onLeave={leaveGame} />
         <Scoreboard state={state} myTeam={myTeam} />
 
         <SeatAvatar seat={partnerSeat} position="top"   isTurn={state.currentBidder === partnerSeat?.id} myTeam={myTeam} bubble={getBubble(partnerSeat?.id, state)} />
@@ -560,6 +646,7 @@ export default function ContreeGame({ roomCode, playerId, playerName }: GameProp
 
   return (
     <BoardBackground>
+      <SettingsMenu onLeave={leaveGame} />
       <Scoreboard state={state} myTeam={myTeam} />
 
       <SeatAvatar seat={partnerSeat} position="top"   isTurn={state.currentPlayerId === partnerSeat?.id} myTeam={myTeam} />
