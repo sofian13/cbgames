@@ -7,41 +7,58 @@ interface ScoreboardProps {
   rankings: GameRanking[];
 }
 
-const RANK_STYLES = [
-  "border-amber-400/30 bg-gradient-to-r from-amber-400/[0.08] to-yellow-400/[0.04] shadow-[0_0_30px_rgba(245,180,50,0.12)]",
-  "border-slate-300/20 bg-gradient-to-r from-slate-300/[0.06] to-slate-400/[0.03]",
-  "border-[color:var(--line-violet)] bg-gradient-to-r from-[rgba(139,92,246,0.08)] to-[rgba(167,139,250,0.04)] shadow-[0_0_24px_rgba(139,92,246,0.16)]",
+const RANK_ACCENTS = [
+  { color: "#E3B83A", bg: "rgba(227,184,58,0.12)" }, // gold
+  { color: "#B8B8B8", bg: "rgba(184,184,184,0.10)" }, // silver
+  { color: "#C28F50", bg: "rgba(194,143,80,0.10)" },  // bronze
 ];
 
 const RANK_LABELS = ["1er", "2e", "3e"];
 
 export function Scoreboard({ rankings }: ScoreboardProps) {
   return (
-    <div className="space-y-2">
-      {rankings.map((r, i) => (
-        <div
-          key={r.playerId}
-          className={cn(
-            "flex items-center gap-3 rounded-xl border p-3.5 transition-all",
-            i < 3 ? RANK_STYLES[i] : "border-white/[0.06] bg-white/[0.02]"
-          )}
-          style={i === 0 ? { animation: "fadeUp 0.5s cubic-bezier(0.16,1,0.3,1) 0.1s both" } :
-                 i === 1 ? { animation: "fadeUp 0.5s cubic-bezier(0.16,1,0.3,1) 0.2s both" } :
-                          { animation: "fadeUp 0.5s cubic-bezier(0.16,1,0.3,1) " + (0.1 + i * 0.1) + "s both" }}
-        >
-          <div className={cn(
-            "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-sm font-serif font-bold",
-            i === 0 ? "bg-amber-400/15 text-amber-300" :
-            i === 1 ? "bg-slate-300/10 text-slate-300" :
-            i === 2 ? "bg-[rgba(139,92,246,0.14)] text-[color:var(--brand-accent)]" :
-            "bg-white/[0.04] text-white/30"
-          )}>
-            {i < 3 ? RANK_LABELS[i] : `#${r.rank}`}
+    <div className="space-y-1.5">
+      {rankings.map((r, i) => {
+        const accent = i < 3 ? RANK_ACCENTS[i] : null;
+        return (
+          <div
+            key={r.playerId}
+            className={cn(
+              "flex items-center gap-3 rounded-xl border p-3"
+            )}
+            style={{
+              background: accent ? accent.bg : "rgba(255,255,255,0.04)",
+              borderColor: accent ? accent.color + "40" : "rgba(255,255,255,0.06)",
+            }}
+          >
+            <div
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-xs font-black"
+              style={{
+                background: accent ? accent.bg : "rgba(255,255,255,0.05)",
+                color: accent ? accent.color : "rgba(255,255,255,0.4)",
+                fontFamily: "var(--font-display)",
+              }}
+            >
+              {i < 3 ? RANK_LABELS[i] : `#${r.rank}`}
+            </div>
+            <span
+              className="flex-1 text-sm font-bold"
+              style={{
+                color: "rgba(255,255,255,0.92)",
+                fontFamily: "var(--font-display)",
+              }}
+            >
+              {r.playerName}
+            </span>
+            <span
+              className="cb-mono text-sm font-bold"
+              style={{ color: accent ? accent.color : "rgba(255,255,255,0.55)" }}
+            >
+              {r.score}
+            </span>
           </div>
-          <span className="flex-1 font-sans font-semibold text-sm text-white/80">{r.playerName}</span>
-          <span className="font-mono font-bold text-sm text-white/60">{r.score}</span>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }

@@ -32,52 +32,51 @@ export function ReadyCheck({
     connectedPlayers.length > 0 ? (readyCount / connectedPlayers.length) * 100 : 0;
 
   return (
-    <section className="site-panel rounded-[1.6rem] p-4 sm:p-5">
-      <div className="mb-4 flex items-center justify-between gap-3">
+    <section
+      className="rounded-2xl border bg-[color:var(--surface)] p-5"
+      style={{ borderColor: "var(--line-soft)" }}
+    >
+      <div className="mb-3 flex items-baseline justify-between gap-3">
         <div>
-          <p className="section-title">Lancement</p>
-          <p className="mt-1 text-sm text-[color:var(--text-dim)]">
-            {selectedGameId ? "Le jeu est choisi." : "Selectionne un jeu pour continuer."}
-          </p>
+          <span className="cb-eyebrow">lancement</span>
+          <h3 className="cb-display-md mt-1">
+            {selectedGameId ? "Tout est prêt." : "Choisis un jeu."}
+          </h3>
         </div>
-        <span className="rounded-full border border-[color:var(--line-brand)] bg-[rgba(46,124,255,0.08)] px-3 py-1 text-xs font-mono font-semibold text-[color:var(--brand-light)]">
-          {readyCount}/{connectedPlayers.length} prets
+        <span
+          className="rounded-full border px-3 py-1 text-xs cb-mono font-bold"
+          style={{
+            background: readyCount === connectedPlayers.length && readyCount > 0
+              ? "var(--cb-strategy)"
+              : "var(--surface-2)",
+            color: readyCount === connectedPlayers.length && readyCount > 0
+              ? "#fff"
+              : "var(--text-dim)",
+            borderColor: "transparent",
+          }}
+        >
+          {readyCount}/{connectedPlayers.length} prêts
         </span>
       </div>
 
-      <div className="mb-4 h-1.5 overflow-hidden rounded-full bg-white/[0.06]">
+      <div className="mb-4 h-1.5 overflow-hidden rounded-full" style={{ background: "var(--surface-2)" }}>
         <div
-          className="h-full rounded-full bg-gradient-to-r from-[color:var(--brand)] via-[color:var(--brand-accent)] to-[color:var(--brand-2)] shadow-[0_0_12px_var(--glow-brand)] transition-all duration-500"
-          style={{ width: `${progress}%` }}
+          className="h-full rounded-full transition-all duration-500"
+          style={{
+            width: `${progress}%`,
+            background: "var(--cb-brand)",
+          }}
         />
       </div>
 
-      <div className="mb-4 rounded-[1.2rem] border border-white/8 bg-white/[0.03] p-4">
-        <p className="text-[10px] uppercase tracking-[0.22em] text-[color:var(--brand)]">Statut</p>
-        <p className="mt-2 text-base font-semibold text-white sm:text-lg">
-          {effectiveIsHost
-            ? selectedGameId
-              ? "Tu peux lancer la partie."
-              : "Choisis un jeu pour lancer."
-            : currentPlayer?.isReady
-              ? "Tu es pret."
-              : "Signale quand tu es pret."}
-        </p>
-      </div>
-
-      <div className="space-y-3">
+      <div className="space-y-2">
         {!effectiveIsHost && (
           <button
             onClick={onToggleReady}
-            className={cn(
-              "flex w-full items-center justify-center gap-2 rounded-full px-4 py-3.5 text-sm font-semibold transition",
-              currentPlayer?.isReady
-                ? "border border-white/10 bg-white/[0.05] text-white/72 hover:border-[color:var(--brand)] hover:text-white"
-                : "btn-brand"
-            )}
+            className={cn("cb-btn w-full", currentPlayer?.isReady ? "cb-btn-soft" : "cb-btn-brand")}
           >
             <Check className="h-4 w-4" />
-            {currentPlayer?.isReady ? "Retirer mon ready" : "Je suis pret"}
+            {currentPlayer?.isReady ? "Retirer mon ready" : "Je suis prêt"}
           </button>
         )}
 
@@ -85,14 +84,10 @@ export function ReadyCheck({
           <button
             onClick={() => onStartGame(normalizedGameId)}
             disabled={!canStart}
-            className={cn(
-              "flex w-full items-center justify-center gap-2 rounded-full px-4 py-3.5 text-sm font-semibold transition",
-              canStart
-                ? "btn-brand"
-                : "border border-white/10 bg-white/[0.04] text-white/30 cursor-not-allowed"
-            )}
+            className={cn("cb-btn cb-btn-lg w-full", canStart ? "cb-btn-brand" : "cb-btn-soft")}
+            style={!canStart ? { opacity: 0.5, cursor: "not-allowed" } : undefined}
           >
-            <Play className="h-4 w-4" />
+            <Play className="h-4 w-4 fill-current" />
             {!selectedGameId ? "Choisir un jeu" : "Lancer la partie"}
           </button>
         )}

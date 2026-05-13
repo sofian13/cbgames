@@ -24,6 +24,9 @@ import { BlockRunnerGame } from "./games/block-runner";
 import { BattleshipGame } from "./games/battleship";
 import { TapRushGame } from "./games/tap-rush";
 import { LocalGame } from "./games/local-game";
+import { HuitAmericainGame } from "./games/huit-americain";
+import { PresidentGame } from "./games/president";
+import { ContreeGame } from "./games/contree";
 
 // Registry of game constructors
 const GAME_REGISTRY: Record<string, () => BaseGame> = {
@@ -53,6 +56,9 @@ const GAME_REGISTRY: Record<string, () => BaseGame> = {
   "guess-word": () => new LocalGame(),
   "make-guess": () => new LocalGame(),
   "category-chrono": () => new LocalGame(),
+  "huit-americain": () => new HuitAmericainGame(),
+  "president": () => new PresidentGame(),
+  "contree": () => new ContreeGame(),
 };
 
 export default class GameServer {
@@ -106,7 +112,7 @@ export default class GameServer {
       if (this.gameId === "undercover" || this.gameId === "chess" || this.gameId === "block-runner" || this.gameId === "guess-word" || this.gameId === "make-guess" || this.gameId === "category-chrono") {
         return;
       }
-      const minToStart = 2;
+      const minToStart = this.gameId === "contree" ? 4 : this.gameId === "president" ? 3 : 2;
       if (this.game.players.size >= minToStart && !this.game.started) {
         this.game.start();
       }

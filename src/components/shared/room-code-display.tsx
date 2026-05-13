@@ -22,18 +22,23 @@ export function RoomCodeDisplay({ code, className }: RoomCodeDisplayProps) {
   return (
     <button
       onClick={copyToClipboard}
-      className={cn(
-        "group flex min-w-0 items-center gap-1.5 rounded-full border border-[color:var(--line-brand)] bg-[linear-gradient(180deg,rgba(46,124,255,0.18),rgba(46,124,255,0.08))] px-3 py-2 text-white transition hover:border-[color:var(--brand)] hover:bg-[rgba(46,124,255,0.16)] sm:gap-2 sm:px-3.5",
-        className
-      )}
+      className={cn("group flex items-center gap-2 rounded-full border px-3 py-1.5 transition", className)}
+      style={{
+        background: "var(--cb-brand-tint)",
+        borderColor: "var(--line-brand)",
+        color: "var(--cb-brand)",
+      }}
     >
-      <span className="font-mono text-xs font-bold tracking-[0.18em] text-[color:var(--brand-light)] group-hover:text-white sm:text-sm sm:tracking-[0.24em]">
+      <span
+        className="cb-mono text-xs font-bold tracking-[0.22em]"
+        style={{ color: "var(--cb-brand)" }}
+      >
         {code}
       </span>
       {copied ? (
-        <Check className="h-3.5 w-3.5 text-[color:var(--brand-accent)]" />
+        <Check className="h-3.5 w-3.5" />
       ) : (
-        <Copy className="h-3.5 w-3.5 shrink-0 text-white/32 transition-colors group-hover:text-[color:var(--brand-light)]" />
+        <Copy className="h-3.5 w-3.5 opacity-60 transition group-hover:opacity-100" />
       )}
     </button>
   );

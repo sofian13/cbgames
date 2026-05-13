@@ -1,21 +1,20 @@
 import type { Metadata } from "next";
-import { Bricolage_Grotesque, Geist, JetBrains_Mono } from "next/font/google";
+import { Archivo, Inter, JetBrains_Mono } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
 import { SessionProvider } from "next-auth/react";
-import { SmoothScroll } from "@/components/layout/smooth-scroll";
 import "./globals.css";
 
-const bricolage = Bricolage_Grotesque({
+const archivo = Archivo({
   variable: "--font-display",
   subsets: ["latin"],
-  weight: ["300", "400", "500", "600", "700", "800"],
+  weight: ["500", "600", "700", "800", "900"],
   display: "swap",
 });
 
-const geist = Geist({
+const inter = Inter({
   variable: "--font-body",
   subsets: ["latin"],
-  weight: ["300", "400", "500", "600", "700", "800"],
+  weight: ["400", "500", "600", "700", "800"],
   display: "swap",
 });
 
@@ -27,8 +26,8 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "AF Games | Party Arcade",
-  description: "Mini-jeux multijoueur pensés pour le mobile et les soirees entre potes",
+  title: "CB Games · Party Arcade",
+  description: "Une soirée, un code, un jeu. 29 mini-jeux multijoueur conçus pour le mobile et les soirées entre potes.",
 };
 
 export default function RootLayout({
@@ -37,12 +36,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="fr" className="dark">
+    <html lang="fr" suppressHydrationWarning>
       <body
-        className={`${bricolage.variable} ${geist.variable} ${jetbrainsMono.variable} antialiased`}
+        className={`${archivo.variable} ${inter.variable} ${jetbrainsMono.variable} antialiased`}
       >
         <SessionProvider>
-          <SmoothScroll>{children}</SmoothScroll>
+          {children}
           <Toaster />
         </SessionProvider>
       </body>
