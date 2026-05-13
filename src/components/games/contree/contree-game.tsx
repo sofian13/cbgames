@@ -234,107 +234,106 @@ function BottomHand({
   isLegal?: (card: { rank: Rank; suit: Suit }) => boolean;
   zIndex?: number;
 }) {
-  const [zoomIdx, setZoomIdx] = useState<number | null>(null);
+  const [previewMode, setPreviewMode] = useState(false);
   const [pressTimer, setPressTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
 
-  const startPress = (idx: number) => {
+  const startPress = () => {
     if (pressTimer) clearTimeout(pressTimer);
-    const t = setTimeout(() => setZoomIdx(idx), 350);
+    const t = setTimeout(() => setPreviewMode(true), 280);
     setPressTimer(t);
   };
   const endPress = () => {
     if (pressTimer) { clearTimeout(pressTimer); setPressTimer(null); }
-    setTimeout(() => setZoomIdx(null), 80);
+    setPreviewMode(false);
   };
 
   return (
-    <>
+    <div
+      className="pointer-events-none absolute bottom-0 left-0 right-0"
+      style={{ zIndex }}
+      onPointerLeave={endPress}
+    >
       <div
-        className="pointer-events-none absolute bottom-0 left-0 right-0"
-        style={{ zIndex }}
+        className="relative mx-auto"
+        style={{
+          width: "100%",
+          maxWidth: 820,
+          height: 168,
+          pointerEvents: canPlay ? "auto" : "none",
+        }}
       >
-        <div
-          className="relative mx-auto"
-          style={{
-            width: "100%",
-            maxWidth: 820,
-            height: 168,
-            pointerEvents: canPlay || isLegal ? "auto" : "none",
-          }}
-        >
-          {hand.length === 0 && (
-            <div className="absolute left-1/2 bottom-6 -translate-x-1/2 text-[10px] uppercase tracking-[0.18em]"
-                 style={{ color: "rgba(255,255,255,0.3)", fontFamily: "var(--font-display)" }}>
-              en attente de distribution
-            </div>
-          )}
-          {hand.map((c, i) => {
-            const n = hand.length;
-            const mid = (n - 1) / 2;
-            const offset = i - mid;
-            const spacing = Math.min(58, 620 / Math.max(1, n));
-            const rot = offset * Math.min(4, 16 / Math.max(1, n - 1));
-            const x = offset * spacing;
-            const y = Math.abs(offset) * 2;
-            const playable = canPlay && (isLegal ? isLegal(c) : true);
-            const dim = !playable;
-            return (
-              <button
-                key={`${c.rank}${c.suit}-${i}`}
-                onClick={() => playable && onPlay(i)}
-                onPointerDown={() => startPress(i)}
-                onPointerUp={endPress}
-                onPointerLeave={endPress}
-                onContextMenu={(e) => e.preventDefault()}
-                disabled={!playable}
-                className="absolute outline-none transition-all duration-300 ease-out hover:-translate-y-4 focus-visible:-translate-y-4"
-                style={{
-                  left: "50%", bottom: 16,
-                  transform: `translateX(${x - 32}px) translateY(${-y}px) rotate(${rot}deg)`,
-                  transformOrigin: "center 140px",
-                  zIndex: i,
-                  cursor: playable ? "pointer" : "default",
-                  touchAction: "manipulation",
-                  filter: playable
-                    ? "drop-shadow(0 0 10px rgba(140,255,170,0.45))"
-                    : (canPlay ? "saturate(0.4) brightness(0.7)" : "none"),
-                }}
-              >
-                <PlayingCard
-                  value={c.rank as Rank}
-                  suit={c.suit as Suit}
-                  size="lg"
-                  dim={dim && canPlay}
-                  raised={playable}
-                />
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {zoomIdx !== null && hand[zoomIdx] && (
-        <div
-          className="pointer-events-none fixed inset-0 z-[100] flex items-center justify-center"
-          style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(4px)" }}
-        >
-          <div
-            style={{
-              transform: "scale(2.2)",
-              filter: "drop-shadow(0 20px 40px rgba(0,0,0,0.5))",
-              transition: "transform 200ms ease-out",
-            }}
-          >
-            <PlayingCard
-              value={hand[zoomIdx].rank as Rank}
-              suit={hand[zoomIdx].suit as Suit}
-              size="lg"
-              raised
-            />
+        {hand.length === 0 && (
+          <div className="absolute left-1/2 bottom-6 -translate-x-1/2 text-[10px] uppercase tracking-[0.18em]"
+               style={{ color: "rgba(255,255,255,0.3)", fontFamily: "var(--font-display)" }}>
+            en attente de distribution
           </div>
-        </div>
-      )}
-    </>
+        )}
+        {hand.map((c, i) => {
+          const n = hand.length;
+          const mid = (n - 1) / 2;
+          const offset = i - mid;
+          const spacing = Math.min(58, 620 / Math.max(1, n));
+          const rot = offset * Math.min(4, 16 / Math.max(1, n - 1));
+          const x = offset * spacing;
+          const y = Math.abs(offset) * 2;
+          const playable = canPlay && (isLegal ? isLegal(c) : true);
+
+          // Visual states:
+          // - normal play (no preview): playable = neutral, non-playable = dim
+          // - preview mode (long press): playable = bright white glow, non-playable = very dim
+          let filter = "none";
+          if (canPlay) {
+            if (previewMode) {
+              filter = playable
+                ? "brightness(1.18) drop-shadow(0 0 16px rgba(255,255,255,0.9))"
+                : "brightness(0.45) saturate(0.4)";
+            } else {
+              filter = playable
+                ? "drop-shadow(0 4px 8px rgba(0,0,0,0.4))"
+                : "saturate(0.5) brightness(0.75)";
+            }
+          }
+
+          return (
+            <button
+              key={`${c.rank}${c.suit}-${i}`}
+              onClick={() => playable && onPlay(i)}
+              onPointerDown={startPress}
+              onPointerUp={endPress}
+              onPointerCancel={endPress}
+              onContextMenu={(e) => e.preventDefault()}
+              disabled={!playable}
+              className="absolute outline-none transition-all duration-300 ease-out hover:-translate-y-4 focus-visible:-translate-y-4"
+              style={{
+                left: "50%", bottom: 16,
+                transform: `translateX(${x - 32}px) translateY(${-y}px) rotate(${rot}deg)`,
+                transformOrigin: "center 140px",
+                zIndex: previewMode && playable ? 100 + i : i,
+                cursor: playable ? "pointer" : "default",
+                touchAction: "manipulation",
+                filter,
+              }}
+            >
+              <PlayingCard
+                value={c.rank as Rank}
+                suit={c.suit as Suit}
+                size="lg"
+                raised={playable}
+              />
+              {previewMode && playable && (
+                <span
+                  aria-hidden
+                  className="pointer-events-none absolute inset-0 rounded-md"
+                  style={{
+                    boxShadow: "inset 0 0 0 2.5px rgba(255,255,255,0.9), 0 0 24px rgba(255,255,255,0.55)",
+                  }}
+                />
+              )}
+            </button>
+          );
+        })}
+      </div>
+    </div>
   );
 }
 
@@ -515,10 +514,9 @@ export default function ContreeGame({ roomCode, playerId, playerName }: GameProp
 
         {/* Bidding modal — compact mobile-first */}
         <div
-          className="absolute left-1/2 z-[55] w-[88%] max-w-md -translate-x-1/2 rounded-2xl p-4 sm:p-5"
+          className="absolute left-1/2 top-1/2 z-[55] -translate-x-1/2 -translate-y-1/2 rounded-2xl p-4 sm:p-5"
           style={{
-            top: "44%",
-            transform: "translate(-50%, -50%)",
+            width: "min(92vw, 420px)",
             background: "linear-gradient(180deg, rgba(40,70,150,0.65), rgba(20,38,90,0.78))",
             border: "1.5px solid rgba(120,170,255,0.35)",
             boxShadow: "0 0 60px rgba(80,140,255,0.25), 0 30px 80px rgba(0,0,0,0.5)",
