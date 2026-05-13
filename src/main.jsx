@@ -2,6 +2,31 @@
 // CB Games — Main canvas: artboards + tweaks
 // ===========================================================
 
+import React from "react";
+import { createRoot } from "react-dom/client";
+
+// Side-effect imports — each module attaches its components to window
+import "./design-canvas.jsx";
+import "./ios-frame.jsx";
+import "./tweaks-panel.jsx";
+import "./screens-core.jsx";
+import "./screens-games.jsx";
+import "./screens-cards.jsx";
+import "./screens-cards-landscape.jsx";
+import "./screens-president.jsx";
+
+const {
+  DesignCanvas, DCSection, DCArtboard,
+  IOSDevice,
+  TweaksPanel, TweakSection, TweakColor, TweakRadio, TweakSelect, TweakToggle,
+  useTweaks,
+  CBHomeScreen, CBLobbyScreen, CBGameShellInGame, CBGameOverScreen,
+  CBBombPartyScreen, CBQuizScreen, CBLoupGarouScreen, CBMotionTennisController, CBUndercoverScreen,
+  CBContreeScreen, CB8AmericainScreen, CBContreeBiddingScreen, CB8AmericainRulesScreen, CBContreeSetupScreen,
+  CBContreeLandscape, CB8AmericainLandscape, CBPresidentLandscape,
+  CBPresidentRanking, CBPresidentExchange, CBPresidentPlaying,
+} = window;
+
 const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
   "brand": "#FF6A3D",
   "radius": "round",
@@ -307,4 +332,4 @@ function App() {
   );
 }
 
-ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+createRoot(document.getElementById("root")).render(<App />);

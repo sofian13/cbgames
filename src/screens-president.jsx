@@ -1,3 +1,4 @@
+import React from "react";
 // ===========================================================
 // CB Games — Le Président (Trou-du-cul)
 // 3 écrans : Révélation des rangs · Échange forcé · Partie

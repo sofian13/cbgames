@@ -1,3 +1,4 @@
+import React from "react";
 // ===========================================================
 // CB Games — Jeux de cartes en MODE PAYSAGE (rotated phone)
 // Contrée · 8 Américain · Le Président — table en feutre, timer

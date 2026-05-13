@@ -1,3 +1,4 @@
+import React from "react";
 // ===========================================================
 // CB Games — Shared UI primitives + Home / Lobby / Game Shell
 // ===========================================================

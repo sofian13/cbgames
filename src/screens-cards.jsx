@@ -1,3 +1,4 @@
+import React from "react";
 // ===========================================================
 // CB Games — Jeux de cartes : La Contrée (Belote) + 8 Américain
 // ===========================================================
@@ -50,7 +51,7 @@ function PlayingCard({ value, suit, size = "md", faceDown = false, dim = false, 
 
   const rankNum = CARD_RANK_FILE[value];
   const suitFile = FACE_CARD_SUIT[suit];
-  const svgPath = rankNum && suitFile ? `cards/${rankNum}${suitFile}.svg` : null;
+  const svgPath = rankNum && suitFile ? `/cards/${rankNum}${suitFile}.svg` : null;
 
   // Tighter corner index — smaller font, less padding from edge — so it doesn't
   // overlap with the SVG art (which has its own pip arrangement coming in from

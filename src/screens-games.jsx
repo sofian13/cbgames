@@ -1,3 +1,4 @@
+import React from "react";
 // ===========================================================
 // CB Games — Improved game screens
 // Bomb Party · Speed/Roast Quiz · Loup-Garou · Motion Tennis
