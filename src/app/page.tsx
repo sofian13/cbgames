@@ -10,16 +10,16 @@ import { cn } from "@/lib/utils";
 
 const CATEGORY_META: Record<
   string,
-  { label: string; tagline: string; color: string }
+  { label: string; tagline: string; color: string; art: string }
 > = {
-  words:    { label: "Mots",      tagline: "Vocabulaire sous pression",  color: "var(--cb-words)"    },
-  trivia:   { label: "Quiz",      tagline: "Culture G à la seconde",      color: "var(--cb-trivia)"   },
-  speed:    { label: "Rapide",    tagline: "Réflexes purs",               color: "var(--cb-speed)"    },
-  strategy: { label: "Stratégie", tagline: "Tête froide",                 color: "var(--cb-strategy)" },
-  social:   { label: "Bluff",     tagline: "Lis les autres",              color: "var(--cb-social)"   },
-  cards:    { label: "Cartes",    tagline: "Tour de table",               color: "var(--cb-cards)"    },
-  party:    { label: "Party",     tagline: "Ambiance",                    color: "var(--cb-party)"    },
-  sport:    { label: "Sport",     tagline: "Coordination",                color: "var(--cb-sport)"    },
+  words:    { label: "Mots",      tagline: "Vocabulaire sous pression",  color: "var(--cb-words)",    art: "/categories/words.svg"    },
+  trivia:   { label: "Quiz",      tagline: "Culture G à la seconde",      color: "var(--cb-trivia)",   art: "/categories/trivia.svg"   },
+  speed:    { label: "Rapide",    tagline: "Réflexes purs",               color: "var(--cb-speed)",    art: "/categories/speed.svg"    },
+  strategy: { label: "Stratégie", tagline: "Tête froide",                 color: "var(--cb-strategy)", art: "/categories/strategy.svg" },
+  social:   { label: "Bluff",     tagline: "Lis les autres",              color: "var(--cb-social)",   art: "/categories/social.svg"   },
+  cards:    { label: "Cartes",    tagline: "Tour de table",               color: "var(--cb-cards)",    art: "/categories/cards.svg"    },
+  party:    { label: "Party",     tagline: "Ambiance",                    color: "var(--cb-party)",    art: "/categories/party.svg"    },
+  sport:    { label: "Sport",     tagline: "Coordination",                color: "var(--cb-sport)",    art: "/categories/sport.svg"    },
 };
 
 function UsernameEditor({
@@ -310,7 +310,14 @@ export default function HomePage() {
                       <span className="cb-eyebrow">0{idx + 1}</span>
                       <span className="text-4xl">{sample?.icon}</span>
                     </div>
-                    <div>
+                    <img
+                      src={meta.art}
+                      alt=""
+                      aria-hidden="true"
+                      className="pointer-events-none absolute left-1/2 top-1/2 w-[78%] -translate-x-1/2 -translate-y-1/2 select-none transition-transform duration-500 group-hover:scale-105"
+                      draggable={false}
+                    />
+                    <div className="relative">
                       <p className="cb-display-md" style={{ color: meta.color }}>
                         {meta.label}
                       </p>

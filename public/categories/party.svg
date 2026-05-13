@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none">
+  <g fill="#E63CA0">
+    <rect x="35"  y="40"  width="10" height="3"  transform="rotate(20 40 41)"   opacity="0.9"/>
+    <rect x="65"  y="55"  width="14" height="4"  transform="rotate(-35 72 57)"  opacity="0.7"/>
+    <circle cx="100" cy="45" r="4" opacity="0.85"/>
+    <rect x="130" y="50"  width="12" height="3"  transform="rotate(40 136 52)"  opacity="0.6"/>
+    <circle cx="160" cy="60" r="3" opacity="0.9"/>
+    <rect x="50"  y="100" width="14" height="4"  transform="rotate(-15 57 102)" opacity="0.5"/>
+    <circle cx="85" cy="95" r="5" opacity="0.95"/>
+    <rect x="115" y="90"  width="18" height="4"  transform="rotate(60 124 92)"  opacity="0.85"/>
+    <circle cx="150" cy="105" r="4" opacity="0.7"/>
+    <rect x="40"  y="140" width="12" height="3"  transform="rotate(30 46 142)"  opacity="0.6"/>
+    <circle cx="75" cy="150" r="3.5" opacity="0.7"/>
+    <rect x="105" y="140" width="14" height="4"  transform="rotate(-25 112 142)" opacity="0.95"/>
+    <rect x="145" y="148" width="10" height="3"  transform="rotate(55 150 150)" opacity="0.55"/>
+  </g>
+  <g stroke="#E63CA0" stroke-width="2" stroke-linecap="round">
+    <path d="M100 110 L100 100" opacity="0.4"/>
+    <path d="M60  120 L72  110" opacity="0.3"/>
+    <path d="M140 120 L128 110" opacity="0.3"/>
+  </g>
+</svg>
