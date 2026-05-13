@@ -40,7 +40,7 @@ const SUIT_RED = (s: Suit) => s === "♥" || s === "♦";
 
 export default function ContreeGame({ roomCode, playerId, playerName }: GameProps) {
   const { sendAction } = useGame(roomCode, "contree", playerId, playerName);
-  const state = useGameStore((s) => s.gameState) as ContreeState | null;
+  const state = useGameStore((s) => s.gameState) as unknown as ContreeState | null;
 
   // Bidding UI state
   const [bidAmount, setBidAmount] = useState(80);

@@ -38,7 +38,7 @@ const SUIT_PICK: { s: Suit; label: string; red: boolean }[] = [
 
 export default function HuitAmericainGame({ roomCode, playerId, playerName }: GameProps) {
   const { sendAction } = useGame(roomCode, "huit-americain", playerId, playerName);
-  const lastState = useGameStore((s) => s.gameState) as AmState | null;
+  const lastState = useGameStore((s) => s.gameState) as unknown as AmState | null;
   const [pickingSuit, setPickingSuit] = useState<{ index: number } | null>(null);
 
   const state = lastState;

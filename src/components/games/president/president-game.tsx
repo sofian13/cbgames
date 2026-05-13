@@ -30,7 +30,7 @@ const palette = ["#FF6A3D","#2B6DE8","#18A957","#E63CA0","#6B4FE8","#E89A2B","#0
 
 export default function PresidentGame({ roomCode, playerId, playerName }: GameProps) {
   const { sendAction } = useGame(roomCode, "president", playerId, playerName);
-  const state = useGameStore((s) => s.gameState) as PresidentState | null;
+  const state = useGameStore((s) => s.gameState) as unknown as PresidentState | null;
   const [selected, setSelected] = useState<number[]>([]);
 
   const myHand = state?.hands?.[playerId] ?? [];

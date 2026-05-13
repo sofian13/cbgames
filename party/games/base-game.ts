@@ -35,6 +35,10 @@ export abstract class BaseGame {
     }
   }
 
+  broadcastState() {
+    this.broadcast({ type: "game-state", payload: this.getState() });
+  }
+
   sendTo(connectionId: string, msg: Record<string, unknown>) {
     const conn = this.connections.get(connectionId);
     conn?.send(JSON.stringify(msg));
