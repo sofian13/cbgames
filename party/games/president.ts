@@ -123,6 +123,45 @@ export class PresidentGame extends BaseGame {
       }
       this.broadcastState();
     }, 1000);
+    this.scheduleBotIfNeeded();
+  }
+
+  scheduleBotIfNeeded() {
+    if (this.status !== "playing") return;
+    const id = this.currentPlayerId();
+    if (!id || !this.isBot(id)) return;
+    this.queueBotAction(() => {
+      if (this.status !== "playing" || this.currentPlayerId() !== id) return;
+      const p = this.prePlayers.get(id);
+      if (!p || p.hand.length === 0) return;
+      const comboSize = this.lastCombo.length;
+      // Try every single card from lowest. For multi-card combos, find same-size groups.
+      if (comboSize <= 1) {
+        for (let i = 0; i < p.hand.length; i++) {
+          if (this.comboBeats([p.hand[i]], this.lastCombo) && this.validCombo([p.hand[i]])) {
+            return this.playCombo(id, [i]);
+          }
+        }
+      } else {
+        // Group by rank, try ascending
+        const groups = new Map<string, number[]>();
+        p.hand.forEach((c, i) => {
+          const arr = groups.get(c.rank) ?? [];
+          arr.push(i);
+          groups.set(c.rank, arr);
+        });
+        for (const indices of groups.values()) {
+          if (indices.length >= comboSize) {
+            const tryIndices = indices.slice(0, comboSize);
+            const cards = tryIndices.map((i) => p.hand[i]);
+            if (this.validCombo(cards) && this.comboBeats(cards, this.lastCombo)) {
+              return this.playCombo(id, tryIndices);
+            }
+          }
+        }
+      }
+      this.passAction(id);
+    });
   }
   stopTurnTimer() {
     if (this.timer) { clearInterval(this.timer); this.timer = null; }
@@ -285,5 +324,6 @@ export class PresidentGame extends BaseGame {
 
   cleanup() {
     this.stopTurnTimer();
+    this.clearBotTimeouts();
   }
 }

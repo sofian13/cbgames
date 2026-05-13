@@ -29,7 +29,7 @@ interface PresidentState {
 const palette = ["#FF6A3D","#2B6DE8","#18A957","#E63CA0","#6B4FE8","#E89A2B","#00B3A6","#E23434"];
 
 export default function PresidentGame({ roomCode, playerId, playerName }: GameProps) {
-  const { sendAction } = useGame(roomCode, "president", playerId, playerName);
+  const { sendAction, sendRaw } = useGame(roomCode, "president", playerId, playerName);
   const state = useGameStore((s) => s.gameState) as unknown as PresidentState | null;
   const [selected, setSelected] = useState<number[]>([]);
 
@@ -58,6 +58,13 @@ export default function PresidentGame({ roomCode, playerId, playerName }: GamePr
         <p className="mt-3 text-sm" style={{ color: "rgba(255,255,255,0.55)" }}>
           Min 3 joueurs · 1er à vider = Président
         </p>
+        <button
+          onClick={() => sendRaw({ type: "start-with-bots" })}
+          className="mt-6 rounded-xl px-5 py-3 text-sm font-black"
+          style={{ background: "var(--cb-brand)", color: "var(--cb-brand-ink)", fontFamily: "var(--font-display)", letterSpacing: "0.04em" }}
+        >
+          Lancer avec bots
+        </button>
       </div>
     );
   }

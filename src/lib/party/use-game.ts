@@ -76,5 +76,9 @@ export function useGame(roomCode: string, gameId: string, playerId: string, play
     socketRef.current?.send(JSON.stringify(msg));
   }, []);
 
-  return { sendAction };
+  const sendRaw = useCallback((msg: Record<string, unknown>) => {
+    socketRef.current?.send(JSON.stringify(msg));
+  }, []);
+
+  return { sendAction, sendRaw };
 }

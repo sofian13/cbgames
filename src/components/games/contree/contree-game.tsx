@@ -39,7 +39,7 @@ const palette = ["#FF6A3D","#2B6DE8","#18A957","#E63CA0","#6B4FE8","#E89A2B","#0
 const SUIT_RED = (s: Suit) => s === "♥" || s === "♦";
 
 export default function ContreeGame({ roomCode, playerId, playerName }: GameProps) {
-  const { sendAction } = useGame(roomCode, "contree", playerId, playerName);
+  const { sendAction, sendRaw } = useGame(roomCode, "contree", playerId, playerName);
   const state = useGameStore((s) => s.gameState) as unknown as ContreeState | null;
 
   // Bidding UI state
@@ -82,6 +82,13 @@ export default function ContreeGame({ roomCode, playerId, playerName }: GameProp
         <p className="mt-3 text-sm" style={{ color: "rgba(255,255,255,0.55)" }}>
           4 joueurs nécessaires · 2v2
         </p>
+        <button
+          onClick={() => sendRaw({ type: "start-with-bots" })}
+          className="mt-6 rounded-xl px-5 py-3 text-sm font-black"
+          style={{ background: "var(--cb-brand)", color: "var(--cb-brand-ink)", fontFamily: "var(--font-display)", letterSpacing: "0.04em" }}
+        >
+          Lancer avec bots
+        </button>
       </div>
     );
   }

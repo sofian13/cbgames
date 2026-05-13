@@ -7,9 +7,13 @@ export interface GamePlayer {
   connectionId: string;
 }
 
+const BOT_NAMES = ["Léo", "Maya", "Théo", "Inès", "Sami", "Zoé", "Yanis", "Nora"];
+
 export abstract class BaseGame {
   players: Map<string, GamePlayer> = new Map();
   connections: Map<string, Connection> = new Map();
+  botIds: Set<string> = new Set();
+  botTimeouts: Set<ReturnType<typeof setTimeout>> = new Set();
   started = false;
 
   addPlayer(id: string, name: string, conn: Connection) {
@@ -26,6 +30,34 @@ export abstract class BaseGame {
       }
     }
     return null;
+  }
+
+  addBots(count: number) {
+    const existing = this.players.size;
+    for (let i = 0; i < count; i++) {
+      const botId = `bot-${existing + i + 1}-${Math.random().toString(36).slice(2, 6)}`;
+      const botName = BOT_NAMES[(existing + i) % BOT_NAMES.length];
+      this.players.set(botId, { id: botId, name: botName, connectionId: botId });
+      this.botIds.add(botId);
+    }
+  }
+
+  isBot(playerId: string): boolean {
+    return this.botIds.has(playerId);
+  }
+
+  queueBotAction(action: () => void, minDelay = 700, maxDelay = 1600) {
+    const delay = minDelay + Math.floor(Math.random() * (maxDelay - minDelay + 1));
+    const t = setTimeout(() => {
+      this.botTimeouts.delete(t);
+      action();
+    }, delay);
+    this.botTimeouts.add(t);
+  }
+
+  clearBotTimeouts() {
+    for (const t of this.botTimeouts) clearTimeout(t);
+    this.botTimeouts.clear();
   }
 
   broadcast(msg: Record<string, unknown>) {

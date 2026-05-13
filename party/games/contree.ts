@@ -183,6 +183,31 @@ export class ContreeGame extends BaseGame {
       }
       this.broadcastState();
     }, 1000);
+    this.scheduleBotIfNeeded();
+  }
+
+  scheduleBotIfNeeded() {
+    if (this.phase === "bidding") {
+      const id = this.seatOrder[this.currentBidder];
+      if (!id || !this.isBot(id)) return;
+      this.queueBotAction(() => {
+        if (this.phase !== "bidding" || this.seatOrder[this.currentBidder] !== id) return;
+        // 80% pass, 20% bid minimum if no bid yet
+        if (!this.currentBid && Math.random() < 0.25) {
+          const suit = SUITS[Math.floor(Math.random() * 4)];
+          this.handleBid({ type: "bid", amount: 80, suit }, id);
+        } else {
+          this.handleBid({ type: "pass" }, id);
+        }
+      });
+    } else if (this.phase === "playing") {
+      const id = this.seatOrder[this.currentTurn];
+      if (!id || !this.isBot(id)) return;
+      this.queueBotAction(() => {
+        if (this.phase !== "playing" || this.seatOrder[this.currentTurn] !== id) return;
+        this.autoPlay();
+      });
+    }
   }
   stopTurnTimer() {
     if (this.timer) { clearInterval(this.timer); this.timer = null; }
@@ -514,5 +539,6 @@ export class ContreeGame extends BaseGame {
 
   cleanup() {
     this.stopTurnTimer();
+    this.clearBotTimeouts();
   }
 }

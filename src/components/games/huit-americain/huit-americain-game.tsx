@@ -37,7 +37,7 @@ const SUIT_PICK: { s: Suit; label: string; red: boolean }[] = [
 ];
 
 export default function HuitAmericainGame({ roomCode, playerId, playerName }: GameProps) {
-  const { sendAction } = useGame(roomCode, "huit-americain", playerId, playerName);
+  const { sendAction, sendRaw } = useGame(roomCode, "huit-americain", playerId, playerName);
   const lastState = useGameStore((s) => s.gameState) as unknown as AmState | null;
   const [pickingSuit, setPickingSuit] = useState<{ index: number } | null>(null);
 
@@ -92,6 +92,13 @@ export default function HuitAmericainGame({ roomCode, playerId, playerName }: Ga
         <p className="mt-3 text-sm" style={{ color: "rgba(255,255,255,0.55)" }}>
           Min 2 joueurs · vide ta main en premier
         </p>
+        <button
+          onClick={() => sendRaw({ type: "start-with-bots" })}
+          className="mt-6 rounded-xl px-5 py-3 text-sm font-black"
+          style={{ background: "var(--cb-brand)", color: "var(--cb-brand-ink)", fontFamily: "var(--font-display)", letterSpacing: "0.04em" }}
+        >
+          Lancer avec bots
+        </button>
       </div>
     );
   }

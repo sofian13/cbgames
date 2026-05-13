@@ -146,6 +146,29 @@ export class HuitAmericainGame extends BaseGame {
       }
       this.broadcastState();
     }, 1000);
+    this.scheduleBotIfNeeded();
+  }
+
+  scheduleBotIfNeeded() {
+    if (this.status !== "playing") return;
+    const id = this.currentPlayerId();
+    if (!id || !this.isBot(id)) return;
+    this.queueBotAction(() => {
+      if (this.status !== "playing" || this.currentPlayerId() !== id || !this.discardTop) return;
+      const p = this.amPlayers.get(id);
+      if (!p) return;
+      const top = this.discardTop;
+      const idx = p.hand.findIndex((c) => this.canPlay(c, top, this.askedSuit));
+      if (idx >= 0) {
+        const card = p.hand[idx];
+        const chosen = (card.rank === "8" || card.rank === "JK")
+          ? SUITS[Math.floor(Math.random() * 4)]
+          : null;
+        this.playCard(id, idx, chosen);
+      } else {
+        this.forceDraw();
+      }
+    });
   }
   stopTurnTimer() {
     if (this.timer) { clearInterval(this.timer); this.timer = null; }
@@ -322,5 +345,6 @@ export class HuitAmericainGame extends BaseGame {
 
   cleanup() {
     this.stopTurnTimer();
+    this.clearBotTimeouts();
   }
 }
