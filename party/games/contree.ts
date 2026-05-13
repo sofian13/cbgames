@@ -86,6 +86,7 @@ export class ContreeGame extends BaseGame {
   trick: { card: Card; seat: number }[] = [];
   trickLeadSuit: Suit | null = null;
   lastTrickWinnerSeat: number | null = null;
+  bubbles: Record<string, { text: string; tone: "bid" | "pass" | "coincher" | "belote" }> = {};
   trumpSuit: Suit | null = null;
   pliCounts: [number, number] = [0, 0]; // tricks won by team A, B
   trickPoints: [number, number] = [0, 0]; // raw card points won this hand
@@ -237,7 +238,7 @@ export class ContreeGame extends BaseGame {
         if (!bidderPlayer || bidderPlayer.team === player.team) return;
         if (this.currentBid.multiplier !== 1) return;
         this.currentBid.multiplier = 2;
-        // Continue bidding so original team can surcoincher
+        this.showBubble(playerId, "Contre !", "coincher");
         this.consecutivePasses = 0;
         this.advanceBidder();
         this.startTurnTimer();
@@ -248,6 +249,7 @@ export class ContreeGame extends BaseGame {
         if (!bidderPlayer || bidderPlayer.team !== player.team) return;
         if (this.currentBid.multiplier !== 2) return;
         this.currentBid.multiplier = 4;
+        this.showBubble(playerId, "Surcontre !", "coincher");
         this.endBiddingPhase();
       }
       return;
@@ -262,8 +264,19 @@ export class ContreeGame extends BaseGame {
     }
   }
 
+  showBubble(playerId: string, text: string, tone: "bid" | "pass" | "coincher" | "belote") {
+    this.bubbles[playerId] = { text, tone };
+    setTimeout(() => {
+      if (this.bubbles[playerId]?.text === text) {
+        delete this.bubbles[playerId];
+        this.broadcastState();
+      }
+    }, 2200);
+  }
+
   handleBid(bid: { type: "bid"; amount: number; suit: Suit } | { type: "pass" }, playerId: string) {
     if (bid.type === "pass") {
+      this.showBubble(playerId, "Passe", "pass");
       this.passCount++;
       this.consecutivePasses++;
       if (this.currentBid && this.consecutivePasses >= 3) {
@@ -285,7 +298,7 @@ export class ContreeGame extends BaseGame {
     if (bid.amount < 80) return;
     if (this.currentBid && bid.amount <= this.currentBid.amount) return;
 
-    const player = this.contreePlayers.get(playerId)!;
+    this.showBubble(playerId, `${bid.amount} ${bid.suit}`, "bid");
     this.currentBid = {
       amount: bid.amount,
       suit: bid.suit,
@@ -296,8 +309,6 @@ export class ContreeGame extends BaseGame {
     this.advanceBidder();
     this.startTurnTimer();
     this.broadcastState();
-
-    void player; // silence unused
   }
 
   advanceBidder() {
@@ -525,6 +536,7 @@ export class ContreeGame extends BaseGame {
       trick: this.trick,
       trickLeadSuit: this.trickLeadSuit,
       lastTrickWinnerSeat: this.lastTrickWinnerSeat,
+      bubbles: this.bubbles,
       trumpSuit: this.trumpSuit,
       pliCounts: this.pliCounts,
       trickPoints: this.trickPoints,

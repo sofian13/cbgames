@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useGame } from "@/lib/party/use-game";
 import { useGameStore } from "@/lib/stores/game-store";
@@ -34,6 +34,7 @@ interface ContreeState {
   matchScore: [number, number];
   targetPoints: number;
   beloteHolder: string | null;
+  bubbles?: Record<string, { text: string; tone: "bid" | "pass" | "coincher" | "belote" }>;
   seats: Seat[];
   hands: Record<string, { rank: Rank; suit: Suit }[]>;
 }
@@ -87,6 +88,7 @@ function BoardBackground({ children }: { children: React.ReactNode }) {
 function Scoreboard({ state, myTeam }: { state: ContreeState; myTeam: 0 | 1 }) {
   const pli = state.pliCounts ?? [0, 0];
   const score = state.matchScore ?? [0, 0];
+  const oppTeam: 0 | 1 = (1 - myTeam) as 0 | 1;
   return (
     <div className="absolute left-4 top-4 z-30 rounded-2xl px-4 py-3"
          style={{
@@ -94,18 +96,18 @@ function Scoreboard({ state, myTeam }: { state: ContreeState; myTeam: 0 | 1 }) {
            border: "1px solid rgba(120,170,255,0.18)",
            boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
          }}>
-      <div className="grid grid-cols-[20px_1fr_1fr] items-center gap-x-4 gap-y-1.5">
-        <span className="col-span-1" />
+      <div className="grid grid-cols-[32px_1fr_1fr] items-center gap-x-4 gap-y-1.5">
+        <span />
         <span className="text-[10px] font-bold uppercase tracking-[0.18em]" style={{ color: "rgba(255,255,255,0.55)", fontFamily: "var(--font-display)" }}>tour</span>
         <span className="text-[10px] font-bold uppercase tracking-[0.18em]" style={{ color: "rgba(255,255,255,0.55)", fontFamily: "var(--font-display)" }}>total</span>
 
-        <span className="h-3 w-3 rounded-full" style={{ background: myTeam === 0 ? "#5BA3FF" : "#E23434", boxShadow: `0 0 8px ${myTeam === 0 ? "#5BA3FF" : "#E23434"}` }} />
-        <span className="text-lg font-black text-white" style={{ fontFamily: "var(--font-display)" }}>{pli[0]}</span>
-        <span className="text-lg font-black text-white" style={{ fontFamily: "var(--font-display)" }}>{score[0]}</span>
+        <span className="text-[10px] font-black uppercase tracking-wider" style={{ color: "#5BA3FF", fontFamily: "var(--font-display)" }}>nous</span>
+        <span className="text-lg font-black text-white" style={{ fontFamily: "var(--font-display)" }}>{pli[myTeam]}</span>
+        <span className="text-lg font-black text-white" style={{ fontFamily: "var(--font-display)" }}>{score[myTeam]}</span>
 
-        <span className="h-3 w-3 rounded-full" style={{ background: myTeam === 1 ? "#5BA3FF" : "#E23434", boxShadow: `0 0 8px ${myTeam === 1 ? "#5BA3FF" : "#E23434"}` }} />
-        <span className="text-lg font-black text-white" style={{ fontFamily: "var(--font-display)" }}>{pli[1]}</span>
-        <span className="text-lg font-black text-white" style={{ fontFamily: "var(--font-display)" }}>{score[1]}</span>
+        <span className="text-[10px] font-black uppercase tracking-wider" style={{ color: "#E23434", fontFamily: "var(--font-display)" }}>eux</span>
+        <span className="text-lg font-black text-white" style={{ fontFamily: "var(--font-display)" }}>{pli[oppTeam]}</span>
+        <span className="text-lg font-black text-white" style={{ fontFamily: "var(--font-display)" }}>{score[oppTeam]}</span>
       </div>
       {state.currentBid && (
         <div className="mt-2 border-t pt-2 text-[10px] font-bold tracking-wider"
@@ -119,6 +121,57 @@ function Scoreboard({ state, myTeam }: { state: ContreeState; myTeam: 0 | 1 }) {
   );
 }
 
+type BubbleData = { text: string; tone: "bid" | "pass" | "coincher" | "belote" };
+
+function SpeechBubble({ text, tone, position }: { text: string; tone: BubbleData["tone"]; position: "top" | "left" | "right" }) {
+  const palette: Record<BubbleData["tone"], { bg: string; border: string; color: string; shadow: string }> = {
+    bid:      { bg: "linear-gradient(180deg,#FFFFFF,#E8EEFB)", border: "rgba(120,170,255,0.55)", color: "#0F1840", shadow: "0 0 24px rgba(120,170,255,0.5)" },
+    pass:     { bg: "linear-gradient(180deg,rgba(60,110,200,0.95),rgba(30,60,150,0.95))", border: "rgba(180,210,255,0.6)", color: "#fff", shadow: "0 0 16px rgba(80,130,220,0.4)" },
+    coincher: { bg: "linear-gradient(180deg,#FF5C5C,#B91C1C)", border: "rgba(255,200,200,0.6)", color: "#fff", shadow: "0 0 22px rgba(255,80,80,0.5)" },
+    belote:   { bg: "linear-gradient(180deg,#22C55E,#15803D)", border: "rgba(180,255,200,0.5)", color: "#fff", shadow: "0 0 22px rgba(34,197,94,0.5)" },
+  };
+  const c = palette[tone];
+
+  // Pointer (tail) position depending on avatar position
+  const tail: React.CSSProperties =
+    position === "top"
+      ? { position: "absolute", left: "50%", top: "100%", transform: "translateX(-50%)", borderTop: `7px solid ${c.border}`, borderLeft: "6px solid transparent", borderRight: "6px solid transparent" }
+      : position === "left"
+      ? { position: "absolute", left: "100%", top: "50%", transform: "translateY(-50%)", borderLeft: `7px solid ${c.border}`, borderTop: "6px solid transparent", borderBottom: "6px solid transparent" }
+      : { position: "absolute", right: "100%", top: "50%", transform: "translateY(-50%)", borderRight: `7px solid ${c.border}`, borderTop: "6px solid transparent", borderBottom: "6px solid transparent" };
+
+  const placement: React.CSSProperties =
+    position === "top"
+      ? { position: "absolute", left: "50%", top: -36, transform: "translateX(-50%)" }
+      : position === "left"
+      ? { position: "absolute", left: 70, top: 0 }
+      : { position: "absolute", right: 70, top: 0 };
+
+  return (
+    <div
+      style={{
+        ...placement,
+        animation: "bubbleIn 220ms cubic-bezier(0.34, 1.5, 0.64, 1)",
+      }}
+    >
+      <div
+        className="relative whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-black"
+        style={{
+          background: c.bg,
+          border: `1.5px solid ${c.border}`,
+          color: c.color,
+          boxShadow: `${c.shadow}, 0 4px 12px rgba(0,0,0,0.35)`,
+          fontFamily: "var(--font-display)",
+          letterSpacing: "0.02em",
+        }}
+      >
+        {text}
+        <span aria-hidden style={tail} />
+      </div>
+    </div>
+  );
+}
+
 function SeatAvatar({
   seat, position, isTurn, myTeam, dealerSeat, bubble,
 }: {
@@ -127,7 +180,7 @@ function SeatAvatar({
   isTurn: boolean;
   myTeam: 0 | 1;
   dealerSeat?: number;
-  bubble?: string | null;
+  bubble?: BubbleData | null;
 }) {
   if (!seat) return null;
   const color = palette[seat.seatIndex];
@@ -200,29 +253,15 @@ function SeatAvatar({
         </span>
       </div>
       {bubble && (
-        <div
-          className="absolute -bottom-3 left-1/2 -translate-x-1/2 rounded-full px-3 py-1 text-[11px] font-bold text-white whitespace-nowrap"
-          style={{
-            background: "linear-gradient(180deg, rgba(60,110,200,0.95), rgba(30,60,150,0.95))",
-            border: "1px solid rgba(180,210,255,0.5)",
-            boxShadow: "0 4px 12px rgba(0,0,0,0.4)",
-            fontFamily: "var(--font-display)",
-          }}
-        >
-          {bubble}
-        </div>
+        <SpeechBubble text={bubble.text} tone={bubble.tone} position={position} />
       )}
     </div>
   );
 }
 
-function getBubble(seatId: string | undefined, state: ContreeState): string | null {
+function getBubble(seatId: string | undefined, state: ContreeState): BubbleData | null {
   if (!seatId) return null;
-  if (state.phase !== "bidding") return null;
-  if (state.currentBid?.bidder === seatId) {
-    return `${state.currentBid.amount}${state.currentBid.suit}`;
-  }
-  return null;
+  return state.bubbles?.[seatId] ?? null;
 }
 
 function BottomHand({
@@ -235,15 +274,17 @@ function BottomHand({
   zIndex?: number;
 }) {
   const [previewMode, setPreviewMode] = useState(false);
-  const [pressTimer, setPressTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
+  const pressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const startPress = () => {
-    if (pressTimer) clearTimeout(pressTimer);
-    const t = setTimeout(() => setPreviewMode(true), 280);
-    setPressTimer(t);
+    if (pressTimerRef.current) clearTimeout(pressTimerRef.current);
+    pressTimerRef.current = setTimeout(() => setPreviewMode(true), 260);
   };
   const endPress = () => {
-    if (pressTimer) { clearTimeout(pressTimer); setPressTimer(null); }
+    if (pressTimerRef.current) {
+      clearTimeout(pressTimerRef.current);
+      pressTimerRef.current = null;
+    }
     setPreviewMode(false);
   };
 
@@ -251,16 +292,21 @@ function BottomHand({
     <div
       className="pointer-events-none absolute bottom-0 left-0 right-0"
       style={{ zIndex }}
-      onPointerLeave={endPress}
     >
       <div
-        className="relative mx-auto"
+        className="relative mx-auto select-none"
         style={{
           width: "100%",
           maxWidth: 820,
-          height: 168,
-          pointerEvents: canPlay ? "auto" : "none",
+          height: 180,
+          pointerEvents: hand.length > 0 ? "auto" : "none",
+          touchAction: "none",
         }}
+        onPointerDown={startPress}
+        onPointerUp={endPress}
+        onPointerCancel={endPress}
+        onPointerLeave={endPress}
+        onContextMenu={(e) => e.preventDefault()}
       >
         {hand.length === 0 && (
           <div className="absolute left-1/2 bottom-6 -translate-x-1/2 text-[10px] uppercase tracking-[0.18em]"
@@ -278,31 +324,24 @@ function BottomHand({
           const y = Math.abs(offset) * 2;
           const playable = canPlay && (isLegal ? isLegal(c) : true);
 
-          // Visual states:
-          // - normal play (no preview): playable = neutral, non-playable = dim
-          // - preview mode (long press): playable = bright white glow, non-playable = very dim
           let filter = "none";
           if (canPlay) {
             if (previewMode) {
               filter = playable
-                ? "brightness(1.18) drop-shadow(0 0 16px rgba(255,255,255,0.9))"
-                : "brightness(0.45) saturate(0.4)";
+                ? "brightness(1.2) drop-shadow(0 0 18px rgba(255,255,255,0.95))"
+                : "brightness(0.42) saturate(0.35)";
             } else {
               filter = playable
                 ? "drop-shadow(0 4px 8px rgba(0,0,0,0.4))"
-                : "saturate(0.5) brightness(0.75)";
+                : "saturate(0.5) brightness(0.78)";
             }
           }
 
           return (
             <button
               key={`${c.rank}${c.suit}-${i}`}
-              onClick={() => playable && onPlay(i)}
-              onPointerDown={startPress}
-              onPointerUp={endPress}
-              onPointerCancel={endPress}
-              onContextMenu={(e) => e.preventDefault()}
-              disabled={!playable}
+              type="button"
+              onClick={() => { if (playable) onPlay(i); }}
               className="absolute outline-none transition-all duration-300 ease-out hover:-translate-y-4 focus-visible:-translate-y-4"
               style={{
                 left: "50%", bottom: 16,
@@ -310,7 +349,7 @@ function BottomHand({
                 transformOrigin: "center 140px",
                 zIndex: previewMode && playable ? 100 + i : i,
                 cursor: playable ? "pointer" : "default",
-                touchAction: "manipulation",
+                pointerEvents: "auto",
                 filter,
               }}
             >
@@ -325,7 +364,7 @@ function BottomHand({
                   aria-hidden
                   className="pointer-events-none absolute inset-0 rounded-md"
                   style={{
-                    boxShadow: "inset 0 0 0 2.5px rgba(255,255,255,0.9), 0 0 24px rgba(255,255,255,0.55)",
+                    boxShadow: "inset 0 0 0 2.5px rgba(255,255,255,0.95), 0 0 26px rgba(255,255,255,0.6)",
                   }}
                 />
               )}
@@ -725,9 +764,9 @@ export default function ContreeGame({ roomCode, playerId, playerName }: GameProp
       <SettingsMenu onLeave={leaveGame} />
       <Scoreboard state={state} myTeam={myTeam} />
 
-      <SeatAvatar seat={partnerSeat} position="top"   isTurn={state.currentPlayerId === partnerSeat?.id} myTeam={myTeam} />
-      <SeatAvatar seat={leftOpp}     position="left"  isTurn={state.currentPlayerId === leftOpp?.id}     myTeam={myTeam} dealerSeat={state.dealer} />
-      <SeatAvatar seat={rightOpp}    position="right" isTurn={state.currentPlayerId === rightOpp?.id}    myTeam={myTeam} dealerSeat={state.dealer} />
+      <SeatAvatar seat={partnerSeat} position="top"   isTurn={state.currentPlayerId === partnerSeat?.id} myTeam={myTeam} bubble={getBubble(partnerSeat?.id, state)} />
+      <SeatAvatar seat={leftOpp}     position="left"  isTurn={state.currentPlayerId === leftOpp?.id}     myTeam={myTeam} dealerSeat={state.dealer} bubble={getBubble(leftOpp?.id, state)} />
+      <SeatAvatar seat={rightOpp}    position="right" isTurn={state.currentPlayerId === rightOpp?.id}    myTeam={myTeam} dealerSeat={state.dealer} bubble={getBubble(rightOpp?.id, state)} />
 
       {/* Trump chip + timer (top right) */}
       <div className="absolute right-4 top-4 z-30 flex flex-col items-end gap-2">
@@ -806,7 +845,10 @@ export default function ContreeGame({ roomCode, playerId, playerName }: GameProp
                 zIndex: 10 + i,
                 filter: "drop-shadow(0 8px 16px rgba(0,0,0,0.45))",
                 opacity: collected ? 0 : 1,
-                transition: "transform 700ms cubic-bezier(0.34, 1.2, 0.64, 1), opacity 700ms ease-out 200ms",
+                transition: collected
+                  ? "transform 700ms cubic-bezier(0.34, 1.2, 0.64, 1), opacity 700ms ease-out 200ms"
+                  : "none",
+                animation: collected ? undefined : "trickCardIn 240ms ease-out",
               }}
             >
               <PlayingCard
