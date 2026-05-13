@@ -114,6 +114,18 @@ const GameComponents = {
     () => import("@/components/games/make-guess/make-guess-game"),
     { ssr: false }
   ),
+  "huit-americain": dynamic(
+    () => import("@/components/games/huit-americain/huit-americain-game"),
+    { ssr: false }
+  ),
+  "president": dynamic(
+    () => import("@/components/games/president/president-game"),
+    { ssr: false }
+  ),
+  "contree": dynamic(
+    () => import("@/components/games/contree/contree-game"),
+    { ssr: false }
+  ),
 } as const;
 
 export default function GamePage() {
