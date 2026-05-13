@@ -81,7 +81,7 @@ export default function HuitAmericainGame({ roomCode, playerId, playerName }: Ga
     setPickingSuit(null);
   }
 
-  if (!state || state.status === "waiting") {
+  if (!state || !state.status || state.status === "waiting") {
     return (
       <div className="flex h-full flex-col items-center justify-center px-6 text-center"
            style={{ color: "var(--foreground)" }}>

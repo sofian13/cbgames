@@ -74,7 +74,7 @@ export default function ContreeGame({ roomCode, playerId, playerName }: GameProp
     sendAction({ action: "play-card",  playerId, cardIndex: idx  });
   }
 
-  if (!state || state.phase === "waiting") {
+  if (!state || !state.phase || state.phase === "waiting") {
     return (
       <div className="flex h-full flex-col items-center justify-center px-6 text-center text-white">
         <span className="cb-eyebrow" style={{ color: "rgba(255,255,255,0.5)" }}>en attente</span>

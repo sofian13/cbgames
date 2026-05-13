@@ -50,7 +50,7 @@ export default function PresidentGame({ roomCode, playerId, playerName }: GamePr
     sendAction({ action: "pass",  playerId  });
   }
 
-  if (!state || state.status === "waiting") {
+  if (!state || !state.status || state.status === "waiting") {
     return (
       <div className="flex h-full flex-col items-center justify-center px-6 text-center text-white">
         <span className="cb-eyebrow" style={{ color: "rgba(255,255,255,0.5)" }}>en attente</span>
