@@ -61,6 +61,14 @@ export default function BombPartyGame({ roomCode, playerId, playerName }: GamePr
   const opponents = (state.players || []).filter((p) => p.id !== playerId);
   const rad = 130;
   const me = state.players?.find((p) => p.id === playerId);
+  const currentPlayer = (state.players || []).find((p) => p.id === state.currentPlayerId);
+
+  // Vibrate mobile when my turn starts
+  useEffect(() => {
+    if (isMyTurn && typeof navigator !== "undefined" && navigator.vibrate) {
+      navigator.vibrate([50, 80, 50]);
+    }
+  }, [isMyTurn]);
 
   // Used alphabet from completed words (for bonus = use all 26 = +1 life)
   // We approximate by inspecting state.usedWords — collect letters typed by me
@@ -96,6 +104,36 @@ export default function BombPartyGame({ roomCode, playerId, playerName }: GamePr
         <span className="cb-mono text-[10px]" style={{ color: "rgba(255,255,255,0.5)" }}>
           {(state.players || []).filter((p) => p.isAlive).length}/{state.players?.length ?? 0}
         </span>
+      </div>
+
+      {/* Turn banner — huge & obvious */}
+      <div className="flex items-center justify-center px-4 py-2">
+        <div
+          className="flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-black uppercase tracking-[0.18em]"
+          style={{
+            background: isMyTurn
+              ? "linear-gradient(90deg, #22C55E, #15803D)"
+              : "rgba(0,0,0,0.5)",
+            color: "#fff",
+            border: isMyTurn ? "1.5px solid rgba(180,255,200,0.6)" : "1px solid rgba(255,255,255,0.12)",
+            boxShadow: isMyTurn
+              ? "0 0 28px rgba(34,197,94,0.55), inset 0 1px 0 rgba(255,255,255,0.25)"
+              : "none",
+            fontFamily: "var(--font-display)",
+            animation: isMyTurn ? "cb-pulse 1.4s infinite" : undefined,
+          }}
+        >
+          {isMyTurn ? (
+            <>
+              <span>🎯</span>
+              <span>À TOI DE JOUER</span>
+            </>
+          ) : (
+            <span style={{ color: "rgba(255,255,255,0.75)" }}>
+              tour de <span className="text-white">{currentPlayer?.name ?? "…"}</span>
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Hero bomb area */}
@@ -158,11 +196,13 @@ export default function BombPartyGame({ roomCode, playerId, playerName }: GamePr
                     style={{ transition: "stroke-dashoffset 1s linear" }} />
           </svg>
           <div
-            className="flex h-44 w-44 flex-col items-center justify-center rounded-full"
+            className="flex h-44 w-44 flex-col items-center justify-center rounded-full transition-all duration-300"
             style={{
               background: "radial-gradient(circle at 30% 25%, rgba(255,255,255,0.06), rgba(0,0,0,0.5))",
-              border: "1px solid rgba(255,255,255,0.08)",
-              boxShadow: "0 16px 48px rgba(0,0,0,0.4)",
+              border: isMyTurn ? "2px solid rgba(34,197,94,0.7)" : "1px solid rgba(255,255,255,0.08)",
+              boxShadow: isMyTurn
+                ? "0 0 60px rgba(34,197,94,0.55), 0 16px 48px rgba(0,0,0,0.4)"
+                : "0 16px 48px rgba(0,0,0,0.4)",
               animation: urgent ? "cb-pulse 0.6s infinite" : "none",
             }}
           >
