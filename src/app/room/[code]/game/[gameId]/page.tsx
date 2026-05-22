@@ -126,6 +126,18 @@ const GameComponents = {
     () => import("@/components/games/contree/contree-game"),
     { ssr: false }
   ),
+  "top-ten": dynamic(
+    () => import("@/components/games/top-ten/top-ten-game"),
+    { ssr: false }
+  ),
+  "le-bluffeur": dynamic(
+    () => import("@/components/games/le-bluffeur/le-bluffeur-game"),
+    { ssr: false }
+  ),
+  "longueur-onde": dynamic(
+    () => import("@/components/games/longueur-onde/longueur-onde-game"),
+    { ssr: false }
+  ),
 } as const;
 
 export default function GamePage() {
