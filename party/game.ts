@@ -23,6 +23,9 @@ import { ChessGame } from "./games/chess";
 import { BlockRunnerGame } from "./games/block-runner";
 import { BattleshipGame } from "./games/battleship";
 import { TapRushGame } from "./games/tap-rush";
+import { TopTenGame } from "./games/top-ten";
+import { LeBluffeurGame } from "./games/le-bluffeur";
+import { LongueurOndeGame } from "./games/longueur-onde";
 import { LocalGame } from "./games/local-game";
 import { HuitAmericainGame } from "./games/huit-americain";
 import { PresidentGame } from "./games/president";
@@ -53,6 +56,9 @@ const GAME_REGISTRY: Record<string, () => BaseGame> = {
   "block-runner": () => new BlockRunnerGame(),
   "battleship": () => new BattleshipGame(),
   "tap-rush": () => new TapRushGame(),
+  "top-ten": () => new TopTenGame(),
+  "le-bluffeur": () => new LeBluffeurGame(),
+  "longueur-onde": () => new LongueurOndeGame(),
   "guess-word": () => new LocalGame(),
   "make-guess": () => new LocalGame(),
   "category-chrono": () => new LocalGame(),
@@ -112,7 +118,15 @@ export default class GameServer {
       if (this.gameId === "undercover" || this.gameId === "chess" || this.gameId === "block-runner" || this.gameId === "guess-word" || this.gameId === "make-guess" || this.gameId === "category-chrono") {
         return;
       }
-      const minToStart = this.gameId === "contree" ? 4 : this.gameId === "president" ? 3 : 2;
+      const minToStart =
+        this.gameId === "contree"
+          ? 4
+          : this.gameId === "president" ||
+              this.gameId === "top-ten" ||
+              this.gameId === "le-bluffeur" ||
+              this.gameId === "longueur-onde"
+            ? 3
+            : 2;
       if (this.game.players.size >= minToStart && !this.game.started) {
         this.game.start();
       }
