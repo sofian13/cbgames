@@ -3,8 +3,8 @@ import { Toaster } from "@/components/ui/sonner";
 import { SessionProvider } from "next-auth/react";
 import "./globals.css";
 
-// Fonts (Bricolage Grotesque + DM Sans + JetBrains Mono) are loaded via the
-// Google Fonts @import in globals.css and exposed through the --font-* CSS vars.
+// Fonts (Clash Display via Fontshare for display + DM Sans + JetBrains Mono)
+// are loaded via @import in globals.css and exposed through the --font-* CSS vars.
 
 export const metadata: Metadata = {
   title: "af.games · Party Arcade",

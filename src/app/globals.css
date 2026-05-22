@@ -1,5 +1,6 @@
 /* Fonts first — @import rules must precede all other statements (CSS spec). */
-@import url("https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=DM+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap");
+@import url("https://api.fontshare.com/v2/css?f[]=clash-display@400,500,600,700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap");
 
 @import "tailwindcss";
 @import "tw-animate-css";
@@ -75,7 +76,7 @@
   --radius: 1rem;
 
   /* Fonts (real family names, loaded via @import above) */
-  --font-display:   "Bricolage Grotesque", system-ui, sans-serif;
+  --font-display:   "Clash Display", system-ui, sans-serif;
   --font-body:      "DM Sans", system-ui, sans-serif;
   --font-mono-face: "JetBrains Mono", ui-monospace, "SF Mono", monospace;
 
@@ -208,7 +209,7 @@
   }
 
   h1, h2, h3, h4, h5, h6 {
-    font-family: "Bricolage Grotesque", system-ui, sans-serif;
+    font-family: var(--font-display), system-ui, sans-serif;
     font-weight: 800;
     letter-spacing: -0.025em;
   }
@@ -328,7 +329,7 @@
   }
 
   .af-eyebrow {
-    font-family: "Bricolage Grotesque", sans-serif;
+    font-family: var(--font-display), sans-serif;
     font-weight: 700;
     font-size: 11px;
     letter-spacing: 1.6px;
@@ -337,7 +338,7 @@
   }
 
   .af-display {
-    font-family: "Bricolage Grotesque", sans-serif;
+    font-family: var(--font-display), sans-serif;
     font-weight: 800;
     letter-spacing: -1.2px;
     line-height: 0.95;
@@ -353,7 +354,7 @@
     display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
     height: 3rem; padding: 0 1.375rem;
     border-radius: 9999px;
-    font-family: "Bricolage Grotesque", sans-serif;
+    font-family: var(--font-display), sans-serif;
     font-weight: 800;
     font-size: 0.875rem;
     letter-spacing: 0.06em;
@@ -382,15 +383,15 @@
   .cb-btn-sm      { height: 2.25rem; padding: 0 0.875rem; font-size: 0.6875rem; }
   .cb-btn-lg      { height: 3.5rem; padding: 0 1.75rem; font-size: 0.9375rem; }
 
-  .cb-display-xl  { font-family: "Bricolage Grotesque"; font-weight: 900; font-size: clamp(2.5rem, 8vw, 5rem); line-height: 0.94; letter-spacing: -0.035em; }
-  .cb-display-lg  { font-family: "Bricolage Grotesque"; font-weight: 900; font-size: clamp(2rem, 6vw, 2.5rem); line-height: 0.98; letter-spacing: -0.03em; }
-  .cb-display-md  { font-family: "Bricolage Grotesque"; font-weight: 800; font-size: clamp(1.25rem, 4vw, 1.625rem); line-height: 1.04; letter-spacing: -0.02em; }
-  .cb-display-sm  { font-family: "Bricolage Grotesque"; font-weight: 800; font-size: 1.125rem; line-height: 1.15; letter-spacing: -0.01em; }
+  .cb-display-xl  { font-family: var(--font-display); font-weight: 900; font-size: clamp(2.5rem, 8vw, 5rem); line-height: 0.94; letter-spacing: -0.035em; }
+  .cb-display-lg  { font-family: var(--font-display); font-weight: 900; font-size: clamp(2rem, 6vw, 2.5rem); line-height: 0.98; letter-spacing: -0.03em; }
+  .cb-display-md  { font-family: var(--font-display); font-weight: 800; font-size: clamp(1.25rem, 4vw, 1.625rem); line-height: 1.04; letter-spacing: -0.02em; }
+  .cb-display-sm  { font-family: var(--font-display); font-weight: 800; font-size: 1.125rem; line-height: 1.15; letter-spacing: -0.01em; }
 
   .cb-mono       { font-family: "JetBrains Mono", monospace; font-variant-numeric: tabular-nums; }
 
   .cb-eyebrow {
-    font-family: "Bricolage Grotesque";
+    font-family: var(--font-display);
     font-weight: 700;
     font-size: 0.625rem;
     line-height: 1.25;
