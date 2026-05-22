@@ -1,3 +1,6 @@
+/* Fonts first — @import rules must precede all other statements (CSS spec). */
+@import url("https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=DM+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap");
+
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
@@ -5,21 +8,16 @@
 @custom-variant dark (&:is(.dark *));
 
 /* ─────────────────────────────────────────────────────────────
-   CB Games — Design system
-   Light by default · dark for in-game atmosphere
-   Focus DS tokens + CB brand (sunset orange) + category accents
+   af.games — Design system (refonte mai 2026)
+   Night-purple background, festive accents, blob mascots.
    ───────────────────────────────────────────────────────────── */
 
-@import url("https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800;900&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap");
-
 @theme inline {
-  /* Map our tokens through Tailwind's color system */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-body);
   --font-display: var(--font-display);
   --font-mono: var(--font-mono-face);
-  /* Aliases preserved for existing components */
   --font-orbitron: var(--font-display);
   --font-space-grotesk: var(--font-body);
   --font-geist-mono: var(--font-mono-face);
@@ -53,8 +51,6 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
-  --color-ember: var(--ember);
-  --color-ember-glow: var(--ember-glow);
   --color-cb-brand: var(--cb-brand);
   --color-cb-words: var(--cb-words);
   --color-cb-trivia: var(--cb-trivia);
@@ -73,257 +69,351 @@
 }
 
 /* =========================================================
-   LIGHT THEME (default) — Focus DS
+   ROOT — Dark by default (app is always dark now)
    ========================================================= */
 :root {
   --radius: 1rem;
 
-  /* Base surfaces */
-  --background: #F4F4F3;
-  --foreground: #0A0A0A;
-  --bg-deep:    #EDEDEB;
-  --bg-2:       #FFFFFF;
-  --surface:    #FFFFFF;
-  --surface-2:  #FAFAF9;
+  /* Fonts (real family names, loaded via @import above) */
+  --font-display:   "Bricolage Grotesque", system-ui, sans-serif;
+  --font-body:      "DM Sans", system-ui, sans-serif;
+  --font-mono-face: "JetBrains Mono", ui-monospace, "SF Mono", monospace;
 
-  /* CB Brand — sunset orange, single semantic accent */
-  --cb-brand:       #FF6A3D;
-  --cb-brand-light: #FF8B66;
-  --cb-brand-dim:   #E25627;
-  --cb-brand-tint:  rgba(255, 106, 61, 0.10);
+  /* Night-purple surfaces */
+  --background: #0E0828;
+  --foreground: #FFFFFF;
+  --bg-deep:    #0A0420;
+  --bg-2:       #170F3A;
+  --surface:    #170F3A;
+  --surface-2: rgba(255, 255, 255, 0.04);
+
+  /* Brand (purple festive) */
+  --cb-brand:       #5B36D6;
+  --cb-brand-light: #7A4EE8;
+  --cb-brand-dim:   #4023A0;
+  --cb-brand-tint:  rgba(91, 54, 214, 0.18);
   --cb-brand-ink:   #FFFFFF;
 
-  /* Legacy brand aliases (used by ember + game components) */
   --brand:       var(--cb-brand);
   --brand-light: var(--cb-brand-light);
   --brand-dim:   var(--cb-brand-dim);
-  --brand-2:     #6B4FE8;
-  --brand-accent:#8A72FF;
-  --brand-3:     #00B3A6;
+  --brand-2:     #FF3EA5;
+  --brand-accent:#FFD23F;
+  --brand-3:     #3DDC97;
 
-  /* Category accents */
-  --cb-words:    #2B6DE8;
-  --cb-trivia:   #E89A2B;
-  --cb-speed:    #FF6A3D;
-  --cb-strategy: #18A957;
-  --cb-social:   #E23434;
-  --cb-cards:    #6B4FE8;
-  --cb-party:    #E63CA0;
-  --cb-sport:    #00B3A6;
+  /* Category accents (festive palette) */
+  --cb-words:    #4ECDC4;  /* sky */
+  --cb-trivia:   #FFD23F;  /* yellow */
+  --cb-speed:    #FF6B5B;  /* coral */
+  --cb-strategy: #3DDC97;  /* mint */
+  --cb-social:   #FF3EA5;  /* pink */
+  --cb-cards:    #7A4EE8;  /* purple */
+  --cb-party:    #B5A1FF;  /* lavender */
+  --cb-sport:    #4ECDC4;  /* sky */
+
+  /* Festive accents directly */
+  --af-pink:   #FF3EA5;
+  --af-yellow: #FFD23F;
+  --af-mint:   #3DDC97;
+  --af-sky:    #4ECDC4;
+  --af-coral:  #FF6B5B;
+  --af-lavender: #B5A1FF;
 
   /* Text */
-  --text-strong: #0A0A0A;
-  --text-dim:    rgba(10, 10, 10, 0.62);
-  --text-muted:  rgba(10, 10, 10, 0.42);
+  --text-strong: #FFFFFF;
+  --text-dim:    rgba(255, 255, 255, 0.65);
+  --text-muted:  rgba(255, 255, 255, 0.42);
+  --text-soft:   rgba(255, 255, 255, 0.18);
+
+  --ink:         #FFFFFF;
+  --ink-muted:   rgba(255, 255, 255, 0.65);
+  --ink-soft:    rgba(255, 255, 255, 0.42);
 
   /* Lines & glows */
-  --line-soft:   rgba(10, 10, 10, 0.08);
-  --line-brand:  rgba(255, 106, 61, 0.22);
-  --line-violet: rgba(107, 79, 232, 0.18);
-  --glow-brand:  rgba(255, 106, 61, 0.32);
-  --glow-violet: rgba(107, 79, 232, 0.24);
-  --glow-cyan:   rgba(0, 179, 166, 0.24);
-
-  /* shadcn tokens — rebound to CB palette */
-  --card:               #FFFFFF;
-  --card-foreground:    #0A0A0A;
-  --popover:            #FFFFFF;
-  --popover-foreground: #0A0A0A;
-  --primary:            #0A0A0A;
-  --primary-foreground: #FAFAF9;
-  --secondary:          rgba(10, 10, 10, 0.06);
-  --secondary-foreground: #0A0A0A;
-  --muted:              rgba(10, 10, 10, 0.04);
-  --muted-foreground:   rgba(10, 10, 10, 0.55);
-  --accent:             rgba(255, 106, 61, 0.10);
-  --accent-foreground:  #0A0A0A;
-  --destructive:        #E23434;
-  --border:             rgba(10, 10, 10, 0.08);
-  --input:              rgba(10, 10, 10, 0.10);
-  --ring:               #0A0A0A;
-
-  --chart-1: #FF6A3D;
-  --chart-2: #2B6DE8;
-  --chart-3: #18A957;
-  --chart-4: #6B4FE8;
-  --chart-5: #E63CA0;
-
-  --sidebar:                     #FAFAF9;
-  --sidebar-foreground:          #0A0A0A;
-  --sidebar-primary:             #0A0A0A;
-  --sidebar-primary-foreground:  #FAFAF9;
-  --sidebar-accent:              rgba(255, 106, 61, 0.10);
-  --sidebar-accent-foreground:   #0A0A0A;
-  --sidebar-border:              rgba(10, 10, 10, 0.08);
-  --sidebar-ring:                #FF6A3D;
-
-  /* Ember (legacy game animations — keep brand-coherent) */
-  --ember:      #FF6A3D;
-  --ember-glow: #FFAA80;
-}
-
-/* =========================================================
-   DARK THEME — used during gameplay for atmosphere
-   ========================================================= */
-.dark {
-  --background: #0B0B0C;
-  --foreground: #FAFAF9;
-  --bg-deep:    #08080A;
-  --bg-2:       #16161A;
-  --surface:    #16161A;
-  --surface-2:  #1E1E22;
-
-  --cb-brand:       #FF8157;
-  --cb-brand-light: #FFAA80;
-  --cb-brand-dim:   #E25627;
-  --cb-brand-tint:  rgba(255, 129, 87, 0.14);
-  --cb-brand-ink:   #0A0A0A;
-
-  --brand:       var(--cb-brand);
-  --brand-light: var(--cb-brand-light);
-  --brand-dim:   var(--cb-brand-dim);
-  --brand-2:     #8A72FF;
-  --brand-accent:#A78BFA;
-  --brand-3:     #2FD8C8;
-
-  --cb-words:    #4F8DFF;
-  --cb-trivia:   #FFB347;
-  --cb-speed:    #FF8157;
-  --cb-strategy: #1FCB6E;
-  --cb-social:   #FF4D4D;
-  --cb-cards:    #8A72FF;
-  --cb-party:    #FF5BB3;
-  --cb-sport:    #2FD8C8;
-
-  --text-strong: #FAFAF9;
-  --text-dim:    rgba(250, 250, 249, 0.64);
-  --text-muted:  rgba(250, 250, 249, 0.40);
-
   --line-soft:   rgba(255, 255, 255, 0.10);
-  --line-brand:  rgba(255, 129, 87, 0.30);
-  --line-violet: rgba(138, 114, 255, 0.30);
-  --glow-brand:  rgba(255, 129, 87, 0.40);
-  --glow-violet: rgba(138, 114, 255, 0.36);
-  --glow-cyan:   rgba(47, 216, 200, 0.32);
+  --line-brand:  rgba(91, 54, 214, 0.35);
+  --line-violet: rgba(122, 78, 232, 0.30);
+  --glow-brand:  rgba(91, 54, 214, 0.50);
+  --glow-violet: rgba(122, 78, 232, 0.36);
+  --glow-cyan:   rgba(78, 205, 196, 0.30);
 
-  --card:               #16161A;
-  --card-foreground:    #FAFAF9;
-  --popover:            #1E1E22;
-  --popover-foreground: #FAFAF9;
-  --primary:            #FF8157;
-  --primary-foreground: #0A0A0A;
+  /* shadcn tokens */
+  --card:               #170F3A;
+  --card-foreground:    #FFFFFF;
+  --popover:            #170F3A;
+  --popover-foreground: #FFFFFF;
+  --primary:            #5B36D6;
+  --primary-foreground: #FFFFFF;
   --secondary:          rgba(255, 255, 255, 0.06);
-  --secondary-foreground: #FAFAF9;
+  --secondary-foreground: #FFFFFF;
   --muted:              rgba(255, 255, 255, 0.04);
   --muted-foreground:   rgba(255, 255, 255, 0.55);
-  --accent:             rgba(255, 129, 87, 0.14);
-  --accent-foreground:  #FAFAF9;
+  --accent:             rgba(91, 54, 214, 0.18);
+  --accent-foreground:  #FFFFFF;
   --destructive:        #FF4D4D;
   --border:             rgba(255, 255, 255, 0.10);
   --input:              rgba(255, 255, 255, 0.10);
-  --ring:               #FF8157;
+  --ring:               #5B36D6;
 
-  --chart-1: #FF8157;
-  --chart-2: #4F8DFF;
-  --chart-3: #1FCB6E;
-  --chart-4: #8A72FF;
-  --chart-5: #FF5BB3;
+  --chart-1: #5B36D6;
+  --chart-2: #FF3EA5;
+  --chart-3: #3DDC97;
+  --chart-4: #FFD23F;
+  --chart-5: #4ECDC4;
 
-  --sidebar:                     #16161A;
-  --sidebar-foreground:          #FAFAF9;
-  --sidebar-primary:             #FF8157;
-  --sidebar-primary-foreground:  #0A0A0A;
-  --sidebar-accent:              rgba(255, 129, 87, 0.14);
-  --sidebar-accent-foreground:   #FAFAF9;
+  --sidebar:                     #170F3A;
+  --sidebar-foreground:          #FFFFFF;
+  --sidebar-primary:             #5B36D6;
+  --sidebar-primary-foreground:  #FFFFFF;
+  --sidebar-accent:              rgba(91, 54, 214, 0.18);
+  --sidebar-accent-foreground:   #FFFFFF;
   --sidebar-border:              rgba(255, 255, 255, 0.10);
-  --sidebar-ring:                #FF8157;
+  --sidebar-ring:                #5B36D6;
 
-  --ember:      #FF8157;
-  --ember-glow: #FFAA80;
+  --ember:      #FF3EA5;
+  --ember-glow: #FFD23F;
 }
+
+/* Legacy .dark uses same tokens (app is dark by default now) */
+.dark { color-scheme: dark; }
 
 /* =========================================================
    Base
    ========================================================= */
 @layer base {
-  * { @apply border-border outline-ring/50; }
+  * { @apply border-border outline-ring/50; box-sizing: border-box; }
   html, body {
-    font-family: var(--font-body, "Inter"), -apple-system, system-ui, sans-serif;
+    font-family: "DM Sans", -apple-system, system-ui, sans-serif;
     min-height: 100vh;
   }
   body {
-    background: var(--background);
+    background:
+      radial-gradient(120% 80% at 20% 0%, rgba(91,54,214,0.45) 0%, transparent 55%),
+      radial-gradient(100% 70% at 100% 100%, rgba(255,62,165,0.30) 0%, transparent 60%),
+      linear-gradient(180deg, var(--bg-deep) 0%, var(--background) 100%);
+    background-attachment: fixed;
     color: var(--foreground);
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
   }
-  body.game-shell-active { background: var(--bg-deep); }
-  body.dark-game { background: #0B0B0C; color: #FAFAF9; }
+  body.game-shell-active {
+    background:
+      radial-gradient(120% 80% at 20% 0%, rgba(91,54,214,0.35) 0%, transparent 55%),
+      linear-gradient(180deg, var(--bg-deep) 0%, var(--background) 100%);
+  }
 
   ::selection {
-    background: var(--cb-brand);
-    color: var(--cb-brand-ink);
+    background: var(--af-pink);
+    color: #FFFFFF;
   }
 
   h1, h2, h3, h4, h5, h6 {
-    font-family: var(--font-display, "Archivo"), system-ui, sans-serif;
-    font-weight: 900;
+    font-family: "Bricolage Grotesque", system-ui, sans-serif;
+    font-weight: 800;
     letter-spacing: -0.025em;
   }
 }
 
 /* =========================================================
-   CB · Reusable utilities
+   Mascot animations
+   ========================================================= */
+@keyframes mascot-breathe {
+  0%, 100% { transform: scaleY(1) scaleX(1) translateY(0); }
+  50%      { transform: scaleY(0.96) scaleX(1.04) translateY(2px); }
+}
+@keyframes mascot-bob {
+  0%, 100% { transform: translateY(0) rotate(-2deg); }
+  50%      { transform: translateY(-6px) rotate(2deg); }
+}
+@keyframes mascot-blink {
+  0%, 92%, 100% { transform: scaleY(1); }
+  95%, 97%      { transform: scaleY(0.08); }
+}
+@keyframes mascot-cheer {
+  0%, 100% { transform: translateY(0) rotate(-5deg); }
+  25%      { transform: translateY(-18px) rotate(8deg); }
+  50%      { transform: translateY(-4px) rotate(-3deg); }
+  75%      { transform: translateY(-12px) rotate(5deg); }
+}
+
+@keyframes af-spin-slow { to { transform: rotate(360deg); } }
+@keyframes af-pulse-ring {
+  0%   { transform: scale(0.95); opacity: 0.7; }
+  100% { transform: scale(1.5); opacity: 0; }
+}
+@keyframes af-shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+@keyframes af-confetti-fall {
+  0%   { transform: translate3d(var(--cx,0), -120%, 0) rotate(0); opacity: 1; }
+  100% { transform: translate3d(var(--cx,0), 120vh, 0) rotate(720deg); opacity: 1; }
+}
+@keyframes af-drift-up {
+  0%   { transform: translateY(0); opacity: 1; }
+  100% { transform: translateY(-40px); opacity: 0; }
+}
+@keyframes af-star-twinkle {
+  0%, 100% { transform: scale(1) rotate(0); opacity: 0.6; }
+  50%      { transform: scale(1.2) rotate(180deg); opacity: 1; }
+}
+@keyframes af-slide-up {
+  from { transform: translateY(20px); opacity: 0; }
+  to   { transform: translateY(0); opacity: 1; }
+}
+
+.afgames-confetti {
+  position: absolute; top: 0;
+  width: 10px; height: 14px;
+  border-radius: 2px;
+  --cx: 0px;
+  animation: af-confetti-fall 2.4s linear infinite;
+}
+
+.afgames-sparkle {
+  position: absolute;
+  pointer-events: none;
+  width: 8px; height: 8px;
+  background: var(--af-yellow);
+  clip-path: polygon(50% 0%, 60% 40%, 100% 50%, 60% 60%, 50% 100%, 40% 60%, 0% 50%, 40% 40%);
+  animation: af-star-twinkle 3s ease-in-out infinite;
+}
+
+/* =========================================================
+   Reusable utilities (af-*)
    ========================================================= */
 @layer utilities {
-  /* Site shell — plain canvas, no fancy gradient */
-  .site-shell {
-    position: relative;
-    min-height: 100vh;
-    background: var(--background);
+  .af-card-glass {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.10);
+    border-radius: 28px;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
   }
-  .site-orb { display: none; }
 
-  /* Panel surfaces */
-  .site-panel {
-    position: relative;
-    border: 1px solid var(--line-soft);
-    background: var(--surface);
-    box-shadow: 0 1px 2px rgba(10,10,10,0.04), 0 8px 20px rgba(10,10,10,0.04);
-    border-radius: 1.25rem;
-  }
-  .site-panel-soft {
-    border: 1px solid var(--line-soft);
-    background: var(--surface-2);
-    border-radius: 1rem;
-  }
-  .dark .site-panel  { background: var(--surface);   border-color: rgba(255,255,255,0.06); box-shadow: 0 2px 4px rgba(0,0,0,0.4), 0 12px 28px rgba(0,0,0,0.5); }
-  .dark .site-panel-soft { background: var(--surface-2); border-color: rgba(255,255,255,0.05); }
-
-  .site-chip {
+  .af-chip {
     display: inline-flex; align-items: center; gap: 6px;
-    border: 1px solid var(--line-soft);
-    background: var(--surface);
-    color: var(--text-strong);
+    padding: 6px 12px; border-radius: 999px;
+    background: rgba(255,255,255,0.10);
+    border: 1px solid rgba(255,255,255,0.10);
+    font-family: "DM Sans", sans-serif;
+    font-size: 12px; font-weight: 600;
+    color: #fff; letter-spacing: 0.2px; text-transform: uppercase;
+  }
+
+  .af-btn {
+    font-family: "DM Sans", sans-serif;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    border-radius: 22px;
+    padding: 14px 22px;
+    font-size: 15px;
+    letter-spacing: -0.2px;
+    color: #fff;
+    transition: transform .15s, box-shadow .15s;
+  }
+  .af-btn:active { transform: translateY(1px) scale(0.99); }
+  .af-btn-primary {
+    background: linear-gradient(180deg, var(--cb-brand), var(--cb-brand-dim));
+    box-shadow: 0 10px 24px rgba(91,54,214,0.5), 0 2px 0 rgba(255,255,255,0.18) inset;
+  }
+  .af-btn-pink {
+    background: linear-gradient(180deg, var(--af-pink), #B5226E);
+    box-shadow: 0 10px 24px rgba(255,62,165,0.45), 0 2px 0 rgba(255,255,255,0.18) inset;
+  }
+  .af-btn-ghost {
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.12);
+  }
+
+  .af-eyebrow {
+    font-family: "Bricolage Grotesque", sans-serif;
+    font-weight: 700;
+    font-size: 11px;
+    letter-spacing: 1.6px;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.65);
+  }
+
+  .af-display {
+    font-family: "Bricolage Grotesque", sans-serif;
+    font-weight: 800;
+    letter-spacing: -1.2px;
+    line-height: 0.95;
+  }
+
+  .af-mono {
+    font-family: "JetBrains Mono", ui-monospace, "SF Mono", monospace;
+    font-feature-settings: "tnum" 1;
+  }
+
+  /* CB legacy buttons — keep them working for non-refactored games */
+  .cb-btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
+    height: 3rem; padding: 0 1.375rem;
     border-radius: 9999px;
-    padding: 4px 10px;
+    font-family: "Bricolage Grotesque", sans-serif;
+    font-weight: 800;
+    font-size: 0.875rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    transition: transform 120ms cubic-bezier(0.2, 0.7, 0.2, 1),
+                box-shadow 200ms cubic-bezier(0.2, 0.7, 0.2, 1);
+    user-select: none;
+    white-space: nowrap;
+    cursor: pointer;
   }
-  .dark .site-chip { background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.10); }
+  .cb-btn:active { transform: scale(0.97); }
+  .cb-btn-primary {
+    background: var(--cb-brand);
+    color: #fff;
+    box-shadow: 0 10px 24px rgba(91,54,214,0.5);
+    border: none;
+  }
+  .cb-btn-brand {
+    background: var(--cb-brand);
+    color: #fff;
+    box-shadow: 0 10px 24px rgba(91,54,214,0.5);
+    border: none;
+  }
+  .cb-btn-ghost   { background: transparent; color: #fff; border: 1px solid var(--line-soft); }
+  .cb-btn-soft    { background: rgba(255,255,255,0.06); color: #fff; border: 1px solid var(--line-soft); }
+  .cb-btn-sm      { height: 2.25rem; padding: 0 0.875rem; font-size: 0.6875rem; }
+  .cb-btn-lg      { height: 3.5rem; padding: 0 1.75rem; font-size: 0.9375rem; }
 
-  .site-chip-cool {
-    display: inline-flex; align-items: center; gap: 6px;
-    border: 1px solid var(--line-brand);
-    background: var(--cb-brand-tint);
-    color: var(--cb-brand);
-    border-radius: 9999px;
-    padding: 4px 10px;
+  .cb-display-xl  { font-family: "Bricolage Grotesque"; font-weight: 900; font-size: clamp(2.5rem, 8vw, 5rem); line-height: 0.94; letter-spacing: -0.035em; }
+  .cb-display-lg  { font-family: "Bricolage Grotesque"; font-weight: 900; font-size: clamp(2rem, 6vw, 2.5rem); line-height: 0.98; letter-spacing: -0.03em; }
+  .cb-display-md  { font-family: "Bricolage Grotesque"; font-weight: 800; font-size: clamp(1.25rem, 4vw, 1.625rem); line-height: 1.04; letter-spacing: -0.02em; }
+  .cb-display-sm  { font-family: "Bricolage Grotesque"; font-weight: 800; font-size: 1.125rem; line-height: 1.15; letter-spacing: -0.01em; }
+
+  .cb-mono       { font-family: "JetBrains Mono", monospace; font-variant-numeric: tabular-nums; }
+
+  .cb-eyebrow {
+    font-family: "Bricolage Grotesque";
+    font-weight: 700;
+    font-size: 0.625rem;
+    line-height: 1.25;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-dim);
   }
 
-  .site-divider {
-    height: 1px;
-    background: linear-gradient(90deg, transparent, var(--line-soft), transparent);
+  @keyframes cb-pulse {
+    0% { box-shadow: 0 0 0 0 rgba(226,52,52,0.7); }
+    60% { box-shadow: 0 0 0 6px rgba(226,52,52,0); }
+    100% { box-shadow: 0 0 0 0 rgba(226,52,52,0); }
   }
+  .cb-live-pulse { animation: cb-pulse 1.4s infinite; }
 
+  .text-balance { text-wrap: balance; }
+  .safe-bottom { padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 1rem); }
+
+  /* Hide subtle scrollbars */
+  .cb-scroll::-webkit-scrollbar { width: 0; height: 0; }
+  .cb-scroll { scrollbar-width: none; }
+
+  /* Card hover */
   .site-card-hover {
     transition:
       transform 0.32s cubic-bezier(0.16, 1, 0.3, 1),
@@ -332,15 +422,44 @@
   }
   .site-card-hover:hover {
     transform: translateY(-2px);
-    border-color: var(--line-brand);
-    box-shadow: 0 6px 14px rgba(10,10,10,0.06), 0 20px 36px rgba(10,10,10,0.06);
-  }
-  .dark .site-card-hover:hover {
-    box-shadow: 0 6px 14px rgba(0,0,0,0.5), 0 20px 36px rgba(0,0,0,0.5);
+    border-color: rgba(91, 54, 214, 0.45);
+    box-shadow: 0 6px 14px rgba(0,0,0,.4), 0 20px 36px rgba(0,0,0,.4);
   }
 
-  .safe-bottom { padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 1rem); }
+  /* Site panels (legacy compat) */
+  .site-panel {
+    position: relative;
+    border: 1px solid var(--line-soft);
+    background: var(--surface);
+    border-radius: 1.25rem;
+  }
+  .site-panel-soft {
+    border: 1px solid var(--line-soft);
+    background: rgba(255,255,255,0.04);
+    border-radius: 1rem;
+  }
+  .site-chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    border: 1px solid var(--line-soft);
+    background: rgba(255,255,255,0.06);
+    color: #fff;
+    border-radius: 9999px;
+    padding: 4px 10px;
+  }
+  .site-shell { position: relative; min-height: 100vh; background: transparent; }
+  .site-orb, .ember-bg, .ember-particles, .ember-orb, .cursor-trail, .film-grain { display: none !important; }
 
+  /* Legacy chip variant (used by tap-rush & co) */
+  .site-chip-cool {
+    display: inline-flex; align-items: center; gap: 6px;
+    border: 1px solid var(--line-brand);
+    background: var(--cb-brand-tint);
+    color: var(--cb-brand-light);
+    border-radius: 9999px;
+    padding: 4px 10px;
+  }
+
+  /* Page rise transition (legacy) */
   .page-enter {
     opacity: 0;
     animation: cbPageRise 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
@@ -350,80 +469,13 @@
     to   { opacity: 1; transform: translateY(0); }
   }
 
-  .text-balance { text-wrap: balance; }
-
-  /* CB Display heading helpers */
-  .cb-display-xl { font-family: var(--font-display, "Archivo"); font-weight: 900; font-size: clamp(2.5rem, 8vw, 3.5rem); line-height: 0.94; letter-spacing: -0.035em; }
-  .cb-display-lg { font-family: var(--font-display, "Archivo"); font-weight: 900; font-size: clamp(2rem, 6vw, 2.5rem); line-height: 0.98; letter-spacing: -0.03em; }
-  .cb-display-md { font-family: var(--font-display, "Archivo"); font-weight: 800; font-size: clamp(1.25rem, 4vw, 1.625rem); line-height: 1.04; letter-spacing: -0.02em; }
-  .cb-display-sm { font-family: var(--font-display, "Archivo"); font-weight: 800; font-size: 1.125rem; line-height: 1.15; letter-spacing: -0.01em; }
-  .cb-mono       { font-family: var(--font-mono-face, "JetBrains Mono"); font-variant-numeric: tabular-nums; }
-
-  .cb-eyebrow {
-    font-family: var(--font-display, "Archivo");
-    font-weight: 700;
-    font-size: 0.625rem;
-    line-height: 1.25;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: var(--text-dim);
-  }
-
-  /* Primary CTA button */
-  .cb-btn {
-    display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
-    height: 3rem; padding: 0 1.375rem;
-    border-radius: 9999px;
-    font-family: var(--font-display, "Archivo");
-    font-weight: 800;
-    font-size: 0.875rem;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    transition: transform 120ms cubic-bezier(0.2, 0.7, 0.2, 1),
-                box-shadow 200ms cubic-bezier(0.2, 0.7, 0.2, 1),
-                background 200ms cubic-bezier(0.2, 0.7, 0.2, 1);
-    user-select: none;
-    white-space: nowrap;
-  }
-  .cb-btn:active { transform: scale(0.97); }
-  .cb-btn-primary { background: var(--primary); color: var(--primary-foreground); box-shadow: 0 2px 4px rgba(10,10,10,0.04), 0 10px 22px rgba(10,10,10,0.07); }
-  .cb-btn-brand   { background: var(--cb-brand); color: var(--cb-brand-ink); box-shadow: 0 2px 4px rgba(255,106,61,0.12), 0 10px 22px rgba(255,106,61,0.18); }
-  .cb-btn-ghost   { background: transparent; color: var(--foreground); border: 1px solid var(--line-soft); }
-  .cb-btn-soft    { background: var(--surface-2); color: var(--foreground); border: 1px solid var(--line-soft); }
-  .cb-btn-sm      { height: 2.25rem; padding: 0 0.875rem; font-size: 0.6875rem; }
-  .cb-btn-lg      { height: 3.5rem; padding: 0 1.75rem; font-size: 0.9375rem; }
-
-  /* Pulse for LIVE indicators */
-  @keyframes cb-pulse {
-    0% { box-shadow: 0 0 0 0 rgba(226,52,52,0.7); }
-    60% { box-shadow: 0 0 0 6px rgba(226,52,52,0); }
-    100% { box-shadow: 0 0 0 0 rgba(226,52,52,0); }
-  }
-  .cb-live-pulse {
-    animation: cb-pulse 1.4s infinite;
-  }
-
+  /* Card / bubble entrance animations (used by Contrée) */
   @keyframes trickCardIn {
     0%   { opacity: 0; transform: var(--enter-from, scale(0.7)); }
     100% { opacity: 1; }
   }
-
   @keyframes bubbleIn {
     0%   { opacity: 0; transform: translate(-50%, -8px) scale(0.85); }
     100% { opacity: 1; transform: translate(-50%, 0) scale(1); }
-  }
-
-  /* Hide subtle scrollbars */
-  .cb-scroll::-webkit-scrollbar { width: 0; height: 0; }
-  .cb-scroll { scrollbar-width: none; }
-}
-
-/* =========================================================
-   Legacy ember/orb classes used by existing components.
-   Keep them defined but neutralized so the new look stays clean.
-   ========================================================= */
-@layer utilities {
-  .ember-bg, .ember-particles, .ember-orb, .cursor-trail, .film-grain {
-    display: none !important;
   }
 }

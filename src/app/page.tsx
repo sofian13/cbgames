@@ -2,33 +2,32 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRight, Plus, Smartphone, Sparkles, Users2, Zap } from "lucide-react";
+import { ArrowRight, Plus } from "lucide-react";
 import { generateRoomCode, ROOM_CODE_LENGTH } from "@/lib/party/constants";
 import { getOrCreateGuest, setGuestName } from "@/lib/guest";
 import { GAMES } from "@/lib/games/registry";
-import { cn } from "@/lib/utils";
+import { Mascot, MascotAvatar, MASCOT_PALETTE, type MascotColor } from "@/components/Mascot";
+import { Sparkles } from "@/components/ConfettiBurst";
 
-const CATEGORY_META: Record<
-  string,
-  { label: string; tagline: string; color: string; art: string }
-> = {
-  words:    { label: "Mots",      tagline: "Vocabulaire sous pression",  color: "var(--cb-words)",    art: "/categories/words.svg"    },
-  trivia:   { label: "Quiz",      tagline: "Culture G à la seconde",      color: "var(--cb-trivia)",   art: "/categories/trivia.svg"   },
-  speed:    { label: "Rapide",    tagline: "Réflexes purs",               color: "var(--cb-speed)",    art: "/categories/speed.svg"    },
-  strategy: { label: "Stratégie", tagline: "Tête froide",                 color: "var(--cb-strategy)", art: "/categories/strategy.svg" },
-  social:   { label: "Bluff",     tagline: "Lis les autres",              color: "var(--cb-social)",   art: "/categories/social.svg"   },
-  cards:    { label: "Cartes",    tagline: "Tour de table",               color: "var(--cb-cards)",    art: "/categories/cards.svg"    },
-  party:    { label: "Party",     tagline: "Ambiance",                    color: "var(--cb-party)",    art: "/categories/party.svg"    },
-  sport:    { label: "Sport",     tagline: "Coordination",                color: "var(--cb-sport)",    art: "/categories/sport.svg"    },
+type CategoryMeta = {
+  label: string;
+  tag: string;
+  color: MascotColor;
+  icon: string;
 };
 
-function UsernameEditor({
-  initialName,
-  onSave,
-}: {
-  initialName: string;
-  onSave: (name: string) => void;
-}) {
+const CATEGORY_META: Record<string, CategoryMeta> = {
+  words:    { label: "Mots",      tag: "Vocabulaire", color: "sky",      icon: "💬" },
+  trivia:   { label: "Quiz",      tag: "Culture",     color: "yellow",   icon: "🧠" },
+  speed:    { label: "Rapide",    tag: "Réflexes",    color: "coral",    icon: "⚡" },
+  strategy: { label: "Stratégie", tag: "Tête froide", color: "mint",     icon: "♟" },
+  social:   { label: "Bluff",     tag: "Lis-les",     color: "pink",     icon: "🎭" },
+  cards:    { label: "Cartes",    tag: "Tour table",  color: "purple",   icon: "🃏" },
+  party:    { label: "Party",     tag: "Ambiance",    color: "lavender", icon: "🎉" },
+  sport:    { label: "Sport",     tag: "Coordination", color: "sky",     icon: "🎾" },
+};
+
+function UsernameEditor({ initialName, onSave }: { initialName: string; onSave: (name: string) => void }) {
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(initialName);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -50,32 +49,28 @@ function UsernameEditor({
 
   if (editing) {
     return (
-      <div className="flex items-center gap-2">
-        <input
-          ref={inputRef}
-          type="text"
-          value={name}
-          onChange={(event) => setName(event.target.value.slice(0, 20))}
-          onBlur={save}
-          onKeyDown={(event) => {
-            if (event.key === "Enter") save();
-            if (event.key === "Escape") {
-              setName(initialName);
-              setEditing(false);
-            }
-          }}
-          className="h-9 rounded-full border border-[color:var(--line-soft)] bg-[color:var(--surface-2)] px-3 text-sm text-[color:var(--foreground)] outline-none transition focus:border-[color:var(--cb-brand)] focus:ring-2 focus:ring-[color:var(--cb-brand-tint)]"
-        />
-      </div>
+      <input
+        ref={inputRef}
+        type="text"
+        value={name}
+        onChange={(event) => setName(event.target.value.slice(0, 20))}
+        onBlur={save}
+        onKeyDown={(event) => {
+          if (event.key === "Enter") save();
+          if (event.key === "Escape") { setName(initialName); setEditing(false); }
+        }}
+        className="h-9 rounded-full border border-[color:var(--line-soft)] bg-[color:var(--surface-2)] px-3 text-sm text-white outline-none transition focus:border-[color:var(--cb-brand)]"
+      />
     );
   }
 
   return (
     <button
       onClick={() => setEditing(true)}
-      className="rounded-full border border-[color:var(--line-soft)] bg-[color:var(--surface-2)] px-3 py-1.5 text-xs font-semibold text-[color:var(--text-strong)] transition hover:border-[color:var(--cb-brand)]"
+      className="flex items-center gap-2 rounded-full border border-[color:var(--line-soft)] bg-white/[0.04] py-1 pl-1 pr-3 text-xs font-semibold text-white transition hover:border-[color:var(--cb-brand)]"
     >
-      {initialName}
+      <MascotAvatar color="purple" size={28} mood="wink" />
+      <span>{initialName}</span>
     </button>
   );
 }
@@ -83,21 +78,20 @@ function UsernameEditor({
 export default function HomePage() {
   const router = useRouter();
   const [code, setCode] = useState("");
-  const [guestName, setGuestNameState] = useState(() => {
-    if (typeof window === "undefined") return "";
-    return getOrCreateGuest().name;
-  });
+  // Init empty so SSR and first client render match; populate after mount.
+  const [guestName, setGuestNameState] = useState("");
+  useEffect(() => {
+    setGuestNameState(getOrCreateGuest().name);
+  }, []);
 
   const implementedGames = GAMES.filter((game) => game.implemented);
-  const categoriesList = Array.from(
-    new Set(implementedGames.map((g) => g.category))
-  );
+  const categoriesList = Array.from(new Set(implementedGames.map((g) => g.category)));
 
   const featured = [
-    { id: "bomb-party",    emoji: "💣", name: "Bomb Party",    cat: "Mots",   color: "var(--cb-words)",    tagline: "Désamorce avant l'explosion" },
-    { id: "loup-garou",    emoji: "🐺", name: "Loup-Garou",    cat: "Bluff",  color: "var(--cb-social)",   tagline: "Démasque les loups" },
-    { id: "motion-tennis", emoji: "🎾", name: "Motion Tennis", cat: "Sport",  color: "var(--cb-sport)",    tagline: "Ton tel = ta raquette" },
-    { id: "contree",       emoji: "♥",  name: "La Contrée",    cat: "Cartes", color: "var(--cb-cards)",    tagline: "Belote 2v2, coinche incluse" },
+    { id: "bomb-party",    emoji: "💣", name: "Bomb Party",    cat: "Mots",   color: "sky" as MascotColor,    line: "Désamorce avant l'explosion" },
+    { id: "le-bluffeur",   emoji: "🎭", name: "Le Bluffeur",   cat: "Bluff",  color: "pink" as MascotColor,   line: "Invente, bluffe, démasque" },
+    { id: "longueur-onde", emoji: "📡", name: "Longueur d'Onde", cat: "Party", color: "lavender" as MascotColor, line: "Synchro avec ton équipe" },
+    { id: "motion-tennis", emoji: "🎾", name: "Motion Tennis", cat: "Sport",  color: "mint" as MascotColor,   line: "Ton tel = ta raquette" },
   ];
 
   const handleSaveName = useCallback((newName: string) => {
@@ -121,169 +115,151 @@ export default function HomePage() {
   }, [code, router]);
 
   return (
-    <main className="relative min-h-screen bg-[color:var(--background)] text-[color:var(--foreground)]">
+    <main className="relative min-h-screen overflow-hidden text-white">
+      <Sparkles count={14} />
+
+      {/* HEADER */}
+      <header className="relative z-10 mx-auto flex w-full max-w-6xl items-center justify-between gap-3 px-5 pt-6 sm:px-10">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl text-sm font-black text-white"
+               style={{ background: "linear-gradient(135deg, var(--cb-brand), var(--af-pink))", fontFamily: "var(--font-display)" }}>
+            af
+          </div>
+          <span className="text-2xl font-black tracking-tight" style={{ fontFamily: "var(--font-display)", letterSpacing: -0.5 }}>
+            af<span style={{ color: "var(--af-pink)" }}>.</span>games
+          </span>
+        </div>
+        {guestName && <UsernameEditor initialName={guestName} onSave={handleSaveName} />}
+      </header>
+
       {/* HERO */}
-      <section className="relative w-full">
-        <div className="mx-auto flex w-full max-w-6xl flex-col px-5 pb-10 pt-6 sm:px-10">
-          {/* Header */}
-          <header className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <span
-                className="flex h-8 w-8 items-center justify-center rounded-md text-xs font-black"
-                style={{ background: "var(--primary)", color: "var(--primary-foreground)" }}
-              >
-                cb
+      <section className="relative z-10 mx-auto w-full max-w-6xl px-5 sm:px-10">
+        <div className="grid gap-10 py-12 lg:grid-cols-[1.15fr_0.85fr] lg:gap-16 lg:py-20">
+          <div className="flex flex-col">
+            <div className="mb-6 flex flex-wrap items-center gap-2">
+              <span className="af-chip" style={{
+                background: "rgba(91,54,214,0.2)",
+                borderColor: "rgba(91,54,214,0.4)",
+                color: "#fff",
+              }}>
+                <span className="inline-block h-1.5 w-1.5 rounded-full" style={{ background: "var(--af-mint)", boxShadow: "0 0 0 4px rgba(61,220,151,0.2)" }} />
+                {implementedGames.length} jeux live
               </span>
-              <span
-                className="font-display text-xl font-black tracking-tight"
-                style={{ fontFamily: "var(--font-display)" }}
-              >
-                games
-              </span>
+              <span className="af-chip">{categoriesList.length} univers</span>
             </div>
 
-            {guestName && (
-              <UsernameEditor initialName={guestName} onSave={handleSaveName} />
-            )}
-          </header>
+            <h1 className="cb-display-xl" style={{ letterSpacing: -3, lineHeight: 0.92 }}>
+              La soirée<br/>
+              commence<br/>
+              <span style={{ background: "linear-gradient(120deg, var(--af-pink), var(--af-yellow))", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+                ici.
+              </span>
+            </h1>
 
-          {/* Hero content */}
-          <div className="flex flex-col gap-8 py-12 lg:grid lg:grid-cols-[1.1fr_0.9fr] lg:gap-16 lg:py-16">
-            <div className="flex flex-col gap-6">
-              <div className="flex flex-wrap items-center gap-2">
-                <span
-                  className="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em]"
+            <p className="mt-6 max-w-md text-base leading-relaxed sm:text-lg" style={{ color: "var(--text-dim)" }}>
+              Un code, une salle, on joue.<br/>
+              Pas de compte, pas d&apos;install — juste ton tel et tes potes.
+            </p>
+
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
+              <button onClick={handleCreate} className="af-btn af-btn-primary group flex items-center gap-3" style={{ padding: "18px 28px", fontSize: 16 }}>
+                <Plus className="h-5 w-5 transition-transform group-hover:rotate-90" />
+                Créer une salle
+              </button>
+
+              <div className="flex items-center gap-1 rounded-full border bg-white/[0.06] p-1.5 pl-5"
+                   style={{ borderColor: "var(--line-soft)" }}>
+                <input
+                  type="text"
+                  value={code}
+                  onChange={(event) =>
+                    setCode(event.target.value.toUpperCase().replace(/[^A-Z]/g, "").slice(0, ROOM_CODE_LENGTH))
+                  }
+                  onKeyDown={(event) => { if (event.key === "Enter") handleJoin(); }}
+                  placeholder="CODE"
+                  maxLength={ROOM_CODE_LENGTH}
+                  className="w-24 bg-transparent text-base font-bold tracking-[0.4em] outline-none placeholder:text-white/40"
+                  style={{ fontFamily: "var(--font-display)", color: "var(--af-yellow)" }}
+                />
+                <button
+                  onClick={handleJoin}
+                  aria-label="Rejoindre la salle"
+                  disabled={code.length !== ROOM_CODE_LENGTH}
+                  className="flex h-10 w-10 items-center justify-center rounded-full transition disabled:opacity-30"
                   style={{
-                    background: "var(--cb-brand-tint)",
-                    borderColor: "var(--line-brand)",
-                    color: "var(--cb-brand)",
+                    background: code.length === ROOM_CODE_LENGTH ? "var(--cb-brand)" : "rgba(255,255,255,0.06)",
+                    color: "#fff",
                   }}
                 >
-                  <span
-                    className="h-1.5 w-1.5 rounded-full cb-live-pulse"
-                    style={{ background: "var(--cb-brand)" }}
-                  />
-                  {implementedGames.length} jeux live
-                </span>
-                <span
-                  className="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em]"
-                  style={{ borderColor: "var(--line-soft)", color: "var(--text-dim)" }}
-                >
-                  {categoriesList.length} univers
-                </span>
-              </div>
-
-              <h1
-                className="cb-display-xl text-balance"
-                style={{ fontFamily: "var(--font-display)" }}
-              >
-                La soirée
-                <br />
-                <span style={{ color: "var(--cb-brand)" }}>commence ici.</span>
-              </h1>
-
-              <p
-                className="max-w-md text-base leading-relaxed sm:text-lg"
-                style={{ color: "var(--text-dim)" }}
-              >
-                Un code, une salle, on joue. Pas de compte, pas d&apos;install — juste ton tel et tes potes.
-              </p>
-
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                <button
-                  onClick={handleCreate}
-                  className="cb-btn cb-btn-primary cb-btn-lg group"
-                >
-                  <Plus className="h-5 w-5 transition-transform group-hover:rotate-90" />
-                  Créer une salle
+                  <ArrowRight className="h-4 w-4" />
                 </button>
-
-                <div
-                  className="flex items-center gap-1 rounded-full border bg-[color:var(--surface)] p-1.5 pl-5"
-                  style={{ borderColor: "var(--line-soft)" }}
-                >
-                  <input
-                    type="text"
-                    value={code}
-                    onChange={(event) =>
-                      setCode(
-                        event.target.value
-                          .toUpperCase()
-                          .replace(/[^A-Z]/g, "")
-                          .slice(0, ROOM_CODE_LENGTH)
-                      )
-                    }
-                    onKeyDown={(event) => {
-                      if (event.key === "Enter") handleJoin();
-                    }}
-                    placeholder="CODE"
-                    maxLength={ROOM_CODE_LENGTH}
-                    className="w-24 bg-transparent text-base font-bold tracking-[0.4em] outline-none placeholder:text-[color:var(--text-muted)]"
-                    style={{ fontFamily: "var(--font-display)" }}
-                  />
-                  <button
-                    onClick={handleJoin}
-                    aria-label="Rejoindre la salle"
-                    disabled={code.length !== ROOM_CODE_LENGTH}
-                    className="flex h-10 w-10 items-center justify-center rounded-full transition disabled:opacity-30 disabled:cursor-not-allowed"
-                    style={{
-                      background: code.length === ROOM_CODE_LENGTH ? "var(--cb-brand)" : "var(--surface-2)",
-                      color: code.length === ROOM_CODE_LENGTH ? "var(--cb-brand-ink)" : "var(--text-dim)",
-                    }}
-                  >
-                    <ArrowRight className="h-4 w-4" />
-                  </button>
-                </div>
               </div>
             </div>
+          </div>
 
-            {/* Featured games grid */}
-            <div className="grid grid-cols-2 gap-3">
-              {featured.map((g) => (
-                <article
-                  key={g.id}
-                  className="site-card-hover relative overflow-hidden rounded-2xl border bg-[color:var(--surface)] p-5"
-                  style={{ borderColor: "var(--line-soft)" }}
-                >
-                  <div
-                    className="pointer-events-none absolute inset-x-0 bottom-0 h-1/2 opacity-60"
-                    style={{
-                      background: `radial-gradient(100% 120% at 50% 100%, ${g.color}22, transparent 70%)`,
-                    }}
-                  />
-                  <div className="relative flex flex-col gap-6">
-                    <div className="flex items-start justify-between">
-                      <span className="text-4xl leading-none">{g.emoji}</span>
-                      <span
-                        className="rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider"
-                        style={{ borderColor: g.color, color: g.color }}
-                      >
-                        {g.cat}
-                      </span>
-                    </div>
-                    <div>
-                      <p className="cb-display-sm">{g.name}</p>
-                      <p className="mt-1 text-xs" style={{ color: "var(--text-dim)" }}>
-                        {g.tagline}
-                      </p>
-                    </div>
-                  </div>
-                </article>
-              ))}
-            </div>
+          {/* Mascots cluster */}
+          <div className="relative h-[420px]">
+            <div className="absolute inset-8" style={{
+              background: "radial-gradient(circle at 50% 50%, rgba(255,62,165,0.35), transparent 70%)",
+              filter: "blur(20px)",
+            }} />
+            <div className="absolute top-0 left-[30%]"><Mascot size={100} color="pink" mood="happy" arms cheering delay={0.0} /></div>
+            <div className="absolute top-[20%] left-0"><Mascot size={84} color="yellow" mood="wink" arms delay={0.3} /></div>
+            <div className="absolute top-[30%] right-0"><Mascot size={94} color="mint" mood="happy" arms delay={0.6} /></div>
+            <div className="absolute bottom-[14%] left-[40%]"><Mascot size={130} color="purple" mood="happy" arms crown delay={0.2} /></div>
+            <div className="absolute bottom-[20%] left-[12%]"><Mascot size={64} color="coral" mood="love" delay={0.9} /></div>
+            <div className="absolute bottom-[6%] right-[15%]"><Mascot size={76} color="lavender" mood="happy" delay={1.1} /></div>
           </div>
         </div>
       </section>
 
+      {/* FEATURED GRID */}
+      <section className="relative z-10 mx-auto w-full max-w-6xl px-5 pb-12 sm:px-10">
+        <div className="mb-8 flex items-end justify-between">
+          <div>
+            <p className="af-eyebrow mb-2">01 — sélection</p>
+            <h2 className="cb-display-lg" style={{ letterSpacing: -1 }}>Le top du moment.</h2>
+          </div>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {featured.map((g, i) => (
+            <article
+              key={g.id}
+              className="site-card-hover relative overflow-hidden rounded-2xl border p-5"
+              style={{
+                background: `linear-gradient(155deg, ${MASCOT_PALETTE[g.color].body}1A, rgba(255,255,255,0.04))`,
+                borderColor: `${MASCOT_PALETTE[g.color].body}33`,
+                minHeight: 180,
+              }}
+            >
+              <div className="flex items-start justify-between">
+                <span className="text-3xl leading-none">{g.emoji}</span>
+                <span className="af-chip" style={{ borderColor: MASCOT_PALETTE[g.color].body, color: MASCOT_PALETTE[g.color].body, background: "transparent" }}>
+                  {g.cat}
+                </span>
+              </div>
+              <div className="absolute right-[-12px] bottom-[-12px]" style={{ opacity: 0.55 }}>
+                <Mascot size={80} color={g.color} mood="happy" delay={i * 0.25} />
+              </div>
+              <div className="relative mt-10">
+                <p className="cb-display-md" style={{ color: MASCOT_PALETTE[g.color].body }}>{g.name}</p>
+                <p className="mt-1 text-xs" style={{ color: "var(--text-dim)" }}>{g.line}</p>
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+
       {/* CATEGORIES STRIP */}
-      <section className="border-y" style={{ borderColor: "var(--line-soft)", background: "var(--surface)" }}>
+      <section
+        className="relative z-10 border-y"
+        style={{ borderColor: "var(--line-soft)", background: "linear-gradient(180deg, transparent, rgba(91,54,214,0.08))" }}
+      >
         <div className="mx-auto w-full max-w-6xl px-5 py-12 sm:px-10 sm:py-20">
-          <div className="mb-10 flex flex-col gap-3">
-            <span className="cb-eyebrow">01 — univers</span>
-            <h2 className="cb-display-lg text-balance">
-              Huit ambiances,
-              <br />
-              <span style={{ color: "var(--cb-brand)" }}>{implementedGames.length} jeux</span>, zéro temps mort.
+          <div className="mb-10">
+            <p className="af-eyebrow mb-2">02 — univers</p>
+            <h2 className="cb-display-lg text-balance" style={{ letterSpacing: -1 }}>
+              Huit ambiances, <span style={{ color: "var(--af-pink)" }}>zéro temps mort</span>.
             </h2>
           </div>
 
@@ -292,50 +268,29 @@ export default function HomePage() {
               const meta = CATEGORY_META[cat];
               if (!meta) return null;
               const count = implementedGames.filter((g) => g.category === cat).length;
-              const sample = implementedGames.find((g) => g.category === cat);
               return (
                 <article
                   key={cat}
-                  className="site-card-hover group relative overflow-hidden rounded-2xl border bg-[color:var(--bg-2)] p-5 aspect-[4/5]"
-                  style={{ borderColor: "var(--line-soft)" }}
+                  className="site-card-hover relative overflow-hidden rounded-2xl border p-5"
+                  style={{
+                    background: `linear-gradient(155deg, ${MASCOT_PALETTE[meta.color].body}1A, rgba(255,255,255,0.04))`,
+                    borderColor: `${MASCOT_PALETTE[meta.color].body}33`,
+                    minHeight: 180,
+                  }}
                 >
-                  <div
-                    className="pointer-events-none absolute inset-x-0 bottom-0 h-1/2 opacity-50 transition-opacity duration-500 group-hover:opacity-100"
-                    style={{
-                      background: `radial-gradient(100% 120% at 50% 100%, ${meta.color}33, transparent 70%)`,
-                    }}
-                  />
-                  <div className="relative flex h-full flex-col justify-between">
-                    <div className="flex items-start justify-between">
-                      <span className="cb-eyebrow">0{idx + 1}</span>
-                      <span className="text-4xl">{sample?.icon}</span>
-                    </div>
-                    <img
-                      src={meta.art}
-                      alt=""
-                      aria-hidden="true"
-                      className="pointer-events-none absolute left-1/2 top-1/2 w-[78%] -translate-x-1/2 -translate-y-1/2 select-none transition-transform duration-500 group-hover:scale-105"
-                      draggable={false}
-                    />
-                    <div className="relative">
-                      <p className="cb-display-md" style={{ color: meta.color }}>
-                        {meta.label}
-                      </p>
-                      <p className="mt-1 text-xs" style={{ color: "var(--text-dim)" }}>
-                        {meta.tagline}
-                      </p>
-                      <div
-                        className="mt-3 flex items-center justify-between border-t pt-2"
-                        style={{ borderColor: "var(--line-soft)" }}
-                      >
-                        <span className="cb-eyebrow">
-                          {count} jeu{count > 1 ? "x" : ""}
-                        </span>
-                        <ArrowRight
-                          className="h-4 w-4 transition-all group-hover:translate-x-1"
-                          style={{ color: meta.color }}
-                        />
-                      </div>
+                  <div className="flex items-start justify-between">
+                    <span className="af-eyebrow">0{idx + 1}</span>
+                    <span className="text-3xl">{meta.icon}</span>
+                  </div>
+                  <div className="absolute right-[-14px] bottom-[-10px]" style={{ opacity: 0.6 }}>
+                    <Mascot size={72} color={meta.color} mood="happy" delay={idx * 0.18} />
+                  </div>
+                  <div className="relative mt-8">
+                    <p className="cb-display-md" style={{ color: MASCOT_PALETTE[meta.color].body }}>{meta.label}</p>
+                    <p className="mt-1 text-xs" style={{ color: "var(--text-dim)" }}>{meta.tag}</p>
+                    <div className="mt-3 flex items-center justify-between border-t pt-2" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
+                      <span className="af-eyebrow" style={{ color: MASCOT_PALETTE[meta.color].body }}>{count} jeu{count > 1 ? "x" : ""}</span>
+                      <ArrowRight className="h-4 w-4" style={{ color: MASCOT_PALETTE[meta.color].body }} />
                     </div>
                   </div>
                 </article>
@@ -346,114 +301,60 @@ export default function HomePage() {
       </section>
 
       {/* HOW IT WORKS */}
-      <section className="mx-auto w-full max-w-6xl px-5 py-12 sm:px-10 sm:py-20">
-        <div className="mb-10 flex flex-col gap-3">
-          <span className="cb-eyebrow">02 — flow</span>
-          <h2 className="cb-display-lg text-balance">
-            Trois étapes. Aucune friction.
+      <section className="relative z-10 mx-auto w-full max-w-6xl px-5 py-12 sm:px-10 sm:py-20">
+        <div className="mb-10">
+          <p className="af-eyebrow mb-2">03 — flow</p>
+          <h2 className="cb-display-lg text-balance" style={{ letterSpacing: -1 }}>
+            Trois étapes. <span style={{ color: "var(--af-mint)" }}>Aucune friction.</span>
           </h2>
         </div>
-
         <div className="grid gap-3 md:grid-cols-3">
           {[
-            { num: "01", title: "Créer",  desc: "Un clic, un code de salle unique. Tu partages, on arrive.",     icon: Plus    },
-            { num: "02", title: "Choisir", desc: "Picke un jeu dans la liste. Chaque joueur vote prêt.",          icon: Sparkles },
-            { num: "03", title: "Jouer",   desc: "Le jeu se lance. Écran principal + phones synchro. Ça part.", icon: Zap     },
-          ].map((step) => (
-            <article
-              key={step.num}
-              className="relative overflow-hidden rounded-2xl border bg-[color:var(--surface)] p-6"
-              style={{ borderColor: "var(--line-soft)" }}
-            >
-              <div className="mb-8 flex items-center justify-between">
-                <span
-                  className="font-black leading-none"
-                  style={{
-                    color: "var(--cb-brand)",
-                    fontFamily: "var(--font-display)",
-                    fontSize: "3.5rem",
-                  }}
-                >
-                  {step.num}
-                </span>
-                <step.icon className="h-6 w-6" style={{ color: "var(--text-dim)" }} />
+            { num: "01", title: "Créer",   desc: "Un clic, un code de salle unique. Tu partages, on arrive.", color: "yellow", emoji: "✨" },
+            { num: "02", title: "Choisir", desc: "Picke un jeu dans la liste. Chaque joueur vote prêt.",       color: "pink",   emoji: "🎯" },
+            { num: "03", title: "Jouer",   desc: "Le jeu se lance. Écran + phones synchro. Ça part.",          color: "mint",   emoji: "🚀" },
+          ].map((s) => (
+            <article key={s.num} className="af-card-glass relative overflow-hidden p-6">
+              <div className="absolute right-5 top-5 text-3xl opacity-60">{s.emoji}</div>
+              <div
+                className="cb-display-xl"
+                style={{ color: MASCOT_PALETTE[s.color as MascotColor].body, fontSize: 70, lineHeight: 0.9 }}
+              >
+                {s.num}
               </div>
-              <h3 className="cb-display-sm">{step.title}</h3>
-              <p className="mt-2 text-sm" style={{ color: "var(--text-dim)" }}>
-                {step.desc}
-              </p>
+              <h3 className="cb-display-sm mt-4">{s.title}</h3>
+              <p className="mt-2 text-sm" style={{ color: "var(--text-dim)" }}>{s.desc}</p>
             </article>
           ))}
         </div>
       </section>
 
-      {/* FEATURES */}
-      <section
-        className="border-t"
-        style={{ borderColor: "var(--line-soft)", background: "var(--surface)" }}
-      >
-        <div className="mx-auto w-full max-w-6xl px-5 py-12 sm:px-10 sm:py-16">
-          <div className="grid gap-4 md:grid-cols-3">
-            {[
-              { icon: Users2,     label: "2 à 8 joueurs",   title: "Multi rapide",   desc: "Des parties courtes qui s'enchaînent." },
-              { icon: Smartphone, label: "Mobile first",    title: "Touch first",    desc: "Grandes cibles, peu de texte, action directe." },
-              { icon: Sparkles,   label: "Zero setup",      title: "Aucune friction", desc: "Pas d'install, pas de compte, pas de mur de texte." },
-            ].map((f) => (
-              <article
-                key={f.title}
-                className="site-card-hover relative overflow-hidden rounded-2xl border bg-[color:var(--bg-2)] p-6"
-                style={{ borderColor: "var(--line-soft)" }}
-              >
-                <f.icon className="h-6 w-6" style={{ color: "var(--cb-brand)" }} />
-                <p className="cb-eyebrow mt-6">{f.label}</p>
-                <h3 className="cb-display-sm mt-1">{f.title}</h3>
-                <p className="mt-2 text-sm" style={{ color: "var(--text-dim)" }}>
-                  {f.desc}
-                </p>
-              </article>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* CTA */}
-      <section
-        className="relative overflow-hidden border-t"
-        style={{ borderColor: "var(--line-soft)" }}
-      >
-        <div
-          className="pointer-events-none absolute inset-0 opacity-60"
-          style={{
-            background: `radial-gradient(60% 100% at 50% 100%, var(--cb-brand-tint), transparent 60%)`,
-          }}
-        />
-        <div className="relative mx-auto flex w-full max-w-3xl flex-col items-center gap-8 px-5 py-20 text-center sm:px-10 sm:py-28">
-          <span className="cb-eyebrow">ready player one</span>
-          <h2 className="cb-display-xl text-balance">
+      <section className="relative z-10 overflow-hidden border-t" style={{ borderColor: "var(--line-soft)" }}>
+        <div className="pointer-events-none absolute inset-0" style={{
+          background: "radial-gradient(60% 100% at 50% 100%, rgba(255,62,165,0.25), transparent 60%)",
+        }} />
+        <div className="relative mx-auto flex w-full max-w-3xl flex-col items-center gap-7 px-5 py-20 text-center sm:px-10 sm:py-28">
+          <p className="af-eyebrow" style={{ color: "var(--af-yellow)" }}>ready player one</p>
+          <h2 className="cb-display-xl text-balance" style={{ letterSpacing: -2.5, fontSize: "clamp(3rem, 10vw, 6rem)" }}>
             On joue ?
           </h2>
           <p className="max-w-lg text-base" style={{ color: "var(--text-dim)" }}>
-            Un code, une salle, {implementedGames.length} mini-jeux. Le reste dépend de ton canapé et de ton wifi.
+            Un code, une salle, {implementedGames.length} mini-jeux.<br/>
+            Le reste dépend de ton canap&apos; et de ton wifi.
           </p>
-          <button onClick={handleCreate} className="cb-btn cb-btn-brand cb-btn-lg">
-            <Plus className="h-5 w-5" />
-            Lancer une salle
+          <button onClick={handleCreate} className="af-btn af-btn-primary flex items-center gap-3" style={{ padding: "20px 32px", fontSize: 16 }}>
+            <Plus className="h-5 w-5" /> Lancer une salle
           </button>
         </div>
       </section>
 
       {/* FOOTER */}
-      <footer
-        className="border-t py-8"
-        style={{ borderColor: "var(--line-soft)", background: "var(--bg-deep)" }}
-      >
+      <footer className="border-t py-8" style={{ borderColor: "var(--line-soft)" }}>
         <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-3 px-5 text-xs sm:px-10">
           <p style={{ color: "var(--text-dim)" }}>Sans compte, sans pub, sans friction.</p>
-          <p
-            className={cn("cb-mono uppercase tracking-[0.22em]")}
-            style={{ color: "var(--text-muted)" }}
-          >
-            cb / party arcade
+          <p className="cb-mono uppercase tracking-[0.22em]" style={{ color: "var(--text-muted)" }}>
+            af.games / party arcade
           </p>
         </div>
       </footer>

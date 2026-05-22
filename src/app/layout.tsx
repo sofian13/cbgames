@@ -1,33 +1,14 @@
 import type { Metadata } from "next";
-import { Archivo, Inter, JetBrains_Mono } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
 import { SessionProvider } from "next-auth/react";
 import "./globals.css";
 
-const archivo = Archivo({
-  variable: "--font-display",
-  subsets: ["latin"],
-  weight: ["500", "600", "700", "800", "900"],
-  display: "swap",
-});
-
-const inter = Inter({
-  variable: "--font-body",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800"],
-  display: "swap",
-});
-
-const jetbrainsMono = JetBrains_Mono({
-  variable: "--font-mono-face",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-  display: "swap",
-});
+// Fonts (Bricolage Grotesque + DM Sans + JetBrains Mono) are loaded via the
+// Google Fonts @import in globals.css and exposed through the --font-* CSS vars.
 
 export const metadata: Metadata = {
-  title: "CB Games · Party Arcade",
-  description: "Une soirée, un code, un jeu. 29 mini-jeux multijoueur conçus pour le mobile et les soirées entre potes.",
+  title: "af.games · Party Arcade",
+  description: "Une soirée, un code, un jeu. Des mini-jeux multijoueur pensés pour le mobile et les soirées entre potes.",
 };
 
 export default function RootLayout({
@@ -37,9 +18,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="fr" suppressHydrationWarning>
-      <body
-        className={`${archivo.variable} ${inter.variable} ${jetbrainsMono.variable} antialiased`}
-      >
+      <body className="antialiased">
         <SessionProvider>
           {children}
           <Toaster />

@@ -6,9 +6,12 @@ import { useGameStore } from "@/lib/stores/game-store";
 import type { GameProps } from "@/lib/games/types";
 import { cn } from "@/lib/utils";
 import { useKeyedState } from "@/lib/use-keyed-state";
+import { Mascot, MascotAvatar, MASCOT_PALETTE, type MascotColor } from "@/components/Mascot";
+import { ConfettiBurst, Sparkles } from "@/components/ConfettiBurst";
 
-const ACCENT = "#36d0e0";
-const BAND = 22; // demi-largeur de la zone affichee au reveal (zones de score)
+const BAND_WIDE = 22;
+const BAND_MID  = 12;
+const BAND_TIGHT = 5;
 
 interface WavePlayerState {
   id: string;
@@ -18,10 +21,7 @@ interface WavePlayerState {
   hasGuessed: boolean;
 }
 
-interface Spectrum {
-  left: string;
-  right: string;
-}
+interface Spectrum { left: string; right: string; }
 
 interface WaveState {
   phase: "waiting" | "intro" | "clue" | "guessing" | "reveal" | "game-over";
@@ -41,6 +41,13 @@ interface WaveState {
   myTarget: number | null;
 }
 
+const COLORS: MascotColor[] = ["purple", "pink", "yellow", "mint", "sky", "coral", "lavender"];
+function colorFor(id: string): MascotColor {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) & 0xffff;
+  return COLORS[h % COLORS.length];
+}
+
 export default function LongueurOndeGame({ roomCode, playerId, playerName }: GameProps) {
   const { sendAction } = useGame(roomCode, "longueur-onde", playerId, playerName);
   const { gameState, error } = useGameStore();
@@ -58,39 +65,42 @@ export default function LongueurOndeGame({ roomCode, playerId, playerName }: Gam
   const nameOf = useCallback((id: string) => state?.players?.find((p) => p.id === id)?.name ?? "?", [state?.players]);
 
   if (!state || state.phase === "waiting") {
-    return <Centered emoji="🌡️" text="Calibrage des ondes..." />;
+    return <Centered emoji="📡" text="Calibrage des ondes..." />;
   }
 
   // ── INTRO ───────────────────────────────────────────────
   if (state.phase === "intro") {
+    const psychicColor: MascotColor = state.psychicId ? colorFor(state.psychicId) : "purple";
     return (
-      <Centered>
-        <span className="text-xs text-white/25 font-sans uppercase tracking-[0.2em] mb-6">
-          Manche {state.round} / {state.totalRounds}
-        </span>
-        <p className="text-sm text-white/40 font-sans mb-3">Le Médium de ce tour est</p>
-        <p className="text-5xl font-serif font-semibold text-white/90 mb-8" style={{ textShadow: `0 0 50px ${ACCENT}44` }}>
+      <div className="relative flex flex-1 flex-col items-center justify-center p-6">
+        <Sparkles count={10} />
+        <p className="af-eyebrow mb-6">Manche {state.round} / {state.totalRounds}</p>
+        <p className="text-sm mb-4" style={{ color: "var(--text-dim)" }}>Le Médium de ce tour est</p>
+        <Mascot size={120} color={psychicColor} mood="wink" arms crown delay={0} />
+        <h2 className="cb-display-xl mt-4" style={{ letterSpacing: -1.5, fontSize: "clamp(2rem, 7vw, 3.5rem)", textShadow: "0 0 40px rgba(91,54,214,0.5)" }}>
           {state.psychicName}
-          {state.amPsychic && <span className="text-white/40 text-2xl"> (toi)</span>}
+          {state.amPsychic && <span style={{ color: "var(--text-dim)", fontSize: "0.5em" }}> (toi)</span>}
+        </h2>
+        <p className="mt-6 max-w-xs animate-pulse text-center text-xs" style={{ color: "var(--text-muted)" }}>
+          {state.amPsychic
+            ? "Tu vas voir une cible secrète et donner un indice"
+            : "Tu devras deviner où le Médium vise sur le curseur"}
         </p>
-        <p className="text-xs text-white/30 font-sans max-w-xs text-center animate-pulse">
-          {state.amPsychic ? "Tu vas voir une cible secrète et donner un indice" : "Tu devras deviner où le Médium vise sur le curseur"}
-        </p>
-      </Centered>
+      </div>
     );
   }
 
-  // ── CLUE (psychic gives a clue) ─────────────────────────
+  // ── CLUE — psychic gives a clue ─────────────────────────
   if (state.phase === "clue") {
     if (state.amPsychic) {
       return (
-        <div className="flex flex-1 flex-col items-center p-5" style={{ background: `radial-gradient(circle at 50% 15%, ${ACCENT}16, transparent 45%), #060606` }}>
-          <RoundHeader round={state.round} total={state.totalRounds} timeLeft={state.timeLeft} max={45} role="Tu es Médium" />
-          <p className="text-center text-base font-serif text-white/80 mt-3 mb-2">
-            La cible est ici — trouve un <span className="text-white" style={{ color: ACCENT }}>indice</span> qui la situe
+        <div className="flex flex-1 flex-col items-center p-5">
+          <RoundHeader round={state.round} total={state.totalRounds} timeLeft={state.timeLeft} max={45} role="🔮 Médium" />
+          <p className="mt-4 max-w-md text-center text-base" style={{ color: "var(--text-dim)" }}>
+            La cible est ici — trouve un <span style={{ color: "var(--af-yellow)" }}>indice</span> qui la situe.
           </p>
-          <Dial spectrum={state.spectrum} target={state.myTarget} showBand markers={[]} />
-          <div className="w-full max-w-md mt-6">
+          <SpectrumDial spectrum={state.spectrum} target={state.myTarget} mode="psychic" />
+          <div className="mt-6 w-full max-w-md">
             <div className="flex gap-2">
               <input
                 value={clueInput}
@@ -99,14 +109,21 @@ export default function LongueurOndeGame({ roomCode, playerId, playerName }: Gam
                 placeholder="Ton indice (un mot, un exemple...)"
                 maxLength={60}
                 autoComplete="off"
-                className="flex-1 rounded-2xl border border-white/20 bg-black/40 px-4 py-3.5 font-sans text-base text-white/90 placeholder:text-white/25 outline-none focus:border-[#36d0e0]/60"
+                className="flex-1 rounded-2xl border px-4 py-3.5 text-base outline-none transition"
+                style={{
+                  background: "rgba(255,255,255,0.08)",
+                  borderColor: "rgba(91,54,214,0.35)",
+                  color: "#fff",
+                  fontFamily: "var(--font-display)",
+                }}
               />
-              <button onClick={submitClue} disabled={!clueInput.trim()} className="px-6 rounded-2xl font-sans text-sm font-semibold text-white transition-all disabled:opacity-30" style={{ background: `linear-gradient(135deg, #3a8cff, ${ACCENT})` }}>
+              <button onClick={submitClue} disabled={!clueInput.trim()}
+                      className="af-btn af-btn-primary disabled:opacity-30" style={{ padding: "0 24px", fontSize: 14 }}>
                 Envoyer
               </button>
             </div>
-            <p className="text-[11px] text-white/30 font-sans mt-3 text-center">
-              Ni trop vague, ni trop évident : les autres doivent retrouver la zone
+            <p className="mt-3 text-center text-[11px]" style={{ color: "var(--text-muted)" }}>
+              💡 Ni trop vague, ni trop évident
             </p>
           </div>
         </div>
@@ -121,10 +138,10 @@ export default function LongueurOndeGame({ roomCode, playerId, playerName }: Gam
       const guessed = state.players?.filter((p) => !p.isPsychic && p.hasGuessed).length ?? 0;
       const total = state.players?.filter((p) => !p.isPsychic).length ?? 0;
       return (
-        <div className="flex flex-1 flex-col items-center p-5" style={{ background: `radial-gradient(circle at 50% 15%, ${ACCENT}16, transparent 45%), #060606` }}>
-          <RoundHeader round={state.round} total={state.totalRounds} timeLeft={state.timeLeft} max={30} role="Tu es Médium" />
-          <ClueBadge clue={state.clue} />
-          <Dial spectrum={state.spectrum} target={state.myTarget} showBand markers={[]} />
+        <div className="flex flex-1 flex-col items-center p-5">
+          <RoundHeader round={state.round} total={state.totalRounds} timeLeft={state.timeLeft} max={30} role="🔮 Médium" />
+          <ClueBadge clue={state.clue} authorName={state.psychicName} />
+          <SpectrumDial spectrum={state.spectrum} target={state.myTarget} mode="psychic" />
           <Waiting text={`${guessed}/${total} ont placé leur curseur...`} />
         </div>
       );
@@ -139,6 +156,7 @@ export default function LongueurOndeGame({ roomCode, playerId, playerName }: Gam
         timeLeft={state.timeLeft}
         submitted={state.myGuess != null}
         onSubmit={(g) => sendAction({ action: "submit-guess", guess: g })}
+        psychicName={state.psychicName}
       />
     );
   }
@@ -149,19 +167,42 @@ export default function LongueurOndeGame({ roomCode, playerId, playerName }: Gam
       value: val,
       label: nameOf(id),
       isMe: id === playerId,
+      color: colorFor(id),
     }));
     const myPts = state.roundPoints?.[playerId] ?? 0;
+    const bullseye = myPts >= 4;
+
     return (
-      <div className="flex flex-1 flex-col items-center p-5 overflow-y-auto" style={{ background: `radial-gradient(circle at 50% 15%, ${ACCENT}1c, transparent 45%), #060606` }}>
-        <span className="text-xs text-white/25 font-sans uppercase tracking-[0.2em] mb-3 mt-1">
-          Manche {state.round}/{state.totalRounds} — Révélation
-        </span>
-        <ClueBadge clue={state.clue} />
-        <Dial spectrum={state.spectrum} target={state.target} showBand showZones markers={markers} />
-        <div className="mt-5 px-5 py-2.5 rounded-2xl border font-sans text-sm" style={{ borderColor: `${ACCENT}40`, background: `${ACCENT}14`, color: "#fff" }}>
-          {state.amPsychic ? "Ton indice rapporte" : "Tu marques"} <span className="font-bold">+{myPts}</span> pts
+      <div className="relative flex flex-1 flex-col items-center overflow-y-auto p-5">
+        {bullseye && <ConfettiBurst count={50} />}
+        <Sparkles count={8} />
+
+        <div className="relative z-10 w-full">
+          <div className="text-center">
+            <p className="af-eyebrow" style={{ color: "var(--af-yellow)" }}>
+              {bullseye ? "✦ Bullseye !" : "Révélation"}
+            </p>
+            <h2 className="cb-display-xl mt-2" style={{ letterSpacing: -1.5, lineHeight: 0.95, fontSize: "clamp(2rem, 6vw, 3rem)" }}>
+              +<span style={{ color: "var(--af-yellow)" }}>{myPts}</span> pts
+            </h2>
+            {bullseye && (
+              <p className="mt-1 text-sm" style={{ color: "var(--text-dim)" }}>
+                Vous êtes vraiment sur la même longueur d&apos;onde.
+              </p>
+            )}
+          </div>
+          <ClueBadge clue={state.clue} authorName={state.psychicName} />
+          <SpectrumDial spectrum={state.spectrum} target={state.target} markers={markers} mode="reveal" />
+          <div className="mx-auto mt-5 inline-flex items-center justify-center gap-2 rounded-2xl border px-5 py-3"
+               style={{
+                 background: "rgba(91,54,214,0.18)",
+                 borderColor: "rgba(91,54,214,0.45)",
+               }}>
+            <span className="text-sm">{state.amPsychic ? "Ton indice rapporte" : "Tu marques"}</span>
+            <span className="cb-display-md" style={{ color: "var(--af-yellow)", fontSize: 22 }}>+{myPts}</span>
+          </div>
+          <p className="mt-4 animate-pulse text-center text-[11px]" style={{ color: "var(--text-muted)" }}>Manche suivante…</p>
         </div>
-        <p className="text-[11px] text-white/25 font-sans mt-4 animate-pulse">Manche suivante...</p>
       </div>
     );
   }
@@ -170,44 +211,52 @@ export default function LongueurOndeGame({ roomCode, playerId, playerName }: Gam
   if (state.phase === "game-over") {
     const sorted = [...(state.players ?? [])].sort((a, b) => b.score - a.score);
     return (
-      <div className="flex flex-1 flex-col items-center justify-center p-6" style={{ background: `radial-gradient(circle at 50% 25%, ${ACCENT}18, transparent 45%), #060606` }}>
-        <span className="text-xs text-white/25 font-sans uppercase tracking-[0.2em] mb-2">Partie terminée</span>
-        <p className="text-4xl mb-6">🌡️</p>
-        <div className="w-full max-w-sm space-y-2.5">
-          {sorted.map((p, i) => (
-            <div key={p.id} className={cn("flex items-center justify-between rounded-3xl border p-4 backdrop-blur-sm", i === 0 ? "border-[#36d0e0]/40 bg-[#36d0e0]/10" : "border-white/10 bg-black/30")} style={i === 0 ? { boxShadow: `0 0 25px ${ACCENT}33` } : undefined}>
-              <div className="flex items-center gap-3">
-                <span className={cn("text-xl font-mono font-bold w-8", i === 0 ? "text-[#5fe3f0]" : "text-white/25")}>#{i + 1}</span>
-                <span className={cn("text-sm font-sans font-semibold", i === 0 ? "text-white/90" : "text-white/45")}>{p.name}{p.id === playerId && " (toi)"}</span>
-              </div>
-              <span className={cn("text-xl font-mono font-bold", i === 0 ? "text-[#5fe3f0]" : "text-white/40")}>{p.score}</span>
-            </div>
-          ))}
+      <div className="relative flex flex-1 flex-col items-center justify-center p-6">
+        <ConfettiBurst count={50} />
+        <div className="relative z-10 w-full max-w-sm">
+          <p className="af-eyebrow text-center" style={{ color: "var(--af-yellow)" }}>Partie terminée</p>
+          <h2 className="cb-display-lg mt-2 text-center">📡 Résultats</h2>
+          <div className="mt-6 space-y-2.5">
+            {sorted.map((p, i) => {
+              const c = colorFor(p.id);
+              return (
+                <div key={p.id}
+                     className="flex items-center justify-between rounded-3xl border p-4"
+                     style={{
+                       background: i === 0
+                         ? `linear-gradient(120deg, ${MASCOT_PALETTE[c].body}30, rgba(255,255,255,0.04))`
+                         : "rgba(255,255,255,0.04)",
+                       borderColor: i === 0 ? `${MASCOT_PALETTE[c].body}55` : "rgba(255,255,255,0.10)",
+                       boxShadow: i === 0 ? `0 0 25px ${MASCOT_PALETTE[c].body}33` : undefined,
+                     }}>
+                  <div className="flex items-center gap-3">
+                    <span className="cb-mono w-8 text-xl font-bold" style={{ color: i === 0 ? MASCOT_PALETTE[c].body : "var(--text-muted)" }}>#{i + 1}</span>
+                    <MascotAvatar color={c} size={36} mood={i === 0 ? "wink" : "neutral"} />
+                    <span className="text-sm font-bold" style={{ color: i === 0 ? "#fff" : "var(--text-dim)" }}>
+                      {p.name}{p.id === playerId && " (toi)"}
+                    </span>
+                  </div>
+                  <span className="cb-mono text-xl font-bold" style={{ color: i === 0 ? MASCOT_PALETTE[c].body : "var(--text-muted)" }}>{p.score}</span>
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
     );
   }
 
-  return <Centered emoji="🌡️" text={error ?? "Chargement..."} />;
+  return <Centered emoji="📡" text={error ?? "Chargement..."} />;
 }
 
 // ── Guess board with interactive slider ───────────────────
 function GuessBoard({
-  spectrum,
-  clue,
-  round,
-  total,
-  timeLeft,
-  submitted,
-  onSubmit,
+  spectrum, clue, round, total, timeLeft, submitted, onSubmit, psychicName,
 }: {
-  spectrum: Spectrum | null;
-  clue: string | null;
-  round: number;
-  total: number;
-  timeLeft: number;
-  submitted: boolean;
-  onSubmit: (g: number) => void;
+  spectrum: Spectrum | null; clue: string | null;
+  round: number; total: number; timeLeft: number;
+  submitted: boolean; onSubmit: (g: number) => void;
+  psychicName: string | null;
 }) {
   const [value, setValue] = useState(50);
   const [sent, setSent] = useState(false);
@@ -233,93 +282,142 @@ function GuessBoard({
     e.preventDefault();
     setFromClientX(e.clientX);
   };
-  const onPointerUp = () => {
-    dragging.current = false;
-  };
+  const onPointerUp = () => { dragging.current = false; };
 
-  const submit = () => {
-    if (sent || submitted) return;
-    setSent(true);
-    onSubmit(value);
-  };
-
+  const submit = () => { if (!sent && !submitted) { setSent(true); onSubmit(value); } };
   const locked = sent || submitted;
 
   return (
-    <div className="flex flex-1 flex-col items-center p-5" style={{ background: `radial-gradient(circle at 50% 15%, ${ACCENT}16, transparent 45%), #060606` }}>
+    <div className="flex flex-1 flex-col items-center p-5">
       <RoundHeader round={round} total={total} timeLeft={timeLeft} max={30} role="Place le curseur" />
-      <ClueBadge clue={clue} />
+      <ClueBadge clue={clue} authorName={psychicName} />
 
-      <div className="w-full max-w-md mt-4">
-        <div className="flex items-center justify-between mb-2 px-1">
-          <span className="text-sm font-sans text-emerald-400 max-w-[42%] leading-tight">{spectrum?.left}</span>
-          <span className="text-sm font-sans text-right max-w-[42%] leading-tight" style={{ color: ACCENT }}>{spectrum?.right}</span>
+      <div className="w-full max-w-md mt-6">
+        {/* Spectrum labels */}
+        <div className="mb-3 flex items-center justify-between px-2">
+          <span className="rounded-full px-3 py-1 text-xs font-bold"
+                style={{ background: `${MASCOT_PALETTE.sky.body}22`, color: MASCOT_PALETTE.sky.body }}>
+            {spectrum?.left}
+          </span>
+          <span className="text-[10px]" style={{ color: "var(--text-muted)" }}>↔</span>
+          <span className="rounded-full px-3 py-1 text-xs font-bold"
+                style={{ background: `${MASCOT_PALETTE.pink.body}22`, color: MASCOT_PALETTE.pink.body }}>
+            {spectrum?.right}
+          </span>
         </div>
+
+        {/* Track */}
         <div
           ref={trackRef}
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}
-          className="relative h-14 rounded-full cursor-pointer select-none"
-          style={{ touchAction: "none", background: "linear-gradient(90deg, #2bd47a, #3a8cff 50%, #36d0e0)" }}
+          className="relative h-20 cursor-pointer select-none rounded-full"
+          style={{
+            touchAction: "none",
+            background: "linear-gradient(90deg, #4ECDC4 0%, #5B36D6 50%, #FF3EA5 100%)",
+            boxShadow: "inset 0 4px 16px rgba(0,0,0,0.4), 0 8px 24px rgba(91,54,214,0.3)",
+          }}
         >
+          {/* Tick marks */}
+          {Array.from({ length: 11 }).map((_, i) => (
+            <div key={i} className="absolute top-1/2 h-3 w-px -translate-y-1/2"
+                 style={{ left: `${i * 10}%`, background: "rgba(255,255,255,0.3)" }} />
+          ))}
+
+          {/* KNOB */}
           <div
-            className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 h-16 w-3 rounded-full bg-white shadow-lg pointer-events-none"
-            style={{ left: `${value}%`, boxShadow: "0 0 16px rgba(255,255,255,0.6)" }}
-          />
-          <div className="absolute -top-7 -translate-x-1/2 font-mono text-sm text-white/80 pointer-events-none" style={{ left: `${value}%` }}>
-            {value}
+            className={cn("absolute top-1/2 -translate-x-1/2 -translate-y-1/2 transition-transform", locked ? "" : "scale-100")}
+            style={{ left: `${value}%` }}
+          >
+            {!locked && (
+              <div className="absolute -inset-3 rounded-full border-2"
+                   style={{ borderColor: "rgba(255,255,255,0.3)", animation: "af-pulse-ring 1.8s ease-out infinite" }} />
+            )}
+            <div className="relative flex h-16 w-16 items-center justify-center rounded-full"
+                 style={{
+                   background: "linear-gradient(135deg, #fff 0%, #F0E8FF 100%)",
+                   boxShadow: "0 8px 20px rgba(0,0,0,0.4), 0 0 0 6px rgba(91,54,214,0.25)",
+                   color: "var(--cb-brand)",
+                   fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 18,
+                 }}>
+              {value}
+            </div>
           </div>
         </div>
       </div>
 
-      <button onClick={submit} disabled={locked} className="mt-8 w-full max-w-md py-4 rounded-2xl font-sans text-sm font-semibold text-white transition-all hover:brightness-110 active:scale-[0.98] disabled:opacity-50" style={{ background: `linear-gradient(135deg, #3a8cff, ${ACCENT})`, boxShadow: `0 0 25px ${ACCENT}44` }}>
-        {locked ? "Curseur placé !" : "Valider ma réponse"}
+      <button onClick={submit} disabled={locked}
+              className="af-btn af-btn-primary mt-8 w-full max-w-md disabled:opacity-50"
+              style={{ padding: "16px", fontSize: 15 }}>
+        {locked ? "Curseur placé ✓" : "Valider la position"}
       </button>
     </div>
   );
 }
 
-// ── Dial (read-only display: target band, zones, markers) ─
-function Dial({
-  spectrum,
-  target,
-  showBand,
-  showZones,
-  markers,
+// ── Spectrum dial (read-only display) ─────────────────────
+function SpectrumDial({
+  spectrum, target, markers = [], mode,
 }: {
   spectrum: Spectrum | null;
   target: number | null;
-  showBand?: boolean;
-  showZones?: boolean;
-  markers: { value: number; label: string; isMe: boolean }[];
+  markers?: { value: number; label: string; isMe: boolean; color: MascotColor }[];
+  mode: "psychic" | "reveal";
 }) {
   return (
     <div className="w-full max-w-md mt-4">
-      <div className="flex items-center justify-between mb-2 px-1">
-        <span className="text-sm font-sans text-emerald-400 max-w-[42%] leading-tight">{spectrum?.left}</span>
-        <span className="text-sm font-sans text-right max-w-[42%] leading-tight" style={{ color: ACCENT }}>{spectrum?.right}</span>
+      <div className="mb-3 flex items-center justify-between px-2">
+        <span className="rounded-full px-3 py-1 text-xs font-bold"
+              style={{ background: `${MASCOT_PALETTE.sky.body}22`, color: MASCOT_PALETTE.sky.body }}>
+          {spectrum?.left}
+        </span>
+        <span className="text-[10px]" style={{ color: "var(--text-muted)" }}>↔</span>
+        <span className="rounded-full px-3 py-1 text-xs font-bold"
+              style={{ background: `${MASCOT_PALETTE.pink.body}22`, color: MASCOT_PALETTE.pink.body }}>
+          {spectrum?.right}
+        </span>
       </div>
-      <div className="relative h-14 rounded-full overflow-hidden" style={{ background: "linear-gradient(90deg, #2bd47a, #3a8cff 50%, #36d0e0)" }}>
-        {/* Score zones at reveal */}
-        {showZones && target != null && (
+
+      {/* Track */}
+      <div className="relative h-20 overflow-hidden rounded-full"
+           style={{
+             background: "linear-gradient(90deg, #4ECDC4 0%, #5B36D6 50%, #FF3EA5 100%)",
+             boxShadow: "inset 0 4px 16px rgba(0,0,0,0.4)",
+           }}>
+        {/* Score zones — psychic sees target, reveal shows them too */}
+        {target != null && (
           <>
-            <Zone center={target} half={BAND} color="rgba(255,255,255,0.10)" />
-            <Zone center={target} half={12} color="rgba(255,255,255,0.18)" />
-            <Zone center={target} half={5} color="rgba(255,255,255,0.30)" />
+            <Zone center={target} half={BAND_WIDE}  color="rgba(255,255,255,0.10)" />
+            <Zone center={target} half={BAND_MID}   color="rgba(255,210,63,0.30)" />
+            <Zone center={target} half={BAND_TIGHT} color="rgba(255,62,165,0.65)" />
+            {/* Pts labels at reveal */}
+            {mode === "reveal" && (
+              <>
+                <ZoneLabel value="5" center={target} y={"50%"} bold />
+                <ZoneLabel value="3" center={target - 8} y={"50%"} />
+                <ZoneLabel value="2" center={target - 17} y={"50%"} />
+              </>
+            )}
+            {/* Target line */}
+            <div className="absolute top-0 bottom-0 w-1 bg-white"
+                 style={{ left: `${target}%`, transform: "translateX(-50%)", boxShadow: "0 0 14px rgba(255,255,255,0.8)" }} />
           </>
         )}
-        {/* Target line */}
-        {showBand && target != null && (
-          <div className="absolute top-0 bottom-0 w-1 bg-white" style={{ left: `${target}%`, transform: "translateX(-50%)", boxShadow: "0 0 14px rgba(255,255,255,0.8)" }} />
-        )}
       </div>
-      {/* Markers below */}
+
+      {/* Markers below for reveal */}
       {markers.length > 0 && (
-        <div className="relative h-10 mt-1">
+        <div className="relative mt-2 h-12">
           {markers.map((m, i) => (
-            <div key={i} className="absolute -translate-x-1/2 flex flex-col items-center" style={{ left: `${m.value}%`, top: i % 2 === 0 ? 0 : 18 }}>
-              <span className={cn("text-[10px] font-sans whitespace-nowrap px-1.5 py-0.5 rounded", m.isMe ? "text-white bg-white/20" : "text-white/60")}>
+            <div key={i} className="absolute flex -translate-x-1/2 flex-col items-center"
+                 style={{ left: `${m.value}%`, top: i % 2 === 0 ? 0 : 26 }}>
+              <MascotAvatar color={m.color} size={20} mood={m.isMe ? "wink" : "happy"} border={m.isMe} />
+              <span className={cn("mt-0.5 whitespace-nowrap rounded px-1.5 py-0.5 text-[9px]")}
+                    style={{
+                      background: m.isMe ? "var(--cb-brand)" : "rgba(0,0,0,0.4)",
+                      color: "#fff", fontWeight: 700,
+                    }}>
                 {m.label}
               </span>
             </div>
@@ -336,50 +434,79 @@ function Zone({ center, half, color }: { center: number; half: number; color: st
   return <div className="absolute top-0 bottom-0" style={{ left: `${left}%`, width: `${right - left}%`, background: color }} />;
 }
 
+function ZoneLabel({ value, center, y, bold }: { value: string; center: number; y: string; bold?: boolean }) {
+  return (
+    <div
+      className="absolute -translate-x-1/2 -translate-y-1/2 text-white pointer-events-none"
+      style={{
+        left: `${center}%`,
+        top: y,
+        fontFamily: "var(--font-display)",
+        fontSize: bold ? 14 : 11,
+        fontWeight: 800,
+        textShadow: "0 1px 4px rgba(0,0,0,0.6)",
+      }}
+    >
+      {value}
+    </div>
+  );
+}
+
 // ── Small shared pieces ───────────────────────────────────
-function RoundHeader({ round, total, timeLeft, max, role }: { round: number; total: number; timeLeft: number; max: number; role: string }) {
+function RoundHeader({ round, total, timeLeft, max, role }: {
+  round: number; total: number; timeLeft: number; max: number; role: string;
+}) {
   return (
     <div className="w-full max-w-md">
-      <div className="flex items-center justify-between mb-1">
-        <span className="text-xs text-white/25 font-sans tracking-wide">Manche {round}/{total}</span>
-        <span className="text-[10px] px-3 py-1 rounded-full border font-sans font-semibold uppercase tracking-wider" style={{ color: ACCENT, borderColor: `${ACCENT}40`, background: `${ACCENT}14` }}>{role}</span>
+      <div className="mb-1 flex items-center justify-between">
+        <span className="af-chip">Manche {round}/{total}</span>
+        <span className="af-chip" style={{
+          background: "rgba(255,210,63,0.18)",
+          borderColor: "rgba(255,210,63,0.3)",
+          color: "var(--af-yellow)",
+        }}>{role}</span>
       </div>
-      <div className="w-full h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
-        <div className="h-full rounded-full transition-all duration-1000 ease-linear" style={{ width: `${(timeLeft / max) * 100}%`, background: `linear-gradient(90deg, #3a8cff, ${ACCENT})` }} />
+      <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full" style={{ background: "rgba(255,255,255,0.06)" }}>
+        <div className="h-full rounded-full transition-all duration-1000 ease-linear"
+             style={{
+               width: `${(timeLeft / max) * 100}%`,
+               background: "linear-gradient(90deg, var(--cb-brand), var(--af-pink))",
+             }} />
       </div>
     </div>
   );
 }
 
-function ClueBadge({ clue }: { clue: string | null }) {
+function ClueBadge({ clue, authorName }: { clue: string | null; authorName: string | null }) {
   if (!clue) return null;
   return (
-    <div className="mt-3 mb-1 px-5 py-2.5 rounded-2xl border border-white/15 bg-black/40 backdrop-blur-sm">
-      <p className="text-[10px] text-white/30 font-sans uppercase tracking-[0.2em] text-center">Indice</p>
-      <p className="text-lg font-serif font-semibold text-white/95 text-center">« {clue} »</p>
+    <div className="mx-auto mt-4 max-w-md rounded-2xl border px-5 py-3 text-center"
+         style={{ background: "rgba(255,255,255,0.06)", borderColor: "rgba(255,255,255,0.10)", backdropFilter: "blur(6px)" }}>
+      <p className="af-eyebrow mb-1">Indice de {authorName ?? "?"}</p>
+      <p className="text-xl font-bold" style={{ fontFamily: "var(--font-display)", letterSpacing: -0.3 }}>
+        « {clue} »
+      </p>
     </div>
   );
 }
 
 function Waiting({ text }: { text: string }) {
   return (
-    <div className="mt-6 rounded-2xl border border-white/15 bg-black/40 px-5 py-4 max-w-md">
-      <p className="text-sm text-white/50 font-sans text-center animate-pulse">{text}</p>
+    <div className="mt-6 max-w-md rounded-2xl border px-5 py-4"
+         style={{ background: "rgba(255,255,255,0.05)", borderColor: "rgba(255,255,255,0.10)" }}>
+      <p className="animate-pulse text-center text-sm" style={{ color: "var(--text-dim)" }}>{text}</p>
     </div>
   );
 }
 
-function Centered({ emoji, text, children }: { emoji?: string; text?: string; children?: React.ReactNode }) {
+function Centered({ emoji, text }: { emoji: string; text: string }) {
   return (
-    <div className="flex flex-1 flex-col items-center justify-center p-6" style={{ background: `radial-gradient(circle at 50% 25%, ${ACCENT}12, transparent 45%), #060606` }}>
-      {children ?? (
-        <>
-          <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full border border-white/10 bg-black/30" style={{ boxShadow: `0 0 40px ${ACCENT}22` }}>
-            <span className="text-4xl">{emoji}</span>
-          </div>
-          <p className="text-white/40 animate-pulse font-sans text-lg text-center">{text}</p>
-        </>
-      )}
+    <div className="flex flex-1 flex-col items-center justify-center p-6">
+      <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full border"
+           style={{ background: "rgba(255,255,255,0.04)", borderColor: "rgba(255,255,255,0.10)", boxShadow: "0 0 40px rgba(91,54,214,0.3)" }}>
+        <span className="text-4xl">{emoji}</span>
+      </div>
+      <p className="animate-pulse text-center text-lg" style={{ color: "var(--text-dim)" }}>{text}</p>
     </div>
   );
 }
