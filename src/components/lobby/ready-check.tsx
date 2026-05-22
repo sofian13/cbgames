@@ -69,26 +69,52 @@ export function ReadyCheck({
         />
       </div>
 
+      <p className="mb-3 text-xs" style={{ color: "var(--text-dim)" }}>
+        On démarre dès que tout le monde a validé.
+      </p>
+
       <div className="space-y-2">
-        {!effectiveIsHost && (
+        {/* Ready toggle — segmented, pour tout le monde */}
+        <div className="grid grid-cols-2 gap-2">
           <button
-            onClick={onToggleReady}
-            className={cn("cb-btn w-full", currentPlayer?.isReady ? "cb-btn-soft" : "cb-btn-brand")}
+            onClick={() => { if (currentPlayer?.isReady) onToggleReady(); }}
+            className="cb-btn"
+            style={{
+              background: !currentPlayer?.isReady ? "rgba(255,255,255,0.08)" : "transparent",
+              border: "1px solid var(--line-soft)",
+              color: !currentPlayer?.isReady ? "#fff" : "var(--text-dim)",
+            }}
+          >
+            Pas prêt
+          </button>
+          <button
+            onClick={() => { if (!currentPlayer?.isReady) onToggleReady(); }}
+            className={cn("cb-btn", currentPlayer?.isReady ? "cb-btn-brand" : "")}
+            style={!currentPlayer?.isReady
+              ? { background: "rgba(255,255,255,0.08)", border: "1px solid var(--line-soft)", color: "#fff" }
+              : undefined}
           >
             <Check className="h-4 w-4" />
-            {currentPlayer?.isReady ? "Retirer mon ready" : "Je suis prêt"}
+            Je suis prêt
           </button>
-        )}
+        </div>
 
+        {/* Démarrage forcé par l'hôte */}
         {effectiveIsHost && (
           <button
             onClick={() => onStartGame(normalizedGameId)}
             disabled={!canStart}
-            className={cn("cb-btn cb-btn-lg w-full", canStart ? "cb-btn-brand" : "cb-btn-soft")}
-            style={!canStart ? { opacity: 0.5, cursor: "not-allowed" } : undefined}
+            className="cb-btn cb-btn-lg w-full"
+            style={{
+              background: canStart ? "var(--af-yellow)" : "var(--surface-2)",
+              color: canStart ? "#3A2700" : "var(--text-dim)",
+              boxShadow: canStart ? "0 10px 24px rgba(255,210,63,0.35)" : "none",
+              opacity: canStart ? 1 : 0.6,
+              cursor: canStart ? "pointer" : "not-allowed",
+            }}
           >
             <Play className="h-4 w-4 fill-current" />
-            {!selectedGameId ? "Choisir un jeu" : "Lancer la partie"}
+            {!selectedGameId ? "Choisir un jeu" : "Forcer le démarrage (Host)"}
           </button>
         )}
       </div>

@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
 import { GamePicker } from "@/components/lobby/game-picker";
 import { PlayerList } from "@/components/lobby/player-list";
 import { ReadyCheck } from "@/components/lobby/ready-check";
@@ -11,8 +10,16 @@ import { getOrCreateGuest } from "@/lib/guest";
 import { getGameById } from "@/lib/games/registry";
 import { useRoom } from "@/lib/party/use-room";
 import { useRoomStore } from "@/lib/stores/room-store";
+import { getGlobalStats, getLevel, type GlobalStats } from "@/lib/stores/global-points";
 import { Mascot, MascotAvatar, MASCOT_PALETTE, type MascotColor } from "@/components/Mascot";
 import { Sparkles } from "@/components/ConfettiBurst";
+
+const NAV_ITEMS: { label: string; href: string | null }[] = [
+  { label: "Jeux", href: null },
+  { label: "Catégories", href: null },
+  { label: "Classement", href: "/leaderboard" },
+  { label: "À propos", href: null },
+];
 
 // Map game category → mascot color (so banner picks a coherent mascot)
 const CAT_COLOR: Record<string, MascotColor> = {
@@ -53,6 +60,20 @@ export default function LobbyPage() {
   const selectedGame = selectedGameId ? getGameById(selectedGameId) : null;
   const gameColor: MascotColor = selectedGame ? (CAT_COLOR[selectedGame.category] ?? "purple") : "purple";
 
+  // Stats joueur (chip XP / niveau) — branché sur le stats store (PartyKit + cache local).
+  const [stats, setStats] = useState<GlobalStats | null>(null);
+  useEffect(() => {
+    let alive = true;
+    getGlobalStats(playerId).then((s) => { if (alive) setStats(s); }).catch(() => {});
+    return () => { alive = false; };
+  }, [playerId]);
+  const level = stats ? getLevel(stats.totalPoints) : null;
+
+  // Le lobby dépend d'identités client (localStorage) + WebSocket : on rend
+  // un écran d'attente jusqu'au montage pour éviter tout mismatch d'hydratation.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
   useEffect(() => {
     if (status === "in-game" && selectedGameId) {
       router.push(`/room/${code}/game/${selectedGameId}`);
@@ -70,31 +91,78 @@ export default function LobbyPage() {
     send({ type: "kick-player", payload: { playerId: targetId } });
   };
 
+  if (!mounted) {
+    return (
+      <div className="flex min-h-screen items-center justify-center text-white">
+        <p className="animate-pulse text-sm" style={{ color: "var(--text-dim)" }}>
+          Connexion à la salle…
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="relative flex min-h-screen flex-col overflow-hidden text-white">
       <Sparkles count={8} />
 
       {/* HEADER */}
       <header className="relative z-10 mx-auto flex w-full max-w-6xl items-center justify-between gap-3 px-5 pt-6 sm:px-10">
-        <Link href="/" className="flex h-10 w-10 items-center justify-center rounded-full text-white/70 transition hover:text-white"
-              style={{ background: "rgba(255,255,255,0.06)", border: "1px solid var(--line-soft)" }}>
-          <ArrowLeft className="h-4 w-4" />
-        </Link>
+        {/* Gauche : logo + room + statut */}
         <div className="flex items-center gap-3">
+          <Link href="/" className="flex items-center gap-2">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl text-xs font-black text-white"
+                 style={{ background: "linear-gradient(135deg, var(--cb-brand), var(--af-pink))", fontFamily: "var(--font-display)" }}>
+              af
+            </div>
+            <span className="hidden text-lg font-black tracking-tight sm:inline" style={{ fontFamily: "var(--font-display)", letterSpacing: -0.5 }}>
+              af<span style={{ color: "var(--af-pink)" }}>.</span>games
+            </span>
+          </Link>
           <span className="af-chip" style={{
             background: "rgba(255,210,63,0.18)", borderColor: "rgba(255,210,63,0.3)",
-            color: "var(--af-yellow)", letterSpacing: 2,
+            color: "var(--af-yellow)", letterSpacing: 1.5,
           }}>
             <span className="cb-mono">ROOM · {code}</span>
           </span>
-          <div className="flex h-2 w-2 rounded-full" style={{
+          <div className="h-2 w-2 rounded-full" style={{
             background: isConnected ? "var(--af-mint)" : "var(--af-coral)",
             boxShadow: `0 0 8px ${isConnected ? "rgba(61,220,151,0.7)" : "rgba(255,107,91,0.7)"}`,
           }} />
         </div>
-        <div className="flex items-center gap-2">
+
+        {/* Centre : navigation */}
+        <nav className="hidden items-center gap-1 lg:flex">
+          {NAV_ITEMS.map((item) =>
+            item.href ? (
+              <Link key={item.label} href={item.href}
+                    className="rounded-full px-3 py-1.5 text-sm font-semibold transition hover:text-white"
+                    style={{ color: "var(--text-dim)" }}>
+                {item.label}
+              </Link>
+            ) : (
+              <span key={item.label}
+                    className="rounded-full px-3 py-1.5 text-sm font-semibold"
+                    style={{
+                      color: item.label === "Jeux" ? "#fff" : "var(--text-dim)",
+                      background: item.label === "Jeux" ? "rgba(255,255,255,0.06)" : "transparent",
+                    }}>
+                {item.label}
+              </span>
+            )
+          )}
+        </nav>
+
+        {/* Droite : chip XP + avatar */}
+        <div className="flex items-center gap-2.5">
+          <div className="hidden items-center gap-2 rounded-full border px-3 py-1.5 sm:flex"
+               style={{ background: "rgba(255,255,255,0.04)", borderColor: "var(--line-soft)" }}>
+            <span className="cb-mono text-xs font-bold" style={{ color: "var(--af-yellow)" }}>★ {stats?.totalPoints ?? 0}</span>
+            <span className="rounded-full px-2 py-0.5 text-[10px] font-bold" style={{ background: "var(--cb-brand)", color: "#fff" }}>
+              Niv.{level?.level ?? 1}
+            </span>
+          </div>
           <MascotAvatar color="purple" size={32} mood="wink" />
-          <span className="text-sm font-bold">{playerName}</span>
+          <span className="hidden text-sm font-bold sm:inline">{playerName}</span>
         </div>
       </header>
 
