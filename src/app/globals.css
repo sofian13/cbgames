@@ -219,8 +219,8 @@
    Mascot animations
    ========================================================= */
 @keyframes mascot-breathe {
-  0%, 100% { transform: scaleY(1) scaleX(1) translateY(0); }
-  50%      { transform: scaleY(0.96) scaleX(1.04) translateY(2px); }
+  0%, 100% { transform: translateX(-50%) scaleY(1) scaleX(1) translateY(0); }
+  50%      { transform: translateX(-50%) scaleY(0.96) scaleX(1.04) translateY(2px); }
 }
 @keyframes mascot-bob {
   0%, 100% { transform: translateY(0) rotate(-2deg); }
@@ -236,6 +236,18 @@
   50%      { transform: translateY(-4px) rotate(-3deg); }
   75%      { transform: translateY(-12px) rotate(5deg); }
 }
+@keyframes mascot-rofl {
+  0%, 100% { transform: rotate(-14deg) translateY(0); }
+  50%      { transform: rotate(14deg) translateY(-6px); }
+}
+@keyframes mascot-flicker {
+  from { transform: translateX(-50%) scale(1) rotate(-2deg); opacity: 1; }
+  to   { transform: translateX(-50%) scale(1.1) rotate(3deg); opacity: 0.92; }
+}
+@keyframes mascot-drift-up   { 0% { transform: translateY(0); opacity: 1; } 100% { transform: translateY(-40px); opacity: 0; } }
+@keyframes mascot-drift-down { 0% { transform: rotate(180deg) translateY(0); opacity: 1; } 100% { transform: rotate(180deg) translateY(40px); opacity: 0; } }
+@keyframes mascot-twinkle { 0%, 100% { transform: scale(1) rotate(0); opacity: 0.6; } 50% { transform: scale(1.2) rotate(180deg); opacity: 1; } }
+@keyframes mascot-spin { to { transform: rotate(360deg); } }
 
 @keyframes af-spin-slow { to { transform: rotate(360deg); } }
 @keyframes af-pulse-ring {

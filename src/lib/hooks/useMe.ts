@@ -110,12 +110,17 @@ export const COLOR_CHOICES: MascotColor[] = [
 ];
 
 export const MOOD_CHOICES: { id: MascotMood; label: string }[] = [
-  { id: "happy",   label: "Joie" },
-  { id: "wink",    label: "Clin d'œil" },
-  { id: "neutral", label: "Stoïque" },
-  { id: "love",    label: "Amoureux" },
-  { id: "shocked", label: "Surpris" },
-  { id: "asleep",  label: "Endormi" },
+  { id: "happy",     label: "Joie" },
+  { id: "wink",      label: "Clin d'œil" },
+  { id: "cool",      label: "Cool 😎" },
+  { id: "laughing",  label: "Rire" },
+  { id: "love",      label: "Amoureux" },
+  { id: "mindblown", label: "Mind blown" },
+  { id: "sus",       label: "Suspicieux" },
+  { id: "angry",     label: "Énervé" },
+  { id: "shocked",   label: "Surpris" },
+  { id: "neutral",   label: "Stoïque" },
+  { id: "asleep",    label: "Endormi" },
 ];
 
 export const ACCESSORY_CHOICES: { id: MeAccessory; label: string; icon: string }[] = [
