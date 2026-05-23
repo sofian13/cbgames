@@ -1,6 +1,6 @@
 "use client";
 
-import { getPartyKitHost, getPartyKitHttpProtocol } from "@/lib/party/host";
+import { getSupabase } from "@/lib/supabase/client";
 
 const GLOBAL_STATS_KEY = "af-games-global-stats";
 
@@ -14,10 +14,17 @@ export interface GlobalStats {
   lastPlayed: number;
 }
 
-function getStatsUrl(): string {
-  const host = getPartyKitHost();
-  const protocol = getPartyKitHttpProtocol(host);
-  return `${protocol}://${host}/parties/stats/global`;
+// Maps a snake_case row from the `game_stats` table to GlobalStats.
+function rowToStats(r: Record<string, unknown>): GlobalStats {
+  return {
+    playerId: String(r.player_id),
+    playerName: String(r.player_name),
+    totalPoints: Number(r.total_points ?? 0),
+    gamesPlayed: Number(r.games_played ?? 0),
+    wins: Number(r.wins ?? 0),
+    topRank: Number(r.top_rank ?? 999),
+    lastPlayed: r.last_played ? Date.parse(String(r.last_played)) : 0,
+  };
 }
 
 // --- Local cache (fallback) ---
@@ -41,7 +48,7 @@ function saveLocalCache(playerId: string, stats: GlobalStats) {
   } catch { /* ignore */ }
 }
 
-// --- Server API ---
+// --- Supabase API (with localStorage fallback) ---
 
 export async function addGameResult(
   playerId: string,
@@ -49,20 +56,21 @@ export async function addGameResult(
   rank: number,
   score: number
 ): Promise<{ earnedPoints: number; stats: GlobalStats }> {
-  try {
-    const res = await fetch(getStatsUrl(), {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "save-result", playerId, playerName, rank, score }),
-    });
-    if (res.ok) {
-      const data = await res.json() as { earnedPoints: number; stats: GlobalStats };
-      saveLocalCache(playerId, data.stats);
-      return data;
-    }
-  } catch { /* fallback below */ }
+  const sb = getSupabase();
+  if (sb) {
+    try {
+      const { data, error } = await sb.rpc("add_game_result", {
+        p_player_id: playerId, p_player_name: playerName, p_rank: rank, p_score: score,
+      });
+      if (!error && data) {
+        const stats = rowToStats(data.stats);
+        saveLocalCache(playerId, stats);
+        return { earnedPoints: Number(data.earned_points ?? 0), stats };
+      }
+    } catch { /* fallback below */ }
+  }
 
-  // Fallback: compute locally if server unreachable
+  // Fallback: compute locally if Supabase unreachable / not configured
   const map = getLocalCache();
   const current: GlobalStats = map[playerId] ?? {
     playerId, playerName, totalPoints: 0, gamesPlayed: 0, wins: 0, topRank: 999, lastPlayed: 0,
@@ -80,27 +88,32 @@ export async function addGameResult(
 }
 
 export async function getGlobalStats(playerId: string): Promise<GlobalStats | null> {
-  try {
-    const res = await fetch(`${getStatsUrl()}?action=get-stats&playerId=${encodeURIComponent(playerId)}`);
-    if (res.ok) {
-      const data = await res.json() as GlobalStats | null;
-      if (data) saveLocalCache(playerId, data);
-      return data;
-    }
-  } catch { /* fallback below */ }
-
-  // Fallback: local cache
+  const sb = getSupabase();
+  if (sb) {
+    try {
+      const { data, error } = await sb.from("game_stats").select("*").eq("player_id", playerId).maybeSingle();
+      if (!error) {
+        const stats = data ? rowToStats(data) : null;
+        if (stats) saveLocalCache(playerId, stats);
+        return stats;
+      }
+    } catch { /* fallback below */ }
+  }
   const map = getLocalCache();
   return map[playerId] ?? null;
 }
 
 export async function getLeaderboard(limit = 20): Promise<GlobalStats[]> {
-  try {
-    const res = await fetch(`${getStatsUrl()}?action=leaderboard&limit=${limit}`);
-    if (res.ok) return await res.json() as GlobalStats[];
-  } catch { /* fallback below */ }
-
-  // Fallback: local cache (only own data)
+  const sb = getSupabase();
+  if (sb) {
+    try {
+      const { data, error } = await sb
+        .from("game_stats").select("*")
+        .order("total_points", { ascending: false })
+        .limit(limit);
+      if (!error && data) return data.map(rowToStats);
+    } catch { /* fallback below */ }
+  }
   const map = getLocalCache();
   return Object.values(map).sort((a, b) => b.totalPoints - a.totalPoints).slice(0, limit);
 }
