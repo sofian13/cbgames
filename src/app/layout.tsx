@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Toaster } from "@/components/ui/sonner";
 import { SessionProvider } from "next-auth/react";
+import { Providers } from "@/components/Providers";
 import "./globals.css";
 
 // Fonts (Clash Display via Fontshare for display + DM Sans + JetBrains Mono)
@@ -20,8 +21,10 @@ export default function RootLayout({
     <html lang="fr" suppressHydrationWarning>
       <body className="antialiased">
         <SessionProvider>
-          {children}
-          <Toaster />
+          <Providers>
+            {children}
+            <Toaster />
+          </Providers>
         </SessionProvider>
       </body>
     </html>
