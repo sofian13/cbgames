@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import Link from "next/link";
 import { GamePicker } from "@/components/lobby/game-picker";
 import { PlayerList } from "@/components/lobby/player-list";
 import { ReadyCheck } from "@/components/lobby/ready-check";
@@ -9,9 +10,10 @@ import { getOrCreateGuest } from "@/lib/guest";
 import { getGameById } from "@/lib/games/registry";
 import { useRoom } from "@/lib/party/use-room";
 import { useRoomStore } from "@/lib/stores/room-store";
-import { Mascot, MASCOT_PALETTE, type MascotColor } from "@/components/Mascot";
+import { Mascot, MascotAvatar, MASCOT_PALETTE, type MascotColor } from "@/components/Mascot";
 import { Sparkles } from "@/components/ConfettiBurst";
-import { SiteNav } from "@/components/SiteNav";
+import { MuteToggle } from "@/components/MuteToggle";
+import { useMe } from "@/lib/hooks/useMe";
 
 // Map game category → mascot color (so banner picks a coherent mascot)
 const CAT_COLOR: Record<string, MascotColor> = {
@@ -28,6 +30,8 @@ export default function LobbyPage() {
     const guest = getOrCreateGuest();
     return { id: guest.id, name: guest.name };
   }, []);
+
+  const [persona] = useMe();
 
   const optimisticHost = useMemo(() => {
     if (typeof window === "undefined") return false;
@@ -88,7 +92,29 @@ export default function LobbyPage() {
     <div className="relative flex min-h-screen flex-col overflow-hidden text-white">
       <Sparkles count={8} />
 
-      <SiteNav room={code} />
+      {/* Header de lobby dédié — PAS de nav cross-site (sinon on quitte la salle) */}
+      <header className="relative z-10 mx-auto flex w-full max-w-6xl items-center justify-between gap-3 px-5 pt-6 sm:px-10">
+        <div className="flex items-center gap-3">
+          <Link href="/" className="flex items-center gap-2" title="Accueil (quitter la salle)">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl text-xs font-black text-white"
+                 style={{ background: "linear-gradient(135deg, var(--cb-brand), var(--af-pink))", fontFamily: "var(--font-display)" }}>
+              af
+            </div>
+          </Link>
+          <span className="af-chip" style={{ background: "rgba(255,210,63,0.18)", borderColor: "rgba(255,210,63,0.3)", color: "var(--af-yellow)", letterSpacing: 1.5 }}>
+            <span className="cb-mono">ROOM · {code}</span>
+          </span>
+          <span className="h-2 w-2 rounded-full" style={{
+            background: isConnected ? "var(--af-mint)" : "var(--af-coral)",
+            boxShadow: `0 0 8px ${isConnected ? "rgba(61,220,151,0.7)" : "rgba(255,107,91,0.7)"}`,
+          }} />
+        </div>
+        <div className="flex items-center gap-3">
+          <MuteToggle />
+          <MascotAvatar color={persona.color} size={34} mood={persona.mood} />
+          <span className="hidden text-sm font-bold sm:inline">{playerName}</span>
+        </div>
+      </header>
 
       <main className="relative z-10 mx-auto flex w-full max-w-6xl flex-1 flex-col gap-5 px-5 py-6 sm:px-10">
         {error && (
