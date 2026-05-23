@@ -5,6 +5,8 @@ import { useGame } from "@/lib/party/use-game";
 import { useGameStore } from "@/lib/stores/game-store";
 import type { GameProps } from "@/lib/games/types";
 import { cn } from "@/lib/utils";
+import { MascotAvatar } from "@/components/Mascot";
+import { ModeSelect, PlayersSetup, PassScreen, colorForIndex, type GameMode } from "@/components/games/local-kit";
 
 // ── Types ─────────────────────────────────────────────────
 interface TopTenPlayerState {
@@ -42,8 +44,207 @@ interface TopTenState {
 
 const ACCENT = "#ff5a8a";
 
+// ── Thèmes 18+ (mode local) ───────────────────────────────
+const LOCAL_THEMES: ThemeState[] = [
+  { theme: "Un endroit où tu ferais l'amour", low: "Dans ton lit, tranquille", high: "En public, avec le risque de se faire prendre" },
+  { theme: "Un message coquin à envoyer à ton crush", low: "« Tu me manques... »", high: "Un truc carrément explicite" },
+  { theme: "Une tenue pour une soirée", low: "Jean - t-shirt classique", high: "Quasi rien, tout est suggéré" },
+  { theme: "Un fantasme à avouer à voix haute", low: "Un câlin sous la couette", high: "Le truc que t'oserais jamais dire" },
+  { theme: "Niveau d'alcool un samedi soir", low: "Un verre de vin", high: "Black-out total" },
+  { theme: "Un truc qui t'excite", low: "Un regard appuyé", high: "Quelque chose de carrément chaud" },
+  { theme: "Une chose à faire pour un date parfait", low: "Dîner aux chandelles", high: "On saute l'étape dîner" },
+  { theme: "Un endroit pour un premier baiser", low: "Devant sa porte, timidement", high: "Sur la piste, devant tout le monde" },
+  { theme: "Le degré d'audace d'un sexto", low: "Un emoji cœur", high: "Photo et description détaillée" },
+  { theme: "Une chose qu'on pourrait te demander dans une chambre", low: "Un massage du dos", high: "Un truc franchement osé" },
+  { theme: "Ce que tu fais quand t'es bourré", low: "Je deviens très câlin", high: "Un truc dont j'aurai honte demain" },
+  { theme: "Le niveau d'un strip-tease", low: "J'enlève ma veste", high: "Je garde plus rien" },
+  { theme: "Une partie du corps à embrasser", low: "La joue", high: "Un endroit très intime" },
+  { theme: "Ce que tu cherches sur une appli de rencontre", low: "Une vraie histoire", high: "Un plan d'un soir, ce soir" },
+  { theme: "Le niveau d'un gage de soirée", low: "Imiter un animal", high: "Embrasser la personne à ta gauche" },
+  { theme: "Un lieu insolite pour le faire", low: "Le canapé du salon", high: "Les toilettes d'une boîte" },
+  { theme: "Ce que tu postes sur les réseaux", low: "Un coucher de soleil", high: "Une photo qui fait monter la température" },
+  { theme: "Une chose à tester en couple", low: "Un resto romantique", high: "Un sextoy ou un accessoire" },
+  { theme: "Ce que tu réponds à « on monte chez moi ? »", low: "« Une autre fois »", high: "« J'attendais que ça »" },
+  { theme: "Une activité de couple un dimanche", low: "Brunch et série", high: "On sort pas du lit" },
+  { theme: "Une phrase à murmurer à l'oreille", low: "« T'es mignon(ne) »", high: "Un truc qui ferait rougir n'importe qui" },
+  { theme: "Le degré d'une danse en boîte", low: "Je bouge gentiment", high: "Collé-serré très rapproché" },
+  { theme: "Une audace en vacances", low: "Bronzer sur la plage", high: "Se baigner sans maillot la nuit" },
+  { theme: "Le niveau d'un texto à 3h du matin", low: "« Tu dors ? »", high: "« Viens, je suis seul(e) »" },
+];
+
+// ── WRAPPER : le joueur choisit local ou online ───────────
+export default function TopTenGame(props: GameProps) {
+  const [mode, setMode] = useState<GameMode | null>(null);
+  if (mode === null) {
+    return (
+      <ModeSelect emoji="🔥" name="Top Ten"
+        tagline="Un thème osé, un numéro secret de 1 à 10. Joue l'intensité, fais deviner ton classement. (18+)"
+        onPick={setMode} />
+    );
+  }
+  if (mode === "local") return <TopTenLocal onReturnToLobby={props.onReturnToLobby} />;
+  return <TopTenOnline {...props} />;
+}
+
 // ══════════════════════════════════════════════════════════
-export default function TopTenGame({ roomCode, playerId, playerName }: GameProps) {
+// MODE LOCAL (pass-and-play — numéros secrets révélés un par un)
+// ══════════════════════════════════════════════════════════
+function TopTenLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) {
+  type Phase = "setup" | "pass-number" | "show-number" | "answer" | "pass-captain" | "order" | "reveal" | "over";
+  const [phase, setPhase] = useState<Phase>("setup");
+  const [players, setPlayers] = useState<string[]>([]);
+  const [scores, setScores] = useState<number[]>([]);
+  const [round, setRound] = useState(0);
+  const [captain, setCaptain] = useState(0);
+  const [themes] = useState(() => [...LOCAL_THEMES].sort(() => Math.random() - 0.5));
+  const [numbers, setNumbers] = useState<Record<number, number>>({});
+  const [order, setOrder] = useState<number[]>([]); // non-captain indices (reveal order)
+  const [revealIdx, setRevealIdx] = useState(0);
+  const [guess, setGuess] = useState<number[]>([]); // captain's ordering (player indices)
+
+  const total = players.length;
+  const theme = themes[(round - 1) % themes.length] ?? null;
+
+  const startRound = (r: number, cap: number, names = players) => {
+    const nonCap = names.map((_, i) => i).filter((i) => i !== cap);
+    const pool = Array.from({ length: 10 }, (_, i) => i + 1).sort(() => Math.random() - 0.5);
+    const nums: Record<number, number> = {};
+    nonCap.forEach((idx, k) => { nums[idx] = pool[k]; });
+    setNumbers(nums);
+    setOrder([...nonCap].sort(() => Math.random() - 0.5));
+    setRevealIdx(0);
+    setRound(r); setCaptain(cap); setGuess([]);
+    setPhase("pass-number");
+  };
+
+  const begin = (names: string[]) => {
+    setPlayers(names); setScores(names.map(() => 0));
+    startRound(1, 0, names);
+  };
+
+  // -- scoring on captain submit --
+  const submitOrder = (orderedIdx: number[]) => {
+    let correct = 0;
+    for (let i = 0; i < orderedIdx.length - 1; i++) {
+      if (numbers[orderedIdx[i]] < numbers[orderedIdx[i + 1]]) correct++;
+    }
+    const totalPairs = Math.max(0, orderedIdx.length - 1);
+    const perfect = totalPairs > 0 && correct === totalPairs;
+    const pts = correct * 2 + (perfect ? 5 : 0);
+    setScores((s) => s.map((v, i) => (i === captain ? v + pts : v)));
+    setGuess(orderedIdx);
+    setPhase("reveal");
+  };
+
+  if (phase === "setup") {
+    return <PlayersSetup emoji="🔥" name="Top Ten" min={3} max={10} accent="#ff5a8a" onStart={begin} onBack={onReturnToLobby} />;
+  }
+  if (phase === "pass-number") {
+    const idx = order[revealIdx];
+    return <PassScreen toName={players[idx]} colorIndex={idx} accent="#ff5a8a"
+      hint="Toi seul : tu vas voir ton numéro secret (1 = soft, 10 = hard)." onReady={() => setPhase("show-number")} />;
+  }
+  if (phase === "show-number") {
+    const idx = order[revealIdx];
+    return (
+      <div className="flex min-h-[100svh] flex-col items-center justify-center p-6 text-white"
+        style={{ background: `radial-gradient(circle at 50% 25%, ${ACCENT}30, transparent 45%), #0E0828` }}>
+        <p className="af-eyebrow mb-2">{players[idx]} · ton numéro</p>
+        <NumberCard myNumber={numbers[idx]} />
+        <button onClick={() => {
+          if (revealIdx < order.length - 1) { setRevealIdx(revealIdx + 1); setPhase("pass-number"); }
+          else setPhase("answer");
+        }} className="af-btn af-btn-primary mt-8 w-full max-w-xs">J&apos;ai vu — cacher</button>
+      </div>
+    );
+  }
+  if (phase === "answer") {
+    return (
+      <div className="flex min-h-[100svh] flex-col items-center p-5 text-white"
+        style={{ background: `radial-gradient(circle at 50% 15%, ${ACCENT}26, transparent 45%), #0E0828` }}>
+        <p className="af-eyebrow mt-3">Manche {round}/{total} · Capitaine : {players[captain]}</p>
+        <div className="mt-4 w-full max-w-md rounded-3xl border p-6" style={{ borderColor: "rgba(255,255,255,0.1)", background: "rgba(0,0,0,0.4)" }}>
+          <p className="af-eyebrow mb-2 text-center" style={{ color: ACCENT }}>Thème 18+</p>
+          <p className="cb-display-sm text-center">{theme?.theme}</p>
+          <div className="mt-4 flex gap-2 text-center text-xs">
+            <div className="flex-1 rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-2"><b className="text-emerald-400">1</b><br/>{theme?.low}</div>
+            <div className="flex-1 rounded-2xl border p-2" style={{ borderColor: `${ACCENT}40`, background: `${ACCENT}14` }}><b style={{ color: ACCENT }}>10</b><br/>{theme?.high}</div>
+          </div>
+        </div>
+        <p className="mt-5 max-w-xs text-center text-sm" style={{ color: "var(--text-dim)" }}>
+          Chacun annonce sa réponse <b>à voix haute</b> selon l&apos;intensité de son numéro. Le Capitaine écoute.
+        </p>
+        <button onClick={() => setPhase("pass-captain")} className="af-btn af-btn-primary mt-6 w-full max-w-md">Tout le monde a parlé →</button>
+      </div>
+    );
+  }
+  if (phase === "pass-captain") {
+    return <PassScreen toName={players[captain]} colorIndex={captain} accent="#ff5a8a"
+      buttonLabel="C'est moi, le Capitaine" hint="À toi de classer les joueurs du plus soft au plus hard." onReady={() => setPhase("order")} />;
+  }
+  if (phase === "order") {
+    return (
+      <OrderingBoard ids={order.map(String)} nameOf={(id) => players[+id]} round={round} total={total}
+        onSubmit={(o) => submitOrder(o.map(Number))} />
+    );
+  }
+  if (phase === "reveal") {
+    return (
+      <div className="flex min-h-[100svh] flex-col items-center overflow-y-auto p-5 text-white"
+        style={{ background: `radial-gradient(circle at 50% 15%, ${ACCENT}26, transparent 45%), #0E0828` }}>
+        <p className="af-eyebrow mt-3">Classement de {players[captain]} (soft → hard)</p>
+        <div className="mt-4 w-full max-w-md space-y-2">
+          {guess.map((idx, i) => {
+            const num = numbers[idx];
+            const prev = i > 0 ? numbers[guess[i - 1]] : -1;
+            const ok = i === 0 || prev < num;
+            return (
+              <div key={idx} className={cn("flex items-center gap-3 rounded-2xl border px-4 py-3", ok ? "border-emerald-500/30 bg-emerald-500/[0.07]" : "border-rose-500/30 bg-rose-500/[0.08]")}>
+                <span className="cb-mono w-5 text-white/40">{i + 1}.</span>
+                <span className="flex h-9 w-9 items-center justify-center rounded-full font-mono font-bold text-white" style={{ background: ACCENT, opacity: 0.3 + (num / 10) * 0.7 }}>{num}</span>
+                <span className="flex-1 font-semibold">{players[idx]}</span>
+                <span className={ok ? "text-emerald-400" : "text-rose-400"}>{ok ? "✓" : "✗"}</span>
+              </div>
+            );
+          })}
+        </div>
+        <button onClick={() => { if (round >= total) setPhase("over"); else startRound(round + 1, (captain + 1) % total); }}
+          className="af-btn af-btn-primary mt-6 w-full max-w-md">{round >= total ? "Voir les scores" : "Manche suivante"}</button>
+      </div>
+    );
+  }
+  // over
+  const ranking = players.map((name, i) => ({ name, score: scores[i], i })).sort((a, b) => b.score - a.score);
+  return (
+    <div className="flex min-h-[100svh] flex-col items-center justify-center p-6 text-white"
+      style={{ background: `radial-gradient(circle at 50% 25%, ${ACCENT}2e, transparent 45%), #0E0828` }}>
+      <p className="af-eyebrow" style={{ color: ACCENT }}>Partie terminée</p>
+      <h2 className="cb-display-lg mt-1 mb-5">🔥 Meilleur Capitaine</h2>
+      <div className="w-full max-w-sm space-y-2">
+        {ranking.map((p, idx) => (
+          <div key={p.i} className="flex items-center justify-between rounded-2xl border p-4"
+            style={{ background: idx === 0 ? `${ACCENT}22` : "rgba(255,255,255,0.04)", borderColor: idx === 0 ? `${ACCENT}55` : "var(--line-soft)" }}>
+            <div className="flex items-center gap-3">
+              <span className="cb-mono w-7 font-bold" style={{ color: idx === 0 ? ACCENT : "var(--text-muted)" }}>#{idx + 1}</span>
+              <MascotAvatar color={colorForIndex(p.i)} size={34} mood={idx === 0 ? "wink" : "happy"} />
+              <span className="font-bold">{p.name}</span>
+            </div>
+            <span className="cb-mono font-bold" style={{ color: idx === 0 ? ACCENT : "#fff" }}>{p.score}</span>
+          </div>
+        ))}
+      </div>
+      <div className="mt-6 flex gap-2">
+        <button onClick={() => setPhase("setup")} className="af-btn af-btn-ghost">Nouvelle partie</button>
+        {onReturnToLobby && <button onClick={onReturnToLobby} className="af-btn af-btn-primary">Lobby</button>}
+      </div>
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════
+// MODE ONLINE (multi-appareils) — inchangé
+// ══════════════════════════════════════════════════════════
+function TopTenOnline({ roomCode, playerId, playerName }: GameProps) {
   const { sendAction } = useGame(roomCode, "top-ten", playerId, playerName);
   const { gameState, error } = useGameStore();
   const state = gameState as unknown as TopTenState;

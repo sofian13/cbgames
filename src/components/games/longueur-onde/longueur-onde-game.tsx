@@ -8,6 +8,161 @@ import { cn } from "@/lib/utils";
 import { useKeyedState } from "@/lib/use-keyed-state";
 import { Mascot, MascotAvatar, MASCOT_PALETTE, type MascotColor } from "@/components/Mascot";
 import { ConfettiBurst, Sparkles } from "@/components/ConfettiBurst";
+import { ModeSelect, PlayersSetup, PassScreen, colorForIndex, type GameMode } from "@/components/games/local-kit";
+
+// ── Spectres pour le mode local (mêmes que le serveur) ────
+const LOCAL_SPECTRUMS: Spectrum[] = [
+  { left: "Inutile", right: "Indispensable" }, { left: "Ringard", right: "Stylé" },
+  { left: "Sous-coté", right: "Surcoté" }, { left: "Soft", right: "Hardcore" },
+  { left: "Mauvais film", right: "Chef-d'œuvre" }, { left: "Aliment dégueu", right: "Aliment délicieux" },
+  { left: "Talent inutile", right: "Super-pouvoir" }, { left: "Pas cher", right: "Hors de prix" },
+  { left: "Animal nul", right: "Animal parfait" }, { left: "Crime mineur", right: "Crime grave" },
+  { left: "Date raté", right: "Date parfait" }, { left: "Tenue gênante", right: "Tenue canon" },
+  { left: "Pas romantique", right: "Très romantique" }, { left: "Activité chiante", right: "Activité fun" },
+  { left: "Cadeau nul", right: "Cadeau de rêve" }, { left: "Pas attirant", right: "Irrésistible" },
+  { left: "Plaisir coupable", right: "Vraie fierté" }, { left: "Banal", right: "Légendaire" },
+  { left: "Calme", right: "Chaotique" }, { left: "Effrayant", right: "Mignon" },
+  { left: "Innocent", right: "Coquin" }, { left: "Mauvais goût", right: "Très classe" },
+  { left: "Ennuyeux au lit", right: "Bête de sexe" }, { left: "Petit mensonge", right: "Vraie trahison" },
+  { left: "Trop tôt", right: "Trop tard" },
+];
+
+function localPoints(d: number): number {
+  if (d <= 5) return 5;
+  if (d <= 12) return 3;
+  if (d <= 22) return 2;
+  return 0;
+}
+function shuffleArr<T>(a: T[]): T[] {
+  const r = [...a];
+  for (let i = r.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [r[i], r[j]] = [r[j], r[i]]; }
+  return r;
+}
+
+// ── WRAPPER : le joueur choisit local ou online ───────────
+export default function LongueurOndeGame(props: GameProps) {
+  const [mode, setMode] = useState<GameMode | null>(null);
+  if (mode === null) {
+    return (
+      <ModeSelect emoji="📡" name="Longueur d'onde"
+        tagline="Un Médium voit une cible secrète et donne un indice : retrouvez-la sur le curseur."
+        onPick={setMode} />
+    );
+  }
+  if (mode === "local") return <LongueurOndeLocal onReturnToLobby={props.onReturnToLobby} />;
+  return <LongueurOndeOnline {...props} />;
+}
+
+// ══════════════════════════════════════════════════════════
+// MODE LOCAL (pass-and-play, coopératif, Médium tournant)
+// ══════════════════════════════════════════════════════════
+function LongueurOndeLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) {
+  type Phase = "setup" | "pass" | "clue" | "guess" | "reveal" | "over";
+  const [phase, setPhase] = useState<Phase>("setup");
+  const [players, setPlayers] = useState<string[]>([]);
+  const [scores, setScores] = useState<number[]>([]);
+  const [round, setRound] = useState(0);
+  const [psychic, setPsychic] = useState(0);
+  const [spectrums] = useState(() => shuffleArr(LOCAL_SPECTRUMS));
+  const [target, setTarget] = useState(50);
+  const [clue, setClue] = useState("");
+  const [guess, setGuess] = useState(50);
+  const [clueInput, setClueInput] = useKeyedState<string>(`${round}-localclue`, "");
+
+  const total = players.length;
+  const spectrum = spectrums[(round - 1) % spectrums.length] ?? null;
+  const lastPts = localPoints(Math.abs(guess - target));
+
+  const begin = (names: string[]) => {
+    setPlayers(names); setScores(names.map(() => 0));
+    setPsychic(0); setRound(1);
+    setTarget(8 + Math.floor(Math.random() * 85)); setClue(""); setPhase("pass");
+  };
+  const startRound = (r: number, p: number) => {
+    setRound(r); setPsychic(p);
+    setTarget(8 + Math.floor(Math.random() * 85)); setClue(""); setPhase("pass");
+  };
+
+  if (phase === "setup") {
+    return <PlayersSetup emoji="📡" name="Longueur d'onde" min={2} max={8} accent="#36d0e0" onStart={begin} onBack={onReturnToLobby} />;
+  }
+  if (phase === "pass") {
+    return <PassScreen toName={players[psychic]} colorIndex={psychic} accent="#36d0e0"
+      hint="Toi seul regardes l'écran : tu vas voir la cible secrète." onReady={() => setPhase("clue")} />;
+  }
+  if (phase === "clue") {
+    return (
+      <div className="flex min-h-[100svh] flex-col items-center p-5 text-white"
+        style={{ background: "radial-gradient(circle at 50% 12%, rgba(54,208,224,0.28), transparent 45%), #0E0828" }}>
+        <p className="af-eyebrow mt-3">Manche {round}/{total} · Médium : {players[psychic]}</p>
+        <p className="mt-2 mb-1 text-center text-sm" style={{ color: "var(--text-dim)" }}>
+          La cible est ici. Donne un <span style={{ color: "var(--af-yellow)" }}>indice</span> à voix haute.
+        </p>
+        <SpectrumDial spectrum={spectrum} target={target} mode="psychic" />
+        <div className="mt-6 w-full max-w-md">
+          <input value={clueInput} onChange={(e) => setClueInput(e.target.value)}
+            placeholder="Ton indice (écrire est optionnel)" maxLength={60} autoComplete="off"
+            className="w-full rounded-2xl border px-4 py-3.5 text-base outline-none"
+            style={{ background: "rgba(255,255,255,0.08)", borderColor: "rgba(54,208,224,0.4)", color: "#fff", fontFamily: "var(--font-display)" }} />
+          <button onClick={() => { setClue(clueInput.trim() || "(à l'oral)"); setGuess(50); setPhase("guess"); }}
+            className="af-btn af-btn-primary mt-3 w-full">Indice donné → l&apos;équipe devine</button>
+        </div>
+      </div>
+    );
+  }
+  if (phase === "guess") {
+    return <GuessBoard key={`${round}-localguess`} spectrum={spectrum} clue={clue} round={round} total={total}
+      timeLeft={30} submitted={false} psychicName={players[psychic]} onSubmit={(g) => { setGuess(g); setPhase("reveal"); }} />;
+  }
+  if (phase === "reveal") {
+    const markers = [{ value: guess, label: "Équipe", isMe: true, color: colorForIndex(psychic) }];
+    const bull = lastPts >= 5;
+    return (
+      <div className="relative flex min-h-[100svh] flex-col items-center p-5 text-white"
+        style={{ background: "radial-gradient(circle at 50% 12%, rgba(54,208,224,0.28), transparent 45%), #0E0828" }}>
+        {bull && <ConfettiBurst count={40} />}
+        <Sparkles count={6} />
+        <p className="af-eyebrow mt-3" style={{ color: "var(--af-yellow)" }}>{bull ? "✦ Dans le mille !" : "Révélation"}</p>
+        <h2 className="cb-display-lg mt-1">+<span style={{ color: "var(--af-yellow)" }}>{lastPts}</span> pts · {players[psychic]}</h2>
+        <ClueBadge clue={clue} authorName={players[psychic]} />
+        <SpectrumDial spectrum={spectrum} target={target} markers={markers} mode="reveal" />
+        <button onClick={() => {
+          const ns = [...scores]; ns[psychic] += lastPts; setScores(ns);
+          if (round >= total) setPhase("over"); else startRound(round + 1, (psychic + 1) % total);
+        }} className="af-btn af-btn-primary mt-6 w-full max-w-md">
+          {round >= total ? "Voir les scores" : "Manche suivante"}
+        </button>
+      </div>
+    );
+  }
+  // over
+  const ranking = players.map((name, i) => ({ name, score: scores[i], i })).sort((a, b) => b.score - a.score);
+  return (
+    <div className="relative flex min-h-[100svh] flex-col items-center justify-center p-6 text-white"
+      style={{ background: "radial-gradient(circle at 50% 25%, rgba(54,208,224,0.3), transparent 45%), #0E0828" }}>
+      <ConfettiBurst count={50} />
+      <p className="af-eyebrow" style={{ color: "var(--af-yellow)" }}>Partie terminée</p>
+      <h2 className="cb-display-lg mt-1 mb-5">📡 Meilleur Médium</h2>
+      <div className="w-full max-w-sm space-y-2">
+        {ranking.map((p, idx) => (
+          <div key={p.i} className="flex items-center justify-between rounded-2xl border p-4"
+            style={{ background: idx === 0 ? "rgba(54,208,224,0.14)" : "rgba(255,255,255,0.04)", borderColor: idx === 0 ? "rgba(54,208,224,0.5)" : "var(--line-soft)" }}>
+            <div className="flex items-center gap-3">
+              <span className="cb-mono w-7 font-bold" style={{ color: idx === 0 ? "var(--af-yellow)" : "var(--text-muted)" }}>#{idx + 1}</span>
+              <MascotAvatar color={colorForIndex(p.i)} size={34} mood={idx === 0 ? "wink" : "happy"} />
+              <span className="font-bold">{p.name}</span>
+            </div>
+            <span className="cb-mono font-bold" style={{ color: idx === 0 ? "var(--af-yellow)" : "#fff" }}>{p.score}</span>
+          </div>
+        ))}
+      </div>
+      <div className="mt-6 flex gap-2">
+        <button onClick={() => setPhase("setup")} className="af-btn af-btn-ghost">Nouvelle partie</button>
+        {onReturnToLobby && <button onClick={onReturnToLobby} className="af-btn af-btn-primary">Lobby</button>}
+      </div>
+    </div>
+  );
+}
 
 const BAND_WIDE = 22;
 const BAND_MID  = 12;
@@ -48,7 +203,7 @@ function colorFor(id: string): MascotColor {
   return COLORS[h % COLORS.length];
 }
 
-export default function LongueurOndeGame({ roomCode, playerId, playerName }: GameProps) {
+function LongueurOndeOnline({ roomCode, playerId, playerName }: GameProps) {
   const { sendAction } = useGame(roomCode, "longueur-onde", playerId, playerName);
   const { gameState, error } = useGameStore();
   const state = gameState as unknown as WaveState;
