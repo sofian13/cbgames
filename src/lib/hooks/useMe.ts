@@ -15,55 +15,70 @@
 
 import { useCallback, useEffect, useState } from "react";
 import type { MascotColor, MascotMood } from "@/components/Mascot";
+import { getOrCreateGuest, setGuestName } from "@/lib/guest";
+import { getGlobalStats, getLevel } from "@/lib/stores/global-points";
 
 export type MeAccessory = "none" | "arms" | "crown";
 
 export interface Me {
+  id: string;          // = guest id (identité partagée avec les jeux + Supabase)
   name: string;
   email: string;
   color: MascotColor;
   mood: MascotMood;
   accessory: MeAccessory;
-  level: number;
-  xp: number;
-  title: string;
+  level: number;       // dérivé des stats Supabase
+  xp: number;          // = total_points Supabase
+  title: string;       // dérivé du niveau
 }
 
 const STORAGE_KEY = "afgames-me";
 const EVENT = "af-me-changed";
 
+// Customisation par défaut (l'XP/niveau/titre sont écrasés par les vraies stats).
 export const DEFAULT_ME: Me = {
-  name: "Léa",
-  email: "lea@af.games",
+  id: "",
+  name: "",
+  email: "",
   color: "purple",
   mood: "happy",
   accessory: "crown",
-  level: 9,
-  xp: 12480,
-  title: "Mythique",
+  level: 1,
+  xp: 0,
+  title: "Débutant",
 };
 
-function readStored(): Me {
-  if (typeof window === "undefined") return DEFAULT_ME;
+// On ne persiste que la customisation (pas l'XP/niveau, qui viennent de la DB).
+type Persona = Pick<Me, "name" | "email" | "color" | "mood" | "accessory">;
+
+function readStored(): Partial<Persona> {
+  if (typeof window === "undefined") return {};
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return DEFAULT_ME;
-    const parsed = JSON.parse(raw) as Partial<Me>;
-    return { ...DEFAULT_ME, ...parsed };
+    return raw ? (JSON.parse(raw) as Partial<Persona>) : {};
   } catch {
-    return DEFAULT_ME;
+    return {};
   }
 }
 
 export function useMe(): [Me, (patch: Partial<Me>) => void] {
   const [me, setMe] = useState<Me>(DEFAULT_ME);
 
-  // Hydrate after mount (avoids SSR/CSR mismatch)
+  // Hydrate après le montage : identité = guest, XP/niveau = Supabase.
   useEffect(() => {
-    setMe(readStored());
+    const guest = getOrCreateGuest();
+    const stored = readStored();
+    setMe((m) => ({ ...m, ...stored, id: guest.id, name: stored.name || guest.name }));
+    getGlobalStats(guest.id)
+      .then((s) => {
+        if (!s) return;
+        const lvl = getLevel(s.totalPoints);
+        setMe((m) => ({ ...m, xp: s.totalPoints, level: lvl.level, title: lvl.title }));
+      })
+      .catch(() => {});
   }, []);
 
-  // Listen for external updates (other hook instances)
+  // Sync entre instances du hook (ex. nav ↔ profil).
   useEffect(() => {
     const onChange = (event: Event) => {
       const next = (event as CustomEvent<Me>).detail;
@@ -76,7 +91,12 @@ export function useMe(): [Me, (patch: Partial<Me>) => void] {
   const update = useCallback((patch: Partial<Me>) => {
     setMe((current) => {
       const next = { ...current, ...patch };
-      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)); } catch {}
+      const persona: Persona = {
+        name: next.name, email: next.email, color: next.color, mood: next.mood, accessory: next.accessory,
+      };
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(persona)); } catch {}
+      // Le nom est partagé avec les jeux (guest) pour rester cohérent partout.
+      if (patch.name !== undefined && patch.name.trim()) setGuestName(patch.name.trim());
       window.dispatchEvent(new CustomEvent<Me>(EVENT, { detail: next }));
       return next;
     });

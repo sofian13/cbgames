@@ -54,13 +54,16 @@ export async function addGameResult(
   playerId: string,
   playerName: string,
   rank: number,
-  score: number
+  score: number,
+  gameId = "unknown",
+  category = "party"
 ): Promise<{ earnedPoints: number; stats: GlobalStats }> {
   const sb = getSupabase();
   if (sb) {
     try {
       const { data, error } = await sb.rpc("add_game_result", {
         p_player_id: playerId, p_player_name: playerName, p_rank: rank, p_score: score,
+        p_game_id: gameId, p_category: category,
       });
       if (!error && data) {
         const stats = rowToStats(data.stats);
@@ -103,19 +106,60 @@ export async function getGlobalStats(playerId: string): Promise<GlobalStats | nu
   return map[playerId] ?? null;
 }
 
-export async function getLeaderboard(limit = 20): Promise<GlobalStats[]> {
+export async function getLeaderboard(
+  limit = 50,
+  period: "all" | "week" | "month" = "all",
+  category = "all"
+): Promise<GlobalStats[]> {
   const sb = getSupabase();
   if (sb) {
     try {
-      const { data, error } = await sb
-        .from("game_stats").select("*")
-        .order("total_points", { ascending: false })
-        .limit(limit);
-      if (!error && data) return data.map(rowToStats);
+      const { data, error } = await sb.rpc("leaderboard", {
+        p_period: period, p_category: category, p_limit: limit,
+      });
+      if (!error && Array.isArray(data)) {
+        return (data as Record<string, unknown>[]).map((r) => ({
+          playerId: String(r.player_id),
+          playerName: String(r.player_name),
+          totalPoints: Number(r.points ?? 0),
+          gamesPlayed: Number(r.games ?? 0),
+          wins: Number(r.wins ?? 0),
+          topRank: 0,
+          lastPlayed: 0,
+        }));
+      }
     } catch { /* fallback below */ }
   }
   const map = getLocalCache();
   return Object.values(map).sort((a, b) => b.totalPoints - a.totalPoints).slice(0, limit);
+}
+
+export interface RecentGame {
+  gameId: string;
+  category: string;
+  rank: number;
+  score: number;
+  points: number;
+  playedAt: number;
+}
+
+export async function getPlayerRecent(playerId: string, limit = 8): Promise<RecentGame[]> {
+  const sb = getSupabase();
+  if (!sb) return [];
+  try {
+    const { data, error } = await sb.rpc("player_recent", { p_player_id: playerId, p_limit: limit });
+    if (!error && Array.isArray(data)) {
+      return (data as Record<string, unknown>[]).map((r) => ({
+        gameId: String(r.game_id),
+        category: String(r.category),
+        rank: Number(r.rank ?? 0),
+        score: Number(r.score ?? 0),
+        points: Number(r.points ?? 0),
+        playedAt: r.played_at ? Date.parse(String(r.played_at)) : 0,
+      }));
+    }
+  } catch { /* ignore */ }
+  return [];
 }
 
 export function getLevel(totalPoints: number): { level: number; title: string; nextLevelPoints: number; progress: number } {

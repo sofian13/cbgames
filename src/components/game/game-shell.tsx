@@ -53,7 +53,7 @@ export function GameShell({
     const ranking = rankings.find((entry) => entry.playerId === playerId);
     if (!ranking) return;
     recordedResultRef.current = pointsRecordKey;
-    addGameResult(playerId, playerName, ranking.rank, ranking.score).then((result) => {
+    addGameResult(playerId, playerName, ranking.rank, ranking.score, gameId, gameMeta?.category ?? "party").then((result) => {
       setPointsEarned(result.earnedPoints);
       setStats(result.stats);
     });

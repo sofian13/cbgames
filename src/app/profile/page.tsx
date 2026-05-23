@@ -10,13 +10,43 @@
  *   - L'XP / niveau / titre vivent dans `global-points.ts` (zustand store)
  */
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { SiteNav } from "@/components/SiteNav";
 import { Sparkles } from "@/components/ConfettiBurst";
 import { Mascot, MASCOT_PALETTE, type MascotColor, type MascotMood } from "@/components/Mascot";
 import { Customizer } from "@/components/Customizer";
 import { useMe } from "@/lib/hooks/useMe";
+import { getGlobalStats, getPlayerRecent, getLevel, type GlobalStats } from "@/lib/stores/global-points";
+import { getGameById } from "@/lib/games/registry";
+
+const CAT_COLOR: Record<string, MascotColor> = {
+  words: "sky", trivia: "yellow", speed: "coral", strategy: "mint",
+  social: "pink", cards: "purple", party: "lavender", sport: "sky",
+};
+
+function relTime(ts: number): string {
+  if (!ts) return "";
+  const diff = Date.now() - ts;
+  const min = Math.floor(diff / 60000);
+  if (min < 1) return "à l'instant";
+  if (min < 60) return `il y a ${min} min`;
+  const h = Math.floor(min / 60);
+  if (h < 24) return `il y a ${h} h`;
+  const d = Math.floor(h / 24);
+  return d === 1 ? "hier" : `il y a ${d} j`;
+}
+
+const BADGE_DEFS: { id: string; emoji: string; label: string; color: MascotColor; test: (s: GlobalStats | null) => boolean }[] = [
+  { id: "newbie", emoji: "🌱", label: "Première partie", color: "mint", test: (s) => !!s && s.gamesPlayed >= 1 },
+  { id: "win1", emoji: "🏅", label: "Première victoire", color: "yellow", test: (s) => !!s && s.wins >= 1 },
+  { id: "ten", emoji: "🔟", label: "10 parties", color: "sky", test: (s) => !!s && s.gamesPlayed >= 10 },
+  { id: "win10", emoji: "👑", label: "10 victoires", color: "pink", test: (s) => !!s && s.wins >= 10 },
+  { id: "fifty", emoji: "5️⃣0️⃣", label: "50 parties", color: "coral", test: (s) => !!s && s.gamesPlayed >= 50 },
+  { id: "expert", emoji: "⚡", label: "Niveau Expert", color: "purple", test: (s) => !!s && s.totalPoints >= 1000 },
+  { id: "legend", emoji: "✨", label: "Niveau Légende", color: "lavender", test: (s) => !!s && s.totalPoints >= 4000 },
+  { id: "century", emoji: "💯", label: "100 parties", color: "purple", test: (s) => !!s && s.gamesPlayed >= 100 },
+];
 
 interface RecentGame {
   game: string;
@@ -28,46 +58,44 @@ interface RecentGame {
   win: boolean;
 }
 
-interface Badge {
-  id: string;
-  emoji: string;
-  label: string;
-  unlocked: boolean;
-  color: MascotColor;
-}
-
-const RECENT: RecentGame[] = [
-  { game: "Top Ten",          emoji: "🔥", color: "pink",     when: "il y a 12 min",  rank: 1, score: "+58 XP", win: true  },
-  { game: "Le Bluffeur",      emoji: "🎭", color: "coral",    when: "il y a 38 min",  rank: 2, score: "+32 XP", win: false },
-  { game: "Longueur d'Onde",  emoji: "📡", color: "purple",   when: "hier 22:14",     rank: 1, score: "+44 XP", win: true  },
-  { game: "Bomb Party",       emoji: "💣", color: "sky",      when: "hier 21:50",     rank: 4, score: "+12 XP", win: false },
-  { game: "Noms de Code",     emoji: "🔍", color: "lavender", when: "ven. 23:08",     rank: 1, score: "+50 XP", win: true  },
-];
-
-const STATS = [
-  { label: "Parties jouées",   value: 156,   color: "purple" as MascotColor, emoji: "🎮" },
-  { label: "Victoires",        value: 84,    color: "yellow" as MascotColor, emoji: "👑" },
-  { label: "Taux de victoire", value: "54%", color: "mint"   as MascotColor, emoji: "📈" },
-  { label: "Streak actuelle",  value: 7,     color: "coral"  as MascotColor, emoji: "🔥" },
-];
-
-const BADGES: Badge[] = [
-  { id: "newbie", emoji: "🌱",   label: "Première partie",     unlocked: true,  color: "mint" },
-  { id: "social", emoji: "🎭",   label: "Roi du bluff (×10)",  unlocked: true,  color: "pink" },
-  { id: "speed",  emoji: "⚡",   label: "Vitesse éclair",      unlocked: true,  color: "yellow" },
-  { id: "weekly", emoji: "🏆",   label: "Top 3 hebdo",         unlocked: true,  color: "purple" },
-  { id: "fifty",  emoji: "5️⃣0️⃣", label: "50 parties",          unlocked: true,  color: "coral" },
-  { id: "myth",   emoji: "✨",   label: "Niveau Mythique",     unlocked: true,  color: "lavender" },
-  { id: "addict", emoji: "📅",   label: "30 jours d'affilée",  unlocked: false, color: "sky" },
-  { id: "fool",   emoji: "🃏",   label: "Bluff parfait ×100",  unlocked: false, color: "purple" },
-];
-
 export default function ProfilePage() {
   const [me, update] = useMe();
   const [editing, setEditing] = useState(false);
+  const [stats, setStats] = useState<GlobalStats | null>(null);
+  const [recent, setRecent] = useState<RecentGame[]>([]);
+
+  useEffect(() => {
+    if (!me.id) return;
+    getGlobalStats(me.id).then(setStats).catch(() => {});
+    getPlayerRecent(me.id, 6).then((list) =>
+      setRecent(list.map((r) => {
+        const meta = getGameById(r.gameId);
+        return {
+          game: meta?.name ?? r.gameId,
+          emoji: meta?.icon ?? "🎮",
+          color: CAT_COLOR[r.category] ?? "purple",
+          when: relTime(r.playedAt),
+          rank: r.rank,
+          score: `+${r.points} XP`,
+          win: r.rank === 1,
+        };
+      }))
+    ).catch(() => {});
+  }, [me.id]);
+
+  const games = stats?.gamesPlayed ?? 0;
+  const wins = stats?.wins ?? 0;
+  const STATS = [
+    { label: "Parties jouées",   value: games,   color: "purple" as MascotColor, emoji: "🎮" },
+    { label: "Victoires",        value: wins,    color: "yellow" as MascotColor, emoji: "👑" },
+    { label: "Taux de victoire", value: games ? `${Math.round((wins / games) * 100)}%` : "—", color: "mint" as MascotColor, emoji: "📈" },
+    { label: "Meilleur rang",    value: stats && stats.topRank < 999 ? `#${stats.topRank}` : "—", color: "coral" as MascotColor, emoji: "🏆" },
+  ];
+  const BADGES = BADGE_DEFS.map((b) => ({ ...b, unlocked: b.test(stats) }));
   const unlocked = BADGES.filter((b) => b.unlocked).length;
-  const xpToNext = 15000;
-  const xpPct = Math.min(100, (me.xp / xpToNext) * 100);
+
+  const nextThreshold = getLevel(me.xp).nextLevelPoints;
+  const xpPct = Math.min(100, nextThreshold ? (me.xp / nextThreshold) * 100 : 100);
 
   return (
     <main className="relative min-h-screen overflow-hidden text-white">
@@ -127,7 +155,7 @@ export default function ProfilePage() {
               <div className="mb-1 flex items-center justify-between text-xs">
                 <span style={{ color: "var(--text-muted)" }}>Vers niveau {me.level + 1}</span>
                 <span className="cb-mono" style={{ color: "var(--text-muted)" }}>
-                  {me.xp.toLocaleString("fr-FR")} / {xpToNext.toLocaleString("fr-FR")} XP
+                  {me.xp.toLocaleString("fr-FR")} / {nextThreshold.toLocaleString("fr-FR")} XP
                 </span>
               </div>
               <div className="h-2.5 overflow-hidden rounded-full" style={{ background: "rgba(255,255,255,0.08)" }}>
@@ -209,7 +237,12 @@ export default function ProfilePage() {
             </Link>
           </div>
           <div className="flex flex-col gap-2">
-            {RECENT.map((r, i) => (
+            {recent.length === 0 && (
+              <p className="py-6 text-center text-sm" style={{ color: "var(--text-muted)" }}>
+                Aucune partie en ligne pour l&apos;instant.
+              </p>
+            )}
+            {recent.map((r, i) => (
               <RecentRow key={i} row={r} />
             ))}
           </div>

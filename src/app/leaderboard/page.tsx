@@ -20,14 +20,36 @@ const PODIUM = {
   3: { bg: "linear-gradient(180deg, #FF8B5C 0%, #A04020 100%)", text: "rgba(0,0,0,0.6)" },
 } as const;
 
+type Period = "all" | "week" | "month";
+const PERIODS: { id: Period; label: string }[] = [
+  { id: "week", label: "Semaine" },
+  { id: "month", label: "Mois" },
+  { id: "all", label: "All-time" },
+];
+const CATS: { id: string; label: string }[] = [
+  { id: "all", label: "Tout" },
+  { id: "party", label: "Party" },
+  { id: "social", label: "Bluff" },
+  { id: "trivia", label: "Quiz" },
+  { id: "cards", label: "Cartes" },
+  { id: "words", label: "Mots" },
+  { id: "speed", label: "Rapide" },
+];
+
 export default function LeaderboardPage() {
   const [rows, setRows] = useState<GlobalStats[] | null>(null);
   const [meId, setMeId] = useState("");
+  const [period, setPeriod] = useState<Period>("all");
+  const [category, setCategory] = useState("all");
 
   useEffect(() => {
     setMeId(getOrCreateGuest().id);
-    getLeaderboard(50).then(setRows).catch(() => setRows([]));
   }, []);
+
+  useEffect(() => {
+    setRows(null);
+    getLeaderboard(50, period, category).then(setRows).catch(() => setRows([]));
+  }, [period, category]);
 
   const loading = rows === null;
   const players = rows ?? [];
@@ -54,8 +76,28 @@ export default function LeaderboardPage() {
           Top <span style={{ background: "linear-gradient(120deg, var(--af-yellow), var(--af-pink))", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>Ten.</span>
         </h1>
         <p className="mt-3 max-w-md text-sm" style={{ color: "var(--text-dim)" }}>
-          Les pros du canapé. Les points montent à chaque partie jouée.
+          Les pros du canapé. Les points montent à chaque partie en ligne.
         </p>
+
+        {/* Filtres période × catégorie */}
+        <div className="mt-6 flex flex-col gap-3">
+          <div className="flex flex-wrap gap-2">
+            {PERIODS.map((p) => (
+              <button key={p.id} onClick={() => setPeriod(p.id)} className="rounded-full px-4 py-2 text-xs font-bold transition"
+                style={{ background: period === p.id ? "var(--cb-brand)" : "rgba(255,255,255,0.06)", color: period === p.id ? "#fff" : "var(--text-dim)" }}>
+                {p.label}
+              </button>
+            ))}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {CATS.map((c) => (
+              <button key={c.id} onClick={() => setCategory(c.id)} className="af-chip"
+                style={{ background: category === c.id ? "rgba(255,62,165,0.18)" : "rgba(255,255,255,0.04)", color: category === c.id ? "var(--af-pink)" : "var(--text-dim)", borderColor: category === c.id ? "rgba(255,62,165,0.4)" : "var(--line-soft)", textTransform: "none", letterSpacing: 0, cursor: "pointer" }}>
+                {c.label}
+              </button>
+            ))}
+          </div>
+        </div>
 
         {loading && <p className="mt-10 animate-pulse" style={{ color: "var(--text-dim)" }}>Chargement du classement…</p>}
 
