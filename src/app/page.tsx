@@ -8,6 +8,7 @@ import { getOrCreateGuest, setGuestName } from "@/lib/guest";
 import { GAMES } from "@/lib/games/registry";
 import { Mascot, MascotAvatar, MASCOT_PALETTE, type MascotColor } from "@/components/Mascot";
 import { Sparkles } from "@/components/ConfettiBurst";
+import { SiteNav } from "@/components/SiteNav";
 
 type CategoryMeta = {
   label: string;
@@ -119,18 +120,7 @@ export default function HomePage() {
       <Sparkles count={14} />
 
       {/* HEADER */}
-      <header className="relative z-10 mx-auto flex w-full max-w-6xl items-center justify-between gap-3 px-5 pt-6 sm:px-10">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl text-sm font-black text-white"
-               style={{ background: "linear-gradient(135deg, var(--cb-brand), var(--af-pink))", fontFamily: "var(--font-display)" }}>
-            af
-          </div>
-          <span className="text-2xl font-black tracking-tight" style={{ fontFamily: "var(--font-display)", letterSpacing: -0.5 }}>
-            af<span style={{ color: "var(--af-pink)" }}>.</span>games
-          </span>
-        </div>
-        {guestName && <UsernameEditor initialName={guestName} onSave={handleSaveName} />}
-      </header>
+      <SiteNav />
 
       {/* HERO */}
       <section className="relative z-10 mx-auto w-full max-w-6xl px-5 sm:px-10">
