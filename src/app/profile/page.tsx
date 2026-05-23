@@ -146,8 +146,9 @@ export default function ProfilePage() {
               {me.name}
             </h1>
             <p className="mt-3 max-w-lg text-sm" style={{ color: "var(--text-dim)" }}>
-              Mythique de l&apos;équipe violet. Spécialité : bluff &amp; lecture humaine.
-              Membre depuis février 2026.
+              {games > 0
+                ? `${me.title} · ${games} partie${games > 1 ? "s" : ""} jouée${games > 1 ? "s" : ""}${wins > 0 ? ` · ${wins} victoire${wins > 1 ? "s" : ""}` : ""}.`
+                : "Nouveau joueur af.games. Lance une partie en ligne pour grimper au classement !"}
             </p>
 
             {/* XP bar */}
