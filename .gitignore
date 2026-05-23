@@ -46,3 +46,6 @@ next-env.d.ts
 /.partykit/state/
 *.out.log
 *.err.log
+
+# local env
+.env*.local
