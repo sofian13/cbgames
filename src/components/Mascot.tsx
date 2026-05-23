@@ -84,9 +84,9 @@ export function Mascot({
 
   const bodyW = s;
   const bodyH = s * 0.92;
-  const eyeSize = s * 0.16;
+  const eyeSize = s * 0.185;
   const eyeY = bodyH * 0.42;
-  const eyeGap = bodyW * 0.22;
+  const eyeGap = bodyW * 0.26;
   const mouthY = bodyH * 0.62;
 
   // Mouth shape per mood
@@ -125,14 +125,14 @@ export function Mascot({
         transformOrigin: "center",
       }}>
         <div style={{
-          width: eyeSize * 0.55, height: eyeSize * 0.55,
+          width: eyeSize * 0.62, height: eyeSize * 0.62,
           background: "#1A0E2E", borderRadius: "50%",
           transform: `translate(${px}px, ${py}px)`,
         }} />
         <div style={{
           position: "absolute",
-          top: eyeSize * 0.18, left: eyeSize * 0.22,
-          width: eyeSize * 0.18, height: eyeSize * 0.18,
+          top: eyeSize * 0.16, left: eyeSize * 0.2,
+          width: eyeSize * 0.24, height: eyeSize * 0.24,
           background: "white", borderRadius: "50%",
         }} />
       </div>

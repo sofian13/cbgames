@@ -86,6 +86,12 @@ export function SiteNav({ user, level, xp, room = null }: SiteNavProps) {
           </span>
         )}
         <MuteToggle />
+        <Link
+          href="/login"
+          className="hidden rounded-full border border-white/10 bg-white/[0.04] px-3.5 py-2 text-xs font-bold text-white transition hover:bg-white/[0.1] sm:inline-block"
+        >
+          Connexion
+        </Link>
         <div
           className="hidden items-center gap-2.5 rounded-full border border-white/10 bg-white/[0.04] py-1.5 pl-3 pr-1.5 sm:flex"
         >

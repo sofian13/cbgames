@@ -4,6 +4,7 @@ import { useState } from "react";
 import { BookOpen, CheckCircle2, Users, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { GameMeta } from "@/lib/games/types";
+import { Mascot, MASCOT_PALETTE, type MascotColor } from "@/components/Mascot";
 
 interface GameCardProps {
   game: GameMeta;
@@ -12,21 +13,17 @@ interface GameCardProps {
   onSelect: () => void;
 }
 
-const CATEGORY_COLOR: Record<string, string> = {
-  words:    "var(--cb-words)",
-  trivia:   "var(--cb-trivia)",
-  speed:    "var(--cb-speed)",
-  strategy: "var(--cb-strategy)",
-  social:   "var(--cb-social)",
-  cards:    "var(--cb-cards)",
-  party:    "var(--cb-party)",
-  sport:    "var(--cb-sport)",
+const CAT_MASCOT: Record<string, MascotColor> = {
+  words: "sky", trivia: "yellow", speed: "coral", strategy: "mint",
+  social: "pink", cards: "purple", party: "lavender", sport: "sky",
 };
 
 export function GameCard({ game, isSelected, isHost, onSelect }: GameCardProps) {
   const [showRules, setShowRules] = useState(false);
   const disabled = !game.implemented || !isHost;
-  const catColor = CATEGORY_COLOR[game.category] || "var(--text-dim)";
+  const mascotColor: MascotColor = CAT_MASCOT[game.category] ?? "purple";
+  const body = MASCOT_PALETTE[mascotColor].body;
+  const catColor = body;
 
   return (
     <>
@@ -36,22 +33,19 @@ export function GameCard({ game, isSelected, isHost, onSelect }: GameCardProps) 
           disabled && "opacity-60"
         )}
         style={{
-          background: isSelected ? "var(--primary)" : "var(--surface)",
-          color: isSelected ? "var(--primary-foreground)" : "var(--foreground)",
-          borderColor: isSelected ? "transparent" : "var(--line-soft)",
-          boxShadow: isSelected
-            ? "0 8px 24px rgba(10,10,10,0.18)"
-            : undefined,
+          background: isSelected
+            ? `linear-gradient(150deg, ${body}45, rgba(255,255,255,0.05))`
+            : `linear-gradient(155deg, ${body}1A, rgba(255,255,255,0.04))`,
+          borderColor: isSelected ? body : `${body}33`,
+          boxShadow: isSelected ? `0 10px 28px ${body}40` : undefined,
+          minHeight: 150,
         }}
       >
-        {isSelected && (
-          <div
-            className="pointer-events-none absolute inset-0 opacity-20"
-            style={{
-              background: `radial-gradient(120% 100% at 100% 0%, ${catColor}, transparent 60%)`,
-            }}
-          />
-        )}
+        {/* Mascotte de catégorie en coin */}
+        <div className="pointer-events-none absolute -bottom-3 -right-2" style={{ opacity: 0.5 }}>
+          <Mascot size={70} color={mascotColor} mood={isSelected ? "happy" : "neutral"} bob={isSelected} />
+        </div>
+
         <div
           role={disabled ? undefined : "button"}
           tabIndex={disabled ? -1 : 0}
@@ -64,56 +58,31 @@ export function GameCard({ game, isSelected, isHost, onSelect }: GameCardProps) 
           }}
           className={cn("relative cursor-pointer outline-none", disabled && "cursor-default")}
         >
-          <div className="flex items-start gap-3">
-            <div
-              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-2xl"
-              style={{
-                background: isSelected
-                  ? "rgba(255,255,255,0.08)"
-                  : "var(--surface-2)",
-                border: "1px solid " + (isSelected ? "rgba(255,255,255,0.1)" : "var(--line-soft)"),
-              }}
-            >
-              {game.icon}
-            </div>
+          <div className="flex items-start justify-between">
+            <span className="text-3xl leading-none">{game.icon}</span>
+            {isSelected && (
+              <span className="inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white"
+                    style={{ background: body }}>
+                <CheckCircle2 className="h-2.5 w-2.5" />
+                Actif
+              </span>
+            )}
+          </div>
 
-            <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-baseline gap-2">
-                <h4
-                  className="cb-display-sm"
-                  style={{ fontSize: "0.9375rem", fontFamily: "var(--font-display)" }}
-                >
-                  {game.name}
-                </h4>
-                {isSelected && (
-                  <span className="inline-flex items-center gap-0.5 rounded-full bg-white/15 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider">
-                    <CheckCircle2 className="h-2.5 w-2.5" />
-                    Actif
-                  </span>
-                )}
-              </div>
-              <p
-                className="mt-1 line-clamp-2 text-xs leading-5"
-                style={{
-                  color: isSelected ? "rgba(255,255,255,0.7)" : "var(--text-dim)",
-                }}
-              >
-                {game.description}
-              </p>
-            </div>
+          <div className="relative mt-7 max-w-[78%]">
+            <h4 className="cb-display-sm" style={{ fontSize: "1rem", color: isSelected ? "#fff" : body }}>
+              {game.name}
+            </h4>
+            <p className="mt-1 line-clamp-2 text-xs leading-5" style={{ color: "var(--text-dim)" }}>
+              {game.description}
+            </p>
           </div>
         </div>
 
         <div className="relative mt-3 flex items-center justify-between gap-3">
           <div className="flex items-center gap-1.5 text-xs">
-            <Users
-              className="h-3.5 w-3.5"
-              style={{ color: isSelected ? "rgba(255,255,255,0.6)" : catColor }}
-            />
-            <span
-              className="cb-mono"
-              style={{ color: isSelected ? "rgba(255,255,255,0.7)" : "var(--text-dim)" }}
-            >
+            <Users className="h-3.5 w-3.5" style={{ color: body }} />
+            <span className="cb-mono" style={{ color: "var(--text-dim)" }}>
               {game.minPlayers}-{game.maxPlayers}
             </span>
           </div>
@@ -121,11 +90,7 @@ export function GameCard({ game, isSelected, isHost, onSelect }: GameCardProps) 
           <button
             onClick={() => setShowRules(true)}
             className="flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider transition"
-            style={{
-              background: isSelected ? "rgba(255,255,255,0.12)" : "var(--surface-2)",
-              color: isSelected ? "rgba(255,255,255,0.85)" : "var(--text-dim)",
-              border: "1px solid " + (isSelected ? "transparent" : "var(--line-soft)"),
-            }}
+            style={{ background: "rgba(255,255,255,0.08)", color: "#fff", border: "1px solid rgba(255,255,255,0.12)" }}
           >
             <BookOpen className="h-3 w-3" />
             Règles
