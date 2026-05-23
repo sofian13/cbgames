@@ -11,6 +11,7 @@ import { useKeyedState } from "@/lib/use-keyed-state";
 import { cn } from "@/lib/utils";
 import { Mascot, MascotAvatar, MASCOT_PALETTE, type MascotColor } from "@/components/Mascot";
 import { ConfettiBurst, Sparkles } from "@/components/ConfettiBurst";
+import { GameReactions } from "@/components/reactions";
 
 interface GameShellProps {
   roomCode: string;
@@ -266,6 +267,9 @@ export function GameShell({
             </div>
           )}
         </div>
+
+        {/* REACTIONS (pendant le jeu) */}
+        {!isGameOver && <GameReactions />}
 
         {/* BOTTOM DOCK */}
         {!isGameOver && (
