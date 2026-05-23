@@ -138,6 +138,15 @@ export default class GameServer {
       return;
     }
 
+    // Réactions emojis — rebroadcast à tous les autres (le sender l'affiche déjà localement).
+    if (msg.type === "reaction") {
+      this.party.broadcast(
+        JSON.stringify({ type: "reaction", payload: msg.payload ?? {} }),
+        [sender.id]
+      );
+      return;
+    }
+
     if (msg.type === "start-with-bots" && this.game && !this.game.started) {
       const minToStart = this.gameId === "contree" ? 4 : this.gameId === "president" ? 3 : 2;
       const missing = Math.max(0, minToStart - this.game.players.size);

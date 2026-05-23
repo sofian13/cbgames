@@ -6,9 +6,11 @@
  * reaction bar + the flying-blob overlay. Local (you see your own reactions).
  */
 
-import { useCallback, useRef, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
+import PartySocket from "partysocket";
 import { Mascot, MASCOT_PALETTE, type MascotColor, type MascotMood, type MascotLook } from "@/components/Mascot";
 import { useAudio } from "@/lib/hooks/useAudio";
+import { getPartyKitHost, getPartyKitWsProtocol } from "@/lib/party/host";
 
 interface ReactionDef {
   id: string;
@@ -67,17 +69,19 @@ function BlobReaction({ r, size = 48 }: { r: ReactionDef; size?: number }) {
   );
 }
 
-export function GameReactions() {
+export function GameReactions({ roomCode, gameId }: { roomCode?: string; gameId?: string }) {
   const [stream, setStream] = useState<Piece[]>([]);
   const [grid, setGrid] = useState(false);
   const idRef = useRef(0);
+  const socketRef = useRef<PartySocket | null>(null);
   const { playClick } = useAudio();
 
-  const fire = useCallback((id: string) => {
+  // Spawn a flying blob locally (used by own clicks + remote reactions).
+  const spawn = useCallback((id: string, fromRemote = false) => {
     if (!BY_ID[id]) return;
     const piece: Piece = {
       key: ++idRef.current, id,
-      left: 45 + Math.random() * 10,
+      left: fromRemote ? 25 + Math.random() * 50 : 45 + Math.random() * 10,
       size: 50 + Math.random() * 22,
       driftX: (Math.random() - 0.5) * 80,
       rot1: (Math.random() - 0.5) * 24,
@@ -86,8 +90,32 @@ export function GameReactions() {
     };
     setStream((s) => [...s, piece]);
     setTimeout(() => setStream((s) => s.filter((x) => x.key !== piece.key)), 2600);
+  }, []);
+
+  // Dedicated socket to the game party room — broadcasts reactions to everyone.
+  useEffect(() => {
+    if (!roomCode || !gameId) return;
+    const host = getPartyKitHost();
+    const socket = new PartySocket({
+      host, room: `${roomCode}-${gameId}`, party: "game",
+      protocol: getPartyKitWsProtocol(host),
+    });
+    socketRef.current = socket;
+    socket.addEventListener("message", (event) => {
+      try {
+        const msg = JSON.parse(event.data) as { type: string; payload?: { id?: string } };
+        if (msg.type === "reaction" && msg.payload?.id) spawn(msg.payload.id, true);
+      } catch { /* ignore */ }
+    });
+    return () => { socket.close(); socketRef.current = null; };
+  }, [roomCode, gameId, spawn]);
+
+  const fire = useCallback((id: string) => {
+    if (!BY_ID[id]) return;
+    spawn(id);
     playClick("pill");
-  }, [playClick]);
+    socketRef.current?.send(JSON.stringify({ type: "reaction", payload: { id } }));
+  }, [spawn, playClick]);
 
   return (
     <>

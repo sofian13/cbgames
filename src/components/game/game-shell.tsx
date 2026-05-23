@@ -269,7 +269,7 @@ export function GameShell({
         </div>
 
         {/* REACTIONS (pendant le jeu) */}
-        {!isGameOver && <GameReactions />}
+        {!isGameOver && <GameReactions roomCode={roomCode} gameId={gameId} />}
 
         {/* BOTTOM DOCK */}
         {!isGameOver && (
