@@ -356,6 +356,15 @@ export class PresidentGame extends BaseGame {
     };
   }
 
+  restartIfFinished(): boolean {
+    if (this.status === "round-over" && this.players.size >= 2) {
+      this.round += 1;
+      this.dealRound();
+      return true;
+    }
+    return false;
+  }
+
   cleanup() {
     this.stopTurnTimer();
     this.clearBotTimeouts();

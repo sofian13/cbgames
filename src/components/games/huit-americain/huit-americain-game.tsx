@@ -158,9 +158,14 @@ export default function HuitAmericainGame({ roomCode, playerId, playerName }: Ga
           <div className="flex flex-col items-center gap-2">
             <div className="relative" style={{ width: d.w, height: d.h }}>
               {state.discardTop && (
-                state.discardTop.rank === "JK"
-                  ? <JokerCard size="md" raised />
-                  : <PlayingCard rank={state.discardTop.rank} suit={state.discardTop.suit as Suit} size="md" cardStyle={cardStyle} raised />
+                <div
+                  key={`${state.discardTop.rank}${state.discardTop.suit ?? "X"}-${state.deckCount}`}
+                  style={{ animation: "trickCardIn 280ms cubic-bezier(0.34,1.2,0.64,1)", ["--enter-from" as string]: "translateY(-40px) scale(0.6)" }}
+                >
+                  {state.discardTop.rank === "JK"
+                    ? <JokerCard size="md" raised />
+                    : <PlayingCard rank={state.discardTop.rank} suit={state.discardTop.suit as Suit} size="md" cardStyle={cardStyle} raised />}
+                </div>
               )}
               {state.askedSuit && (
                 <div className="absolute -right-3 -top-3 flex h-8 w-8 items-center justify-center rounded-full border-2 text-lg font-black"

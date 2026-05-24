@@ -107,6 +107,13 @@ export default class GameServer {
 
       this.game.addPlayer(playerId, name, sender);
 
+      // Rejoining a finished game (round/match over) → deal a fresh one so
+      // players never get stuck on an empty, unplayable board.
+      if (this.game.started && this.game.restartIfFinished?.()) {
+        this.game.broadcast({ type: "game-state", payload: this.game.getState() });
+        return;
+      }
+
       // Broadcast current state so waiting screens stay in sync
       this.game.broadcast({
         type: "game-state",

@@ -343,6 +343,15 @@ export class HuitAmericainGame extends BaseGame {
     };
   }
 
+  restartIfFinished(): boolean {
+    if (this.status === "game-over" && this.players.size >= 2) {
+      this.started = false; // start() re-deals a fresh game
+      this.start();
+      return true;
+    }
+    return false;
+  }
+
   cleanup() {
     this.stopTurnTimer();
     this.clearBotTimeouts();

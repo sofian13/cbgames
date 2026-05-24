@@ -88,6 +88,13 @@ export abstract class BaseGame {
   abstract getState(): Record<string, unknown>;
   abstract cleanup(): void;
 
+  /**
+   * Optional: when a player (re)joins a game that has already finished its
+   * round/match, deal a fresh one. Returns true if a restart happened.
+   * Implemented by games that support replaying without a brand-new room.
+   */
+  restartIfFinished?(): boolean;
+
   endGame(rankings: GameRanking[]) {
     this.broadcast({
       type: "game-over",

@@ -559,6 +559,16 @@ export class ContreeGame extends BaseGame {
     };
   }
 
+  restartIfFinished(): boolean {
+    if (this.phase === "match-over" && this.players.size >= 4) {
+      this.matchScore = [0, 0];
+      this.handNumber = 1;
+      this.dealHand();
+      return true;
+    }
+    return false;
+  }
+
   cleanup() {
     this.stopTurnTimer();
     this.clearBotTimeouts();

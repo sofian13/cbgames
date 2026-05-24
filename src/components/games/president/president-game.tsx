@@ -144,12 +144,20 @@ export default function PresidentGame({ roomCode, playerId, playerName }: GamePr
           {state.lastCombo.length > 0 && (
             <div className="flex">
               {state.lastCombo.map((c, i) => (
-                <div key={i} style={{
-                  marginLeft: i === 0 ? 0 : -14,
-                  transform: `rotate(${(i - (state.lastCombo.length - 1) / 2) * 4}deg)`,
-                  filter: "drop-shadow(0 8px 16px rgba(0,0,0,0.55))",
-                }}>
-                  <PlayingCard rank={c.rank} suit={c.suit} size="md" cardStyle={cardStyle} raised />
+                <div
+                  key={`${state.lastComboPlayer}-${i}-${c.rank}${c.suit}`}
+                  style={{
+                    animation: "trickCardIn 280ms cubic-bezier(0.34,1.2,0.64,1)",
+                    ["--enter-from" as string]: "translateY(-46px) scale(0.55)",
+                  }}
+                >
+                  <div style={{
+                    marginLeft: i === 0 ? 0 : -14,
+                    transform: `rotate(${(i - (state.lastCombo.length - 1) / 2) * 4}deg)`,
+                    filter: "drop-shadow(0 8px 16px rgba(0,0,0,0.55))",
+                  }}>
+                    <PlayingCard rank={c.rank} suit={c.suit} size="md" cardStyle={cardStyle} raised />
+                  </div>
                 </div>
               ))}
             </div>
