@@ -2,16 +2,28 @@
 
 import { useEffect, useRef, useState } from "react";
 import { signIn } from "next-auth/react";
-import { ArrowLeft, BookOpen, Home, LogIn, RotateCcw, X } from "lucide-react";
+import { BookOpen, LogIn, LogOut, RotateCcw, Settings, Volume2, VolumeX, X } from "lucide-react";
 import { Scoreboard } from "./scoreboard";
 import { getGameById } from "@/lib/games/registry";
 import { addGameResult, getLevel, type GlobalStats } from "@/lib/stores/global-points";
 import { useGameStore } from "@/lib/stores/game-store";
 import { useKeyedState } from "@/lib/use-keyed-state";
-import { cn } from "@/lib/utils";
+import { useAudio } from "@/lib/hooks/useAudio";
 import { Mascot, MascotAvatar, MASCOT_PALETTE, type MascotColor } from "@/components/Mascot";
 import { ConfettiBurst, Sparkles } from "@/components/ConfettiBurst";
 import { GameReactions } from "@/components/reactions";
+import { PlayingCard, useCardStyle, setCardStyle, type CardStyle } from "@/components/games/cards/card-kit";
+
+function MenuRow({ icon: Icon, label, onClick, danger }: { icon: typeof Settings; label: string; onClick: () => void; danger?: boolean }) {
+  return (
+    <button onClick={onClick}
+      className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-bold transition active:scale-[0.98]"
+      style={{ color: danger ? "var(--af-coral)" : "#fff", background: "rgba(255,255,255,0.04)" }}>
+      <Icon className="h-4 w-4 shrink-0" />
+      {label}
+    </button>
+  );
+}
 
 interface GameShellProps {
   roomCode: string;
@@ -38,6 +50,9 @@ export function GameShell({
 }: GameShellProps) {
   const { isGameOver, rankings, isConnected } = useGameStore();
   const [showRules, setShowRules] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const { muted, toggleMute } = useAudio();
+  const cardStyle = useCardStyle();
   const pointsRecordKey = isGameOver
     ? rankings.map((entry) => `${entry.playerId}:${entry.rank}:${entry.score}`).join("|")
     : "active";
@@ -83,42 +98,65 @@ export function GameShell({
     <div className="relative min-h-[100svh] overflow-hidden text-white">
       <div className="relative z-10 flex min-h-[100svh] flex-col">
 
-        {/* TOP BAR (only when not game-over) */}
-        {!isGameOver && gameMeta && (
-          <div className="pointer-events-none fixed inset-x-0 top-0 z-40 px-3 pt-[calc(env(safe-area-inset-top,0px)+0.75rem)] sm:px-5">
-            <div className="pointer-events-auto mx-auto flex w-full max-w-[1100px] items-center justify-between gap-2">
-              <button onClick={onReturnToLobby} aria-label="Retour au lobby"
-                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border backdrop-blur-md transition active:scale-95"
-                style={{ background: "rgba(0,0,0,0.5)", borderColor: "rgba(255,255,255,0.12)", color: "#fff" }}>
-                <ArrowLeft className="h-4 w-4" />
-              </button>
+        {/* FLOATING MENU (gear) — top-right, notch-aware. Replaces the top bar. */}
+        {!isGameOver && (
+          <>
+            <button onClick={() => setMenuOpen(true)} aria-label="Menu de la partie"
+              className="fixed right-3 top-[calc(env(safe-area-inset-top,0px)+0.6rem)] z-[90] flex h-11 w-11 items-center justify-center rounded-full border backdrop-blur-md transition active:scale-95"
+              style={{ background: "rgba(0,0,0,0.55)", borderColor: "rgba(255,255,255,0.14)", color: "#fff" }}>
+              <Settings className="h-5 w-5" />
+            </button>
 
-              <div className="flex min-w-0 flex-1 items-center justify-between gap-3 rounded-full border px-4 py-2 backdrop-blur-md"
-                   style={{ background: "rgba(0,0,0,0.5)", borderColor: "rgba(255,255,255,0.12)" }}>
-                <div className="min-w-0">
-                  <p className="text-[9px] font-bold uppercase tracking-[0.22em]" style={{ color: "rgba(255,255,255,0.5)" }}>en jeu</p>
-                  <p className="truncate text-sm font-bold text-white" style={{ fontFamily: "var(--font-display)" }}>{gameMeta.name}</p>
-                </div>
-                <div className="flex shrink-0 items-center gap-2">
-                  <span className="cb-mono rounded-full px-2.5 py-0.5 text-[10px] font-bold tracking-[0.22em]"
-                        style={{ background: "rgba(255,255,255,0.08)", color: "#fff" }}>{roomCode}</span>
-                  <span className={cn("h-2 w-2 rounded-full", isConnected ? "" : "cb-live-pulse")}
-                        style={{ background: isConnected ? "var(--af-mint)" : "var(--af-coral)", boxShadow: `0 0 8px ${isConnected ? "rgba(61,220,151,0.6)" : "rgba(255,107,91,0.6)"}` }} />
+            {menuOpen && (
+              <div className="fixed inset-0 z-[110] flex justify-end bg-black/50 px-3 backdrop-blur-sm"
+                   style={{ paddingTop: "calc(env(safe-area-inset-top,0px) + 0.6rem)" }}
+                   onClick={() => setMenuOpen(false)}>
+                <div className="h-fit w-64 max-w-[80vw] rounded-3xl border p-3"
+                     style={{ background: "rgba(20,12,50,0.97)", borderColor: "rgba(255,255,255,0.12)", boxShadow: "0 24px 60px rgba(0,0,0,0.6)" }}
+                     onClick={(e) => e.stopPropagation()}>
+                  {/* header: game · code · connection */}
+                  <div className="mb-2 flex items-center justify-between gap-2 px-1">
+                    <div className="min-w-0">
+                      <p className="text-[9px] font-bold uppercase tracking-[0.2em]" style={{ color: "rgba(255,255,255,0.5)" }}>en jeu</p>
+                      <p className="truncate text-sm font-bold text-white" style={{ fontFamily: "var(--font-display)" }}>{gameMeta?.name ?? "Partie"}</p>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-1.5">
+                      <span className="cb-mono rounded-full px-2 py-0.5 text-[10px] font-bold tracking-[0.18em]" style={{ background: "rgba(255,255,255,0.08)", color: "#fff" }}>{roomCode}</span>
+                      <span className="h-2 w-2 rounded-full" style={{ background: isConnected ? "var(--af-mint)" : "var(--af-coral)", boxShadow: `0 0 8px ${isConnected ? "rgba(61,220,151,0.6)" : "rgba(255,107,91,0.6)"}` }} />
+                    </div>
+                  </div>
+
+                  {/* card model — card games only */}
+                  {gameMeta?.category === "cards" && (
+                    <div className="mb-2 rounded-2xl p-2" style={{ background: "rgba(255,255,255,0.04)" }}>
+                      <p className="mb-1.5 px-1 text-[9px] font-bold tracking-[0.16em]" style={{ color: "rgba(255,255,255,0.5)" }}>MODÈLE DES CARTES</p>
+                      <div className="grid grid-cols-2 gap-1.5">
+                        {(["classic", "modern"] as CardStyle[]).map((k) => (
+                          <button key={k} onClick={() => setCardStyle(k)}
+                            className="flex flex-col items-center gap-1 rounded-xl p-1.5"
+                            style={{ background: cardStyle === k ? "rgba(122,78,232,0.28)" : "rgba(255,255,255,0.04)", border: cardStyle === k ? "1.5px solid var(--cb-brand)" : "1px solid rgba(255,255,255,0.1)" }}>
+                            <PlayingCard rank="D" suit="♥" size="sm" cardStyle={k} />
+                            <span className="text-[10px] font-bold text-white">{k === "classic" ? "Classique" : "Illustré"}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* actions */}
+                  <div className="space-y-1">
+                    {gameMeta?.rules && <MenuRow icon={BookOpen} label="Règles du jeu" onClick={() => { setMenuOpen(false); setShowRules(true); }} />}
+                    <MenuRow icon={muted ? VolumeX : Volume2} label={muted ? "Activer le son" : "Couper le son"} onClick={toggleMute} />
+                    {onResetGame && <MenuRow icon={RotateCcw} label="Relancer le jeu" onClick={() => { setMenuOpen(false); onResetGame(); }} />}
+                    <MenuRow icon={LogOut} label="Quitter la partie" danger onClick={() => { setMenuOpen(false); onReturnToLobby(); }} />
+                  </div>
                 </div>
               </div>
-
-              {gameMeta.rules ? (
-                <button onClick={() => setShowRules(true)} aria-label="Voir les règles"
-                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border backdrop-blur-md transition active:scale-95"
-                  style={{ background: "rgba(0,0,0,0.5)", borderColor: "rgba(255,255,255,0.12)", color: "#fff" }}>
-                  <BookOpen className="h-4 w-4" />
-                </button>
-              ) : (<div className="h-10 w-10 shrink-0" />)}
-            </div>
-          </div>
+            )}
+          </>
         )}
 
-        <div className="flex w-full flex-1 flex-col px-0 pb-[calc(env(safe-area-inset-bottom,0px)+5.6rem)] pt-16 sm:pb-28 sm:pt-20">
+        <div className="flex w-full flex-1 flex-col px-0 pt-[calc(env(safe-area-inset-top,0px)+0.5rem)] pb-[calc(env(safe-area-inset-bottom,0px)+0.5rem)]">
           {isGameOver ? (
             <main className="relative flex flex-1 items-center justify-center p-4 sm:p-6">
               <ConfettiBurst count={60} />
@@ -251,7 +289,7 @@ export function GameShell({
                 {/* ACTIONS */}
                 <div className="flex gap-2">
                   <button onClick={onReturnToLobby} className="cb-btn cb-btn-soft flex-1">
-                    <ArrowLeft className="h-4 w-4" /> Lobby
+                    <LogOut className="h-4 w-4" /> Lobby
                   </button>
                   {onResetGame && (
                     <button onClick={onResetGame} className="cb-btn cb-btn-brand flex-[2]">
@@ -262,7 +300,7 @@ export function GameShell({
               </div>
             </main>
           ) : (
-            <div className="safe-bottom flex min-h-0 flex-1 flex-col pb-20 sm:pb-24">
+            <div className="flex min-h-0 flex-1 flex-col">
               {children}
             </div>
           )}
@@ -272,35 +310,6 @@ export function GameShell({
         {!isGameOver && <GameReactions roomCode={roomCode} gameId={gameId} />}
 
         {/* BOTTOM DOCK */}
-        {!isGameOver && (
-          <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 px-4 pb-[calc(env(safe-area-inset-bottom,0px)+0.95rem)]">
-            <div className="pointer-events-auto mx-auto flex w-full max-w-[1100px] justify-center">
-              <div className="flex items-center gap-1.5 rounded-full border p-1.5 backdrop-blur-md"
-                   style={{ background: "rgba(0,0,0,0.5)", borderColor: "rgba(255,255,255,0.1)" }}>
-                {onResetGame && (
-                  <button onClick={onResetGame} title="Relancer" aria-label="Relancer"
-                          className="flex h-10 w-10 items-center justify-center rounded-full transition active:scale-95"
-                          style={{ background: "rgba(181,161,255,0.2)", color: "var(--af-lavender)" }}>
-                    <RotateCcw className="h-4 w-4" />
-                  </button>
-                )}
-                <button onClick={onReturnToLobby} title="Lobby" aria-label="Retour au lobby"
-                        className="flex h-10 w-10 items-center justify-center rounded-full transition active:scale-95"
-                        style={{ background: "var(--cb-brand)", color: "#fff" }}>
-                  <Home className="h-4 w-4" />
-                </button>
-                {gameMeta?.rules && (
-                  <button onClick={() => setShowRules(true)} title="Règles" aria-label="Voir les règles"
-                          className="flex h-10 w-10 items-center justify-center rounded-full transition active:scale-95"
-                          style={{ background: "rgba(255,255,255,0.06)", color: "#fff" }}>
-                    <BookOpen className="h-4 w-4" />
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* RULES MODAL */}
         {showRules && gameMeta && (
           <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/60 p-4 backdrop-blur-md sm:items-center"

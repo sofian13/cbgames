@@ -51,7 +51,6 @@ const REACTIONS: ReactionDef[] = [
 ];
 
 const BY_ID: Record<string, ReactionDef> = Object.fromEntries(REACTIONS.map((r) => [r.id, r]));
-const QUICK_IDS = ["haha", "love", "wow", "fire", "clap", "sus"];
 
 interface Piece {
   key: number; id: string; left: number; size: number;
@@ -139,63 +138,50 @@ export function GameReactions({ roomCode, gameId }: { roomCode?: string; gameId?
         ))}
       </div>
 
-      {/* Floating bar — bottom-center, raised above the game dock */}
-      <div className="fixed left-1/2 z-[85] -translate-x-1/2" style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 5.2rem)" }}>
+      {/* Small emoji button — bottom-right, discreet. Opens the reaction grid. */}
+      <div className="fixed right-3 z-[85]" style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 0.6rem)" }}>
         {grid && (
-          <div
-            className="absolute left-1/2 -translate-x-1/2"
-            style={{
-              bottom: "calc(100% + 12px)", width: 340, padding: 14, borderRadius: 24,
-              background: "rgba(20,12,50,0.96)", border: "1px solid rgba(255,255,255,0.12)",
-              boxShadow: "0 30px 80px rgba(0,0,0,0.6)", backdropFilter: "blur(20px)",
-              animation: "picker-in .22s cubic-bezier(.34,1.56,.64,1)",
-            }}
-          >
-            <p className="af-eyebrow mb-2" style={{ color: "var(--text-dim)" }}>Envoyer une réaction</p>
-            <div className="grid grid-cols-5 gap-1.5">
-              {REACTIONS.map((r) => (
-                <button
-                  key={r.id}
-                  onClick={() => { fire(r.id); setGrid(false); }}
-                  title={r.hint}
-                  className="flex aspect-square flex-col items-center justify-center rounded-2xl border transition active:scale-95"
-                  style={{ borderColor: "rgba(255,255,255,0.06)", background: `linear-gradient(180deg, ${MASCOT_PALETTE[r.color].body}26, rgba(255,255,255,0.02))` }}
-                >
-                  <BlobReaction r={r} size={34} />
-                  <span className="mt-0.5 text-[8px] font-bold" style={{ color: "var(--text-muted)" }}>{r.label}</span>
-                </button>
-              ))}
+          <>
+            {/* tap-away backdrop */}
+            <div className="fixed inset-0 z-[-1]" onClick={() => setGrid(false)} />
+            <div
+              className="absolute"
+              style={{
+                bottom: "calc(100% + 10px)", right: 0, width: 280, padding: 12, borderRadius: 22,
+                background: "rgba(20,12,50,0.96)", border: "1px solid rgba(255,255,255,0.12)",
+                boxShadow: "0 30px 80px rgba(0,0,0,0.6)", backdropFilter: "blur(20px)",
+                animation: "picker-in .22s cubic-bezier(.34,1.56,.64,1)",
+              }}
+            >
+              <p className="af-eyebrow mb-2" style={{ color: "var(--text-dim)" }}>Réaction</p>
+              <div className="grid grid-cols-5 gap-1.5">
+                {REACTIONS.map((r) => (
+                  <button
+                    key={r.id}
+                    onClick={() => { fire(r.id); setGrid(false); }}
+                    title={r.hint}
+                    className="flex aspect-square items-center justify-center rounded-xl border transition active:scale-90"
+                    style={{ borderColor: "rgba(255,255,255,0.06)", background: `linear-gradient(180deg, ${MASCOT_PALETTE[r.color].body}26, rgba(255,255,255,0.02))` }}
+                  >
+                    <BlobReaction r={r} size={30} />
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
+          </>
         )}
 
-        <div
-          className="flex items-center gap-1 rounded-full p-1.5"
+        <button
+          onClick={() => setGrid((g) => !g)}
+          aria-label="Réactions"
+          className="flex h-11 w-11 items-center justify-center rounded-full border backdrop-blur-md transition active:scale-90"
           style={{
-            background: "rgba(20,12,50,0.85)", border: "1px solid rgba(255,255,255,0.12)",
-            boxShadow: "0 18px 40px rgba(0,0,0,0.5)", backdropFilter: "blur(20px)",
+            background: grid ? "var(--cb-brand)" : "rgba(0,0,0,0.55)",
+            borderColor: "rgba(255,255,255,0.14)",
           }}
         >
-          {QUICK_IDS.map((id) => (
-            <button
-              key={id}
-              onClick={() => fire(id)}
-              title={BY_ID[id].hint}
-              className="flex h-10 w-10 items-center justify-center rounded-full transition hover:bg-white/10 active:scale-90"
-            >
-              <BlobReaction r={BY_ID[id]} size={30} />
-            </button>
-          ))}
-          <div className="mx-1 h-5 w-px" style={{ background: "rgba(255,255,255,0.12)" }} />
-          <button
-            onClick={() => setGrid((g) => !g)}
-            title="Plus de réactions"
-            className="flex h-10 w-10 items-center justify-center rounded-full text-xl font-bold text-white transition active:scale-90"
-            style={{ background: grid ? "var(--cb-brand)" : "rgba(255,255,255,0.06)", fontFamily: "var(--font-display)" }}
-          >
-            {grid ? "✕" : "+"}
-          </button>
-        </div>
+          {grid ? <span className="text-lg font-bold text-white">✕</span> : <BlobReaction r={BY_ID.haha} size={28} />}
+        </button>
       </div>
     </>
   );

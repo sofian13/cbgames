@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useGame } from "@/lib/party/use-game";
 import { useGameStore } from "@/lib/stores/game-store";
 import type { GameProps } from "@/lib/games/types";
-import { TableBg, SeatAvatar, FanHand, PlayingCard, CardSettings, useCardStyle, type Suit, type Rank } from "@/components/games/cards/card-kit";
+import { TableBg, SeatAvatar, FanHand, PlayingCard, useCardStyle, type Suit, type Rank } from "@/components/games/cards/card-kit";
 
 interface OtherPlayer {
   id: string;
@@ -98,7 +98,7 @@ export default function PresidentGame({ roomCode, playerId, playerName }: GamePr
     <div className="relative min-h-0 w-full flex-1 select-none overflow-hidden">
       <TableBg tone="green">
         {/* Opponents — row across the top (under the shell's top bar) */}
-        <div className="absolute inset-x-0 top-0 flex justify-center gap-5 px-4 pt-[calc(env(safe-area-inset-top,0px)+4.25rem)] sm:gap-10">
+        <div className="absolute inset-x-0 top-0 flex justify-center gap-5 px-12 pt-3 sm:gap-10">
           {opps.map((o, i) => {
             const pill = o.finishedAt ? RANK_PILL[o.finishedAt] : null;
             return (
@@ -204,9 +204,6 @@ export default function PresidentGame({ roomCode, playerId, playerName }: GamePr
         <div className="absolute bottom-3 left-3 z-30">
           <SeatAvatar name={playerName} hue={2} isBot={false} isTurn={isMyTurn} cardCount={myHand.length} />
         </div>
-
-        {/* Card-appearance settings (gear) */}
-        <CardSettings />
       </TableBg>
     </div>
   );
