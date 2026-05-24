@@ -60,7 +60,7 @@ export default function PresidentGame({ roomCode, playerId, playerName }: GamePr
   // ── Waiting / round-over (lightweight, keep felt look) ──
   if (!state || !state.status || state.status === "waiting") {
     return (
-      <div className="relative h-full w-full">
+      <div className="relative min-h-0 w-full flex-1">
         <TableBg tone="green">
           <div className="absolute inset-0 flex flex-col items-center justify-center px-6 text-center text-white">
             <span className="text-[10px] font-bold uppercase tracking-[0.22em]" style={{ color: "rgba(255,255,255,0.55)" }}>en attente</span>
@@ -79,7 +79,7 @@ export default function PresidentGame({ roomCode, playerId, playerName }: GamePr
 
   if (state.status === "round-over") {
     return (
-      <div className="relative h-full w-full">
+      <div className="relative min-h-0 w-full flex-1">
         <TableBg tone="green">
           <div className="absolute inset-0 flex flex-col items-center justify-center px-6 text-center text-white">
             <span className="text-[10px] font-bold uppercase tracking-[0.22em]" style={{ color: "rgba(255,255,255,0.55)" }}>fin de manche</span>
@@ -94,7 +94,7 @@ export default function PresidentGame({ roomCode, playerId, playerName }: GamePr
   const opps = state.otherPlayers.filter((p) => p.id !== playerId);
 
   return (
-    <div className="relative h-full w-full select-none overflow-hidden">
+    <div className="relative min-h-0 w-full flex-1 select-none overflow-hidden">
       <TableBg tone="green">
         {/* Opponents — row across the top (under the shell's top bar) */}
         <div className="absolute inset-x-0 top-0 flex justify-center gap-5 px-4 pt-[calc(env(safe-area-inset-top,0px)+4.25rem)] sm:gap-10">
