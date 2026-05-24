@@ -44,7 +44,7 @@ export function SiteNav({ user, level, xp, room = null }: SiteNavProps) {
   };
 
   return (
-    <header className="relative z-10 mx-auto flex w-full max-w-6xl items-center justify-between gap-3 px-5 pt-6 sm:px-10">
+    <header className="relative z-50 mx-auto flex w-full max-w-6xl items-center justify-between gap-3 px-5 pt-6 sm:px-10">
       <Link href="/" className="flex items-center gap-3">
         <div
           className="flex h-10 w-10 items-center justify-center rounded-xl text-sm font-black text-white"
@@ -128,27 +128,30 @@ export function SiteNav({ user, level, xp, room = null }: SiteNavProps) {
         </button>
       </div>
 
-      {/* Mobile dropdown */}
+      {/* Mobile dropdown — fixed + high z-index so page content can't intercept taps */}
       {open && (
-        <div
-          className="absolute right-5 top-[calc(100%+8px)] z-50 w-56 overflow-hidden rounded-2xl border p-2 md:hidden"
-          style={{ background: "rgba(20,12,50,0.97)", borderColor: "var(--line-soft)", boxShadow: "0 20px 50px rgba(0,0,0,0.6)" }}
-        >
-          {LINKS.map((link) => (
-            <Link key={link.label} href={link.href} onClick={() => setOpen(false)}
-              className="block rounded-xl px-4 py-2.5 text-sm font-semibold transition"
-              style={{ color: isActive(link) ? "#fff" : "var(--text-dim)", background: isActive(link) ? "rgba(255,255,255,0.08)" : "transparent" }}>
-              {link.label}
+        <>
+          <div className="fixed inset-0 z-[190] md:hidden" onClick={() => setOpen(false)} />
+          <div
+            className="fixed right-4 top-[74px] z-[200] w-56 overflow-hidden rounded-2xl border p-2 md:hidden"
+            style={{ background: "rgba(20,12,50,0.98)", borderColor: "var(--line-soft)", boxShadow: "0 20px 50px rgba(0,0,0,0.6)" }}
+          >
+            {LINKS.map((link) => (
+              <Link key={link.label} href={link.href} onClick={() => setOpen(false)}
+                className="block rounded-xl px-4 py-3 text-sm font-semibold transition"
+                style={{ color: isActive(link) ? "#fff" : "var(--text-dim)", background: isActive(link) ? "rgba(255,255,255,0.08)" : "transparent" }}>
+                {link.label}
+              </Link>
+            ))}
+            <div className="my-1 h-px" style={{ background: "var(--line-soft)" }} />
+            <Link href="/profile" onClick={() => setOpen(false)} className="block rounded-xl px-4 py-3 text-sm font-semibold" style={{ color: "var(--af-pink)" }}>
+              Mon profil
             </Link>
-          ))}
-          <div className="my-1 h-px" style={{ background: "var(--line-soft)" }} />
-          <Link href="/profile" onClick={() => setOpen(false)} className="block rounded-xl px-4 py-2.5 text-sm font-semibold" style={{ color: "var(--af-pink)" }}>
-            Mon profil
-          </Link>
-          <Link href="/login" onClick={() => setOpen(false)} className="block rounded-xl px-4 py-2.5 text-sm font-semibold" style={{ color: "var(--text-dim)" }}>
-            Connexion
-          </Link>
-        </div>
+            <Link href="/login" onClick={() => setOpen(false)} className="block rounded-xl px-4 py-3 text-sm font-semibold" style={{ color: "var(--text-dim)" }}>
+              Connexion
+            </Link>
+          </div>
+        </>
       )}
     </header>
   );
