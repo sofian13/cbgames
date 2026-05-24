@@ -44,7 +44,7 @@ export function SiteNav({ user, level, xp, room = null }: SiteNavProps) {
   };
 
   return (
-    <header className="relative z-50 mx-auto flex w-full max-w-6xl items-center justify-between gap-3 px-5 pt-6 sm:px-10">
+    <header className="relative z-50 mx-auto flex w-full max-w-6xl items-center justify-between gap-3 px-5 pt-[calc(env(safe-area-inset-top,0px)+1.5rem)] sm:px-10">
       <Link href="/" className="flex items-center gap-3">
         <div
           className="flex h-10 w-10 items-center justify-center rounded-xl text-sm font-black text-white"
@@ -133,7 +133,7 @@ export function SiteNav({ user, level, xp, room = null }: SiteNavProps) {
         <>
           <div className="fixed inset-0 z-[190] md:hidden" onClick={() => setOpen(false)} />
           <div
-            className="fixed right-4 top-[74px] z-[200] w-56 overflow-hidden rounded-2xl border p-2 md:hidden"
+            className="fixed right-4 top-[calc(env(safe-area-inset-top,0px)+74px)] z-[200] w-56 overflow-hidden rounded-2xl border p-2 md:hidden"
             style={{ background: "rgba(20,12,50,0.98)", borderColor: "var(--line-soft)", boxShadow: "0 20px 50px rgba(0,0,0,0.6)" }}
           >
             {LINKS.map((link) => (

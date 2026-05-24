@@ -95,7 +95,7 @@ export default function LobbyPage() {
       <Sparkles count={8} />
 
       {/* Header de lobby dédié — PAS de nav cross-site (sinon on quitte la salle) */}
-      <header className="relative z-10 mx-auto flex w-full max-w-6xl items-center justify-between gap-3 px-5 pt-6 sm:px-10">
+      <header className="relative z-10 mx-auto flex w-full max-w-6xl items-center justify-between gap-3 px-5 pt-[calc(env(safe-area-inset-top,0px)+1.5rem)] sm:px-10">
         <div className="flex items-center gap-3">
           <Link href="/" className="flex items-center gap-2" title="Accueil (quitter la salle)">
             <div className="flex h-9 w-9 items-center justify-center rounded-xl text-xs font-black text-white"
