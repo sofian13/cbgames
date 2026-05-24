@@ -201,14 +201,14 @@ export class ContreeGame extends BaseGame {
         } else {
           this.handleBid({ type: "pass" }, id);
         }
-      });
+      }, 1400, 2400); // slower bidding
     } else if (this.phase === "playing") {
       const id = this.seatOrder[this.currentTurn];
       if (!id || !this.isBot(id)) return;
       this.queueBotAction(() => {
         if (this.phase !== "playing" || this.seatOrder[this.currentTurn] !== id) return;
         this.autoPlay();
-      });
+      }, 1600, 2800); // slower play
     }
   }
   stopTurnTimer() {

@@ -780,7 +780,7 @@ export default function ContreeGame({ roomCode, playerId, playerName }: GameProp
                 transition: collected
                   ? "transform 700ms cubic-bezier(0.34, 1.2, 0.64, 1), opacity 700ms ease-out 200ms"
                   : "none",
-                animation: collected ? undefined : "trickCardIn 240ms ease-out",
+                animation: collected ? undefined : "trickCardIn 320ms cubic-bezier(0.34, 1.5, 0.64, 1)",
               }}
             >
               <PlayingCard

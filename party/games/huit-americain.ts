@@ -168,7 +168,7 @@ export class HuitAmericainGame extends BaseGame {
       } else {
         this.forceDraw();
       }
-    });
+    }, 1500, 2800); // slower bots — easier to follow
   }
   stopTurnTimer() {
     if (this.timer) { clearInterval(this.timer); this.timer = null; }
