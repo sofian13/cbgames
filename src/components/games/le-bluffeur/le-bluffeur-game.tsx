@@ -9,6 +9,7 @@ import { useKeyedState } from "@/lib/use-keyed-state";
 import { Mascot, MascotAvatar, MASCOT_PALETTE, type MascotColor } from "@/components/Mascot";
 import { ConfettiBurst, Sparkles } from "@/components/ConfettiBurst";
 import { ModeSelect, PlayersSetup, PassScreen, colorForIndex, type GameMode } from "@/components/games/local-kit";
+import { TheatreScreen, QuestionBillboard, RecWave } from "@/components/games/le-bluffeur/theatre";
 
 interface BluffPlayerState {
   id: string;
@@ -168,13 +169,16 @@ function LeBluffeurLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) 
   }
   if (phase === "question") {
     return (
-      <div className="flex min-h-[100svh] flex-col items-center justify-center p-5 text-white"
-        style={{ background: "radial-gradient(circle at 50% 15%, rgba(124,92,255,0.28), transparent 45%), #0E0828" }}>
-        <p className="af-eyebrow mb-3">Manche {round}/{totalRounds} · La question</p>
-        <QuestionCard question={q?.question ?? null} />
-        <button onClick={() => { setTurnIdx(0); setDraft(""); setPhase("pass-write"); }}
-          className="af-btn af-btn-primary mt-8 w-full max-w-md">Chacun invente son bluff →</button>
-      </div>
+      <TheatreScreen round={round} total={totalRounds}>
+        <QuestionBillboard question={q?.question ?? null} take={`prise ${String(round).padStart(2, "0")}`} />
+        <div className="relative z-[3] px-6 pb-24 pt-1">
+          <button onClick={() => { setTurnIdx(0); setDraft(""); setPhase("pass-write"); }}
+            className="af-btn af-btn-primary w-full"
+            style={{ background: "linear-gradient(135deg, #FFD23F, #C48800)", color: "#1A0E2E" }}>
+            🎬 Action ! Chacun invente son bluff →
+          </button>
+        </div>
+      </TheatreScreen>
     );
   }
   if (phase === "pass-write") {
@@ -183,19 +187,28 @@ function LeBluffeurLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) 
   }
   if (phase === "write") {
     return (
-      <div className="flex min-h-[100svh] flex-col items-center p-5 text-white"
-        style={{ background: "radial-gradient(circle at 50% 15%, rgba(124,92,255,0.26), transparent 45%), #0E0828" }}>
-        <p className="af-eyebrow mt-3">{players[turnIdx]} · ton bluff</p>
-        <QuestionCard question={q?.question ?? null} />
-        <input value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="Ta fausse réponse crédible..." maxLength={80} autoComplete="off"
-          className="mt-5 w-full max-w-md rounded-2xl border px-4 py-3.5 text-base outline-none"
-          style={{ background: "rgba(255,255,255,0.08)", borderColor: "rgba(124,92,255,0.4)", color: "#fff", fontFamily: "var(--font-display)" }} />
-        <button disabled={!draft.trim()} onClick={() => {
-          const nf = [...fakes]; nf[turnIdx] = draft.trim(); setFakes(nf);
-          if (turnIdx < total - 1) { setTurnIdx(turnIdx + 1); setDraft(""); setPhase("pass-write"); }
-          else { buildOptions(nf, q?.answer ?? ""); setTurnIdx(0); setPhase("pass-vote"); }
-        }} className="af-btn af-btn-primary mt-3 w-full max-w-md disabled:opacity-40">Valider mon bluff</button>
-      </div>
+      <TheatreScreen round={round} total={totalRounds}>
+        <QuestionBillboard question={q?.question ?? null} take={players[turnIdx]} />
+        <div className="relative z-[3] px-6 pb-24 pt-1">
+          <div className="rounded-2xl border p-3" style={{ background: "linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.04))", borderColor: "rgba(255,210,63,0.4)", boxShadow: "0 8px 24px rgba(0,0,0,0.5)" }}>
+            <div className="mb-1.5 flex items-center justify-between">
+              <span style={{ fontFamily: "var(--font-mono-face)", fontSize: 9, color: "#FFD23F", fontWeight: 800, letterSpacing: 2, textTransform: "uppercase" }}>{players[turnIdx]} · TON BLUFF · TAKE 01</span>
+              <span style={{ fontFamily: "var(--font-mono-face)", fontSize: 9, color: "rgba(255,255,255,0.4)" }}>{draft.length}/80</span>
+            </div>
+            <input value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="Ta fausse réponse crédible..." maxLength={80} autoComplete="off" autoFocus
+              className="w-full bg-transparent text-base outline-none"
+              style={{ color: "#fff", fontFamily: "var(--font-display)" }} />
+          </div>
+          <button disabled={!draft.trim()} onClick={() => {
+            const nf = [...fakes]; nf[turnIdx] = draft.trim(); setFakes(nf);
+            if (turnIdx < total - 1) { setTurnIdx(turnIdx + 1); setDraft(""); setPhase("pass-write"); }
+            else { buildOptions(nf, q?.answer ?? ""); setTurnIdx(0); setPhase("pass-vote"); }
+          }} className="af-btn mt-3 w-full disabled:opacity-40"
+            style={{ background: "linear-gradient(135deg, #FFD23F, #C48800)", color: "#1A0E2E" }}>
+            Valider mon bluff →
+          </button>
+        </div>
+      </TheatreScreen>
     );
   }
   if (phase === "pass-vote") {
@@ -322,49 +335,48 @@ function LeBluffeurOnline({ roomCode, playerId, playerName }: GameProps) {
     return <Centered emoji="🎭" text="Préparation des questions..." />;
   }
 
-  // ── WRITING ─────────────────────────────────────────────
+  // ── WRITING (DA théâtre) ────────────────────────────────
   if (state.phase === "writing") {
     const submitted = !!state.myFake;
     return (
-      <Shell round={state.round} total={state.totalRounds} timeLeft={state.timeLeft} max={40} label="Invente une fausse réponse">
-        <QuestionCard question={state.question} />
-        {!submitted ? (
-          <div className="w-full max-w-md mt-6">
-            <div className="flex gap-2">
-              <input
-                ref={fakeRef}
-                value={fakeInput}
-                onChange={(e) => setFakeInput(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && submitFake()}
-                placeholder="Ta fausse réponse crédible..."
-                maxLength={80}
-                autoComplete="off"
-                className="flex-1 rounded-2xl border px-4 py-3.5 text-base outline-none transition-all"
-                style={{
-                  background: "rgba(255,255,255,0.08)",
-                  borderColor: "rgba(91,54,214,0.35)",
-                  color: "#fff",
-                  fontFamily: "var(--font-display)",
-                }}
-              />
-              <button
-                onClick={submitFake}
-                disabled={!fakeInput.trim()}
-                className="af-btn af-btn-primary disabled:opacity-30"
-                style={{ padding: "0 24px", fontSize: 14 }}
-              >
-                OK
-              </button>
+      <TheatreScreen round={state.round} total={state.totalRounds}>
+        <QuestionBillboard question={state.question} take={`prise ${String(state.round).padStart(2, "0")}`} />
+        <RecWave timeLeft={state.timeLeft} max={40} />
+        <div className="relative z-[3] px-6 pb-24 pt-1">
+          {!submitted ? (
+            <>
+              <div className="rounded-2xl border p-3" style={{ background: "linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.04))", borderColor: "rgba(255,210,63,0.4)", boxShadow: "0 8px 24px rgba(0,0,0,0.5)" }}>
+                <div className="mb-1.5 flex items-center justify-between">
+                  <span style={{ fontFamily: "var(--font-mono-face)", fontSize: 9, color: "#FFD23F", fontWeight: 800, letterSpacing: 2, textTransform: "uppercase" }}>TON BLUFF · TAKE 01</span>
+                  <span style={{ fontFamily: "var(--font-mono-face)", fontSize: 9, color: "rgba(255,255,255,0.4)" }}>{fakeInput.length}/80</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    ref={fakeRef} value={fakeInput} onChange={(e) => setFakeInput(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && submitFake()}
+                    placeholder="Ta fausse réponse crédible..." maxLength={80} autoComplete="off"
+                    className="flex-1 bg-transparent text-base outline-none"
+                    style={{ color: "#fff", fontFamily: "var(--font-display)" }}
+                  />
+                  <button onClick={submitFake} disabled={!fakeInput.trim()}
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full disabled:opacity-30"
+                    style={{ background: "linear-gradient(135deg, #FFD23F, #C48800)", border: "1.5px solid #FFE891", color: "#1A0E2E", fontWeight: 800 }}>
+                    →
+                  </button>
+                </div>
+              </div>
+              <p className="mt-2 text-center text-[11px]" style={{ color: "rgba(255,255,255,0.4)" }}>
+                💡 Fais croire que c&apos;est la vraie réponse 😏
+              </p>
+            </>
+          ) : (
+            <div className="rounded-2xl border px-5 py-4 text-center" style={{ background: "rgba(255,210,63,0.1)", borderColor: "rgba(255,210,63,0.3)" }}>
+              <p className="text-sm" style={{ color: "#FFE7D2" }}>Bluff envoyé ! {state.players.filter((p) => p.hasFake).length}/{state.players.length} prêts</p>
             </div>
-            <p className="mt-3 text-center text-[11px]" style={{ color: "var(--text-muted)" }}>
-              💡 Le but : faire croire que c&apos;est la vraie réponse 😏
-            </p>
-          </div>
-        ) : (
-          <Waiting text={`Bluff envoyé ! ${state.players.filter(p => p.hasFake).length}/${state.players.length} joueurs prêts`} />
-        )}
-        <PlayerProgress players={state.players} done={(p) => p.hasFake} selfId={playerId} />
-      </Shell>
+          )}
+          <div className="mt-4"><PlayerProgress players={state.players} done={(p) => p.hasFake} selfId={playerId} /></div>
+        </div>
+      </TheatreScreen>
     );
   }
 
