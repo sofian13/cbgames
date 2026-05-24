@@ -156,7 +156,7 @@ export function GameShell({
           </>
         )}
 
-        <div className="flex w-full flex-1 flex-col px-0 pt-[calc(env(safe-area-inset-top,0px)+0.5rem)] pb-[calc(env(safe-area-inset-bottom,0px)+0.5rem)]">
+        <div className="flex w-full flex-1 flex-col px-0">
           {isGameOver ? (
             <main className="relative flex flex-1 items-center justify-center p-4 sm:p-6">
               <ConfettiBurst count={60} />

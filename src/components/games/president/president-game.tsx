@@ -98,7 +98,7 @@ export default function PresidentGame({ roomCode, playerId, playerName }: GamePr
     <div className="relative min-h-0 w-full flex-1 select-none overflow-hidden">
       <TableBg tone="green">
         {/* Opponents — row across the top (under the shell's top bar) */}
-        <div className="absolute inset-x-0 top-0 flex justify-center gap-5 px-12 pt-3 sm:gap-10">
+        <div className="absolute inset-x-0 top-0 flex justify-center gap-5 px-12 pt-[calc(env(safe-area-inset-top,0px)+0.75rem)] sm:gap-10">
           {opps.map((o, i) => {
             const pill = o.finishedAt ? RANK_PILL[o.finishedAt] : null;
             return (
@@ -160,7 +160,7 @@ export default function PresidentGame({ roomCode, playerId, playerName }: GamePr
 
         {/* Action bar — above the fan */}
         {isMyTurn && (
-          <div className="absolute bottom-[124px] left-1/2 z-30 flex -translate-x-1/2 items-center gap-2">
+          <div className="absolute bottom-[calc(env(safe-area-inset-bottom,0px)+118px)] left-1/2 z-30 flex -translate-x-1/2 items-center gap-2">
             <span className="whitespace-nowrap rounded-full px-2.5 py-1.5 text-[10px] font-bold text-white/85"
                   style={{ background: "rgba(0,0,0,0.5)", border: "1px solid rgba(255,255,255,0.12)", fontFamily: "var(--font-display)" }}>
               {selected.size === 0 ? "sélectionne un combo" : `${selected.size} carte${selected.size > 1 ? "s" : ""}`}
@@ -186,7 +186,7 @@ export default function PresidentGame({ roomCode, playerId, playerName }: GamePr
         )}
 
         {/* My fan */}
-        <div className="absolute inset-x-0 bottom-[-6px] z-40 flex justify-center">
+        <div className="absolute inset-x-0 bottom-[calc(env(safe-area-inset-bottom,0px)-2px)] z-40 flex justify-center">
           <div style={{ width: "min(88%, 620px)" }}>
             <FanHand
               hand={myHand}
@@ -201,7 +201,7 @@ export default function PresidentGame({ roomCode, playerId, playerName }: GamePr
         </div>
 
         {/* Me — bottom-left */}
-        <div className="absolute bottom-3 left-3 z-30">
+        <div className="absolute bottom-[calc(env(safe-area-inset-bottom,0px)+0.5rem)] left-3 z-30">
           <SeatAvatar name={playerName} hue={2} isBot={false} isTurn={isMyTurn} cardCount={myHand.length} />
         </div>
       </TableBg>
