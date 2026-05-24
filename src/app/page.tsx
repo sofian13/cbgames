@@ -9,6 +9,7 @@ import { GAMES } from "@/lib/games/registry";
 import { Mascot, MascotAvatar, MASCOT_PALETTE, type MascotColor } from "@/components/Mascot";
 import { Sparkles } from "@/components/ConfettiBurst";
 import { SiteNav } from "@/components/SiteNav";
+import { InstallApp } from "@/components/InstallApp";
 
 type CategoryMeta = {
   label: string;
@@ -118,6 +119,7 @@ export default function HomePage() {
   return (
     <main className="relative min-h-screen overflow-hidden text-white">
       <Sparkles count={14} />
+      <InstallApp />
 
       {/* HEADER */}
       <SiteNav />
