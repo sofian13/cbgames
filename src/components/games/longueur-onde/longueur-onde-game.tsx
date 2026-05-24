@@ -9,6 +9,7 @@ import { useKeyedState } from "@/lib/use-keyed-state";
 import { Mascot, MascotAvatar, MASCOT_PALETTE, type MascotColor } from "@/components/Mascot";
 import { ConfettiBurst, Sparkles } from "@/components/ConfettiBurst";
 import { ModeSelect, PlayersSetup, PassScreen, colorForIndex, type GameMode } from "@/components/games/local-kit";
+import { SynthwaveScreen, NeonConsole, CassetteInput } from "@/components/games/longueur-onde/synthwave";
 
 // ── Spectres pour le mode local (mêmes que le serveur) ────
 const LOCAL_SPECTRUMS: Spectrum[] = [
@@ -92,22 +93,16 @@ function LongueurOndeLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }
   }
   if (phase === "clue") {
     return (
-      <div className="flex min-h-[100svh] flex-col items-center p-5 text-white"
-        style={{ background: "radial-gradient(circle at 50% 12%, rgba(54,208,224,0.28), transparent 45%), #0E0828" }}>
-        <p className="af-eyebrow mt-3">Manche {round}/{total} · Médium : {players[psychic]}</p>
-        <p className="mt-2 mb-1 text-center text-sm" style={{ color: "var(--text-dim)" }}>
-          La cible est ici. Donne un <span style={{ color: "var(--af-yellow)" }}>indice</span> à voix haute.
-        </p>
-        <SpectrumDial spectrum={spectrum} target={target} mode="psychic" />
-        <div className="mt-6 w-full max-w-md">
-          <input value={clueInput} onChange={(e) => setClueInput(e.target.value)}
-            placeholder="Ton indice (écrire est optionnel)" maxLength={60} autoComplete="off"
-            className="w-full rounded-2xl border px-4 py-3.5 text-base outline-none"
-            style={{ background: "rgba(255,255,255,0.08)", borderColor: "rgba(54,208,224,0.4)", color: "#fff", fontFamily: "var(--font-display)" }} />
-          <button onClick={() => { setClue(clueInput.trim() || "(à l'oral)"); setGuess(50); setPhase("guess"); }}
-            className="af-btn af-btn-primary mt-3 w-full">Indice donné → l&apos;équipe devine</button>
-        </div>
-      </div>
+      <SynthwaveScreen round={round} total={total} spectrum={spectrum}>
+        <NeonConsole readout="TARGET LOCKED">
+          <SpectrumDial spectrum={spectrum} target={target} mode="psychic" />
+          <p className="mt-1 text-center" style={{ fontFamily: "var(--font-mono-face)", fontSize: 10, color: "var(--af-yellow)", letterSpacing: 1.5 }}>🔒 {players[psychic]} : toi seul vois la cible — annonce ton indice à voix haute</p>
+        </NeonConsole>
+        <CassetteInput value={clueInput} onChange={setClueInput}
+          placeholder="Ton indice (à l'oral aussi)"
+          onSubmit={() => { setClue(clueInput.trim() || "(à l'oral)"); setGuess(50); setPhase("guess"); }} />
+        <div className="pb-20" />
+      </SynthwaveScreen>
     );
   }
   if (phase === "guess") {
@@ -245,43 +240,18 @@ function LongueurOndeOnline({ roomCode, playerId, playerName }: GameProps) {
     );
   }
 
-  // ── CLUE — psychic gives a clue ─────────────────────────
+  // ── CLUE — psychic gives a clue (DA synthwave) ──────────
   if (state.phase === "clue") {
     if (state.amPsychic) {
       return (
-        <div className="flex flex-1 flex-col items-center p-5">
-          <RoundHeader round={state.round} total={state.totalRounds} timeLeft={state.timeLeft} max={45} role="🔮 Médium" />
-          <p className="mt-4 max-w-md text-center text-base" style={{ color: "var(--text-dim)" }}>
-            La cible est ici — trouve un <span style={{ color: "var(--af-yellow)" }}>indice</span> qui la situe.
-          </p>
-          <SpectrumDial spectrum={state.spectrum} target={state.myTarget} mode="psychic" />
-          <div className="mt-6 w-full max-w-md">
-            <div className="flex gap-2">
-              <input
-                value={clueInput}
-                onChange={(e) => setClueInput(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && submitClue()}
-                placeholder="Ton indice (un mot, un exemple...)"
-                maxLength={60}
-                autoComplete="off"
-                className="flex-1 rounded-2xl border px-4 py-3.5 text-base outline-none transition"
-                style={{
-                  background: "rgba(255,255,255,0.08)",
-                  borderColor: "rgba(91,54,214,0.35)",
-                  color: "#fff",
-                  fontFamily: "var(--font-display)",
-                }}
-              />
-              <button onClick={submitClue} disabled={!clueInput.trim()}
-                      className="af-btn af-btn-primary disabled:opacity-30" style={{ padding: "0 24px", fontSize: 14 }}>
-                Envoyer
-              </button>
-            </div>
-            <p className="mt-3 text-center text-[11px]" style={{ color: "var(--text-muted)" }}>
-              💡 Ni trop vague, ni trop évident
-            </p>
-          </div>
-        </div>
+        <SynthwaveScreen round={state.round} total={state.totalRounds} spectrum={state.spectrum}>
+          <NeonConsole readout={`TARGET · ${state.timeLeft}s`}>
+            <SpectrumDial spectrum={state.spectrum} target={state.myTarget} mode="psychic" />
+            <p className="mt-1 text-center" style={{ fontFamily: "var(--font-mono-face)", fontSize: 10, color: "var(--af-yellow)", letterSpacing: 1.5 }}>🔒 Toi seul vois la cible</p>
+          </NeonConsole>
+          <CassetteInput value={clueInput} onChange={setClueInput} placeholder="Ton indice (un mot, un exemple...)" onSubmit={submitClue} />
+          <div className="pb-20" />
+        </SynthwaveScreen>
       );
     }
     return <Centered emoji="🔮" text={`${state.psychicName} cherche un indice...`} />;
