@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useGame } from "@/lib/party/use-game";
 import { useGameStore } from "@/lib/stores/game-store";
 import type { GameProps } from "@/lib/games/types";
-import { TableBg, SeatAvatar, FanHand, PlayingCard, type Suit, type Rank } from "@/components/games/cards/card-kit";
+import { TableBg, SeatAvatar, FanHand, PlayingCard, CardSettings, useCardStyle, type Suit, type Rank } from "@/components/games/cards/card-kit";
 
 interface OtherPlayer {
   id: string;
@@ -35,6 +35,7 @@ export default function PresidentGame({ roomCode, playerId, playerName }: GamePr
   const { sendAction, sendRaw } = useGame(roomCode, "president", playerId, playerName);
   const state = useGameStore((s) => s.gameState) as unknown as PresidentState | null;
   const [selected, setSelected] = useState<Set<number>>(new Set());
+  const cardStyle = useCardStyle();
 
   const myHand = state?.hands?.[playerId] ?? [];
   const isMyTurn = state?.currentPlayerId === playerId;
@@ -144,7 +145,7 @@ export default function PresidentGame({ roomCode, playerId, playerName }: GamePr
                   transform: `rotate(${(i - (state.lastCombo.length - 1) / 2) * 4}deg)`,
                   filter: "drop-shadow(0 8px 16px rgba(0,0,0,0.55))",
                 }}>
-                  <PlayingCard rank={c.rank} suit={c.suit} size="md" raised />
+                  <PlayingCard rank={c.rank} suit={c.suit} size="md" cardStyle={cardStyle} raised />
                 </div>
               ))}
             </div>
@@ -194,6 +195,7 @@ export default function PresidentGame({ roomCode, playerId, playerName }: GamePr
               disabled={!isMyTurn}
               cardSize="md"
               maxWidth={560}
+              cardStyle={cardStyle}
             />
           </div>
         </div>
@@ -202,6 +204,9 @@ export default function PresidentGame({ roomCode, playerId, playerName }: GamePr
         <div className="absolute bottom-3 left-3 z-30">
           <SeatAvatar name={playerName} hue={2} isBot={false} isTurn={isMyTurn} cardCount={myHand.length} />
         </div>
+
+        {/* Card-appearance settings (gear) */}
+        <CardSettings />
       </TableBg>
     </div>
   );

@@ -7,11 +7,12 @@
  * SeatAvatar et FanHand. Réutilisé par Président, Contrée et 8 Américain.
  */
 
-import type { CSSProperties, ReactNode } from "react";
+import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
 
 export type Suit = "♠" | "♥" | "♦" | "♣";
 export type Rank = "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" | "10" | "V" | "D" | "R";
 export type CardSize = "xs" | "sm" | "md" | "lg" | "xl";
+export type CardStyle = "modern" | "classic";
 
 export const CARD_SIZES: Record<CardSize, { w: number; h: number; rank: number; pip: number; corner: number }> = {
   xs: { w: 38, h: 53, rank: 9, pip: 10, corner: 4 },
@@ -55,6 +56,7 @@ interface PlayingCardProps {
   selected?: boolean;
   playable?: boolean;
   style?: CSSProperties;
+  cardStyle?: CardStyle;
   onClick?: () => void;
 }
 
@@ -68,6 +70,7 @@ export function PlayingCard({
   selected = false,
   playable = false,
   style = {},
+  cardStyle = "modern",
   onClick,
 }: PlayingCardProps) {
   const d = CARD_SIZES[size] || CARD_SIZES.md;
@@ -124,16 +127,22 @@ export function PlayingCard({
     );
   }
 
+  const cornerFont = cardStyle === "classic"
+    ? "'Helvetica Neue', Arial, sans-serif"
+    : "Georgia, 'Times New Roman', serif";
+  const cornerRankSize = cardStyle === "classic" ? d.rank * 1.25 : d.rank;
+  const cornerSuitSize = cardStyle === "classic" ? d.rank * 0.95 : d.rank * 0.78;
+
   const corner = (rotated: boolean) => (
     <div style={{
       position: "absolute",
       ...(rotated ? { bottom: d.corner, right: d.corner + 1 } : { top: d.corner, left: d.corner + 1 }),
       textAlign: "center", lineHeight: 1,
-      fontFamily: "Georgia, 'Times New Roman', serif", fontWeight: 900, color,
+      fontFamily: cornerFont, fontWeight: 900, color,
       transform: rotated ? "rotate(180deg)" : undefined,
     }}>
-      <div style={{ fontSize: d.rank, letterSpacing: "-0.05em" }}>{label}</div>
-      <div style={{ fontSize: d.rank * 0.78, marginTop: 1 }}>{SUIT_GLYPH[suit]}</div>
+      <div style={{ fontSize: cornerRankSize, letterSpacing: "-0.05em" }}>{label}</div>
+      <div style={{ fontSize: cornerSuitSize, marginTop: 1 }}>{SUIT_GLYPH[suit]}</div>
     </div>
   );
 
@@ -155,20 +164,24 @@ export function PlayingCard({
     >
       {corner(false)}
       {corner(true)}
-      {isFace ? <FaceCenter label={label} suit={suit} d={d} />
-        : isAce ? <AceCenter suit={suit} d={d} />
-        : <PipCenter rank={label} suit={suit} d={d} />}
+      {isFace
+        ? (cardStyle === "classic"
+            ? <ClassicFaceCenter label={label} suit={suit} d={d} />
+            : <FaceCenter label={label} suit={suit} d={d} />)
+        : isAce ? <AceCenter suit={suit} d={d} cardStyle={cardStyle} />
+        : <PipCenter rank={label} suit={suit} d={d} cardStyle={cardStyle} />}
     </div>
   );
 }
 
 type Dim = (typeof CARD_SIZES)[CardSize];
 
-function PipCenter({ rank, suit, d }: { rank: string; suit: Suit; d: Dim }) {
+function PipCenter({ rank, suit, d, cardStyle = "modern" }: { rank: string; suit: Suit; d: Dim; cardStyle?: CardStyle }) {
   const layout = PIPS[rank] || [];
   const color = SUIT_COLOR(suit);
-  const padX = d.w * 0.18;
-  const padY = d.h * 0.16;
+  const padX = d.w * (cardStyle === "classic" ? 0.30 : 0.18);
+  const padY = d.h * (cardStyle === "classic" ? 0.20 : 0.16);
+  const pipScale = cardStyle === "classic" ? 0.9 : 1;
   return (
     <div style={{ position: "absolute", left: padX, top: padY, width: d.w - padX * 2, height: d.h - padY * 2 }}>
       {layout.map(([col, row], i) => {
@@ -179,7 +192,7 @@ function PipCenter({ rank, suit, d }: { rank: string; suit: Suit; d: Dim }) {
             left: `${(col / 2) * 100}%`, top: `${(row / 6) * 100}%`,
             transform: `translate(-50%, -50%) scaleY(${flip ? -1 : 1})`,
             color, fontFamily: "Georgia, serif", fontWeight: 700,
-            fontSize: d.pip, lineHeight: 1,
+            fontSize: d.pip * pipScale, lineHeight: 1,
           }}>{SUIT_GLYPH[suit]}</div>
         );
       })}
@@ -187,23 +200,138 @@ function PipCenter({ rank, suit, d }: { rank: string; suit: Suit; d: Dim }) {
   );
 }
 
-function AceCenter({ suit, d }: { suit: Suit; d: Dim }) {
+function AceCenter({ suit, d, cardStyle = "modern" }: { suit: Suit; d: Dim; cardStyle?: CardStyle }) {
   const color = SUIT_COLOR(suit);
+  const box = d.w * (cardStyle === "classic" ? 0.72 : 0.6);
   return (
     <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <div style={{ position: "relative", width: d.w * 0.6, height: d.w * 0.6, display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <div style={{
-          position: "absolute", inset: 0, borderRadius: "50%",
-          background: SUIT_RED(suit)
-            ? "radial-gradient(circle, rgba(209,28,45,0.08) 0%, transparent 70%)"
-            : "radial-gradient(circle, rgba(0,0,0,0.07) 0%, transparent 70%)",
-        }} />
+      <div style={{ position: "relative", width: box, height: box, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        {cardStyle === "modern" && (
+          <div style={{
+            position: "absolute", inset: 0, borderRadius: "50%",
+            background: SUIT_RED(suit)
+              ? "radial-gradient(circle, rgba(209,28,45,0.08) 0%, transparent 70%)"
+              : "radial-gradient(circle, rgba(0,0,0,0.07) 0%, transparent 70%)",
+          }} />
+        )}
         <span style={{
-          fontFamily: "Georgia, serif", fontSize: d.w * 0.58, color, lineHeight: 1,
+          fontFamily: cardStyle === "classic" ? "Arial, sans-serif" : "Georgia, serif",
+          fontSize: d.w * (cardStyle === "classic" ? 0.7 : 0.58), color, lineHeight: 1,
           textShadow: SUIT_RED(suit) ? "0 1px 0 rgba(0,0,0,0.05)" : "0 1px 0 rgba(255,255,255,0.4)",
         }}>{SUIT_GLYPH[suit]}</span>
       </div>
     </div>
+  );
+}
+
+// Classic (Bicycle-style) face — portrait mirrored vertically.
+function ClassicFaceCenter({ label, suit, d }: { label: string; suit: Suit; d: Dim }) {
+  return (
+    <div style={{
+      position: "absolute", left: d.w * 0.18, top: d.h * 0.13,
+      width: d.w * 0.64, height: d.h * 0.74, overflow: "hidden", borderRadius: 2,
+    }}>
+      <div style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: "50%", overflow: "hidden" }}>
+        <div style={{ position: "absolute", left: "-12%", top: 0, right: "-12%", height: "200%" }}>
+          <ClassicPortraitSvg label={label} suit={suit} />
+        </div>
+      </div>
+      <div style={{ position: "absolute", left: 0, right: 0, top: "50%", bottom: 0, overflow: "hidden", transform: "rotate(180deg)" }}>
+        <div style={{ position: "absolute", left: "-12%", top: 0, right: "-12%", height: "200%" }}>
+          <ClassicPortraitSvg label={label} suit={suit} />
+        </div>
+      </div>
+      <div style={{
+        position: "absolute", left: 0, right: 0, top: "calc(50% - 1px)", height: 2,
+        background: "linear-gradient(90deg, transparent 0%, rgba(0,0,0,0.6) 10%, rgba(0,0,0,0.6) 90%, transparent 100%)",
+      }} />
+      <div style={{ position: "absolute", left: 0, top: "50%", transform: "translate(-50%, -50%)", fontFamily: "Georgia, serif", color: SUIT_COLOR(suit), fontSize: d.w * 0.22, lineHeight: 1 }}>{SUIT_GLYPH[suit]}</div>
+      <div style={{ position: "absolute", right: 0, top: "50%", transform: "translate(50%, -50%)", fontFamily: "Georgia, serif", color: SUIT_COLOR(suit), fontSize: d.w * 0.22, lineHeight: 1 }}>{SUIT_GLYPH[suit]}</div>
+    </div>
+  );
+}
+
+function ClassicPortraitSvg({ label, suit }: { label: string; suit: Suit }) {
+  const red = SUIT_RED(suit);
+  const kind = label === "R" ? "R" : label === "D" ? "D" : "V";
+  const robeMain = red ? "#C42030" : "#1E3068";
+  const robeDeep = red ? "#7B121F" : "#0E1B40";
+  const gold = "#D4A93D";
+  const goldDeep = "#8A6418";
+  const skin = "#F1CFA8";
+  const skinShade = "#C99772";
+  const hair = kind === "D" ? "#3D2410" : "#1E1108";
+  const eye = "#181020";
+  const blush = "#D26352";
+  const accent = red ? "#1E3068" : "#C42030";
+  return (
+    <svg viewBox="0 0 50 70" preserveAspectRatio="xMidYMid meet" width="100%" height="100%">
+      <path d="M0,70 L0,52 Q5,46 12,44 L20,52 Q25,55 30,52 L38,44 Q45,46 50,52 L50,70 Z" fill={robeMain} />
+      <path d="M0,70 L0,52 Q5,46 12,44 L14,52 L18,62 L10,70 Z" fill={robeDeep} opacity="0.45" />
+      <path d="M50,70 L50,52 Q45,46 38,44 L36,52 L32,62 L40,70 Z" fill={robeDeep} opacity="0.45" />
+      <path d="M14,46 Q25,42 36,46 L35,48 Q25,44 15,48 Z" fill={gold} />
+      <g transform="translate(25,56)">
+        <circle r="3.6" fill={gold} stroke={goldDeep} strokeWidth="0.4" />
+        <text x="0" y="1.6" textAnchor="middle" fontFamily="Georgia, serif" fontSize="5.2" fill={SUIT_COLOR(suit)}>{SUIT_GLYPH[suit]}</text>
+      </g>
+      <path d="M22,40 L22,46 Q25,47.5 28,46 L28,40 Z" fill={skin} />
+      <ellipse cx="25" cy="32" rx="8.5" ry="10.5" fill={skin} />
+      <ellipse cx="20.5" cy="35" rx="1.4" ry="0.9" fill={blush} opacity="0.5" />
+      <ellipse cx="29.5" cy="35" rx="1.4" ry="0.9" fill={blush} opacity="0.5" />
+      <path d="M29,25 Q33,28 33,35 Q33,40 28,42 L28,38 Q31,35 30,29 Z" fill={skinShade} opacity="0.35" />
+      {kind === "R" && (
+        <>
+          <path d="M16,30 Q15,40 18,46 L21,43 Q19.5,37 19,30 Z" fill={hair} />
+          <path d="M34,30 Q35,40 32,46 L29,43 Q30.5,37 31,30 Z" fill={hair} />
+          <path d="M18,37 Q15,42 16,47 Q18,51 22,52 Q25,52.5 28,52 Q32,51 34,47 Q35,42 32,37 Q30,42 25,42.5 Q20,42 18,37 Z" fill={hair} />
+          <path d="M19,37 Q22,40 25,39 Q28,40 31,37 Q28,38.5 25,38.5 Q22,38.5 19,37 Z" fill={hair} />
+        </>
+      )}
+      {kind === "D" && (
+        <>
+          <path d="M14,28 Q11,40 13,52 Q16,50 17,42 Q18,36 19,30 Z" fill={hair} />
+          <path d="M36,28 Q39,40 37,52 Q34,50 33,42 Q32,36 31,30 Z" fill={hair} />
+          <path d="M16.5,28 Q17,24 25,23 Q33,24 33.5,28 L32,27 Q28,25 25,25 Q22,25 18,27 Z" fill={hair} />
+          <circle cx="16" cy="36" r="0.6" fill={gold} /><circle cx="34" cy="36" r="0.6" fill={gold} />
+        </>
+      )}
+      {kind === "V" && (
+        <>
+          <path d="M15,26 Q13,34 16,42 L20,40 Q18,34 18,28 Z" fill={hair} />
+          <path d="M35,26 Q37,34 34,42 L30,40 Q32,34 32,28 Z" fill={hair} />
+          <path d="M18,27 Q22,26 25,26.5 Q28,26 32,27 L31,28.5 Q28,28 25,28 Q22,28 19,28.5 Z" fill={hair} />
+        </>
+      )}
+      <ellipse cx="21.5" cy="32.5" rx="0.8" ry="1" fill={eye} />
+      <ellipse cx="28.5" cy="32.5" rx="0.8" ry="1" fill={eye} />
+      <circle cx="21.7" cy="32.2" r="0.2" fill="#fff" /><circle cx="28.7" cy="32.2" r="0.2" fill="#fff" />
+      <path d="M19.5,30 Q21.5,29 23,30" stroke={hair} strokeWidth="0.5" fill="none" strokeLinecap="round" />
+      <path d="M27,30 Q28.5,29 30.5,30" stroke={hair} strokeWidth="0.5" fill="none" strokeLinecap="round" />
+      <path d="M25,33 Q24.5,36 24.2,37 Q25,37.5 25.8,37 Q25.5,36 25,33" fill={skinShade} opacity="0.6" />
+      {kind !== "R" && <path d="M23,40 Q25,41.5 27,40" stroke={blush} strokeWidth="0.6" fill="none" strokeLinecap="round" />}
+      {kind === "R" && (
+        <g>
+          <path d="M16,22 L17,12 L20,18 L22,10 L25,18 L28,10 L30,18 L33,12 L34,22 Z" fill={gold} stroke={goldDeep} strokeWidth="0.4" />
+          <rect x="15.5" y="21" width="19" height="2.5" fill={gold} stroke={goldDeep} strokeWidth="0.4" />
+          <circle cx="22" cy="11" r="0.9" fill={accent} /><circle cx="25" cy="17.5" r="1" fill={accent} /><circle cx="28" cy="11" r="0.9" fill={accent} />
+        </g>
+      )}
+      {kind === "D" && (
+        <g>
+          <path d="M17.5,24 L19,18 L22,22 L25,16 L28,22 L31,18 L32.5,24 Z" fill={gold} stroke={goldDeep} strokeWidth="0.35" />
+          <rect x="17.2" y="23" width="15.6" height="1.6" fill={gold} stroke={goldDeep} strokeWidth="0.35" />
+          <circle cx="22" cy="20.5" r="0.7" fill={accent} /><circle cx="25" cy="17.5" r="0.85" fill={accent} /><circle cx="28" cy="20.5" r="0.7" fill={accent} />
+        </g>
+      )}
+      {kind === "V" && (
+        <g>
+          <path d="M16,26 Q15,22 19,20 Q22,18.5 25,18.5 Q30,18.5 32,21 Q35,23 34,26 Z" fill={accent} stroke={goldDeep} strokeWidth="0.3" />
+          <path d="M16,26 L34,26" stroke={gold} strokeWidth="0.7" />
+          <path d="M30,22 Q34,17 36,11 Q35,17 33,21 Q34,18 35,15 Q33,20 31,23 Z" fill={gold} stroke={goldDeep} strokeWidth="0.25" />
+          <circle cx="22" cy="22" r="0.8" fill={gold} stroke={goldDeep} strokeWidth="0.2" />
+        </g>
+      )}
+    </svg>
   );
 }
 
@@ -386,7 +514,7 @@ export function SeatAvatar({
 // ───────────────────────── Fan hand ─────────────────────────
 export function FanHand({
   hand, onClickIndex, isLegal = () => true, selectedSet = null,
-  cardSize = "md", maxWidth = 600, disabled = false,
+  cardSize = "md", maxWidth = 600, disabled = false, cardStyle = "modern",
 }: {
   hand: { rank: Rank | string; suit: Suit }[];
   onClickIndex?: (i: number) => void;
@@ -395,6 +523,7 @@ export function FanHand({
   cardSize?: CardSize;
   maxWidth?: number;
   disabled?: boolean;
+  cardStyle?: CardStyle;
 }) {
   const n = hand.length;
   const d = CARD_SIZES[cardSize];
@@ -425,10 +554,89 @@ export function FanHand({
             }}
             aria-label={`${c.rank} de ${c.suit}`}
           >
-            <PlayingCard rank={c.rank} suit={c.suit} size={cardSize} raised={playable} selected={isSel} playable={playable && !isSel} />
+            <PlayingCard rank={c.rank} suit={c.suit} size={cardSize} cardStyle={cardStyle} raised={playable} selected={isSel} playable={playable && !isSel} />
           </button>
         );
       })}
     </div>
+  );
+}
+
+// ───────────────────────── Card-style preference ─────────────────────────
+// Persisted in localStorage, shared live across all card games via a tiny pub-sub.
+const CARD_STYLE_KEY = "af-card-style";
+const styleSubs = new Set<(s: CardStyle) => void>();
+let currentStyle: CardStyle | null = null;
+
+function readStyle(): CardStyle {
+  if (currentStyle) return currentStyle;
+  if (typeof window === "undefined") return "modern";
+  const v = window.localStorage.getItem(CARD_STYLE_KEY);
+  currentStyle = v === "classic" ? "classic" : "modern";
+  return currentStyle;
+}
+
+export function setCardStyle(s: CardStyle) {
+  currentStyle = s;
+  try { window.localStorage.setItem(CARD_STYLE_KEY, s); } catch {}
+  styleSubs.forEach((fn) => fn(s));
+}
+
+export function useCardStyle(): CardStyle {
+  const [style, setStyle] = useState<CardStyle>("modern");
+  useEffect(() => {
+    setStyle(readStyle());
+    const fn = (s: CardStyle) => setStyle(s);
+    styleSubs.add(fn);
+    return () => { styleSubs.delete(fn); };
+  }, []);
+  return style;
+}
+
+// ───────────────────────── Settings (gear + popover) ─────────────────────────
+export function CardSettings() {
+  const [open, setOpen] = useState(false);
+  const style = useCardStyle();
+  return (
+    <>
+      <button
+        onClick={() => setOpen((v) => !v)}
+        aria-label="Paramètres des cartes"
+        className="absolute right-3 top-[calc(env(safe-area-inset-top,0px)+4.25rem)] z-[60] flex h-9 w-9 items-center justify-center rounded-full"
+        style={{
+          background: open ? "linear-gradient(160deg, #FF8E58, #C13D1A)" : "linear-gradient(160deg, #4180D8, #2A5BB0)",
+          border: "1.5px solid rgba(255,255,255,0.25)",
+          boxShadow: open ? "0 0 12px rgba(255,140,90,0.6)" : "0 0 12px rgba(60,120,220,0.5)",
+        }}
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="3" />
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+        </svg>
+      </button>
+      {open && (
+        <>
+          <div className="absolute inset-0 z-[70]" style={{ background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)" }} onClick={() => setOpen(false)} />
+          <div className="absolute right-3 top-[calc(env(safe-area-inset-top,0px)+7rem)] z-[71] w-64 rounded-2xl p-4"
+               style={{ background: "linear-gradient(180deg, rgba(20,35,80,0.97), rgba(10,18,48,0.97))", border: "1px solid rgba(120,170,255,0.3)", boxShadow: "0 18px 40px rgba(0,0,0,0.55)" }}>
+            <p className="mb-2 text-[9px] font-bold tracking-[0.16em] text-white/55" style={{ fontFamily: "var(--font-display)" }}>MODÈLE DES CARTES</p>
+            <div className="grid grid-cols-2 gap-2">
+              {([{ key: "classic", label: "Classique" }, { key: "modern", label: "Illustré" }] as const).map((opt) => (
+                <button key={opt.key} onClick={() => setCardStyle(opt.key)}
+                  className="flex flex-col items-center gap-1.5 rounded-xl p-2"
+                  style={{
+                    background: style === opt.key ? "rgba(122,78,232,0.25)" : "rgba(255,255,255,0.04)",
+                    border: style === opt.key ? "1.5px solid var(--cb-brand, #7A4EE8)" : "1px solid rgba(255,255,255,0.1)",
+                  }}>
+                  <PlayingCard rank="D" suit="♥" size="sm" cardStyle={opt.key} />
+                  <span className="text-[11px] font-extrabold text-white" style={{ fontFamily: "var(--font-display)" }}>{opt.label}</span>
+                </button>
+              ))}
+            </div>
+            <p className="mt-3 text-[10px] text-white/50">S&apos;applique à tous les jeux de carte.</p>
+          </div>
+        </>
+      )}
+    </>
   );
 }
