@@ -179,17 +179,20 @@ type Dim = (typeof CARD_SIZES)[CardSize];
 function PipCenter({ rank, suit, d, cardStyle = "modern" }: { rank: string; suit: Suit; d: Dim; cardStyle?: CardStyle }) {
   const layout = PIPS[rank] || [];
   const color = SUIT_COLOR(suit);
-  const padX = d.w * (cardStyle === "classic" ? 0.30 : 0.18);
-  const padY = d.h * (cardStyle === "classic" ? 0.20 : 0.16);
-  const pipScale = cardStyle === "classic" ? 0.9 : 1;
+  // Reserve room for the rotated bottom-right corner index so pips never overlap it.
+  const cornerBoxH = d.rank * 1.9 + d.corner;
+  const padX = d.w * (cardStyle === "classic" ? 0.30 : 0.22);
+  const padY = Math.max(d.h * (cardStyle === "classic" ? 0.22 : 0.18), cornerBoxH + 2);
+  const pipScale = cardStyle === "classic" ? 0.85 : 0.95;
   return (
     <div style={{ position: "absolute", left: padX, top: padY, width: d.w - padX * 2, height: d.h - padY * 2 }}>
       {layout.map(([col, row], i) => {
         const flip = row > 3;
+        const rowFrac = 0.06 + (row / 6) * 0.88; // compress so pips never hug the edges
         return (
           <div key={i} style={{
             position: "absolute",
-            left: `${(col / 2) * 100}%`, top: `${(row / 6) * 100}%`,
+            left: `${(col / 2) * 100}%`, top: `${rowFrac * 100}%`,
             transform: `translate(-50%, -50%) scaleY(${flip ? -1 : 1})`,
             color, fontFamily: "Georgia, serif", fontWeight: 700,
             fontSize: d.pip * pipScale, lineHeight: 1,
