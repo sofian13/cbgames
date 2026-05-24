@@ -33,11 +33,11 @@ export function ModeSelect({
 }) {
   return (
     <div className={SHELL} style={{ background: BG("rgba(91,54,214,0.35)"), justifyContent: "center", padding: 24 }}>
-      <div className="text-5xl mb-3">{emoji}</div>
-      <h1 className="cb-display-lg text-center">{name}</h1>
-      <p className="mt-2 mb-8 max-w-xs text-center text-sm" style={{ color: "var(--text-dim)" }}>{tagline}</p>
+      <div className="mb-3 text-5xl sm:text-7xl">{emoji}</div>
+      <h1 className="cb-display-lg text-center sm:text-5xl">{name}</h1>
+      <p className="mt-2 mb-8 max-w-md text-center text-sm sm:text-base" style={{ color: "var(--text-dim)" }}>{tagline}</p>
 
-      <div className="w-full max-w-sm space-y-3">
+      <div className="w-full max-w-md space-y-3 sm:max-w-xl">
         <button
           onClick={() => onPick("local")}
           className="w-full rounded-3xl border p-5 text-left transition active:scale-[0.99]"
@@ -98,19 +98,19 @@ export function PlayersSetup({
 
   return (
     <div className={SHELL} style={{ background: BG(`${accent}30`), padding: "32px 20px" }}>
-      <div className="mt-4 text-4xl">{emoji}</div>
-      <h1 className="cb-display-md mt-2">{name}</h1>
-      <p className="mb-6 text-xs" style={{ color: "var(--text-dim)" }}>Qui joue ? ({min}–{max} joueurs)</p>
+      <div className="mt-4 text-4xl sm:text-6xl">{emoji}</div>
+      <h1 className="cb-display-md mt-2 sm:text-4xl">{name}</h1>
+      <p className="mb-6 text-xs sm:text-sm" style={{ color: "var(--text-dim)" }}>Qui joue ? ({min}–{max} joueurs)</p>
 
-      <div className="w-full max-w-sm space-y-2">
+      <div className="w-full max-w-md space-y-2 sm:max-w-xl sm:space-y-3">
         {names.map((n, i) => (
-          <div key={i} className="flex items-center gap-2">
-            <MascotAvatar color={colorForIndex(i)} size={34} mood="happy" />
+          <div key={i} className="flex items-center gap-2 sm:gap-3">
+            <MascotAvatar color={colorForIndex(i)} size={38} mood="happy" />
             <input
               value={n}
               onChange={(e) => update(i, e.target.value)}
               placeholder={`Joueur ${i + 1}`}
-              className="flex-1 rounded-2xl border px-4 py-3 text-sm outline-none"
+              className="flex-1 rounded-2xl border px-4 py-3 text-sm outline-none sm:py-4 sm:text-base"
               style={{ background: "rgba(255,255,255,0.06)", borderColor: "var(--line-soft)", color: "#fff" }}
             />
             {names.length > min && (
@@ -130,7 +130,8 @@ export function PlayersSetup({
       <button
         onClick={() => onStart(filled)}
         disabled={!canStart}
-        className="af-btn af-btn-primary mt-8 w-full max-w-sm disabled:opacity-40"
+        className="af-btn af-btn-primary mt-8 w-full max-w-md disabled:opacity-40 sm:max-w-xl"
+        style={{ fontSize: 16 }}
       >
         C&apos;est parti !
       </button>
@@ -162,10 +163,10 @@ export function PassScreen({
   return (
     <div className={SHELL} style={{ background: BG(`${accent}30`), justifyContent: "center", padding: 24 }}>
       <p className="af-eyebrow mb-4" style={{ color: "var(--text-dim)" }}>Passe le téléphone à</p>
-      <Mascot size={110} color={colorForIndex(colorIndex)} mood="wink" arms />
-      <h1 className="cb-display-lg mt-3 text-center">{toName}</h1>
-      {hint && <p className="mt-2 max-w-xs text-center text-sm" style={{ color: "var(--text-dim)" }}>{hint}</p>}
-      <button onClick={onReady} className="af-btn af-btn-primary mt-8 w-full max-w-xs">{buttonLabel}</button>
+      <Mascot size={130} color={colorForIndex(colorIndex)} mood="wink" arms />
+      <h1 className="cb-display-lg mt-3 text-center sm:text-5xl">{toName}</h1>
+      {hint && <p className="mt-2 max-w-sm text-center text-sm sm:text-base" style={{ color: "var(--text-dim)" }}>{hint}</p>}
+      <button onClick={onReady} className="af-btn af-btn-primary mt-8 w-full max-w-xs sm:max-w-sm" style={{ fontSize: 16 }}>{buttonLabel}</button>
     </div>
   );
 }
