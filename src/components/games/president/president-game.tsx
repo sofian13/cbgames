@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useGame } from "@/lib/party/use-game";
 import { useGameStore } from "@/lib/stores/game-store";
 import type { GameProps } from "@/lib/games/types";
-import { TableBg, SeatAvatar, FanHand, PlayingCard, useCardStyle, type Suit, type Rank } from "@/components/games/cards/card-kit";
+import { TableBg, SeatAvatar, FanHand, PlayingCard, opponentSlots, useCardStyle, type Suit, type Rank } from "@/components/games/cards/card-kit";
 
 interface OtherPlayer {
   id: string;
@@ -93,44 +93,45 @@ export default function PresidentGame({ roomCode, playerId, playerName }: GamePr
   }
 
   const opps = state.otherPlayers.filter((p) => p.id !== playerId);
+  const slots = opponentSlots(opps.length);
 
   return (
     <div className="relative min-h-0 w-full flex-1 select-none overflow-hidden">
       <TableBg tone="green">
-        {/* Opponents — row across the top (under the shell's top bar) */}
-        <div className="absolute inset-x-0 top-0 flex justify-center gap-5 px-12 pt-[calc(env(safe-area-inset-top,0px)+0.75rem)] sm:gap-10">
-          {opps.map((o, i) => {
-            const pill = o.finishedAt ? RANK_PILL[o.finishedAt] : null;
-            return (
-              <div key={o.id} className="relative flex flex-col items-center" style={{ opacity: o.finishedAt ? 0.6 : 1 }}>
-                {/* mini face-down fan */}
-                <div className="mb-1 flex h-8 items-end justify-center">
-                  {Array.from({ length: Math.min(4, o.cardCount) }).map((_, k) => (
-                    <div key={k} style={{ marginLeft: k === 0 ? 0 : -22, transform: `rotate(${(k - 1.5) * 7}deg)` }}>
-                      <PlayingCard faceDown size="xs" />
-                    </div>
-                  ))}
-                </div>
-                <SeatAvatar name={o.name} hue={i + 1} isBot isTurn={o.isCurrentTurn} cardCount={o.cardCount} />
-                {pill && (
-                  <span className="mt-1 rounded-full px-2 py-0.5 text-[8px] font-black tracking-wider"
-                        style={{ background: pill.bg, color: pill.fg, fontFamily: "var(--font-display)" }}>
-                    {pill.label}
-                  </span>
-                )}
-                {o.passed && !o.finishedAt && (
-                  <span className="mt-1 rounded-full px-2 py-0.5 text-[8px] font-bold tracking-wider"
-                        style={{ background: "rgba(255,255,255,0.16)", color: "rgba(255,255,255,0.85)", fontFamily: "var(--font-display)" }}>
-                    PASSE
-                  </span>
-                )}
+        {/* Opponents — arranged in a circle around the table */}
+        {opps.map((o, i) => {
+          const slot = slots[i] ?? { left: 50, top: 13 };
+          const pill = o.finishedAt ? RANK_PILL[o.finishedAt] : null;
+          return (
+            <div key={o.id} className="absolute z-20 flex flex-col items-center"
+                 style={{ left: `${slot.left}%`, top: `calc(${slot.top}% + env(safe-area-inset-top,0px))`, transform: "translate(-50%,-50%)", opacity: o.finishedAt ? 0.6 : 1 }}>
+              {/* mini face-down fan */}
+              <div className="mb-1 flex h-7 items-end justify-center">
+                {Array.from({ length: Math.min(4, o.cardCount) }).map((_, k) => (
+                  <div key={k} style={{ marginLeft: k === 0 ? 0 : -22, transform: `rotate(${(k - 1.5) * 7}deg)` }}>
+                    <PlayingCard faceDown size="xs" />
+                  </div>
+                ))}
               </div>
-            );
-          })}
-        </div>
+              <SeatAvatar name={o.name} hue={i + 1} isBot isTurn={o.isCurrentTurn} cardCount={o.cardCount} />
+              {pill && (
+                <span className="mt-1 rounded-full px-2 py-0.5 text-[8px] font-black tracking-wider"
+                      style={{ background: pill.bg, color: pill.fg, fontFamily: "var(--font-display)" }}>
+                  {pill.label}
+                </span>
+              )}
+              {o.passed && !o.finishedAt && (
+                <span className="mt-1 rounded-full px-2 py-0.5 text-[8px] font-bold tracking-wider"
+                      style={{ background: "rgba(255,255,255,0.16)", color: "rgba(255,255,255,0.85)", fontFamily: "var(--font-display)" }}>
+                  PASSE
+                </span>
+              )}
+            </div>
+          );
+        })}
 
         {/* Center — combo to beat */}
-        <div className="absolute left-1/2 top-[44%] flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-2">
+        <div className="absolute left-1/2 top-[46%] flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-2">
           <span className="whitespace-nowrap rounded-full px-3 py-1 text-[9px] font-extrabold uppercase tracking-[0.14em]"
                 style={{ background: "rgba(0,0,0,0.45)", border: "1px solid rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.7)", fontFamily: "var(--font-display)" }}>
             {state.lastCombo.length === 0

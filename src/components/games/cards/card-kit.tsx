@@ -436,6 +436,8 @@ function FaceCenter({ label, suit, d }: { label: string; suit: Suit; d: Dim }) {
 }
 
 // ───────────────────────── TableBg ─────────────────────────
+// `fixed` so the felt always covers the entire screen (under notch + home
+// indicator) — no black bands. Children are positioned against the viewport.
 export function TableBg({ children, tone = "navy" }: { children?: ReactNode; tone?: "navy" | "green" | "plum" }) {
   const tones = {
     navy: { bg0: "#0B1437", bg1: "#050A20" },
@@ -444,7 +446,7 @@ export function TableBg({ children, tone = "navy" }: { children?: ReactNode; ton
   };
   const t = tones[tone] || tones.navy;
   return (
-    <div style={{ position: "absolute", inset: 0, background: `radial-gradient(140% 90% at 50% 35%, ${t.bg0} 0%, ${t.bg1} 100%)`, overflow: "hidden" }}>
+    <div style={{ position: "fixed", inset: 0, zIndex: 0, background: `radial-gradient(120% 80% at 50% 40%, ${t.bg0} 0%, ${t.bg1} 100%)`, overflow: "hidden" }}>
       <div aria-hidden style={{
         position: "absolute", inset: 0,
         background: "radial-gradient(70% 50% at 50% 45%, rgba(80,140,255,0.06) 0%, transparent 70%)",
@@ -453,6 +455,20 @@ export function TableBg({ children, tone = "navy" }: { children?: ReactNode; ton
       {children}
     </div>
   );
+}
+
+// Seat positions (in %) for N opponents arranged around the upper part of an
+// oval table — "me" sits at the bottom. Gives a circle feel for 3-6 players.
+export function opponentSlots(n: number): { left: number; top: number }[] {
+  switch (n) {
+    case 0: return [];
+    case 1: return [{ left: 50, top: 14 }];
+    case 2: return [{ left: 20, top: 18 }, { left: 80, top: 18 }];
+    case 3: return [{ left: 13, top: 44 }, { left: 50, top: 13 }, { left: 87, top: 44 }];
+    case 4: return [{ left: 11, top: 42 }, { left: 35, top: 13 }, { left: 65, top: 13 }, { left: 89, top: 42 }];
+    case 5: return [{ left: 10, top: 46 }, { left: 28, top: 15 }, { left: 50, top: 11 }, { left: 72, top: 15 }, { left: 90, top: 46 }];
+    default: return [{ left: 9, top: 48 }, { left: 24, top: 16 }, { left: 41, top: 11 }, { left: 59, top: 11 }, { left: 76, top: 16 }, { left: 91, top: 48 }].slice(0, n);
+  }
 }
 
 // ───────────────────────── SeatAvatar ─────────────────────────
