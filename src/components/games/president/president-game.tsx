@@ -21,6 +21,7 @@ interface PresidentState {
   timeLeft: number;
   lastCombo: { rank: Rank; suit: Suit }[];
   lastComboPlayer: string | null;
+  forcedRank: Rank | null;
   otherPlayers: OtherPlayer[];
   hands: Record<string, { rank: Rank; suit: Suit }[]>;
 }
@@ -41,6 +42,8 @@ export default function PresidentGame({ roomCode, playerId, playerName }: GamePr
   const isMyTurn = state?.currentPlayerId === playerId;
 
   function toggle(i: number) {
+    // When a rank is locked, only that rank can be selected.
+    if (state?.forcedRank && myHand[i]?.rank !== state.forcedRank) return;
     setSelected((sel) => {
       const next = new Set(sel);
       if (next.has(i)) next.delete(i); else next.add(i);
@@ -159,6 +162,16 @@ export default function PresidentGame({ roomCode, playerId, playerName }: GamePr
           )}
         </div>
 
+        {/* Locked-rank banner — "X ou rien" */}
+        {state.forcedRank && (
+          <div className="absolute left-1/2 top-[27%] z-30 -translate-x-1/2 animate-pulse">
+            <span className="whitespace-nowrap rounded-full px-4 py-1.5 text-xs font-black tracking-[0.08em] text-white"
+                  style={{ background: "linear-gradient(180deg,#FF8E58,#C13D1A)", border: "1.5px solid rgba(255,255,255,0.3)", fontFamily: "var(--font-display)", boxShadow: "0 0 18px rgba(255,140,90,0.5)" }}>
+              🔒 {state.forcedRank} ou rien
+            </span>
+          </div>
+        )}
+
         {/* Action bar — above the fan */}
         {isMyTurn && (
           <div className="absolute bottom-[calc(env(safe-area-inset-bottom,0px)+118px)] left-1/2 z-30 flex -translate-x-1/2 items-center gap-2">
@@ -194,6 +207,7 @@ export default function PresidentGame({ roomCode, playerId, playerName }: GamePr
               onClickIndex={isMyTurn ? toggle : undefined}
               selectedSet={selected}
               disabled={!isMyTurn}
+              isLegal={state.forcedRank ? (c) => c.rank === state.forcedRank : undefined}
               cardSize="md"
               maxWidth={560}
               cardStyle={cardStyle}

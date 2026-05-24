@@ -45,7 +45,9 @@ export class PresidentGame extends BaseGame {
   lastComboPlayer: string | null = null;
   consecutivePasses = 0;
   passedThisRound = new Set<string>();
-  finishersOrder: string[] = []; // player IDs in finishing order
+  finishersOrder: string[] = []; // player IDs in finishing order (président first)
+  penalized: string[] = [];      // finished by playing a 2 → forced last place (trou)
+  forcedRank: Rank | null = null; // when two equal combos stack: next must match this rank or skip
   status: "waiting" | "playing" | "round-over" = "waiting";
   timeLeft = TURN_TIME;
   timer: ReturnType<typeof setInterval> | null = null;
@@ -77,6 +79,8 @@ export class PresidentGame extends BaseGame {
     this.consecutivePasses = 0;
     this.passedThisRound.clear();
     this.finishersOrder = [];
+    this.penalized = [];
+    this.forcedRank = null;
 
     const deck = this.buildDeck();
     this.shuffle(deck);
@@ -116,6 +120,18 @@ export class PresidentGame extends BaseGame {
     this.stopTurnTimer();
     this.clearBotTimeouts(); // drop any stale bot action from the previous turn
     this.timeLeft = TURN_TIME;
+
+    // Rank locked and current player can't match → "ça saute" (auto-skip after a beat).
+    const cur = this.currentPlayerId();
+    const curP = cur ? this.prePlayers.get(cur) : null;
+    if (this.forcedRank && curP && !curP.hand.some((c) => c.rank === this.forcedRank)) {
+      this.broadcastState();
+      this.queueBotAction(() => {
+        if (this.status === "playing" && this.currentPlayerId() === cur) this.passAction(cur);
+      }, 1000, 1500);
+      return;
+    }
+
     this.timer = setInterval(() => {
       this.timeLeft -= 1;
       if (this.timeLeft <= 0) {
@@ -162,7 +178,7 @@ export class PresidentGame extends BaseGame {
         }
       }
       this.passAction(id);
-    });
+    }, 1700, 3200); // slower bots — easier to follow
   }
   stopTurnTimer() {
     if (this.timer) { clearInterval(this.timer); this.timer = null; }
@@ -191,6 +207,7 @@ export class PresidentGame extends BaseGame {
 
   resetTrick() {
     this.lastCombo = [];
+    this.forcedRank = null; // new trick → rank lock released
     this.passedThisRound.clear();
     if (this.lastComboPlayer) {
       const idx = this.turnOrder.indexOf(this.lastComboPlayer);
@@ -213,9 +230,11 @@ export class PresidentGame extends BaseGame {
   comboBeats(newCombo: Card[], oldCombo: Card[]): boolean {
     if (oldCombo.length === 0) return true;
     if (newCombo.length !== oldCombo.length) return false;
+    // Rank locked (two equal combos stacked): only that exact rank may be played.
+    if (this.forcedRank) return newCombo[0].rank === this.forcedRank;
     const a = RANK_ORDER.indexOf(newCombo[0].rank);
     const b = RANK_ORDER.indexOf(oldCombo[0].rank);
-    return a > b;
+    return a >= b; // equal OR higher (equal triggers the lock)
   }
 
   onMessage(msg: Record<string, unknown>, sender: Connection) {
@@ -240,26 +259,33 @@ export class PresidentGame extends BaseGame {
     if (!this.validCombo(cards)) return;
     if (!this.comboBeats(cards, this.lastCombo)) return;
 
+    // Two equal combos stacked (same rank as the combo we just beat) → lock the rank:
+    // the next players must play this same rank or "ça saute".
+    const playedEqual = this.lastCombo.length > 0 && cards[0].rank === this.lastCombo[0].rank;
+
     // Remove cards from hand
     p.hand = p.hand.filter((_, i) => !indices.includes(i));
     this.lastCombo = cards;
     this.lastComboPlayer = playerId;
     this.consecutivePasses = 0;
+    if (playedEqual) this.forcedRank = cards[0].rank;
 
     // Check if player finished
     if (p.hand.length === 0 && p.finishedAt === null) {
-      p.finishedAt = this.finishersOrder.length + 1;
-      this.finishersOrder.push(playerId);
-      // Check if round over (only one left)
+      if (cards[0].rank === "2") {
+        // Forbidden to finish on a 2 → forced trou-du-cul (ranked last).
+        p.finishedAt = -1; // sentinel: penalized, resolved at endRound
+        this.penalized.push(playerId);
+      } else {
+        p.finishedAt = this.finishersOrder.length + 1;
+        this.finishersOrder.push(playerId);
+      }
+      // Round over when only one player still holds cards.
       const remaining = this.turnOrder.filter(id => (this.prePlayers.get(id)?.hand.length ?? 0) > 0);
       if (remaining.length <= 1) {
-        // Last player auto-finishes as trou-du-cul
         for (const rid of remaining) {
           const rp = this.prePlayers.get(rid);
-          if (rp) {
-            rp.finishedAt = this.finishersOrder.length + 1;
-            this.finishersOrder.push(rid);
-          }
+          if (rp) { rp.finishedAt = this.finishersOrder.length + 1; this.finishersOrder.push(rid); }
         }
         return this.endRound();
       }
@@ -288,7 +314,10 @@ export class PresidentGame extends BaseGame {
     this.stopTurnTimer();
     this.status = "round-over";
 
-    const rankings: GameRanking[] = this.finishersOrder.map((id, i) => {
+    // Final order: normal finishers (président first), then players who finished
+    // on a 2 (penalized → trou). penalized go last, in reverse so the most recent is dead-last.
+    const order = [...this.finishersOrder, ...[...this.penalized].reverse()];
+    const rankings: GameRanking[] = order.map((id, i) => {
       const p = this.prePlayers.get(id)!;
       return {
         playerId: id,
@@ -309,6 +338,7 @@ export class PresidentGame extends BaseGame {
       timeLeft: this.timeLeft,
       lastCombo: this.lastCombo,
       lastComboPlayer: this.lastComboPlayer,
+      forcedRank: this.forcedRank,
       otherPlayers: this.turnOrder.map(id => {
         const p = this.prePlayers.get(id);
         return p ? {

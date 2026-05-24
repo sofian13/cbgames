@@ -61,7 +61,7 @@ export default function LeaderboardPage() {
     <main className="relative min-h-screen overflow-hidden text-white">
       <Sparkles count={12} />
 
-      <header className="relative z-10 mx-auto flex w-full max-w-6xl items-center justify-between gap-3 px-5 pt-6 sm:px-10">
+      <header className="relative z-10 mx-auto flex w-full max-w-6xl items-center justify-between gap-3 px-5 pt-[calc(env(safe-area-inset-top,0px)+1.5rem)] sm:px-10">
         <Link href="/" className="flex items-center gap-2 text-sm transition hover:text-white" style={{ color: "var(--text-dim)" }}>
           <ArrowLeft className="h-4 w-4" /> Retour
         </Link>
