@@ -114,6 +114,7 @@ export class PresidentGame extends BaseGame {
 
   startTurnTimer() {
     this.stopTurnTimer();
+    this.clearBotTimeouts(); // drop any stale bot action from the previous turn
     this.timeLeft = TURN_TIME;
     this.timer = setInterval(() => {
       this.timeLeft -= 1;
@@ -177,11 +178,14 @@ export class PresidentGame extends BaseGame {
       this.currentIdx = (this.currentIdx + 1) % n;
       const pid = this.currentPlayerId();
       const p = this.prePlayers.get(pid);
-      // Skip finished players
-      if (p && p.hand.length > 0 && !this.passedThisRound.has(pid)) return;
-      if (p && p.hand.length > 0 && p.id === this.lastComboPlayer) return;
+      if (!p || p.hand.length === 0) continue; // skip finished players
+      // We've come back around to the player who laid the current combo:
+      // everyone else passed → they win the trick and lead fresh.
+      if (pid === this.lastComboPlayer) { this.resetTrick(); return; }
+      // Next player who still has cards and hasn't passed this trick.
+      if (!this.passedThisRound.has(pid)) return;
     }
-    // All remaining have passed → trick won by lastComboPlayer
+    // No eligible responder found → trick won by the last combo player.
     this.resetTrick();
   }
 
