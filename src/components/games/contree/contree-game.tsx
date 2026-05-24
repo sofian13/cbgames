@@ -1,11 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import { useGame } from "@/lib/party/use-game";
 import { useGameStore } from "@/lib/stores/game-store";
 import type { GameProps } from "@/lib/games/types";
-import { PlayingCard, type Suit, type Rank } from "@/components/shared/playing-card";
+import type { Suit, Rank } from "@/components/shared/playing-card";
+import { PlayingCard, useCardStyle } from "@/components/games/cards/card-kit";
 
 interface Seat {
   id: string;
@@ -275,6 +275,7 @@ function BottomHand({
 }) {
   const [previewMode, setPreviewMode] = useState(false);
   const pressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const cardStyle = useCardStyle();
 
   const startPress = () => {
     if (pressTimerRef.current) clearTimeout(pressTimerRef.current);
@@ -354,9 +355,10 @@ function BottomHand({
               }}
             >
               <PlayingCard
-                value={c.rank as Rank}
+                rank={c.rank}
                 suit={c.suit as Suit}
                 size="lg"
+                cardStyle={cardStyle}
                 raised={playable}
               />
               {previewMode && playable && (
@@ -376,76 +378,10 @@ function BottomHand({
   );
 }
 
-function SettingsMenu({ onLeave, onReplay }: { onLeave: () => void; onReplay?: () => void }) {
-  const [open, setOpen] = useState(false);
-  return (
-    <div className="absolute right-4 top-4 z-50">
-      <button
-        onClick={() => setOpen((v) => !v)}
-        aria-label="paramètres"
-        className="flex h-11 w-11 items-center justify-center rounded-full transition-transform hover:scale-105"
-        style={{
-          background: "rgba(8,14,40,0.85)",
-          border: "1.5px solid rgba(120,170,255,0.3)",
-          boxShadow: "0 6px 16px rgba(0,0,0,0.4)",
-        }}
-      >
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <circle cx="12" cy="12" r="3"/>
-          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-        </svg>
-      </button>
-      {open && (
-        <>
-          <button
-            onClick={() => setOpen(false)}
-            aria-label="fermer"
-            className="fixed inset-0 z-0"
-            style={{ background: "transparent" }}
-          />
-          <div
-            className="absolute right-0 top-12 z-10 w-48 overflow-hidden rounded-xl"
-            style={{
-              background: "rgba(8,14,40,0.95)",
-              border: "1px solid rgba(120,170,255,0.3)",
-              boxShadow: "0 12px 32px rgba(0,0,0,0.5)",
-              backdropFilter: "blur(12px)",
-            }}
-          >
-            {onReplay && (
-              <button
-                onClick={() => { setOpen(false); onReplay(); }}
-                className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm text-white transition-colors hover:bg-white/10"
-                style={{ fontFamily: "var(--font-display)" }}
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>
-                </svg>
-                Rejouer
-              </button>
-            )}
-            <button
-              onClick={() => { setOpen(false); onLeave(); }}
-              className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm transition-colors hover:bg-white/10"
-              style={{ color: "#FF8E70", fontFamily: "var(--font-display)" }}
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
-              </svg>
-              Quitter la partie
-            </button>
-          </div>
-        </>
-      )}
-    </div>
-  );
-}
-
 export default function ContreeGame({ roomCode, playerId, playerName }: GameProps) {
-  const router = useRouter();
   const { sendAction, sendRaw } = useGame(roomCode, "contree", playerId, playerName);
   const state = useGameStore((s) => s.gameState) as unknown as ContreeState | null;
-  const leaveGame = () => router.push(`/room/${roomCode}`);
+  const cardStyle = useCardStyle();
 
   // Bidding UI state
   const [bidAmount, setBidAmount] = useState(80);
@@ -482,7 +418,6 @@ export default function ContreeGame({ roomCode, playerId, playerName }: GameProp
   if (!state || !state.phase || state.phase === "waiting") {
     return (
       <BoardBackground>
-        <SettingsMenu onLeave={leaveGame} />
         <div className="absolute inset-0 flex flex-col items-center justify-center px-6 text-center text-white">
           <span className="cb-eyebrow" style={{ color: "rgba(255,255,255,0.5)" }}>en attente</span>
           <h2 className="cb-display-lg mt-2">Distribution…</h2>
@@ -510,7 +445,6 @@ export default function ContreeGame({ roomCode, playerId, playerName }: GameProp
   if (state.phase === "match-over") {
     return (
       <BoardBackground>
-        <SettingsMenu onLeave={leaveGame} />
         <div className="absolute inset-0 flex flex-col items-center justify-center px-6 text-center text-white">
           <span className="cb-eyebrow" style={{ color: "rgba(255,255,255,0.5)" }}>partie terminée</span>
           <h2 className="cb-display-lg mt-2" style={{ fontFamily: "var(--font-display)" }}>
@@ -544,7 +478,6 @@ export default function ContreeGame({ roomCode, playerId, playerName }: GameProp
 
     return (
       <BoardBackground>
-        <SettingsMenu onLeave={leaveGame} />
         <Scoreboard state={state} myTeam={myTeam} />
 
         <SeatAvatar seat={partnerSeat} position="top"   isTurn={state.currentBidder === partnerSeat?.id} myTeam={myTeam} bubble={getBubble(partnerSeat?.id, state)} />
@@ -761,7 +694,6 @@ export default function ContreeGame({ roomCode, playerId, playerName }: GameProp
 
   return (
     <BoardBackground>
-      <SettingsMenu onLeave={leaveGame} />
       <Scoreboard state={state} myTeam={myTeam} />
 
       <SeatAvatar seat={partnerSeat} position="top"   isTurn={state.currentPlayerId === partnerSeat?.id} myTeam={myTeam} bubble={getBubble(partnerSeat?.id, state)} />
@@ -852,9 +784,10 @@ export default function ContreeGame({ roomCode, playerId, playerName }: GameProp
               }}
             >
               <PlayingCard
-                value={t.card.rank as Rank}
+                rank={t.card.rank}
                 suit={t.card.suit as Suit}
                 size="lg"
+                cardStyle={cardStyle}
                 raised
               />
             </div>
