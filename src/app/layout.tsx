@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Toaster } from "@/components/ui/sonner";
 import { SessionProvider } from "next-auth/react";
 import { Providers } from "@/components/Providers";
@@ -10,6 +10,20 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "af.games · Party Arcade",
   description: "Une soirée, un code, un jeu. Des mini-jeux multijoueur pensés pour le mobile et les soirées entre potes.",
+  applicationName: "af.games",
+  appleWebApp: { capable: true, statusBarStyle: "black-translucent", title: "af.games" },
+  icons: { icon: "/icon-192.png", apple: "/apple-touch-icon.png" },
+  other: {
+    "apple-mobile-web-app-capable": "yes",
+    "mobile-web-app-capable": "yes",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#0E0828",
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
