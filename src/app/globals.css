@@ -186,18 +186,28 @@
   html, body {
     font-family: "DM Sans", -apple-system, system-ui, sans-serif;
     min-height: 100vh;
+    /* Solid base so a tall page never shows white below the gradient (mobile fix). */
+    background-color: var(--bg-deep);
   }
   body {
-    background:
-      radial-gradient(120% 80% at 20% 0%, rgba(91,54,214,0.45) 0%, transparent 55%),
-      radial-gradient(100% 70% at 100% 100%, rgba(255,62,165,0.30) 0%, transparent 60%),
-      linear-gradient(180deg, var(--bg-deep) 0%, var(--background) 100%);
-    background-attachment: fixed;
     color: var(--foreground);
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
   }
-  body.game-shell-active {
+  /* Decorative gradient as a fixed layer behind content — robust on mobile
+     (no background-attachment:fixed jank, always covers the viewport). */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background:
+      radial-gradient(120% 80% at 20% 0%, rgba(91,54,214,0.45) 0%, transparent 55%),
+      radial-gradient(100% 70% at 100% 100%, rgba(255,62,165,0.30) 0%, transparent 60%),
+      linear-gradient(180deg, var(--bg-deep) 0%, var(--background) 100%);
+  }
+  body.game-shell-active::before {
     background:
       radial-gradient(120% 80% at 20% 0%, rgba(91,54,214,0.35) 0%, transparent 55%),
       linear-gradient(180deg, var(--bg-deep) 0%, var(--background) 100%);
