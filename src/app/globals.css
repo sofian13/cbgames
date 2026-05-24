@@ -509,4 +509,9 @@
     0%   { opacity: 0; transform: translate(-50%, -8px) scale(0.85); }
     100% { opacity: 1; transform: translate(-50%, 0) scale(1); }
   }
+  /* Pulsing ring around the active player's seat (card games) */
+  @keyframes pulseRing {
+    0%, 100% { opacity: 0.5; transform: scale(0.92); }
+    50%      { opacity: 1;   transform: scale(1.12); }
+  }
 }

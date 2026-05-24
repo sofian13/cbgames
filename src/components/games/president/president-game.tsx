@@ -4,8 +4,7 @@ import { useState } from "react";
 import { useGame } from "@/lib/party/use-game";
 import { useGameStore } from "@/lib/stores/game-store";
 import type { GameProps } from "@/lib/games/types";
-import { PlayingCard, type Suit, type Rank } from "@/components/shared/playing-card";
-import { cn } from "@/lib/utils";
+import { TableBg, SeatAvatar, FanHand, PlayingCard, type Suit, type Rank } from "@/components/games/cards/card-kit";
 
 interface OtherPlayer {
   id: string;
@@ -26,57 +25,68 @@ interface PresidentState {
   hands: Record<string, { rank: Rank; suit: Suit }[]>;
 }
 
-const palette = ["#FF6A3D","#2B6DE8","#18A957","#E63CA0","#6B4FE8","#E89A2B","#00B3A6","#E23434"];
+// Finishing-position label (1st to empty hand = Président)
+const RANK_PILL: Record<number, { label: string; bg: string; fg: string }> = {
+  1: { label: "PRÉSIDENT", bg: "linear-gradient(180deg,#FFD23F,#E0AA00)", fg: "#3B2900" },
+  2: { label: "VICE-P", bg: "linear-gradient(180deg,#5BA3FF,#2A6FDB)", fg: "#fff" },
+};
 
 export default function PresidentGame({ roomCode, playerId, playerName }: GameProps) {
   const { sendAction, sendRaw } = useGame(roomCode, "president", playerId, playerName);
   const state = useGameStore((s) => s.gameState) as unknown as PresidentState | null;
-  const [selected, setSelected] = useState<number[]>([]);
+  const [selected, setSelected] = useState<Set<number>>(new Set());
 
   const myHand = state?.hands?.[playerId] ?? [];
   const isMyTurn = state?.currentPlayerId === playerId;
 
   function toggle(i: number) {
-    setSelected((sel) => sel.includes(i) ? sel.filter((x) => x !== i) : [...sel, i]);
+    setSelected((sel) => {
+      const next = new Set(sel);
+      if (next.has(i)) next.delete(i); else next.add(i);
+      return next;
+    });
   }
 
   function playSelection() {
-    if (selected.length === 0) return;
-    sendAction({ action: "play-combo",  playerId, indices: selected  });
-    setSelected([]);
+    if (selected.size === 0) return;
+    sendAction({ action: "play-combo", playerId, indices: [...selected].sort((a, b) => a - b) });
+    setSelected(new Set());
   }
 
   function pass() {
-    sendAction({ action: "pass",  playerId  });
+    sendAction({ action: "pass", playerId });
   }
 
+  // ── Waiting / round-over (lightweight, keep felt look) ──
   if (!state || !state.status || state.status === "waiting") {
     return (
-      <div className="flex h-full flex-col items-center justify-center px-6 text-center text-white">
-        <span className="cb-eyebrow" style={{ color: "rgba(255,255,255,0.5)" }}>en attente</span>
-        <h2 className="cb-display-lg mt-2">Distribution…</h2>
-        <p className="mt-3 text-sm" style={{ color: "rgba(255,255,255,0.55)" }}>
-          Min 3 joueurs · 1er à vider = Président
-        </p>
-        <button
-          onClick={() => sendRaw({ type: "start-with-bots" })}
-          className="mt-6 rounded-xl px-5 py-3 text-sm font-black"
-          style={{ background: "var(--cb-brand)", color: "var(--cb-brand-ink)", fontFamily: "var(--font-display)", letterSpacing: "0.04em" }}
-        >
-          Lancer avec bots
-        </button>
+      <div className="relative h-full w-full">
+        <TableBg tone="green">
+          <div className="absolute inset-0 flex flex-col items-center justify-center px-6 text-center text-white">
+            <span className="text-[10px] font-bold uppercase tracking-[0.22em]" style={{ color: "rgba(255,255,255,0.55)" }}>en attente</span>
+            <h2 className="cb-display-lg mt-2">Distribution…</h2>
+            <p className="mt-3 text-sm" style={{ color: "rgba(255,255,255,0.6)" }}>Min 3 joueurs · 1er à vider = Président</p>
+            <button onClick={() => sendRaw({ type: "start-with-bots" })}
+              className="mt-6 rounded-xl px-5 py-3 text-sm font-black"
+              style={{ background: "var(--cb-brand)", color: "#fff", fontFamily: "var(--font-display)", letterSpacing: "0.04em" }}>
+              Lancer avec bots
+            </button>
+          </div>
+        </TableBg>
       </div>
     );
   }
 
   if (state.status === "round-over") {
     return (
-      <div className="flex h-full flex-col items-center justify-center px-6 text-center text-white">
-        <span className="cb-eyebrow" style={{ color: "rgba(255,255,255,0.5)" }}>fin de manche</span>
-        <h2 className="cb-display-lg mt-2">Hiérarchie révélée</h2>
-        <p className="mt-3 text-sm" style={{ color: "rgba(255,255,255,0.55)" }}>
-          Le classement s&apos;affiche dans le shell…
-        </p>
+      <div className="relative h-full w-full">
+        <TableBg tone="green">
+          <div className="absolute inset-0 flex flex-col items-center justify-center px-6 text-center text-white">
+            <span className="text-[10px] font-bold uppercase tracking-[0.22em]" style={{ color: "rgba(255,255,255,0.55)" }}>fin de manche</span>
+            <h2 className="cb-display-lg mt-2">Hiérarchie révélée</h2>
+            <p className="mt-3 text-sm" style={{ color: "rgba(255,255,255,0.6)" }}>Le classement s&apos;affiche dans le shell…</p>
+          </div>
+        </TableBg>
       </div>
     );
   }
@@ -84,178 +94,115 @@ export default function PresidentGame({ roomCode, playerId, playerName }: GamePr
   const opps = state.otherPlayers.filter((p) => p.id !== playerId);
 
   return (
-    <div className="relative flex h-full flex-col">
-      {/* Opponents row */}
-      <div className="grid gap-2 px-3 pt-2"
-           style={{ gridTemplateColumns: `repeat(${Math.max(1, opps.length)}, minmax(0, 1fr))` }}>
-        {opps.map((o, i) => (
-          <div
-            key={o.id}
-            className="relative rounded-xl border p-2"
-            style={{
-              background: o.isCurrentTurn ? "var(--cb-brand)" : "rgba(255,255,255,0.04)",
-              color: o.isCurrentTurn ? "var(--cb-brand-ink)" : "#fff",
-              borderColor: o.isCurrentTurn ? "transparent" : "rgba(255,255,255,0.1)",
-              opacity: o.finishedAt ? 0.55 : 1,
-            }}
-          >
-            <div className="flex items-center gap-2">
-              <span
-                className="flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-black"
-                style={{
-                  background: palette[i % palette.length],
-                  color: "#fff",
-                  fontFamily: "var(--font-display)",
-                }}
-              >
-                {o.name.slice(0, 2).toUpperCase()}
-              </span>
-              <span className="truncate text-xs font-bold"
-                    style={{ fontFamily: "var(--font-display)" }}>{o.name}</span>
-              {o.finishedAt && (
-                <span
-                  className="ml-auto rounded-full px-1.5 text-[8px] font-black"
-                  style={{ background: "#E3B83A", color: "#3B2C00" }}
-                >
-                  #{o.finishedAt}
-                </span>
-              )}
-            </div>
-            <div className="mt-1 flex items-center gap-1">
-              <span className="cb-mono text-[10px]" style={{
-                color: o.isCurrentTurn ? "rgba(0,0,0,0.6)" : "rgba(255,255,255,0.6)"
-              }}>
-                {o.cardCount} cartes
-              </span>
-              {o.passed && (
-                <span className="text-[9px]" style={{
-                  color: o.isCurrentTurn ? "rgba(0,0,0,0.6)" : "rgba(255,255,255,0.5)"
-                }}>· passe</span>
-              )}
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Felt with last combo */}
-      <div
-        className="relative mx-3 mt-3 flex flex-1 flex-col items-center justify-center rounded-3xl"
-        style={{
-          background: "radial-gradient(120% 80% at 50% 50%, #1B3D2A 0%, #0D2418 100%)",
-          border: "1px solid rgba(255,255,255,0.06)",
-          overflow: "hidden",
-        }}
-      >
-        <span
-          className="rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-wider"
-          style={{
-            background: "rgba(0,0,0,0.4)",
-            color: "rgba(255,255,255,0.7)",
-            fontFamily: "var(--font-display)",
-          }}
-        >
-          {state.lastCombo.length === 0
-            ? "tu mènes — joue ce que tu veux"
-            : `à battre · ${state.lastCombo.length} carte${state.lastCombo.length > 1 ? "s" : ""}`}
-        </span>
-
-        {state.lastCombo.length > 0 && (
-          <div className="mt-3 flex gap-1">
-            {state.lastCombo.map((c, i) => (
-              <div
-                key={i}
-                style={{ transform: `rotate(${(i - (state.lastCombo.length - 1) / 2) * 3}deg)` }}
-              >
-                <PlayingCard value={c.rank as Rank} suit={c.suit as Suit} size="md" raised
-                             style={{ boxShadow: "0 6px 16px rgba(0,0,0,0.45)" }}/>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {isMyTurn && (
-          <div
-            className="absolute top-3 right-3 rounded-full px-3 py-1 text-xs font-black"
-            style={{
-              background: state.timeLeft <= 5 ? "var(--cb-social)" : "var(--cb-brand)",
-              color: "#fff",
-              fontFamily: "var(--font-display)",
-            }}
-          >
-            {state.timeLeft}s
-          </div>
-        )}
-      </div>
-
-      {/* Selection summary + actions */}
-      {isMyTurn && (
-        <div className="px-3 pt-2">
-          <div className="flex items-center gap-2">
-            <span className="flex-1 text-xs" style={{ color: "rgba(255,255,255,0.7)" }}>
-              {selected.length === 0
-                ? "Sélectionne une carte (ou un combo)"
-                : `${selected.length} carte${selected.length > 1 ? "s" : ""} sélectionnée${selected.length > 1 ? "s" : ""}`}
-            </span>
-            {state.lastCombo.length > 0 && (
-              <button onClick={pass} className="cb-btn cb-btn-soft cb-btn-sm">Passer</button>
-            )}
-            <button
-              onClick={playSelection}
-              disabled={selected.length === 0}
-              className={cn("cb-btn cb-btn-sm",
-                selected.length === 0 ? "cb-btn-soft" : "cb-btn-brand"
-              )}
-            >
-              Jouer
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* My hand */}
-      <div className="relative h-32 px-3 pt-2">
-        <div className="relative mx-auto" style={{ width: "100%", maxWidth: 540, height: 110 }}>
-          {myHand.map((c, i) => {
-            const n = myHand.length;
-            const mid = (n - 1) / 2;
-            const offset = i - mid;
-            const spacing = Math.min(34, 320 / Math.max(1, n - 1));
-            const rot = offset * Math.min(3, 16 / Math.max(1, n - 1));
-            const x = offset * spacing;
-            const y = Math.abs(offset) * 1.5;
-            const isSelected = selected.includes(i);
+    <div className="relative h-full w-full select-none overflow-hidden">
+      <TableBg tone="green">
+        {/* Opponents — row across the top (under the shell's top bar) */}
+        <div className="absolute inset-x-0 top-0 flex justify-center gap-5 px-4 pt-[calc(env(safe-area-inset-top,0px)+4.25rem)] sm:gap-10">
+          {opps.map((o, i) => {
+            const pill = o.finishedAt ? RANK_PILL[o.finishedAt] : null;
             return (
-              <button
-                key={i}
-                onClick={() => isMyTurn && toggle(i)}
-                disabled={!isMyTurn}
-                className="absolute outline-none"
-                style={{
-                  left: "50%", bottom: 0,
-                  transform: `translateX(${x - 28}px) translateY(${-y - (isSelected ? 16 : 0)}px) rotate(${rot}deg)`,
-                  transformOrigin: "center 95px",
-                  zIndex: isSelected ? 100 + i : i,
-                  cursor: isMyTurn ? "pointer" : "not-allowed",
-                  transition: "transform 0.2s var(--ease-out)",
-                }}
-              >
-                <PlayingCard
-                  value={c.rank as Rank}
-                  suit={c.suit as Suit}
-                  size="md"
-                  dim={!isMyTurn && !isSelected}
-                  raised={isSelected}
-                  style={isSelected ? {
-                    boxShadow: "0 12px 24px rgba(255,106,61,0.5)",
-                    outline: "3px solid var(--cb-brand)",
-                    outlineOffset: -3,
-                  } : undefined}
-                />
-              </button>
+              <div key={o.id} className="relative flex flex-col items-center" style={{ opacity: o.finishedAt ? 0.6 : 1 }}>
+                {/* mini face-down fan */}
+                <div className="mb-1 flex h-8 items-end justify-center">
+                  {Array.from({ length: Math.min(4, o.cardCount) }).map((_, k) => (
+                    <div key={k} style={{ marginLeft: k === 0 ? 0 : -22, transform: `rotate(${(k - 1.5) * 7}deg)` }}>
+                      <PlayingCard faceDown size="xs" />
+                    </div>
+                  ))}
+                </div>
+                <SeatAvatar name={o.name} hue={i + 1} isBot isTurn={o.isCurrentTurn} cardCount={o.cardCount} />
+                {pill && (
+                  <span className="mt-1 rounded-full px-2 py-0.5 text-[8px] font-black tracking-wider"
+                        style={{ background: pill.bg, color: pill.fg, fontFamily: "var(--font-display)" }}>
+                    {pill.label}
+                  </span>
+                )}
+                {o.passed && !o.finishedAt && (
+                  <span className="mt-1 rounded-full px-2 py-0.5 text-[8px] font-bold tracking-wider"
+                        style={{ background: "rgba(255,255,255,0.16)", color: "rgba(255,255,255,0.85)", fontFamily: "var(--font-display)" }}>
+                    PASSE
+                  </span>
+                )}
+              </div>
             );
           })}
         </div>
-      </div>
+
+        {/* Center — combo to beat */}
+        <div className="absolute left-1/2 top-[44%] flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-2">
+          <span className="whitespace-nowrap rounded-full px-3 py-1 text-[9px] font-extrabold uppercase tracking-[0.14em]"
+                style={{ background: "rgba(0,0,0,0.45)", border: "1px solid rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.7)", fontFamily: "var(--font-display)" }}>
+            {state.lastCombo.length === 0
+              ? "tu mènes — joue ce que tu veux"
+              : `à battre · ${state.lastCombo.length} carte${state.lastCombo.length > 1 ? "s" : ""}`}
+          </span>
+          {state.lastCombo.length > 0 && (
+            <div className="flex">
+              {state.lastCombo.map((c, i) => (
+                <div key={i} style={{
+                  marginLeft: i === 0 ? 0 : -14,
+                  transform: `rotate(${(i - (state.lastCombo.length - 1) / 2) * 4}deg)`,
+                  filter: "drop-shadow(0 8px 16px rgba(0,0,0,0.55))",
+                }}>
+                  <PlayingCard rank={c.rank} suit={c.suit} size="md" raised />
+                </div>
+              ))}
+            </div>
+          )}
+          {isMyTurn && (
+            <span className="mt-1 whitespace-nowrap rounded-full px-3 py-1 text-[10px] font-black tracking-[0.12em] text-white"
+                  style={{ background: state.timeLeft <= 5 ? "linear-gradient(180deg,#FF6B5B,#C13D1A)" : "linear-gradient(180deg,#FF8E58,#C13D1A)", fontFamily: "var(--font-display)" }}>
+              À TOI · {state.timeLeft}s
+            </span>
+          )}
+        </div>
+
+        {/* Action bar — above the fan */}
+        {isMyTurn && (
+          <div className="absolute bottom-[124px] left-1/2 z-30 flex -translate-x-1/2 items-center gap-2">
+            <span className="whitespace-nowrap rounded-full px-2.5 py-1.5 text-[10px] font-bold text-white/85"
+                  style={{ background: "rgba(0,0,0,0.5)", border: "1px solid rgba(255,255,255,0.12)", fontFamily: "var(--font-display)" }}>
+              {selected.size === 0 ? "sélectionne un combo" : `${selected.size} carte${selected.size > 1 ? "s" : ""}`}
+            </span>
+            {state.lastCombo.length > 0 && (
+              <button onClick={pass}
+                className="rounded-full px-3.5 py-1.5 text-[10px] font-black tracking-[0.14em] text-white active:scale-95"
+                style={{ background: "linear-gradient(180deg,#3B82F6,#1D4ED8)", border: "1.5px solid rgba(180,210,255,0.4)", fontFamily: "var(--font-display)", boxShadow: "0 0 14px rgba(59,130,246,0.4)" }}>
+                PASSE
+              </button>
+            )}
+            <button onClick={playSelection} disabled={selected.size === 0}
+              className="rounded-full px-3.5 py-1.5 text-[10px] font-black tracking-[0.14em] text-white active:scale-95 disabled:opacity-50"
+              style={{
+                background: selected.size === 0 ? "rgba(255,255,255,0.08)" : "linear-gradient(180deg,#22C55E,#15803D)",
+                border: "1.5px solid " + (selected.size === 0 ? "rgba(255,255,255,0.12)" : "rgba(180,255,200,0.4)"),
+                fontFamily: "var(--font-display)",
+                boxShadow: selected.size === 0 ? "none" : "0 0 14px rgba(34,197,94,0.4)",
+              }}>
+              JOUER ↑
+            </button>
+          </div>
+        )}
+
+        {/* My fan */}
+        <div className="absolute inset-x-0 bottom-[-6px] z-40 flex justify-center">
+          <div style={{ width: "min(88%, 620px)" }}>
+            <FanHand
+              hand={myHand}
+              onClickIndex={isMyTurn ? toggle : undefined}
+              selectedSet={selected}
+              disabled={!isMyTurn}
+              cardSize="md"
+              maxWidth={560}
+            />
+          </div>
+        </div>
+
+        {/* Me — bottom-left */}
+        <div className="absolute bottom-3 left-3 z-30">
+          <SeatAvatar name={playerName} hue={2} isBot={false} isTurn={isMyTurn} cardCount={myHand.length} />
+        </div>
+      </TableBg>
     </div>
   );
 }
