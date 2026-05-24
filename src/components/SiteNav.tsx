@@ -6,8 +6,10 @@
  * so the avatar reflects the current blob everywhere.
  */
 
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { Menu, X } from "lucide-react";
 import { MascotAvatar } from "@/components/Mascot";
 import { MuteToggle } from "@/components/MuteToggle";
 import { useMe } from "@/lib/hooks/useMe";
@@ -30,6 +32,7 @@ const LINKS: { label: string; href: string; matchPrefix?: string }[] = [
 
 export function SiteNav({ user, level, xp, room = null }: SiteNavProps) {
   const [me] = useMe();
+  const [open, setOpen] = useState(false);
   const pathname = usePathname();
   const navUser = user ?? me.name;
   const navLevel = level ?? me.level;
@@ -114,7 +117,39 @@ export function SiteNav({ user, level, xp, room = null }: SiteNavProps) {
           <MascotAvatar color={me.color} size={36} mood={me.mood} />
           <span className="hidden text-sm font-semibold text-white sm:inline">{navUser}</span>
         </Link>
+
+        {/* Burger menu — mobile only */}
+        <button
+          onClick={() => setOpen((v) => !v)}
+          aria-label="Menu"
+          className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/[0.06] text-white md:hidden"
+        >
+          {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+        </button>
       </div>
+
+      {/* Mobile dropdown */}
+      {open && (
+        <div
+          className="absolute right-5 top-[calc(100%+8px)] z-50 w-56 overflow-hidden rounded-2xl border p-2 md:hidden"
+          style={{ background: "rgba(20,12,50,0.97)", borderColor: "var(--line-soft)", boxShadow: "0 20px 50px rgba(0,0,0,0.6)" }}
+        >
+          {LINKS.map((link) => (
+            <Link key={link.label} href={link.href} onClick={() => setOpen(false)}
+              className="block rounded-xl px-4 py-2.5 text-sm font-semibold transition"
+              style={{ color: isActive(link) ? "#fff" : "var(--text-dim)", background: isActive(link) ? "rgba(255,255,255,0.08)" : "transparent" }}>
+              {link.label}
+            </Link>
+          ))}
+          <div className="my-1 h-px" style={{ background: "var(--line-soft)" }} />
+          <Link href="/profile" onClick={() => setOpen(false)} className="block rounded-xl px-4 py-2.5 text-sm font-semibold" style={{ color: "var(--af-pink)" }}>
+            Mon profil
+          </Link>
+          <Link href="/login" onClick={() => setOpen(false)} className="block rounded-xl px-4 py-2.5 text-sm font-semibold" style={{ color: "var(--text-dim)" }}>
+            Connexion
+          </Link>
+        </div>
+      )}
     </header>
   );
 }

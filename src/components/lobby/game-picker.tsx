@@ -49,69 +49,51 @@ export function GamePicker({ selectedGameId, isHost, onSelectGame }: GamePickerP
   }, [activeCategory, deferredSearch]);
 
   return (
-    <section
-      className="min-w-0 overflow-hidden rounded-2xl border bg-[color:var(--surface)] p-4 sm:p-5"
-      style={{ borderColor: "var(--line-soft)" }}
-    >
-      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-baseline sm:justify-between">
+    <section className="min-w-0">
+      <div className="mb-4 flex items-end justify-between gap-3">
         <div className="min-w-0">
-          <span className="cb-eyebrow">jeux</span>
-          <h2 className="cb-display-md mt-1">{isHost ? "Choisis un jeu" : "Catalogue"}</h2>
+          <p className="af-eyebrow" style={{ color: "var(--af-yellow)" }}>la bibliothèque</p>
+          <h2 className="cb-display-lg mt-1" style={{ letterSpacing: -1 }}>
+            {isHost ? "Choisis un jeu." : "Catalogue."}
+          </h2>
           <p className="mt-1 text-xs" style={{ color: "var(--text-dim)" }}>
-            {isHost
-              ? "Tap pour sélectionner. Tu peux changer à tout moment."
-              : "Le host choisit la prochaine partie."}
+            {isHost ? "Tap pour sélectionner — tu peux changer à tout moment." : "Le host choisit la prochaine partie."}
           </p>
         </div>
-        <span
-          className="w-fit rounded-full border px-3 py-1 text-xs cb-mono font-bold"
-          style={{ borderColor: "var(--line-soft)", color: "var(--text-dim)" }}
-        >
+        <span className="af-chip shrink-0" style={{ color: "var(--af-yellow)" }}>
           {filteredGames.length} jeu{filteredGames.length > 1 ? "x" : ""}
         </span>
       </div>
 
       <div className="mb-4 space-y-3">
         <label className="relative block">
-          <Search
-            className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2"
-            style={{ color: "var(--text-muted)" }}
-          />
+          <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2" style={{ color: "var(--text-muted)" }} />
           <input
             type="text"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="Rechercher un jeu"
-            className="h-11 w-full rounded-full border pl-10 pr-4 text-sm outline-none transition focus:ring-2"
-            style={{
-              background: "var(--surface-2)",
-              borderColor: "var(--line-soft)",
-              color: "var(--foreground)",
-            }}
+            placeholder="Rechercher un jeu…"
+            className="h-12 w-full rounded-2xl border pl-11 pr-4 text-sm outline-none transition focus:border-[color:var(--cb-brand)]"
+            style={{ background: "rgba(255,255,255,0.06)", borderColor: "var(--line-soft)", color: "#fff" }}
           />
         </label>
 
         <div className="cb-scroll flex gap-2 overflow-x-auto pb-1">
           {CATEGORIES.map((category) => {
-            const color = CATEGORY_COLOR[category.id] || "var(--foreground)";
+            const color = CATEGORY_COLOR[category.id] || "var(--af-pink)";
             const active = activeCategory === category.id;
             return (
               <button
                 key={category.id}
                 onClick={() => setActiveCategory(category.id)}
-                className={cn(
-                  "shrink-0 rounded-full border px-3 py-1.5 text-xs font-bold uppercase tracking-wider transition"
-                )}
+                className={cn("shrink-0 rounded-full border px-3.5 py-1.5 text-xs font-bold transition")}
                 style={{
-                  background: active ? "var(--primary)" : "var(--surface)",
-                  color: active ? "var(--primary-foreground)" : "var(--text-strong)",
-                  borderColor: active ? "transparent" : "var(--line-soft)",
+                  background: active ? `${color}22` : "rgba(255,255,255,0.04)",
+                  color: active ? "#fff" : "var(--text-dim)",
+                  borderColor: active ? color : "var(--line-soft)",
                 }}
               >
-                <span
-                  className="inline-block mr-1.5 h-1.5 w-1.5 rounded-full align-middle"
-                  style={{ background: color }}
-                />
+                <span className="mr-1.5 inline-block h-1.5 w-1.5 rounded-full align-middle" style={{ background: color }} />
                 {category.label}
               </button>
             );
@@ -119,7 +101,7 @@ export function GamePicker({ selectedGameId, isHost, onSelectGame }: GamePickerP
         </div>
       </div>
 
-      <div className="grid min-w-0 gap-2.5 md:grid-cols-2">
+      <div className="grid min-w-0 gap-3 sm:grid-cols-2">
         {filteredGames.length > 0 ? (
           filteredGames.map((game) => (
             <GameCard

@@ -13,6 +13,7 @@ import { useRoomStore } from "@/lib/stores/room-store";
 import { Mascot, MascotAvatar, MASCOT_PALETTE, type MascotColor } from "@/components/Mascot";
 import { Sparkles } from "@/components/ConfettiBurst";
 import { MuteToggle } from "@/components/MuteToggle";
+import { Customizer } from "@/components/Customizer";
 import { useMe } from "@/lib/hooks/useMe";
 
 // Map game category → mascot color (so banner picks a coherent mascot)
@@ -31,7 +32,8 @@ export default function LobbyPage() {
     return { id: guest.id, name: guest.name };
   }, []);
 
-  const [persona] = useMe();
+  const [persona, updatePersona] = useMe();
+  const [showProfile, setShowProfile] = useState(false);
 
   const optimisticHost = useMemo(() => {
     if (typeof window === "undefined") return false;
@@ -111,10 +113,31 @@ export default function LobbyPage() {
         </div>
         <div className="flex items-center gap-3">
           <MuteToggle />
-          <MascotAvatar color={persona.color} size={34} mood={persona.mood} />
-          <span className="hidden text-sm font-bold sm:inline">{playerName}</span>
+          <button onClick={() => setShowProfile(true)} className="flex items-center gap-2" aria-label="Mon profil">
+            <MascotAvatar color={persona.color} size={34} mood={persona.mood} />
+            <span className="hidden text-sm font-bold sm:inline">{playerName}</span>
+          </button>
         </div>
       </header>
+
+      {/* Profil / customizer en modal — sans quitter la salle */}
+      {showProfile && (
+        <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/60 p-4 backdrop-blur-md sm:items-center"
+             onClick={() => setShowProfile(false)}>
+          <div className="w-full max-w-lg rounded-3xl border p-6" style={{ background: "var(--surface)", borderColor: "rgba(255,255,255,0.1)" }}
+               onClick={(e) => e.stopPropagation()}>
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="cb-display-md">Ton blob</h3>
+              <button onClick={() => setShowProfile(false)} className="flex h-9 w-9 items-center justify-center rounded-full border"
+                      style={{ background: "rgba(255,255,255,0.05)", borderColor: "rgba(255,255,255,0.1)", color: "var(--text-dim)" }}>✕</button>
+            </div>
+            <Customizer me={persona} update={updatePersona} layout="row" blobSize={70} />
+            <a href="/profile" className="af-btn af-btn-ghost mt-4 block text-center" style={{ fontSize: 13 }}>
+              Voir mon profil complet → <span style={{ color: "var(--text-muted)" }}>(quitte la salle)</span>
+            </a>
+          </div>
+        </div>
+      )}
 
       <main className="relative z-10 mx-auto flex w-full max-w-6xl flex-1 flex-col gap-5 px-5 py-6 sm:px-10">
         {error && (
