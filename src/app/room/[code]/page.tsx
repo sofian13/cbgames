@@ -3,7 +3,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { GamePicker } from "@/components/lobby/game-picker";
+import dynamic from "next/dynamic";
+// La grille de jeux (illustrations des 32 jeux) est lourde : on la charge à part
+// pour que la salle s'affiche instantanément.
+const GamePicker = dynamic(
+  () => import("@/components/lobby/game-picker").then((m) => m.GamePicker),
+  { ssr: false, loading: () => <div className="py-10 text-center text-sm" style={{ color: "var(--text-dim)" }}>Chargement des jeux…</div> },
+);
 import { PlayerList } from "@/components/lobby/player-list";
 import { ReadyCheck } from "@/components/lobby/ready-check";
 import { getOrCreateGuest } from "@/lib/guest";

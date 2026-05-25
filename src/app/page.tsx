@@ -84,7 +84,9 @@ export default function HomePage() {
   const [guestName, setGuestNameState] = useState("");
   useEffect(() => {
     setGuestNameState(getOrCreateGuest().name);
-  }, []);
+    // Précharge le bundle de la salle pour que "Créer une salle" soit instantané.
+    router.prefetch("/room/_warm");
+  }, [router]);
 
   const implementedGames = GAMES.filter((game) => game.implemented);
   const categoriesList = Array.from(new Set(implementedGames.map((g) => g.category)));
