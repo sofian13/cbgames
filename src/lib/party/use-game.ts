@@ -9,6 +9,19 @@ import type {
   GameServerMessage,
 } from "@/lib/party/message-types";
 
+// Référence vers le socket de jeu actif, pour quitter volontairement depuis le shell.
+let activeGameSocket: PartySocket | null = null;
+
+// Quitter VOLONTAIREMENT (menu) : demande au serveur de réinitialiser la partie
+// si plus aucun humain ne reste (une simple fermeture = reconnexion à la partie).
+export function leaveActiveGame() {
+  try {
+    activeGameSocket?.send(JSON.stringify({ type: "leave-game" }));
+  } catch {
+    /* ignore */
+  }
+}
+
 export function useGame(roomCode: string, gameId: string, playerId: string, playerName: string) {
   const socketRef = useRef<PartySocket | null>(null);
   const store = useGameStore();
@@ -25,6 +38,7 @@ export function useGame(roomCode: string, gameId: string, playerId: string, play
     });
 
     socketRef.current = socket;
+    activeGameSocket = socket;
     store.setGameId(gameId);
 
     socket.addEventListener("open", () => {
@@ -63,6 +77,7 @@ export function useGame(roomCode: string, gameId: string, playerId: string, play
     return () => {
       socket.close();
       socketRef.current = null;
+      if (activeGameSocket === socket) activeGameSocket = null;
       store.reset();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps

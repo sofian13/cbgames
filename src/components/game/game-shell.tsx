@@ -7,6 +7,7 @@ import { Scoreboard } from "./scoreboard";
 import { getGameById } from "@/lib/games/registry";
 import { addGameResult, getLevel, type GlobalStats } from "@/lib/stores/global-points";
 import { useGameStore } from "@/lib/stores/game-store";
+import { leaveActiveGame } from "@/lib/party/use-game";
 import { useKeyedState } from "@/lib/use-keyed-state";
 import { useAudio } from "@/lib/hooks/useAudio";
 import { Mascot, MascotAvatar, MASCOT_PALETTE, type MascotColor } from "@/components/Mascot";
@@ -17,9 +18,9 @@ import { PlayingCard, useCardStyle, setCardStyle, type CardStyle } from "@/compo
 function MenuRow({ icon: Icon, label, onClick, danger }: { icon: typeof Settings; label: string; onClick: () => void; danger?: boolean }) {
   return (
     <button onClick={onClick}
-      className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-bold transition active:scale-[0.98]"
-      style={{ color: danger ? "var(--af-coral)" : "#fff", background: "rgba(255,255,255,0.04)" }}>
-      <Icon className="h-4 w-4 shrink-0" />
+      className="flex w-full items-center gap-3 rounded-2xl px-4 py-3.5 text-left text-[15px] font-bold transition active:scale-[0.98]"
+      style={{ color: danger ? "var(--af-coral)" : "#fff", background: danger ? "rgba(255,107,91,0.10)" : "rgba(255,255,255,0.05)", border: `1px solid ${danger ? "rgba(255,107,91,0.25)" : "rgba(255,255,255,0.08)"}` }}>
+      <Icon className="h-5 w-5 shrink-0" />
       {label}
     </button>
   );
@@ -62,6 +63,26 @@ export function GameShell({
 
   const gameMeta = getGameById(gameId);
   const level = stats ? getLevel(stats.totalPoints) : null;
+  const isCardGame = gameMeta?.category === "cards";
+
+  // Orientation : les jeux de cartes se jouent en paysage (sinon main illisible sur mobile).
+  const [portrait, setPortrait] = useState(false);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const upd = () => setPortrait(window.matchMedia("(orientation: portrait)").matches && window.innerWidth < 820);
+    upd();
+    window.addEventListener("resize", upd);
+    window.addEventListener("orientationchange", upd);
+    return () => { window.removeEventListener("resize", upd); window.removeEventListener("orientationchange", upd); };
+  }, []);
+  const needsLandscape = isCardGame && portrait;
+
+  // Quitter volontairement (menu) : signale au serveur de réinitialiser, puis sort.
+  const quitGame = () => {
+    setMenuOpen(false);
+    leaveActiveGame();
+    setTimeout(() => onReturnToLobby(), 150);
+  };
 
   useEffect(() => {
     if (!isGameOver || rankings.length === 0 || !playerId) return;
@@ -96,6 +117,21 @@ export function GameShell({
 
   return (
     <div className="relative min-h-[100svh] overflow-hidden text-white">
+      {/* Jeux de cartes : on impose le mode paysage (sinon la main est illisible). */}
+      {needsLandscape && (
+        <div className="fixed inset-0 z-[300] flex flex-col items-center justify-center px-8 text-center"
+          style={{ background: "radial-gradient(120% 70% at 50% 0%, rgba(122,78,232,0.25) 0%, transparent 55%), linear-gradient(180deg,#0F0A1F,#1A1230)" }}>
+          <div style={{ animation: "rotatePhone 2.2s ease-in-out infinite" }}>
+            <Mascot size={92} color="yellow" mood="cool" />
+          </div>
+          <div className="mt-6 text-5xl" style={{ animation: "rotatePhone 2.2s ease-in-out infinite" }}>📱↻</div>
+          <h2 className="mt-5 text-2xl font-black text-white" style={{ fontFamily: "var(--font-display)" }}>Tourne ton téléphone</h2>
+          <p className="mt-2 max-w-xs text-sm" style={{ color: "rgba(255,255,255,0.6)" }}>
+            {gameMeta?.name ?? "Ce jeu"} se joue en <b style={{ color: "var(--af-yellow)" }}>mode paysage</b> — bascule l&apos;écran sur le côté pour bien voir ta main.
+          </p>
+          <style>{`@keyframes rotatePhone{0%,100%{transform:rotate(0deg)}50%{transform:rotate(-90deg)}}`}</style>
+        </div>
+      )}
       <div className="relative z-10 flex min-h-[100svh] flex-col">
 
         {/* FLOATING MENU (gear) — top-right, notch-aware. Replaces the top bar. */}
@@ -108,35 +144,44 @@ export function GameShell({
             </button>
 
             {menuOpen && (
-              <div className="fixed inset-0 z-[110] flex justify-end bg-black/50 px-3 backdrop-blur-sm"
-                   style={{ paddingTop: "calc(env(safe-area-inset-top,0px) + 0.6rem)" }}
+              <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/60 p-4 backdrop-blur-md"
                    onClick={() => setMenuOpen(false)}>
-                <div className="h-fit w-64 max-w-[80vw] rounded-3xl border p-3"
-                     style={{ background: "rgba(20,12,50,0.97)", borderColor: "rgba(255,255,255,0.12)", boxShadow: "0 24px 60px rgba(0,0,0,0.6)" }}
+                <div className="flex max-h-[88vh] w-full max-w-[380px] flex-col overflow-y-auto rounded-[28px] border p-4"
+                     style={{ background: "linear-gradient(180deg, rgba(26,18,58,0.98), rgba(14,8,36,0.98))", borderColor: "rgba(255,255,255,0.14)", boxShadow: "0 30px 70px rgba(0,0,0,0.7)", animation: "scaleIn 0.25s ease" }}
                      onClick={(e) => e.stopPropagation()}>
-                  {/* header: game · code · connection */}
-                  <div className="mb-2 flex items-center justify-between gap-2 px-1">
-                    <div className="min-w-0">
-                      <p className="text-[9px] font-bold uppercase tracking-[0.2em]" style={{ color: "rgba(255,255,255,0.5)" }}>en jeu</p>
-                      <p className="truncate text-sm font-bold text-white" style={{ fontFamily: "var(--font-display)" }}>{gameMeta?.name ?? "Partie"}</p>
+                  {/* header: blob + game + close */}
+                  <div className="mb-3 flex items-center gap-3">
+                    <Mascot size={42} color="purple" mood="cool" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[10px] font-bold uppercase tracking-[0.2em]" style={{ color: "rgba(255,255,255,0.5)" }}>Réglages</p>
+                      <p className="truncate text-lg font-black text-white" style={{ fontFamily: "var(--font-display)" }}>{gameMeta?.name ?? "Partie"}</p>
                     </div>
-                    <div className="flex shrink-0 items-center gap-1.5">
-                      <span className="cb-mono rounded-full px-2 py-0.5 text-[10px] font-bold tracking-[0.18em]" style={{ background: "rgba(255,255,255,0.08)", color: "#fff" }}>{roomCode}</span>
-                      <span className="h-2 w-2 rounded-full" style={{ background: isConnected ? "var(--af-mint)" : "var(--af-coral)", boxShadow: `0 0 8px ${isConnected ? "rgba(61,220,151,0.6)" : "rgba(255,107,91,0.6)"}` }} />
-                    </div>
+                    <button onClick={() => setMenuOpen(false)} aria-label="Fermer"
+                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/12 bg-white/[0.06] text-white/80">
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+
+                  {/* code + connection */}
+                  <div className="mb-3 flex items-center justify-between rounded-2xl px-4 py-2.5" style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}>
+                    <span className="text-[11px] font-bold uppercase tracking-[0.16em]" style={{ color: "rgba(255,255,255,0.5)" }}>Code · {roomCode}</span>
+                    <span className="flex items-center gap-1.5 text-[11px] font-bold" style={{ color: isConnected ? "var(--af-mint)" : "var(--af-coral)" }}>
+                      <span className="h-2 w-2 rounded-full" style={{ background: "currentColor", boxShadow: "0 0 8px currentColor" }} />
+                      {isConnected ? "Connecté" : "Hors-ligne"}
+                    </span>
                   </div>
 
                   {/* card model — card games only */}
-                  {gameMeta?.category === "cards" && (
-                    <div className="mb-2 rounded-2xl p-2" style={{ background: "rgba(255,255,255,0.04)" }}>
-                      <p className="mb-1.5 px-1 text-[9px] font-bold tracking-[0.16em]" style={{ color: "rgba(255,255,255,0.5)" }}>MODÈLE DES CARTES</p>
-                      <div className="grid grid-cols-3 gap-1.5">
+                  {isCardGame && (
+                    <div className="mb-3 rounded-2xl p-3" style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}>
+                      <p className="mb-2 px-1 text-[10px] font-bold tracking-[0.16em]" style={{ color: "rgba(255,255,255,0.55)" }}>MODÈLE DES CARTES</p>
+                      <div className="grid grid-cols-3 gap-2">
                         {(["real", "classic", "modern"] as CardStyle[]).map((k) => (
                           <button key={k} onClick={() => setCardStyle(k)}
-                            className="flex flex-col items-center gap-1 rounded-xl p-1.5"
-                            style={{ background: cardStyle === k ? "rgba(122,78,232,0.28)" : "rgba(255,255,255,0.04)", border: cardStyle === k ? "1.5px solid var(--cb-brand)" : "1px solid rgba(255,255,255,0.1)" }}>
-                            <PlayingCard rank="D" suit="♥" size="xs" cardStyle={k} />
-                            <span className="text-[10px] font-bold text-white">{k === "real" ? "Réelles" : k === "classic" ? "Classique" : "Illustré"}</span>
+                            className="flex flex-col items-center gap-1.5 rounded-2xl p-2.5 transition active:scale-95"
+                            style={{ background: cardStyle === k ? "rgba(122,78,232,0.3)" : "rgba(255,255,255,0.04)", border: cardStyle === k ? "1.5px solid var(--cb-brand)" : "1px solid rgba(255,255,255,0.1)" }}>
+                            <PlayingCard rank="D" suit="♥" size="sm" cardStyle={k} />
+                            <span className="text-[11px] font-bold text-white">{k === "real" ? "Réelles" : k === "classic" ? "Classique" : "Illustré"}</span>
                           </button>
                         ))}
                       </div>
@@ -144,11 +189,11 @@ export function GameShell({
                   )}
 
                   {/* actions */}
-                  <div className="space-y-1">
+                  <div className="space-y-2">
                     {gameMeta?.rules && <MenuRow icon={BookOpen} label="Règles du jeu" onClick={() => { setMenuOpen(false); setShowRules(true); }} />}
                     <MenuRow icon={muted ? VolumeX : Volume2} label={muted ? "Activer le son" : "Couper le son"} onClick={toggleMute} />
                     {onResetGame && <MenuRow icon={RotateCcw} label="Relancer le jeu" onClick={() => { setMenuOpen(false); onResetGame(); }} />}
-                    <MenuRow icon={LogOut} label="Quitter la partie" danger onClick={() => { setMenuOpen(false); onReturnToLobby(); }} />
+                    <MenuRow icon={LogOut} label="Quitter la partie" danger onClick={quitGame} />
                   </div>
                 </div>
               </div>

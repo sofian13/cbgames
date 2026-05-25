@@ -154,6 +154,21 @@ export default class GameServer {
       return;
     }
 
+    // Quitter volontairement : on retire le joueur ; s'il ne reste que des bots
+    // (ou personne), on réinitialise la partie pour repartir de zéro au prochain lancement.
+    if (msg.type === "leave-game" && this.game) {
+      this.game.removePlayer(sender.id);
+      const humansLeft = [...this.game.players.keys()].some((id) => !this.game!.isBot(id));
+      if (!humansLeft && this.gameId) {
+        this.game.cleanup();
+        const factory = GAME_REGISTRY[this.gameId];
+        if (factory) this.game = factory();
+      } else {
+        this.game.broadcast({ type: "game-state", payload: this.game.getState() });
+      }
+      return;
+    }
+
     if (msg.type === "start-with-bots" && this.game && !this.game.started) {
       const minToStart = this.gameId === "contree" ? 4 : this.gameId === "president" ? 3 : 2;
       const missing = Math.max(0, minToStart - this.game.players.size);
