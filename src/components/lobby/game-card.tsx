@@ -4,7 +4,7 @@ import { useState } from "react";
 import { BookOpen, CheckCircle2, Users, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { GameMeta } from "@/lib/games/types";
-import { Mascot, MASCOT_PALETTE, type MascotColor } from "@/components/Mascot";
+import { GameArt, CB_CAT } from "@/components/lobby/game-art";
 
 interface GameCardProps {
   game: GameMeta;
@@ -13,39 +13,24 @@ interface GameCardProps {
   onSelect: () => void;
 }
 
-const CAT_MASCOT: Record<string, MascotColor> = {
-  words: "sky", trivia: "yellow", speed: "coral", strategy: "mint",
-  social: "pink", cards: "purple", party: "lavender", sport: "sky",
-};
-
 export function GameCard({ game, isSelected, isHost, onSelect }: GameCardProps) {
   const [showRules, setShowRules] = useState(false);
   const disabled = !game.implemented || !isHost;
-  const mascotColor: MascotColor = CAT_MASCOT[game.category] ?? "purple";
-  const body = MASCOT_PALETTE[mascotColor].body;
-  const catColor = body;
+  const catColor = (CB_CAT[game.category] ?? CB_CAT.party).color;
 
   return (
     <>
       <article
         className={cn(
-          "site-card-hover relative overflow-hidden rounded-2xl border p-4 transition",
+          "site-card-hover relative overflow-hidden rounded-2xl border transition",
           disabled && "opacity-60"
         )}
         style={{
-          background: isSelected
-            ? `linear-gradient(150deg, ${body}45, rgba(255,255,255,0.05))`
-            : `linear-gradient(155deg, ${body}1A, rgba(255,255,255,0.04))`,
-          borderColor: isSelected ? body : `${body}33`,
-          boxShadow: isSelected ? `0 10px 28px ${body}40` : undefined,
-          minHeight: 150,
+          background: "rgba(255,255,255,0.03)",
+          borderColor: isSelected ? catColor : "var(--line-soft)",
+          boxShadow: isSelected ? `0 10px 28px ${catColor}55, inset 0 0 0 1px ${catColor}` : undefined,
         }}
       >
-        {/* Mascotte de catégorie en coin */}
-        <div className="pointer-events-none absolute -bottom-3 -right-2" style={{ opacity: 0.5 }}>
-          <Mascot size={70} color={mascotColor} mood={isSelected ? "happy" : "neutral"} bob={isSelected} />
-        </div>
-
         <div
           role={disabled ? undefined : "button"}
           tabIndex={disabled ? -1 : 0}
@@ -56,45 +41,37 @@ export function GameCard({ game, isSelected, isHost, onSelect }: GameCardProps) 
               onSelect();
             }
           }}
-          className={cn("relative cursor-pointer outline-none", disabled && "cursor-default")}
+          className={cn("cursor-pointer outline-none", disabled && "cursor-default")}
         >
-          <div className="flex items-start justify-between">
-            <span className="text-3xl leading-none">{game.icon}</span>
+          {/* Illustration */}
+          <div className="relative" style={{ height: 104 }}>
+            <GameArt game={game} rounded={0} />
             {isSelected && (
-              <span className="inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white"
-                    style={{ background: body }}>
-                <CheckCircle2 className="h-2.5 w-2.5" />
-                Actif
+              <span className="absolute right-2 top-2 inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-white"
+                    style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(4px)" }}>
+                <CheckCircle2 className="h-2.5 w-2.5" /> Actif
               </span>
             )}
           </div>
 
-          <div className="relative mt-7 max-w-[78%]">
-            <h4 className="cb-display-sm" style={{ fontSize: "1rem", color: isSelected ? "#fff" : body }}>
-              {game.name}
-            </h4>
-            <p className="mt-1 line-clamp-2 text-xs leading-5" style={{ color: "var(--text-dim)" }}>
-              {game.description}
-            </p>
+          {/* Texte */}
+          <div className="p-3">
+            <h4 className="cb-display-sm truncate" style={{ fontSize: "1rem", color: "#fff" }}>{game.name}</h4>
+            <p className="mt-0.5 line-clamp-2 text-xs leading-5" style={{ color: "var(--text-dim)" }}>{game.description}</p>
+            <div className="mt-2.5 flex items-center justify-between gap-2">
+              <span className="inline-flex items-center gap-1.5 text-xs">
+                <Users className="h-3.5 w-3.5" style={{ color: catColor }} />
+                <span className="cb-mono" style={{ color: "var(--text-dim)" }}>{game.minPlayers}-{game.maxPlayers}</span>
+              </span>
+              <button
+                onClick={(e) => { e.stopPropagation(); setShowRules(true); }}
+                className="flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider transition"
+                style={{ background: "rgba(255,255,255,0.08)", color: "#fff", border: "1px solid rgba(255,255,255,0.12)" }}
+              >
+                <BookOpen className="h-3 w-3" /> Règles
+              </button>
+            </div>
           </div>
-        </div>
-
-        <div className="relative mt-3 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-1.5 text-xs">
-            <Users className="h-3.5 w-3.5" style={{ color: body }} />
-            <span className="cb-mono" style={{ color: "var(--text-dim)" }}>
-              {game.minPlayers}-{game.maxPlayers}
-            </span>
-          </div>
-
-          <button
-            onClick={() => setShowRules(true)}
-            className="flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider transition"
-            style={{ background: "rgba(255,255,255,0.08)", color: "#fff", border: "1px solid rgba(255,255,255,0.12)" }}
-          >
-            <BookOpen className="h-3 w-3" />
-            Règles
-          </button>
         </div>
       </article>
 
