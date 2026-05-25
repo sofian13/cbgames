@@ -5,7 +5,7 @@ import { useGame } from "@/lib/party/use-game";
 import { useGameStore } from "@/lib/stores/game-store";
 import type { GameProps } from "@/lib/games/types";
 import { cn } from "@/lib/utils";
-import { UCBack, PlayerCountPicker, SpyBlob, DossierTag, UCButton } from "./uc-kit";
+import { UCBack, PlayerCountPicker, SpyBlob, DossierTag, UCButton, Stamp, FileCard } from "./uc-kit";
 
 // ── Types (mirrors server state) ────────────────────────────
 
@@ -1368,118 +1368,90 @@ export default function UndercoverGame({
     if (localPhase === "vote") {
       const aliveTargets = getLocalAlive();
       return (
-        <div className="relative flex flex-1 flex-col gap-4 p-6">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_20%,rgba(80,216,255,0.12),transparent_28%),radial-gradient(circle_at_82%_78%,rgba(255,96,96,0.14),transparent_34%),linear-gradient(180deg,#050714,#050916_58%,#04050d)]" />
-          <p className="relative text-xs uppercase tracking-[0.22em] text-cyan-200/45 font-sans">Vote oral de groupe</p>
-          <h2 className="relative text-3xl text-white font-serif">Qui eliminer ?</h2>
-          <div className="relative grid w-full gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            {aliveTargets.map((p, index) => (
-              <button
-                key={p.id}
-                onClick={() => setLocalSelectedTarget(p.id)}
-                className={cn(
-                  "rounded-[1.5rem] border p-4 text-left transition-all press-effect",
-                  localSelectedTarget === p.id
-                    ? "border-[#ff7a66]/70 bg-[linear-gradient(180deg,rgba(255,122,102,0.16),rgba(255,122,102,0.06))] text-white shadow-[0_0_30px_rgba(255,122,102,0.18)]"
-                    : "border-white/[0.1] bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02))] text-white/80 hover:border-cyan-300/35"
-                )}
-                style={{ animation: `cardReveal 0.35s ease ${index * 0.05}s both` }}
-              >
-                <p className="text-[11px] uppercase tracking-[0.22em] text-white/26">Carte joueur</p>
-                <p className="mt-3 text-xl font-semibold">{p.name}</p>
-                <div className="mt-10 flex items-center justify-between">
-                  <span className="rounded-full border border-white/10 bg-black/20 px-3 py-1 text-xs text-white/44">
-                    {localSelectedTarget === p.id ? "Selectionne" : "Appuyer pour voter"}
-                  </span>
-                  <span className="text-xs uppercase tracking-[0.22em] text-white/18">Suspect</span>
-                </div>
-              </button>
-            ))}
+        <div className="relative flex min-h-[100svh] flex-1 flex-col overflow-hidden p-5 text-white">
+          <UCBack tone="danger" />
+          <div className="relative z-[2] mt-[calc(env(safe-area-inset-top,0px)+1rem)]">
+            <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, letterSpacing: 2, color: "var(--af-yellow)", fontWeight: 800 }}>VOTE DU GROUPE</p>
+            <h2 className="cb-display-lg mt-1">Qui éliminer ?</h2>
           </div>
-          <button
-            onClick={submitLocalVote}
-            disabled={!localSelectedTarget}
-            className="relative self-center rounded-[1.35rem] bg-gradient-to-r from-[#ff8d52] via-[#ff6b3d] to-[#ff3d3d] px-6 py-4 text-sm font-semibold text-white shadow-[0_0_30px_rgba(255,107,61,0.24)] disabled:border-white/[0.12] disabled:bg-white/[0.05] disabled:text-white/20"
-          >
-            Eliminer ce joueur
-          </button>
+          <div className="relative z-[2] mt-4 grid grid-cols-2 gap-3">
+            {aliveTargets.map((p, index) => {
+              const sel = localSelectedTarget === p.id;
+              return (
+                <button
+                  key={p.id}
+                  onClick={() => setLocalSelectedTarget(p.id)}
+                  className="rounded-2xl border p-3 text-left transition-all active:scale-95"
+                  style={{
+                    animation: `cardReveal 0.35s ease ${index * 0.05}s both`,
+                    ...(sel
+                      ? { borderColor: "#FF3EA5", background: "linear-gradient(180deg,rgba(255,62,165,0.18),rgba(255,62,165,0.05))", boxShadow: "0 0 26px rgba(255,62,165,0.3)" }
+                      : { borderColor: "rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.04)" }),
+                  }}
+                >
+                  <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 8, letterSpacing: 2, color: "rgba(255,255,255,0.4)", fontWeight: 700 }}>SUSPECT</p>
+                  <p className="mt-2 text-lg font-bold">{p.name}</p>
+                  <p className="mt-1 text-[10px]" style={{ color: sel ? "#FF3EA5" : "rgba(255,255,255,0.4)" }}>{sel ? "✓ sélectionné" : "appuyer pour voter"}</p>
+                </button>
+              );
+            })}
+          </div>
+          <div className="relative z-[2] mt-auto pt-5">
+            <UCButton tone="danger" disabled={!localSelectedTarget} onClick={submitLocalVote}>Éliminer ce joueur</UCButton>
+          </div>
         </div>
       );
     }
 
     if (localPhase === "vote-result") {
       const eliminated = localPlayers.find((p) => p.id === localEliminatedId) ?? null;
+      const roleAccent = localEliminatedRole === "mrwhite" ? "#FFD23F" : localEliminatedRole === "undercover" ? "#FF3EA5" : "#3DDC97";
       return (
-        <div className="relative flex flex-1 flex-col gap-4 p-6">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_18%,rgba(80,216,255,0.12),transparent_28%),radial-gradient(circle_at_80%_75%,rgba(255,122,80,0.14),transparent_34%),linear-gradient(180deg,#050714,#050916_58%,#04050d)]" />
-          <div className="relative text-center">
-            <p className="text-xs uppercase tracking-[0.22em] text-cyan-200/45 font-sans">Resultat du vote</p>
-            <h2 className="mt-2 text-3xl text-white font-serif">
-              {!eliminated ? "Egalite" : `${eliminated.name} elimine`}
-            </h2>
-            <p className="mt-2 text-sm text-white/42">La carte se retourne pour reveler le role.</p>
-          </div>
-          <div className="relative mx-auto w-full max-w-sm [perspective:1200px]">
-            <div className="relative min-h-[200px] rounded-[1.7rem] transition-transform duration-500 [transform-style:preserve-3d] [transform:rotateY(180deg)]">
-              <div className="absolute inset-0 rounded-[1.7rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.02))] p-5 [backface-visibility:hidden]">
-                <p className="text-[11px] uppercase tracking-[0.22em] text-white/24">Carte joueur</p>
-                <p className="mt-6 text-2xl font-semibold text-white/92">{eliminated?.name ?? "Egalite"}</p>
-              </div>
-              <div
-                className={cn(
-                  "absolute inset-0 flex rounded-[1.7rem] border p-5 [backface-visibility:hidden] [transform:rotateY(180deg)]",
-                  localEliminatedRole ? ROLE_BG[localEliminatedRole] : "border-white/10 bg-white/[0.04]"
-                )}
-              >
-                <div className="flex h-full w-full flex-col justify-between">
-                  <div>
-                    <p className="text-[11px] uppercase tracking-[0.22em] text-white/30">Role revele</p>
-                    <p className={cn("mt-6 text-2xl font-semibold", getRoleColor(localEliminatedRole))}>
-                      {localEliminatedRole ? getRoleLabel(localEliminatedRole) : "Aucune elimination"}
-                    </p>
-                  </div>
-                  <p className="text-xs text-white/42">{eliminated?.name ?? "Tour nul"}</p>
-                </div>
-              </div>
+        <div className="relative flex min-h-[100svh] flex-1 flex-col items-center overflow-hidden p-5 text-white">
+          <UCBack tone="danger" />
+          <div className="relative z-[2] mt-[calc(env(safe-area-inset-top,0px)+1.5rem)] text-center">
+            <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, letterSpacing: 2, color: "var(--af-yellow)", fontWeight: 800 }}>RÉSULTAT DU VOTE</p>
+            <div className="mt-3 flex justify-center">
+              <Stamp text={eliminated ? "Éliminé" : "Égalité"} color={eliminated ? "#FF3EA5" : "#FFD23F"} rotate={-6} size={26} />
             </div>
+            <h2 className="cb-display-md mt-4">{!eliminated ? "Personne n'est éliminé" : eliminated.name}</h2>
           </div>
-          <p className="relative text-center text-xs text-white/25 font-sans">Le mot n&apos;est jamais revele ici.</p>
-          <button
-            onClick={continueAfterLocalVoteResult}
-            className="relative self-center rounded-[1.3rem] bg-gradient-to-r from-[#ff8d52] via-[#ff6b3d] to-[#ff3d3d] px-6 py-3 text-sm font-semibold text-white shadow-[0_0_26px_rgba(255,107,61,0.2)]"
-          >
-            Continuer
-          </button>
+          <div className="relative z-[2] mt-6 w-full max-w-xs">
+            <FileCard accent={roleAccent}>
+              <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9, letterSpacing: 2, color: "rgba(255,255,255,0.45)", fontWeight: 800 }}>RÔLE RÉVÉLÉ</p>
+              <p className={cn("mt-3 text-2xl font-bold", getRoleColor(localEliminatedRole))}>
+                {localEliminatedRole ? getRoleLabel(localEliminatedRole) : "Aucune élimination"}
+              </p>
+              <p className="mt-1 text-xs text-white/40">{eliminated?.name ?? "Tour nul"}</p>
+            </FileCard>
+          </div>
+          <p className="relative z-[2] mt-3 text-center text-xs text-white/30">Le mot n&apos;est jamais révélé ici.</p>
+          <div className="relative z-[2] mt-auto w-full max-w-xs pt-5">
+            <UCButton tone="primary" onClick={continueAfterLocalVoteResult}>Continuer</UCButton>
+          </div>
         </div>
       );
     }
 
     if (localPhase === "game-over") {
+      const civilsWin = localWinners === "civilian";
       return (
-        <div className="flex flex-1 flex-col items-center justify-center p-6 gap-4">
-          <p className="text-xs text-white/30 font-sans">Fin de partie locale</p>
-          <p className="text-3xl font-serif text-cyan-300">
-            {localWinners === "civilian" ? "Les Civils gagnent" : "Undercover / Mr.White gagnent"}
-          </p>
-          <div className="flex flex-col gap-2 sm:flex-row">
-            <button
-              onClick={() => {
-                setLocalSetupStep("config");
-                setLocalCollectedNames([]);
-                setLocalNameIndex(0);
-                setLocalNameInput("");
-                setLocalPhase("setup");
-              }}
-              className="rounded-xl border border-cyan-300/40 bg-gradient-to-r from-cyan-600 to-blue-600 px-6 py-2 text-sm font-sans text-white"
-            >
-              Recommencer la partie
-            </button>
-            <button
-              onClick={handleBackToGamePicker}
-              className="rounded-xl border border-white/25 bg-white/10 px-6 py-2 text-sm font-sans text-white"
-            >
-              Retour a l&apos;ecran des jeux
-            </button>
+        <div className="relative flex min-h-[100svh] flex-1 flex-col items-center justify-center overflow-hidden p-6 text-white">
+          <UCBack tone={civilsWin ? "civ" : "danger"} />
+          <div className="relative z-[2] flex flex-col items-center gap-4">
+            <SpyBlob size={130} color={civilsWin ? "mint" : "coral"} mood={civilsWin ? "happy" : "cool"} />
+            <Stamp text={civilsWin ? "Civils" : "Infiltrés"} color={civilsWin ? "#3DDC97" : "#FF3EA5"} rotate={-5} size={24} />
+            <h2 className="cb-display-lg text-center" style={{ lineHeight: 1.05 }}>
+              {civilsWin ? "Les Civils gagnent" : "Undercover / Mr. White gagnent"}
+            </h2>
+            <div className="mt-2 w-full max-w-xs space-y-2">
+              <UCButton tone="primary" onClick={() => { setLocalSetupStep("config"); setLocalCollectedNames([]); setLocalNameIndex(0); setLocalNameInput(""); setLocalPhase("setup"); }}>
+                Recommencer
+              </UCButton>
+              <button onClick={handleBackToGamePicker} className="w-full text-center text-sm text-white/60 underline-offset-4 hover:underline">
+                Retour aux jeux
+              </button>
+            </div>
           </div>
         </div>
       );
