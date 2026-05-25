@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect, useMemo } from "react";
+import { useState, useCallback, useEffect, useMemo, useRef, type ReactNode } from "react";
 import { useGame } from "@/lib/party/use-game";
 import { useGameStore } from "@/lib/stores/game-store";
 import type { GameProps } from "@/lib/games/types";
@@ -59,6 +59,139 @@ const CELL_COLORS: Record<CellState, string> = {
   hit: "bg-red-500/60 border-red-400/40",
   miss: "bg-white/10 border-white/15",
 };
+
+// ── Naval design system (maquettes BS) ─────────────────────
+const BS_SONAR = "#00FFB4";
+const BS_INK = "#E8F4F8";
+const BS_INKMUTE = "#6B8AA0";
+const NAVAL_BG = "radial-gradient(120% 70% at 50% 0%, rgba(0,255,180,0.10) 0%, transparent 55%), linear-gradient(180deg,#020F18 0%,#031826 100%)";
+const NAVAL_SCANLINES = "repeating-linear-gradient(0deg, rgba(0,255,180,0.04) 0px, rgba(0,255,180,0.04) 1px, transparent 1px, transparent 4px)";
+
+type BotLevel2 = "mousse" | "capitaine" | "amiral";
+const BS_AI_LEVELS: Array<{ id: BotLevel2; name: string; desc: string; color: string; icon: string }> = [
+  { id: "mousse", name: "Mousse", desc: "tire au hasard", color: BS_SONAR, icon: "🌊" },
+  { id: "capitaine", name: "Capitaine", desc: "stratégie classique", color: "#FFD23F", icon: "⚓" },
+  { id: "amiral", name: "Amiral", desc: "probabilités avancées", color: "#FF3838", icon: "💀" },
+];
+
+function NavalShell({ children }: { children: ReactNode }) {
+  return (
+    <div className="relative flex flex-1 flex-col overflow-y-auto font-sans" style={{
+      background: NAVAL_BG, color: BS_INK,
+      padding: "calc(env(safe-area-inset-top,0px) + 18px) 16px calc(env(safe-area-inset-bottom,0px) + 26px)",
+    }}>
+      <div className="pointer-events-none absolute inset-0" style={{ background: NAVAL_SCANLINES, mixBlendMode: "screen" }} />
+      <div className="relative mx-auto flex w-full max-w-[460px] flex-1 flex-col">{children}</div>
+    </div>
+  );
+}
+
+// Mini radar animé (hero BS01).
+function SonarHero({ size = 240 }: { size?: number }) {
+  const n = 10;
+  const cell = size / n;
+  const blips = [
+    { x: 2, y: 3, hit: false }, { x: 5, y: 5, hit: true }, { x: 7, y: 2, hit: false },
+    { x: 8, y: 7, hit: true }, { x: 3, y: 7, hit: false },
+  ];
+  return (
+    <div className="relative overflow-hidden rounded-xl" style={{
+      width: size, height: size,
+      background: "radial-gradient(circle at 50% 50%, rgba(0,255,180,0.10), transparent 60%), #020F18",
+      boxShadow: "0 18px 36px rgba(0,0,0,0.5), inset 0 0 60px rgba(0,255,180,0.08), inset 0 0 0 1px rgba(0,255,180,0.30)",
+    }}>
+      <svg width={size} height={size} className="absolute inset-0">
+        {Array.from({ length: n + 1 }).map((_, i) => (
+          <line key={`v${i}`} x1={i * cell} y1={0} x2={i * cell} y2={size} stroke={BS_SONAR} strokeWidth={i === 0 || i === n ? 1 : 0.5} opacity={0.3} />
+        ))}
+        {Array.from({ length: n + 1 }).map((_, i) => (
+          <line key={`h${i}`} x1={0} y1={i * cell} x2={size} y2={i * cell} stroke={BS_SONAR} strokeWidth={i === 0 || i === n ? 1 : 0.5} opacity={0.3} />
+        ))}
+      </svg>
+      <div className="absolute inset-0 animate-spin" style={{ animationDuration: "4s", background: `conic-gradient(from 0deg, ${BS_SONAR}30 0deg, transparent 70deg)` }} />
+      {blips.map((b, i) => (
+        <div key={i} className="absolute rounded-full" style={{
+          left: b.x * cell + cell * 0.2, top: b.y * cell + cell * 0.2, width: cell * 0.6, height: cell * 0.6,
+          background: b.hit ? "#FF3838" : "transparent", border: b.hit ? "none" : `2px solid ${BS_SONAR}`,
+          boxShadow: b.hit ? "0 0 10px #FF3838" : `0 0 8px ${BS_SONAR}`,
+        }} />
+      ))}
+    </div>
+  );
+}
+
+function BSModeRow({ icon, title, sub, accent, onClick }: { icon: string; title: string; sub: string; accent: string; onClick: () => void }) {
+  return (
+    <button onClick={onClick} className="flex items-center gap-3.5 rounded-[14px] p-3.5 text-left transition active:scale-[0.98]"
+      style={{ background: "rgba(168,184,197,0.04)", border: "1px solid rgba(168,184,197,0.15)" }}>
+      <span className="flex h-[50px] w-[50px] shrink-0 items-center justify-center rounded-xl text-[22px]" style={{ background: `${accent}1A`, border: `1px solid ${accent}33` }}>{icon}</span>
+      <span className="flex-1">
+        <span className="block text-[17px] font-extrabold leading-none" style={{ color: BS_INK }}>{title}</span>
+        <span className="mt-1 block text-xs" style={{ color: BS_INKMUTE }}>{sub}</span>
+      </span>
+      <span style={{ color: accent, fontSize: 20, fontWeight: 800 }}>›</span>
+    </button>
+  );
+}
+
+function BSStepHeader({ onBack, sub, title, tag, tagColor = BS_SONAR }: { onBack: () => void; sub: string; title: string; tag: string; tagColor?: string }) {
+  return (
+    <div className="flex items-center gap-3">
+      <button onClick={onBack} aria-label="Retour" className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-xl text-lg leading-none"
+        style={{ background: "rgba(0,255,180,0.08)", border: "1px solid rgba(0,255,180,0.25)", color: BS_SONAR }}>‹</button>
+      <div className="min-w-0 flex-1">
+        <div className="font-mono text-[10px] font-extrabold uppercase tracking-[2px]" style={{ color: BS_SONAR }}>{sub}</div>
+        <div className="mt-0.5 text-[22px] font-extrabold leading-none tracking-tight" style={{ color: BS_INK }}>{title}</div>
+      </div>
+      <span className="font-mono text-[9px] font-extrabold uppercase tracking-[2px]" style={{ color: tagColor, padding: "4px 9px", borderRadius: 4, border: `1px solid ${tagColor}55`, background: `${tagColor}11` }}>{tag}</span>
+    </div>
+  );
+}
+
+// Silhouette de navire (barre) pour la liste de flotte BS03.
+function ShipBar({ len }: { len: number }) {
+  return (
+    <div className="flex gap-[3px]">
+      {Array.from({ length: len }).map((_, i) => (
+        <span key={i} className="h-3 w-3 rounded-[3px]" style={{ background: i === 0 ? "#A8B8C5" : "#5A7691" }} />
+      ))}
+    </div>
+  );
+}
+
+// ── Bot AI (local vs IA) ────────────────────────────────────
+function enqueueNeighbors(idx: number, grid: CellState[], queue: number[]) {
+  const x = idx % 10, y = Math.floor(idx / 10);
+  const nbrs = [[x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]];
+  for (const [nx, ny] of nbrs) {
+    if (nx < 0 || nx >= 10 || ny < 0 || ny >= 10) continue;
+    const ni = ny * 10 + nx;
+    if (grid[ni] === "empty" || grid[ni] === "ship") {
+      if (!queue.includes(ni)) queue.push(ni);
+    }
+  }
+}
+
+function pickBotTarget(grid: CellState[], queue: number[], level: BotLevel2): number | null {
+  // Mode chasse ciblée : suit les touches déjà trouvées.
+  if (level !== "mousse") {
+    while (queue.length > 0) {
+      const c = queue.pop()!;
+      if (grid[c] === "empty" || grid[c] === "ship") return c;
+    }
+  }
+  // Mode recherche.
+  const all: number[] = [];
+  const parity: number[] = [];
+  for (let i = 0; i < TOTAL_CELLS; i++) {
+    if (grid[i] === "hit" || grid[i] === "miss") continue;
+    all.push(i);
+    if (((i % 10) + Math.floor(i / 10)) % 2 === 0) parity.push(i);
+  }
+  if (all.length === 0) return null;
+  const pool = level === "mousse" ? all : parity.length > 0 ? parity : all;
+  return pool[Math.floor(Math.random() * pool.length)];
+}
 
 // ── Helpers ──────────────────────────────────────────────
 function makeEmptyGrid(): CellState[] {
@@ -323,10 +456,15 @@ function BattleGrid({
 }
 
 // ── Local Mode ──────────────────────────────────────────
-function LocalBattleship({ onReturnToLobby }: { onReturnToLobby?: () => void }) {
+function LocalBattleship({ onReturnToLobby, onBackToModes, initialBot = false }: { onReturnToLobby?: () => void; onBackToModes?: () => void; initialBot?: boolean }) {
   const [localPhase, setLocalPhase] = useState<"setup" | "placing-1" | "placing-2" | "handoff" | "playing" | "game-over">("setup");
+  const [vsBot] = useState(initialBot);
+  const [botLevel, setBotLevel] = useState<BotLevel2>("capitaine");
+  const [botTurn, setBotTurn] = useState(false);
+  const [botTick, setBotTick] = useState(0);
+  const botQueueRef = useRef<number[]>([]);
   const [player1Name, setPlayer1Name] = useState("Joueur 1");
-  const [player2Name, setPlayer2Name] = useState("Joueur 2");
+  const [player2Name, setPlayer2Name] = useState(initialBot ? "L'IA" : "Joueur 2");
   const [p1Grid, setP1Grid] = useState(makeEmptyGrid);
   const [p2Grid, setP2Grid] = useState(makeEmptyGrid);
   const [p1Ships, setP1Ships] = useState<Ship[]>([]);
@@ -338,6 +476,40 @@ function LocalBattleship({ onReturnToLobby }: { onReturnToLobby?: () => void }) 
   const [winner, setWinner] = useState<1 | 2 | null>(null);
   const [lastShotResult, setLastShotResult] = useState<"hit" | "miss" | "sunk" | null>(null);
   const [showingBoard, setShowingBoard] = useState(false);
+
+  // Refs pour le bot (lecture de l'état frais sans relancer l'effet).
+  const p1GridRef = useRef(p1Grid);
+  const p1ShipsRef = useRef(p1Ships);
+  useEffect(() => { p1GridRef.current = p1Grid; }, [p1Grid]);
+  useEffect(() => { p1ShipsRef.current = p1Ships; }, [p1Ships]);
+
+  // Tour de l'IA : tire sur la flotte du joueur, rejoue tant qu'elle touche.
+  useEffect(() => {
+    if (!vsBot || !botTurn || localPhase !== "playing" || winner) return;
+    const delay = botLevel === "amiral" ? 520 : 680;
+    const t = setTimeout(() => {
+      const grid = [...p1GridRef.current];
+      const target = pickBotTarget(grid, botQueueRef.current, botLevel);
+      if (target == null) { setBotTurn(false); return; }
+      if (grid[target] === "ship") {
+        grid[target] = "hit";
+        enqueueNeighbors(target, grid, botQueueRef.current);
+        setP1Grid(grid);
+        if (allShipsSunk(p1ShipsRef.current, grid)) {
+          setWinner(2);
+          setLocalPhase("game-over");
+          setBotTurn(false);
+          return;
+        }
+        setBotTick((x) => x + 1); // rejoue
+      } else {
+        grid[target] = "miss";
+        setP1Grid(grid);
+        setBotTurn(false); // rend la main
+      }
+    }, delay);
+    return () => clearTimeout(t);
+  }, [vsBot, botTurn, botTick, localPhase, winner, botLevel]);
 
   const currentGrid = currentPlayer === 1 ? p1Grid : p2Grid;
   const currentShips = currentPlayer === 1 ? p1Ships : p2Ships;
@@ -381,6 +553,18 @@ function LocalBattleship({ onReturnToLobby }: { onReturnToLobby?: () => void }) 
 
   const handleConfirmPlacement = useCallback(() => {
     if (localPhase === "placing-1") {
+      if (vsBot) {
+        // L'IA place sa flotte automatiquement, on saute le passage de téléphone.
+        const { grid, ships } = randomPlacement();
+        setP2Grid(grid);
+        setP2Ships(ships);
+        botQueueRef.current = [];
+        setCurrentPlayer(1);
+        setShowingBoard(true);
+        setBotTurn(false);
+        setLocalPhase("playing");
+        return;
+      }
       setLocalPhase("handoff");
       setCurrentPlayer(2);
       setSelectedShipId(DEFAULT_SHIPS[0].id);
@@ -389,7 +573,7 @@ function LocalBattleship({ onReturnToLobby }: { onReturnToLobby?: () => void }) 
       setLocalPhase("handoff");
       setCurrentPlayer(1); // Player 1 starts
     }
-  }, [localPhase]);
+  }, [localPhase, vsBot]);
 
   const handleHandoffContinue = useCallback(() => {
     if (p2Ships.length === 0) {
@@ -404,6 +588,7 @@ function LocalBattleship({ onReturnToLobby }: { onReturnToLobby?: () => void }) 
 
   const handleFire = useCallback((idx: number) => {
     if (localPhase !== "playing" || shotLocked) return;
+    if (vsBot && botTurn) return; // l'IA joue, pas le joueur
     const cell = enemyGrid[idx];
     if (cell === "hit" || cell === "miss") return;
 
@@ -424,16 +609,21 @@ function LocalBattleship({ onReturnToLobby }: { onReturnToLobby?: () => void }) 
       newGrid[idx] = "miss";
       setEnemyGrid(newGrid);
       setLastShotResult("miss");
-      setShotLocked(true);
-      // Switch turns after a delay — show handoff screen
-      setTimeout(() => {
-        setCurrentPlayer((p) => (p === 1 ? 2 : 1));
-        setShowingBoard(false);
-        setLastShotResult(null);
-        setShotLocked(false);
-      }, 1500);
+      if (vsBot) {
+        // Tour de l'IA, pas d'écran de passage.
+        setTimeout(() => { setLastShotResult(null); setBotTurn(true); }, 700);
+      } else {
+        setShotLocked(true);
+        // Switch turns after a delay — show handoff screen
+        setTimeout(() => {
+          setCurrentPlayer((p) => (p === 1 ? 2 : 1));
+          setShowingBoard(false);
+          setLastShotResult(null);
+          setShotLocked(false);
+        }, 1500);
+      }
     }
-  }, [localPhase, enemyGrid, setEnemyGrid, enemyShips, currentPlayer, shotLocked]);
+  }, [localPhase, enemyGrid, setEnemyGrid, enemyShips, currentPlayer, shotLocked, vsBot, botTurn]);
 
   const handleHover = useCallback((idx: number) => {
     if (!selectedShipId) { setHoverCells(new Set()); return; }
@@ -450,39 +640,80 @@ function LocalBattleship({ onReturnToLobby }: { onReturnToLobby?: () => void }) 
     setHoverCells(cells);
   }, [selectedShipId, horizontal]);
 
-  // ── Setup ──
+  // ── Setup (BS02 adversaire / duel) ──
   if (localPhase === "setup") {
+    const startPlacement = () => { setLocalPhase("placing-1"); setCurrentPlayer(1); setSelectedShipId(DEFAULT_SHIPS[0].id); setHorizontal(true); };
     return (
-      <div className="relative flex flex-1 flex-col overflow-hidden p-4 sm:p-6">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_20%,rgba(80,216,255,0.14),transparent_35%),radial-gradient(circle_at_82%_70%,rgba(99,102,241,0.14),transparent_35%),linear-gradient(145deg,#040424,#05113a_42%,#01072a)]" />
-        <div className="relative mx-auto flex w-full max-w-md flex-1 flex-col items-center justify-center gap-6 rounded-3xl border border-cyan-300/20 bg-black/35 p-6 backdrop-blur-xl" style={{ animation: "scaleIn 0.4s ease" }}>
-          <div className="text-center">
-            <p className="text-[11px] font-sans uppercase tracking-[0.22em] text-cyan-200/65">Bataille Navale</p>
-            <h2 className="mt-1 text-2xl font-serif text-white">Mode Local</h2>
-          </div>
-          <div className="w-full space-y-3">
-            <div>
-              <label className="text-xs text-white/40 font-sans">Joueur 1</label>
-              <input value={player1Name} onChange={(e) => setPlayer1Name(e.target.value)} maxLength={15}
-                className="mt-1 w-full rounded-xl border border-cyan-300/20 bg-white/[0.04] px-4 py-2.5 text-sm text-white font-sans placeholder:text-white/20 focus:outline-none focus:border-cyan-300/40" />
+      <NavalShell>
+        <BSStepHeader
+          onBack={onBackToModes ?? onReturnToLobby ?? (() => {})}
+          sub={vsBot ? "Setup · 1/2" : "Mode local"}
+          title={vsBot ? "Adversaire" : "Les amiraux"}
+          tag={vsBot ? "vs IA" : "DUEL"}
+          tagColor={vsBot ? BS_SONAR : "#FFD23F"}
+        />
+
+        {vsBot ? (
+          <>
+            <div className="mt-6 flex justify-center">
+              <div className="flex items-center justify-center" style={{
+                width: 100, height: 100, borderRadius: 28, fontSize: 52,
+                background: `linear-gradient(160deg, ${BS_SONAR}22 0%, rgba(0,0,0,0.35) 100%)`,
+                border: `1px solid ${BS_SONAR}40`, boxShadow: `0 18px 40px ${BS_SONAR}33, inset 0 1px 0 rgba(255,255,255,0.10)`,
+              }}>📡</div>
             </div>
-            <div>
-              <label className="text-xs text-white/40 font-sans">Joueur 2</label>
-              <input value={player2Name} onChange={(e) => setPlayer2Name(e.target.value)} maxLength={15}
-                className="mt-1 w-full rounded-xl border border-cyan-300/20 bg-white/[0.04] px-4 py-2.5 text-sm text-white font-sans placeholder:text-white/20 focus:outline-none focus:border-cyan-300/40" />
+            <div className="mt-6 flex flex-col gap-2.5">
+              {BS_AI_LEVELS.map((l) => {
+                const active = botLevel === l.id;
+                return (
+                  <button key={l.id} onClick={() => setBotLevel(l.id)} className="flex items-center gap-3.5 rounded-[14px] px-4 py-3.5 text-left transition" style={{
+                    background: active ? `linear-gradient(160deg, ${l.color}22 0%, rgba(0,0,0,0.30) 100%)` : "rgba(168,184,197,0.04)",
+                    border: active ? `2px solid ${l.color}` : "1px solid rgba(168,184,197,0.15)",
+                    boxShadow: active ? `0 14px 28px ${l.color}30` : "none",
+                  }}>
+                    <span className="flex h-12 w-12 items-center justify-center rounded-xl text-[22px]" style={{ background: `${l.color}1A`, border: `1px solid ${l.color}40` }}>{l.icon}</span>
+                    <span className="flex-1">
+                      <span className="block text-[18px] font-extrabold leading-none" style={{ color: BS_INK }}>{l.name}</span>
+                      <span className="mt-1 block font-mono text-[10px] font-extrabold uppercase tracking-wider" style={{ color: l.color }}>{l.desc}</span>
+                    </span>
+                    <span className="flex h-[22px] w-[22px] items-center justify-center rounded-full text-[12px] font-black" style={{ border: active ? `2px solid ${l.color}` : "1.5px solid rgba(168,184,197,0.25)", background: active ? l.color : "transparent", color: "#031826" }}>{active ? "✓" : ""}</span>
+                  </button>
+                );
+              })}
             </div>
-          </div>
-          <button onClick={() => { setLocalPhase("placing-1"); setCurrentPlayer(1); }}
-            className="w-full rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 px-6 py-3 text-sm font-sans font-medium text-white press-effect shadow-[0_0_20px_rgba(80,216,255,0.2)]">
-            Commencer
-          </button>
-          {onReturnToLobby && (
-            <button onClick={onReturnToLobby} className="text-xs text-white/30 font-sans hover:text-white/50">
-              Retour
-            </button>
-          )}
+          </>
+        ) : (
+          <>
+            <p className="mt-6 font-mono text-[10px] font-extrabold uppercase tracking-[2px]" style={{ color: BS_INKMUTE }}>Les deux amiraux</p>
+            <div className="mt-3 flex flex-col gap-2.5">
+              <input value={player1Name} onChange={(e) => setPlayer1Name(e.target.value)} maxLength={15} placeholder="Joueur 1"
+                className="w-full rounded-xl px-4 py-3 text-sm font-sans text-white outline-none" style={{ background: "rgba(168,184,197,0.04)", border: `1px solid ${BS_SONAR}33` }} />
+              <input value={player2Name} onChange={(e) => setPlayer2Name(e.target.value)} maxLength={15} placeholder="Joueur 2"
+                className="w-full rounded-xl px-4 py-3 text-sm font-sans text-white outline-none" style={{ background: "rgba(168,184,197,0.04)", border: `1px solid ${BS_SONAR}33` }} />
+            </div>
+          </>
+        )}
+
+        {/* Flotte (BS03) */}
+        <p className="mt-6 font-mono text-[10px] font-extrabold uppercase tracking-[2px]" style={{ color: BS_INKMUTE }}>Ta flotte · 5 navires</p>
+        <div className="mt-2.5 flex flex-col gap-2 rounded-[14px] p-3.5" style={{ background: "rgba(168,184,197,0.04)", border: "1px solid rgba(168,184,197,0.10)" }}>
+          {DEFAULT_SHIPS.map((s) => (
+            <div key={s.id} className="flex items-center gap-3">
+              <div className="flex-1">
+                <div className="text-xs font-bold" style={{ color: BS_INK }}>{s.label ?? s.id}</div>
+                <div className="font-mono text-[9px] font-bold tracking-wide" style={{ color: BS_INKMUTE }}>{s.size} CASES</div>
+              </div>
+              <ShipBar len={s.size} />
+            </div>
+          ))}
         </div>
-      </div>
+
+        <button onClick={startPlacement} className="mt-auto pt-7">
+          <span className="flex items-center justify-center gap-2 rounded-[14px] py-4 text-base font-bold" style={{ background: `linear-gradient(180deg, ${BS_SONAR} 0%, #00A878 100%)`, color: "#031826", boxShadow: `0 14px 30px rgba(0,255,180,0.40), inset 0 1px 0 rgba(255,255,255,0.30)` }}>
+            <span style={{ fontSize: 18 }}>⚓</span> {vsBot ? "Placer ma flotte" : "Placer les flottes"}
+          </span>
+        </button>
+      </NavalShell>
     );
   }
 
@@ -659,6 +890,34 @@ function LocalBattleship({ onReturnToLobby }: { onReturnToLobby?: () => void }) 
 
   // ── Playing Phase ──
   if (localPhase === "playing") {
+    // Vs IA : grille ennemie + ta flotte, pas d'écran de passage.
+    if (vsBot) {
+      return (
+        <NavalShell>
+          <div className="flex items-center justify-between">
+            <span className="font-mono text-[10px] font-extrabold uppercase tracking-[2px]" style={{ color: BS_SONAR }}>Opération · {botLevel}</span>
+            {lastShotResult && (
+              <span className="rounded px-2 py-0.5 text-xs font-bold" style={{
+                color: lastShotResult === "miss" ? BS_INKMUTE : lastShotResult === "sunk" ? "#FF8A8A" : "#FFB84D",
+                background: lastShotResult === "miss" ? "rgba(255,255,255,0.05)" : lastShotResult === "sunk" ? "rgba(255,56,56,0.20)" : "rgba(255,184,77,0.18)",
+              }}>{lastShotResult === "hit" ? "Touché !" : lastShotResult === "sunk" ? "Coulé !" : "Raté !"}</span>
+            )}
+          </div>
+          <div className="mt-2 text-center text-sm font-bold" style={{ color: botTurn ? "#FFB84D" : BS_SONAR }}>
+            {botTurn ? "📡 L'ennemi tire…" : "À toi de tirer"}
+          </div>
+          <div className="mt-3 flex flex-col items-center gap-4">
+            <div style={{ opacity: botTurn ? 0.55 : 1, transition: "opacity 0.3s" }}>
+              <BattleGrid grid={p2Grid} ships={p2Ships} onCellClick={handleFire} isEnemy disabled={botTurn} label={`Cible · ${player2Name}`} />
+            </div>
+            <BattleGrid grid={p1Grid} ships={p1Ships} label={`Ta flotte · ${player1Name}`} small />
+          </div>
+          {onReturnToLobby && (
+            <button onClick={onReturnToLobby} className="mx-auto mt-4 rounded-xl px-4 py-2 text-xs" style={{ border: `1px solid ${BS_SONAR}33`, color: BS_INKMUTE }}>Quitter</button>
+          )}
+        </NavalShell>
+      );
+    }
     if (!showingBoard) {
       // Handoff screen between shots
       return (
@@ -705,18 +964,20 @@ function LocalBattleship({ onReturnToLobby }: { onReturnToLobby?: () => void }) 
   // ── Game Over ──
   if (localPhase === "game-over") {
     const winnerName = winner === 1 ? player1Name : player2Name;
+    const playerLost = vsBot && winner === 2;
+    const accent = playerLost ? "#FF3838" : BS_SONAR;
     return (
-      <div className="relative flex flex-1 flex-col overflow-hidden p-4 sm:p-6">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_20%,rgba(80,216,255,0.14),transparent_35%),radial-gradient(circle_at_82%_70%,rgba(99,102,241,0.14),transparent_35%),linear-gradient(145deg,#040424,#05113a_42%,#01072a)]" />
-        <div className="relative mx-auto flex w-full max-w-md flex-1 flex-col items-center justify-center gap-6 rounded-3xl border border-cyan-300/20 bg-black/35 p-6 backdrop-blur-xl" style={{ animation: "scaleIn 0.4s ease" }}>
-          <div className="text-center" style={{ animation: "fadeUp 0.5s ease" }}>
-            <p className="text-xs text-white/30 font-sans uppercase tracking-widest">Victoire</p>
-            <h2 className="mt-2 text-4xl font-serif text-cyan-200" style={{ textShadow: "0 0 30px rgba(80,216,255,0.4)", animation: "scaleIn 0.6s ease 0.2s both" }}>
-              {winnerName}
-            </h2>
-            <p className="mt-1 text-sm text-white/40 font-sans">a coule toute la flotte !</p>
-          </div>
-          <div className="flex gap-3">
+      <NavalShell>
+        <div className="flex flex-1 flex-col items-center justify-center text-center">
+          <p className="font-mono text-[11px] font-extrabold uppercase tracking-[3px]" style={{ color: BS_INKMUTE }}>
+            {playerLost ? "Flotte coulée" : "Victoire"}
+          </p>
+          <div className="mt-3 text-[56px]">{playerLost ? "💀" : "🏆"}</div>
+          <h2 className="mt-2 text-4xl font-black" style={{ color: accent, textShadow: `0 0 30px ${accent}66` }}>{winnerName}</h2>
+          <p className="mt-1 text-sm" style={{ color: BS_INKMUTE }}>
+            {playerLost ? "a coulé ta flotte…" : "a coulé toute la flotte !"}
+          </p>
+          <div className="mt-8 flex gap-3">
             <button onClick={() => {
               setLocalPhase("setup");
               setP1Grid(makeEmptyGrid());
@@ -725,19 +986,20 @@ function LocalBattleship({ onReturnToLobby }: { onReturnToLobby?: () => void }) 
               setP2Ships([]);
               setWinner(null);
               setLastShotResult(null);
+              setBotTurn(false);
+              botQueueRef.current = [];
             }}
-              className="rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 px-6 py-2.5 text-sm font-sans font-medium text-white press-effect">
+              className="rounded-xl px-6 py-3 text-sm font-bold" style={{ background: `linear-gradient(180deg, ${BS_SONAR} 0%, #00A878 100%)`, color: "#031826", boxShadow: "0 14px 30px rgba(0,255,180,0.40)" }}>
               Rejouer
             </button>
             {onReturnToLobby && (
-              <button onClick={onReturnToLobby}
-                className="rounded-xl border border-white/15 bg-white/[0.06] px-6 py-2.5 text-sm font-sans text-white/60 hover:bg-white/[0.1]">
+              <button onClick={onReturnToLobby} className="rounded-xl px-6 py-3 text-sm" style={{ border: `1px solid ${BS_SONAR}33`, color: BS_INKMUTE }}>
                 Retour
               </button>
             )}
           </div>
         </div>
-      </div>
+      </NavalShell>
     );
   }
 
@@ -751,39 +1013,43 @@ export default function BattleshipGame({ roomCode, playerId, playerName, onRetur
   const state = gameState as unknown as OnlineState | null;
 
   const [entryMode, setEntryMode] = useState<"choose" | "local" | "multi">("choose");
+  const [botStart, setBotStart] = useState(false);
   const [selectedShipId, setSelectedShipId] = useState<string | null>("carrier");
   const [horizontal, setHorizontal] = useState(true);
   const [hoverCells, setHoverCells] = useState<Set<number>>(new Set());
 
-  // ── Entry Mode ──
+  // ── BS01 · Mode select ──
   if (entryMode === "choose") {
     return (
-      <div className="relative flex flex-1 flex-col overflow-hidden p-4 sm:p-6">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_20%,rgba(80,216,255,0.14),transparent_35%),radial-gradient(circle_at_82%_70%,rgba(99,102,241,0.14),transparent_35%),linear-gradient(145deg,#040424,#05113a_42%,#01072a)]" />
-        <div className="relative mx-auto flex w-full max-w-md flex-1 flex-col items-center justify-center gap-6 rounded-3xl border border-cyan-300/20 bg-black/35 p-6 backdrop-blur-xl" style={{ animation: "scaleIn 0.4s ease" }}>
-          <div className="text-center">
-            <p className="text-[11px] font-sans uppercase tracking-[0.22em] text-cyan-200/65">Bataille Navale</p>
-            <h2 className="mt-1 text-3xl font-serif text-white">Choisis ton mode</h2>
-          </div>
-          <div className="w-full space-y-3">
-            <button onClick={() => setEntryMode("multi")}
-              className="w-full rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 px-6 py-4 text-left press-effect shadow-[0_0_20px_rgba(80,216,255,0.15)]">
-              <p className="text-sm font-sans font-medium text-white">En ligne</p>
-              <p className="text-xs text-white/50 font-sans">Joue contre un autre joueur</p>
-            </button>
-            <button onClick={() => setEntryMode("local")}
-              className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-6 py-4 text-left hover:border-cyan-300/25 hover:bg-white/[0.06] transition-all press-effect">
-              <p className="text-sm font-sans font-medium text-white/80">Local</p>
-              <p className="text-xs text-white/40 font-sans">Deux joueurs sur un seul telephone</p>
-            </button>
-          </div>
+      <NavalShell>
+        <div className="flex items-center justify-between">
+          <span className="font-mono text-[10px] font-extrabold uppercase tracking-[2px]" style={{ color: BS_SONAR }}>Opération · 0142</span>
+          <span className="font-mono text-[9px] font-extrabold uppercase tracking-[2px]" style={{ color: BS_SONAR, padding: "4px 9px", borderRadius: 4, border: `1px solid ${BS_SONAR}55`, background: `${BS_SONAR}11` }}>Briefing</span>
         </div>
-      </div>
+
+        <div className="mt-6 flex justify-center"><SonarHero size={240} /></div>
+
+        <div className="mt-7 text-center">
+          <h1 className="font-black" style={{ fontSize: 46, lineHeight: 0.9, letterSpacing: -2, color: BS_INK, textShadow: `0 0 36px ${BS_SONAR}55` }}>
+            Bataille<br />
+            <span style={{ background: `linear-gradient(120deg, ${BS_SONAR}, #FFD23F)`, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>navale</span>
+          </h1>
+          <p className="mt-3 text-[13px]" style={{ color: BS_INKMUTE }}>
+            Coule la flotte ennemie. <em className="not-italic font-bold" style={{ color: BS_SONAR }}>Mer agitée.</em>
+          </p>
+        </div>
+
+        <div className="mt-7 flex flex-col gap-2.5">
+          <BSModeRow icon="📡" title="Contre l'IA" sub="3 niveaux · solo" accent="#FFD23F" onClick={() => { setBotStart(true); setEntryMode("local"); }} />
+          <BSModeRow icon="📱" title="Un seul téléphone" sub="On se passe l'appareil" accent={BS_SONAR} onClick={() => { setBotStart(false); setEntryMode("local"); }} />
+          <BSModeRow icon="🌐" title="En ligne" sub="Avec un code de salle" accent="#FF3EA5" onClick={() => setEntryMode("multi")} />
+        </div>
+      </NavalShell>
     );
   }
 
   if (entryMode === "local") {
-    return <LocalBattleship onReturnToLobby={onReturnToLobby} />;
+    return <LocalBattleship onReturnToLobby={onReturnToLobby} onBackToModes={() => setEntryMode("choose")} initialBot={botStart} />;
   }
 
   // ── Online Mode ──
