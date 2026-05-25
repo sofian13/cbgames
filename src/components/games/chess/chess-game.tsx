@@ -471,6 +471,45 @@ function GameOverPopup({
   );
 }
 
+// Carte joueur compacte (style maquette CH05) — avatar roi + nom + captures + timer + glow.
+function CompactPlayerCard({ name, color, timeMs, captures, isTurn }: {
+  name: string; color: Color; timeMs: number; captures: string[]; isTurn: boolean;
+}) {
+  return (
+    <div style={{
+      padding: "8px 12px", borderRadius: 12,
+      background: isTurn ? "linear-gradient(90deg, rgba(255,210,63,0.18) 0%, rgba(255,210,63,0.04) 100%)" : "rgba(255,255,255,0.04)",
+      border: isTurn ? "1.5px solid #FFD23F" : "1px solid rgba(255,255,255,0.08)",
+      boxShadow: isTurn ? "0 8px 18px rgba(255,210,63,0.20)" : "none",
+      display: "flex", alignItems: "center", gap: 10,
+    }}>
+      <div style={{
+        width: 38, height: 38, borderRadius: 10, flexShrink: 0,
+        background: color === "w" ? "#F4F1E8" : "#1A1A1A",
+        border: `1px solid ${color === "w" ? "#C9C2AC" : "#3A3A3A"}`,
+        display: "flex", alignItems: "center", justifyContent: "center",
+      }}>
+        <span style={{ fontSize: 26, lineHeight: 1, color: color === "w" ? "#0F0F12" : "#FAF6E8" }}>♚</span>
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div className="font-sans" style={{ fontSize: 14, color: "white", fontWeight: 800, lineHeight: 1.1 }}>{name}</div>
+        {captures.length > 0 && (
+          <div style={{ marginTop: 2, height: 16, overflow: "hidden", whiteSpace: "nowrap", fontSize: 14, lineHeight: 1, color: "rgba(255,255,255,0.55)" }}>
+            {captures.join("")}
+          </div>
+        )}
+      </div>
+      <div style={{
+        padding: "6px 12px", borderRadius: 8, minWidth: 78, textAlign: "center",
+        background: isTurn ? "#FFD23F" : "rgba(255,255,255,0.06)",
+        color: isTurn ? "#1A0E2E" : "white",
+        fontFamily: "var(--font-mono, monospace)", fontSize: 20, fontWeight: 900, letterSpacing: 1,
+        boxShadow: isTurn ? "0 6px 14px rgba(255,210,63,0.30)" : "none",
+      }}>{formatClock(timeMs)}</div>
+    </div>
+  );
+}
+
 interface ChessBoardViewProps {
   board: Array<Piece | null>;
   selectedSquare: number | null;
@@ -537,20 +576,23 @@ const ChessBoardView = memo(function ChessBoardView({
                 <button
                   key={idx}
                   onClick={() => onSquareClick(idx)}
-                  className={cn(
-                    "relative flex aspect-square items-center justify-center leading-none",
-                    isLight ? "bg-[#e8dab2]" : "bg-[#7b6b4a]",
-                    isLastMove && (isLight ? "bg-[#c8b878]" : "bg-[#8a7a48]"),
-                    isSelected && "bg-[#6ecf6e]/50",
-                    isCheck && "bg-red-500/70",
-                  )}
-                  style={{ fontSize: "clamp(1rem, 6vw, 2.8rem)" }}
+                  className="relative flex aspect-square items-center justify-center leading-none"
+                  style={{ background: isLight ? "#EFE2C5" : "#A37553", fontSize: "clamp(1rem, 6vw, 2.8rem)" }}
                 >
+                  {isLastMove && (
+                    <span className="pointer-events-none absolute inset-0" style={{ background: "rgba(255,210,63,0.30)" }} />
+                  )}
+                  {isSelected && (
+                    <span className="pointer-events-none absolute inset-0" style={{ background: "rgba(255,210,63,0.40)", boxShadow: "inset 0 0 0 3px #FFD23F" }} />
+                  )}
+                  {isCheck && (
+                    <span className="pointer-events-none absolute inset-0" style={{ background: "radial-gradient(circle, rgba(255,62,165,0.7) 0%, rgba(255,62,165,0) 70%)" }} />
+                  )}
                   {isTarget && !isCapture && (
-                    <span className="absolute h-[28%] w-[28%] rounded-full bg-black/20" />
+                    <span className="absolute h-[28%] w-[28%] rounded-full" style={{ background: "rgba(0,0,0,0.32)" }} />
                   )}
                   {isCapture && (
-                    <span className="absolute inset-[5%] rounded-full border-[3px] border-red-500/60" />
+                    <span className="absolute inset-[5%] rounded-full" style={{ border: "3px solid rgba(0,0,0,0.32)" }} />
                   )}
                   {code && (
                     <span
@@ -559,11 +601,11 @@ const ChessBoardView = memo(function ChessBoardView({
                         isSelected && "scale-110"
                       )}
                       style={{
-                        filter: piece?.color === "w"
-                          ? "drop-shadow(0 2px 3px rgba(0,0,0,0.45)) drop-shadow(0 0 1px rgba(0,0,0,0.3))"
-                          : "drop-shadow(0 2px 2px rgba(0,0,0,0.3)) drop-shadow(0 0 1px rgba(255,255,255,0.1))",
-                        color: piece?.color === "w" ? "#fff" : "#1a1a2e",
-                        WebkitTextStroke: piece?.color === "w" ? "0.3px rgba(0,0,0,0.15)" : "0.3px rgba(255,255,255,0.08)",
+                        color: piece?.color === "w" ? "#FAF6E8" : "#0F0F12",
+                        WebkitTextStroke: piece?.color === "w" ? "0.6px #14101F" : "0.4px #5A4D7A",
+                        textShadow: piece?.color === "w"
+                          ? "0 2px 3px rgba(0,0,0,0.45), 0 0 1px rgba(0,0,0,0.5)"
+                          : "0 2px 3px rgba(0,0,0,0.55)",
                       }}
                     >
                       {PIECE_GLYPH[code]}
@@ -1147,19 +1189,14 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
             <p className="mt-4 font-sans text-lg font-semibold text-white/90">{statusText}</p>
           )}
 
-          {/* Clocks */}
-          <div className="mt-3 grid grid-cols-2 gap-2 sm:gap-3">
-            <ClockPanel
-              name={localWhiteName}
-              time={localWhiteTimeMs}
-              isActive={!localWinner && localTurn === "w"}
-              color="white"
-            />
-            <ClockPanel
+          {/* Adversaire (noir) — en haut */}
+          <div className="mt-3">
+            <CompactPlayerCard
               name={localKind === "bot" ? "Bot" : localBlackName}
-              time={localBlackTimeMs}
-              isActive={!localWinner && localTurn === "b"}
-              color="black"
+              color="b"
+              timeMs={localBlackTimeMs}
+              captures={localCapturedWhite}
+              isTurn={!localWinner && localTurn === "b"}
             />
           </div>
 
@@ -1170,7 +1207,7 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
           )}
 
           {/* Board */}
-          <div className="mx-auto mt-4" style={normalBoardStyle}>
+          <div className="mx-auto mt-3" style={normalBoardStyle}>
             <ChessBoardView
               board={localBoard}
               selectedSquare={localSelected}
@@ -1182,12 +1219,14 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
             />
           </div>
 
-          {/* Captured pieces */}
-          <div className="mt-4 hidden grid-cols-2 gap-3 sm:grid">
-            <CapturedPieces label={`${localWhiteName} a pris`} pieces={localCapturedBlack} />
-            <CapturedPieces
-              label={`${localKind === "bot" ? "Bot" : localBlackName} a pris`}
-              pieces={localCapturedWhite}
+          {/* Moi (blanc) — en bas */}
+          <div className="mt-3">
+            <CompactPlayerCard
+              name={localWhiteName}
+              color="w"
+              timeMs={localWhiteTimeMs}
+              captures={localCapturedBlack}
+              isTurn={!localWinner && localTurn === "w"}
             />
           </div>
 
