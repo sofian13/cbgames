@@ -1,12 +1,14 @@
 "use client";
 
 import { useMemo, useState, useEffect, useCallback, useRef, memo } from "react";
+import { Settings, Maximize2, Minimize2 } from "lucide-react";
 import type { GameProps } from "@/lib/games/types";
 import { useGame } from "@/lib/party/use-game";
 import { useGameStore } from "@/lib/stores/game-store";
 import { cn } from "@/lib/utils";
 import { useKeyedState } from "@/lib/use-keyed-state";
 import { Mascot } from "@/components/Mascot";
+import { addGameResult, getLevel } from "@/lib/stores/global-points";
 
 type Color = "w" | "b";
 type PieceType = "p" | "n" | "b" | "r" | "q" | "k";
@@ -455,31 +457,51 @@ function GameOverPopup({
   winnerName,
   reason,
   isDraw,
+  iWon,
+  xpEarned,
+  totalXp,
   onClose,
   onReplay,
 }: {
   winnerName: string;
   reason: EndReason | null;
   isDraw: boolean;
+  iWon?: boolean;
+  xpEarned?: number | null;
+  totalXp?: number | null;
   onClose: () => void;
   onReplay?: () => void;
 }) {
-  const reasonLabel = reason === "checkmate" ? "Echec et mat" : reason === "resign" ? "Abandon" : reason === "timeout" ? "Temps ecoule" : reason === "stalemate" ? "Pat" : "Match nul";
+  const reasonLabel = reason === "checkmate" ? "Échec et mat" : reason === "resign" ? "Abandon" : reason === "timeout" ? "Temps écoulé" : reason === "stalemate" ? "Pat" : "Match nul";
+  const lvl = typeof totalXp === "number" ? getLevel(totalXp) : null;
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/70 backdrop-blur-sm" style={{ animation: "fadeIn 0.3s ease" }}>
-      <div className="mx-4 w-full max-w-sm rounded-3xl border border-white/25 bg-black/80 p-7 text-center backdrop-blur-md" style={{ animation: "scaleIn 0.3s ease" }}>
+    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/70 px-4 backdrop-blur-sm" style={{ animation: "fadeIn 0.3s ease" }}>
+      <div className="w-full max-w-sm rounded-3xl border border-white/25 bg-black/80 p-7 text-center backdrop-blur-md" style={{ animation: "scaleIn 0.3s ease" }}>
         <p className="font-sans text-xs uppercase tracking-[0.2em] text-white/40">{reasonLabel}</p>
+        <div className="mt-3 flex justify-center">
+          {isDraw
+            ? <Mascot size={78} color="lavender" mood="neutral" />
+            : iWon === false
+              ? <Mascot size={78} color="coral" mood="dead" />
+              : <Mascot size={88} color="yellow" mood="happy" crown arms cheering />}
+        </div>
         {isDraw ? (
           <>
-            <p className="mt-4 font-serif text-3xl font-bold text-white/90">Match nul</p>
-            <p className="mt-2 font-sans text-sm text-white/50">Personne ne gagne</p>
+            <p className="mt-3 font-serif text-3xl font-bold text-white/90">Match nul</p>
+            <p className="mt-1 font-sans text-sm text-white/50">Personne ne gagne</p>
           </>
         ) : (
           <>
-            <p className="mt-4 font-serif text-3xl font-bold text-[#65dfb2]">{winnerName}</p>
-            <p className="mt-2 font-sans text-sm text-white/50">remporte la partie</p>
+            <p className="mt-3 font-serif text-3xl font-bold" style={{ color: iWon === false ? "#FF8B8B" : "#FFD23F" }}>{iWon === false ? "Défaite" : winnerName}</p>
+            <p className="mt-1 font-sans text-sm text-white/50">{iWon === false ? `${winnerName} remporte la partie` : "remporte la partie"}</p>
           </>
+        )}
+        {typeof xpEarned === "number" && xpEarned > 0 && (
+          <div className="mt-4 flex items-center justify-center gap-3 rounded-2xl border border-amber-300/30 bg-amber-400/10 px-4 py-2.5">
+            <span className="font-serif text-xl font-black text-[#FFD23F]">+{xpEarned} XP</span>
+            {lvl && <span className="font-sans text-xs text-white/55">Niveau {lvl.level} · {lvl.title}</span>}
+          </div>
         )}
         <div className="mt-6 flex flex-col gap-2">
           {onReplay && (
@@ -588,6 +610,38 @@ function KingGlyph({ color, size = 34 }: { color: Color; size?: number }) {
       WebkitTextStroke: color === "w" ? "0.6px #14101F" : "0.4px #5A4D7A",
       textShadow: color === "w" ? "0 2px 3px rgba(0,0,0,0.45)" : "0 2px 3px rgba(0,0,0,0.55)",
     }}>♚</span>
+  );
+}
+
+// Échiquier 3D en perspective (hero CH01).
+function ChessHeroBoard({ size = 230 }: { size?: number }) {
+  const cell = size / 8;
+  const start = useMemo(() => initialBoard(), []);
+  return (
+    <div style={{ perspective: 820, width: size, height: size * 0.86, display: "flex", justifyContent: "center", alignItems: "center" }}>
+      <div style={{
+        position: "absolute", width: size * 1.25, height: size,
+        background: "radial-gradient(ellipse, rgba(255,210,63,0.16) 0%, transparent 65%)", pointerEvents: "none",
+      }} />
+      <div style={{ transform: "rotateX(49deg) rotateZ(-7deg) scale(0.82)", transformOrigin: "center", filter: "drop-shadow(0 28px 28px rgba(0,0,0,0.6))" }}>
+        <div style={{ width: size, height: size, display: "grid", gridTemplateColumns: `repeat(8, ${cell}px)`, borderRadius: 6, overflow: "hidden", boxShadow: "0 18px 40px rgba(0,0,0,0.5), inset 0 0 0 3px rgba(255,255,255,0.06)" }}>
+          {Array.from({ length: 64 }).map((_, i) => {
+            const x = i % 8, y = Math.floor(i / 8);
+            const dark = (x + y) % 2 === 1;
+            const piece = start[i];
+            return (
+              <div key={i} style={{ width: cell, height: cell, display: "flex", alignItems: "center", justifyContent: "center", background: dark ? "#A37553" : "#EFE2C5" }}>
+                {piece && (
+                  <span style={{ fontSize: cell * 0.82, lineHeight: 1, color: piece.color === "w" ? "#FAF6E8" : "#0F0F12", WebkitTextStroke: piece.color === "w" ? "0.5px #14101F" : "0.3px #5A4D7A", textShadow: piece.color === "w" ? "0 1px 2px rgba(0,0,0,0.45)" : "0 1px 2px rgba(0,0,0,0.55)" }}>
+                    {PIECE_GLYPH[`${piece.color}${piece.type}`]}
+                  </span>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -871,6 +925,8 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
   const [showHints, setShowHints] = useState(true);
   const [soundOn, setSoundOn] = useState(true);
   const [vibrateOn, setVibrateOn] = useState(false);
+  const [chessAward, setChessAward] = useState<{ earned: number; total: number } | null>(null);
+  const awardKeyRef = useRef<string>("");
   const [inviteFeedback, setInviteFeedback] = useState<string>("");
   const audioContextRef = useRef<AudioContext | null>(null);
   const onlineLastMoveKeyRef = useRef<string | null>(null);
@@ -1209,6 +1265,36 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
     }
   }, [localWinner, localKind, playWinSound, playLoseSound]);
 
+  // XP — partie locale vs IA (le duel pass-and-play ne rapporte pas d'XP).
+  useEffect(() => {
+    if (!localWinner || localKind !== "bot") return;
+    const key = `local-${localWinner}-${localReason}`;
+    if (awardKeyRef.current === key) return;
+    awardKeyRef.current = key;
+    const won = localWinner === localHumanColor;
+    const draw = localWinner === "draw";
+    const rank = won ? 1 : 2;
+    const score = draw ? 50 : won ? 120 : 30;
+    addGameResult(playerId, playerName, rank, score, "chess", "strategy")
+      .then((r) => setChessAward({ earned: r.earnedPoints, total: r.stats.totalPoints }))
+      .catch(() => {});
+  }, [localWinner, localReason, localKind, localHumanColor, playerId, playerName]);
+
+  // XP — partie en ligne.
+  useEffect(() => {
+    if (!state || state.phase !== "game-over" || !myColor) return;
+    const key = `online-${state.winner}-${state.reason}`;
+    if (awardKeyRef.current === key) return;
+    awardKeyRef.current = key;
+    const won = state.winner === myColor;
+    const draw = state.winner === "draw";
+    const rank = won ? 1 : 2;
+    const score = draw ? 50 : won ? 120 : 30;
+    addGameResult(playerId, playerName, rank, score, "chess", "strategy")
+      .then((r) => setChessAward({ earned: r.earnedPoints, total: r.stats.totalPoints }))
+      .catch(() => {});
+  }, [state, myColor, playerId, playerName]);
+
   // Online game over sound + popup
   useEffect(() => {
     if (!state || state.phase !== "game-over" || endSoundPlayedRef.current) return;
@@ -1232,6 +1318,8 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
   useEffect(() => {
     if (state?.phase === "playing") {
       endSoundPlayedRef.current = false;
+      awardKeyRef.current = "";
+      setChessAward(null);
     }
   }, [state?.phase]);
 
@@ -1301,6 +1389,8 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
     setLocalWhiteTimeMs(minutes * 60_000);
     setLocalBlackTimeMs(minutes * 60_000);
     setLocalMode(true);
+    awardKeyRef.current = "";
+    setChessAward(null);
   }, [localTimeMinutes]);
 
   // Lance une partie locale depuis l'écran de réglages (CH03).
@@ -1445,6 +1535,9 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
               winnerName={localWinnerName}
               reason={localReason}
               isDraw={localWinner === "draw"}
+              iWon={localKind === "bot" ? localWinner === localHumanColor : undefined}
+              xpEarned={chessAward?.earned}
+              totalXp={chessAward?.total}
               onClose={() => setShowGameOverPopup(false)}
               onReplay={startLocalGame}
             />
@@ -1455,7 +1548,7 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
     }
 
     return (
-      <div className="relative flex flex-1 flex-col overflow-hidden p-4 font-sans sm:p-6">
+      <div className="relative flex flex-1 flex-col overflow-hidden px-4 pb-4 font-sans sm:p-6" style={{ paddingTop: "calc(env(safe-area-inset-top,0px) + 0.85rem)" }}>
         {/* Background gradient */}
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_25%,rgba(78,207,138,0.12),transparent_40%),radial-gradient(circle_at_85%_85%,rgba(139,92,246,0.1),transparent_40%),linear-gradient(145deg,#0a0a1a,#111827)]" />
 
@@ -1475,9 +1568,15 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
             </div>
             <div className="flex items-center gap-1.5">
               <button onClick={() => setSettingsOpen(true)} aria-label="Réglages"
-                className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-white/[0.06] text-sm leading-none text-white">⚙</button>
-              <button onClick={toggleFullscreen} aria-label="Plein écran"
-                className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-white/[0.06] text-sm leading-none text-white">⛶</button>
+                className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/[0.07] backdrop-blur-md transition active:scale-95">
+                <Settings className="h-[18px] w-[18px] text-white/90" />
+              </button>
+              <button onClick={toggleFullscreen} aria-label={isFocusView ? "Quitter plein écran" : "Plein écran"}
+                className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/[0.07] backdrop-blur-md transition active:scale-95">
+                {isFocusView
+                  ? <Minimize2 className="h-[18px] w-[18px] text-white/90" />
+                  : <Maximize2 className="h-[18px] w-[18px] text-white/90" />}
+              </button>
             </div>
           </div>
 
@@ -1551,6 +1650,9 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
             winnerName={localWinnerName}
             reason={localReason}
             isDraw={localWinner === "draw"}
+            iWon={localKind === "bot" ? localWinner === localHumanColor : undefined}
+            xpEarned={chessAward?.earned}
+            totalXp={chessAward?.total}
             onClose={() => setShowGameOverPopup(false)}
             onReplay={startLocalGame}
           />
@@ -1589,10 +1691,11 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
           {entryMode === "choose" && (
             <>
               <div className="flex flex-col items-center pt-2 text-center">
-                <div className="mb-3 flex items-end justify-center gap-1">
-                  <Mascot size={54} color="sky" mood="cool" delay={0.15} />
-                  <Mascot size={88} color="yellow" mood="happy" crown arms cheering delay={0} />
-                  <Mascot size={54} color="coral" mood="shocked" delay={0.3} />
+                <div className="relative mb-1 flex justify-center" style={{ height: 210, width: "100%" }}>
+                  <ChessHeroBoard size={232} />
+                  <div className="absolute left-1 top-1"><Mascot size={50} color="yellow" mood="happy" crown delay={0} /></div>
+                  <div className="absolute -bottom-1 right-2"><Mascot size={56} color="sky" mood="cool" delay={0.15} /></div>
+                  <div className="absolute bottom-2 left-3"><Mascot size={42} color="coral" mood="shocked" delay={0.3} /></div>
                 </div>
                 <p className="text-[11px] uppercase tracking-[0.25em] text-white/45">af games · le roi des jeux</p>
                 <h2 className="mt-1 font-black text-white" style={{ fontSize: 52, letterSpacing: -2.2, lineHeight: 0.92, textShadow: "0 0 40px rgba(255,210,63,0.22)" }}>
@@ -1926,6 +2029,9 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
             winnerName={onlineWinnerName}
             reason={state.reason}
             isDraw={state.winner === "draw"}
+            iWon={state.winner === myColor}
+            xpEarned={chessAward?.earned}
+            totalXp={chessAward?.total}
             onClose={() => setShowGameOverPopup(false)}
             onReplay={() => sendAction({ action: "start-game" })}
           />
@@ -2088,6 +2194,9 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
           winnerName={onlineWinnerName}
           reason={state.reason}
           isDraw={state.winner === "draw"}
+          iWon={state.winner === myColor}
+          xpEarned={chessAward?.earned}
+          totalXp={chessAward?.total}
           onClose={() => setShowGameOverPopup(false)}
           onReplay={() => sendAction({ action: "start-game" })}
         />
