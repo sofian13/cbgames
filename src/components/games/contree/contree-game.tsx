@@ -181,7 +181,7 @@ function SpeechBubble({ text, tone, position }: { text: string; tone: BubbleData
 }
 
 function SeatAvatar({
-  seat, position, isTurn, myTeam, dealerSeat, bubble,
+  seat, position, isTurn, myTeam, dealerSeat, bubble, contract,
 }: {
   seat: Seat | undefined;
   position: "top" | "left" | "right";
@@ -189,6 +189,7 @@ function SeatAvatar({
   myTeam: 0 | 1;
   dealerSeat?: number;
   bubble?: BubbleData | null;
+  contract?: { amount: number; suit: Suit; multiplier: number } | null;
 }) {
   if (!seat) return null;
   const color = palette[seat.seatIndex];
@@ -259,6 +260,15 @@ function SeatAvatar({
         <span className="text-[9px]" style={{ color: isTeammate ? "#5BA3FF" : "rgba(255,255,255,0.55)" }}>
           {isTeammate ? "coéquipier" : "adversaire"}
         </span>
+        {/* Contrat remporté — affiché toute la manche sous le preneur (maquette). */}
+        {contract && (
+          <span className="mt-1 flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-black text-white"
+            style={{ background: "linear-gradient(180deg, rgba(40,70,150,0.95), rgba(20,38,90,0.95))", border: "1.5px solid rgba(130,180,255,0.5)", boxShadow: "0 4px 12px rgba(0,0,0,0.4)", fontFamily: "var(--font-display)" }}>
+            {contract.amount === 250 ? "Capot" : contract.amount === 500 ? "Géné." : contract.amount}
+            <span style={{ color: SUIT_RED(contract.suit) ? "#FF8C8C" : "#FFFFFF", fontSize: 14 }}>{contract.suit}</span>
+            {contract.multiplier > 1 && <span style={{ color: "#FFD23F" }}>×{contract.multiplier}</span>}
+          </span>
+        )}
       </div>
       {bubble && (
         <SpeechBubble text={bubble.text} tone={bubble.tone} position={position} />
@@ -327,8 +337,8 @@ function BottomHand({
           const n = hand.length;
           const mid = (n - 1) / 2;
           const offset = i - mid;
-          const spacing = Math.min(58, 620 / Math.max(1, n));
-          const rot = offset * Math.min(4, 16 / Math.max(1, n - 1));
+          const spacing = Math.min(66, 640 / Math.max(1, n));
+          const rot = offset * Math.min(3.5, 14 / Math.max(1, n - 1));
           const x = offset * spacing;
           const y = Math.abs(offset) * 2;
           const playable = canPlay && (isLegal ? isLegal(c) : true);
@@ -353,8 +363,8 @@ function BottomHand({
               onClick={() => { if (playable) onPlay(i); }}
               className="absolute outline-none transition-all duration-300 ease-out hover:-translate-y-4 focus-visible:-translate-y-4"
               style={{
-                left: "50%", bottom: 16,
-                transform: `translateX(${x - 32}px) translateY(${-y}px) rotate(${rot}deg)`,
+                left: "50%", bottom: 38,
+                transform: `translateX(${x - 37}px) translateY(${-y}px) rotate(${rot}deg)`,
                 transformOrigin: "center 140px",
                 zIndex: previewMode && playable ? 100 + i : i,
                 cursor: playable ? "pointer" : "default",
@@ -475,14 +485,16 @@ export default function ContreeGame({ roomCode, playerId, playerName }: GameProp
     const rightOpp = seatBy(1);
     const leftOpp = seatBy(3);
 
-    const amounts = [80, 90, 100, 110, 120, 130, 140, 150, 160];
+    const amounts = [80, 90, 100, 110, 120, 130, 140, 150, 160, 250, 500];
     const minBid = state.currentBid ? state.currentBid.amount + 10 : 80;
     const validAmounts = amounts.filter((a) => a >= minBid);
     const curIdx = validAmounts.indexOf(bidAmount);
+    const amountLabel = (a: number) => (a === 250 ? "Capot" : a === 500 ? "Géné." : String(a));
     const stepAmount = (dir: 1 | -1) => {
       const next = validAmounts[curIdx + dir];
       if (next) setBidAmount(next);
     };
+    const oppHasBid = !!state.currentBid && state.seats.find((s) => s.id === state.currentBid?.bidder)?.team !== myTeam;
 
     return (
       <BoardBackground>
@@ -492,183 +504,70 @@ export default function ContreeGame({ roomCode, playerId, playerName }: GameProp
         <SeatAvatar seat={leftOpp}     position="left"  isTurn={state.currentBidder === leftOpp?.id}     myTeam={myTeam} dealerSeat={state.dealer} bubble={getBubble(leftOpp?.id, state)} />
         <SeatAvatar seat={rightOpp}    position="right" isTurn={state.currentBidder === rightOpp?.id}    myTeam={myTeam} dealerSeat={state.dealer} bubble={getBubble(rightOpp?.id, state)} />
 
-        {/* Contrôles d'enchère — affichés UNIQUEMENT quand c'est à toi.
-            Sinon les annonces s'affichent en bulle à côté de chaque joueur. */}
+        {/* Contrôles d'enchère — affichés UNIQUEMENT quand c'est à toi (sinon : bulles). */}
         {isMyBid && (
         <div
-          className="absolute left-1/2 z-[55] -translate-x-1/2 rounded-2xl p-4 sm:p-5"
+          className="absolute left-1/2 top-1/2 z-[55] -translate-x-1/2 -translate-y-1/2 rounded-[26px] p-5"
           style={{
-            bottom: 168,
-            width: "min(92vw, 420px)",
-            background: "linear-gradient(180deg, rgba(40,70,150,0.78), rgba(20,38,90,0.9))",
-            border: "1.5px solid rgba(120,170,255,0.35)",
-            boxShadow: "0 0 60px rgba(80,140,255,0.25), 0 30px 80px rgba(0,0,0,0.5)",
-            backdropFilter: "blur(10px)",
+            width: "min(92vw, 440px)",
+            background: "linear-gradient(180deg, rgba(52,92,182,0.55), rgba(24,44,104,0.82))",
+            border: "1.5px solid rgba(130,180,255,0.45)",
+            boxShadow: "0 0 70px rgba(80,140,255,0.3), 0 30px 80px rgba(0,0,0,0.55)",
+            backdropFilter: "blur(12px)",
           }}
         >
-          {/* Header — current top bid or "Enchères" */}
-          <div className="mb-3 flex items-center justify-between">
-            <span className="text-[10px] font-bold uppercase tracking-[0.18em]" style={{ color: "rgba(255,255,255,0.65)", fontFamily: "var(--font-display)" }}>
-              {state.currentBid ? `par ${state.seats.find((s) => s.id === state.currentBid?.bidder)?.name ?? "?"}` : "à toi d'ouvrir"}
-            </span>
-            {state.currentBid && (
-              <span className="flex items-center gap-1 text-xs font-black text-white" style={{ fontFamily: "var(--font-display)" }}>
-                {state.currentBid.amount}
-                <span style={{ color: SUIT_RED(state.currentBid.suit) ? "#FF8C8C" : "#FFFFFF" }}>{state.currentBid.suit}</span>
-                {state.currentBid.multiplier > 1 && (
-                  <span className="ml-1 rounded px-1 py-0.5 text-[9px] font-bold" style={{ background: "var(--cb-social)" }}>
-                    ×{state.currentBid.multiplier}
-                  </span>
-                )}
-              </span>
+          {/* Stepper : montant courant + suivant + flèches */}
+          <div className="flex items-center justify-center gap-3">
+            <button onClick={() => stepAmount(-1)} disabled={curIdx <= 0}
+              className="flex h-10 w-10 items-center justify-center rounded-full text-xl text-white transition disabled:opacity-25"
+              style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.18)" }} aria-label="Moins">‹</button>
+            <div className="flex h-14 min-w-[110px] items-center justify-center rounded-2xl px-4 text-3xl font-black text-white"
+              style={{ background: "linear-gradient(180deg, rgba(255,255,255,0.2), rgba(255,255,255,0.06))", border: "1.5px solid rgba(190,215,255,0.5)", boxShadow: "inset 0 1px 0 rgba(255,255,255,0.25), 0 6px 18px rgba(0,0,0,0.3)", fontFamily: "var(--font-display)" }}>
+              {amountLabel(bidAmount)}
+            </div>
+            {validAmounts[curIdx + 1] != null && (
+              <span className="text-xl font-black" style={{ color: "rgba(255,255,255,0.35)", fontFamily: "var(--font-display)" }}>{amountLabel(validAmounts[curIdx + 1])}</span>
             )}
+            <button onClick={() => stepAmount(1)} disabled={curIdx >= validAmounts.length - 1}
+              className="flex h-10 w-10 items-center justify-center rounded-full text-xl text-white transition disabled:opacity-25"
+              style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.18)" }} aria-label="Plus">›</button>
           </div>
 
-          {/* Amount stepper */}
-          <>
-              <div className="flex items-center justify-center gap-2">
-                <button
-                  onClick={() => stepAmount(-1)}
-                  disabled={curIdx <= 0}
-                  className="flex h-9 w-9 items-center justify-center rounded-full text-lg text-white transition-all disabled:opacity-30"
-                  style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.15)" }}
-                  aria-label="Montant inférieur"
-                >
-                  ‹
+          {/* Couleurs */}
+          <div className="mt-5 flex justify-center gap-3">
+            {(["♦","♠","♥","♣"] as Suit[]).map((s) => {
+              const active = bidSuit === s;
+              const red = SUIT_RED(s);
+              return (
+                <button key={s} onClick={() => setBidSuit(s)}
+                  className="flex h-14 w-12 items-center justify-center rounded-lg transition-transform active:scale-95"
+                  style={{ background: "#FAFAF9", border: active ? "3px solid #6BB1FF" : "2px solid transparent", boxShadow: active ? "0 0 16px rgba(107,177,255,0.6)" : "0 2px 6px rgba(0,0,0,0.25)" }}>
+                  <span className="text-3xl font-black" style={{ color: red ? "#E23434" : "#0A0A0A" }}>{s}</span>
                 </button>
-                <div
-                  className="flex h-12 w-20 items-center justify-center rounded-2xl text-2xl font-black text-white"
-                  style={{
-                    background: "linear-gradient(180deg, rgba(255,255,255,0.18), rgba(255,255,255,0.05))",
-                    border: "1.5px solid rgba(180,210,255,0.4)",
-                    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.2), 0 6px 18px rgba(0,0,0,0.25)",
-                    fontFamily: "var(--font-display)",
-                  }}
-                >
-                  {bidAmount}
-                </div>
-                <button
-                  onClick={() => stepAmount(1)}
-                  disabled={curIdx >= validAmounts.length - 1 || curIdx < 0}
-                  className="flex h-9 w-9 items-center justify-center rounded-full text-lg text-white transition-all disabled:opacity-30"
-                  style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.15)" }}
-                  aria-label="Montant supérieur"
-                >
-                  ›
-                </button>
-                <button
-                  onClick={() => setBidAmount(250)}
-                  className="ml-1 rounded-full px-2.5 py-1.5 text-[10px] font-black"
-                  style={{
-                    background: bidAmount === 250 ? "var(--cb-cards)" : "rgba(255,255,255,0.08)",
-                    color: "#fff",
-                    fontFamily: "var(--font-display)",
-                    letterSpacing: "0.04em",
-                    border: bidAmount === 250 ? "1.5px solid transparent" : "1px solid rgba(255,255,255,0.15)",
-                  }}
-                >
-                  CAPOT
-                </button>
-                <button
-                  onClick={() => setBidAmount(500)}
-                  className="rounded-full px-2.5 py-1.5 text-[10px] font-black"
-                  style={{
-                    background: bidAmount === 500 ? "var(--cb-brand)" : "rgba(255,255,255,0.08)",
-                    color: "#fff",
-                    fontFamily: "var(--font-display)",
-                    letterSpacing: "0.04em",
-                    border: bidAmount === 500 ? "1.5px solid transparent" : "1px solid rgba(255,255,255,0.15)",
-                  }}
-                >
-                  GÉN.
-                </button>
-              </div>
+              );
+            })}
+          </div>
 
-              {/* Suit cards */}
-              <div className="mt-4 flex justify-center gap-2">
-                {(["♦","♠","♥","♣"] as Suit[]).map((s) => {
-                  const active = bidSuit === s;
-                  const red = SUIT_RED(s);
-                  return (
-                    <button
-                      key={s}
-                      onClick={() => setBidSuit(s)}
-                      className="flex h-12 w-10 items-center justify-center rounded-md transition-transform active:scale-95"
-                      style={{
-                        background: "#FAFAF9",
-                        border: active ? "3px solid #6BB1FF" : "2px solid transparent",
-                        boxShadow: active ? "0 0 16px rgba(107,177,255,0.5)" : "0 2px 6px rgba(0,0,0,0.25)",
-                      }}
-                    >
-                      <span className="text-2xl font-black" style={{ color: red ? "#E23434" : "#0A0A0A" }}>
-                        {s}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* Actions */}
-              <div className="mt-4 flex gap-2">
-                <button
-                  onClick={pass}
-                  className="flex-1 rounded-xl py-2.5 text-xs font-black tracking-widest transition-transform active:scale-95"
-                  style={{
-                    background: "linear-gradient(180deg, #3B82F6, #1D4ED8)",
-                    color: "#fff",
-                    border: "1.5px solid rgba(180,210,255,0.5)",
-                    fontFamily: "var(--font-display)",
-                    boxShadow: "0 0 18px rgba(59,130,246,0.35), inset 0 1px 0 rgba(255,255,255,0.2)",
-                  }}
-                >
-                  PASSE
-                </button>
-                {state.currentBid ? (
-                  <>
-                    <button
-                      onClick={placeBid}
-                      className="flex-1 rounded-xl py-2.5 text-xs font-black tracking-widest transition-transform active:scale-95"
-                      style={{
-                        background: "linear-gradient(180deg, #22C55E, #15803D)",
-                        color: "#fff",
-                        border: "1.5px solid rgba(180,255,200,0.4)",
-                        fontFamily: "var(--font-display)",
-                        boxShadow: "0 0 18px rgba(34,197,94,0.35), inset 0 1px 0 rgba(255,255,255,0.2)",
-                      }}
-                    >
-                      ENCHÉRIR
-                    </button>
-                    <button
-                      onClick={coincher}
-                      className="flex-1 rounded-xl py-2.5 text-xs font-black tracking-widest transition-transform active:scale-95"
-                      style={{
-                        background: "linear-gradient(180deg, #B91C1C, #7F1D1D)",
-                        color: "#fff",
-                        border: "1.5px solid rgba(255,150,150,0.4)",
-                        fontFamily: "var(--font-display)",
-                        boxShadow: "inset 0 1px 0 rgba(255,255,255,0.1)",
-                      }}
-                    >
-                      CONTRE
-                    </button>
-                  </>
-                ) : (
-                  <button
-                    onClick={placeBid}
-                    className="flex-1 rounded-xl py-2.5 text-xs font-black tracking-widest transition-transform active:scale-95"
-                    style={{
-                      background: "linear-gradient(180deg, #22C55E, #15803D)",
-                      color: "#fff",
-                      border: "1.5px solid rgba(180,255,200,0.4)",
-                      fontFamily: "var(--font-display)",
-                      boxShadow: "0 0 18px rgba(34,197,94,0.35), inset 0 1px 0 rgba(255,255,255,0.2)",
-                    }}
-                  >
-                    ANNONCER
-                  </button>
-                )}
-              </div>
-            </>
+          {/* Actions */}
+          <div className="mt-5 flex gap-2.5">
+            <button onClick={pass}
+              className="flex-1 rounded-2xl py-3.5 text-sm font-black tracking-wider transition-transform active:scale-95"
+              style={{ background: "linear-gradient(180deg, #3B82F6, #1D4ED8)", color: "#fff", border: "1.5px solid rgba(180,210,255,0.5)", fontFamily: "var(--font-display)", boxShadow: "0 0 18px rgba(59,130,246,0.35), inset 0 1px 0 rgba(255,255,255,0.2)" }}>
+              JE PASSE
+            </button>
+            <button onClick={placeBid}
+              className="flex-1 rounded-2xl py-3.5 text-sm font-black tracking-wider transition-transform active:scale-95"
+              style={{ background: "linear-gradient(180deg, #22C55E, #15803D)", color: "#fff", border: "1.5px solid rgba(180,255,200,0.4)", fontFamily: "var(--font-display)", boxShadow: "0 0 18px rgba(34,197,94,0.35), inset 0 1px 0 rgba(255,255,255,0.2)" }}>
+              {state.currentBid ? "ENCHÉRIR" : "ANNONCER"}
+            </button>
+            {oppHasBid && (
+              <button onClick={coincher}
+                className="flex-1 rounded-2xl py-3.5 text-sm font-black tracking-wider transition-transform active:scale-95"
+                style={{ background: "linear-gradient(180deg, #B91C1C, #7F1D1D)", color: "#fff", border: "1.5px solid rgba(255,150,150,0.4)", fontFamily: "var(--font-display)", boxShadow: "inset 0 1px 0 rgba(255,255,255,0.1)" }}>
+                CONTRE
+              </button>
+            )}
+          </div>
         </div>
         )}
 
@@ -699,9 +598,9 @@ export default function ContreeGame({ roomCode, playerId, playerName }: GameProp
     <BoardBackground>
       <Scoreboard state={state} myTeam={myTeam} />
 
-      <SeatAvatar seat={partnerSeat} position="top"   isTurn={state.currentPlayerId === partnerSeat?.id} myTeam={myTeam} bubble={getBubble(partnerSeat?.id, state)} />
-      <SeatAvatar seat={leftOpp}     position="left"  isTurn={state.currentPlayerId === leftOpp?.id}     myTeam={myTeam} dealerSeat={state.dealer} bubble={getBubble(leftOpp?.id, state)} />
-      <SeatAvatar seat={rightOpp}    position="right" isTurn={state.currentPlayerId === rightOpp?.id}    myTeam={myTeam} dealerSeat={state.dealer} bubble={getBubble(rightOpp?.id, state)} />
+      <SeatAvatar seat={partnerSeat} position="top"   isTurn={state.currentPlayerId === partnerSeat?.id} myTeam={myTeam} bubble={getBubble(partnerSeat?.id, state)} contract={state.currentBid?.bidder === partnerSeat?.id ? state.currentBid : null} />
+      <SeatAvatar seat={leftOpp}     position="left"  isTurn={state.currentPlayerId === leftOpp?.id}     myTeam={myTeam} dealerSeat={state.dealer} bubble={getBubble(leftOpp?.id, state)} contract={state.currentBid?.bidder === leftOpp?.id ? state.currentBid : null} />
+      <SeatAvatar seat={rightOpp}    position="right" isTurn={state.currentPlayerId === rightOpp?.id}    myTeam={myTeam} dealerSeat={state.dealer} bubble={getBubble(rightOpp?.id, state)} contract={state.currentBid?.bidder === rightOpp?.id ? state.currentBid : null} />
 
       {/* Trump chip + timer (top right) */}
       <div className="absolute right-4 top-4 z-30 flex flex-col items-end gap-2">

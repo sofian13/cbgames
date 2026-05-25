@@ -558,7 +558,6 @@ function LocalBattleship({ onReturnToLobby, onBackToModes, initialBot = false, p
   const [botTurn, setBotTurn] = useState(false);
   const [botTick, setBotTick] = useState(0);
   const botQueueRef = useRef<number[]>([]);
-  const pickedUpRef = useRef(false);
   const gameStartRef = useRef<number>(0);
   const [player1Name, setPlayer1Name] = useState("Joueur 1");
   const [player2Name, setPlayer2Name] = useState(initialBot ? "L'IA" : "Joueur 2");
@@ -642,23 +641,17 @@ function LocalBattleship({ onReturnToLobby, onBackToModes, initialBot = false, p
   const remainingShips = DEFAULT_SHIPS.filter((s) => !placedIds.has(s.id));
 
   const handlePlacementClick = useCallback((idx: number) => {
-    // Le long-press (drag) a déjà ramassé le navire : on ignore ce clic.
-    if (pickedUpRef.current) { pickedUpRef.current = false; return; }
-
-    // Appui sur un navire déjà placé → rotation sur place (autour de la proue).
+    // Appui sur un navire déjà placé → on le RAMASSE (retiré + sélectionné) pour le
+    // redéposer ailleurs d'un simple tap. (Rotation = bouton ROTATE.)
     const existing = currentShips.find((s) => s.cells.includes(idx));
     if (existing) {
-      const cfg = DEFAULT_SHIPS.find((s) => s.id === existing.id);
-      if (!cfg) return;
-      const head = existing.cells[0];
       const wasHoriz = existing.cells.length > 1 && Math.abs(existing.cells[0] - existing.cells[1]) === 1;
       const gridCopy = [...currentGrid];
       for (const c of existing.cells) gridCopy[c] = "empty";
-      if (canPlaceShip(gridCopy, head, cfg.size, !wasHoriz)) {
-        const cells = placeShipOnGrid(gridCopy, head, cfg.size, !wasHoriz);
-        setCurrentGrid(gridCopy);
-        setCurrentShips((prev) => prev.map((s) => (s.id === existing.id ? { ...s, cells } : s)));
-      }
+      setCurrentGrid(gridCopy);
+      setCurrentShips((prev) => prev.filter((s) => s.id !== existing.id));
+      setSelectedShipId(existing.id);
+      setHorizontal(wasHoriz);
       return;
     }
 
@@ -673,7 +666,7 @@ function LocalBattleship({ onReturnToLobby, onBackToModes, initialBot = false, p
     // Auto-select next ship
     const nextShip = DEFAULT_SHIPS.find((s) => !placedIds.has(s.id) && s.id !== selectedShipId);
     setSelectedShipId(nextShip?.id ?? null);
-  }, [selectedShipId, horizontal, currentGrid, currentShips, setCurrentGrid, setCurrentShips, placedIds]);
+  }, [selectedShipId, horizontal, currentGrid, currentShips, setCurrentGrid, setCurrentShips, setHorizontal, placedIds]);
 
   const handleRandomPlace = useCallback(() => {
     const { grid, ships } = randomPlacement();
@@ -917,32 +910,9 @@ function LocalBattleship({ onReturnToLobby, onBackToModes, initialBot = false, p
                         <button key={idx}
                           onClick={() => handlePlacementClick(idx)}
                           onMouseEnter={() => handleHover(idx)}
-                          onTouchStart={(e) => {
-                            if (!isShip) return;
-                            const ship = currentShips.find((s) => s.cells.includes(idx));
-                            if (!ship) return;
-                            const timer = setTimeout(() => {
-                              // Long press: pick up ship to move it
-                              pickedUpRef.current = true;
-                              const newGrid = [...currentGrid];
-                              for (const c of ship.cells) newGrid[c] = "empty";
-                              setCurrentGrid(newGrid);
-                              setCurrentShips((prev) => prev.filter((s) => s.id !== ship.id));
-                              setSelectedShipId(ship.id);
-                              const cfg = DEFAULT_SHIPS.find((s) => s.id === ship.id);
-                              if (cfg) {
-                                const isH = ship.cells.length > 1 && Math.abs(ship.cells[0] - ship.cells[1]) === 1;
-                                setHorizontal(isH);
-                              }
-                            }, 400);
-                            const el = e.currentTarget;
-                            const clearTimer = () => { clearTimeout(timer); el.removeEventListener("touchend", clearTimer); el.removeEventListener("touchmove", clearTimer); };
-                            el.addEventListener("touchend", clearTimer, { once: true });
-                            el.addEventListener("touchmove", clearTimer, { once: true });
-                          }}
                           className={cn(
                             "w-[var(--cell)] h-[var(--cell)] transition-all relative bg-[#0c1a3a] border border-cyan-300/8",
-                            isShip && "bg-cyan-500/10",
+                            isShip && "bg-cyan-500/15",
                             isHover && !isShip && "bg-cyan-400/20 border-cyan-300/35",
                           )} />
                       );
@@ -959,7 +929,7 @@ function LocalBattleship({ onReturnToLobby, onBackToModes, initialBot = false, p
         {/* Dock — reste à placer (illustrations) + ROTATE */}
         {!allPlaced && (
           <>
-            <p className="mt-4 font-mono text-[10px] font-extrabold uppercase tracking-[2px]" style={{ color: BS_INKMUTE }}>Reste à placer · glisser / appuyer pour tourner</p>
+            <p className="mt-4 font-mono text-[10px] font-extrabold uppercase tracking-[2px]" style={{ color: BS_INKMUTE }}>Reste à placer · tape une case pour poser · re-tape un navire pour le déplacer</p>
             <div className="mt-2.5 flex items-stretch gap-2.5">
               <div className="flex flex-1 flex-col gap-2">
                 {remainingShips.map((s) => {
