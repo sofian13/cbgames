@@ -12,7 +12,8 @@ export const metadata: Metadata = {
   description: "Une soirée, un code, un jeu. Des mini-jeux multijoueur pensés pour le mobile et les soirées entre potes.",
   applicationName: "af.games",
   appleWebApp: { capable: true, statusBarStyle: "black-translucent", title: "af.games" },
-  icons: { icon: "/icon-192.png", apple: "/apple-touch-icon.png" },
+  // Favicon + apple-touch are served via the app/icon.png & app/apple-icon.png
+  // file conventions (auto cache-busted), so no manual `icons` here.
   other: {
     "apple-mobile-web-app-capable": "yes",
     "mobile-web-app-capable": "yes",
