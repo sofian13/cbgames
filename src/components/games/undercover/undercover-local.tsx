@@ -2,7 +2,6 @@
 
 import { useMemo, useState, type CSSProperties, type ReactNode } from "react";
 import { Mascot, MASCOT_COLORS, type MascotColor, type MascotMood } from "@/components/Mascot";
-import { PlayersSetup, PassScreen } from "@/components/games/local-kit";
 
 /* ─────────────────────────────────────────────────────────────
    UNDERCOVER LOCAL — Pass-and-play (un seul téléphone)
@@ -345,14 +344,7 @@ export default function UndercoverLocal({ onReturnToLobby }: { onReturnToLobby?:
   // 1. Setup joueurs
   if (phase === "setup-players") {
     return (
-      <PlayersSetup
-        emoji="🕶️"
-        name="Undercover"
-        min={3} max={7}
-        accent="#7A4EE8"
-        onStart={handleStartNames}
-        onBack={onReturnToLobby}
-      />
+      <PlayersSetupUC onStart={handleStartNames} onBack={onReturnToLobby} />
     );
   }
 
@@ -375,12 +367,14 @@ export default function UndercoverLocal({ onReturnToLobby }: { onReturnToLobby?:
   if (phase === "pass-reveal") {
     const p = players[revealIdx];
     return (
-      <PassScreen
+      <PassScreenUC
         toName={p.name}
-        colorIndex={p.idx}
-        accent="#FFD23F"
-        hint={`Personne d'autre ne doit voir l'écran. (${revealIdx + 1}/${players.length})`}
+        colorIdx={p.idx}
+        label={`${revealIdx + 1} / ${players.length} · Distribution`}
+        players={players}
+        currentIdx={p.idx}
         buttonLabel="🕶️ Voir mon rôle"
+        buttonSub="Maintiens pour confirmer"
         onReady={() => setPhase("reveal")}
       />
     );
@@ -428,11 +422,11 @@ export default function UndercoverLocal({ onReturnToLobby }: { onReturnToLobby?:
   if (phase === "review-pass") {
     const p = players[reviewIdx!];
     return (
-      <PassScreen
+      <PassScreenUC
         toName={p.name}
-        colorIndex={p.idx}
-        accent="#FFD23F"
-        hint="Personne d'autre ne doit voir l'écran."
+        colorIdx={p.idx}
+        label="Revoir le mot"
+        tag="Privé"
         buttonLabel="🕶️ Voir mon rôle"
         onReady={() => setPhase("review-show")}
       />
@@ -456,11 +450,11 @@ export default function UndercoverLocal({ onReturnToLobby }: { onReturnToLobby?:
   if (phase === "pass-vote") {
     const p = players[voteOrder[voteIdx]];
     return (
-      <PassScreen
+      <PassScreenUC
         toName={p.name}
-        colorIndex={p.idx}
-        accent="#FF3EA5"
-        hint={`Ton tour de voter. (${voteIdx + 1}/${voteOrder.length})`}
+        colorIdx={p.idx}
+        label={`Vote · ${voteIdx + 1}/${voteOrder.length}`}
+        tag="Vote secret"
         buttonLabel="⚖ Voter"
         onReady={() => setPhase("vote")}
       />
@@ -498,11 +492,11 @@ export default function UndercoverLocal({ onReturnToLobby }: { onReturnToLobby?:
     const p = eliminatedIdx !== null ? players[eliminatedIdx] : null;
     if (!p) return null;
     return (
-      <PassScreen
+      <PassScreenUC
         toName={p.name}
-        colorIndex={p.idx}
-        accent="#FFD23F"
-        hint="Mr. White éliminé — une dernière chance de gagner seul."
+        colorIdx={p.idx}
+        label="Mr. White · dernière chance"
+        tag="Bonus"
         buttonLabel="🎯 Tenter ma chance"
         onReady={() => setPhase("mrwhite-guess")}
       />
@@ -1528,5 +1522,110 @@ function Confetti({ count = 40, accent = "#FFD23F" }: { count?: number; accent?:
         }} />
       ))}
     </div>
+  );
+}
+
+// ── Maquette 03 — "Qui joue ?" + grille LES SUSPECTS (remplace le PlayersSetup générique) ──
+function PlayersSetupUC({ onStart, onBack }: { onStart: (names: string[]) => void; onBack?: () => void }) {
+  const [names, setNames] = useState<string[]>(["", "", "", "", ""]);
+  const count = names.length;
+  const setCount = (n: number) =>
+    setNames((prev) => {
+      const next = [...prev];
+      while (next.length < n) next.push("");
+      return next.slice(0, n);
+    });
+  return (
+    <LocalShell tone="noir">
+      <NavBar sub="Étape 2/3" title="Qui joue ?" onBack={onBack} right={<Tag>LOCAL</Tag>} />
+
+      <FileCard accent="#FFD23F" style={{ marginBottom: 16 }}>
+        <Mono style={{ marginBottom: 6 }}>Nombre de joueurs</Mono>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+          <span style={{ fontFamily: "var(--font-display)", fontSize: 48, fontWeight: 800, color: "#FFD23F", lineHeight: 1 }}>{count}</span>
+          <Stepper value={count} min={3} max={7} onChange={setCount} />
+        </div>
+        <div style={{ display: "flex", justifyContent: "space-between" }}>
+          {[3, 4, 5, 6, 7].map((n) => {
+            const sel = n === count, on = n <= count;
+            return (
+              <button key={n} onClick={() => setCount(n)} style={{
+                width: sel ? 36 : 30, height: sel ? 36 : 30, borderRadius: "50%", padding: 0, cursor: "pointer",
+                border: sel ? "2px solid #fff" : "1px solid rgba(255,255,255,0.1)",
+                background: on ? (sel ? "linear-gradient(135deg,#FFD23F,#FF8B5C)" : "rgba(255,210,63,0.3)") : "rgba(255,255,255,0.05)",
+                color: on ? (sel ? "#1A0E2E" : "#fff") : "rgba(255,255,255,0.4)",
+                fontFamily: "var(--font-display)", fontWeight: 800, fontSize: sel ? 15 : 12,
+              }}>{n}</button>
+            );
+          })}
+        </div>
+      </FileCard>
+
+      <Mono style={{ marginBottom: 8 }}>Les suspects</Mono>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+        {names.map((nm, i) => (
+          <div key={i} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, padding: 10, borderRadius: 16, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>
+            <Mascot size={48} color={MASCOT_COLORS[i % MASCOT_COLORS.length]} mood="happy" bob={false} shadow={false} />
+            <input
+              value={nm}
+              onChange={(e) => setNames((prev) => prev.map((x, idx) => (idx === i ? e.target.value.slice(0, 14) : x)))}
+              placeholder={`Joueur ${i + 1}`}
+              style={{ width: "100%", textAlign: "center", background: "transparent", border: "none", outline: "none", color: "#fff", fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 15 }}
+            />
+            <Mono style={{ fontSize: 8 }}>Suspect N°{String(i + 1).padStart(2, "0")}</Mono>
+          </div>
+        ))}
+      </div>
+
+      <div style={{ marginTop: 20 }}>
+        <Btn tone="gold" onClick={() => onStart(names.map((n, i) => n.trim() || `Joueur ${i + 1}`))}>Choisir les rôles →</Btn>
+      </div>
+    </LocalShell>
+  );
+}
+
+// ── Maquette 06 — "Passe le téléphone" (remplace le PassScreen générique) ──
+function PassScreenUC({ toName, colorIdx, label, players, currentIdx, buttonLabel, buttonSub, tag = "Rôles prêts", onReady }: {
+  toName: string; colorIdx: number; label: string;
+  players?: LocalPlayer[]; currentIdx?: number;
+  buttonLabel: string; buttonSub?: string; tag?: string; onReady: () => void;
+}) {
+  return (
+    <LocalShell tone="noir">
+      <NavBar sub={label} right={<Tag color="#3DDC97">{tag}</Tag>} />
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 16, marginTop: 40 }}>
+        <div style={{ position: "relative" }}>
+          {[0, 1].map((i) => (
+            <span key={i} style={{ position: "absolute", left: "50%", top: "50%", width: 150, height: 150, borderRadius: "50%", border: "1.5px solid rgba(255,210,63,0.5)", transform: "translate(-50%,-50%)", animation: "uc-pulse 2.6s ease-out infinite", animationDelay: `${i * 1.3}s` }} />
+          ))}
+          <Mascot size={150} color={MASCOT_COLORS[colorIdx % MASCOT_COLORS.length]} mood="neutral" bob={false} shadow={false} />
+        </div>
+        <Mono style={{ color: "#FFD23F", marginTop: 12 }}>Passe le téléphone à</Mono>
+        <div style={{ fontFamily: "var(--font-display)", fontSize: 52, fontWeight: 800, color: "#fff", lineHeight: 1, textShadow: "0 0 32px rgba(122,78,232,0.5)" }}>{toName}</div>
+      </div>
+
+      {players && (
+        <div style={{ marginTop: 28 }}>
+          <Mono style={{ marginBottom: 8, display: "block", textAlign: "center" }}>Tour de distribution</Mono>
+          <div style={{ display: "flex", justifyContent: "center", gap: 10 }}>
+            {players.map((p) => {
+              const active = p.idx === currentIdx;
+              return (
+                <div key={p.idx} style={{ textAlign: "center", opacity: active ? 1 : 0.4 }}>
+                  <div style={{ borderRadius: "50%", border: active ? "2px solid #FFD23F" : "1px solid rgba(255,255,255,0.1)", padding: 1 }}>
+                    <Mascot size={34} color={MASCOT_COLORS[p.idx % MASCOT_COLORS.length]} mood="happy" bob={false} shadow={false} />
+                  </div>
+                  <div style={{ fontSize: 8, marginTop: 3, color: active ? "#FFD23F" : "rgba(255,255,255,0.4)", fontWeight: 700, textTransform: "uppercase" }}>{p.name}</div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      <div style={{ marginTop: 32 }}>
+        <Btn tone="gold" sub={buttonSub} onClick={onReady}>{buttonLabel}</Btn>
+      </div>
+    </LocalShell>
   );
 }
