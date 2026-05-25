@@ -5,7 +5,7 @@ import { useGame } from "@/lib/party/use-game";
 import { useGameStore } from "@/lib/stores/game-store";
 import type { GameProps } from "@/lib/games/types";
 import { cn } from "@/lib/utils";
-import { UCBack, PlayerCountPicker } from "./uc-kit";
+import { UCBack, PlayerCountPicker, SpyBlob, DossierTag, UCButton } from "./uc-kit";
 
 // ── Types (mirrors server state) ────────────────────────────
 
@@ -1050,18 +1050,18 @@ export default function UndercoverGame({
         const passPlayer = localPlayers.find((p) => p.id === localPassToId) ?? null;
         if (passPlayer) {
           return (
-            <div className="relative flex min-h-[100svh] flex-1 flex-col items-center justify-center overflow-hidden bg-[#040824] p-6 text-white">
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_25%,rgba(149,60,101,0.35),transparent_40%),radial-gradient(circle_at_50%_62%,rgba(36,224,224,0.3),transparent_34%),linear-gradient(180deg,#040424_0%,#05113a_42%,#01072a_100%)]" />
-              <div className="relative w-full max-w-lg rounded-3xl border border-white/35 bg-black/35 p-7 text-center shadow-[0_20px_70px_rgba(0,0,0,0.4)] backdrop-blur-sm">
-                <p className="text-[11px] font-sans uppercase tracking-[0.24em] text-cyan-300/80">Passe le telephone</p>
-                <p className="mt-3 text-5xl font-sans font-semibold text-cyan-300">{passPlayer.name}</p>
-                <p className="mt-3 text-base font-sans text-white/85">Pioche une carte</p>
-                <button
-                  onClick={() => setLocalPassToId(null)}
-                  className="mt-6 rounded-full bg-gradient-to-r from-[#65dfb2] to-[#4ecf8a] px-8 py-2.5 text-lg font-sans font-semibold text-white"
-                >
-                  Continuer
-                </button>
+            <div className="relative flex min-h-[100svh] flex-1 flex-col items-center justify-center overflow-hidden p-6 text-white">
+              <UCBack tone="noir" />
+              <div className="relative z-[2] flex flex-col items-center gap-5">
+                <DossierTag color="#3DDC97">RÔLES DISTRIBUÉS</DossierTag>
+                <SpyBlob size={150} color="purple" mood="sus" />
+                <div className="text-center">
+                  <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, letterSpacing: 2, color: "var(--af-yellow)", fontWeight: 800 }}>PASSE LE TÉLÉPHONE À</p>
+                  <p className="cb-display-lg mt-1.5" style={{ fontSize: 46, lineHeight: 1, textShadow: "0 0 32px rgba(122,78,232,0.5)" }}>{passPlayer.name}</p>
+                </div>
+                <UCButton tone="primary" full={false} style={{ marginTop: 6, padding: "14px 28px" }} onClick={() => setLocalPassToId(null)}>
+                  🕶️ Piocher ma carte
+                </UCButton>
               </div>
             </div>
           );
@@ -1136,18 +1136,21 @@ export default function UndercoverGame({
                       <p className="text-6xl font-sans font-bold text-white">?</p>
                     </div>
                     <div
-                      className="absolute inset-0 flex flex-col items-center justify-center rounded-2xl border border-white/40 bg-[linear-gradient(145deg,#102046,#1c2a63)]"
+                      className="absolute inset-0 flex flex-col items-center justify-center gap-2 rounded-2xl px-3 text-center"
                       style={{
                         backfaceVisibility: "hidden",
                         transform: "rotateY(180deg)",
+                        background: "linear-gradient(160deg, rgba(255,255,255,0.08), rgba(0,0,0,0.4))",
+                        border: `2px solid ${localCardReveal.role === "mrwhite" ? "#FFD23F" : "#3DDC97"}`,
+                        boxShadow: `0 0 28px ${localCardReveal.role === "mrwhite" ? "rgba(255,210,63,0.45)" : "rgba(61,220,151,0.45)"}`,
                       }}
                     >
-                      <p className="text-3xl font-sans font-semibold text-cyan-300">
-                        {localCardReveal.role === "mrwhite" ? "Mr. White" : "Civil"}
-                      </p>
-                      <p className="mt-2 px-3 text-center text-4xl font-sans font-semibold text-white">
+                      <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9, letterSpacing: 2, fontWeight: 800, color: localCardReveal.role === "mrwhite" ? "#FFD23F" : "#3DDC97" }}>
+                        {localCardReveal.role === "mrwhite" ? "MR. WHITE" : "TON MOT"}
+                      </span>
+                      <span className="cb-display-md" style={{ fontSize: 30, color: "#fff", lineHeight: 1.05 }}>
                         {localCardReveal.role === "mrwhite" ? "???" : localCardReveal.word}
-                      </p>
+                      </span>
                     </div>
                   </div>
                 </div>
