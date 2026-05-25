@@ -12,7 +12,7 @@ import { Mascot, MASCOT_COLORS, type MascotColor, type MascotMood } from "@/comp
 // ═════════════════════════════════════════════════════════════
 //  Modèle de données
 // ═════════════════════════════════════════════════════════════
-type Role = "civil" | "undercover" | "mrwhite";
+type Role = "civil" | "undercover" | "mrwhite" | "jester";
 
 interface LocalPlayer {
   idx: number;            // position d'origine (sert de "id" stable)
@@ -42,7 +42,7 @@ type LocalPhase =
   | "mrwhite-guess"
   | "over";
 
-type EndReason = "civils-win" | "undercover-wins" | "mrwhite-wins";
+type EndReason = "civils-win" | "undercover-wins" | "mrwhite-wins" | "jester-wins";
 
 // ═════════════════════════════════════════════════════════════
 //  Banque de mots (même contenu que le serveur)
@@ -76,8 +76,8 @@ const WORD_PAIRS: [string, string][] = [
 // ═════════════════════════════════════════════════════════════
 //  Tokens (mirror online)
 // ═════════════════════════════════════════════════════════════
-const ROLE_COLOR: Record<Role, string> = { civil: "#3DDC97", undercover: "#FF3EA5", mrwhite: "#FFD23F" };
-const ROLE_LABEL: Record<Role, string> = { civil: "Civil", undercover: "Undercover", mrwhite: "Mr. White" };
+const ROLE_COLOR: Record<Role, string> = { civil: "#3DDC97", undercover: "#FF3EA5", mrwhite: "#FFD23F", jester: "#C58CFF" };
+const ROLE_LABEL: Record<Role, string> = { civil: "Civil", undercover: "Undercover", mrwhite: "Mr. White", jester: "Bouffon" };
 
 const colorByIdx = (idx: number): MascotColor => MASCOT_COLORS[idx % MASCOT_COLORS.length];
 
@@ -98,6 +98,7 @@ export default function UndercoverLocal({ onReturnToLobby }: { onReturnToLobby?:
   // Config de rôles (configurée en setup-roles)
   const [ucCount, setUcCount]       = useState(1);
   const [mrWhite, setMrWhite]       = useState(false);
+  const [jester, setJester]         = useState(false);  // Bouffon : gagne s'il se fait éliminer
 
   // Distribution / phase pass-reveal
   const [revealIdx, setRevealIdx]   = useState(0);   // joueur courant qui voit son mot
@@ -142,6 +143,7 @@ export default function UndercoverLocal({ onReturnToLobby }: { onReturnToLobby?:
     if (n <= 4)      { setUcCount(1); setMrWhite(false); }
     else if (n <= 6) { setUcCount(1); setMrWhite(true);  }
     else             { setUcCount(2); setMrWhite(true);  }
+    setJester(false);
     setPhase("setup-roles");
   };
 
@@ -163,6 +165,13 @@ export default function UndercoverLocal({ onReturnToLobby }: { onReturnToLobby?:
     if (mrWhite && i < shuffled.length) {
       const id = shuffled[i];
       newPlayers[id] = { ...newPlayers[id], role: "mrwhite", word: null };
+      i++;
+    }
+    if (jester && i < shuffled.length) {
+      const id = shuffled[i];
+      // Le Bouffon a le mot des civils (il se fond dans la masse), mais son but
+      // est de se faire éliminer.
+      newPlayers[id] = { ...newPlayers[id], role: "jester", word: a };
       i++;
     }
     for (; i < shuffled.length; i++) {
@@ -223,6 +232,13 @@ export default function UndercoverLocal({ onReturnToLobby }: { onReturnToLobby?:
     if (!target) return;
     setPlayers((ps) => ps.map((p) => (p.idx === id ? { ...p, isEliminated: true, eliminatedRound: round } : p)));
     setEliminatedIdx(id);
+    if (target.role === "jester") {
+      // Le Bouffon voulait être éliminé → il gagne immédiatement.
+      setPlayers((ps) => ps.map((p) => (p.idx === id ? { ...p, score: p.score + 6 } : p)));
+      setEndReason("jester-wins");
+      setPhase("over");
+      return;
+    }
     if (target.role === "mrwhite") setPhase("mrwhite-pass");
     else setPhase("eliminate");
   };
@@ -250,7 +266,7 @@ export default function UndercoverLocal({ onReturnToLobby }: { onReturnToLobby?:
     const remain = players.filter((p) => !p.isEliminated);
     const remUC = remain.filter((p) => p.role === "undercover").length;
     const remMW = remain.filter((p) => p.role === "mrwhite").length;
-    const remCv = remain.filter((p) => p.role === "civil").length;
+    const remCv = remain.filter((p) => p.role === "civil" || p.role === "jester").length;
 
     // Civils gagnent
     if (remUC === 0 && remMW === 0) {
@@ -305,6 +321,8 @@ export default function UndercoverLocal({ onReturnToLobby }: { onReturnToLobby?:
         setUcCount={setUcCount}
         mrWhite={mrWhite}
         setMrWhite={setMrWhite}
+        jester={jester}
+        setJester={setJester}
         onStart={distributeRoles}
         onBack={() => setPhase("setup-players")}
       />
@@ -477,11 +495,12 @@ export default function UndercoverLocal({ onReturnToLobby }: { onReturnToLobby?:
 
 // — SETUP ROLES (composition)
 function SetupRoles({
-  players, ucCount, setUcCount, mrWhite, setMrWhite, onStart, onBack,
+  players, ucCount, setUcCount, mrWhite, setMrWhite, jester, setJester, onStart, onBack,
 }: {
   players: LocalPlayer[];
   ucCount: number; setUcCount: (v: number) => void;
   mrWhite: boolean; setMrWhite: (v: boolean) => void;
+  jester: boolean; setJester: (v: boolean) => void;
   onStart: () => void; onBack: () => void;
 }) {
   const total = players.length;
@@ -491,8 +510,12 @@ function SetupRoles({
   const mwSlots = mrWhite && canMrWhite ? 1 : 0;
   const maxUC = Math.max(1, Math.min(3, impostorCap - mwSlots));
   const ucEff = Math.min(Math.max(1, ucCount), maxUC);
-  const civils = total - ucEff - mwSlots;
-  const valid = ucEff >= 1 && civils > ucEff + mwSlots;
+  // Le Bouffon est neutre : il prend une place côté civils. Il faut qu'il
+  // reste au moins 1 vrai civil après UC + Mr.White + Bouffon.
+  const canJester = total - ucEff - mwSlots >= 3;
+  const jSlots = jester && canJester ? 1 : 0;
+  const civils = total - ucEff - mwSlots - jSlots;
+  const valid = ucEff >= 1 && civils >= 1 && ucEff + mwSlots < civils + jSlots;
   const toggleMrWhite = (v: boolean) => {
     const nv = v && canMrWhite;
     if (nv) {
@@ -501,6 +524,7 @@ function SetupRoles({
     }
     setMrWhite(nv);
   };
+  const toggleJester = (v: boolean) => setJester(v && canJester);
 
   return (
     <LocalShell tone="noir">
@@ -523,19 +547,24 @@ function SetupRoles({
             <Mascot key={`u${i}`} size={42} color="pink" mood="shifty" bob={false} shadow={false} delay={0.3 + i * 0.1} />
           ))}
           {mwSlots > 0 && <Mascot size={42} color="white" mood="thinking" bob={false} shadow={false} delay={0.5} />}
+          {jSlots > 0 && <Mascot size={42} color="lavender" mood="laughing" bob={false} shadow={false} delay={0.6} />}
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 6, marginBottom: 14 }}>
+        <div style={{ display: "grid", gridTemplateColumns: jSlots > 0 ? "repeat(4,1fr)" : "repeat(3,1fr)", gap: 6, marginBottom: 14 }}>
           <Stat n={civils} label="Civils" color="#3DDC97" sub="même mot" />
           <Stat n={ucEff} label="Undercover" color="#FF3EA5" sub="mot voisin" />
           <Stat n={mwSlots} label="Mr. White" color="#FFD23F" sub="aucun mot" />
+          {jSlots > 0 && <Stat n={jSlots} label="Bouffon" color="#C58CFF" sub="à éliminer" />}
         </div>
 
         <Row label="Undercover" hint={`1 à ${maxUC}`}>
           <Stepper value={ucEff} min={1} max={maxUC} onChange={setUcCount} />
         </Row>
-        <Row label="Mr. White" hint={canMrWhite ? "bonus chaos" : "5 joueurs min"}>
+        <Row label="Mr. White" hint={canMrWhite ? "aucun mot · devine s'il sort" : "5 joueurs min"}>
           <Toggle value={mwSlots > 0} onChange={toggleMrWhite} />
+        </Row>
+        <Row label="Bouffon" hint={canJester ? "gagne s'il se fait éliminer" : "pas assez de civils"}>
+          <Toggle value={jSlots > 0} onChange={toggleJester} />
         </Row>
       </FileCard>
 
@@ -574,15 +603,20 @@ function RevealScreen({
   // L'undercover NE SAIT PAS qu'il l'est : civil + undercover voient "Civil".
   // Seul Mr. White sait qu'il n'a pas de mot.
   const isMrWhite = player.role === "mrwhite";
-  const displayRole: Role = isMrWhite ? "mrwhite" : "civil";
+  const isJester = player.role === "jester";
+  // L'undercover NE SAIT PAS qu'il l'est (il se croit civil). Mr.White et
+  // Bouffon connaissent leur rôle (ils ont un objectif spécial).
+  const displayRole: Role = isMrWhite ? "mrwhite" : isJester ? "jester" : "civil";
   const color = ROLE_COLOR[displayRole];
   const label = ROLE_LABEL[displayRole];
   const hint = isMrWhite
     ? "Aucun mot. Bluff. Si tu es éliminé, devine le mot des civils pour gagner seul."
+    : isJester
+    ? "Tu es le Bouffon. Ton but : te faire éliminer ! Sois louche… mais pas trop vite."
     : "Mémorise ton mot. Donne un indice clair, mais pas trop évident.";
 
-  const blobColor: MascotColor = isMrWhite ? "white" : "mint";
-  const blobMood: MascotMood = isMrWhite ? "thinking" : "happy";
+  const blobColor: MascotColor = isMrWhite ? "white" : isJester ? "lavender" : "mint";
+  const blobMood: MascotMood = isMrWhite ? "thinking" : isJester ? "laughing" : "happy";
 
   return (
     <LocalShell tone={isMrWhite ? "gold" : "civ"}>
@@ -989,15 +1023,18 @@ function GameOverScreen({
   const title =
     endReason === "civils-win" ? "Civils victorieux" :
     endReason === "undercover-wins" ? "Undercover gagne" :
+    endReason === "jester-wins" ? "Le Bouffon gagne" :
     "Mr. White triomphe";
   const accent =
     endReason === "civils-win" ? "#3DDC97" :
-    endReason === "undercover-wins" ? "#FF3EA5" : "#FFD23F";
+    endReason === "undercover-wins" ? "#FF3EA5" :
+    endReason === "jester-wins" ? "#C58CFF" : "#FFD23F";
 
   const sorted = useMemo(() => [...players].sort((a, b) => b.score - a.score), [players]);
   const winners = sorted.filter((p) => {
     if (endReason === "civils-win") return p.role === "civil";
-    if (endReason === "undercover-wins") return p.role !== "civil";
+    if (endReason === "undercover-wins") return p.role === "undercover" || p.role === "mrwhite";
+    if (endReason === "jester-wins") return p.role === "jester";
     return p.role === "mrwhite";
   });
 
