@@ -214,6 +214,42 @@ function ShipSVG({ len, sunk = false }: { len: number; sunk?: boolean }) {
   );
 }
 
+// Calque d'illustrations de navires posées sur une grille (multi-cases).
+function ShipFleetOverlay({ ships, grid, gridN = 10 }: { ships: Ship[]; grid: CellState[]; gridN?: number }) {
+  const cp = 100 / gridN;
+  const hitCells = ships.flatMap((s) => s.cells).filter((c) => grid[c] === "hit");
+  return (
+    <div className="pointer-events-none absolute inset-0 z-10">
+      {ships.map((s, si) => {
+        const horiz = s.cells.length > 1 && Math.abs(s.cells[0] - s.cells[1]) === 1;
+        const head = s.cells[0];
+        const sx = head % gridN, sy = Math.floor(head / gridN);
+        const sunk = s.cells.every((c) => grid[c] === "hit");
+        const box = horiz
+          ? { left: `${sx * cp}%`, top: `${sy * cp}%`, width: `${s.size * cp}%`, height: `${cp}%` }
+          : { left: `${sx * cp}%`, top: `${sy * cp}%`, width: `${cp}%`, height: `${s.size * cp}%` };
+        return (
+          <div key={si} className="absolute" style={{ ...box, padding: "3%" }}>
+            {horiz ? (
+              <div className="h-full w-full"><ShipSVG len={s.size} sunk={sunk} /></div>
+            ) : (
+              <div className="absolute" style={{ left: "50%", top: "50%", width: `${s.size * 100}%`, height: `${100 / s.size}%`, transform: "translate(-50%,-50%) rotate(90deg)" }}>
+                <ShipSVG len={s.size} sunk={sunk} />
+              </div>
+            )}
+          </div>
+        );
+      })}
+      {hitCells.map((c, i) => {
+        const x = c % gridN, y = Math.floor(c / gridN);
+        return (
+          <div key={`hit${i}`} className="absolute flex items-center justify-center" style={{ left: `${x * cp}%`, top: `${y * cp}%`, width: `${cp}%`, height: `${cp}%`, fontSize: "min(4vw,18px)" }}>💥</div>
+        );
+      })}
+    </div>
+  );
+}
+
 // ── Bot AI (local vs IA) ────────────────────────────────────
 function enqueueNeighbors(idx: number, grid: CellState[], queue: number[]) {
   const x = idx % 10, y = Math.floor(idx / 10);
@@ -433,7 +469,7 @@ function BattleGrid({
             ))}
           </div>
           <div
-            className="grid grid-cols-10 rounded-lg overflow-hidden border border-white/10"
+            className="relative grid grid-cols-10 rounded-lg overflow-hidden border border-white/10"
             style={{ "--cell": small ? "clamp(22px, 3.2vw, 28px)" : "clamp(28px, 7.5vw, 38px)" } as React.CSSProperties}
           >
             {grid.map((cell, idx) => {
@@ -441,7 +477,8 @@ function BattleGrid({
               const isSunk = sunkSet.has(idx);
               const isHit = cell === "hit";
               const isMiss = cell === "miss";
-              const showShip = !isEnemy && !hideShips && (cell === "ship" || shipCells.has(idx));
+              // Les navires sont dessinés en illustration (calque overlay), pas en cellules.
+              const showShip = false;
               const edges = showShip && ships ? getShipEdges(ships, idx) : null;
               const shipStyle = edges?.isShip ? (SHIP_STYLES[edges.shipId] ?? DEFAULT_SHIP_STYLE) : null;
               const radius = edges ? getShipCellRadius(edges) : "0";
@@ -503,6 +540,9 @@ function BattleGrid({
                 </button>
               );
             })}
+            {!isEnemy && !hideShips && ships && ships.length > 0 && (
+              <ShipFleetOverlay ships={ships} grid={grid} />
+            )}
           </div>
         </div>
       </div>
@@ -868,15 +908,11 @@ function LocalBattleship({ onReturnToLobby, onBackToModes, initialBot = false, p
                       </div>
                     ))}
                   </div>
-                  <div className="grid grid-cols-10 rounded-lg overflow-hidden border border-white/10"
+                  <div className="relative grid grid-cols-10 rounded-lg overflow-hidden border border-white/10"
                     style={{ "--cell": "clamp(28px, 7.5vw, 38px)" } as React.CSSProperties}>
                     {currentGrid.map((cell, idx) => {
                       const isHover = hoverCells.has(idx);
                       const isShip = cell === "ship";
-                      const edges = isShip ? getShipEdges(currentShips, idx) : null;
-                      const shipStyle = edges?.isShip ? (SHIP_STYLES[edges.shipId] ?? DEFAULT_SHIP_STYLE) : null;
-                      const radius = edges ? getShipCellRadius(edges) : "0";
-                      const isMidCell = edges?.isShip && !edges.isHead && !edges.isTail;
                       return (
                         <button key={idx}
                           onClick={() => handlePlacementClick(idx)}
@@ -905,36 +941,13 @@ function LocalBattleship({ onReturnToLobby, onBackToModes, initialBot = false, p
                             el.addEventListener("touchmove", clearTimer, { once: true });
                           }}
                           className={cn(
-                            "w-[var(--cell)] h-[var(--cell)] transition-all relative",
-                            isShip ? `bg-gradient-to-br ${shipStyle?.gradient ?? "from-cyan-500/50 to-blue-600/40"} border-2 ${shipStyle?.border ?? "border-cyan-300/30"}`
-                              : "bg-[#0c1a3a] border border-cyan-300/8",
+                            "w-[var(--cell)] h-[var(--cell)] transition-all relative bg-[#0c1a3a] border border-cyan-300/8",
+                            isShip && "bg-cyan-500/10",
                             isHover && !isShip && "bg-cyan-400/20 border-cyan-300/35",
-                          )}
-                          style={{ borderRadius: isShip ? radius : undefined }}>
-                          {/* Hull shine */}
-                          {isShip && (
-                            <span className="absolute inset-0 pointer-events-none" style={{
-                              borderRadius: radius,
-                              background: edges?.isHoriz
-                                ? "linear-gradient(180deg, rgba(255,255,255,0.15) 0%, transparent 50%, rgba(0,0,0,0.1) 100%)"
-                                : "linear-gradient(90deg, rgba(255,255,255,0.15) 0%, transparent 50%, rgba(0,0,0,0.1) 100%)",
-                            }} />
-                          )}
-                          {/* Porthole */}
-                          {isShip && isMidCell && (
-                            <span className="absolute inset-0 flex items-center justify-center">
-                              <span className="w-2 h-2 rounded-full border border-white/25 bg-white/8" />
-                            </span>
-                          )}
-                          {/* Ship icon */}
-                          {isShip && edges?.isHead && shipStyle?.icon && (
-                            <span className="absolute inset-0 flex items-center justify-center text-[10px] opacity-60">
-                              {shipStyle.icon}
-                            </span>
-                          )}
-                        </button>
+                          )} />
                       );
                     })}
+                    {currentShips.length > 0 && <ShipFleetOverlay ships={currentShips} grid={currentGrid} />}
                   </div>
                 </div>
               </div>
@@ -1303,7 +1316,7 @@ export default function BattleshipGame({ roomCode, playerId, playerName, onRetur
                       <div key={l} className="flex items-center justify-center text-[9px] text-white/25 font-mono" style={{ width: "clamp(28px, 7.5vw, 38px)" }}>{l}</div>
                     ))}
                   </div>
-                  <div className="grid grid-cols-10 rounded-lg overflow-hidden border border-white/10"
+                  <div className="relative grid grid-cols-10 rounded-lg overflow-hidden border border-white/10"
                     style={{ "--cell": "clamp(28px, 7.5vw, 38px)" } as React.CSSProperties}>
                     {(state.myGrid ?? makeEmptyGrid()).map((cell: CellState, idx: number) => {
                       const isHover = hoverCells.has(idx);
@@ -1321,12 +1334,13 @@ export default function BattleshipGame({ roomCode, playerId, playerName, onRetur
                           disabled={allPlaced}
                           className={cn(
                             "w-[var(--cell)] h-[var(--cell)] border transition-all",
-                            isShip ? "bg-cyan-500/35 border-cyan-300/25" : "bg-[#0c1a3a] border-cyan-300/8",
+                            isShip ? "bg-cyan-500/10 border-cyan-300/15" : "bg-[#0c1a3a] border-cyan-300/8",
                             isHover && !isShip && "bg-cyan-400/20 border-cyan-300/35",
                             allPlaced && "cursor-default",
                           )} />
                       );
                     })}
+                    {(state.myShips ?? []).length > 0 && <ShipFleetOverlay ships={state.myShips} grid={state.myGrid ?? makeEmptyGrid()} />}
                   </div>
                 </div>
               </div>
