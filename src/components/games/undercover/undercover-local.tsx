@@ -212,71 +212,19 @@ export default function UndercoverLocal({ onReturnToLobby }: { onReturnToLobby?:
     // Si plus personne → on n'avance pas automatiquement, l'hôte clique "Passer au vote"
   };
 
-  // ── Vote ─────────────────────────────────────────────────
+  // ── Vote de groupe (un seul, sur le téléphone partagé) ──
   const startVote = () => {
-    const aliveIds = players.filter((p) => !p.isEliminated).map((p) => p.idx);
-    const shuffled = [...aliveIds].sort(() => Math.random() - 0.5);
-    setVoteOrder(shuffled);
-    setVoteIdx(0);
-    setVotes({});
-    setPhase("pass-vote");
+    setPhase("vote");
   };
 
-  const castVote = (targetId: number) => {
-    const voter = voteOrder[voteIdx];
-    const nv = { ...votes, [voter]: targetId };
-    setVotes(nv);
-    if (voteIdx < voteOrder.length - 1) {
-      setVoteIdx(voteIdx + 1);
-      setPhase("pass-vote");
-    } else {
-      resolveVotes(nv);
-    }
-  };
-
-  // ── Résolution du vote ──────────────────────────────────
-  const resolveVotes = (finalVotes: Record<number, number>) => {
-    const tally: Record<number, number> = {};
-    Object.values(finalVotes).forEach((t) => { tally[t] = (tally[t] ?? 0) + 1; });
-    let max = 0; const top: number[] = [];
-    Object.entries(tally).forEach(([id, n]) => {
-      const idN = Number(id);
-      if (n > max) { max = n; top.length = 0; top.push(idN); }
-      else if (n === max) top.push(idN);
-    });
-
-    if (top.length === 0) {
-      setEliminatedIdx(null);
-      setPhase("eliminate");
-      return;
-    }
-    // Tirage au sort si égalité
-    const id = top[Math.floor(Math.random() * top.length)];
+  // La table désigne UN joueur ensemble → on l'élimine directement.
+  const eliminateTarget = (id: number) => {
     const target = players[id];
-
-    // Récompenses : civils qui ont voté contre un imposteur
-    const newPlayers = players.map((p) => {
-      if (p.idx === id) return { ...p, isEliminated: true, eliminatedRound: round };
-      return p;
-    });
-    if (target.role !== "civil") {
-      Object.entries(finalVotes).forEach(([vId, tId]) => {
-        if (tId === id) {
-          const vIdx = Number(vId);
-          if (newPlayers[vIdx].role === "civil") {
-            newPlayers[vIdx] = { ...newPlayers[vIdx], score: newPlayers[vIdx].score + 2 };
-          }
-        }
-      });
-    }
-    setPlayers(newPlayers);
+    if (!target) return;
+    setPlayers((ps) => ps.map((p) => (p.idx === id ? { ...p, isEliminated: true, eliminatedRound: round } : p)));
     setEliminatedIdx(id);
-
-    if (target.role === "mrwhite") {
-      setPhase("mrwhite-pass");
-    } else {
-      setPhase("eliminate");
-    }
+    if (target.role === "mrwhite") setPhase("mrwhite-pass");
+    else setPhase("eliminate");
   };
 
   // ── Phase mr-white guess ────────────────────────────────
@@ -445,29 +393,13 @@ export default function UndercoverLocal({ onReturnToLobby }: { onReturnToLobby?:
   }
 
   // 7. Vote
-  if (phase === "pass-vote") {
-    const p = players[voteOrder[voteIdx]];
+  if (phase === "vote" || phase === "pass-vote") {
     return (
-      <PassScreenUC
-        toName={p.name}
-        colorIdx={p.idx}
-        label={`Vote · ${voteIdx + 1}/${voteOrder.length}`}
-        tag="Vote secret"
-        buttonLabel="⚖ Voter"
-        onReady={() => setPhase("vote")}
-      />
-    );
-  }
-  if (phase === "vote") {
-    const voter = voteOrder[voteIdx];
-    return (
-      <VoteScreen
+      <GroupVoteScreen
         players={players}
-        voterIdx={voter}
-        currentVoteIdx={voteIdx}
-        totalVoters={voteOrder.length}
         round={round}
-        onVote={castVote}
+        onEliminate={eliminateTarget}
+        onCancel={() => setPhase("table")}
       />
     );
   }
@@ -639,20 +571,21 @@ function RevealScreen({
   review?: boolean;
   onAck: () => void;
 }) {
-  const role = player.role;
-  const color = ROLE_COLOR[role];
-  const label = ROLE_LABEL[role];
-  const hint = role === "civil"
-    ? "Trouve les civils. Donne un indice clair sans aider l'undercover."
-    : role === "undercover"
-    ? "Mot voisin. Reste vague. Devine leur mot avant qu'ils ne te grillent."
-    : "Aucun mot. Bluff. Si tu es éliminé, devine le mot des civils pour gagner seul.";
+  // L'undercover NE SAIT PAS qu'il l'est : civil + undercover voient "Civil".
+  // Seul Mr. White sait qu'il n'a pas de mot.
+  const isMrWhite = player.role === "mrwhite";
+  const displayRole: Role = isMrWhite ? "mrwhite" : "civil";
+  const color = ROLE_COLOR[displayRole];
+  const label = ROLE_LABEL[displayRole];
+  const hint = isMrWhite
+    ? "Aucun mot. Bluff. Si tu es éliminé, devine le mot des civils pour gagner seul."
+    : "Mémorise ton mot. Donne un indice clair, mais pas trop évident.";
 
-  const blobColor: MascotColor = role === "civil" ? "mint" : role === "undercover" ? "pink" : "white";
-  const blobMood: MascotMood = role === "civil" ? "happy" : role === "undercover" ? "shifty" : "thinking";
+  const blobColor: MascotColor = isMrWhite ? "white" : "mint";
+  const blobMood: MascotMood = isMrWhite ? "thinking" : "happy";
 
   return (
-    <LocalShell tone={role === "civil" ? "civ" : role === "undercover" ? "danger" : "gold"}>
+    <LocalShell tone={isMrWhite ? "gold" : "civ"}>
       <NavBar
         sub={review ? "Rappel · ne pas montrer" : `Joueur · ${player.name}`}
         title="Mot secret"
@@ -663,7 +596,7 @@ function RevealScreen({
         <Mascot color={blobColor} size={88} mood={blobMood} arms />
       </div>
 
-      <DossierCard word={player.word} role={role} hint={hint} round={round} />
+      <DossierCard word={player.word} role={displayRole} hint={hint} round={round} />
 
       {position !== null && (
         <div style={{
@@ -859,73 +792,57 @@ function ReviewPick({
 }
 
 // — VOTE
-function VoteScreen({
-  players, voterIdx, currentVoteIdx, totalVoters, round, onVote,
+function GroupVoteScreen({
+  players, round, onEliminate, onCancel,
 }: {
   players: LocalPlayer[];
-  voterIdx: number;
-  currentVoteIdx: number;
-  totalVoters: number;
   round: number;
-  onVote: (targetId: number) => void;
+  onEliminate: (id: number) => void;
+  onCancel: () => void;
 }) {
   const [picked, setPicked] = useState<number | null>(null);
-  const voter = players[voterIdx];
   const alive = players.filter((p) => !p.isEliminated);
 
   return (
     <LocalShell tone="danger">
       <NavBar
-        sub={`Manche ${round} · vote ${currentVoteIdx + 1}/${totalVoters}`}
-        title="Qui démasquer ?"
-        right={
-          <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "4px 10px 4px 6px", borderRadius: 99, background: "rgba(255,210,63,0.18)", border: "1px solid rgba(255,210,63,0.40)" }}>
-            <Mascot color={colorByIdx(voter.idx)} size={20} bob={false} shadow={false} />
-            <span style={{ fontSize: 11, fontWeight: 800, color: "#FFD23F" }}>{voter.name}</span>
-          </div>
-        }
+        sub={`Manche ${round} · vote du groupe`}
+        title="Qui éliminer ?"
+        onBack={onCancel}
+        right={<Tag color="#FF3EA5">{alive.length} EN VIE</Tag>}
       />
 
-      <div style={{ padding: "8px 12px", borderRadius: 12, background: "rgba(0,0,0,0.35)", border: "1px dashed rgba(255,255,255,0.12)", fontSize: 12, color: "rgba(255,255,255,0.7)", marginBottom: 14 }}>
-        <strong style={{ color: "white" }}>{voter.name}</strong>, choisis qui doit sortir. Pas toi-même.
-      </div>
+      <Mono style={{ marginBottom: 12 }}>Décidez ensemble qui démasquer, puis confirmez</Mono>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14 }}>
         {alive.map((p) => {
-          const isMe = p.idx === voterIdx;
           const isPicked = picked === p.idx;
           return (
-            <button key={p.idx} disabled={isMe} onClick={() => !isMe && setPicked(p.idx)}
+            <button key={p.idx} onClick={() => setPicked(p.idx)}
               style={{
                 position: "relative", padding: "16px 12px 14px", borderRadius: 18,
                 background: isPicked ? "linear-gradient(160deg, rgba(255,62,165,0.35), rgba(0,0,0,0.4))" : "rgba(255,255,255,0.04)",
                 border: isPicked ? "2px solid #FF3EA5" : "1px solid rgba(255,255,255,0.10)",
                 boxShadow: isPicked ? "0 18px 36px rgba(255,62,165,0.4)" : "0 4px 10px rgba(0,0,0,0.3)",
                 transform: isPicked ? "scale(1.04)" : "scale(1)",
-                opacity: isMe ? 0.4 : 1, cursor: isMe ? "not-allowed" : "pointer",
-                color: "white", textAlign: "center", fontFamily: "inherit",
+                color: "white", textAlign: "center", fontFamily: "inherit", cursor: "pointer",
               }}>
-              {isMe && <span style={{ position: "absolute", top: 8, left: 8, padding: "2px 7px", borderRadius: 99, background: "#FFD23F", color: "#1A0E2E", fontSize: 8, fontWeight: 900 }}>TOI</span>}
               <div style={{ display: "flex", justifyContent: "center", marginTop: 4 }}>
-                <Mascot color={colorByIdx(p.idx)} size={64} mood={isPicked ? "shocked" : isMe ? "neutral" : "shifty"} arms bob={false} />
+                <Mascot color={colorByIdx(p.idx)} size={64} mood={isPicked ? "shocked" : "shifty"} arms bob={false} />
               </div>
               <div style={{ fontFamily: "var(--font-display, system-ui)", fontSize: 18, marginTop: 10, lineHeight: 1, fontWeight: 800 }}>{p.name}</div>
-              {isPicked ? (
-                <div style={{ marginTop: 8, padding: "6px 0", borderRadius: 10, background: "#FF3EA5", color: "white", fontSize: 11, fontWeight: 800 }}>✕ Ton vote</div>
-              ) : isMe ? (
-                <div style={{ marginTop: 8, padding: "6px 0", borderRadius: 10, border: "1px dashed rgba(255,255,255,0.18)", color: "rgba(255,255,255,0.5)", fontSize: 10, fontWeight: 700 }}>pas toi-même</div>
-              ) : (
-                <div style={{ marginTop: 8, padding: "6px 0", borderRadius: 10, background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.5)", fontSize: 11, fontWeight: 700 }}>tap pour voter</div>
-              )}
+              <div style={{ marginTop: 8, padding: "6px 0", borderRadius: 10, background: isPicked ? "#FF3EA5" : "rgba(255,255,255,0.05)", color: isPicked ? "#fff" : "rgba(255,255,255,0.5)", fontSize: 11, fontWeight: 800 }}>
+                {isPicked ? "✕ Éliminer" : "tap pour choisir"}
+              </div>
             </button>
           );
         })}
       </div>
 
       <div style={{ marginTop: "auto" }}>
-        <Btn tone="danger" disabled={picked === null} onClick={() => picked !== null && onVote(picked)}
+        <Btn tone="danger" disabled={picked === null} onClick={() => picked !== null && onEliminate(picked)}
           sub={picked !== null ? players[picked]?.name : undefined}>
-          Confirmer le vote
+          Éliminer ce joueur
         </Btn>
       </div>
     </LocalShell>
