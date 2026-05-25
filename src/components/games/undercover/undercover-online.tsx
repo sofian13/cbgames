@@ -208,17 +208,20 @@ function SpyMascot({ id, size = 80, tilt = -3, mood = "sus", cheering = false, c
 }) {
   const color = colorOf(id);
   const w = size * 0.66, h = size * 0.18;
+  const bobAnim = cheering ? "mascot-cheer 0.9s ease-in-out infinite" : `mascot-bob ${2.4 + delay * 0.2}s ease-in-out infinite`;
   return (
     <div style={{ position: "relative", display: "inline-block", width: size, height: size * 1.15 + (crown ? size * 0.3 : 0) }}>
       <Mascot size={size} color={color} mood={mood} cheering={cheering} crown={crown} arms={arms} delay={delay} />
-      <div style={{ position: "absolute", left: "50%", top: (crown ? size * 0.3 : 0) + size * 0.32, width: w, height: h, transform: `translateX(-50%) rotate(${tilt}deg)`, pointerEvents: "none", zIndex: 5 }}>
-        <svg viewBox="0 0 100 28" width="100%" height="100%" preserveAspectRatio="none">
-          <path d="M2 12 L18 12 M48 12 L52 12 M82 12 L98 12" stroke="#0E0828" strokeWidth="3" strokeLinecap="round" fill="none" />
-          <path d="M18 4 Q18 18 30 22 Q44 24 47 14 Q48 6 36 4 Z" fill="#0E0828" stroke="#FFD23F" strokeWidth="1.2" />
-          <path d="M53 14 Q56 24 70 22 Q82 18 82 4 L65 4 Q53 6 53 14 Z" fill="#0E0828" stroke="#FFD23F" strokeWidth="1.2" />
-          <ellipse cx="26" cy="9" rx="3" ry="2" fill="#FFD23F" opacity="0.6" />
-          <ellipse cx="63" cy="9" rx="3" ry="2" fill="#FFD23F" opacity="0.45" />
-        </svg>
+      <div style={{ position: "absolute", left: `calc(50% - ${w / 2}px)`, top: (crown ? size * 0.3 : 0) + size * 0.32, width: w, height: h, transformOrigin: "50% 600%", animation: bobAnim, animationDelay: `${delay}s`, pointerEvents: "none", zIndex: 5 }}>
+        <div style={{ width: "100%", height: "100%", transform: `rotate(${tilt}deg)` }}>
+          <svg viewBox="0 0 100 28" width="100%" height="100%" preserveAspectRatio="none">
+            <path d="M2 12 L18 12 M48 12 L52 12 M82 12 L98 12" stroke="#0E0828" strokeWidth="3" strokeLinecap="round" fill="none" />
+            <path d="M18 4 Q18 18 30 22 Q44 24 47 14 Q48 6 36 4 Z" fill="#0E0828" stroke="#FFD23F" strokeWidth="1.2" />
+            <path d="M53 14 Q56 24 70 22 Q82 18 82 4 L65 4 Q53 6 53 14 Z" fill="#0E0828" stroke="#FFD23F" strokeWidth="1.2" />
+            <ellipse cx="26" cy="9" rx="3" ry="2" fill="#FFD23F" opacity="0.6" />
+            <ellipse cx="63" cy="9" rx="3" ry="2" fill="#FFD23F" opacity="0.45" />
+          </svg>
+        </div>
       </div>
     </div>
   );

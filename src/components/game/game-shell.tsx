@@ -8,6 +8,7 @@ import { getGameById } from "@/lib/games/registry";
 import { addGameResult, getLevel, type GlobalStats } from "@/lib/stores/global-points";
 import { useGameStore } from "@/lib/stores/game-store";
 import { leaveActiveGame } from "@/lib/party/use-game";
+import { softReplay } from "@/lib/game-replay";
 import { useKeyedState } from "@/lib/use-keyed-state";
 import { useAudio } from "@/lib/hooks/useAudio";
 import { Mascot, MascotAvatar, MASCOT_PALETTE, type MascotColor } from "@/components/Mascot";
@@ -192,7 +193,7 @@ export function GameShell({
                   <div className="space-y-2">
                     {gameMeta?.rules && <MenuRow icon={BookOpen} label="Règles du jeu" onClick={() => { setMenuOpen(false); setShowRules(true); }} />}
                     <MenuRow icon={muted ? VolumeX : Volume2} label={muted ? "Activer le son" : "Couper le son"} onClick={toggleMute} />
-                    {onResetGame && <MenuRow icon={RotateCcw} label="Relancer le jeu" onClick={() => { setMenuOpen(false); onResetGame(); }} />}
+                    {onResetGame && <MenuRow icon={RotateCcw} label="Relancer la partie" onClick={() => { setMenuOpen(false); if (!softReplay()) onResetGame(); }} />}
                     <MenuRow icon={LogOut} label="Quitter la partie" danger onClick={quitGame} />
                   </div>
                 </div>

@@ -80,7 +80,13 @@ function BoardBackground({ children }: { children: React.ReactNode }) {
         className="pointer-events-none absolute inset-0"
         style={{ background: "radial-gradient(60% 50% at 50% 45%, rgba(60,110,200,0.12), transparent 70%)" }}
       />
-      {children}
+      {/* Tout le contenu reste dans la zone sûre (encoche / Dynamic Island en paysage). */}
+      <div className="absolute" style={{
+        top: "env(safe-area-inset-top,0px)", left: "env(safe-area-inset-left,0px)",
+        right: "env(safe-area-inset-right,0px)", bottom: "env(safe-area-inset-bottom,0px)",
+      }}>
+        {children}
+      </div>
     </div>
   );
 }
@@ -484,12 +490,15 @@ export default function ContreeGame({ roomCode, playerId, playerName }: GameProp
         <SeatAvatar seat={leftOpp}     position="left"  isTurn={state.currentBidder === leftOpp?.id}     myTeam={myTeam} dealerSeat={state.dealer} bubble={getBubble(leftOpp?.id, state)} />
         <SeatAvatar seat={rightOpp}    position="right" isTurn={state.currentBidder === rightOpp?.id}    myTeam={myTeam} dealerSeat={state.dealer} bubble={getBubble(rightOpp?.id, state)} />
 
-        {/* Bidding modal — compact mobile-first */}
+        {/* Contrôles d'enchère — affichés UNIQUEMENT quand c'est à toi.
+            Sinon les annonces s'affichent en bulle à côté de chaque joueur. */}
+        {isMyBid && (
         <div
-          className="absolute left-1/2 top-1/2 z-[55] -translate-x-1/2 -translate-y-1/2 rounded-2xl p-4 sm:p-5"
+          className="absolute left-1/2 z-[55] -translate-x-1/2 rounded-2xl p-4 sm:p-5"
           style={{
+            bottom: 168,
             width: "min(92vw, 420px)",
-            background: "linear-gradient(180deg, rgba(40,70,150,0.65), rgba(20,38,90,0.78))",
+            background: "linear-gradient(180deg, rgba(40,70,150,0.78), rgba(20,38,90,0.9))",
             border: "1.5px solid rgba(120,170,255,0.35)",
             boxShadow: "0 0 60px rgba(80,140,255,0.25), 0 30px 80px rgba(0,0,0,0.5)",
             backdropFilter: "blur(10px)",
@@ -514,8 +523,7 @@ export default function ContreeGame({ roomCode, playerId, playerName }: GameProp
           </div>
 
           {/* Amount stepper */}
-          {isMyBid ? (
-            <>
+          <>
               <div className="flex items-center justify-center gap-2">
                 <button
                   onClick={() => stepAmount(-1)}
@@ -659,15 +667,8 @@ export default function ContreeGame({ roomCode, playerId, playerName }: GameProp
                 )}
               </div>
             </>
-          ) : (
-            <div className="py-5 text-center">
-              <span className="cb-eyebrow" style={{ color: "rgba(255,255,255,0.5)" }}>en cours</span>
-              <div className="mt-1 text-sm text-white" style={{ fontFamily: "var(--font-display)" }}>
-                {state.seats.find((s) => s.id === state.currentBidder)?.name} réfléchit…
-              </div>
-            </div>
-          )}
         </div>
+        )}
 
         {/* Hand at the bottom — z-30 (below modal z-55) */}
         <BottomHand hand={myHand} onPlay={() => {}} canPlay={false} zIndex={30} />
