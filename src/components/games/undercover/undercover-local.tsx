@@ -117,6 +117,12 @@ const WORD_CATEGORIES: { id: string; label: string; emoji: string; pairs: [strin
     ["Tequila", "Vodka"], ["Strip-tease", "Pole dance"], ["Suçon", "Bisou"],
     ["Nude", "Sextape"], ["Boîte de nuit", "Bar"], ["Célibataire", "Friendzone"],
     ["Bière", "Shot"], ["Cigarette", "Chicha"], ["String", "Boxer"],
+    ["Lingerie", "Nuisette"], ["Coup d'un soir", "Plan cul"], ["Pécho", "Date"],
+    ["Mojito", "Margarita"], ["Champagne", "Prosecco"], ["Joint", "Pétard"],
+    ["Décolleté", "Mini-jupe"], ["Talons aiguilles", "Bas résille"], ["Motel", "Love hotel"],
+    ["Tatouage", "Piercing"], ["Speed dating", "Blind date"], ["Cabaret", "Effeuillage"],
+    ["Apéro", "Before"], ["Casino", "Pari"], ["Whisky", "Rhum"],
+    ["Préliminaires", "Câlin"], ["Drague", "Flirt"], ["Sex-shop", "Boudoir"],
   ] },
 ];
 const ALL_WORD_PAIRS: [string, string][] = WORD_CATEGORIES.flatMap((c) => c.pairs);
