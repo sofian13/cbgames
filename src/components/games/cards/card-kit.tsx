@@ -12,7 +12,21 @@ import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 
 export type Suit = "♠" | "♥" | "♦" | "♣";
 export type Rank = "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" | "10" | "V" | "D" | "R";
 export type CardSize = "xs" | "sm" | "md" | "lg" | "xl";
-export type CardStyle = "modern" | "classic";
+export type CardStyle = "modern" | "classic" | "real";
+
+// Mappe un rang (FR ou EN) vers le nom de fichier SVG (Vector Playing Cards, domaine public).
+function svgRankName(r: string): string {
+  const s = String(r).toUpperCase();
+  if (s === "A" || s === "1") return "A";
+  if (s === "V" || s === "J") return "J";
+  if (s === "D" || s === "Q") return "Q"; // Dame → Queen
+  if (s === "R" || s === "K") return "K"; // Roi → King
+  if (s === "10" || s === "T") return "10";
+  return s; // 2..9
+}
+function svgSuitName(suit: string): string {
+  return suit === "♠" ? "S" : suit === "♥" ? "H" : suit === "♦" ? "D" : "C";
+}
 
 export const CARD_SIZES: Record<CardSize, { w: number; h: number; rank: number; pip: number; corner: number }> = {
   xs: { w: 38, h: 53, rank: 9, pip: 10, corner: 4 },
@@ -123,6 +137,35 @@ export function PlayingCard({
           fontFamily: "var(--font-display)", fontWeight: 900,
           fontSize: d.w * 0.34, letterSpacing: "-0.05em",
         }}>♣♥♠♦</div>
+      </div>
+    );
+  }
+
+  // Style « réaliste » : vraies cartes vectorielles (Vector Playing Cards, domaine public).
+  if (cardStyle === "real") {
+    return (
+      <div
+        onClick={onClick}
+        style={{
+          width: d.w, height: d.h,
+          borderRadius: Math.max(4, d.w * 0.085),
+          boxShadow: ring || shadow,
+          border: "1px solid rgba(0,0,0,0.18)",
+          background: "#fff",
+          position: "relative", overflow: "hidden",
+          opacity: dim ? 0.45 : 1,
+          transition: "transform 180ms cubic-bezier(0.22, 1, 0.36, 1), filter 160ms",
+          cursor: onClick ? "pointer" : "default",
+          ...style,
+        }}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={`/cards/svg/${svgRankName(String(rank))}${svgSuitName(suit)}.svg`}
+          alt={`${label} ${suit}`}
+          draggable={false}
+          style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", userSelect: "none" }}
+        />
       </div>
     );
   }
@@ -607,7 +650,7 @@ function readStyle(): CardStyle {
   if (currentStyle) return currentStyle;
   if (typeof window === "undefined") return "modern";
   const v = window.localStorage.getItem(CARD_STYLE_KEY);
-  currentStyle = v === "classic" ? "classic" : "modern";
+  currentStyle = v === "classic" || v === "real" ? (v as CardStyle) : "modern";
   return currentStyle;
 }
 
@@ -655,16 +698,16 @@ export function CardSettings() {
           <div className="absolute right-3 top-[calc(env(safe-area-inset-top,0px)+7rem)] z-[71] w-64 rounded-2xl p-4"
                style={{ background: "linear-gradient(180deg, rgba(20,35,80,0.97), rgba(10,18,48,0.97))", border: "1px solid rgba(120,170,255,0.3)", boxShadow: "0 18px 40px rgba(0,0,0,0.55)" }}>
             <p className="mb-2 text-[9px] font-bold tracking-[0.16em] text-white/55" style={{ fontFamily: "var(--font-display)" }}>MODÈLE DES CARTES</p>
-            <div className="grid grid-cols-2 gap-2">
-              {([{ key: "classic", label: "Classique" }, { key: "modern", label: "Illustré" }] as const).map((opt) => (
+            <div className="grid grid-cols-3 gap-2">
+              {([{ key: "real", label: "Réelles" }, { key: "classic", label: "Classique" }, { key: "modern", label: "Illustré" }] as const).map((opt) => (
                 <button key={opt.key} onClick={() => setCardStyle(opt.key)}
                   className="flex flex-col items-center gap-1.5 rounded-xl p-2"
                   style={{
                     background: style === opt.key ? "rgba(122,78,232,0.25)" : "rgba(255,255,255,0.04)",
                     border: style === opt.key ? "1.5px solid var(--cb-brand, #7A4EE8)" : "1px solid rgba(255,255,255,0.1)",
                   }}>
-                  <PlayingCard rank="D" suit="♥" size="sm" cardStyle={opt.key} />
-                  <span className="text-[11px] font-extrabold text-white" style={{ fontFamily: "var(--font-display)" }}>{opt.label}</span>
+                  <PlayingCard rank="D" suit="♥" size="xs" cardStyle={opt.key} />
+                  <span className="text-[10px] font-extrabold text-white" style={{ fontFamily: "var(--font-display)" }}>{opt.label}</span>
                 </button>
               ))}
             </div>

@@ -442,34 +442,37 @@ export class ContreeGame extends BaseGame {
     const bidderTeam = (this.contreePlayers.get(this.currentBid.bidder)!.team) as 0 | 1;
     const opposingTeam = (1 - bidderTeam) as 0 | 1;
 
-    // Total dealt points in trump game = 152 ≈ (162 with der)
-    // Compute final hand score
-    let teamScore: [number, number] = [...this.trickPoints];
-
-    // Belote +20 to belote holder's team
-    if (this.beloteHolder && this.belotePartialClaimed) {
-      const bt = this.contreePlayers.get(this.beloteHolder)!.team;
-      teamScore[bt] += 20;
-    }
-
-    // Capot bonus
-    if (this.pliCounts[bidderTeam] === 8 && this.pliCounts[opposingTeam] === 0) {
-      teamScore[bidderTeam] += 100;
-    }
-
-    // Contract check
+    // Points de cartes réalisés (le « 10 de der » est déjà inclus dans trickPoints) :
+    // total = 152 cartes + 10 de der = 162. Valeurs réelles belote : V=20/9=14 à l'atout,
+    // A=11, 10=10, R=4, D=3, V=2, 9/8/7=0 hors atout — calculées dans resolveTrick().
+    const teamScore: [number, number] = [...this.trickPoints];
+    const contract = this.currentBid.amount;
     const m = this.currentBid.multiplier;
-    let success = teamScore[bidderTeam] >= this.currentBid.amount;
-    if (this.currentBid.amount === 250) success = this.pliCounts[bidderTeam] === 8;       // Capot
-    if (this.currentBid.amount === 500) success = this.pliCounts[bidderTeam] === 8;       // Générale (also capot-like)
 
-    let handFinal: [number, number] = [0, 0];
+    // Belote-rebelote : +20 à l'équipe qui détient R+D d'atout (toujours acquise).
+    const beloteTeam = (this.beloteHolder && this.belotePartialClaimed)
+      ? (this.contreePlayers.get(this.beloteHolder)!.team as 0 | 1)
+      : null;
+    if (beloteTeam !== null) teamScore[beloteTeam] += 20;
+
+    const capot = this.pliCounts[bidderTeam] === 8 && this.pliCounts[opposingTeam] === 0;
+
+    // Contrat atteint ? (la belote du preneur compte pour atteindre le contrat)
+    let success = teamScore[bidderTeam] >= contract;
+    if (contract === 250) success = capot;       // Capot annoncé
+    if (contract === 500) success = capot;       // Générale
+
+    const handFinal: [number, number] = [0, 0];
     if (success) {
-      handFinal[bidderTeam] = (teamScore[bidderTeam] + this.currentBid.amount) * m;
+      // Réussi : le preneur marque ses points réalisés + la valeur du contrat (×coinche).
+      handFinal[bidderTeam] = (teamScore[bidderTeam] + contract) * m;
       handFinal[opposingTeam] = teamScore[opposingTeam];
     } else {
-      handFinal[opposingTeam] = (160 + this.currentBid.amount) * m;
+      // Chuté (« dedans ») : la défense empoche 162 + le contrat (×coinche).
+      handFinal[opposingTeam] = (162 + contract) * m;
       handFinal[bidderTeam] = 0;
+      // La belote reste acquise à son détenteur même en cas de chute.
+      if (beloteTeam !== null) handFinal[beloteTeam] += 20;
     }
 
     this.matchScore[0] += handFinal[0];

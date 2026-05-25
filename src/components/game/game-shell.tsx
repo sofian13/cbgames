@@ -130,13 +130,13 @@ export function GameShell({
                   {gameMeta?.category === "cards" && (
                     <div className="mb-2 rounded-2xl p-2" style={{ background: "rgba(255,255,255,0.04)" }}>
                       <p className="mb-1.5 px-1 text-[9px] font-bold tracking-[0.16em]" style={{ color: "rgba(255,255,255,0.5)" }}>MODÈLE DES CARTES</p>
-                      <div className="grid grid-cols-2 gap-1.5">
-                        {(["classic", "modern"] as CardStyle[]).map((k) => (
+                      <div className="grid grid-cols-3 gap-1.5">
+                        {(["real", "classic", "modern"] as CardStyle[]).map((k) => (
                           <button key={k} onClick={() => setCardStyle(k)}
                             className="flex flex-col items-center gap-1 rounded-xl p-1.5"
                             style={{ background: cardStyle === k ? "rgba(122,78,232,0.28)" : "rgba(255,255,255,0.04)", border: cardStyle === k ? "1.5px solid var(--cb-brand)" : "1px solid rgba(255,255,255,0.1)" }}>
-                            <PlayingCard rank="D" suit="♥" size="sm" cardStyle={k} />
-                            <span className="text-[10px] font-bold text-white">{k === "classic" ? "Classique" : "Illustré"}</span>
+                            <PlayingCard rank="D" suit="♥" size="xs" cardStyle={k} />
+                            <span className="text-[10px] font-bold text-white">{k === "real" ? "Réelles" : k === "classic" ? "Classique" : "Illustré"}</span>
                           </button>
                         ))}
                       </div>
