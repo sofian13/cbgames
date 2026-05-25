@@ -140,6 +140,16 @@ export class UndercoverGame extends BaseGame {
       else             { this.config.undercoverCount = 2; this.config.includeMrWhite = true; }
     }
 
+    // Garde-fou : les civils doivent rester majoritaires (UC + Mr.White < civils).
+    {
+      const n = this.players.size;
+      const cap = Math.floor((n - 1) / 2); // nb max d'imposteurs au total
+      if (n < 5) this.config.includeMrWhite = false; // Mr.White seulement à partir de 5
+      const mw = this.config.includeMrWhite ? 1 : 0;
+      this.config.undercoverCount = Math.max(1, Math.min(this.config.undercoverCount, 3, cap - mw));
+      if (this.config.undercoverCount + mw > cap) this.config.includeMrWhite = false;
+    }
+
     // Init des joueurs
     this.gamePlayers.clear();
     for (const [id, p] of this.players) {

@@ -106,7 +106,7 @@ function Container({ children, tone = "noir" }: { children: ReactNode; tone?: To
         maskImage: "radial-gradient(circle at 50% 40%, black 0%, transparent 80%)",
         pointerEvents: "none",
       }} />
-      <div style={{ position: "relative", zIndex: 1, padding: "24px 16px 36px", maxWidth: 460, margin: "0 auto", minHeight: "100dvh", display: "flex", flexDirection: "column" }}>
+      <div style={{ position: "relative", zIndex: 1, padding: "calc(env(safe-area-inset-top, 0px) + 18px) 16px calc(env(safe-area-inset-bottom, 0px) + 28px)", maxWidth: 460, margin: "0 auto", minHeight: "100dvh", display: "flex", flexDirection: "column" }}>
         {children}
       </div>
     </div>

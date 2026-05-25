@@ -400,9 +400,7 @@ export default function UndercoverLocal({ onReturnToLobby }: { onReturnToLobby?:
       <TableScreen
         players={players}
         order={order}
-        currentSpeaker={currentSpeaker}
         round={round}
-        onSpeakerDone={advanceSpeaker}
         onReviewWord={startReview}
         onForceVote={startVote}
       />
@@ -555,9 +553,22 @@ function SetupRoles({
   onStart: () => void; onBack: () => void;
 }) {
   const total = players.length;
-  const maxUC = Math.max(1, Math.min(3, total - (mrWhite ? 2 : 1))); // garder au moins 1 civil
-  const civils = total - ucCount - (mrWhite ? 1 : 0);
-  const valid = civils >= 1 && ucCount >= 1 && ucCount <= 3;
+  // Les civils doivent rester majoritaires : (Undercover + Mr.White) < civils.
+  const impostorCap = Math.floor((total - 1) / 2); // nb max d'imposteurs au total
+  const canMrWhite = impostorCap >= 2;             // Mr.White à partir de 5 joueurs
+  const mwSlots = mrWhite && canMrWhite ? 1 : 0;
+  const maxUC = Math.max(1, Math.min(3, impostorCap - mwSlots));
+  const ucEff = Math.min(Math.max(1, ucCount), maxUC);
+  const civils = total - ucEff - mwSlots;
+  const valid = ucEff >= 1 && civils > ucEff + mwSlots;
+  const toggleMrWhite = (v: boolean) => {
+    const nv = v && canMrWhite;
+    if (nv) {
+      const cap = Math.max(1, Math.min(3, impostorCap - 1));
+      if (ucCount > cap) setUcCount(cap);
+    }
+    setMrWhite(nv);
+  };
 
   return (
     <LocalShell tone="noir">
@@ -576,23 +587,23 @@ function SetupRoles({
           {Array.from({ length: civils }).map((_, i) => (
             <Mascot key={`c${i}`} size={42} color="mint" mood="happy" bob={false} shadow={false} delay={i * 0.1} />
           ))}
-          {Array.from({ length: ucCount }).map((_, i) => (
+          {Array.from({ length: ucEff }).map((_, i) => (
             <Mascot key={`u${i}`} size={42} color="pink" mood="shifty" bob={false} shadow={false} delay={0.3 + i * 0.1} />
           ))}
-          {mrWhite && <Mascot size={42} color="white" mood="thinking" bob={false} shadow={false} delay={0.5} />}
+          {mwSlots > 0 && <Mascot size={42} color="white" mood="thinking" bob={false} shadow={false} delay={0.5} />}
         </div>
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 6, marginBottom: 14 }}>
           <Stat n={civils} label="Civils" color="#3DDC97" sub="même mot" />
-          <Stat n={ucCount} label="Undercover" color="#FF3EA5" sub="mot voisin" />
-          <Stat n={mrWhite ? 1 : 0} label="Mr. White" color="#FFD23F" sub="aucun mot" />
+          <Stat n={ucEff} label="Undercover" color="#FF3EA5" sub="mot voisin" />
+          <Stat n={mwSlots} label="Mr. White" color="#FFD23F" sub="aucun mot" />
         </div>
 
         <Row label="Undercover" hint={`1 à ${maxUC}`}>
-          <Stepper value={ucCount} min={1} max={maxUC} onChange={setUcCount} />
+          <Stepper value={ucEff} min={1} max={maxUC} onChange={setUcCount} />
         </Row>
-        <Row label="Mr. White" hint="bonus chaos">
-          <Toggle value={mrWhite} onChange={setMrWhite} />
+        <Row label="Mr. White" hint={canMrWhite ? "bonus chaos" : "5 joueurs min"}>
+          <Toggle value={mwSlots > 0} onChange={toggleMrWhite} />
         </Row>
       </FileCard>
 
@@ -679,86 +690,50 @@ function RevealScreen({
 
 // — TABLE (ordre de parole)
 function TableScreen({
-  players, order, currentSpeaker, round,
-  onSpeakerDone, onReviewWord, onForceVote,
+  players, order, round, onReviewWord, onForceVote,
 }: {
   players: LocalPlayer[];
   order: number[];
-  currentSpeaker: number;
   round: number;
-  onSpeakerDone: () => void;
   onReviewWord: () => void;
   onForceVote: () => void;
 }) {
   const alive = players.filter((p) => !p.isEliminated);
   const dead = players.filter((p) => p.isEliminated);
-  const allSpoke = currentSpeaker >= order.length;
-  const orderedAlive = order.map((idx) => players[idx]).filter(Boolean);
+  const orderedAlive = order.map((idx) => players[idx]).filter(Boolean) as LocalPlayer[];
+  const rows: { p: LocalPlayer; n: number | null; dead: boolean }[] = [
+    ...orderedAlive.map((p, i) => ({ p, n: i + 1, dead: false })),
+    ...dead.map((p) => ({ p, n: null, dead: true })),
+  ];
 
   return (
     <LocalShell tone="noir">
-      <NavBar
-        sub={`Manche ${round} · ordre de parole`}
-        title="À qui le tour ?"
-        right={<Tag color="#3DDC97">{alive.length} EN VIE</Tag>}
-      />
+      <NavBar sub={`Manche ${round}`} title="Tour de table" right={<Tag color="#3DDC97">{alive.length} EN VIE</Tag>} />
+      <Mono style={{ marginBottom: 12 }}>Chacun donne un indice à voix haute, dans l&apos;ordre</Mono>
 
-      <div style={{
-        padding: 8, borderRadius: 18,
-        background: "rgba(0,0,0,0.32)",
-        border: "1px dashed rgba(255,255,255,0.12)",
-        display: "flex", flexDirection: "column", gap: 4,
-        marginBottom: 16,
-      }}>
-        {orderedAlive.map((p, i) => {
-          const isCurrent = i === currentSpeaker;
-          const hasSpoken = i < currentSpeaker;
-          return (
-            <PlayerRow
-              key={p.idx}
-              player={p}
-              n={i + 1}
-              isCurrent={isCurrent}
-              hasSpoken={hasSpoken}
-              isDead={false}
-              right={isCurrent && (
-                <button onClick={onSpeakerDone} style={{
-                  padding: "6px 14px", borderRadius: 99,
-                  background: "#FFD23F", color: "#1A0E2E",
-                  border: "none", fontWeight: 800, fontSize: 12, cursor: "pointer",
-                  boxShadow: "0 6px 14px rgba(255,210,63,0.35)", fontFamily: "inherit",
-                }}>OK ✓</button>
-              )}
-            />
-          );
-        })}
-        {dead.map((p) => (
-          <PlayerRow key={p.idx} player={p} n={null} isCurrent={false} hasSpoken={false} isDead />
+      <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+        {rows.map(({ p, n, dead: d }) => (
+          <div key={p.idx} style={{
+            display: "flex", alignItems: "center", gap: 12, padding: "10px 12px", borderRadius: 14,
+            background: d ? "transparent" : "rgba(255,255,255,0.04)",
+            border: d ? "1px dashed rgba(255,255,255,0.12)" : "1px solid rgba(255,255,255,0.08)",
+            opacity: d ? 0.45 : 1,
+          }}>
+            <span style={{
+              width: 26, height: 26, borderRadius: 8, flexShrink: 0,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              fontFamily: "var(--font-display)", fontWeight: 900, fontSize: 13,
+              background: d ? "transparent" : "rgba(255,255,255,0.08)", color: d ? "#FF3EA5" : "#fff",
+            }}>{d ? "✕" : n}</span>
+            <Mascot size={40} color={colorByIdx(p.idx)} mood={d ? "dead" : "happy"} bob={false} shadow={false} />
+            <span style={{ flex: 1, fontSize: 16, fontWeight: 800, color: d ? "rgba(255,255,255,0.45)" : "#fff", textDecoration: d ? "line-through" : "none" }}>{p.name}</span>
+          </div>
         ))}
       </div>
 
-      <div style={{
-        padding: "10px 14px", borderRadius: 12,
-        background: "rgba(255,210,63,0.06)",
-        border: "1px dashed rgba(255,210,63,0.25)",
-        fontSize: 12, color: "rgba(255,255,255,0.75)",
-        marginBottom: 12,
-        display: "flex", gap: 10, alignItems: "flex-start",
-      }}>
-        <span style={{ fontSize: 16 }}>🎤</span>
-        <div style={{ lineHeight: 1.4 }}>
-          Chacun donne <strong style={{ color: "#FFD23F" }}>un indice à voix haute</strong>, dans l'ordre.
-          Tape <strong>OK</strong> quand le joueur courant a parlé.
-        </div>
-      </div>
-
-      <div style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: 10 }}>
-        <Btn tone="ghost" icon={<span style={{ fontSize: 16 }}>👁</span>} onClick={onReviewWord}>
-          Revoir mon mot
-        </Btn>
-        <Btn tone="danger" icon={<span style={{ fontSize: 16 }}>⚖</span>} disabled={!allSpoke} onClick={onForceVote}>
-          {allSpoke ? "Passer au vote" : `${currentSpeaker}/${order.length} ont parlé`}
-        </Btn>
+      <div style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: 10, paddingTop: 18 }}>
+        <Btn tone="ghost" icon={<span style={{ fontSize: 16 }}>👁</span>} onClick={onReviewWord}>Revoir mon mot</Btn>
+        <Btn tone="danger" icon={<span style={{ fontSize: 16 }}>⚖</span>} onClick={onForceVote}>Passer au vote</Btn>
       </div>
     </LocalShell>
   );
@@ -990,9 +965,9 @@ function EliminateScreen({
         <>
           <div style={{ position: "relative", display: "flex", flexDirection: "column", alignItems: "center", padding: "12px 0 20px" }}>
             <div style={{ position: "absolute", top: 10, width: 280, height: 220, background: `radial-gradient(circle, ${color}40 0%, transparent 65%)` }} />
-            <div style={{ position: "relative" }}>
+            <div style={{ position: "relative", animation: "uc-die 1.1s cubic-bezier(0.34,1.45,0.64,1) both" }}>
               <SpyMascotById idx={eliminated.idx} size={160} tilt={-14} mood="dead" />
-              <div style={{ position: "absolute", top: -8, right: -50, zIndex: 5 }}>
+              <div style={{ position: "absolute", top: -8, right: -50, zIndex: 5, animation: "uc-die 0.5s ease-out 0.9s both" }}>
                 <Stamp text="Éliminé" color={color} rotate={-12} size={20} />
               </div>
             </div>
@@ -1223,6 +1198,14 @@ function LocalShell({ tone = "noir", children }: { tone?: Tone; children: ReactN
         @keyframes uc-spin { to { transform: rotate(360deg); } }
         @keyframes uc-rotate { to { transform: translate(-50%, -50%) rotate(360deg); } }
         @keyframes uc-confetti { 0% { transform: translateY(-30px) rotate(0); opacity: 1; } 100% { transform: translateY(110vh) rotate(720deg); opacity: 1; } }
+        @keyframes uc-die {
+          0%   { transform: translateY(-26px) scale(1.12) rotate(0deg); opacity: 0; filter: none; }
+          22%  { transform: translateY(0) scale(1) rotate(-9deg); opacity: 1; }
+          40%  { transform: translateY(0) rotate(9deg); }
+          55%  { transform: rotate(-7deg); }
+          70%  { transform: rotate(5deg); }
+          100% { transform: translateY(8px) rotate(-14deg); filter: grayscale(0.55) brightness(0.85); }
+        }
       `}</style>
       <div style={{
         position: "fixed", inset: 0,
@@ -1230,7 +1213,7 @@ function LocalShell({ tone = "noir", children }: { tone?: Tone; children: ReactN
         maskImage: "radial-gradient(circle at 50% 40%, black 0%, transparent 80%)",
         pointerEvents: "none",
       }} />
-      <div style={{ position: "relative", zIndex: 1, padding: "24px 16px 36px", maxWidth: 460, margin: "0 auto", minHeight: "100dvh", display: "flex", flexDirection: "column" }}>
+      <div style={{ position: "relative", zIndex: 1, padding: "calc(env(safe-area-inset-top, 0px) + 18px) 16px calc(env(safe-area-inset-bottom, 0px) + 28px)", maxWidth: 460, margin: "0 auto", minHeight: "100dvh", display: "flex", flexDirection: "column" }}>
         {children}
       </div>
     </div>
