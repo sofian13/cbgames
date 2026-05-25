@@ -113,12 +113,10 @@ const WORD_CATEGORIES: { id: string; label: string; emoji: string; pairs: [strin
     ["Vétérinaire", "Dentiste"], ["Architecte", "Ingénieur"],
   ] },
   { id: "adult", label: "+18", emoji: "🔞", pairs: [
-    ["Tinder", "Bumble"], ["Coup d'un soir", "Plan cul"], ["Gueule de bois", "Black-out"],
-    ["Préservatif", "Pilule"], ["Suçon", "Bisou baveux"], ["Strip-tease", "Pole dance"],
-    ["Nude", "Sextape"], ["Drague lourde", "Râteau"], ["Tequila", "Jägerbomb"],
-    ["Boîte de nuit", "After"], ["Célibataire", "Friendzone"], ["Pécho", "Date Tinder"],
-    ["Préliminaires", "Câlins"], ["Sexto", "Dick pic"], ["Threesome", "Couple libre"],
-    ["Apéro qui dérape", "Soirée mousse"],
+    ["Tinder", "Bumble"], ["Préservatif", "Pilule"], ["Gueule de bois", "Black-out"],
+    ["Tequila", "Vodka"], ["Strip-tease", "Pole dance"], ["Suçon", "Bisou"],
+    ["Nude", "Sextape"], ["Boîte de nuit", "Bar"], ["Célibataire", "Friendzone"],
+    ["Bière", "Shot"], ["Cigarette", "Chicha"], ["String", "Boxer"],
   ] },
 ];
 const ALL_WORD_PAIRS: [string, string][] = WORD_CATEGORIES.flatMap((c) => c.pairs);
