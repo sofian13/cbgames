@@ -248,9 +248,13 @@ export function Mascot({
 
         {mood === "cool" && (
           <div style={{ position: "absolute", top: eyeY - eyeSize * 0.2, left: "50%", transform: "translateX(-50%)", display: "flex", gap: s * 0.04, alignItems: "center", zIndex: 4 }}>
-            <div style={{ width: eyeSize * 1.4, height: eyeSize * 1.1, background: "linear-gradient(135deg, #1A0E2E 60%, #5B36D6 100%)", borderRadius: "30% 60% 30% 30%", boxShadow: "inset 4px 2px 0 rgba(255,255,255,0.25)", border: `1.5px solid ${INK}` }} />
+            <div style={{ position: "relative", overflow: "hidden", width: eyeSize * 1.4, height: eyeSize * 1.1, background: "linear-gradient(135deg, #1A0E2E 60%, #5B36D6 100%)", borderRadius: "30% 60% 30% 30%", border: `1.5px solid ${INK}` }}>
+              <div style={{ position: "absolute", top: "-30%", left: "-60%", width: "55%", height: "180%", background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.55), transparent)", transform: "rotate(20deg)", animation: `mascot-shine ${2.6 + delay}s ease-in-out infinite`, animationDelay: `${delay}s` }} />
+            </div>
             <div style={{ width: s * 0.06, height: 2, background: INK }} />
-            <div style={{ width: eyeSize * 1.4, height: eyeSize * 1.1, background: "linear-gradient(135deg, #1A0E2E 60%, #5B36D6 100%)", borderRadius: "60% 30% 30% 30%", boxShadow: "inset -4px 2px 0 rgba(255,255,255,0.25)", border: `1.5px solid ${INK}` }} />
+            <div style={{ position: "relative", overflow: "hidden", width: eyeSize * 1.4, height: eyeSize * 1.1, background: "linear-gradient(135deg, #1A0E2E 60%, #5B36D6 100%)", borderRadius: "60% 30% 30% 30%", border: `1.5px solid ${INK}` }}>
+              <div style={{ position: "absolute", top: "-30%", left: "-60%", width: "55%", height: "180%", background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.55), transparent)", transform: "rotate(20deg)", animation: `mascot-shine ${2.6 + delay}s ease-in-out infinite`, animationDelay: `${delay + 0.25}s` }} />
+            </div>
           </div>
         )}
 

@@ -47,31 +47,73 @@ type EndReason = "civils-win" | "undercover-wins" | "mrwhite-wins" | "jester-win
 // ═════════════════════════════════════════════════════════════
 //  Banque de mots (même contenu que le serveur)
 // ═════════════════════════════════════════════════════════════
-const WORD_PAIRS: [string, string][] = [
-  ["Pizza", "Pâtes"], ["Hamburger", "Sandwich"], ["Sushi", "Maki"],
-  ["Croissant", "Brioche"], ["Crêpe", "Galette"], ["Kebab", "Tacos"],
-  ["Raclette", "Fondue"], ["Tiramisu", "Mousse au chocolat"], ["Café", "Thé"],
-  ["Bière", "Vin"], ["Vodka", "Rhum"], ["Coca", "Pepsi"],
-  ["Plage", "Piscine"], ["Montagne", "Colline"], ["Forêt", "Jungle"],
-  ["Hôpital", "Pharmacie"], ["Cinéma", "Théâtre"], ["Bibliothèque", "Librairie"],
-  ["Aéroport", "Gare"], ["Restaurant", "Cafétéria"], ["Hôtel", "Auberge"],
-  ["Football", "Rugby"], ["Tennis", "Badminton"], ["Ski", "Snowboard"],
-  ["Boxe", "Karaté"], ["Natation", "Plongée"], ["Cyclisme", "Course à pied"],
-  ["Chien", "Chat"], ["Lion", "Tigre"], ["Aigle", "Faucon"],
-  ["Dauphin", "Requin"], ["Vache", "Chèvre"], ["Cheval", "Âne"],
-  ["Lapin", "Hamster"], ["Batman", "Superman"], ["Star Wars", "Star Trek"],
-  ["Naruto", "One Piece"], ["Harry Potter", "Le Seigneur des Anneaux"],
-  ["Titanic", "Avatar"], ["Mario", "Sonic"], ["Pokemon", "Digimon"],
-  ["Voiture", "Moto"], ["Train", "Bus"], ["Avion", "Hélicoptère"],
-  ["Téléphone", "Tablette"], ["Ordinateur", "Console"], ["Livre", "Magazine"],
-  ["Stylo", "Crayon"], ["Lunettes", "Loupe"], ["Montre", "Bracelet"],
-  ["Soleil", "Lune"], ["Pluie", "Neige"], ["Été", "Hiver"],
-  ["Printemps", "Automne"], ["Mer", "Lac"], ["Volcan", "Geyser"],
-  ["Mariage", "Anniversaire"], ["Noël", "Pâques"], ["Halloween", "Carnaval"],
-  ["Festival", "Concert"], ["Médecin", "Infirmier"], ["Boulanger", "Pâtissier"],
-  ["Avocat", "Juge"], ["Pompier", "Policier"], ["Pilote", "Astronaute"],
-  ["Coiffeur", "Barbier"], ["Professeur", "Directeur"], ["Plombier", "Électricien"],
+// Grosse liste de mots, classée par catégorie. Chaque paire = (mot civil, mot voisin).
+const WORD_CATEGORIES: { id: string; label: string; emoji: string; pairs: [string, string][] }[] = [
+  { id: "food", label: "Nourriture", emoji: "🍔", pairs: [
+    ["Pizza", "Pâtes"], ["Hamburger", "Sandwich"], ["Sushi", "Maki"], ["Croissant", "Brioche"],
+    ["Crêpe", "Galette"], ["Kebab", "Tacos"], ["Raclette", "Fondue"], ["Tiramisu", "Mousse au chocolat"],
+    ["Café", "Thé"], ["Coca", "Pepsi"], ["Frites", "Chips"], ["Glace", "Sorbet"],
+    ["Chocolat", "Caramel"], ["Pain", "Baguette"], ["Fromage", "Beurre"], ["Soupe", "Velouté"],
+    ["Steak", "Escalope"], ["Pomme", "Poire"], ["Fraise", "Framboise"], ["Banane", "Mangue"],
+  ] },
+  { id: "drinks", label: "Boissons", emoji: "🥤", pairs: [
+    ["Bière", "Vin"], ["Vodka", "Rhum"], ["Whisky", "Cognac"], ["Jus d'orange", "Limonade"],
+    ["Champagne", "Mojito"], ["Smoothie", "Milkshake"], ["Eau", "Soda"], ["Sirop", "Grenadine"],
+  ] },
+  { id: "places", label: "Lieux", emoji: "🌍", pairs: [
+    ["Plage", "Piscine"], ["Montagne", "Colline"], ["Forêt", "Jungle"], ["Hôpital", "Pharmacie"],
+    ["Cinéma", "Théâtre"], ["Bibliothèque", "Librairie"], ["Aéroport", "Gare"], ["Restaurant", "Cafétéria"],
+    ["Hôtel", "Auberge"], ["Musée", "Galerie"], ["École", "Université"], ["Parc", "Jardin"],
+    ["Marché", "Supermarché"], ["Château", "Palais"], ["Église", "Cathédrale"], ["Désert", "Savane"],
+    ["Île", "Presqu'île"], ["Stade", "Arène"],
+  ] },
+  { id: "sport", label: "Sport", emoji: "⚽", pairs: [
+    ["Football", "Rugby"], ["Tennis", "Badminton"], ["Ski", "Snowboard"], ["Boxe", "Karaté"],
+    ["Natation", "Plongée"], ["Cyclisme", "Course à pied"], ["Basket", "Handball"], ["Golf", "Pétanque"],
+    ["Escalade", "Randonnée"], ["Surf", "Voile"], ["Judo", "Lutte"], ["Volley", "Beach-volley"],
+    ["Hockey", "Curling"], ["Équitation", "Polo"],
+  ] },
+  { id: "animals", label: "Animaux", emoji: "🐾", pairs: [
+    ["Chien", "Chat"], ["Lion", "Tigre"], ["Aigle", "Faucon"], ["Dauphin", "Requin"],
+    ["Vache", "Chèvre"], ["Cheval", "Âne"], ["Lapin", "Hamster"], ["Loup", "Renard"],
+    ["Éléphant", "Rhinocéros"], ["Singe", "Gorille"], ["Serpent", "Lézard"], ["Grenouille", "Crapaud"],
+    ["Abeille", "Guêpe"], ["Pingouin", "Manchot"], ["Tortue", "Escargot"], ["Crocodile", "Alligator"],
+  ] },
+  { id: "pop", label: "Pop culture", emoji: "🎬", pairs: [
+    ["Batman", "Superman"], ["Star Wars", "Star Trek"], ["Naruto", "One Piece"],
+    ["Harry Potter", "Le Seigneur des Anneaux"], ["Titanic", "Avatar"], ["Mario", "Sonic"],
+    ["Pokémon", "Digimon"], ["Spider-Man", "Iron Man"], ["Dragon Ball", "Bleach"],
+    ["Squid Game", "Money Heist"], ["Minecraft", "Roblox"], ["Fortnite", "Call of Duty"],
+    ["Disney", "Pixar"], ["Marvel", "DC"], ["Game of Thrones", "The Witcher"],
+  ] },
+  { id: "transport", label: "Transport", emoji: "🚗", pairs: [
+    ["Voiture", "Moto"], ["Train", "Bus"], ["Avion", "Hélicoptère"], ["Bateau", "Sous-marin"],
+    ["Vélo", "Trottinette"], ["Métro", "Tramway"], ["Camion", "Fourgon"], ["Taxi", "Uber"],
+    ["Fusée", "Navette"], ["Ferry", "Paquebot"],
+  ] },
+  { id: "objects", label: "Objets", emoji: "📱", pairs: [
+    ["Téléphone", "Tablette"], ["Ordinateur", "Console"], ["Livre", "Magazine"], ["Stylo", "Crayon"],
+    ["Lunettes", "Loupe"], ["Montre", "Bracelet"], ["Clé", "Cadenas"], ["Parapluie", "Parasol"],
+    ["Casque", "Écouteurs"], ["Appareil photo", "Caméra"], ["Lampe", "Bougie"], ["Couteau", "Ciseaux"],
+    ["Sac", "Valise"], ["Miroir", "Vitre"],
+  ] },
+  { id: "nature", label: "Nature", emoji: "🌦️", pairs: [
+    ["Soleil", "Lune"], ["Pluie", "Neige"], ["Été", "Hiver"], ["Printemps", "Automne"],
+    ["Mer", "Lac"], ["Volcan", "Geyser"], ["Rivière", "Fleuve"], ["Orage", "Tempête"],
+    ["Arbre", "Buisson"], ["Fleur", "Plante"], ["Étoile", "Planète"], ["Nuage", "Brouillard"],
+  ] },
+  { id: "events", label: "Événements", emoji: "🎉", pairs: [
+    ["Mariage", "Anniversaire"], ["Noël", "Pâques"], ["Halloween", "Carnaval"], ["Festival", "Concert"],
+    ["Nouvel An", "Saint-Sylvestre"], ["Baptême", "Communion"], ["Soirée", "Apéro"], ["Vacances", "Week-end"],
+  ] },
+  { id: "jobs", label: "Métiers", emoji: "💼", pairs: [
+    ["Médecin", "Infirmier"], ["Boulanger", "Pâtissier"], ["Avocat", "Juge"], ["Pompier", "Policier"],
+    ["Pilote", "Astronaute"], ["Coiffeur", "Barbier"], ["Professeur", "Directeur"], ["Plombier", "Électricien"],
+    ["Cuisinier", "Serveur"], ["Acteur", "Chanteur"], ["Peintre", "Sculpteur"], ["Journaliste", "Écrivain"],
+    ["Vétérinaire", "Dentiste"], ["Architecte", "Ingénieur"],
+  ] },
 ];
+const ALL_WORD_PAIRS: [string, string][] = WORD_CATEGORIES.flatMap((c) => c.pairs);
 
 // ═════════════════════════════════════════════════════════════
 //  Tokens (mirror online)
@@ -90,6 +132,8 @@ export default function UndercoverLocal({ onReturnToLobby }: { onReturnToLobby?:
   const [players, setPlayers]       = useState<LocalPlayer[]>([]);
   const [round, setRound]           = useState(1);
   const [endReason, setEndReason]   = useState<EndReason | null>(null);
+  // Catégories de mots sélectionnées (toutes par défaut).
+  const [selectedCats, setSelectedCats] = useState<Set<string>>(() => new Set(WORD_CATEGORIES.map((c) => c.id)));
 
   // Pair de mots tirée pour la partie
   const [civilWord, setCivilWord]   = useState("");
@@ -149,7 +193,12 @@ export default function UndercoverLocal({ onReturnToLobby }: { onReturnToLobby?:
 
   // ── Distribution des rôles + mots ───────────────────────
   const distributeRoles = () => {
-    const pair = WORD_PAIRS[Math.floor(Math.random() * WORD_PAIRS.length)];
+    // Pioche dans les catégories choisies (toutes si aucune sélection).
+    const pool = selectedCats.size === 0
+      ? ALL_WORD_PAIRS
+      : WORD_CATEGORIES.filter((c) => selectedCats.has(c.id)).flatMap((c) => c.pairs);
+    const src = pool.length > 0 ? pool : ALL_WORD_PAIRS;
+    const pair = src[Math.floor(Math.random() * src.length)];
     const [a, b] = Math.random() < 0.5 ? pair : [pair[1], pair[0]];
     setCivilWord(a); setUcWord(b);
 
@@ -323,6 +372,8 @@ export default function UndercoverLocal({ onReturnToLobby }: { onReturnToLobby?:
         setMrWhite={setMrWhite}
         jester={jester}
         setJester={setJester}
+        selectedCats={selectedCats}
+        setSelectedCats={setSelectedCats}
         onStart={distributeRoles}
         onBack={() => setPhase("setup-players")}
       />
@@ -495,14 +546,23 @@ export default function UndercoverLocal({ onReturnToLobby }: { onReturnToLobby?:
 
 // — SETUP ROLES (composition)
 function SetupRoles({
-  players, ucCount, setUcCount, mrWhite, setMrWhite, jester, setJester, onStart, onBack,
+  players, ucCount, setUcCount, mrWhite, setMrWhite, jester, setJester, selectedCats, setSelectedCats, onStart, onBack,
 }: {
   players: LocalPlayer[];
   ucCount: number; setUcCount: (v: number) => void;
   mrWhite: boolean; setMrWhite: (v: boolean) => void;
   jester: boolean; setJester: (v: boolean) => void;
+  selectedCats: Set<string>; setSelectedCats: (v: Set<string>) => void;
   onStart: () => void; onBack: () => void;
 }) {
+  const allSelected = selectedCats.size === WORD_CATEGORIES.length;
+  const toggleCat = (id: string) => {
+    const next = new Set(selectedCats);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    if (next.size === 0) return; // garder au moins une catégorie
+    setSelectedCats(next);
+  };
+  const toggleAll = () => setSelectedCats(allSelected ? new Set([WORD_CATEGORIES[0].id]) : new Set(WORD_CATEGORIES.map((c) => c.id)));
   const total = players.length;
   // Les civils doivent rester majoritaires : (Undercover + Mr.White) < civils.
   const impostorCap = Math.floor((total - 1) / 2); // nb max d'imposteurs au total
@@ -566,6 +626,35 @@ function SetupRoles({
         <Row label="Bouffon" hint={canJester ? "gagne s'il se fait éliminer" : "pas assez de civils"}>
           <Toggle value={jSlots > 0} onChange={toggleJester} />
         </Row>
+      </FileCard>
+
+      {/* Catégories de mots */}
+      <FileCard accent="#FFD23F" style={{ marginBottom: 14 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+          <Mono>Thèmes des mots</Mono>
+          <button onClick={toggleAll} style={{
+            fontFamily: "var(--font-mono, monospace)", fontSize: 10, fontWeight: 800, letterSpacing: 1,
+            textTransform: "uppercase", color: "#FFD23F", padding: "4px 10px", borderRadius: 999,
+            background: allSelected ? "rgba(255,210,63,0.18)" : "rgba(255,255,255,0.06)",
+            border: "1px solid rgba(255,210,63,0.4)", cursor: "pointer",
+          }}>{allSelected ? "Tout ✓" : "Tout sélectionner"}</button>
+        </div>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
+          {WORD_CATEGORIES.map((c) => {
+            const on = selectedCats.has(c.id);
+            return (
+              <button key={c.id} onClick={() => toggleCat(c.id)} style={{
+                display: "flex", alignItems: "center", gap: 6, padding: "8px 12px", borderRadius: 12,
+                fontSize: 13, fontWeight: 700, color: on ? "#fff" : "rgba(255,255,255,0.5)",
+                background: on ? "linear-gradient(160deg, rgba(255,210,63,0.22), rgba(0,0,0,0.2))" : "rgba(255,255,255,0.04)",
+                border: on ? "1.5px solid rgba(255,210,63,0.7)" : "1px solid rgba(255,255,255,0.12)",
+                cursor: "pointer", transition: "all 0.15s",
+              }}>
+                <span style={{ fontSize: 16 }}>{c.emoji}</span>{c.label}
+              </button>
+            );
+          })}
+        </div>
       </FileCard>
 
       <div style={{
@@ -892,8 +981,9 @@ function EliminateScreen({
   civilWord: string;
   onNext: () => void;
 }) {
-  const role = eliminated?.role ?? null;
-  const color = role ? ROLE_COLOR[role] : "#FFD23F";
+    // On ne révèle NI le mot NI le rôle à l'élimination (rôles cachés jusqu'à la fin).
+    void civilWord;
+    const color = "#FFD23F";
 
   return (
     <LocalShell tone="danger">
@@ -908,8 +998,8 @@ function EliminateScreen({
 
       <NavBar
         sub={`Verdict · manche ${round}`}
-        title={eliminated ? "Démasqué !" : "Égalité"}
-        right={<Tag color={color}>{role ? ROLE_LABEL[role].toUpperCase() : "—"}</Tag>}
+        title={eliminated ? "Éliminé !" : "Égalité"}
+        right={<Tag color={color}>VOTE</Tag>}
       />
 
       {eliminated ? (
@@ -927,19 +1017,13 @@ function EliminateScreen({
 
           <div style={{
             padding: "16px 18px", borderRadius: 18,
-            background: `linear-gradient(160deg, ${color}26, rgba(0,0,0,0.45))`,
-            border: `1px solid ${color}55`,
-            display: "flex", justifyContent: "space-between", alignItems: "center",
-            marginBottom: 16,
+            background: "linear-gradient(160deg, rgba(255,210,63,0.16), rgba(0,0,0,0.45))",
+            border: "1px solid rgba(255,210,63,0.35)",
+            textAlign: "center", marginBottom: 16,
           }}>
-            <div>
-              <Mono>Son mot</Mono>
-              <div style={{ fontFamily: "var(--font-display, system-ui)", fontSize: 24, color, fontWeight: 900, marginTop: 4 }}>{eliminated.word ?? "Aucun mot"}</div>
-            </div>
-            <div style={{ fontSize: 22, color: "rgba(255,255,255,0.5)" }}>≠</div>
-            <div style={{ textAlign: "right" }}>
-              <Mono>Vrai mot</Mono>
-              <div style={{ fontFamily: "var(--font-display, system-ui)", fontSize: 24, color: "#3DDC97", fontWeight: 900, marginTop: 4 }}>{civilWord}</div>
+            <div style={{ fontSize: 14, color: "rgba(255,255,255,0.75)", lineHeight: 1.4 }}>
+              Le groupe a voté contre <b>{eliminated.name}</b>.<br />
+              Son rôle reste secret… on verra à la fin !
             </div>
           </div>
         </>
