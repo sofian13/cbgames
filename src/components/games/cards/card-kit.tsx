@@ -179,16 +179,15 @@ type Dim = (typeof CARD_SIZES)[CardSize];
 function PipCenter({ rank, suit, d, cardStyle = "modern" }: { rank: string; suit: Suit; d: Dim; cardStyle?: CardStyle }) {
   const layout = PIPS[rank] || [];
   const color = SUIT_COLOR(suit);
-  // Reserve room for the rotated bottom-right corner index so pips never overlap it.
-  const cornerBoxH = d.rank * 1.9 + d.corner;
-  const padX = d.w * (cardStyle === "classic" ? 0.30 : 0.22);
-  const padY = Math.max(d.h * (cardStyle === "classic" ? 0.22 : 0.18), cornerBoxH + 2);
-  const pipScale = cardStyle === "classic" ? 0.85 : 0.95;
+  // Modest padding: keep pips clear of the corner indices without cramming them.
+  const padX = d.w * (cardStyle === "classic" ? 0.26 : 0.19);
+  const padY = d.h * (cardStyle === "classic" ? 0.16 : 0.13);
+  const pipScale = cardStyle === "classic" ? 0.85 : 0.9;
   return (
     <div style={{ position: "absolute", left: padX, top: padY, width: d.w - padX * 2, height: d.h - padY * 2 }}>
       {layout.map(([col, row], i) => {
         const flip = row > 3;
-        const rowFrac = 0.06 + (row / 6) * 0.88; // compress so pips never hug the edges
+        const rowFrac = 0.05 + (row / 6) * 0.9; // light edge margin only
         return (
           <div key={i} style={{
             position: "absolute",
@@ -439,8 +438,9 @@ function FaceCenter({ label, suit, d }: { label: string; suit: Suit; d: Dim }) {
 }
 
 // ───────────────────────── TableBg ─────────────────────────
-// `fixed` so the felt always covers the entire screen (under notch + home
-// indicator) — no black bands. Children are positioned against the viewport.
+// The felt is a FIXED, pointer-events:none layer so it always covers the whole
+// screen (no black bands) WITHOUT swallowing clicks. The interactive content
+// (`children`) lives in the normal flow above it, so cards/buttons stay clickable.
 export function TableBg({ children, tone = "navy" }: { children?: ReactNode; tone?: "navy" | "green" | "plum" }) {
   const tones = {
     navy: { bg0: "#0B1437", bg1: "#050A20" },
@@ -449,12 +449,13 @@ export function TableBg({ children, tone = "navy" }: { children?: ReactNode; ton
   };
   const t = tones[tone] || tones.navy;
   return (
-    <div style={{ position: "fixed", inset: 0, zIndex: 0, background: `radial-gradient(120% 80% at 50% 40%, ${t.bg0} 0%, ${t.bg1} 100%)`, overflow: "hidden" }}>
+    <div style={{ position: "absolute", inset: 0, overflow: "hidden" }}>
       <div aria-hidden style={{
-        position: "absolute", inset: 0,
-        background: "radial-gradient(70% 50% at 50% 45%, rgba(80,140,255,0.06) 0%, transparent 70%)",
-        pointerEvents: "none",
-      }} />
+        position: "fixed", inset: 0, zIndex: 0, pointerEvents: "none",
+        background: `radial-gradient(120% 80% at 50% 40%, ${t.bg0} 0%, ${t.bg1} 100%)`,
+      }}>
+        <div style={{ position: "absolute", inset: 0, background: "radial-gradient(70% 50% at 50% 45%, rgba(80,140,255,0.06) 0%, transparent 70%)" }} />
+      </div>
       {children}
     </div>
   );
