@@ -591,6 +591,44 @@ function KingGlyph({ color, size = 34 }: { color: Color; size?: number }) {
   );
 }
 
+// Modale de promotion (maquette CH07) + touche blob.
+function ChessPromotionModal({ color, onPick }: { color: Color; onPick: (t: PieceType) => void }) {
+  const choices: Array<{ t: PieceType; name: string; sub: string; featured?: boolean }> = [
+    { t: "q", name: "Dame", sub: "+ puissante", featured: true },
+    { t: "r", name: "Tour", sub: "lignes droites" },
+    { t: "b", name: "Fou", sub: "diagonales" },
+    { t: "n", name: "Cavalier", sub: "saute" },
+  ];
+  return (
+    <div className="fixed inset-0 z-[200] flex items-center justify-center px-6" style={{ background: "rgba(8,4,20,0.72)", backdropFilter: "blur(3px)", animation: "fadeIn 0.25s ease" }}>
+      <div className="relative w-full max-w-sm rounded-3xl p-5 pt-12" style={{ background: "linear-gradient(180deg,#2A2440 0%,#161024 100%)", border: "1px solid rgba(255,255,255,0.12)", boxShadow: "0 30px 60px rgba(0,0,0,0.65)", animation: "scaleIn 0.3s ease" }}>
+        {/* Blob qui regarde par-dessus la modale */}
+        <div className="absolute -top-9 left-1/2 -translate-x-1/2">
+          <Mascot size={64} color="yellow" mood="happy" crown bob />
+        </div>
+        <div className="text-center">
+          <span className="font-mono text-[9px] font-extrabold uppercase tracking-[2px]" style={{ color: "#FFD23F", padding: "4px 9px", borderRadius: 4, border: "1px solid #FFD23F55", background: "#FFD23F11" }}>Promotion</span>
+          <h3 className="mt-2.5 text-2xl font-black text-white" style={{ letterSpacing: -0.5 }}>Choisis ta pièce</h3>
+          <p className="mt-1 text-xs text-white/45">Ton pion atteint la dernière rangée</p>
+        </div>
+        <div className="mt-4 grid grid-cols-2 gap-2.5">
+          {choices.map((c) => (
+            <button key={c.t} onClick={() => onPick(c.t)} className="rounded-2xl px-3 pb-3 pt-4 text-center transition active:scale-95" style={{
+              background: c.featured ? "linear-gradient(160deg, rgba(255,210,63,0.18) 0%, rgba(0,0,0,0.30) 100%)" : "rgba(255,255,255,0.04)",
+              border: c.featured ? "2px solid #FFD23F" : "1px solid rgba(255,255,255,0.10)",
+              boxShadow: c.featured ? "0 12px 24px rgba(255,210,63,0.25)" : "none",
+            }}>
+              <span style={{ fontSize: 48, lineHeight: 1, color: color === "w" ? "#FAF6E8" : "#0F0F12", WebkitTextStroke: color === "w" ? "0.7px #14101F" : "0.5px #5A4D7A", display: "block" }}>{PIECE_GLYPH[`${color}${c.t}`]}</span>
+              <span className="mt-1.5 block text-[15px] font-extrabold text-white">{c.name}</span>
+              <span className="block text-[10px] font-semibold" style={{ color: c.featured ? "#FFD23F" : "rgba(255,255,255,0.4)" }}>{c.sub}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 interface ChessBoardViewProps {
   board: Array<Piece | null>;
   selectedSquare: number | null;
@@ -728,6 +766,7 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
   const [localWinner, setLocalWinner] = useState<Color | "draw" | null>(null);
   const [localReason, setLocalReason] = useState<EndReason | null>(null);
   const [localSelected, setLocalSelected] = useState<number | null>(null);
+  const [localPromo, setLocalPromo] = useState<{ from: number; to: number } | null>(null);
   const [localLastMove, setLocalLastMove] = useState<ChessMove | null>(null);
   const [localMoveCount, setLocalMoveCount] = useState(0);
   const [localMoveLog, setLocalMoveLog] = useState<string[]>([]);
@@ -1130,6 +1169,13 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
     if (localSelected !== null) {
       const targets = localLegalByFrom.get(localSelected) ?? [];
       if (targets.includes(index)) {
+        const mover = localBoard[localSelected];
+        const toRank = Math.floor(index / 8);
+        if (mover?.type === "p" && (toRank === 0 || toRank === 7)) {
+          setLocalPromo({ from: localSelected, to: index });
+          setLocalSelected(null);
+          return;
+        }
         applyLocalMove({ from: localSelected, to: index });
         return;
       }
@@ -1201,6 +1247,10 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
       captures: c === "w" ? localCapturedBlack : localCapturedWhite,
       isTurn: !localWinner && localTurn === c,
     });
+
+    const promoModal = localPromo ? (
+      <ChessPromotionModal color={localTurn} onPick={(t) => { applyLocalMove({ from: localPromo.from, to: localPromo.to, promotion: t }); setLocalPromo(null); }} />
+    ) : null;
 
     if (isFocusView) {
       return (
@@ -1291,6 +1341,7 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
               onReplay={startLocalGame}
             />
           )}
+          {promoModal}
         </div>
       );
     }
@@ -1390,6 +1441,7 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
             onReplay={startLocalGame}
           />
         )}
+        {promoModal}
       </div>
     );
   }

@@ -5,6 +5,7 @@ import { useGame } from "@/lib/party/use-game";
 import { useGameStore } from "@/lib/stores/game-store";
 import type { GameProps } from "@/lib/games/types";
 import { cn } from "@/lib/utils";
+import { Mascot } from "@/components/Mascot";
 
 // ── Types ──────────────────────────────────────────────
 type CellState = "empty" | "ship" | "hit" | "miss";
@@ -655,12 +656,13 @@ function LocalBattleship({ onReturnToLobby, onBackToModes, initialBot = false }:
 
         {vsBot ? (
           <>
-            <div className="mt-6 flex justify-center">
+            <div className="relative mt-6 flex justify-center">
               <div className="flex items-center justify-center" style={{
                 width: 100, height: 100, borderRadius: 28, fontSize: 52,
                 background: `linear-gradient(160deg, ${BS_SONAR}22 0%, rgba(0,0,0,0.35) 100%)`,
                 border: `1px solid ${BS_SONAR}40`, boxShadow: `0 18px 40px ${BS_SONAR}33, inset 0 1px 0 rgba(255,255,255,0.10)`,
               }}>📡</div>
+              <div className="absolute -right-1 bottom-0"><Mascot size={46} color="purple" mood="shifty" /></div>
             </div>
             <div className="mt-6 flex flex-col gap-2.5">
               {BS_AI_LEVELS.map((l) => {
@@ -721,19 +723,19 @@ function LocalBattleship({ onReturnToLobby, onBackToModes, initialBot = false }:
   if (localPhase === "handoff") {
     const nextName = p2Ships.length === 0 ? player2Name : (currentPlayer === 1 ? player1Name : player2Name);
     return (
-      <div className="relative flex flex-1 flex-col overflow-hidden p-4 sm:p-6">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_20%,rgba(80,216,255,0.14),transparent_35%),radial-gradient(circle_at_82%_70%,rgba(99,102,241,0.14),transparent_35%),linear-gradient(145deg,#040424,#05113a_42%,#01072a)]" />
-        <div className="relative mx-auto flex w-full max-w-md flex-1 flex-col items-center justify-center gap-6 rounded-3xl border border-cyan-300/20 bg-black/35 p-6 backdrop-blur-xl" style={{ animation: "scaleIn 0.4s ease" }}>
-          <h2 className="text-2xl font-serif text-cyan-200" style={{ textShadow: "0 0 30px rgba(80,216,255,0.35)" }}>
-            Passe le telephone a {nextName}
+      <NavalShell>
+        <div className="flex flex-1 flex-col items-center justify-center gap-5 text-center">
+          <Mascot size={92} color="sky" mood="sus" />
+          <h2 className="text-2xl font-black" style={{ color: BS_SONAR, textShadow: `0 0 30px ${BS_SONAR}55` }}>
+            Passe le téléphone à {nextName}
           </h2>
-          <p className="text-xs text-white/30 font-sans">Ne regarde pas !</p>
+          <p className="font-mono text-[11px] font-bold uppercase tracking-[2px]" style={{ color: BS_INKMUTE }}>Ne regarde pas la grille !</p>
           <button onClick={handleHandoffContinue}
-            className="rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 px-8 py-3 text-sm font-sans font-medium text-white press-effect shadow-[0_0_20px_rgba(80,216,255,0.2)]">
+            className="rounded-xl px-8 py-3.5 text-sm font-bold" style={{ background: `linear-gradient(180deg, ${BS_SONAR} 0%, #00A878 100%)`, color: "#031826", boxShadow: "0 14px 30px rgba(0,255,180,0.40)" }}>
             C&apos;est bon, je suis {nextName}
           </button>
         </div>
-      </div>
+      </NavalShell>
     );
   }
 
@@ -741,13 +743,15 @@ function LocalBattleship({ onReturnToLobby, onBackToModes, initialBot = false }:
   if (localPhase === "placing-1" || localPhase === "placing-2") {
     const allPlaced = remainingShips.length === 0;
     return (
-      <div className="relative flex flex-1 flex-col overflow-hidden p-4 sm:p-6">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_20%,rgba(80,216,255,0.14),transparent_35%),radial-gradient(circle_at_82%_70%,rgba(99,102,241,0.14),transparent_35%),linear-gradient(145deg,#040424,#05113a_42%,#01072a)]" />
-        <div className="relative mx-auto flex w-full max-w-lg flex-1 flex-col items-center gap-4 rounded-3xl border border-cyan-300/20 bg-black/35 p-4 backdrop-blur-xl sm:p-6" style={{ animation: "scaleIn 0.4s ease" }}>
-          <div className="text-center">
-            <p className="text-xs text-white/30 font-sans">{currentName}, place tes navires</p>
-          </div>
-
+      <NavalShell>
+        <BSStepHeader
+          onBack={onBackToModes ?? onReturnToLobby ?? (() => {})}
+          sub={vsBot ? "Phase 1 · placement" : `Au tour de ${currentName}`}
+          title="Place ta flotte"
+          tag={`${currentShips.length}/${DEFAULT_SHIPS.length} placés`}
+          tagColor={BS_SONAR}
+        />
+        <div className="mt-4 flex flex-col items-center gap-4">
           {/* Ship selection */}
           <div className="flex flex-wrap gap-2 justify-center">
             {DEFAULT_SHIPS.map((s) => {
@@ -878,13 +882,13 @@ function LocalBattleship({ onReturnToLobby, onBackToModes, initialBot = false }:
 
           {allPlaced && (
             <button onClick={handleConfirmPlacement}
-              className="rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 px-8 py-3 text-sm font-sans font-medium text-white press-effect shadow-[0_0_20px_rgba(80,216,255,0.2)]"
-              style={{ animation: "scaleIn 0.3s ease" }}>
-              Confirmer
+              className="rounded-xl px-8 py-3 text-sm font-bold"
+              style={{ background: `linear-gradient(180deg, ${BS_SONAR} 0%, #00A878 100%)`, color: "#031826", boxShadow: "0 14px 30px rgba(0,255,180,0.40)", animation: "scaleIn 0.3s ease" }}>
+              {vsBot ? "Lancer l'assaut ⚓" : "Confirmer"}
             </button>
           )}
         </div>
-      </div>
+      </NavalShell>
     );
   }
 
@@ -921,43 +925,39 @@ function LocalBattleship({ onReturnToLobby, onBackToModes, initialBot = false }:
     if (!showingBoard) {
       // Handoff screen between shots
       return (
-        <div className="relative flex flex-1 flex-col overflow-hidden p-4 sm:p-6">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_20%,rgba(80,216,255,0.14),transparent_35%),radial-gradient(circle_at_82%_70%,rgba(99,102,241,0.14),transparent_35%),linear-gradient(145deg,#040424,#05113a_42%,#01072a)]" />
-          <div className="relative mx-auto flex w-full max-w-md flex-1 flex-col items-center justify-center gap-6 rounded-3xl border border-cyan-300/20 bg-black/35 p-6 backdrop-blur-xl" style={{ animation: "scaleIn 0.4s ease" }}>
-            <h2 className="text-2xl font-serif text-cyan-200" style={{ textShadow: "0 0 30px rgba(80,216,255,0.35)" }}>
+        <NavalShell>
+          <div className="flex flex-1 flex-col items-center justify-center gap-5 text-center">
+            <Mascot size={88} color="mint" mood="cool" />
+            <h2 className="text-2xl font-black" style={{ color: BS_SONAR, textShadow: `0 0 30px ${BS_SONAR}55` }}>
               Tour de {currentName}
             </h2>
-            <p className="text-xs text-white/30 font-sans">Appuie quand tu es pret</p>
+            <p className="font-mono text-[11px] font-bold uppercase tracking-[2px]" style={{ color: BS_INKMUTE }}>Appuie quand tu es prêt</p>
             <button onClick={() => setShowingBoard(true)}
-              className="rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 px-8 py-3 text-sm font-sans font-medium text-white press-effect shadow-[0_0_20px_rgba(80,216,255,0.2)]">
+              className="rounded-xl px-8 py-3.5 text-sm font-bold" style={{ background: `linear-gradient(180deg, ${BS_SONAR} 0%, #00A878 100%)`, color: "#031826", boxShadow: "0 14px 30px rgba(0,255,180,0.40)" }}>
               Voir la grille
             </button>
           </div>
-        </div>
+        </NavalShell>
       );
     }
 
     return (
-      <div className="relative flex flex-1 flex-col overflow-hidden p-4 sm:p-6">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_20%,rgba(80,216,255,0.14),transparent_35%),radial-gradient(circle_at_82%_70%,rgba(99,102,241,0.14),transparent_35%),linear-gradient(145deg,#040424,#05113a_42%,#01072a)]" />
-        <div className="relative mx-auto flex w-full max-w-2xl flex-1 flex-col items-center gap-3 rounded-3xl border border-cyan-300/20 bg-black/35 p-3 backdrop-blur-xl sm:p-4">
-          <div className="flex items-center justify-between w-full">
-            <span className="text-xs text-white/30 font-sans">Tour de <span className="text-cyan-300">{currentName}</span></span>
-            {lastShotResult && (
-              <span className={cn("text-xs font-sans font-bold px-2 py-0.5 rounded",
-                lastShotResult === "miss" ? "text-white/40 bg-white/5" :
-                lastShotResult === "sunk" ? "text-red-300 bg-red-500/20" : "text-orange-300 bg-orange-500/20"
-              )} style={{ animation: "scaleIn 0.2s ease" }}>
-                {lastShotResult === "hit" ? "Touche !" : lastShotResult === "sunk" ? "Coule !" : "Rate !"}
-              </span>
-            )}
-          </div>
-
+      <NavalShell>
+        <div className="flex items-center justify-between">
+          <span className="font-mono text-[10px] font-extrabold uppercase tracking-[2px]" style={{ color: BS_SONAR }}>Tir · {currentName}</span>
+          {lastShotResult && (
+            <span className="rounded px-2 py-0.5 text-xs font-bold" style={{
+              color: lastShotResult === "miss" ? BS_INKMUTE : lastShotResult === "sunk" ? "#FF8A8A" : "#FFB84D",
+              background: lastShotResult === "miss" ? "rgba(255,255,255,0.05)" : lastShotResult === "sunk" ? "rgba(255,56,56,0.20)" : "rgba(255,184,77,0.18)",
+            }}>{lastShotResult === "hit" ? "Touché !" : lastShotResult === "sunk" ? "Coulé !" : "Raté !"}</span>
+          )}
+        </div>
+        <div className="mt-4 flex flex-col items-center">
           {/* Enemy grid only — no own grid shown in local to prevent cheating */}
           <BattleGrid grid={enemyGrid} ships={enemyShips} onCellClick={handleFire}
             isEnemy disabled={shotLocked} label={`Grille de ${otherName}`} />
         </div>
-      </div>
+      </NavalShell>
     );
   }
 
@@ -972,7 +972,11 @@ function LocalBattleship({ onReturnToLobby, onBackToModes, initialBot = false }:
           <p className="font-mono text-[11px] font-extrabold uppercase tracking-[3px]" style={{ color: BS_INKMUTE }}>
             {playerLost ? "Flotte coulée" : "Victoire"}
           </p>
-          <div className="mt-3 text-[56px]">{playerLost ? "💀" : "🏆"}</div>
+          <div className="mt-3">
+            {playerLost
+              ? <Mascot size={92} color="coral" mood="dead" />
+              : <Mascot size={104} color="yellow" mood="happy" crown arms cheering />}
+          </div>
           <h2 className="mt-2 text-4xl font-black" style={{ color: accent, textShadow: `0 0 30px ${accent}66` }}>{winnerName}</h2>
           <p className="mt-1 text-sm" style={{ color: BS_INKMUTE }}>
             {playerLost ? "a coulé ta flotte…" : "a coulé toute la flotte !"}
@@ -1027,7 +1031,16 @@ export default function BattleshipGame({ roomCode, playerId, playerName, onRetur
           <span className="font-mono text-[9px] font-extrabold uppercase tracking-[2px]" style={{ color: BS_SONAR, padding: "4px 9px", borderRadius: 4, border: `1px solid ${BS_SONAR}55`, background: `${BS_SONAR}11` }}>Briefing</span>
         </div>
 
-        <div className="mt-6 flex justify-center"><SonarHero size={240} /></div>
+        <div className="relative mt-6 flex justify-center">
+          <SonarHero size={240} />
+          {/* touche af.games : un blob marin scrute le sonar */}
+          <div className="absolute -bottom-3 -right-1">
+            <Mascot size={58} color="sky" mood="cool" />
+          </div>
+          <div className="absolute -bottom-2 -left-2">
+            <Mascot size={42} color="coral" mood="shocked" delay={0.3} />
+          </div>
+        </div>
 
         <div className="mt-7 text-center">
           <h1 className="font-black" style={{ fontSize: 46, lineHeight: 0.9, letterSpacing: -2, color: BS_INK, textShadow: `0 0 36px ${BS_SONAR}55` }}>
