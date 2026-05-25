@@ -6,6 +6,7 @@ import { useGame } from "@/lib/party/use-game";
 import { useGameStore } from "@/lib/stores/game-store";
 import { cn } from "@/lib/utils";
 import { useKeyedState } from "@/lib/use-keyed-state";
+import { Mascot } from "@/components/Mascot";
 
 type Color = "w" | "b";
 type PieceType = "p" | "n" | "b" | "r" | "q" | "k";
@@ -1238,40 +1239,39 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
 
         {/* Main panel */}
         <div className="relative mx-auto flex w-full max-w-4xl flex-1 flex-col rounded-3xl border border-white/18 bg-black/28 p-4 backdrop-blur-xl sm:p-7">
-          {/* Title */}
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <p className="font-sans text-[11px] uppercase tracking-[0.2em] text-white/40">Mode de jeu</p>
-              <h2 className="mt-1 font-serif text-4xl font-semibold text-white/90">Echecs</h2>
+          {/* Title + hero de blobs (la touche af.games) */}
+          <div className="flex flex-col items-center text-center">
+            <div className="mb-2 flex items-end justify-center gap-1">
+              <Mascot size={54} color="sky" mood="cool" delay={0.15} />
+              <Mascot size={82} color="yellow" mood="happy" crown arms cheering delay={0} />
+              <Mascot size={54} color="coral" mood="shocked" delay={0.3} />
             </div>
+            <p className="font-sans text-[11px] uppercase tracking-[0.25em] text-white/45">af games · le roi des jeux</p>
+            <h2 className="mt-1 font-sans font-black text-white" style={{ fontSize: 46, letterSpacing: -2, lineHeight: 0.95 }}>
+              Échec<span style={{ background: "linear-gradient(120deg,#FFD23F,#fff)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>s</span>
+            </h2>
+            <p className="mt-2 font-sans text-sm text-white/50">2 joueurs, contre l&apos;IA ou en ligne.</p>
           </div>
 
           {/* Mode chooser */}
           {entryMode === "choose" && (
-            <div className="mt-8 grid gap-4 sm:grid-cols-2">
-              <button
-                onClick={() => setEntryMode("local")}
-                className="group rounded-3xl border border-white/25 bg-black/30 p-7 text-left backdrop-blur-sm transition hover:border-[#65dfb2]/40 hover:shadow-[0_0_20px_rgba(101,223,178,0.1)]"
-              >
-                <p className="font-sans text-xl font-semibold text-white/90 transition group-hover:text-[#65dfb2]">
-                  Local
-                </p>
-                <p className="mt-2 font-sans text-sm text-white/40">
-                  Sur le meme telephone: vs bot ou vs collegue
-                </p>
-              </button>
-              <button
-                onClick={() => {
-                  setEntryMode("multi");
-                  sendAction({ action: "set-mode", mode: "online" });
-                }}
-                className="group rounded-3xl border border-white/25 bg-black/30 p-7 text-left backdrop-blur-sm transition hover:border-amber-300/40 hover:shadow-[0_0_20px_rgba(251,191,36,0.1)]"
-              >
-                <p className="font-sans text-xl font-semibold text-white/90 transition group-hover:text-amber-300">
-                  Multijoueur
-                </p>
-                <p className="mt-2 font-sans text-sm text-white/40">Duel en ligne</p>
-              </button>
+            <div className="mt-7 grid gap-3 sm:grid-cols-2">
+              {([
+                { onClick: () => setEntryMode("local"), icon: "📱", color: "#65dfb2", glow: "rgba(101,223,178,0.15)", title: "Local", sub: "Même téléphone · vs bot ou un pote" },
+                { onClick: () => { setEntryMode("multi"); sendAction({ action: "set-mode", mode: "online" }); }, icon: "🌐", color: "#fbbf24", glow: "rgba(251,191,36,0.15)", title: "Multijoueur", sub: "Duel en ligne avec un code" },
+              ] as const).map((m) => (
+                <button key={m.title} onClick={m.onClick}
+                  className="group flex items-center gap-4 rounded-3xl border border-white/12 bg-white/[0.04] p-5 text-left backdrop-blur-sm transition active:scale-[0.98]"
+                  style={{ boxShadow: `0 8px 24px rgba(0,0,0,0.25)` }}>
+                  <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-2xl"
+                        style={{ background: `${m.color}1A`, border: `1px solid ${m.color}33` }}>{m.icon}</span>
+                  <span className="flex-1">
+                    <span className="block font-sans text-lg font-bold text-white">{m.title}</span>
+                    <span className="block font-sans text-xs text-white/45">{m.sub}</span>
+                  </span>
+                  <span style={{ color: m.color, fontSize: 22, fontWeight: 800 }}>›</span>
+                </button>
+              ))}
             </div>
           )}
 
