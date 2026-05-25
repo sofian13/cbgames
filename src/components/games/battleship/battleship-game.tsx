@@ -1068,11 +1068,15 @@ export default function BattleshipGame({ roomCode, playerId, playerName, onRetur
   // ── Online Mode ──
   if (!state || error) {
     return (
-      <div className="flex flex-1 items-center justify-center">
-        <p className="text-sm text-white/40 font-sans animate-pulse">
-          {error ?? "Connexion en cours..."}
-        </p>
-      </div>
+      <NavalShell>
+        <div className="flex flex-1 flex-col items-center justify-center gap-4 text-center">
+          <Mascot size={76} color="sky" mood="thinking" />
+          <span className="h-9 w-9 animate-spin rounded-full" style={{ border: `2px solid ${BS_SONAR}30`, borderTopColor: BS_SONAR }} />
+          <p className="font-mono text-[11px] font-bold uppercase tracking-[2px]" style={{ color: BS_INKMUTE }}>
+            {error ?? "Établissement du signal…"}
+          </p>
+        </div>
+      </NavalShell>
     );
   }
 
@@ -1100,37 +1104,45 @@ export default function BattleshipGame({ roomCode, playerId, playerName, onRetur
     const allPlaced = state.myAllPlaced;
 
     return (
-      <div className="relative flex flex-1 flex-col overflow-hidden p-4 sm:p-6">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_20%,rgba(80,216,255,0.14),transparent_35%),radial-gradient(circle_at_82%_70%,rgba(99,102,241,0.14),transparent_35%),linear-gradient(145deg,#040424,#05113a_42%,#01072a)]" />
-        <div className="relative mx-auto flex w-full max-w-lg flex-1 flex-col items-center gap-4 rounded-3xl border border-cyan-300/20 bg-black/35 p-4 backdrop-blur-xl sm:p-6" style={{ animation: "scaleIn 0.4s ease" }}>
-          <div className="text-center">
-            <p className="text-xs text-white/30 font-sans">
-              {allPlaced ? "En attente de l'adversaire..." : "Place tes navires"}
-            </p>
-            {state.opponentReady && <p className="text-[10px] text-cyan-300/50 font-sans mt-1">Adversaire pret</p>}
-          </div>
+      <NavalShell>
+        <BSStepHeader
+          onBack={onReturnToLobby ?? (() => {})}
+          sub="En ligne · placement"
+          title="Place ta flotte"
+          tag={allPlaced ? "PRÊT" : `${(state.myShips ?? []).length}/${shipsConfig.length}`}
+          tagColor={BS_SONAR}
+        />
+        <div className="mt-4 flex flex-col items-center gap-4">
+          {allPlaced && (
+            <div className="flex items-center gap-2 text-sm font-bold" style={{ color: BS_SONAR }}>
+              <Mascot size={30} color="sky" mood="cool" /> En attente de l&apos;adversaire…
+            </div>
+          )}
+          {state.opponentReady && <p className="font-mono text-[10px] font-bold uppercase tracking-[2px]" style={{ color: BS_SONAR }}>Adversaire prêt</p>}
 
           {!allPlaced && (
             <>
-              <div className="flex flex-wrap gap-2 justify-center">
+              <div className="flex flex-wrap justify-center gap-2">
                 {shipsConfig.map((s: ShipConfig) => {
                   const placed = myPlacedIds.has(s.id);
+                  const sel = selectedShipId === s.id;
                   return (
                     <button key={s.id} disabled={placed}
                       onClick={() => setSelectedShipId(s.id)}
-                      className={cn(
-                        "rounded-lg border px-3 py-1.5 text-xs font-sans transition-all",
-                        placed ? "border-white/5 bg-white/[0.02] text-white/20 line-through" :
-                        selectedShipId === s.id ? "border-cyan-300/50 bg-cyan-300/10 text-cyan-200" :
-                        "border-white/10 bg-white/[0.03] text-white/60 hover:border-cyan-300/30"
-                      )}>
+                      className="rounded-lg px-3 py-1.5 text-xs font-bold transition-all"
+                      style={{
+                        color: placed ? "rgba(168,184,197,0.35)" : sel ? "#031826" : BS_INK,
+                        background: placed ? "rgba(168,184,197,0.04)" : sel ? BS_SONAR : "rgba(168,184,197,0.04)",
+                        border: `1px solid ${sel ? BS_SONAR : "rgba(168,184,197,0.20)"}`,
+                        textDecoration: placed ? "line-through" : "none",
+                      }}>
                       {s.label ?? s.id} ({s.size})
                     </button>
                   );
                 })}
               </div>
               <button onClick={() => setHorizontal((h) => !h)}
-                className="rounded-lg border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs font-sans text-white/60">
+                className="rounded-lg px-3 py-1.5 text-xs font-bold" style={{ color: BS_INKMUTE, background: "rgba(168,184,197,0.04)", border: "1px solid rgba(168,184,197,0.20)" }}>
                 {horizontal ? "↔ Horizontal" : "↕ Vertical"}
               </button>
             </>
@@ -1181,53 +1193,47 @@ export default function BattleshipGame({ roomCode, playerId, playerName, onRetur
           </div>
 
           {allPlaced && (
-            <p className="text-xs text-white/20 font-sans animate-pulse">En attente de l&apos;adversaire...</p>
+            <p className="font-mono text-[10px] font-bold uppercase tracking-[2px]" style={{ color: BS_INKMUTE }}>Signal envoyé… en attente</p>
           )}
         </div>
-      </div>
+      </NavalShell>
     );
   }
 
   // ── Online Playing ──
   if (state.phase === "playing") {
     return (
-      <div className="relative flex flex-1 flex-col overflow-hidden p-4 sm:p-6">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_20%,rgba(80,216,255,0.14),transparent_35%),radial-gradient(circle_at_82%_70%,rgba(99,102,241,0.14),transparent_35%),linear-gradient(145deg,#040424,#05113a_42%,#01072a)]" />
-        <div className="relative mx-auto flex w-full max-w-2xl flex-1 flex-col items-center gap-3 rounded-3xl border border-cyan-300/20 bg-black/35 p-3 backdrop-blur-xl sm:p-4">
-          <div className="flex items-center justify-between w-full">
-            <span className={cn("text-sm font-sans font-medium", state.isMyTurn ? "text-cyan-300" : "text-white/40")}>
-              {state.isMyTurn ? "A toi de tirer !" : "En attente..."}
-            </span>
-            {state.lastShot && (
-              <span className={cn("text-xs font-sans font-bold px-2 py-0.5 rounded",
-                state.lastShot.result === "miss" ? "text-white/40 bg-white/5" :
-                state.lastShot.result === "sunk" ? "text-red-300 bg-red-500/20" : "text-orange-300 bg-orange-500/20"
-              )} style={{ animation: "scaleIn 0.2s ease" }}>
-                {state.lastShot.result === "hit" ? "Touche !" : state.lastShot.result === "sunk" ? "Coule !" : "Rate !"}
-              </span>
-            )}
-          </div>
-
-          <div className={cn("flex flex-col sm:flex-row gap-4 items-center sm:items-start transition-opacity duration-300", !state.isMyTurn && "opacity-50")}>
-            <BattleGrid
-              grid={state.opponentGrid ?? makeEmptyGrid()}
-              ships={state.opponentShipsSunk}
-              onCellClick={(idx) => {
-                if (state.isMyTurn) sendAction({ action: "fire", idx });
-              }}
-              isEnemy
-              disabled={!state.isMyTurn}
-              label={state.opponentName ?? "Adversaire"}
-            />
-            <BattleGrid
-              grid={state.myGrid ?? makeEmptyGrid()}
-              ships={state.myShips}
-              label="Ta flotte"
-              small
-            />
-          </div>
+      <NavalShell>
+        <div className="flex items-center justify-between">
+          <span className="font-mono text-[10px] font-extrabold uppercase tracking-[2px]" style={{ color: state.isMyTurn ? BS_SONAR : BS_INKMUTE }}>
+            {state.isMyTurn ? "À toi de tirer" : "En attente…"}
+          </span>
+          {state.lastShot && (
+            <span className="rounded px-2 py-0.5 text-xs font-bold" style={{
+              color: state.lastShot.result === "miss" ? BS_INKMUTE : state.lastShot.result === "sunk" ? "#FF8A8A" : "#FFB84D",
+              background: state.lastShot.result === "miss" ? "rgba(255,255,255,0.05)" : state.lastShot.result === "sunk" ? "rgba(255,56,56,0.20)" : "rgba(255,184,77,0.18)",
+            }}>{state.lastShot.result === "hit" ? "Touché !" : state.lastShot.result === "sunk" ? "Coulé !" : "Raté !"}</span>
+          )}
         </div>
-      </div>
+        <div className={cn("mt-4 flex flex-col items-center gap-4 transition-opacity duration-300", !state.isMyTurn && "opacity-50")}>
+          <BattleGrid
+            grid={state.opponentGrid ?? makeEmptyGrid()}
+            ships={state.opponentShipsSunk}
+            onCellClick={(idx) => {
+              if (state.isMyTurn) sendAction({ action: "fire", idx });
+            }}
+            isEnemy
+            disabled={!state.isMyTurn}
+            label={`Cible · ${state.opponentName ?? "Adversaire"}`}
+          />
+          <BattleGrid
+            grid={state.myGrid ?? makeEmptyGrid()}
+            ships={state.myShips}
+            label="Ta flotte"
+            small
+          />
+        </div>
+      </NavalShell>
     );
   }
 
@@ -1235,22 +1241,21 @@ export default function BattleshipGame({ roomCode, playerId, playerName, onRetur
   if (state.phase === "game-over") {
     const iWon = state.winner === playerId;
     return (
-      <div className="relative flex flex-1 flex-col overflow-hidden p-4 sm:p-6">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_20%,rgba(80,216,255,0.14),transparent_35%),radial-gradient(circle_at_82%_70%,rgba(99,102,241,0.14),transparent_35%),linear-gradient(145deg,#040424,#05113a_42%,#01072a)]" />
-        <div className="relative mx-auto flex w-full max-w-md flex-1 flex-col items-center justify-center gap-6 rounded-3xl border border-cyan-300/20 bg-black/35 p-6 backdrop-blur-xl" style={{ animation: "scaleIn 0.4s ease" }}>
-          <div className="text-center" style={{ animation: "fadeUp 0.5s ease" }}>
-            <p className="text-xs text-white/30 font-sans uppercase tracking-widest">
-              {iWon ? "Victoire !" : "Defaite"}
-            </p>
-            <h2 className={cn("mt-2 text-4xl font-serif", iWon ? "text-cyan-200" : "text-red-300")}
-              style={{ textShadow: iWon ? "0 0 30px rgba(80,216,255,0.4)" : "0 0 30px rgba(239,68,68,0.3)", animation: "scaleIn 0.6s ease 0.2s both" }}>
-              {state.winnerName ?? "?"}
-            </h2>
-            <p className="mt-1 text-sm text-white/40 font-sans">a coule toute la flotte !</p>
+      <NavalShell>
+        <div className="flex flex-1 flex-col items-center justify-center text-center">
+          <p className="font-mono text-[11px] font-extrabold uppercase tracking-[3px]" style={{ color: BS_INKMUTE }}>
+            {iWon ? "Victoire" : "Flotte coulée"}
+          </p>
+          <div className="mt-3">
+            {iWon ? <Mascot size={104} color="yellow" mood="happy" crown arms cheering /> : <Mascot size={92} color="coral" mood="dead" />}
           </div>
-          <p className="text-xs text-white/20 font-sans animate-pulse">Retour au lobby...</p>
+          <h2 className="mt-2 text-4xl font-black" style={{ color: iWon ? BS_SONAR : "#FF3838", textShadow: iWon ? `0 0 30px ${BS_SONAR}66` : "0 0 30px rgba(255,56,56,0.4)" }}>
+            {state.winnerName ?? "?"}
+          </h2>
+          <p className="mt-1 text-sm" style={{ color: BS_INKMUTE }}>a coulé toute la flotte !</p>
+          <p className="mt-6 font-mono text-[10px] font-bold uppercase tracking-[2px] animate-pulse" style={{ color: BS_INKMUTE }}>Retour au lobby…</p>
         </div>
-      </div>
+      </NavalShell>
     );
   }
 

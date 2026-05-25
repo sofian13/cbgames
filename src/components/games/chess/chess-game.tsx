@@ -629,6 +629,89 @@ function ChessPromotionModal({ color, onPick }: { color: Color; onPick: (t: Piec
   );
 }
 
+// Interrupteur on/off (maquette CH11).
+function ChessToggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <button onClick={() => onChange(!on)} className="relative shrink-0" style={{
+      width: 44, height: 26, borderRadius: 99,
+      background: on ? "#3DDC97" : "rgba(255,255,255,0.12)", transition: "background 0.2s",
+    }} aria-pressed={on}>
+      <span className="absolute top-0.5 h-[22px] w-[22px] rounded-full bg-white" style={{ left: on ? 20 : 2, transition: "left 0.2s", boxShadow: "0 2px 6px rgba(0,0,0,0.3)" }} />
+    </button>
+  );
+}
+
+function ChessSettingRow({ icon, label, hint, on, onChange }: { icon: string; label: string; hint: string; on: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <div className="flex items-center gap-3 rounded-xl px-3.5 py-2.5" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>
+      <span className="w-7 text-lg">{icon}</span>
+      <span className="flex-1">
+        <span className="block text-[13px] font-bold text-white">{label}</span>
+        <span className="block text-[10px] text-white/40">{hint}</span>
+      </span>
+      <ChessToggle on={on} onChange={onChange} />
+    </div>
+  );
+}
+
+// Réglages pendant la partie (maquette CH11) + blob.
+function ChessSettingsModal({ previewBoard, theme, onTheme, showCoords, onCoords, showHints, onHints, soundOn, onSound, vibrateOn, onVibrate, onResign, onClose }: {
+  previewBoard: Array<Piece | null>; theme: BoardTheme; onTheme: (t: BoardTheme) => void;
+  showCoords: boolean; onCoords: (v: boolean) => void; showHints: boolean; onHints: (v: boolean) => void;
+  soundOn: boolean; onSound: (v: boolean) => void; vibrateOn: boolean; onVibrate: (v: boolean) => void;
+  onResign: () => void; onClose: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-[200] flex items-end justify-center sm:items-center" style={{ background: "rgba(8,4,20,0.72)", backdropFilter: "blur(3px)", animation: "fadeIn 0.25s ease" }} onClick={onClose}>
+      <div onClick={(e) => e.stopPropagation()} className="max-h-[92vh] w-full max-w-sm overflow-y-auto rounded-t-3xl p-5 sm:rounded-3xl"
+        style={{ background: "linear-gradient(180deg,#2A2440 0%,#161024 100%)", border: "1px solid rgba(255,255,255,0.12)", boxShadow: "0 -20px 60px rgba(0,0,0,0.6)", paddingBottom: "calc(env(safe-area-inset-bottom,0px) + 20px)", animation: "scaleIn 0.3s ease" }}>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Mascot size={34} color="purple" mood="cool" />
+            <h3 className="text-xl font-black text-white">Réglages</h3>
+          </div>
+          <button onClick={onClose} className="flex h-8 w-8 items-center justify-center rounded-lg text-white/70" style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.10)" }}>✕</button>
+        </div>
+
+        {/* Aperçu */}
+        <div className="mx-auto mt-4" style={{ width: 190 }}>
+          <ChessBoardView board={previewBoard} selectedSquare={null} onSquareClick={() => {}} availableTargets={[]} lastMove={null} theme={theme} showCoords={false} showHints={false} />
+        </div>
+
+        {/* Thème */}
+        <p className="mt-5 font-mono text-[10px] font-extrabold uppercase tracking-[2px] text-white/40">Thème du plateau</p>
+        <div className="mt-2.5 flex gap-2">
+          {(Object.keys(BOARD_THEMES) as BoardTheme[]).map((t) => {
+            const T = BOARD_THEMES[t];
+            const active = theme === t;
+            return (
+              <button key={t} onClick={() => onTheme(t)} className="flex-1 rounded-xl p-1.5" style={{ background: "rgba(255,255,255,0.04)", border: active ? "2px solid #FFD23F" : "1px solid rgba(255,255,255,0.08)" }}>
+                <span className="grid aspect-square w-full overflow-hidden rounded-md" style={{ gridTemplateColumns: "1fr 1fr", gridTemplateRows: "1fr 1fr" }}>
+                  <span style={{ background: T.light }} /><span style={{ background: T.dark }} />
+                  <span style={{ background: T.dark }} /><span style={{ background: T.light }} />
+                </span>
+                <span className="mt-1.5 block text-center text-[9px] font-bold text-white">{T.name}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Toggles */}
+        <div className="mt-4 flex flex-col gap-2">
+          <ChessSettingRow icon="🔢" label="Coordonnées" hint="a-h · 1-8" on={showCoords} onChange={onCoords} />
+          <ChessSettingRow icon="🎯" label="Coups possibles" hint="point sur les cases légales" on={showHints} onChange={onHints} />
+          <ChessSettingRow icon="🔊" label="Sons" hint="déplacement, capture" on={soundOn} onChange={onSound} />
+          <ChessSettingRow icon="📳" label="Vibration" hint="à chaque coup" on={vibrateOn} onChange={onVibrate} />
+        </div>
+
+        <button onClick={() => { onResign(); onClose(); }} className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl py-3.5 text-base font-bold text-white" style={{ background: "linear-gradient(180deg,#FF3EA5 0%,#B5176E 100%)", boxShadow: "0 14px 30px rgba(255,62,165,0.40)" }}>
+          🚩 Abandonner la partie
+        </button>
+      </div>
+    </div>
+  );
+}
+
 interface ChessBoardViewProps {
   board: Array<Piece | null>;
   selectedSquare: number | null;
@@ -638,6 +721,8 @@ interface ChessBoardViewProps {
   orientation?: Color;
   inCheckSquare?: number | null;
   theme?: BoardTheme;
+  showCoords?: boolean;
+  showHints?: boolean;
 }
 
 const ChessBoardView = memo(function ChessBoardView({
@@ -649,6 +734,8 @@ const ChessBoardView = memo(function ChessBoardView({
   orientation = "w",
   inCheckSquare = null,
   theme = "classic",
+  showCoords = true,
+  showHints = true,
 }: ChessBoardViewProps) {
   const T = BOARD_THEMES[theme] ?? BOARD_THEMES.classic;
   const rows = orientation === "w" ? [...Array(8).keys()] : [...Array(8).keys()].reverse();
@@ -664,22 +751,26 @@ const ChessBoardView = memo(function ChessBoardView({
   return (
     <div className="relative w-full">
       {/* File labels (bottom) */}
-      <div className="mt-1 grid grid-cols-8 px-0">
-        {fileLabels.map((f, i) => (
-          <span key={`file-${i}`} className="text-center font-mono text-[10px] text-white/25">
-            {f}
-          </span>
-        ))}
-      </div>
-      <div className="flex">
-        {/* Rank labels (left) */}
-        <div className="mr-1 flex flex-col justify-around">
-          {rankLabels.map((r, i) => (
-            <span key={`rank-${i}`} className="font-mono text-[10px] leading-none text-white/25">
-              {r}
+      {showCoords && (
+        <div className="mt-1 grid grid-cols-8 px-0">
+          {fileLabels.map((f, i) => (
+            <span key={`file-${i}`} className="text-center font-mono text-[10px] text-white/25">
+              {f}
             </span>
           ))}
         </div>
+      )}
+      <div className="flex">
+        {/* Rank labels (left) */}
+        {showCoords && (
+          <div className="mr-1 flex flex-col justify-around">
+            {rankLabels.map((r, i) => (
+              <span key={`rank-${i}`} className="font-mono text-[10px] leading-none text-white/25">
+                {r}
+              </span>
+            ))}
+          </div>
+        )}
         {/* Board */}
         <div className="grid flex-1 grid-cols-8 overflow-hidden rounded-2xl border border-white/20 shadow-[0_0_40px_rgba(0,0,0,0.5)]" style={{ gap: 0, lineHeight: 0 }}>
           {rows.map((y) =>
@@ -710,10 +801,10 @@ const ChessBoardView = memo(function ChessBoardView({
                   {isCheck && (
                     <span className="pointer-events-none absolute inset-0" style={{ background: "radial-gradient(circle, rgba(255,62,165,0.7) 0%, rgba(255,62,165,0) 70%)" }} />
                   )}
-                  {isTarget && !isCapture && (
+                  {showHints && isTarget && !isCapture && (
                     <span className="absolute h-[28%] w-[28%] rounded-full" style={{ background: "rgba(0,0,0,0.32)" }} />
                   )}
-                  {isCapture && (
+                  {showHints && isCapture && (
                     <span className="absolute inset-[5%] rounded-full" style={{ border: "3px solid rgba(0,0,0,0.32)" }} />
                   )}
                   {code && (
@@ -775,6 +866,11 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
   const [localBlackTimeMs, setLocalBlackTimeMs] = useState(15 * 60_000);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [focusMode, setFocusMode] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [showCoords, setShowCoords] = useState(true);
+  const [showHints, setShowHints] = useState(true);
+  const [soundOn, setSoundOn] = useState(true);
+  const [vibrateOn, setVibrateOn] = useState(false);
   const [inviteFeedback, setInviteFeedback] = useState<string>("");
   const audioContextRef = useRef<AudioContext | null>(null);
   const onlineLastMoveKeyRef = useRef<string | null>(null);
@@ -847,6 +943,7 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
   }, []);
 
   const playMoveSound = useCallback(() => {
+    if (!soundOn) return;
     const ctx = getAudioCtx();
     if (!ctx) return;
     const now = ctx.currentTime;
@@ -883,7 +980,7 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
     noiseGain.connect(ctx.destination);
     noise.start(now);
     noise.stop(now + 0.04);
-  }, [getAudioCtx]);
+  }, [getAudioCtx, soundOn]);
 
   const playWinSound = useCallback(() => {
     const ctx = getAudioCtx();
@@ -980,6 +1077,7 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
     setLocalBoard(nextBoard);
     setLocalLastMove(move);
     playMoveSound();
+    if (vibrateOn && typeof navigator !== "undefined") navigator.vibrate?.(30);
     setLocalTurn(nextTurn);
     setLocalSelected(null);
     setLocalMoveCount((c) => c + 1);
@@ -999,7 +1097,7 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
         setLocalReason("stalemate");
       }
     }
-  }, [localBoard, localMoveCount, localTurn, localLastMove, localMoveLog, playMoveSound]);
+  }, [localBoard, localMoveCount, localTurn, localLastMove, localMoveLog, playMoveSound, vibrateOn]);
 
   const undoLocal = useCallback(() => {
     setLocalUndoStack((s) => {
@@ -1252,6 +1350,14 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
       <ChessPromotionModal color={localTurn} onPick={(t) => { applyLocalMove({ from: localPromo.from, to: localPromo.to, promotion: t }); setLocalPromo(null); }} />
     ) : null;
 
+    const settingsModal = settingsOpen ? (
+      <ChessSettingsModal previewBoard={localBoard} theme={boardTheme} onTheme={setBoardTheme}
+        showCoords={showCoords} onCoords={setShowCoords} showHints={showHints} onHints={setShowHints}
+        soundOn={soundOn} onSound={setSoundOn} vibrateOn={vibrateOn} onVibrate={setVibrateOn}
+        onResign={() => { setLocalWinner(otherColor(localTurn)); setLocalReason("resign"); }}
+        onClose={() => setSettingsOpen(false)} />
+    ) : null;
+
     if (isFocusView) {
       return (
       <div className="fixed inset-0 z-[120] flex flex-col overflow-hidden bg-[radial-gradient(circle_at_50%_100%,rgba(45,236,255,0.24),transparent_34%),radial-gradient(circle_at_50%_12%,rgba(120,102,255,0.18),transparent_38%),linear-gradient(180deg,#2e2b56,#0a153c_58%,#010816)] px-2 pb-[calc(env(safe-area-inset-bottom,0px)+0.9rem)] pt-[calc(env(safe-area-inset-top,0px)+0.7rem)] font-sans sm:p-5">
@@ -1292,6 +1398,8 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
                 orientation={localOrient}
                 inCheckSquare={localInCheckSquare}
                 theme={boardTheme}
+              showCoords={showCoords}
+              showHints={showHints}
               />
             </div>
 
@@ -1365,8 +1473,12 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
                 {localWinner ? statusText : `Tour ${localTurn === "w" ? "blanc" : "noir"}`}
               </p>
             </div>
-            <button onClick={toggleFullscreen} aria-label="Plein écran"
-              className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-white/[0.06] text-sm leading-none text-white">⛶</button>
+            <div className="flex items-center gap-1.5">
+              <button onClick={() => setSettingsOpen(true)} aria-label="Réglages"
+                className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-white/[0.06] text-sm leading-none text-white">⚙</button>
+              <button onClick={toggleFullscreen} aria-label="Plein écran"
+                className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-white/[0.06] text-sm leading-none text-white">⛶</button>
+            </div>
           </div>
 
           {!localWinner && localKind === "duel" && (
@@ -1391,6 +1503,8 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
               orientation={localOrient}
               inCheckSquare={localInCheckSquare}
               theme={boardTheme}
+              showCoords={showCoords}
+              showHints={showHints}
             />
           </div>
 
@@ -1442,6 +1556,7 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
           />
         )}
         {promoModal}
+        {settingsModal}
       </div>
     );
   }
@@ -1756,6 +1871,8 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
               orientation={orientation}
               inCheckSquare={onlineInCheckSquare}
               theme={boardTheme}
+              showCoords={showCoords}
+              showHints={showHints}
             />
           </div>
 
@@ -1873,6 +1990,12 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
           {/* Side info */}
           <div className="flex flex-wrap items-center gap-2 sm:flex-col sm:items-end">
             <button
+              onClick={() => setSettingsOpen(true)}
+              className="rounded-xl border border-white/25 bg-black/30 px-4 py-2 font-sans text-xs text-white/90 backdrop-blur-sm transition hover:bg-white/10"
+            >
+              ⚙ Réglages
+            </button>
+            <button
               onClick={toggleFullscreen}
               className="rounded-xl border border-white/25 bg-black/30 px-4 py-2 font-sans text-xs text-white/90 backdrop-blur-sm transition hover:bg-white/10"
             >
@@ -1899,6 +2022,8 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
             orientation={orientation}
             inCheckSquare={onlineInCheckSquare}
             theme={boardTheme}
+            showCoords={showCoords}
+            showHints={showHints}
           />
         </div>
 
@@ -1966,6 +2091,13 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
           onClose={() => setShowGameOverPopup(false)}
           onReplay={() => sendAction({ action: "start-game" })}
         />
+      )}
+      {settingsOpen && (
+        <ChessSettingsModal previewBoard={board} theme={boardTheme} onTheme={setBoardTheme}
+          showCoords={showCoords} onCoords={setShowCoords} showHints={showHints} onHints={setShowHints}
+          soundOn={soundOn} onSound={setSoundOn} vibrateOn={vibrateOn} onVibrate={setVibrateOn}
+          onResign={() => { if (state.phase === "playing" && myColor) sendAction({ action: "resign" }); }}
+          onClose={() => setSettingsOpen(false)} />
       )}
     </div>
   );
