@@ -5,6 +5,7 @@ import { useGame } from "@/lib/party/use-game";
 import { useGameStore } from "@/lib/stores/game-store";
 import type { GameProps } from "@/lib/games/types";
 import { cn } from "@/lib/utils";
+import { UCBack, PlayerCountPicker } from "./uc-kit";
 
 // ── Types (mirrors server state) ────────────────────────────
 
@@ -917,9 +918,8 @@ export default function UndercoverGame({
       }
 
       return (
-        <div className="relative flex min-h-[100svh] flex-1 flex-col overflow-hidden bg-[#030921] p-4 pb-8 sm:p-6">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_25%,rgba(149,60,101,0.38),transparent_40%),radial-gradient(circle_at_50%_62%,rgba(36,224,224,0.35),transparent_34%),linear-gradient(180deg,#040424_0%,#05113a_42%,#01072a_100%)]" />
-          <div className="absolute inset-x-0 bottom-0 h-48 bg-[linear-gradient(180deg,rgba(5,11,34,0),rgba(0,4,24,0.95))]" />
+        <div className="relative flex min-h-[100svh] flex-1 flex-col overflow-hidden p-4 pb-8 sm:p-6">
+          <UCBack tone="noir" />
 
           <div className="relative mx-auto flex w-full max-w-md flex-1 flex-col items-center text-white">
             <p className="mt-2 rounded-full bg-white/15 px-4 py-1 text-sm font-sans uppercase tracking-[0.2em] text-white/80">
@@ -992,33 +992,17 @@ export default function UndercoverGame({
               </div>
             </div>
 
-            <div className="mt-4 w-full rounded-2xl border border-white/20 bg-black/20 p-3">
-              <p className="text-xs font-sans uppercase tracking-[0.2em] text-white/60">
-                Nombre de joueurs
-              </p>
-              <div className="mt-2 flex items-center justify-center gap-4">
-                <button
-                  onClick={() => {
-                    const next = Math.max(1, localPlayerCount - 1);
-                    setLocalPlayerCount(next);
-                    applyLocalRoleConfig(next, localUndercoverCount, localMrWhiteCount);
-                  }}
-                  className="h-10 w-10 rounded-full bg-white/20 text-2xl"
-                >
-                  -
-                </button>
-                <span className="text-4xl font-sans font-semibold">{localPlayerCount}</span>
-                <button
-                  onClick={() => {
-                    const next = Math.min(8, localPlayerCount + 1);
-                    setLocalPlayerCount(next);
-                    applyLocalRoleConfig(next, localUndercoverCount, localMrWhiteCount);
-                  }}
-                  className="h-10 w-10 rounded-full bg-white/20 text-2xl"
-                >
-                  +
-                </button>
+            <div className="mt-4 w-full">
+              <div className="mb-2 flex items-baseline justify-between">
+                <span className="text-xs font-sans uppercase tracking-[0.2em] text-white/60">Nombre de joueurs</span>
+                <span style={{ fontFamily: "'JetBrains Mono', monospace", color: "var(--af-yellow)", fontWeight: 800, fontSize: 24 }}>{localPlayerCount}</span>
               </div>
+              <PlayerCountPicker
+                value={localPlayerCount}
+                min={3}
+                max={8}
+                onChange={(n) => { setLocalPlayerCount(n); applyLocalRoleConfig(n, localUndercoverCount, localMrWhiteCount); }}
+              />
             </div>
 
             <div className="mt-3 grid w-full grid-cols-2 gap-2">
