@@ -88,6 +88,10 @@ function inside(x: number, y: number) {
 function makeIndex(x: number, y: number) {
   return y * 8 + x;
 }
+// Index (0 = a8) → nom de case "e4"
+function squareLabel(idx: number) {
+  return "abcdefgh"[idx % 8] + (8 - Math.floor(idx / 8));
+}
 
 function otherColor(color: Color): Color {
   return color === "w" ? "b" : "w";
@@ -510,6 +514,20 @@ function CompactPlayerCard({ name, color, timeMs, captures, isTurn }: {
   );
 }
 
+function LocalActionBtn({ icon, label, accent, onClick, disabled }: { icon: string; label: string; accent?: string; onClick?: () => void; disabled?: boolean }) {
+  return (
+    <button onClick={onClick} disabled={disabled} style={{
+      flex: 1, padding: "10px 6px", borderRadius: 14,
+      background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)",
+      display: "flex", flexDirection: "column", alignItems: "center", gap: 4,
+      cursor: disabled ? "not-allowed" : "pointer", opacity: disabled ? 0.4 : 1,
+    }}>
+      <span style={{ fontSize: 18, color: accent || "white", lineHeight: 1 }}>{icon}</span>
+      <span style={{ fontSize: 10, color: "rgba(255,255,255,0.6)", fontWeight: 700 }}>{label}</span>
+    </button>
+  );
+}
+
 interface ChessBoardViewProps {
   board: Array<Piece | null>;
   selectedSquare: number | null;
@@ -641,6 +659,8 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
   const [localSelected, setLocalSelected] = useState<number | null>(null);
   const [localLastMove, setLocalLastMove] = useState<ChessMove | null>(null);
   const [localMoveCount, setLocalMoveCount] = useState(0);
+  const [localMoveLog, setLocalMoveLog] = useState<string[]>([]);
+  const [localUndoStack, setLocalUndoStack] = useState<{ board: Array<Piece | null>; turn: Color; lastMove: ChessMove | null; moveCount: number; log: string[] }[]>([]);
   const [localWhiteTimeMs, setLocalWhiteTimeMs] = useState(15 * 60_000);
   const [localBlackTimeMs, setLocalBlackTimeMs] = useState(15 * 60_000);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -845,6 +865,8 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
     const nextTurn = otherColor(localTurn);
     const nextLegal = generateLegalMoves(nextBoard, nextTurn);
 
+    setLocalUndoStack((s) => [...s, { board: localBoard, turn: localTurn, lastMove: localLastMove, moveCount: localMoveCount, log: localMoveLog }]);
+    setLocalMoveLog((l) => [...l, `${squareLabel(move.from)}${squareLabel(move.to)}`]);
     setLocalBoard(nextBoard);
     setLocalLastMove(move);
     playMoveSound();
@@ -867,7 +889,34 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
         setLocalReason("stalemate");
       }
     }
-  }, [localBoard, localMoveCount, localTurn, playMoveSound]);
+  }, [localBoard, localMoveCount, localTurn, localLastMove, localMoveLog, playMoveSound]);
+
+  const undoLocal = useCallback(() => {
+    setLocalUndoStack((s) => {
+      if (s.length === 0) return s;
+      const prev = s[s.length - 1];
+      setLocalBoard(prev.board);
+      setLocalTurn(prev.turn);
+      setLocalLastMove(prev.lastMove);
+      setLocalMoveCount(prev.moveCount);
+      setLocalMoveLog(prev.log);
+      setLocalSelected(null);
+      setLocalWinner(null);
+      setLocalReason(null);
+      return s.slice(0, -1);
+    });
+  }, []);
+
+  const offerLocalDraw = useCallback(() => {
+    setLocalWinner("draw");
+    setLocalReason("draw");
+  }, []);
+
+  const localHint = useCallback(() => {
+    if (localWinner) return;
+    const legal = generateLegalMoves(localBoard, localTurn);
+    if (legal.length > 0) setLocalSelected(legal[Math.floor(Math.random() * legal.length)].from);
+  }, [localBoard, localTurn, localWinner]);
 
   useEffect(() => {
     if (!localMode || localWinner || localKind !== "bot" || localTurn !== "b") return;
@@ -1029,6 +1078,8 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
     setLocalSelected(null);
     setLocalLastMove(null);
     setLocalMoveCount(0);
+    setLocalMoveLog([]);
+    setLocalUndoStack([]);
     setLocalWhiteTimeMs(localTimeMinutes * 60_000);
     setLocalBlackTimeMs(localTimeMinutes * 60_000);
     setLocalMode(true);
@@ -1156,37 +1207,26 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
 
         {/* Main panel */}
         <div className="relative mx-auto flex w-full max-w-4xl flex-1 flex-col rounded-3xl border border-white/18 bg-black/28 p-4 backdrop-blur-xl sm:p-7">
-          {/* Header */}
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="font-sans text-[11px] uppercase tracking-[0.2em] text-white/40">Echecs Local</p>
-              <p className="mt-0.5 font-sans text-sm text-white/90">
-                {localKind === "bot" ? `vs Bot (${localBotLevel})` : "Duel 1 telephone"}
+          {/* Top bar compacte (maquette CH05) */}
+          <div className="flex items-center justify-between">
+            <button onClick={() => setLocalMode(false)} aria-label="Retour"
+              className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-white/[0.06] text-lg leading-none text-white">‹</button>
+            <div className="text-center">
+              <p className="font-mono text-[9px] font-extrabold uppercase tracking-[0.15em] text-white/45">
+                {(localKind === "bot" ? `IA · ${localBotLevel}` : "Duel")} · {localTimeMinutes} min
+              </p>
+              <p className="mt-0.5 font-sans text-[13px] font-bold text-white">
+                {localWinner ? statusText : `Tour ${localTurn === "w" ? "blanc" : "noir"}`}
               </p>
             </div>
-            <div className="flex flex-wrap gap-2">
-              <button
-                onClick={toggleFullscreen}
-                className="rounded-xl border border-white/25 bg-black/30 px-3 py-2 font-sans text-xs text-white/90 backdrop-blur-sm transition hover:bg-white/10"
-              >
-                {isFullscreen ? "Quitter plein ecran" : "Plein ecran"}
-              </button>
-              <button
-                onClick={() => setLocalMode(false)}
-                className="rounded-xl border border-white/25 bg-black/30 px-3 py-2 font-sans text-xs text-white/90 backdrop-blur-sm transition hover:bg-white/10"
-              >
-                Quitter local
-              </button>
-            </div>
+            <button onClick={toggleFullscreen} aria-label="Plein écran"
+              className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-white/[0.06] text-sm leading-none text-white">⛶</button>
           </div>
 
-          {/* Status */}
-          {localWinner ? (
-            <div className="mt-4 rounded-2xl border border-[#65dfb2]/30 bg-[#65dfb2]/10 px-5 py-3 shadow-[0_0_20px_rgba(101,223,178,0.15)]">
-              <p className="font-sans text-lg font-semibold text-white/90">{statusText}</p>
-            </div>
-          ) : (
-            <p className="mt-4 font-sans text-lg font-semibold text-white/90">{statusText}</p>
+          {!localWinner && localKind === "duel" && (
+            <p className="mt-2 text-center font-sans text-[11px] text-white/40">
+              Passe le téléphone au joueur {localTurn === "w" ? "Blanc" : "Noir"}.
+            </p>
           )}
 
           {/* Adversaire (noir) — en haut */}
@@ -1199,12 +1239,6 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
               isTurn={!localWinner && localTurn === "b"}
             />
           </div>
-
-          {!localWinner && localKind === "duel" && (
-            <p className="mt-2 font-sans text-xs text-white/40">
-              Passe le telephone au joueur {localTurn === "w" ? "Blanc" : "Noir"}.
-            </p>
-          )}
 
           {/* Board */}
           <div className="mx-auto mt-3" style={normalBoardStyle}>
@@ -1230,26 +1264,36 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
             />
           </div>
 
-          {/* Action buttons */}
-          <div className="mt-5 flex flex-col gap-3 sm:flex-row">
+          {/* Historique des coups (CH05) */}
+          {localMoveLog.length > 0 && (
+            <div className="mt-3 flex items-center gap-1.5 overflow-x-auto rounded-xl border border-dashed border-white/10 bg-black/35 px-2.5 py-1.5">
+              {localMoveLog.map((mv, i) => (
+                <span key={i} className="flex shrink-0 items-center gap-1.5">
+                  {i % 2 === 0 && <span className="font-mono text-[9px] font-extrabold tracking-wide text-white/40">{i / 2 + 1}.</span>}
+                  <span className="font-mono text-[12px] font-bold" style={{
+                    padding: "3px 8px", borderRadius: 6,
+                    background: i === localMoveLog.length - 1 ? "#FFD23F" : "rgba(255,255,255,0.06)",
+                    color: i === localMoveLog.length - 1 ? "#1A0E2E" : "#fff",
+                  }}>{mv}</span>
+                </span>
+              ))}
+            </div>
+          )}
+
+          {/* Actions (maquette CH05) */}
+          <div className="mt-4 flex gap-2">
             {localWinner ? (
-              <button
-                onClick={startLocalGame}
-                className="rounded-xl bg-gradient-to-r from-[#65dfb2] to-[#4ecf8a] px-6 py-3 font-sans text-sm font-semibold text-black shadow-[0_0_20px_rgba(78,207,138,0.25)] transition hover:shadow-[0_0_30px_rgba(78,207,138,0.4)]"
-              >
-                Rejouer
+              <button onClick={startLocalGame}
+                className="flex-1 rounded-2xl bg-gradient-to-r from-[#65dfb2] to-[#4ecf8a] py-3 font-sans text-sm font-bold text-black shadow-[0_0_20px_rgba(78,207,138,0.25)]">
+                🔄 Rejouer
               </button>
             ) : (
-              <button
-                onClick={() => {
-                  const side = localTurn;
-                  setLocalWinner(otherColor(side));
-                  setLocalReason("resign");
-                }}
-                className="rounded-xl border border-red-400/30 bg-red-500/20 px-5 py-3 font-sans text-sm font-semibold text-red-300 transition hover:bg-red-500/30"
-              >
-                Abandonner
-              </button>
+              <>
+                <LocalActionBtn icon="↶" label="Annuler" onClick={undoLocal} disabled={localUndoStack.length === 0} />
+                <LocalActionBtn icon="💡" label="Indice" accent="#FFD23F" onClick={localHint} />
+                <LocalActionBtn icon="🚩" label="Abandon" onClick={() => { setLocalWinner(otherColor(localTurn)); setLocalReason("resign"); }} />
+                <LocalActionBtn icon="🤝" label="Nulle" onClick={offerLocalDraw} />
+              </>
             )}
           </div>
         </div>
