@@ -648,9 +648,10 @@ let currentStyle: CardStyle | null = null;
 
 function readStyle(): CardStyle {
   if (currentStyle) return currentStyle;
-  if (typeof window === "undefined") return "modern";
+  if (typeof window === "undefined") return "real";
   const v = window.localStorage.getItem(CARD_STYLE_KEY);
-  currentStyle = v === "classic" || v === "real" ? (v as CardStyle) : "modern";
+  // Cartes « réelles » (vraies cartes) par défaut.
+  currentStyle = v === "classic" || v === "modern" || v === "real" ? (v as CardStyle) : "real";
   return currentStyle;
 }
 
@@ -661,7 +662,7 @@ export function setCardStyle(s: CardStyle) {
 }
 
 export function useCardStyle(): CardStyle {
-  const [style, setStyle] = useState<CardStyle>("modern");
+  const [style, setStyle] = useState<CardStyle>("real");
   useEffect(() => {
     setStyle(readStyle());
     const fn = (s: CardStyle) => setStyle(s);

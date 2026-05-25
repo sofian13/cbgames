@@ -31,6 +31,7 @@ interface ContreeState {
   lastTrickWinnerSeat: number | null;
   trumpSuit: Suit | null;
   pliCounts: [number, number];
+  trickPoints?: [number, number];
   matchScore: [number, number];
   targetPoints: number;
   beloteHolder: string | null;
@@ -92,7 +93,8 @@ function BoardBackground({ children }: { children: React.ReactNode }) {
 }
 
 function Scoreboard({ state, myTeam }: { state: ContreeState; myTeam: 0 | 1 }) {
-  const pli = state.pliCounts ?? [0, 0];
+  // « TOUR » = points de cartes de la manche en cours (mis à jour à chaque pli, ex. valet d'atout = 20).
+  const pli = state.trickPoints ?? [0, 0];
   const score = state.matchScore ?? [0, 0];
   const oppTeam: 0 | 1 = (1 - myTeam) as 0 | 1;
   return (
@@ -141,14 +143,14 @@ function SpeechBubble({ text, tone, position }: { text: string; tone: BubbleData
   // Pointer (tail) position depending on avatar position
   const tail: React.CSSProperties =
     position === "top"
-      ? { position: "absolute", left: "50%", top: "100%", transform: "translateX(-50%)", borderTop: `7px solid ${c.border}`, borderLeft: "6px solid transparent", borderRight: "6px solid transparent" }
+      ? { position: "absolute", left: "50%", bottom: "100%", transform: "translateX(-50%)", borderBottom: `7px solid ${c.border}`, borderLeft: "6px solid transparent", borderRight: "6px solid transparent" }
       : position === "left"
       ? { position: "absolute", left: "100%", top: "50%", transform: "translateY(-50%)", borderLeft: `7px solid ${c.border}`, borderTop: "6px solid transparent", borderBottom: "6px solid transparent" }
       : { position: "absolute", right: "100%", top: "50%", transform: "translateY(-50%)", borderRight: `7px solid ${c.border}`, borderTop: "6px solid transparent", borderBottom: "6px solid transparent" };
 
   const placement: React.CSSProperties =
     position === "top"
-      ? { position: "absolute", left: "50%", top: -36, transform: "translateX(-50%)" }
+      ? { position: "absolute", left: "50%", top: 88, transform: "translateX(-50%)" }
       : position === "left"
       ? { position: "absolute", left: 70, top: 0 }
       : { position: "absolute", right: 70, top: 0 };

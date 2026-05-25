@@ -435,7 +435,7 @@ export class ContreeGame extends BaseGame {
       this.trickLeadSuit = null;
       this.startTurnTimer();
       this.broadcastState();
-    }, 1500);
+    }, 2300); // laisse le temps de voir la 4e carte avant que le gagnant ramasse
   }
 
   endHand() {

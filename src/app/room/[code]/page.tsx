@@ -12,6 +12,7 @@ import { useRoom } from "@/lib/party/use-room";
 import { useRoomStore } from "@/lib/stores/room-store";
 import { Mascot, MascotAvatar, MASCOT_PALETTE, type MascotColor } from "@/components/Mascot";
 import { Sparkles } from "@/components/ConfettiBurst";
+import { Users } from "lucide-react";
 import { MuteToggle } from "@/components/MuteToggle";
 import { Customizer } from "@/components/Customizer";
 import { useMe } from "@/lib/hooks/useMe";
@@ -103,8 +104,8 @@ export default function LobbyPage() {
               af
             </div>
           </Link>
-          <span className="af-chip" style={{ background: "rgba(255,210,63,0.18)", borderColor: "rgba(255,210,63,0.3)", color: "var(--af-yellow)", letterSpacing: 1.5 }}>
-            <span className="cb-mono">ROOM · {code}</span>
+          <span className="af-chip" style={{ background: "rgba(255,210,63,0.18)", borderColor: "rgba(255,210,63,0.3)", color: "var(--af-yellow)", fontFamily: "var(--font-display)", fontWeight: 800, letterSpacing: 0.3 }}>
+            Salle · {code}
           </span>
           <span className="h-2 w-2 rounded-full" style={{
             background: isConnected ? "var(--af-mint)" : "var(--af-coral)",
@@ -168,14 +169,17 @@ export default function LobbyPage() {
                 <span className="af-chip" style={{
                   background: selectedGame ? "rgba(255,255,255,0.18)" : "rgba(255,255,255,0.06)",
                   borderColor: "transparent", color: "#fff",
+                  fontFamily: "var(--font-display)", fontWeight: 800, letterSpacing: 0.3,
                 }}>
-                  <span className="cb-mono" style={{ letterSpacing: 1.5 }}>ROOM · {code}</span>
+                  Salle · {code}
                 </span>
-                <span className="af-chip" style={{
+                <span className="af-chip inline-flex items-center gap-1.5" style={{
                   background: selectedGame ? "rgba(255,255,255,0.10)" : "rgba(255,255,255,0.06)",
                   borderColor: "transparent", color: "rgba(255,255,255,0.85)",
+                  fontFamily: "var(--font-display)", fontWeight: 700,
                 }}>
-                  👥 {connectedPlayers.length} joueur{connectedPlayers.length > 1 ? "s" : ""}
+                  <Users className="h-3.5 w-3.5" strokeWidth={2.5} />
+                  {connectedPlayers.length} joueur{connectedPlayers.length > 1 ? "s" : ""}
                 </span>
               </div>
 
