@@ -112,7 +112,23 @@ const WORD_CATEGORIES: { id: string; label: string; emoji: string; pairs: [strin
     ["Cuisinier", "Serveur"], ["Acteur", "Chanteur"], ["Peintre", "Sculpteur"], ["Journaliste", "Écrivain"],
     ["Vétérinaire", "Dentiste"], ["Architecte", "Ingénieur"],
   ] },
+  { id: "anime", label: "Anime", emoji: "🎌", pairs: [
+    ["Naruto", "Sasuke"], ["Goku", "Vegeta"], ["Luffy", "Zoro"], ["Itachi", "Madara"],
+    ["Gojo", "Sukuna"], ["Tanjiro", "Zenitsu"], ["Levi", "Eren"], ["Mikasa", "Historia"],
+    ["Nami", "Robin"], ["One Piece", "Bleach"], ["Konoha", "Akatsuki"], ["Sharingan", "Byakugan"],
+    ["Bankai", "Zanpakuto"], ["Manga", "Comics"], ["Shinigami", "Hollow"], ["Titan", "Géant"],
+  ] },
+  { id: "brands", label: "Marques & tech", emoji: "📱", pairs: [
+    ["Netflix", "YouTube"], ["iPhone", "Samsung"], ["Instagram", "TikTok"], ["Google", "Bing"],
+    ["McDonald's", "Burger King"], ["Spotify", "Deezer"], ["WhatsApp", "Telegram"], ["Coca-Cola", "Pepsi"],
+    ["Mars", "Snickers"], ["Email", "SMS"], ["Radio", "Podcast"], ["PlayStation", "Xbox"],
+  ] },
+  { id: "music", label: "Musique", emoji: "🎵", pairs: [
+    ["Guitare", "Piano"], ["Violon", "Violoncelle"], ["Trompette", "Saxophone"], ["Opéra", "Ballet"],
+    ["Rap", "RnB"], ["Batterie", "Percussions"],
+  ] },
   { id: "adult", label: "+18", emoji: "🔞", pairs: [
+    // Soirée / dating
     ["Tinder", "Bumble"], ["Préservatif", "Pilule"], ["Gueule de bois", "Black-out"],
     ["Tequila", "Vodka"], ["Strip-tease", "Pole dance"], ["Suçon", "Bisou"],
     ["Nude", "Sextape"], ["Boîte de nuit", "Bar"], ["Célibataire", "Friendzone"],
@@ -120,9 +136,18 @@ const WORD_CATEGORIES: { id: string; label: string; emoji: string; pairs: [strin
     ["Lingerie", "Nuisette"], ["Coup d'un soir", "Plan cul"], ["Pécho", "Date"],
     ["Mojito", "Margarita"], ["Champagne", "Prosecco"], ["Joint", "Pétard"],
     ["Décolleté", "Mini-jupe"], ["Talons aiguilles", "Bas résille"], ["Motel", "Love hotel"],
-    ["Tatouage", "Piercing"], ["Speed dating", "Blind date"], ["Cabaret", "Effeuillage"],
-    ["Apéro", "Before"], ["Casino", "Pari"], ["Whisky", "Rhum"],
-    ["Préliminaires", "Câlin"], ["Drague", "Flirt"], ["Sex-shop", "Boudoir"],
+    ["Tatouage", "Piercing"], ["Cabaret", "Effeuillage"], ["Apéro", "Before"],
+    ["Crush", "Ex"], ["Corset", "Porte-jarretelles"], ["Fantasme", "Roleplay"],
+    ["Latex", "Cuir"], ["OnlyFans", "MYM"], ["French kiss", "Bisou"],
+    ["Infidèle", "Fidèle"], ["Désir", "Tentation"], ["Menottes", "Chaînes"],
+    // Explicite
+    ["Soumis", "Dominant"], ["Missionnaire", "Levrette"], ["Cunnilingus", "Fellation"],
+    ["Échangisme", "Partouze"], ["Sodomie", "Pénétration"], ["Fétichisme", "Voyeurisme"],
+    ["Plug anal", "Gode ceinture"], ["Domination", "Soumission"], ["Nymphomane", "Puceau"],
+    ["69", "Ciseaux"], ["BDSM", "Soft"], ["Footjob", "Handjob"],
+    ["Pornhub", "Xvideos"], ["Brazzers", "YouPorn"], ["Jacquie et Michel", "Dorcel"],
+    ["Mia Khalifa", "Lana Rhoades"], ["Riley Reid", "Adriana Chechik"], ["Johnny Sins", "Manuel Ferrara"],
+    ["Clara Morgane", "Angela White"], ["Lubrifiant", "Salive"], ["Préliminaires", "Baiser"],
   ] },
 ];
 const ALL_WORD_PAIRS: [string, string][] = WORD_CATEGORIES.flatMap((c) => c.pairs);
