@@ -1,2456 +1,901 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useMemo, useState } from "react";
 import { useGame } from "@/lib/party/use-game";
 import { useGameStore } from "@/lib/stores/game-store";
 import type { GameProps } from "@/lib/games/types";
-import { cn } from "@/lib/utils";
-import { UCBack, PlayerCountPicker, SpyBlob, DossierTag, UCButton, Stamp, FileCard } from "./uc-kit";
-import { MascotAvatar, type MascotColor } from "@/components/Mascot";
 
-const UC_SEAT_COLORS: MascotColor[] = ["purple", "coral", "mint", "yellow", "pink", "sky", "lavender"];
+// ===========================================================
+//  UNDERCOVER — Client (refonte mobile-first, noir / dossier)
+//  Toutes les phases du serveur sont mappées 1:1 ici.
+//  Visuels alignés sur le design system AF Games (blob mascots,
+//  fonts Bricolage / DM Sans, palette nuit-pourpre).
+// ===========================================================
 
-// ── Types (mirrors server state) ────────────────────────────
-
-type Role = "civilian" | "undercover" | "mrwhite";
-type GamePhase =
+// ---------- Types miroir de l'état serveur ----------
+type Role = "civil" | "undercover" | "mrwhite";
+type Phase =
   | "waiting"
-  | "role-reveal"
-  | "describe"
+  | "word-reveal"
+  | "clue"
   | "vote"
   | "vote-result"
   | "mrwhite-guess"
+  | "round-end"
   | "game-over";
+type EndReason = "civils-win" | "undercover-wins" | "mrwhite-wins" | null;
 
-interface UndercoverPlayerState {
+interface UCPlayer {
   id: string;
   name: string;
-  alive: boolean;
-  hasDescribed: boolean;
+  score: number;
+  isEliminated: boolean;
+  hasClue: boolean;
   hasVoted: boolean;
-  description: string | null;
+  clue: string | null;
+  eliminatedRound: number | null;
   role: Role | null;
   word: string | null;
 }
 
-interface ClueEntry {
-  playerId: string;
-  playerName: string;
-  text: string;
+interface UCState {
+  phase: Phase;
   round: number;
-}
-
-interface UndercoverState {
-  phase: GamePhase;
-  round: number;
-  players: UndercoverPlayerState[];
-  turnOrder: string[];
-  currentDescriberId: string | null;
-  clueHistory: ClueEntry[];
   timeLeft: number;
+  config: { undercoverCount: number; includeMrWhite: boolean; autoBalance: boolean };
+  currentSpeakerId: string | null;
+  clueOrder: string[];
+  currentClueIdx: number;
+  eliminatedThisRound: string | null;
+  eliminatedRole: Role | null;
+  voteTally: Record<string, number> | null;
+  clueHistory: { round: number; playerId: string; playerName: string; clue: string }[];
+  civilWord: string | null;
+  undercoverWord: string | null;
+  lastGuess: string | null;
+  lastGuessCorrect: boolean | null;
+  endReason: EndReason;
+  players: UCPlayer[];
   myRole: Role | null;
   myWord: string | null;
-  eliminatedPlayerId: string | null;
-  eliminatedRole: Role | null;
-  mrWhiteGuessCorrect: boolean | null;
-  winners: Role | null;
-  civilianWord: string | null;
-  undercoverWord: string | null;
-  selectedThemeId?: "classic" | "manga" | "adult" | "mixed";
-  availableThemes?: Array<{
-    id: "classic" | "manga" | "adult" | "mixed";
-    label: string;
-    description: string;
-  }>;
-  expectedPlayerCount?: number;
-  selectedRoleDistribution?: {
-    undercoverCount: number;
-    mrWhiteCount: number;
-    civilianCount: number;
-  };
-  availableRoleDistributions?: Array<{
-    undercoverCount: number;
-    mrWhiteCount: number;
-    civilianCount: number;
-  }>;
+  myId: string | null;
 }
 
-type ThemeId = "classic" | "manga" | "adult" | "mixed";
-
-interface LocalPlayer {
-  id: string;
-  name: string;
-  role: Role;
-  word: string | null;
-  alive: boolean;
-}
-
-interface LocalSecretCard {
-  role: Role;
-  word: string | null;
-}
-
-type LocalPhase =
-  | "setup"
-  | "cards"
-  | "order"
-  | "describe"
-  | "vote"
-  | "vote-result"
-  | "game-over";
-
-const LOCAL_WORD_PAIRS: Record<Exclude<ThemeId, "mixed">, [string, string][]> = {
-  classic: [
-    ["Chat", "Chien"],
-    ["Coca-Cola", "Pepsi"],
-    ["Netflix", "YouTube"],
-    ["Pizza", "Burger"],
-    ["iPhone", "Samsung"],
-    ["Paris", "Londres"],
-    ["Football", "Rugby"],
-    ["Chocolat", "Caramel"],
-    ["Avion", "Helicoptere"],
-    ["Guitare", "Piano"],
-    ["Batman", "Superman"],
-    ["McDonald's", "Burger King"],
-    ["Instagram", "TikTok"],
-    ["Plage", "Piscine"],
-    ["Voiture", "Moto"],
-    ["Soleil", "Lune"],
-    ["Dentiste", "Medecin"],
-    ["Cinema", "Theatre"],
-    ["Cafe", "The"],
-    ["Montagne", "Colline"],
-    ["Pomme", "Poire"],
-    ["Ski", "Snowboard"],
-    ["Chemise", "T-shirt"],
-    ["Biere", "Vin"],
-    ["Violon", "Violoncelle"],
-    ["Manga", "Comics"],
-    ["Croissant", "Pain au chocolat"],
-    ["Sushi", "Maki"],
-    ["Tennis", "Badminton"],
-    ["Lion", "Tigre"],
-    ["Rose", "Tulipe"],
-    ["Pluie", "Neige"],
-    ["Train", "Metro"],
-    ["Livre", "Magazine"],
-    ["Canape", "Fauteuil"],
-    ["Email", "SMS"],
-    ["Gateau", "Tarte"],
-    ["Google", "Bing"],
-    ["Stylo", "Crayon"],
-    ["Fourchette", "Cuillere"],
-    ["Basket", "Running"],
-    ["Chapeau", "Casquette"],
-    ["Araignee", "Scorpion"],
-    ["Mer", "Ocean"],
-    ["Fromage", "Beurre"],
-    ["Radio", "Podcast"],
-    ["Aquarium", "Zoo"],
-    ["Chaussettes", "Chaussures"],
-    ["Marteau", "Tournevis"],
-    ["Fraise", "Framboise"],
-    ["Souris", "Rat"],
-    ["Crocodile", "Alligator"],
-    ["Trompette", "Saxophone"],
-    ["Bretagne", "Normandie"],
-    ["Hibou", "Chouette"],
-    ["Crevette", "Homard"],
-    ["Mars", "Snickers"],
-    ["Spotify", "Deezer"],
-    ["WhatsApp", "Telegram"],
-    ["Karate", "Judo"],
-    ["Opera", "Ballet"],
-    ["Camping", "Glamping"],
-    ["Bague", "Bracelet"],
-    ["Valise", "Sac a dos"],
-    ["Pyramide", "Tour Eiffel"],
-    ["Moustache", "Barbe"],
-    ["Aspirateur", "Balai"],
-    ["Parapluie", "Parasol"],
-    ["Vampire", "Loup-garou"],
-    ["Banane", "Ananas"],
-  ],
-  manga: [
-    ["Naruto", "Sasuke"],
-    ["Goku", "Vegeta"],
-    ["Luffy", "Zoro"],
-    ["Itachi", "Madara"],
-    ["Gojo", "Sukuna"],
-    ["Tanjiro", "Zenitsu"],
-    ["Levi", "Eren"],
-    ["Mikasa", "Historia"],
-    ["Nami", "Robin"],
-    ["One Piece", "Bleach"],
-    ["Konoha", "Akatsuki"],
-    ["Shinigami", "Hollow"],
-    ["Sharingan", "Byakugan"],
-    ["Bankai", "Zanpakuto"],
-    ["Titan", "Geant"],
-    ["Jutsu", "Technique"],
-  ],
-  adult: [
-    ["Tinder", "Bumble"],
-    ["Date", "Plan d'un soir"],
-    ["Crush", "Ex"],
-    ["Flirt", "Seduire"],
-    ["Love hotel", "Airbnb"],
-    ["String", "Culotte"],
-    ["Corset", "Porte-jarretelles"],
-    ["Strip-tease", "Lap dance"],
-    ["Fantasme", "Roleplay"],
-    ["Soumis", "Dominant"],
-    ["Latex", "Cuir"],
-    ["message mignon", "Nude"],
-    ["OnlyFans", "MYM"],
-    ["18+", "Tout public"],
-    ["Sensuel", "Sexuel"],
-    ["Tease", "Provoc"],
-    ["Kiss", "French kiss"],
-    ["Preliminaires", "Baiser"],
-    ["Infidele", "Fidele"],
-    ["Desir", "Tentation"],
-    ["Clara Morgane", "Lana Rhoades"],
-    ["Khalamite", "Mia Khalifa"],
-    ["Johnny Sins", "Manuel Ferrara"],
-    ["Missionnaire", "Levrette"],
-    ["Chatte", "Seins"],
-    ["Cunnilingus", "Pipe"],
-    ["Echangisme", "Partouze"],
-    ["Levre", "Clito"],
-    ["Sperme", "Jus"],
-    ["Gorge profonde", "Sodomie"],
-    ["Fellation", "Cunnilingus"],
-    ["Penetration", "Ejaculation"],
-    ["Fetichisme", "Voyeurisme"],
-    ["Plug anal", "Gode ceinture"],
-    ["Domination", "Soumission"],
-    ["Nymphomane", "Puceau"],
-    ["Menottes", "Chaines"],
-    ["Masque", "Ouvre-bouche"],
-    ["Poil", "Rase"],
-    ["69", "Ciseaux"],
-    ["Lubrifiant", "Salive"],
-    ["BDSM", "Soft Dom"],
-    ["Footjob", "Handjob"],
-    ["Pornhub", "Xvideos"],
-    ["Lingerie", "String troue"],
-    ["Brazzers", "xnxx"],
-    ["Jacquie et Michel", "YouPorn"],
-    ["XHamster", "RedTube"],
-    ["Riley Reid", "Adriana Chechik"],
-    ["Mia Khalifa", "Angela White"],
-    ["Lana Rhoades", "Abella Danger"],
-  ],
+// ---------- Palette ----------
+const ROLE_COLOR: Record<Role, string> = {
+  civil: "#3DDC97",
+  undercover: "#FF3EA5",
+  mrwhite: "#FFD23F",
 };
-
-function getLocalPairs(themeId: ThemeId): [string, string][] {
-  if (themeId === "mixed") {
-    return [
-      ...LOCAL_WORD_PAIRS.classic,
-      ...LOCAL_WORD_PAIRS.manga,
-      ...LOCAL_WORD_PAIRS.adult,
-    ];
-  }
-  return LOCAL_WORD_PAIRS[themeId];
-}
-
-function shuffle<T>(arr: T[]): T[] {
-  const copy = [...arr];
-  for (let i = copy.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [copy[i], copy[j]] = [copy[j], copy[i]];
-  }
-  return copy;
-}
-
-// ── Helpers ─────────────────────────────────────────────────
-
-const ROLE_LABELS: Record<Role, string> = {
-  civilian: "Civil",
+const ROLE_LABEL: Record<Role, string> = {
+  civil: "Civil",
   undercover: "Undercover",
   mrwhite: "Mr. White",
 };
 
-const ROLE_COLORS: Record<Role, string> = {
-  civilian: "text-blue-400",
-  undercover: "text-red-400",
-  mrwhite: "text-white",
+// Couleurs déterministes par joueur (basées sur l'id)
+const BLOB_COLORS = ["#7A4EE8", "#FF3EA5", "#3DDC97", "#FFD23F", "#FF6B5B", "#4ECDC4", "#A78BFA", "#F472B6"];
+const colorOf = (id: string) => {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) | 0;
+  return BLOB_COLORS[Math.abs(h) % BLOB_COLORS.length];
 };
 
-const ROLE_BG: Record<Role, string> = {
-  civilian: "border-blue-400/30 bg-blue-400/5",
-  undercover: "border-red-400/30 bg-red-400/5",
-  mrwhite: "border-white/30 bg-white/5",
-};
-
-const ROLE_GLOW: Record<Role, string> = {
-  civilian: "0 0 40px rgba(96,165,250,0.3), 0 0 80px rgba(96,165,250,0.15)",
-  undercover:
-    "0 0 40px rgba(248,113,113,0.3), 0 0 80px rgba(248,113,113,0.15)",
-  mrwhite: "0 0 40px rgba(255,255,255,0.3), 0 0 80px rgba(255,255,255,0.15)",
-};
-
-function getRoleLabel(role: Role | null): string {
-  return role ? ROLE_LABELS[role] : "???";
-}
-
-function getRoleColor(role: Role | null): string {
-  return role ? ROLE_COLORS[role] : "text-white/40";
-}
-
-function getMaxUndercoverFor(playerCount: number): number {
-  return Math.floor(Math.max(0, playerCount) / 2);
-}
-
-function getMaxMrWhiteFor(playerCount: number): number {
-  return playerCount >= 5 ? 1 : 0;
-}
-
-function getMaxThreatsFor(playerCount: number): number {
-  return Math.floor(Math.max(0, playerCount) / 2);
-}
-
-function normalizeLocalRoleConfig(
-  playerCount: number,
-  undercoverCount: number,
-  mrWhiteCount: number
-) {
-  const safePlayers = Math.max(1, playerCount);
-  const maxUndercover = Math.min(getMaxUndercoverFor(safePlayers), safePlayers - 1);
-  const maxMrWhite = Math.min(getMaxMrWhiteFor(safePlayers), safePlayers - 1);
-  const maxThreats = Math.min(getMaxThreatsFor(safePlayers), safePlayers - 1);
-
-  const minUndercover = safePlayers >= 2 ? 1 : 0;
-  const normalizedUndercover = Math.max(
-    minUndercover,
-    Math.min(undercoverCount, maxUndercover)
-  );
-  let normalizedMrWhite = Math.max(0, Math.min(mrWhiteCount, maxMrWhite));
-
-  if (normalizedUndercover + normalizedMrWhite > maxThreats) {
-    normalizedMrWhite = Math.max(0, maxThreats - normalizedUndercover);
-  }
-
-  if (safePlayers - normalizedUndercover - normalizedMrWhite < 1) {
-    normalizedMrWhite = Math.max(0, safePlayers - normalizedUndercover - 1);
-  }
-
-  return {
-    undercoverCount: normalizedUndercover,
-    mrWhiteCount: normalizedMrWhite,
-  };
-}
-
-// ── Component ───────────────────────────────────────────────
-
-export default function UndercoverGame({
-  roomCode,
-  playerId,
-  playerName,
-}: GameProps) {
+// ===========================================================
+//  Composant principal
+// ===========================================================
+export default function UndercoverGame({ roomCode, playerId, playerName, onReturnToLobby }: GameProps) {
   const { sendAction } = useGame(roomCode, "undercover", playerId, playerName);
-  const { gameState, error } = useGameStore();
-  const state = gameState as unknown as UndercoverState;
+  const gameState = useGameStore((s) => s.gameState) as unknown as UCState | null;
 
-  const [clueInput, setClueInput] = useState("");
-  const [guessInput, setGuessInput] = useState("");
-  const [voteTarget, setVoteTarget] = useState<string | null>(null);
-  const [voteConfirmed, setVoteConfirmed] = useState(false);
-  const [revealedRoleCards, setRevealedRoleCards] = useState<string[]>([]);
-  const [clueSubmitted, setClueSubmitted] = useState(false);
-  const clueInputRef = useRef<HTMLInputElement>(null);
-  const guessInputRef = useRef<HTMLInputElement>(null);
-  const prevRoundRef = useRef(0);
-  const prevPhaseRef = useRef<GamePhase>("waiting");
-  const clueListRef = useRef<HTMLDivElement>(null);
-
-  // Single-phone local mode
-  const [localMode, setLocalMode] = useState(false);
-  const [localPhase, setLocalPhase] = useState<LocalPhase>("setup");
-  const [localSetupStep, setLocalSetupStep] = useState<"config" | "names">(
-    "config"
-  );
-  const [localTheme, setLocalTheme] = useState<ThemeId>("mixed");
-  const [localPlayerCount, setLocalPlayerCount] = useState(5);
-  const [localUndercoverCount, setLocalUndercoverCount] = useState(1);
-  const [localMrWhiteCount, setLocalMrWhiteCount] = useState(1);
-  const [localNameInput, setLocalNameInput] = useState("");
-  const [localNameIndex, setLocalNameIndex] = useState(0);
-  const [localCollectedNames, setLocalCollectedNames] = useState<string[]>(
-    []
-  );
-  const [localPlayers, setLocalPlayers] = useState<LocalPlayer[]>([]);
-  const [localTurnOrder, setLocalTurnOrder] = useState<string[]>([]);
-  const [localCurrentIndex, setLocalCurrentIndex] = useState(0);
-  const [localRound, setLocalRound] = useState(1);
-  const [localClues, setLocalClues] = useState<ClueEntry[]>([]);
-  const [localCardTurnIndex, setLocalCardTurnIndex] = useState(0);
-  const [localSecretDeck, setLocalSecretDeck] = useState<LocalSecretCard[]>([]);
-  const [localCardReveal, setLocalCardReveal] = useState<{
-    playerName: string;
-    role: Role;
-    word: string | null;
-  } | null>(null);
-  const [localCardFlip, setLocalCardFlip] = useState(false);
-  const [localDrawnSlot, setLocalDrawnSlot] = useState<number | null>(null);
-  const [localReviewOpen, setLocalReviewOpen] = useState(false);
-  const [localReviewPlayerId, setLocalReviewPlayerId] = useState<string | null>(null);
-  const [localVoteQueue, setLocalVoteQueue] = useState<string[]>([]);
-  const [localVoteIndex, setLocalVoteIndex] = useState(0);
-  const [localSelectedTarget, setLocalSelectedTarget] = useState<string | null>(null);
-  const [localVotes, setLocalVotes] = useState<Record<string, string>>({});
-  const [localPassToId, setLocalPassToId] = useState<string | null>(null);
-  const [localEliminatedId, setLocalEliminatedId] = useState<string | null>(null);
-  const [localEliminatedRole, setLocalEliminatedRole] = useState<Role | null>(null);
-  const [localWinners, setLocalWinners] = useState<Role | null>(null);
-  const [showWordPeek, setShowWordPeek] = useState(false);
-
-  // Reset state on phase/round changes
-  useEffect(() => {
-    if (!state) return;
-    const phaseChanged = state.phase !== prevPhaseRef.current;
-    const roundChanged = state.round !== prevRoundRef.current;
-
-    if (phaseChanged || roundChanged) {
-      prevPhaseRef.current = state.phase;
-      prevRoundRef.current = state.round;
-
-      if (state.phase === "describe") {
-        setClueInput("");
-        setClueSubmitted(false);
-      }
-      if (state.phase === "vote") {
-        setVoteTarget(null);
-        setVoteConfirmed(false);
-      }
-      if (state.phase !== "vote-result") {
-        setRevealedRoleCards([]);
-      }
-      if (state.phase === "mrwhite-guess") {
-        setGuessInput("");
-      }
-    }
-  }, [state?.phase, state?.round, state]);
-
-  // Focus clue input when it is my turn
-  useEffect(() => {
-    if (state?.phase === "describe" && state.currentDescriberId === playerId) {
-      setTimeout(() => clueInputRef.current?.focus(), 100);
-    }
-  }, [state?.phase, state?.currentDescriberId, playerId]);
-
-  // Focus guess input for Mr. White
-  useEffect(() => {
-    if (state?.phase === "mrwhite-guess" && state.myRole === "mrwhite") {
-      setTimeout(() => guessInputRef.current?.focus(), 100);
-    }
-  }, [state?.phase, state?.myRole]);
-
-  // Auto-scroll clue history
-  useEffect(() => {
-    if (clueListRef.current) {
-      clueListRef.current.scrollTop = clueListRef.current.scrollHeight;
-    }
-  }, [state?.clueHistory?.length]);
-
-  const handleSubmitClue = useCallback(() => {
-    const trimmed = clueInput.trim();
-    if (!trimmed || clueSubmitted) return;
-    setClueSubmitted(true);
-    sendAction({ action: "describe", text: trimmed });
-  }, [clueInput, clueSubmitted, sendAction]);
-
-  const handleClueKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      if (e.key === "Enter") {
-        e.preventDefault();
-        handleSubmitClue();
-      }
-    },
-    [handleSubmitClue]
-  );
-
-  const handleVote = useCallback(() => {
-    if (!voteTarget || voteConfirmed) return;
-    setVoteConfirmed(true);
-    sendAction({ action: "vote", targetId: voteTarget });
-  }, [voteTarget, voteConfirmed, sendAction]);
-
-  const handleMrWhiteGuess = useCallback(() => {
-    const trimmed = guessInput.trim();
-    if (!trimmed) return;
-    sendAction({ action: "mrwhite-guess", guess: trimmed });
-  }, [guessInput, sendAction]);
-
-  const handleGuessKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      if (e.key === "Enter") {
-        e.preventDefault();
-        handleMrWhiteGuess();
-      }
-    },
-    [handleMrWhiteGuess]
-  );
-
-  const handleBackToGamePicker = useCallback(() => {
-    window.location.href = `/room/${roomCode}`;
-  }, [roomCode]);
-
-  const getLocalCurrentPlayer = useCallback(() => {
-    const id = localTurnOrder[localCurrentIndex];
-    return localPlayers.find((p) => p.id === id) ?? null;
-  }, [localCurrentIndex, localPlayers, localTurnOrder]);
-
-  const getLocalAlive = useCallback(
-    () => localPlayers.filter((p) => p.alive),
-    [localPlayers]
-  );
-
-  const buildDescribeOrder = useCallback((playersList: LocalPlayer[]) => {
-    const aliveIds = playersList.filter((p) => p.alive).map((p) => p.id);
-    const randomized = shuffle(aliveIds);
-    if (randomized.length <= 1) return randomized;
-
-    const first = playersList.find((p) => p.id === randomized[0]);
-    if (first?.role !== "mrwhite") return randomized;
-
-    const nextNonMrWhiteIndex = randomized.findIndex((id) => {
-      const player = playersList.find((p) => p.id === id);
-      return player?.role !== "mrwhite";
-    });
-    if (nextNonMrWhiteIndex <= 0) return randomized;
-
-    return [
-      ...randomized.slice(nextNonMrWhiteIndex),
-      ...randomized.slice(0, nextNonMrWhiteIndex),
-    ];
-  }, []);
-
-  const applyLocalRoleConfig = useCallback(
-    (playerCount: number, undercoverCount: number, mrWhiteCount: number) => {
-      const normalized = normalizeLocalRoleConfig(
-        playerCount,
-        undercoverCount,
-        mrWhiteCount
-      );
-      setLocalUndercoverCount(normalized.undercoverCount);
-      setLocalMrWhiteCount(normalized.mrWhiteCount);
-    },
-    []
-  );
-
-  const startLocalGame = useCallback((names: string[]) => {
-    if (names.length < 1) return;
-    const normalizedRoles = normalizeLocalRoleConfig(
-      names.length,
-      localUndercoverCount,
-      localMrWhiteCount
-    );
-
-    const pairs = getLocalPairs(localTheme);
-    const pair = pairs[Math.floor(Math.random() * pairs.length)];
-    const civilianWord = Math.random() < 0.5 ? pair[0] : pair[1];
-    const undercoverWord = civilianWord === pair[0] ? pair[1] : pair[0];
-
-    const players: LocalPlayer[] = names.map((name, i) => ({
-      id: `local-${i + 1}`,
-      name,
-      role: "civilian",
-      word: null,
-      alive: true,
-    }));
-
-    const baseRoles: Role[] = [
-      ...Array.from({ length: normalizedRoles.undercoverCount }, () => "undercover" as Role),
-      ...Array.from({ length: normalizedRoles.mrWhiteCount }, () => "mrwhite" as Role),
-      ...Array.from(
-        {
-          length:
-            players.length -
-            normalizedRoles.undercoverCount -
-            normalizedRoles.mrWhiteCount,
-        },
-        () => "civilian" as Role
-      ),
-    ];
-
-    const secretDeck = shuffle(
-      baseRoles.map((role) => ({
-        role,
-        word:
-          role === "mrwhite"
-            ? null
-            : role === "undercover"
-              ? undercoverWord
-              : civilianWord,
-      }))
-    );
-
-    setLocalPlayers(players);
-    setLocalTurnOrder([]);
-    setLocalCurrentIndex(0);
-    setLocalRound(1);
-    setLocalClues([]);
-    setLocalCardTurnIndex(0);
-    setLocalSecretDeck(secretDeck);
-    setLocalCardReveal(null);
-    setLocalCardFlip(false);
-    setLocalDrawnSlot(null);
-    setLocalReviewOpen(false);
-    setLocalReviewPlayerId(null);
-    setLocalVotes({});
-    setLocalPassToId(null);
-    setLocalVoteQueue([]);
-    setLocalVoteIndex(0);
-    setLocalSelectedTarget(null);
-    setLocalEliminatedId(null);
-    setLocalEliminatedRole(null);
-    setLocalWinners(null);
-    setShowWordPeek(false);
-    setLocalSetupStep("config");
-    setLocalNameInput("");
-    setLocalNameIndex(0);
-    setLocalCollectedNames([]);
-    setLocalPassToId(players[0]?.id ?? null);
-    setLocalPhase("cards");
-    setLocalMode(true);
-  }, [localMrWhiteCount, localTheme, localUndercoverCount]);
-
-  const handleContinueToNames = useCallback(() => {
-    setLocalCollectedNames([]);
-    setLocalNameIndex(0);
-    setLocalNameInput("");
-    setLocalSetupStep("names");
-  }, []);
-
-  const handleSubmitLocalName = useCallback(() => {
-    const raw = localNameInput.trim();
-    const nextName = raw || `Joueur ${localNameIndex + 1}`;
-    const nextNames = [...localCollectedNames, nextName];
-
-    if (nextNames.length >= localPlayerCount) {
-      startLocalGame(nextNames);
-      return;
-    }
-
-    setLocalCollectedNames(nextNames);
-    setLocalNameIndex(nextNames.length);
-    setLocalNameInput("");
-  }, [
-    localCollectedNames,
-    localNameIndex,
-    localNameInput,
-    localPlayerCount,
-    startLocalGame,
-  ]);
-
-  const beginLocalVote = useCallback(() => {
-    setLocalSelectedTarget(null);
-    setLocalPhase("vote");
-  }, []);
-
-  const goNextDescribeTurn = useCallback(() => {
-    let nextIndex = localCurrentIndex + 1;
-    while (
-      nextIndex < localTurnOrder.length &&
-      !localPlayers.find((p) => p.id === localTurnOrder[nextIndex] && p.alive)
-    ) {
-      nextIndex++;
-    }
-
-    if (nextIndex >= localTurnOrder.length) {
-      beginLocalVote();
-      return;
-    }
-    setLocalCurrentIndex(nextIndex);
-    setLocalPassToId(localTurnOrder[nextIndex] ?? null);
-  }, [beginLocalVote, localCurrentIndex, localPlayers, localTurnOrder]);
-
-  const submitLocalClue = useCallback(() => {
-    const current = getLocalCurrentPlayer();
-    if (!current) return;
-
-    setLocalClues((prev) => [
-      ...prev,
-      {
-        playerId: current.id,
-        playerName: current.name,
-        text: "(indice oral)",
-        round: localRound,
-      },
-    ]);
-    setShowWordPeek(false);
-    goNextDescribeTurn();
-  }, [getLocalCurrentPlayer, goNextDescribeTurn, localRound]);
-
-  const drawLocalRandomCard = useCallback(() => {
-    const current = localPlayers[localCardTurnIndex];
-    if (!current || localSecretDeck.length === 0) return;
-
-    const drawIndex = Math.floor(Math.random() * localSecretDeck.length);
-    const deckSlot = drawIndex;
-    const card = localSecretDeck[drawIndex];
-    const nextDeck = localSecretDeck.filter((_, i) => i !== drawIndex);
-
-    setLocalPlayers((prev) =>
-      prev.map((p) =>
-        p.id === current.id ? { ...p, role: card.role, word: card.word } : p
-      )
-    );
-    setLocalSecretDeck(nextDeck);
-    setLocalCardReveal({
-      playerName: current.name,
-      role: card.role,
-      word: card.word,
-    });
-    setLocalDrawnSlot(deckSlot);
-    setLocalCardFlip(false);
-    setTimeout(() => setLocalCardFlip(true), 30);
-  }, [localCardTurnIndex, localPlayers, localSecretDeck]);
-
-  const confirmLocalCard = useCallback(() => {
-    if (!localCardReveal) return;
-    setLocalCardReveal(null);
-    setLocalDrawnSlot(null);
-
-    const nextIndex = localCardTurnIndex + 1;
-    if (nextIndex < localPlayers.length) {
-      setLocalCardTurnIndex(nextIndex);
-      setLocalPassToId(localPlayers[nextIndex]?.id ?? null);
-      return;
-    }
-
-    const order = buildDescribeOrder(localPlayers);
-    setLocalTurnOrder(order);
-    setLocalCurrentIndex(0);
-    setLocalPassToId(null);
-    setLocalPhase("order");
-  }, [buildDescribeOrder, localCardReveal, localCardTurnIndex, localPlayers]);
-
-  const resolveLocalVotes = useCallback(
-    (votes: Record<string, string>) => {
-      const counts: Record<string, number> = {};
-      Object.values(votes).forEach((targetId) => {
-        counts[targetId] = (counts[targetId] ?? 0) + 1;
-      });
-
-      let eliminatedId: string | null = null;
-      let maxVotes = 0;
-      let tie = false;
-      Object.entries(counts).forEach(([pid, count]) => {
-        if (count > maxVotes) {
-          maxVotes = count;
-          eliminatedId = pid;
-          tie = false;
-        } else if (count === maxVotes) {
-          tie = true;
-        }
-      });
-
-      if (tie || !eliminatedId || maxVotes === 0) {
-        setLocalEliminatedId(null);
-        setLocalEliminatedRole(null);
-        setLocalPassToId(null);
-        setLocalPhase("vote-result");
-        return;
-      }
-
-      const eliminatedPlayer = localPlayers.find((p) => p.id === eliminatedId);
-      if (!eliminatedPlayer) return;
-
-      setLocalPlayers((prev) =>
-        prev.map((p) => (p.id === eliminatedId ? { ...p, alive: false } : p))
-      );
-      setLocalEliminatedId(eliminatedId);
-      setLocalEliminatedRole(eliminatedPlayer.role);
-      setLocalPassToId(null);
-      setLocalPhase("vote-result");
-    },
-    [localPlayers]
-  );
-
-  const submitLocalVote = useCallback(() => {
-    if (!localSelectedTarget) return;
-    resolveLocalVotes({ oral: localSelectedTarget });
-    setLocalSelectedTarget(null);
-  }, [localSelectedTarget, resolveLocalVotes]);
-
-  const continueAfterLocalVoteResult = useCallback(() => {
-    const alive = localPlayers.filter((p) => p.alive);
-    const aliveThreats = alive.filter(
-      (p) => p.role === "undercover" || p.role === "mrwhite"
-    ).length;
-    const aliveCivilians = alive.filter((p) => p.role === "civilian").length;
-
-    if (aliveThreats === 0) {
-      setLocalWinners("civilian");
-      setLocalPhase("game-over");
-      return;
-    }
-    if (aliveThreats >= aliveCivilians) {
-      setLocalWinners("undercover");
-      setLocalPhase("game-over");
-      return;
-    }
-
-    const nextTurnOrder = buildDescribeOrder(alive);
-    setLocalTurnOrder(nextTurnOrder);
-    setLocalCurrentIndex(0);
-    setLocalRound((r) => r + 1);
-    setLocalEliminatedId(null);
-    setLocalEliminatedRole(null);
-    setLocalVotes({});
-    setLocalVoteQueue([]);
-    setLocalVoteIndex(0);
-    setLocalSelectedTarget(null);
-    setLocalPassToId(null);
-    setLocalReviewOpen(false);
-    setLocalReviewPlayerId(null);
-    setLocalPhase("order");
-  }, [buildDescribeOrder, localPlayers]);
-
-  // ── Waiting ───────────────────────────────────────────────
-  if (localMode) {
-    const localThemeLabel: Record<ThemeId, string> = {
-      classic: "Classique",
-      manga: "Anime / Manga",
-      adult: "Culture Pop 18+",
-      mixed: "Melange Total",
-    };
-    const localThemeDesc: Record<ThemeId, string> = {
-      classic: "Mots grand public",
-      manga: "Univers anime",
-      adult: "References adultes connues",
-      mixed: "Tout melange",
-    };
-
-    if (localPhase === "setup") {
-      const previewCivilians =
-        localPlayerCount - localUndercoverCount - localMrWhiteCount;
-
-      if (localSetupStep === "names") {
-        const nameAt = (i: number) => localCollectedNames[i] ?? "";
-        const setNameAt = (i: number, v: string) =>
-          setLocalCollectedNames((prev) => {
-            const n = [...prev];
-            while (n.length < localPlayerCount) n.push("");
-            n[i] = v.slice(0, 16);
-            return n;
-          });
-        return (
-          <div className="relative flex min-h-[100svh] flex-1 flex-col overflow-hidden p-4 pb-8 text-white">
-            <UCBack tone="noir" />
-            <div className="relative z-[2] mx-auto flex w-full max-w-md flex-1 flex-col pt-[calc(env(safe-area-inset-top,0px)+1rem)]">
-              {/* header */}
-              <div className="mb-4 flex items-center justify-between">
-                <div>
-                  <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, letterSpacing: 2, color: "var(--af-yellow)", fontWeight: 800 }}>ÉTAPE 2/2</p>
-                  <h2 className="cb-display-md mt-1">Qui joue ?</h2>
-                </div>
-                <DossierTag>LOCAL</DossierTag>
-              </div>
-
-              {/* suspects list */}
-              <div className="mb-2 flex items-baseline justify-between">
-                <span className="text-xs uppercase tracking-[0.2em] text-white/60">Noms des suspects</span>
-                <span className="text-[10px] text-white/40">tape pour modifier</span>
-              </div>
-              <div className="flex flex-col gap-2 overflow-auto">
-                {Array.from({ length: localPlayerCount }).map((_, i) => (
-                  <div key={i} className="flex items-center gap-3 rounded-2xl border p-2.5"
-                       style={{ borderColor: "rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.04)" }}>
-                    <MascotAvatar color={UC_SEAT_COLORS[i % UC_SEAT_COLORS.length]} size={44} mood="happy" />
-                    <div className="flex-1">
-                      <input
-                        value={nameAt(i)}
-                        onChange={(e) => setNameAt(i, e.target.value)}
-                        placeholder={`Joueur ${i + 1}`}
-                        className="w-full bg-transparent text-lg font-bold text-white outline-none placeholder:text-white/35"
-                        style={{ fontFamily: "var(--font-display)" }}
-                      />
-                      <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9, letterSpacing: 1, color: "var(--text-muted)" }}>
-                        SUSPECT N°{String(i + 1).padStart(2, "0")}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <div className="mt-auto space-y-2 pt-5">
-                <UCButton tone="mint" onClick={() => startLocalGame(Array.from({ length: localPlayerCount }, (_, i) => nameAt(i).trim() || `Joueur ${i + 1}`))}>
-                  Lancer la distribution →
-                </UCButton>
-                <button onClick={() => setLocalSetupStep("config")} className="w-full text-center text-sm text-white/60 underline-offset-4 hover:underline">
-                  Retour configuration
-                </button>
-              </div>
-            </div>
-          </div>
-        );
-      }
-
-      return (
-        <div className="relative flex min-h-[100svh] flex-1 flex-col overflow-hidden p-4 pb-8 sm:p-6">
-          <UCBack tone="noir" />
-
-          <div className="relative mx-auto flex w-full max-w-md flex-1 flex-col items-center text-white">
-            <p className="mt-2 rounded-full bg-white/15 px-4 py-1 text-sm font-sans uppercase tracking-[0.2em] text-white/80">
-              Etape 1/2
-            </p>
-            <p className="mt-3 text-4xl font-sans font-semibold">
-              Joueurs: {localPlayerCount}
-            </p>
-            <div className="mt-4 h-[3px] w-[92%] rounded-full bg-white/85" />
-
-            <div className="mt-6 w-full rounded-3xl border border-black/15 bg-[#e5e8ef] px-4 py-4 text-black shadow-[0_10px_40px_rgba(0,0,0,0.28)]">
-              <p className="mx-auto mb-3 w-fit rounded-full bg-[#5ba5ee] px-4 py-1 text-lg font-semibold leading-none text-white">
-                {previewCivilians} Civilians
-              </p>
-              <div className="space-y-2 text-lg font-semibold">
-                <div className="mx-auto flex w-fit items-center gap-2 rounded-full bg-black px-3 py-1 text-white">
-                  <button
-                    onClick={() =>
-                      applyLocalRoleConfig(
-                        localPlayerCount,
-                        localUndercoverCount - 1,
-                        localMrWhiteCount
-                      )
-                    }
-                    className="flex h-6 w-6 items-center justify-center rounded-full bg-black text-xl leading-none"
-                  >
-                    -
-                  </button>
-                  <span>{localUndercoverCount} Undercover</span>
-                  <button
-                    onClick={() =>
-                      applyLocalRoleConfig(
-                        localPlayerCount,
-                        localUndercoverCount + 1,
-                        localMrWhiteCount
-                      )
-                    }
-                    className="flex h-6 w-6 items-center justify-center rounded-full bg-black text-xl leading-none"
-                  >
-                    +
-                  </button>
-                </div>
-                <div className="mx-auto flex w-fit items-center gap-2 rounded-full bg-white px-3 py-1 text-black shadow-[inset_0_0_0_2px_rgba(0,0,0,0.15)]">
-                  <button
-                    onClick={() =>
-                      applyLocalRoleConfig(
-                        localPlayerCount,
-                        localUndercoverCount,
-                        localMrWhiteCount - 1
-                      )
-                    }
-                    className="flex h-6 w-6 items-center justify-center rounded-full bg-white text-xl leading-none"
-                  >
-                    -
-                  </button>
-                  <span>{localMrWhiteCount} Mr. White</span>
-                  <button
-                    onClick={() =>
-                      applyLocalRoleConfig(
-                        localPlayerCount,
-                        localUndercoverCount,
-                        localMrWhiteCount + 1
-                      )
-                    }
-                    className="flex h-6 w-6 items-center justify-center rounded-full bg-white text-xl leading-none"
-                  >
-                    +
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-4 w-full">
-              <div className="mb-2 flex items-baseline justify-between">
-                <span className="text-xs font-sans uppercase tracking-[0.2em] text-white/60">Nombre de joueurs</span>
-                <span style={{ fontFamily: "'JetBrains Mono', monospace", color: "var(--af-yellow)", fontWeight: 800, fontSize: 24 }}>{localPlayerCount}</span>
-              </div>
-              <PlayerCountPicker
-                value={localPlayerCount}
-                min={3}
-                max={8}
-                onChange={(n) => { setLocalPlayerCount(n); applyLocalRoleConfig(n, localUndercoverCount, localMrWhiteCount); }}
-              />
-            </div>
-
-            <div className="mt-3 grid w-full grid-cols-2 gap-2">
-              {(["classic", "manga", "adult", "mixed"] as ThemeId[]).map((themeId) => (
-                <button
-                  key={themeId}
-                  onClick={() => setLocalTheme(themeId)}
-                  className={cn(
-                    "rounded-xl border px-3 py-2 text-left transition-all",
-                    localTheme === themeId
-                      ? "border-cyan-300/50 bg-cyan-400/20"
-                      : "border-white/20 bg-white/10"
-                  )}
-                >
-                  <p className="text-sm font-sans font-medium text-white">{localThemeLabel[themeId]}</p>
-                  <p className="text-[11px] font-sans text-white/65">{localThemeDesc[themeId]}</p>
-                </button>
-              ))}
-            </div>
-
-            <button
-              onClick={handleContinueToNames}
-              className="mt-6 w-[78%] rounded-full bg-gradient-to-r from-[#65dfb2] to-[#4ecf8a] px-8 py-3 text-3xl font-sans font-semibold text-white shadow-[0_8px_24px_rgba(80,214,154,0.45)]"
-            >
-              Suivant
-            </button>
-                <button
-                  onClick={handleBackToGamePicker}
-                  className="mt-3 text-sm font-sans text-white/75 underline-offset-4 hover:underline"
-                >
-                  Retour a l&apos;ecran des jeux
-                </button>
-              </div>
-            </div>
-          );
-    }
-
-    if (localPhase === "cards") {
-      const current = localPlayers[localCardTurnIndex] ?? null;
-      const remaining = localSecretDeck.length;
-      const infiltratedCount = localUndercoverCount + localMrWhiteCount;
-      if (!current) return null;
-
-      if (localPassToId && !localCardReveal) {
-        const passPlayer = localPlayers.find((p) => p.id === localPassToId) ?? null;
-        if (passPlayer) {
-          return (
-            <div className="relative flex min-h-[100svh] flex-1 flex-col items-center justify-center overflow-hidden p-6 text-white">
-              <UCBack tone="noir" />
-              <div className="relative z-[2] flex flex-col items-center gap-5">
-                <DossierTag color="#3DDC97">RÔLES DISTRIBUÉS</DossierTag>
-                <SpyBlob size={150} color="purple" mood="sus" />
-                <div className="text-center">
-                  <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, letterSpacing: 2, color: "var(--af-yellow)", fontWeight: 800 }}>PASSE LE TÉLÉPHONE À</p>
-                  <p className="cb-display-lg mt-1.5" style={{ fontSize: 46, lineHeight: 1, textShadow: "0 0 32px rgba(122,78,232,0.5)" }}>{passPlayer.name}</p>
-                </div>
-                <UCButton tone="primary" full={false} style={{ marginTop: 6, padding: "14px 28px" }} onClick={() => setLocalPassToId(null)}>
-                  🕶️ Piocher ma carte
-                </UCButton>
-              </div>
-            </div>
-          );
-        }
-      }
-
-      return (
-        <div className="relative flex min-h-[100svh] flex-1 flex-col gap-5 overflow-hidden p-4 pb-8 text-white">
-          <UCBack tone="noir" />
-          <div className="relative z-[2] mt-[calc(env(safe-area-inset-top,0px)+1.25rem)] text-center">
-            <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, letterSpacing: 2, color: "var(--af-yellow)", fontWeight: 800 }}>
-              DISTRIBUTION · JOUEUR {localCardTurnIndex + 1}
-            </p>
-            <h2 className="cb-display-lg mt-1">Pioche ta carte</h2>
-          </div>
-
-          <div className="relative mx-auto flex w-full max-w-md gap-2">
-            <div className="flex-1 rounded-3xl bg-white/35 px-4 py-3 text-center text-black/80 backdrop-blur-[1px]">
-              <p className="text-xl font-sans">Nombre infiltres</p>
-              <p className="text-3xl font-semibold">{infiltratedCount}</p>
-            </div>
-            <div className="flex-1 rounded-3xl bg-white/35 px-4 py-3 text-center text-black/80 backdrop-blur-[1px]">
-              <p className="text-xl font-sans">Roles speciaux</p>
-              <p className="text-3xl font-semibold">{localMrWhiteCount === 0 ? "Aucun" : `${localMrWhiteCount} Mr. White`}</p>
-            </div>
-          </div>
-
-          <div
-            className={cn(
-              "relative mx-auto grid w-full max-w-md gap-3",
-              remaining <= 4 ? "grid-cols-2" : "grid-cols-3"
-            )}
-          >
-            {Array.from({ length: remaining }).map((_, i) => (
-              <button
-                key={i}
-                onClick={drawLocalRandomCard}
-                disabled={!!localCardReveal}
-                className={cn(
-                  "group relative h-32 rounded-2xl border transition-all hover:-translate-y-1 disabled:opacity-55",
-                  localDrawnSlot === i && "ring-2 ring-white/80"
-                )}
-                style={{ background: "linear-gradient(160deg, rgba(255,255,255,0.07), rgba(0,0,0,0.4))", borderColor: "rgba(255,210,63,0.4)", boxShadow: "0 8px 25px rgba(0,0,0,0.4)" }}
-              >
-                <div className="relative flex h-full items-center justify-center">
-                  <span className="text-6xl font-sans font-black" style={{ color: "var(--af-yellow)", textShadow: "0 0 18px rgba(255,210,63,0.5)" }}>?</span>
-                </div>
-              </button>
-            ))}
-          </div>
-
-          <div className="relative text-center">
-            <p className="text-sm font-sans text-white/70">
-              {current.name} - {Math.max(remaining, 0)} cartes restantes
-            </p>
-          </div>
-
-          {localCardReveal && (
-            <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/70 backdrop-blur-sm p-5">
-              <div className="w-full max-w-md rounded-3xl border border-white/65 bg-[rgba(8,19,58,0.55)] p-6 text-center shadow-[0_20px_90px_rgba(0,0,0,0.55)]">
-                <p className="text-5xl font-sans font-semibold text-cyan-300">Joueur {localCardTurnIndex + 1}</p>
-                <p className="mt-1 text-3xl font-sans text-white/95">Pioche une carte</p>
-                <div className="mx-auto mt-5 h-56 w-40 [perspective:1000px]">
-                  <div
-                    className="relative h-full w-full transition-transform duration-500"
-                    style={{
-                      transformStyle: "preserve-3d",
-                      transform: localCardFlip ? "rotateY(180deg)" : "rotateY(0deg)",
-                    }}
-                  >
-                    <div
-                      className="absolute inset-0 flex items-center justify-center rounded-2xl border border-yellow-300/60 bg-[#ffc911]"
-                      style={{ backfaceVisibility: "hidden" }}
-                    >
-                      <p className="text-6xl font-sans font-bold text-white">?</p>
-                    </div>
-                    <div
-                      className="absolute inset-0 flex flex-col items-center justify-center gap-2 rounded-2xl px-3 text-center"
-                      style={{
-                        backfaceVisibility: "hidden",
-                        transform: "rotateY(180deg)",
-                        background: "linear-gradient(160deg, rgba(255,255,255,0.08), rgba(0,0,0,0.4))",
-                        border: `2px solid ${localCardReveal.role === "mrwhite" ? "#FFD23F" : "#3DDC97"}`,
-                        boxShadow: `0 0 28px ${localCardReveal.role === "mrwhite" ? "rgba(255,210,63,0.45)" : "rgba(61,220,151,0.45)"}`,
-                      }}
-                    >
-                      <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9, letterSpacing: 2, fontWeight: 800, color: localCardReveal.role === "mrwhite" ? "#FFD23F" : "#3DDC97" }}>
-                        {localCardReveal.role === "mrwhite" ? "MR. WHITE" : "TON MOT"}
-                      </span>
-                      <span className="cb-display-md" style={{ fontSize: 30, color: "#fff", lineHeight: 1.05 }}>
-                        {localCardReveal.role === "mrwhite" ? "???" : localCardReveal.word}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-                <button
-                  onClick={confirmLocalCard}
-                  className="mt-6 w-[78%] rounded-full bg-gradient-to-r from-[#65dfb2] to-[#4ecf8a] py-2.5 text-2xl font-sans font-semibold text-white"
-                >
-                  Valider
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-      );
-    }
-
-    if (localPhase === "order") {
-      const orderedPlayers = localTurnOrder
-        .map((id) => localPlayers.find((p) => p.id === id))
-        .filter((p): p is LocalPlayer => !!p);
-
-      const reviewedPlayer =
-        localReviewPlayerId
-          ? localPlayers.find((p) => p.id === localReviewPlayerId) ?? null
-          : null;
-
-      return (
-        <div className="relative flex flex-1 flex-col gap-5 overflow-hidden p-6">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_10%_15%,rgba(80,216,255,0.14),transparent_35%),radial-gradient(circle_at_90%_75%,rgba(96,165,250,0.13),transparent_35%)]" />
-          <div className="relative text-center">
-            <p className="text-[11px] text-white/30 font-sans uppercase tracking-[0.24em]">Ordre des joueurs</p>
-            <p className="mt-1 text-sm text-white/55 font-sans">Indices a voix haute, dans cet ordre.</p>
-          </div>
-
-          <div className="relative mx-auto grid w-full max-w-2xl grid-cols-2 gap-4 rounded-2xl border border-cyan-300/20 bg-[#070d17]/75 p-4 sm:grid-cols-3">
-            {orderedPlayers.map((p, idx) => (
-              <div
-                key={p.id}
-                className="flex flex-col items-center"
-              >
-                <p className="mb-2 text-[11px] font-sans uppercase tracking-widest text-cyan-200/80">
-                  {idx === 0 ? "Commence" : `Tour ${idx + 1}`}
-                </p>
-                <div className="flex h-24 w-24 items-center justify-center rounded-full border border-cyan-200/60 bg-[radial-gradient(circle_at_30%_30%,#64f0a8,#26c8d9_65%,#0ea5e9)] text-5xl font-sans font-bold text-white shadow-[0_10px_24px_rgba(0,0,0,0.35)]">
-                  {p.name.charAt(0).toUpperCase()}
-                </div>
-                <div className="mt-2 w-24 rounded-md bg-white/65 px-2 py-1 text-center text-sm font-sans font-semibold text-black">
-                  {p.name}
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="relative mt-auto mx-auto w-full max-w-md rounded-full border border-white/20 bg-black/35 px-3 py-2 backdrop-blur-sm">
-            <div className="grid grid-cols-4 gap-2">
-              <button
-                onClick={() => setLocalReviewOpen(true)}
-                className="flex h-14 w-14 items-center justify-center rounded-full border border-white/30 bg-gradient-to-b from-[#a855f7] to-[#7c3aed] text-xs font-sans font-semibold text-white"
-              >
-                Mot
-              </button>
-              <button
-                onClick={beginLocalVote}
-                className="flex h-14 w-14 items-center justify-center rounded-full border border-white/30 bg-gradient-to-b from-[#22c55e] to-[#16a34a] text-xs font-sans font-semibold text-white"
-              >
-                Vote
-              </button>
-              <button
-                onClick={() => {
-                  setLocalSetupStep("config");
-                  setLocalCollectedNames([]);
-                  setLocalNameIndex(0);
-                  setLocalNameInput("");
-                  setLocalPhase("setup");
-                }}
-                className="flex h-14 w-14 items-center justify-center rounded-full border border-white/30 bg-gradient-to-b from-[#f97316] to-[#ef4444] text-[10px] font-sans font-semibold text-white"
-              >
-                Reset
-              </button>
-              <button
-                onClick={handleBackToGamePicker}
-                className="flex h-14 w-14 items-center justify-center rounded-full border border-white/30 bg-gradient-to-b from-[#3b82f6] to-[#2563eb] text-xs font-sans font-semibold text-white"
-              >
-                Jeux
-              </button>
-            </div>
-          </div>
-
-          {localReviewOpen && (
-            <div className="fixed inset-0 z-30 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-              <div className="w-full max-w-md rounded-2xl border border-cyan-300/25 bg-[#0b111d] p-5">
-                {!reviewedPlayer ? (
-                  <>
-                    <p className="mb-3 text-sm text-white/80 font-sans">Choisis ta carte pour revoir ton mot:</p>
-                    <div className="grid grid-cols-2 gap-2">
-                      {localPlayers.filter((p) => p.alive).map((p) => (
-                        <button
-                          key={p.id}
-                          onClick={() => setLocalReviewPlayerId(p.id)}
-                          className="rounded-lg border border-white/[0.12] bg-white/[0.03] px-3 py-2 text-left text-sm text-white/80 font-sans hover:border-cyan-300/35 hover:bg-cyan-300/[0.06]"
-                        >
-                          {p.name}
-                        </button>
-                      ))}
-                    </div>
-                  </>
-                ) : (
-                  <div className="text-center">
-                    <p className="text-xs text-white/30 font-sans">{reviewedPlayer.name}</p>
-                    <p className="mt-2 text-xl text-cyan-300 font-serif">
-                      {reviewedPlayer.role === "mrwhite" ? "Mr. White" : "Civil"}
-                    </p>
-                    <p className="mt-1 text-3xl text-white font-serif">
-                      {reviewedPlayer.role === "mrwhite" ? "???" : reviewedPlayer.word}
-                    </p>
-                  </div>
-                )}
-                <div className="flex gap-2 justify-end mt-4">
-                  {reviewedPlayer && (
-                    <button
-                      onClick={() => setLocalReviewPlayerId(null)}
-                      className="px-3 py-2 rounded border border-white/[0.15] text-white/70 text-xs font-sans"
-                    >
-                      Choisir autre carte
-                    </button>
-                  )}
-                  <button
-                    onClick={() => {
-                      setLocalReviewOpen(false);
-                      setLocalReviewPlayerId(null);
-                    }}
-                    className="px-3 py-2 rounded border border-cyan-300/35 bg-cyan-500/80 text-white text-xs font-sans"
-                  >
-                    Fermer
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      );
-    }
-
-    if (localPhase === "vote" && localPassToId && !localCardReveal) {
-      const passPlayer = localPlayers.find((p) => p.id === localPassToId) ?? null;
-      if (passPlayer) {
-        return (
-          <div className="flex flex-1 flex-col items-center justify-center p-6">
-            <div className="w-full max-w-lg rounded-3xl border border-cyan-300/25 bg-[#070d17]/90 p-7 text-center shadow-[0_20px_70px_rgba(0,0,0,0.4)]">
-              <p className="text-[11px] font-sans uppercase tracking-[0.24em] text-cyan-300/60">Passe le telephone</p>
-              <p className="mt-3 text-4xl text-white font-serif text-center">{passPlayer.name}</p>
-              <p className="mt-3 text-sm text-white/45 font-sans">Ordre direct. Le prochain joueur prend la parole.</p>
-              <button
-                onClick={() => {
-                  setLocalPassToId(null);
-                  setShowWordPeek(false);
-                }}
-                className="mt-6 rounded-xl border border-cyan-300/40 bg-gradient-to-r from-cyan-600 to-blue-600 px-7 py-2.5 text-sm font-sans font-medium text-white"
-              >
-                Continuer
-              </button>
-            </div>
-          </div>
-        );
-      }
-    }
-
-    if (localPhase === "describe") {
-      const current = getLocalCurrentPlayer();
-      if (!current) return null;
-      return (
-        <div className="relative flex flex-1 flex-col gap-4 p-6">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_20%,rgba(80,216,255,0.14),transparent_35%),radial-gradient(circle_at_82%_70%,rgba(99,102,241,0.14),transparent_35%)]" />
-          <div className="relative text-center">
-            <p className="text-xs text-white/30 font-sans">Manche {localRound}</p>
-            <h2 className="mt-1 text-3xl text-white font-serif">{current.name}</h2>
-            <p className="text-xs text-white/35 font-sans">donne un indice oral</p>
-          </div>
-          <div className="relative mx-auto w-full max-w-md rounded-2xl border border-cyan-300/20 bg-[#070d17]/85 p-4 text-center">
-            <p className="text-sm text-white/70 font-sans">Donne ton indice a voix haute.</p>
-            <button
-              onClick={submitLocalClue}
-              className="mt-3 rounded-xl border border-cyan-300/40 bg-gradient-to-r from-cyan-600 to-blue-600 px-4 py-2 text-sm font-sans text-white"
-            >
-              Indice donne, joueur suivant
-            </button>
-          </div>
-          <button
-            onClick={() => setShowWordPeek((v) => !v)}
-            className="mx-auto text-xs text-cyan-300/70 hover:text-cyan-200 font-sans"
-          >
-            {showWordPeek ? "Masquer mon mot" : "Revoir mon mot"}
-          </button>
-          {showWordPeek && (
-            <div className="mx-auto w-full max-w-sm rounded-2xl border border-cyan-300/25 bg-[#070d17]/85 p-4 text-center">
-              <p className="text-xs text-white/30 font-sans">{current.role === "mrwhite" ? "Mr. White" : "Mot secret"}</p>
-              <p className="mt-1 text-2xl text-white font-serif">{current.role === "mrwhite" ? "???" : current.word}</p>
-            </div>
-          )}
-          <div className="relative mx-auto w-full max-w-2xl space-y-1">
-            {localClues.map((clue, i) => (
-              <div key={`${clue.playerId}-${i}`} className="rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-2">
-                <span className="text-xs text-white/40 font-sans">{clue.playerName}</span>
-                <span className="text-sm text-white/60 font-sans ml-2">{clue.text}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      );
-    }
-
-    if (localPhase === "vote") {
-      const aliveTargets = getLocalAlive();
-      return (
-        <div className="relative flex min-h-[100svh] flex-1 flex-col overflow-hidden p-5 text-white">
-          <UCBack tone="danger" />
-          <div className="relative z-[2] mt-[calc(env(safe-area-inset-top,0px)+1rem)]">
-            <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, letterSpacing: 2, color: "var(--af-yellow)", fontWeight: 800 }}>VOTE DU GROUPE</p>
-            <h2 className="cb-display-lg mt-1">Qui éliminer ?</h2>
-          </div>
-          <div className="relative z-[2] mt-4 grid grid-cols-2 gap-3">
-            {aliveTargets.map((p, index) => {
-              const sel = localSelectedTarget === p.id;
-              return (
-                <button
-                  key={p.id}
-                  onClick={() => setLocalSelectedTarget(p.id)}
-                  className="rounded-2xl border p-3 text-left transition-all active:scale-95"
-                  style={{
-                    animation: `cardReveal 0.35s ease ${index * 0.05}s both`,
-                    ...(sel
-                      ? { borderColor: "#FF3EA5", background: "linear-gradient(180deg,rgba(255,62,165,0.18),rgba(255,62,165,0.05))", boxShadow: "0 0 26px rgba(255,62,165,0.3)" }
-                      : { borderColor: "rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.04)" }),
-                  }}
-                >
-                  <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 8, letterSpacing: 2, color: "rgba(255,255,255,0.4)", fontWeight: 700 }}>SUSPECT</p>
-                  <p className="mt-2 text-lg font-bold">{p.name}</p>
-                  <p className="mt-1 text-[10px]" style={{ color: sel ? "#FF3EA5" : "rgba(255,255,255,0.4)" }}>{sel ? "✓ sélectionné" : "appuyer pour voter"}</p>
-                </button>
-              );
-            })}
-          </div>
-          <div className="relative z-[2] mt-auto pt-5">
-            <UCButton tone="danger" disabled={!localSelectedTarget} onClick={submitLocalVote}>Éliminer ce joueur</UCButton>
-          </div>
-        </div>
-      );
-    }
-
-    if (localPhase === "vote-result") {
-      const eliminated = localPlayers.find((p) => p.id === localEliminatedId) ?? null;
-      const roleAccent = localEliminatedRole === "mrwhite" ? "#FFD23F" : localEliminatedRole === "undercover" ? "#FF3EA5" : "#3DDC97";
-      return (
-        <div className="relative flex min-h-[100svh] flex-1 flex-col items-center overflow-hidden p-5 text-white">
-          <UCBack tone="danger" />
-          <div className="relative z-[2] mt-[calc(env(safe-area-inset-top,0px)+1.5rem)] text-center">
-            <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, letterSpacing: 2, color: "var(--af-yellow)", fontWeight: 800 }}>RÉSULTAT DU VOTE</p>
-            <div className="mt-3 flex justify-center">
-              <Stamp text={eliminated ? "Éliminé" : "Égalité"} color={eliminated ? "#FF3EA5" : "#FFD23F"} rotate={-6} size={26} />
-            </div>
-            <h2 className="cb-display-md mt-4">{!eliminated ? "Personne n'est éliminé" : eliminated.name}</h2>
-          </div>
-          <div className="relative z-[2] mt-6 w-full max-w-xs">
-            <FileCard accent={roleAccent}>
-              <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9, letterSpacing: 2, color: "rgba(255,255,255,0.45)", fontWeight: 800 }}>RÔLE RÉVÉLÉ</p>
-              <p className={cn("mt-3 text-2xl font-bold", getRoleColor(localEliminatedRole))}>
-                {localEliminatedRole ? getRoleLabel(localEliminatedRole) : "Aucune élimination"}
-              </p>
-              <p className="mt-1 text-xs text-white/40">{eliminated?.name ?? "Tour nul"}</p>
-            </FileCard>
-          </div>
-          <p className="relative z-[2] mt-3 text-center text-xs text-white/30">Le mot n&apos;est jamais révélé ici.</p>
-          <div className="relative z-[2] mt-auto w-full max-w-xs pt-5">
-            <UCButton tone="primary" onClick={continueAfterLocalVoteResult}>Continuer</UCButton>
-          </div>
-        </div>
-      );
-    }
-
-    if (localPhase === "game-over") {
-      const civilsWin = localWinners === "civilian";
-      return (
-        <div className="relative flex min-h-[100svh] flex-1 flex-col items-center justify-center overflow-hidden p-6 text-white">
-          <UCBack tone={civilsWin ? "civ" : "danger"} />
-          <div className="relative z-[2] flex flex-col items-center gap-4">
-            <SpyBlob size={130} color={civilsWin ? "mint" : "coral"} mood={civilsWin ? "happy" : "cool"} />
-            <Stamp text={civilsWin ? "Civils" : "Infiltrés"} color={civilsWin ? "#3DDC97" : "#FF3EA5"} rotate={-5} size={24} />
-            <h2 className="cb-display-lg text-center" style={{ lineHeight: 1.05 }}>
-              {civilsWin ? "Les Civils gagnent" : "Undercover / Mr. White gagnent"}
-            </h2>
-            <div className="mt-2 w-full max-w-xs space-y-2">
-              <UCButton tone="primary" onClick={() => { setLocalSetupStep("config"); setLocalCollectedNames([]); setLocalNameIndex(0); setLocalNameInput(""); setLocalPhase("setup"); }}>
-                Recommencer
-              </UCButton>
-              <button onClick={handleBackToGamePicker} className="w-full text-center text-sm text-white/60 underline-offset-4 hover:underline">
-                Retour aux jeux
-              </button>
-            </div>
-          </div>
-        </div>
-      );
-    }
+  if (!gameState) {
+    return <UCLoader text="Connexion à la salle…" />;
   }
-  if (!state || state.phase === "waiting") {
-    const onlineCount = state?.players?.length ?? 0;
-    const expectedCount = state?.expectedPlayerCount ?? onlineCount;
-    const selectedDist = state?.selectedRoleDistribution;
-    const readyText = selectedDist
-      ? `${selectedDist.civilianCount} civil${selectedDist.civilianCount > 1 ? "s" : ""}`
-      : "Aucune repartition";
 
-    return (
-      <div className="relative flex min-h-[100svh] flex-1 flex-col overflow-hidden px-4 py-5 text-white sm:px-6 sm:py-7">
-        <UCBack tone="noir" />
-        <div className="relative z-[2] mx-auto flex w-full max-w-3xl flex-1 flex-col pt-[calc(env(safe-area-inset-top,0px)+0.5rem)]">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, letterSpacing: 3, fontWeight: 800, color: "var(--af-yellow)" }}>
-                DOSSIER · UNDERCOVER
-              </p>
-              <h2 className="cb-display-lg mt-1.5">Préparer la partie</h2>
-            </div>
-            <div className="grid grid-cols-2 gap-2 self-start sm:self-auto">
-              <div className="rounded-[1.3rem] border border-white/10 bg-white/[0.04] px-4 py-3">
-                <p className="text-[10px] uppercase tracking-[0.22em] text-white/35">Joueurs</p>
-                <p className="mt-1 text-lg font-semibold text-white">{expectedCount}</p>
-              </div>
-              <div className="rounded-[1.3rem] border border-cyan-300/14 bg-cyan-300/[0.08] px-4 py-3">
-                <p className="text-[10px] uppercase tracking-[0.22em] text-cyan-100/45">Session</p>
-                <p className="mt-1 text-sm font-semibold text-cyan-50">
-                  {onlineCount} en ligne{expectedCount > onlineCount && ` + ${expectedCount - onlineCount} bot`}
-                </p>
-              </div>
-            </div>
-          </div>
+  const phase = gameState.phase;
 
-          <div className="mt-5 grid gap-4">
-            <section className="rounded-[1.7rem] border border-white/10 bg-white/[0.03] p-4 sm:p-5">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-[11px] uppercase tracking-[0.22em] text-white/38">
-                    Theme
-                  </p>
-                  <p className="mt-1 text-sm text-white/55">Choix rapide du paquet de mots.</p>
-                </div>
-                <div className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs text-white/45">
-                  {state?.selectedThemeId ?? "mixed"}
-                </div>
-              </div>
-              <div className="mt-4 grid grid-cols-2 gap-3">
-                {state?.availableThemes?.map((theme) => {
-                  const active = theme.id === state.selectedThemeId;
-                  return (
-                    <button
-                      key={theme.id}
-                      onClick={() => sendAction({ action: "set-theme", themeId: theme.id })}
-                      className={cn(
-                        "rounded-[1.2rem] border px-4 py-4 text-left transition-all",
-                        active
-                          ? "border-cyan-300/60 bg-cyan-300/[0.14] shadow-[0_0_28px_rgba(80,216,255,0.18)]"
-                          : "border-white/[0.09] bg-white/[0.03] hover:border-cyan-300/24 hover:bg-white/[0.05]"
-                      )}
-                    >
-                      <p className={cn("text-sm font-semibold", active ? "text-cyan-100" : "text-white/88")}>
-                        {theme.label}
-                      </p>
-                      <p className="mt-1 text-xs leading-5 text-white/38">{theme.description}</p>
-                    </button>
-                  );
-                })}
-              </div>
-            </section>
+  return (
+    <UCContainer>
+      {phase === "waiting" && <PhaseWaiting state={gameState} sendAction={sendAction} myId={playerId} />}
+      {phase === "word-reveal" && <PhaseWordReveal state={gameState} sendAction={sendAction} />}
+      {phase === "clue" && <PhaseClue state={gameState} sendAction={sendAction} myId={playerId} />}
+      {phase === "vote" && <PhaseVote state={gameState} sendAction={sendAction} myId={playerId} />}
+      {phase === "vote-result" && <PhaseEliminate state={gameState} />}
+      {phase === "mrwhite-guess" && <PhaseMrWhiteGuess state={gameState} sendAction={sendAction} myId={playerId} />}
+      {phase === "round-end" && <PhaseEliminate state={gameState} />}
+      {phase === "game-over" && <PhaseGameOver state={gameState} onReturnToLobby={onReturnToLobby} />}
+    </UCContainer>
+  );
+}
 
-            <section className="rounded-[1.7rem] border border-white/10 bg-white/[0.03] p-4 sm:p-5">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <p className="text-[11px] uppercase tracking-[0.22em] text-white/38">
-                    Repartition
-                  </p>
-                  <p className="mt-1 text-sm text-white/55">{readyText}</p>
-                </div>
-                {selectedDist && (
-                  <div className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs text-white/55">
-                    {selectedDist.undercoverCount} undercover · {selectedDist.mrWhiteCount} Mr. White
-                  </div>
-                )}
-              </div>
-              <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                {state?.availableRoleDistributions?.map((option, idx) => {
-                  const active =
-                    selectedDist?.undercoverCount === option.undercoverCount &&
-                    selectedDist?.mrWhiteCount === option.mrWhiteCount;
-                  return (
-                    <button
-                      key={`${option.undercoverCount}-${option.mrWhiteCount}-${idx}`}
-                      onClick={() =>
-                        sendAction({
-                          action: "set-role-distribution",
-                          undercoverCount: option.undercoverCount,
-                          mrWhiteCount: option.mrWhiteCount,
-                        })
-                      }
-                      className={cn(
-                        "rounded-[1.35rem] border px-4 py-4 text-left transition-all",
-                        active
-                          ? "border-[#ff9f68]/70 bg-[#ff9f68]/10 shadow-[0_0_30px_rgba(255,159,104,0.18)]"
-                          : "border-white/[0.09] bg-white/[0.03] hover:border-[#ff9f68]/30 hover:bg-white/[0.05]"
-                      )}
-                    >
-                      <p className="text-base font-semibold text-white/92">
-                        {option.civilianCount} civil{option.civilianCount > 1 ? "s" : ""}
-                      </p>
-                      <p className="mt-1 text-sm text-white/52">
-                        {option.undercoverCount} undercover{option.undercoverCount > 1 ? "s" : ""} · {option.mrWhiteCount} Mr. White
-                      </p>
-                    </button>
-                  );
-                })}
-              </div>
-            </section>
-          </div>
-
-          <div className="mt-5 flex flex-col gap-3 pb-4">
-            <UCButton tone="danger" onClick={() => sendAction({ action: "start-game" })}>
-              🎬 Lancer la partie en ligne
-            </UCButton>
-            <UCButton
-              tone="ghost"
-              onClick={() => {
-                setLocalMode(true);
-                setLocalSetupStep("config");
-                setLocalCollectedNames([]);
-                setLocalNameIndex(0);
-                setLocalNameInput("");
-                setLocalPhase("setup");
-              }}
-            >
-              📱 Jouer sur un seul téléphone
-            </UCButton>
-            <p className="text-center text-xs text-white/40">
-              Configuration courte, lancement direct.
-            </p>
-          </div>
-        </div>
+// ===========================================================
+//  Shell & UI primitives
+// ===========================================================
+function UCContainer({ children }: { children: React.ReactNode }) {
+  return (
+    <div style={{
+      minHeight: "100dvh",
+      color: "white",
+      fontFamily: "var(--f-ui, 'DM Sans'), system-ui, sans-serif",
+      background:
+        "radial-gradient(120% 70% at 50% 0%, rgba(91,54,214,0.35) 0%, transparent 60%), " +
+        "radial-gradient(120% 60% at 50% 100%, rgba(255,62,165,0.18) 0%, transparent 60%), " +
+        "linear-gradient(180deg, #0A0420 0%, #150834 100%)",
+      position: "relative",
+      overflow: "hidden",
+    }}>
+      <div style={{
+        position: "fixed", inset: 0,
+        background:
+          "repeating-linear-gradient(0deg, rgba(255,255,255,0.025) 0px, rgba(255,255,255,0.025) 1px, transparent 1px, transparent 24px), " +
+          "repeating-linear-gradient(90deg, rgba(255,255,255,0.025) 0px, rgba(255,255,255,0.025) 1px, transparent 1px, transparent 24px)",
+        maskImage: "radial-gradient(circle at 50% 40%, black 0%, transparent 80%)",
+        pointerEvents: "none",
+      }} />
+      <div style={{ position: "relative", zIndex: 1, padding: "20px 16px 28px", maxWidth: 480, margin: "0 auto" }}>
+        {children}
       </div>
-    );
-  }
+    </div>
+  );
+}
 
-  const me = state.players?.find((p) => p.id === playerId);
-  const alivePlayers = state.players?.filter((p) => p.alive) ?? [];
-  const isTimeLow = (state.timeLeft ?? 0) <= 5;
-
-  if (false) {
-    const iAmAlive = me?.alive ?? false;
-    const voteOptions = alivePlayers.filter((p) => p.id !== playerId);
-
-    return (
-      <div className="relative flex flex-1 flex-col overflow-hidden px-4 py-5 sm:px-6 sm:py-7">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_20%,rgba(80,216,255,0.12),transparent_28%),radial-gradient(circle_at_80%_78%,rgba(255,96,96,0.14),transparent_34%),linear-gradient(180deg,#050714,#050916_58%,#04050d)]" />
-        <div className="relative mx-auto flex w-full max-w-4xl flex-1 flex-col rounded-[2rem] border border-white/10 bg-black/35 p-4 shadow-[0_30px_90px_rgba(0,0,0,0.48)] backdrop-blur-xl sm:p-6">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-              <p className="text-[11px] uppercase tracking-[0.28em] text-cyan-200/48">
-                Vote · manche {state.round}
-              </p>
-              <h2 className="mt-2 text-3xl font-serif text-white sm:text-4xl">
-                Qui eliminer ?
-              </h2>
-              <p className="mt-2 text-sm text-white/45">
-                Selectionne une carte, puis confirme ton vote.
-              </p>
-            </div>
-            <div className="w-full max-w-xs">
-              <div className="mb-2 flex items-center justify-between text-xs text-white/34">
-                <span>Temps restant</span>
-                <span className={cn("font-mono text-sm font-bold", isTimeLow ? "text-red-400" : "text-cyan-300")}>
-                  {state.timeLeft}s
-                </span>
-              </div>
-              <div className="h-2 overflow-hidden rounded-full bg-white/[0.06]">
-                <div
-                  className={cn(
-                    "h-full rounded-full transition-all duration-1000 ease-linear",
-                    isTimeLow ? "bg-red-500" : "bg-gradient-to-r from-cyan-400 via-sky-400 to-blue-500"
-                  )}
-                  style={{ width: `${((state.timeLeft ?? 0) / 30) * 100}%` }}
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            {voteOptions.map((p, i) => {
-              const isSelected = voteTarget === p.id;
-              return (
-                <button
-                  key={p.id}
-                  onClick={() => {
-                    if (!voteConfirmed && iAmAlive) setVoteTarget(p.id);
-                  }}
-                  disabled={voteConfirmed || !iAmAlive}
-                  className={cn(
-                    "group rounded-[1.6rem] border p-4 text-left transition-all press-effect",
-                    isSelected
-                      ? "border-[#ff7a66]/70 bg-[linear-gradient(180deg,rgba(255,122,102,0.16),rgba(255,122,102,0.06))] shadow-[0_0_34px_rgba(255,122,102,0.18)]"
-                      : "border-white/[0.09] bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02))] hover:border-cyan-300/32 hover:bg-white/[0.05]",
-                    (voteConfirmed || !iAmAlive) && "cursor-not-allowed opacity-55"
-                  )}
-                  style={{ animation: `cardReveal 0.38s ease ${i * 0.05}s both` }}
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="text-[11px] uppercase tracking-[0.22em] text-white/26">
-                        Carte joueur
-                      </p>
-                      <p className={cn("mt-3 truncate text-xl font-semibold", isSelected ? "text-white" : "text-white/88")}>
-                        {p.name}
-                      </p>
-                    </div>
-                    <div
-                      className={cn(
-                        "mt-1 h-3 w-3 rounded-full transition-all",
-                        isSelected ? "bg-[#ff7a66] shadow-[0_0_18px_rgba(255,122,102,0.9)]" : "bg-white/12 group-hover:bg-cyan-300/60"
-                      )}
-                    />
-                  </div>
-                  <div className="mt-10 flex items-center justify-between">
-                    <span className="rounded-full border border-white/10 bg-black/20 px-3 py-1 text-xs text-white/42">
-                      {isSelected ? "Selectionne" : "Appuyer pour voter"}
-                    </span>
-                    <span className="text-xs uppercase tracking-[0.22em] text-white/18">Suspect</span>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-
-          <div className="mt-auto flex flex-col gap-4 pt-5">
-            {iAmAlive && !voteConfirmed && voteTarget && (
-              <button
-                onClick={handleVote}
-                className="w-full rounded-[1.35rem] bg-gradient-to-r from-[#ff8d52] via-[#ff6b3d] to-[#ff3d3d] px-6 py-4 text-sm font-semibold text-white shadow-[0_0_30px_rgba(255,107,61,0.24)] transition hover:brightness-105 sm:w-auto sm:self-center"
-              >
-                Confirmer le vote pour {voteOptions.find((player) => player.id === voteTarget)?.name}
-              </button>
-            )}
-            {voteConfirmed && (
-              <p className="text-center text-sm text-white/42">
-                Vote enregistre. En attente des autres joueurs.
-              </p>
-            )}
-            <div className="flex flex-wrap justify-center gap-2">
-              {alivePlayers.map((p) => (
-                <div
-                  key={p.id}
-                  className={cn(
-                    "rounded-full border px-3 py-2 text-xs transition-all",
-                    p.hasVoted
-                      ? "border-cyan-300/26 bg-cyan-300/[0.08] text-cyan-100"
-                      : "border-white/[0.08] bg-white/[0.03] text-white/38"
-                  )}
-                >
-                  {p.name}
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
+function UCLoader({ text }: { text: string }) {
+  return (
+    <UCContainer>
+      <div style={{ textAlign: "center", padding: "120px 16px", color: "rgba(255,255,255,0.6)" }}>
+        <div style={{
+          width: 38, height: 38, borderRadius: "50%",
+          border: "3px solid rgba(255,210,63,0.25)", borderTopColor: "#FFD23F",
+          animation: "uc-spin 1s linear infinite", margin: "0 auto 16px",
+        }} />
+        {text}
+        <style>{`@keyframes uc-spin { to { transform: rotate(360deg); } }`}</style>
       </div>
-    );
-  }
+    </UCContainer>
+  );
+}
 
-  if (false) {
-    const eliminatedPlayer = state.players?.find(
-      (p) => p.id === state.eliminatedPlayerId
-    );
-    const noElimination = !state.eliminatedPlayerId;
-    const revealedPlayers =
-      state.players?.filter((player) => player.alive || player.id === state.eliminatedPlayerId) ?? [];
+function Tag({ children, color = "#FFD23F" }: { children: React.ReactNode; color?: string }) {
+  return (
+    <span style={{
+      fontFamily: "var(--f-mono, 'JetBrains Mono'), monospace",
+      fontSize: 9, fontWeight: 800, letterSpacing: 2,
+      textTransform: "uppercase",
+      color, padding: "3px 8px",
+      border: `1px solid ${color}55`, borderRadius: 3,
+      background: `${color}11`,
+    }}>{children}</span>
+  );
+}
 
-    return (
-      <div className="relative flex flex-1 flex-col overflow-hidden px-4 py-5 sm:px-6 sm:py-7">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_18%,rgba(80,216,255,0.12),transparent_28%),radial-gradient(circle_at_80%_75%,rgba(255,122,80,0.14),transparent_34%),linear-gradient(180deg,#050714,#050916_58%,#04050d)]" />
-        <div className="relative mx-auto flex w-full max-w-4xl flex-1 flex-col rounded-[2rem] border border-white/10 bg-black/35 p-4 shadow-[0_30px_90px_rgba(0,0,0,0.48)] backdrop-blur-xl sm:p-6">
-          <div className="text-center">
-            <p className="text-[11px] uppercase tracking-[0.28em] text-cyan-200/48">Resultat du vote</p>
-            <h2 className="mt-2 text-3xl font-serif text-white sm:text-4xl">
-              {noElimination ? "Egalite" : `${eliminatedPlayer?.name} elimine`}
-            </h2>
-            <p className="mt-2 text-sm text-white/44">
-              Appuie sur une carte pour reveler le role.
-            </p>
-          </div>
-
-          <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            {revealedPlayers.map((player, index) => {
-              const isRevealed = revealedRoleCards.includes(player.id);
-              const role = player.role;
-              return (
-                <button
-                  key={player.id}
-                  onClick={() =>
-                    setRevealedRoleCards((current) =>
-                      current.includes(player.id)
-                        ? current.filter((id) => id !== player.id)
-                        : [...current, player.id]
-                    )
-                  }
-                  className="group [perspective:1200px] text-left"
-                  style={{ animation: `cardReveal 0.38s ease ${index * 0.06}s both` }}
-                >
-                  <div
-                    className={cn(
-                      "relative min-h-[180px] rounded-[1.6rem] transition-transform duration-500 [transform-style:preserve-3d]",
-                      isRevealed && "[transform:rotateY(180deg)]"
-                    )}
-                  >
-                    <div className="absolute inset-0 rounded-[1.6rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.02))] p-5 [backface-visibility:hidden]">
-                      <p className="text-[11px] uppercase tracking-[0.22em] text-white/24">Carte joueur</p>
-                      <p className="mt-6 text-2xl font-semibold text-white/92">{player.name}</p>
-                      <div className="pt-14">
-                        <span className="rounded-full border border-white/10 bg-black/20 px-3 py-1 text-xs text-white/44">
-                          Toucher pour retourner
-                        </span>
-                      </div>
-                    </div>
-                    <div
-                      className={cn(
-                        "absolute inset-0 flex rounded-[1.6rem] border p-5 [backface-visibility:hidden] [transform:rotateY(180deg)]",
-                        role ? ROLE_BG[role] : "border-white/10 bg-white/[0.04]"
-                      )}
-                    >
-                      <div className="flex h-full w-full flex-col justify-between">
-                        <div>
-                          <p className="text-[11px] uppercase tracking-[0.22em] text-white/30">Role revele</p>
-                          <p className={cn("mt-6 text-2xl font-semibold", getRoleColor(role))}>
-                            {getRoleLabel(role)}
-                          </p>
-                        </div>
-                        <p className="text-xs text-white/44">{player.name}</p>
-                      </div>
-                    </div>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-
-          <div className="mt-auto pt-5 text-center">
-            {state.mrWhiteGuessCorrect !== null && (
-              <div
-                className={cn(
-                  "mx-auto mb-4 max-w-sm rounded-[1.4rem] border p-4 text-center",
-                  state.mrWhiteGuessCorrect
-                    ? "border-emerald-400/30 bg-emerald-400/8"
-                    : "border-red-400/30 bg-red-400/8"
-                )}
-              >
-                <p className={cn("text-base font-semibold", state.mrWhiteGuessCorrect ? "text-emerald-300" : "text-red-300")}>
-                  {state.mrWhiteGuessCorrect ? "Mr. White a trouve le mot" : "Mr. White s'est trompe"}
-                </p>
-              </div>
-            )}
-            <p className="text-sm text-white/40">La suite arrive automatiquement.</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // ── Role Reveal ───────────────────────────────────────────
-  if (state.phase === "role-reveal") {
-    const myRole = state.myRole;
-    const myWord = state.myWord;
-
-    return (
-      <div className="relative flex flex-1 flex-col overflow-hidden p-4 sm:p-6">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_20%,rgba(80,216,255,0.14),transparent_35%),radial-gradient(circle_at_82%_70%,rgba(99,102,241,0.14),transparent_35%),linear-gradient(145deg,#040424,#05113a_42%,#01072a)]" />
-        <div className="relative mx-auto flex w-full max-w-lg flex-1 flex-col items-center justify-center rounded-3xl border border-cyan-300/20 bg-black/35 p-6 shadow-[0_24px_70px_rgba(0,0,0,0.45)] backdrop-blur-xl sm:p-8" style={{ animation: "scaleIn 0.5s ease" }}>
-          <span className="text-xs text-white/20 font-sans uppercase tracking-widest mb-8" style={{ animation: "fadeUp 0.5s ease 0.1s both" }}>
-            Ton identite secrete
-          </span>
-
-          <div
-            className={cn(
-              "rounded-2xl border p-8 text-center max-w-sm w-full",
-              myRole ? ROLE_BG[myRole] : "border-white/[0.06] bg-white/[0.03]"
-            )}
-            style={{ animation: "scaleIn 0.6s cubic-bezier(0.16,1,0.3,1) 0.2s both" }}
-          >
-            <span
-              className={cn(
-                "text-sm font-sans font-medium uppercase tracking-wider",
-                getRoleColor(myRole)
-              )}
-            >
-              {getRoleLabel(myRole)}
-            </span>
-
-            <div className="mt-6 mb-4">
-              {myRole === "mrwhite" ? (
-                <p
-                  className="text-3xl font-serif font-light text-white/90"
-                  style={{ textShadow: ROLE_GLOW.mrwhite }}
-                >
-                  ???
-                </p>
-              ) : (
-                <p
-                  className={cn(
-                    "text-4xl font-serif font-light",
-                    getRoleColor(myRole)
-                  )}
-                  style={{
-                    textShadow: myRole ? ROLE_GLOW[myRole] : undefined,
-                  }}
-                >
-                  {myWord}
-                </p>
-              )}
-            </div>
-
-            {myRole === "mrwhite" && (
-              <p className="text-xs text-white/30 font-sans mt-2">
-                Tu n&apos;as pas de mot. Ecoute les indices et bluff !
-              </p>
-            )}
-            {myRole === "undercover" && (
-              <p className="text-xs text-white/30 font-sans mt-2">
-                Ton mot est different des autres. Sois discret !
-              </p>
-            )}
-            {myRole === "civilian" && (
-              <p className="text-xs text-white/30 font-sans mt-2">
-                Decris ton mot sans te devoiler. Trouve l&apos;imposteur !
-              </p>
-            )}
-          </div>
-
-          <p className="text-xs text-white/20 font-sans mt-6 animate-pulse">
-            Memorise ton mot...
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  // ── Describe Phase ────────────────────────────────────────
-  if (state.phase === "describe") {
-    const isMyTurn = state.currentDescriberId === playerId;
-    const currentDescriber = state.players?.find(
-      (p) => p.id === state.currentDescriberId
-    );
-    const iAmAlive = me?.alive ?? false;
-
-    return (
-      <div className="relative flex flex-1 flex-col overflow-hidden p-4 sm:p-6">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_20%,rgba(80,216,255,0.14),transparent_35%),radial-gradient(circle_at_82%_70%,rgba(99,102,241,0.14),transparent_35%),linear-gradient(145deg,#040424,#05113a_42%,#01072a)]" />
-        <div className="relative mx-auto flex w-full max-w-2xl flex-1 flex-col gap-4 rounded-3xl border border-cyan-300/20 bg-black/35 p-4 shadow-[0_24px_70px_rgba(0,0,0,0.45)] backdrop-blur-xl sm:p-6" style={{ animation: "scaleIn 0.4s ease" }}>
-        {/* Header: round + timer */}
-        <div className="w-full">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs text-white/20 font-sans">
-              Manche {state.round}
-            </span>
-            <span
-              className={cn(
-                "text-sm font-mono font-bold",
-                isTimeLow ? "text-red-400" : "text-cyan-300"
-              )}
-            >
-              {state.timeLeft}s
-            </span>
-          </div>
-          <div className="w-full h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
-            <div
-              className={cn(
-                "h-full rounded-full transition-all duration-1000 ease-linear",
-                isTimeLow ? "bg-red-500" : "bg-gradient-to-r from-cyan-400 to-blue-400"
-              )}
-              style={{
-                width: `${((state.timeLeft ?? 0) / 30) * 100}%`,
-              }}
-            />
-          </div>
-        </div>
-
-        {/* Current describer */}
-        <div className="text-center">
-          {isMyTurn ? (
-            <h2
-              className="text-2xl font-serif font-light text-cyan-200"
-              style={{ textShadow: "0 0 30px rgba(80,216,255,0.35)" }}
-            >
-              C&apos;est ton tour !
-            </h2>
-          ) : (
-            <h2 className="text-xl font-serif font-light text-white/70">
-              <span className="text-cyan-300">{currentDescriber?.name}</span>{" "}
-              decrit son mot...
-            </h2>
-          )}
-          <p className="text-xs text-white/30 font-sans mt-1">
-            Donne un indice SANS dire ton mot
-          </p>
-        </div>
-
-        {/* Clue input (only for current describer) */}
-        {isMyTurn && iAmAlive && !clueSubmitted && (
-          <div className="flex gap-3 max-w-md mx-auto w-full">
-            <input
-              ref={clueInputRef}
-              type="text"
-              value={clueInput}
-              onChange={(e) => setClueInput(e.target.value)}
-              onKeyDown={handleClueKeyDown}
-              placeholder="Ton indice..."
-              autoFocus
-              autoComplete="off"
-              className="flex-1 px-4 py-3 rounded-xl border border-cyan-300/20 bg-white/[0.04] text-white font-sans text-sm placeholder:text-white/20 focus:outline-none focus:border-cyan-300/40 focus:bg-white/[0.06] transition-all"
-            />
-            <button
-              onClick={handleSubmitClue}
-              disabled={!clueInput.trim()}
-              className="px-6 py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 disabled:bg-white/[0.06] disabled:from-transparent disabled:to-transparent disabled:text-white/20 text-white font-sans text-sm font-medium transition-all shadow-[0_0_20px_rgba(80,216,255,0.2)]"
-            >
-              Envoyer
-            </button>
+function NavBar({ title, sub, right }: { title: string; sub?: string; right?: React.ReactNode }) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        {sub && (
+          <div style={{ fontFamily: "var(--f-mono, 'JetBrains Mono')", fontSize: 9, color: "#FFD23F", fontWeight: 800, letterSpacing: 2, textTransform: "uppercase" }}>
+            {sub}
           </div>
         )}
-        {isMyTurn && clueSubmitted && (
-          <div className="max-w-md mx-auto text-center">
-            <div className="px-4 py-3 rounded-xl border border-cyan-300/15 bg-cyan-300/[0.06]">
-              <p className="text-sm text-cyan-200/70 font-sans">
-                Indice envoye !
-              </p>
-            </div>
-          </div>
-        )}
-
-        {/* Clue history */}
-        <div className="flex-1 w-full flex flex-col min-h-0">
-          <span className="text-xs text-white/25 font-sans mb-2">
-            Indices donnes
-          </span>
-          <div
-            ref={clueListRef}
-            className="flex-1 overflow-y-auto space-y-1.5 scrollbar-thin"
-          >
-            {state.clueHistory?.length === 0 && (
-              <p className="text-xs text-white/15 font-sans text-center py-4">
-                Aucun indice pour le moment...
-              </p>
-            )}
-            {state.clueHistory?.map((clue, i) => (
-              <div
-                key={`${clue.playerId}-${clue.round}-${i}`}
-                className={cn(
-                  "flex items-baseline gap-2 px-3 py-2 rounded-xl",
-                  clue.playerId === playerId
-                    ? "bg-cyan-300/[0.06] border border-cyan-300/15"
-                    : "bg-white/[0.02] border border-white/[0.06]"
-                )}
-                style={{ animation: `fadeUp 0.3s ease ${i * 0.05}s both` }}
-              >
-                <span className="text-[10px] text-white/20 font-mono shrink-0">
-                  R{clue.round}
-                </span>
-                <span className="text-xs text-white/50 font-sans font-medium shrink-0">
-                  {clue.playerName}
-                </span>
-                <span className="text-sm text-white/80 font-sans">
-                  {clue.text}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Player grid */}
-        <div className="flex flex-wrap justify-center gap-2">
-          {state.players?.map((p, i) => {
-            const isDescribing = p.id === state.currentDescriberId;
-            return (
-              <div
-                key={p.id}
-                className={cn(
-                  "flex flex-col items-center gap-0.5 rounded-xl border px-3 py-2 min-w-[80px] transition-all",
-                  !p.alive && "opacity-30",
-                  isDescribing
-                    ? "border-cyan-300/40 bg-cyan-300/[0.08] shadow-[0_0_16px_rgba(80,216,255,0.15)]"
-                    : p.hasDescribed
-                      ? "border-white/[0.12] bg-white/[0.05]"
-                      : "border-white/[0.06] bg-white/[0.02]"
-                )}
-                style={{ animation: `fadeUp 0.3s ease ${i * 0.05}s both` }}
-              >
-                <span
-                  className={cn(
-                    "text-xs font-medium truncate max-w-[70px] font-sans",
-                    isDescribing ? "text-cyan-200" : "text-white/60"
-                  )}
-                >
-                  {p.name}
-                  {p.id === playerId && " (toi)"}
-                </span>
-                <span className="text-[10px] text-white/25 font-sans">
-                  {!p.alive
-                    ? "Elimine"
-                    : p.hasDescribed
-                      ? "Fait"
-                      : isDescribing
-                        ? "Parle..."
-                        : "En attente"}
-                </span>
-              </div>
-            );
-          })}
-        </div>
+        <div style={{ fontFamily: "var(--f-display, 'Bricolage Grotesque')", fontWeight: 800, fontSize: 22, color: "white", letterSpacing: -0.5, marginTop: 2 }}>
+          {title}
         </div>
       </div>
-    );
-  }
+      {right}
+    </div>
+  );
+}
 
-  // ── Vote Phase ────────────────────────────────────────────
-  if (state.phase === "vote") {
-    const iAmAlive = me?.alive ?? false;
+function Btn({
+  children,
+  tone = "primary",
+  disabled = false,
+  onClick,
+  full = true,
+  style = {},
+}: {
+  children: React.ReactNode;
+  tone?: "primary" | "danger" | "gold" | "ghost" | "mint";
+  disabled?: boolean;
+  onClick?: () => void;
+  full?: boolean;
+  style?: React.CSSProperties;
+}) {
+  const tones: Record<string, { bg: string; color: string; shadow: string }> = {
+    primary: { bg: "linear-gradient(180deg, #7A4EE8 0%, #4D26B6 100%)", color: "white", shadow: "0 12px 28px rgba(91,54,214,0.55), inset 0 1px 0 rgba(255,255,255,0.25)" },
+    danger:  { bg: "linear-gradient(180deg, #FF3EA5 0%, #B5176E 100%)", color: "white", shadow: "0 12px 28px rgba(255,62,165,0.55), inset 0 1px 0 rgba(255,255,255,0.25)" },
+    gold:    { bg: "linear-gradient(180deg, #FFD23F 0%, #C48800 100%)", color: "#1A0E2E", shadow: "0 12px 28px rgba(255,210,63,0.45), inset 0 1px 0 rgba(255,255,255,0.4)" },
+    ghost:   { bg: "rgba(255,255,255,0.08)", color: "white", shadow: "inset 0 0 0 1px rgba(255,255,255,0.10)" },
+    mint:    { bg: "linear-gradient(180deg, #3DDC97 0%, #189A66 100%)", color: "#0E0828", shadow: "0 12px 28px rgba(61,220,151,0.45), inset 0 1px 0 rgba(255,255,255,0.3)" },
+  };
+  const t = tones[tone];
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      style={{
+        width: full ? "100%" : "auto",
+        padding: "14px 18px",
+        borderRadius: 16,
+        border: "none",
+        cursor: disabled ? "not-allowed" : "pointer",
+        background: t.bg, color: t.color, boxShadow: t.shadow,
+        opacity: disabled ? 0.45 : 1,
+        fontWeight: 700, fontSize: 15, letterSpacing: -0.2,
+        display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8,
+        transition: "transform .12s",
+        ...style,
+      }}
+      onMouseDown={(e) => { if (!disabled) e.currentTarget.style.transform = "scale(0.97)"; }}
+      onMouseUp={(e) => { e.currentTarget.style.transform = "scale(1)"; }}
+    >
+      {children}
+    </button>
+  );
+}
 
-    return (
-      <div className="relative flex flex-1 flex-col overflow-hidden p-4 sm:p-6">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_20%,rgba(80,216,255,0.14),transparent_35%),radial-gradient(circle_at_82%_70%,rgba(99,102,241,0.14),transparent_35%),linear-gradient(145deg,#040424,#05113a_42%,#01072a)]" />
-        <div className="relative mx-auto flex w-full max-w-2xl flex-1 flex-col items-center gap-5 rounded-3xl border border-cyan-300/20 bg-black/35 p-4 shadow-[0_24px_70px_rgba(0,0,0,0.45)] backdrop-blur-xl sm:p-6" style={{ animation: "scaleIn 0.4s ease" }}>
-        {/* Header */}
-        <div className="w-full">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs text-white/20 font-sans">
-              Vote — Manche {state.round}
-            </span>
-            <span
-              className={cn(
-                "text-sm font-mono font-bold",
-                isTimeLow ? "text-red-400" : "text-cyan-300"
-              )}
-            >
-              {state.timeLeft}s
-            </span>
-          </div>
-          <div className="w-full h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
-            <div
-              className={cn(
-                "h-full rounded-full transition-all duration-1000 ease-linear",
-                isTimeLow ? "bg-red-500" : "bg-gradient-to-r from-cyan-400 to-blue-400"
-              )}
-              style={{
-                width: `${((state.timeLeft ?? 0) / 30) * 100}%`,
-              }}
-            />
-          </div>
+function Avatar({ name, id, size = 36, dead = false, ring = false }: { name: string; id: string; size?: number; dead?: boolean; ring?: boolean }) {
+  const c = colorOf(id);
+  const initial = name?.[0]?.toUpperCase() ?? "?";
+  return (
+    <div style={{ position: "relative", width: size, height: size, flexShrink: 0 }}>
+      {ring && (
+        <div style={{
+          position: "absolute", inset: -4, borderRadius: "50%",
+          border: "2px solid #FFD23F", animation: "uc-pulse 1.6s ease-out infinite",
+        }} />
+      )}
+      <div style={{
+        width: size, height: size, borderRadius: "50%",
+        background: `linear-gradient(135deg, ${c}, ${c}99)`,
+        display: "flex", alignItems: "center", justifyContent: "center",
+        color: "white", fontWeight: 800, fontSize: size * 0.42,
+        boxShadow: "inset 0 -3px 6px rgba(0,0,0,0.25), 0 4px 12px rgba(0,0,0,0.3)",
+        filter: dead ? "grayscale(1) brightness(0.55)" : "none",
+        position: "relative",
+      }}>
+        {initial}
+      </div>
+      {dead && (
+        <div style={{
+          position: "absolute", inset: 0, display: "flex",
+          alignItems: "center", justifyContent: "center",
+          color: "#FF3EA5", fontSize: size * 0.7, fontWeight: 900,
+          pointerEvents: "none",
+        }}>✕</div>
+      )}
+      <style>{`@keyframes uc-pulse { 0%{transform:scale(0.95);opacity:0.8;} 100%{transform:scale(1.5);opacity:0;} }`}</style>
+    </div>
+  );
+}
+
+// ===========================================================
+//  PHASE — WAITING (configuration par l'hôte avant start)
+// ===========================================================
+function PhaseWaiting({ state, sendAction, myId }: { state: UCState; sendAction: (a: Record<string, unknown>) => void; myId: string }) {
+  const isHost = state.players[0]?.id === myId; // approximation : l'hôte est le 1er
+  const cfg = state.config;
+  return (
+    <div>
+      <NavBar sub="Étape · Composition" title="Avant de commencer" right={<Tag color="#FF3EA5">RÔLES</Tag>} />
+
+      <div style={{
+        padding: 14, borderRadius: 18,
+        background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.10)",
+      }}>
+        <div style={{ fontSize: 12, color: "rgba(255,255,255,0.65)", marginBottom: 12, lineHeight: 1.5 }}>
+          <strong>Civils</strong> reçoivent le même mot. Les <strong style={{ color: "#FF3EA5" }}>Undercover</strong> ont un mot voisin. Si <strong style={{ color: "#FFD23F" }}>Mr. White</strong> est activé, il joue sans mot et tente de deviner s'il est démasqué.
         </div>
 
-        <div className="text-center">
-          <h2
-            className="text-2xl font-serif font-light text-white/90"
-            style={{ textShadow: "0 0 30px rgba(80,216,255,0.2)" }}
+        <Row label={`Undercover · ${cfg.undercoverCount}`}>
+          <Stepper
+            value={cfg.undercoverCount}
+            min={1}
+            max={3}
+            disabled={!isHost}
+            onChange={(v) => sendAction({ action: "configure", config: { undercoverCount: v, autoBalance: false } })}
+          />
+        </Row>
+        <Row label="Mr. White">
+          <Toggle
+            value={cfg.includeMrWhite}
+            disabled={!isHost}
+            onChange={(v) => sendAction({ action: "configure", config: { includeMrWhite: v, autoBalance: false } })}
+          />
+        </Row>
+        <Row label="Auto-équilibrage">
+          <Toggle
+            value={cfg.autoBalance}
+            disabled={!isHost}
+            onChange={(v) => sendAction({ action: "configure", config: { autoBalance: v } })}
+          />
+        </Row>
+      </div>
+
+      <div style={{ marginTop: 14, fontSize: 12, color: "rgba(255,255,255,0.45)", textAlign: "center" }}>
+        {isHost
+          ? "Tu es l'hôte. Lance la partie quand tout le monde est prêt."
+          : "En attente du lancement par l'hôte…"}
+      </div>
+
+      {isHost && (
+        <div style={{ marginTop: 14 }}>
+          <Btn
+            tone="primary"
+            disabled={state.players.length < 3}
+            onClick={() => sendAction({ action: "start-game" })}
           >
-            Qui est l&apos;imposteur ?
-          </h2>
-          <p className="text-xs text-white/30 font-sans mt-1">
-            Votez pour eliminer un joueur suspect
-          </p>
+            🕶️ Distribuer les rôles ({state.players.length}/3+ joueurs)
+          </Btn>
         </div>
+      )}
 
-        {/* Vote cards */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 max-w-lg w-full">
-          {alivePlayers
-            .filter((p) => p.id !== playerId)
-            .map((p, i) => {
-              const isSelected = voteTarget === p.id;
-              return (
-                <button
-                  key={p.id}
-                  onClick={() => {
-                    if (!voteConfirmed && iAmAlive) setVoteTarget(p.id);
-                  }}
-                  disabled={voteConfirmed || !iAmAlive}
-                  className={cn(
-                    "rounded-xl border p-4 text-center transition-all press-effect",
-                    isSelected
-                      ? "border-red-400/50 bg-red-400/10 shadow-[0_0_20px_rgba(239,68,68,0.15)]"
-                      : "border-white/[0.08] bg-white/[0.03] hover:border-cyan-300/30 hover:bg-cyan-300/[0.04]",
-                    (voteConfirmed || !iAmAlive) &&
-                      "opacity-50 cursor-not-allowed"
-                  )}
-                  style={{ animation: `fadeUp 0.3s ease ${i * 0.06}s both` }}
-                >
-                  <span
-                    className={cn(
-                      "text-sm font-sans font-medium",
-                      isSelected ? "text-red-400" : "text-white/70"
-                    )}
-                  >
-                    {p.name}
-                  </span>
-                </button>
-              );
-            })}
+      <div style={{ marginTop: 18 }}>
+        <div style={{ fontFamily: "var(--f-mono, 'JetBrains Mono')", fontSize: 9, color: "rgba(255,255,255,0.5)", letterSpacing: 2, textTransform: "uppercase", marginBottom: 8 }}>
+          Salon · {state.players.length} joueur{state.players.length > 1 ? "s" : ""}
         </div>
-
-        {/* Confirm vote */}
-        {iAmAlive && !voteConfirmed && voteTarget && (
-          <button
-            onClick={handleVote}
-            className="px-8 py-3 rounded-xl bg-gradient-to-r from-red-500 to-rose-500 hover:from-red-400 hover:to-rose-400 text-white font-sans text-sm font-medium transition-all shadow-[0_0_20px_rgba(239,68,68,0.25)] press-effect"
-            style={{ animation: "scaleIn 0.3s ease" }}
-          >
-            Confirmer le vote
-          </button>
-        )}
-        {voteConfirmed && (
-          <p className="text-xs text-white/20 font-sans animate-pulse">
-            Vote enregistre. En attente des autres...
-          </p>
-        )}
-
-        {/* Vote status */}
-        <div className="flex flex-wrap justify-center gap-2 mt-auto">
-          {alivePlayers.map((p, i) => (
-            <div
-              key={p.id}
-              className={cn(
-                "flex flex-col items-center gap-0.5 rounded-xl border px-3 py-2 min-w-[80px] transition-all",
-                p.hasVoted
-                  ? "border-cyan-300/20 bg-cyan-300/[0.06]"
-                  : "border-white/[0.06] bg-white/[0.02]"
-              )}
-              style={{ animation: `fadeUp 0.3s ease ${i * 0.05}s both` }}
-            >
-              <span className="text-xs text-white/60 font-sans truncate max-w-[70px]">
-                {p.name}
-                {p.id === playerId && " (toi)"}
-              </span>
-              <span className="text-[10px] text-white/25 font-sans">
-                {p.hasVoted ? "A vote" : "..."}
-              </span>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+          {state.players.map((p) => (
+            <div key={p.id} style={{
+              display: "flex", alignItems: "center", gap: 8,
+              padding: "6px 10px 6px 6px", borderRadius: 99,
+              background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.10)",
+            }}>
+              <Avatar id={p.id} name={p.name} size={24} />
+              <span style={{ fontSize: 12, fontWeight: 700 }}>{p.name}</span>
             </div>
           ))}
         </div>
+      </div>
+    </div>
+  );
+}
+
+function Row({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div style={{
+      display: "flex", justifyContent: "space-between", alignItems: "center",
+      padding: "10px 0", borderTop: "1px dashed rgba(255,255,255,0.08)",
+    }}>
+      <span style={{ fontSize: 13, color: "white", fontWeight: 600 }}>{label}</span>
+      {children}
+    </div>
+  );
+}
+
+function Stepper({ value, min, max, onChange, disabled }: { value: number; min: number; max: number; onChange: (v: number) => void; disabled?: boolean }) {
+  const btn: React.CSSProperties = {
+    width: 28, height: 28, borderRadius: 8, border: "none",
+    background: "rgba(255,255,255,0.06)", color: "white", fontWeight: 800, fontSize: 14,
+    cursor: disabled ? "not-allowed" : "pointer", opacity: disabled ? 0.4 : 1,
+  };
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+      <button style={btn} disabled={disabled || value <= min} onClick={() => onChange(value - 1)}>−</button>
+      <span style={{ width: 22, textAlign: "center", fontWeight: 800 }}>{value}</span>
+      <button style={btn} disabled={disabled || value >= max} onClick={() => onChange(value + 1)}>+</button>
+    </div>
+  );
+}
+
+function Toggle({ value, onChange, disabled }: { value: boolean; onChange: (v: boolean) => void; disabled?: boolean }) {
+  return (
+    <button
+      disabled={disabled}
+      onClick={() => onChange(!value)}
+      style={{
+        width: 46, height: 26, borderRadius: 99, border: "none",
+        background: value ? "#3DDC97" : "rgba(255,255,255,0.12)",
+        position: "relative", cursor: disabled ? "not-allowed" : "pointer", opacity: disabled ? 0.5 : 1,
+        transition: "background .15s",
+      }}
+    >
+      <span style={{
+        position: "absolute", top: 2, left: value ? 22 : 2,
+        width: 22, height: 22, borderRadius: "50%", background: "white",
+        transition: "left .15s",
+      }} />
+    </button>
+  );
+}
+
+// ===========================================================
+//  PHASE — WORD REVEAL (mot secret, dossier card)
+// ===========================================================
+function PhaseWordReveal({ state, sendAction }: { state: UCState; sendAction: (a: Record<string, unknown>) => void }) {
+  const role = state.myRole ?? "civil";
+  const word = state.myWord;
+  const color = ROLE_COLOR[role];
+  const label = ROLE_LABEL[role];
+
+  return (
+    <div>
+      <NavBar sub={`Manche ${state.round} · ton dossier`} title="Mot secret" right={<Tag color={color}>{label.toUpperCase()}</Tag>} />
+
+      {/* Carte dossier */}
+      <div style={{
+        position: "relative",
+        padding: "20px 18px 22px",
+        borderRadius: 20,
+        background: "linear-gradient(180deg, #FFF7E0 0%, #F5E2A8 100%)",
+        color: "#1A0E2E",
+        boxShadow: "0 22px 50px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.4)",
+        transform: "rotate(-0.6deg)", marginTop: 8,
+      }}>
+        <div style={{
+          position: "absolute", top: -12, left: "50%", transform: "translateX(-50%) rotate(-2deg)",
+          width: 96, height: 22,
+          background: "linear-gradient(180deg, rgba(255,210,63,0.55) 0%, rgba(255,210,63,0.35) 100%)",
+          boxShadow: "0 4px 10px rgba(0,0,0,0.15)",
+        }} />
+        <div style={{
+          display: "flex", justifyContent: "space-between", alignItems: "center",
+          paddingBottom: 10, marginBottom: 14,
+          borderBottom: "2px solid rgba(26,14,46,0.25)",
+        }}>
+          <div style={{ fontFamily: "var(--f-mono, 'JetBrains Mono')", fontSize: 9, fontWeight: 800, letterSpacing: 2 }}>
+            CONFIDENTIEL · NE PAS MONTRER
+          </div>
+          <div style={{ fontFamily: "var(--f-mono, 'JetBrains Mono')", fontSize: 9, fontWeight: 800, color: "#7A3008" }}>
+            CASE / MANCHE {state.round}
+          </div>
+        </div>
+
+        <div style={{ fontSize: 11, fontFamily: "var(--f-mono, 'JetBrains Mono')", color: "#7A3008", textTransform: "uppercase", letterSpacing: 1.5, fontWeight: 700 }}>
+          {role === "mrwhite" ? "Tu n'as pas de mot" : "Ton mot secret"}
+        </div>
+        <div style={{ fontFamily: "var(--f-display, 'Bricolage Grotesque')", fontSize: word ? 54 : 38, lineHeight: 1, letterSpacing: -2, color: "#1A0E2E", margin: "10px 0 6px", fontWeight: 900 }}>
+          {word ?? "?????"}
+        </div>
+        <div style={{ marginTop: 12, paddingTop: 10, borderTop: "1px dashed rgba(26,14,46,0.25)", fontSize: 11, fontStyle: "italic", color: "#3A2700", lineHeight: 1.4 }}>
+          {role === "civil" && "Trouve les autres civils en donnant un indice clair — sans aider l'undercover."}
+          {role === "undercover" && "Reste vague. Devine le mot des civils en écoutant. Bluff pour survivre."}
+          {role === "mrwhite" && "Tu n'as aucun mot. Bluff. Si tu es éliminé, tu auras une chance de deviner le mot des civils."}
         </div>
       </div>
-    );
-  }
 
-  // ── Mr. White Guess ───────────────────────────────────────
-  if (state.phase === "mrwhite-guess") {
-    const iAmMrWhite = state.myRole === "mrwhite";
-    const eliminatedPlayer = state.players?.find(
-      (p) => p.id === state.eliminatedPlayerId
-    );
+      <div style={{ marginTop: 16, fontSize: 11, color: "rgba(255,255,255,0.5)", textAlign: "center" }}>
+        L'écran passe automatiquement…
+      </div>
+      <div style={{ marginTop: 12 }}>
+        <Btn tone="gold" onClick={() => sendAction({ action: "ack-word" })}>J'ai mémorisé</Btn>
+      </div>
+    </div>
+  );
+}
 
-    return (
-      <div className="relative flex flex-1 flex-col overflow-hidden p-4 sm:p-6">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_20%,rgba(80,216,255,0.14),transparent_35%),radial-gradient(circle_at_82%_70%,rgba(99,102,241,0.14),transparent_35%),linear-gradient(145deg,#040424,#05113a_42%,#01072a)]" />
-        <div className="relative mx-auto flex w-full max-w-lg flex-1 flex-col items-center justify-center gap-6 rounded-3xl border border-cyan-300/20 bg-black/35 p-6 shadow-[0_24px_70px_rgba(0,0,0,0.45)] backdrop-blur-xl sm:p-8" style={{ animation: "scaleIn 0.4s ease" }}>
-        <div className="text-center">
-          <span className="text-xs text-white/20 font-sans uppercase tracking-widest" style={{ animation: "fadeUp 0.4s ease 0.1s both" }}>
-            Mr. White elimine !
-          </span>
-          <h2
-            className="text-3xl font-serif font-light text-white mt-3"
-            style={{ textShadow: ROLE_GLOW.mrwhite, animation: "scaleIn 0.5s ease 0.2s both" }}
-          >
-            {eliminatedPlayer?.name ?? "Mr. White"}
-          </h2>
-          <p className="text-sm text-white/40 font-sans mt-2">
-            Derniere chance : deviner le mot des civils !
-          </p>
+// ===========================================================
+//  PHASE — CLUE (tour de parole)
+// ===========================================================
+function PhaseClue({ state, sendAction, myId }: { state: UCState; sendAction: (a: Record<string, unknown>) => void; myId: string }) {
+  const [text, setText] = useState("");
+  const isMyTurn = state.currentSpeakerId === myId;
+  const speaker = state.players.find((p) => p.id === state.currentSpeakerId);
+  const me = state.players.find((p) => p.id === myId);
+  const dead = me?.isEliminated ?? false;
+
+  const submit = () => {
+    const v = text.trim();
+    if (!v) return;
+    sendAction({ action: "clue", clue: v });
+    setText("");
+  };
+
+  return (
+    <div>
+      <NavBar
+        sub={`Manche ${state.round} · indices`}
+        title="Tour de parole"
+        right={<Timer time={state.timeLeft} color="#FF3EA5" />}
+      />
+
+      {/* Spotlight */}
+      <div style={{
+        padding: 14, borderRadius: 18,
+        background: "linear-gradient(160deg, rgba(255,210,63,0.10) 0%, rgba(255,255,255,0.03) 100%)",
+        border: "1px solid rgba(255,210,63,0.30)",
+        display: "flex", gap: 12, alignItems: "center",
+      }}>
+        {speaker && <Avatar id={speaker.id} name={speaker.name} size={52} ring />}
+        <div style={{ flex: 1 }}>
+          <div style={{ fontFamily: "var(--f-mono, 'JetBrains Mono')", fontSize: 9, color: "#FFD23F", fontWeight: 800, letterSpacing: 2, textTransform: "uppercase" }}>
+            {isMyTurn ? "À toi de parler" : "Parle"}
+          </div>
+          <div style={{ fontFamily: "var(--f-display, 'Bricolage Grotesque')", fontSize: 22, color: "white", lineHeight: 1, marginTop: 4 }}>
+            {speaker?.name ?? "—"}
+          </div>
+          <div style={{ fontSize: 11, color: "rgba(255,255,255,0.55)", marginTop: 4 }}>
+            Donne un indice. Pas le mot. Pas un synonyme exact.
+          </div>
         </div>
+      </div>
 
-        {/* Timer */}
-        <span
-          className={cn(
-            "text-sm font-mono font-bold",
-            isTimeLow ? "text-red-400" : "text-cyan-300"
-          )}
-        >
-          {state.timeLeft}s
-        </span>
-
-        {iAmMrWhite ? (
-          <div className="flex gap-3 max-w-md w-full">
+      {/* Input ou attente */}
+      {isMyTurn && !dead ? (
+        <div style={{ marginTop: 14 }}>
+          <div style={{
+            display: "flex", gap: 8, padding: 6, borderRadius: 14,
+            background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.10)",
+          }}>
             <input
-              ref={guessInputRef}
-              type="text"
-              value={guessInput}
-              onChange={(e) => setGuessInput(e.target.value)}
-              onKeyDown={handleGuessKeyDown}
-              placeholder="Le mot des civils est..."
               autoFocus
-              autoComplete="off"
-              className="flex-1 px-4 py-3 rounded-xl border border-cyan-300/20 bg-white/[0.04] text-white font-sans text-sm placeholder:text-white/20 focus:outline-none focus:border-cyan-300/40 focus:bg-white/[0.06] transition-all"
-            />
-            <button
-              onClick={handleMrWhiteGuess}
-              disabled={!guessInput.trim()}
-              className="px-6 py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 disabled:bg-white/[0.06] disabled:from-transparent disabled:to-transparent disabled:text-white/20 text-white font-sans text-sm font-medium transition-all shadow-[0_0_20px_rgba(80,216,255,0.2)] press-effect"
-            >
-              Deviner
-            </button>
-          </div>
-        ) : (
-          <p className="text-xs text-white/20 font-sans animate-pulse">
-            Mr. White tente de deviner le mot...
-          </p>
-        )}
-        </div>
-      </div>
-    );
-  }
-
-  // ── Vote Result ───────────────────────────────────────────
-  if (state.phase === "vote-result") {
-    const eliminatedPlayer = state.players?.find(
-      (p) => p.id === state.eliminatedPlayerId
-    );
-    const noElimination = !state.eliminatedPlayerId;
-
-    return (
-      <div className="relative flex flex-1 flex-col overflow-hidden p-4 sm:p-6">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_20%,rgba(80,216,255,0.14),transparent_35%),radial-gradient(circle_at_82%_70%,rgba(99,102,241,0.14),transparent_35%),linear-gradient(145deg,#040424,#05113a_42%,#01072a)]" />
-        <div className="relative mx-auto flex w-full max-w-lg flex-1 flex-col items-center justify-center gap-6 rounded-3xl border border-cyan-300/20 bg-black/35 p-6 shadow-[0_24px_70px_rgba(0,0,0,0.45)] backdrop-blur-xl sm:p-8" style={{ animation: "scaleIn 0.4s ease" }}>
-        {noElimination ? (
-          <div className="text-center" style={{ animation: "fadeUp 0.5s ease" }}>
-            <h2 className="text-3xl font-serif font-light text-white/60">
-              Egalite !
-            </h2>
-            <p className="text-sm text-white/30 font-sans mt-2">
-              Personne n&apos;est elimine ce tour.
-            </p>
-          </div>
-        ) : (
-          <div className="text-center" style={{ animation: "fadeUp 0.5s ease" }}>
-            <span className="text-xs text-white/20 font-sans uppercase tracking-widest">
-              Elimine
-            </span>
-            <h2
-              className={cn(
-                "text-3xl font-serif font-light mt-3",
-                state.eliminatedRole
-                  ? ROLE_COLORS[state.eliminatedRole]
-                  : "text-white/90"
-              )}
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && submit()}
+              placeholder="Ton indice…"
+              maxLength={28}
               style={{
-                textShadow: state.eliminatedRole
-                  ? ROLE_GLOW[state.eliminatedRole]
-                  : undefined,
-                animation: "scaleIn 0.5s ease 0.2s both",
+                flex: 1, background: "transparent", border: "none", color: "white",
+                fontSize: 16, padding: "10px 10px", outline: "none", fontWeight: 600,
               }}
-            >
-              {eliminatedPlayer?.name}
-            </h2>
-            <div
-              className={cn(
-                "inline-block mt-3 px-4 py-1.5 rounded-full border text-sm font-sans font-medium",
-                state.eliminatedRole ? ROLE_BG[state.eliminatedRole] : "",
-                getRoleColor(state.eliminatedRole)
-              )}
-              style={{ animation: "scaleIn 0.4s ease 0.35s both" }}
-            >
-              {getRoleLabel(state.eliminatedRole)}
-            </div>
-          </div>
-        )}
-
-        {/* Mr. White guess result */}
-        {state.mrWhiteGuessCorrect !== null && (
-          <div
-            className={cn(
-              "rounded-xl border p-4 text-center max-w-sm",
-              state.mrWhiteGuessCorrect
-                ? "border-emerald-400/30 bg-emerald-400/5"
-                : "border-red-400/30 bg-red-400/5"
-            )}
-            style={{ animation: "scaleIn 0.4s ease 0.3s both" }}
-          >
-            {state.mrWhiteGuessCorrect ? (
-              <>
-                <p className="text-lg text-emerald-400 font-serif">
-                  Mr. White a devine le mot !
-                </p>
-                <p className="text-xs text-emerald-400/60 font-sans mt-1">
-                  Victoire de Mr. White
-                </p>
-              </>
-            ) : (
-              <>
-                <p className="text-lg text-red-400 font-serif">
-                  Mauvaise reponse !
-                </p>
-                <p className="text-xs text-red-400/60 font-sans mt-1">
-                  Mr. White n&apos;a pas trouve le mot
-                </p>
-              </>
-            )}
-          </div>
-        )}
-
-        <p className="text-xs text-white/20 font-sans animate-pulse">
-          La partie continue...
-        </p>
-        </div>
-      </div>
-    );
-  }
-
-  // ── Game Over ─────────────────────────────────────────────
-  if (state.phase === "game-over") {
-    const winnerLabel =
-      state.winners === "civilian"
-        ? "Les Civils"
-        : state.winners === "mrwhite"
-          ? "Mr. White"
-          : "Les Undercovers";
-    const winnerColor =
-      state.winners === "civilian"
-        ? "text-blue-400"
-        : state.winners === "mrwhite"
-          ? "text-white"
-          : "text-red-400";
-    const winnerGlow = state.winners ? ROLE_GLOW[state.winners] : undefined;
-
-    return (
-      <div className="relative flex flex-1 flex-col overflow-hidden p-4 sm:p-6">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_20%,rgba(80,216,255,0.14),transparent_35%),radial-gradient(circle_at_82%_70%,rgba(99,102,241,0.14),transparent_35%),linear-gradient(145deg,#040424,#05113a_42%,#01072a)]" />
-        <div className="relative mx-auto flex w-full max-w-lg flex-1 flex-col items-center justify-center gap-6 rounded-3xl border border-cyan-300/20 bg-black/35 p-6 shadow-[0_24px_70px_rgba(0,0,0,0.45)] backdrop-blur-xl sm:p-8" style={{ animation: "scaleIn 0.4s ease" }}>
-        <div className="text-center" style={{ animation: "fadeUp 0.5s ease" }}>
-          <span className="text-xs text-white/20 font-sans uppercase tracking-widest">
-            Fin de la partie
-          </span>
-          <h2
-            className={cn("text-4xl font-serif font-light mt-3", winnerColor)}
-            style={{ textShadow: winnerGlow, animation: "scaleIn 0.6s cubic-bezier(0.16,1,0.3,1) 0.2s both" }}
-          >
-            {winnerLabel} gagnent !
-          </h2>
-        </div>
-
-        {/* Word reveal */}
-        <div className="flex gap-6 mt-2" style={{ animation: "fadeUp 0.4s ease 0.3s both" }}>
-          <div className="text-center rounded-xl border border-blue-400/20 bg-blue-400/[0.06] px-4 py-3">
-            <span className="text-[10px] text-blue-400/60 font-sans uppercase tracking-wider">
-              Mot civil
-            </span>
-            <p className="text-xl font-serif text-blue-400 mt-1">
-              {state.civilianWord}
-            </p>
-          </div>
-          <div className="text-center rounded-xl border border-red-400/20 bg-red-400/[0.06] px-4 py-3">
-            <span className="text-[10px] text-red-400/60 font-sans uppercase tracking-wider">
-              Mot undercover
-            </span>
-            <p className="text-xl font-serif text-red-400 mt-1">
-              {state.undercoverWord}
-            </p>
+            />
+            <Btn tone="gold" full={false} onClick={submit} style={{ padding: "10px 16px" }}>
+              Envoyer →
+            </Btn>
           </div>
         </div>
+      ) : (
+        <div style={{ marginTop: 14, padding: "10px 12px", borderRadius: 12, background: "rgba(0,0,0,0.35)", border: "1px dashed rgba(255,255,255,0.12)", fontSize: 12, color: "rgba(255,255,255,0.6)", textAlign: "center" }}>
+          {dead ? "Tu as été éliminé — observe la partie." : `En attente de ${speaker?.name ?? "…"}.`}
+        </div>
+      )}
 
-        {/* All players with roles revealed */}
-        <div className="w-full max-w-md space-y-2 mt-2">
-          {state.players?.map((p, i) => {
-            const role = p.role;
+      {/* Board des indices */}
+      <div style={{ marginTop: 18 }}>
+        <div style={{ fontFamily: "var(--f-mono, 'JetBrains Mono')", fontSize: 9, color: "rgba(255,255,255,0.5)", letterSpacing: 2, textTransform: "uppercase", marginBottom: 8 }}>
+          Tableau d'indices
+        </div>
+        <div style={{ padding: 8, borderRadius: 16, background: "rgba(0,0,0,0.32)", border: "1px dashed rgba(255,255,255,0.12)", display: "flex", flexDirection: "column", gap: 4 }}>
+          {state.players.map((p) => {
+            const isSpeak = p.id === state.currentSpeakerId;
             return (
-              <div
-                key={p.id}
-                className={cn(
-                  "flex items-center justify-between rounded-xl border p-3 transition-all",
-                  role
-                    ? ROLE_BG[role]
-                    : "border-white/[0.06] bg-white/[0.03]",
-                  !p.alive && "opacity-60"
-                )}
-                style={{ animation: `fadeUp 0.3s ease ${0.35 + i * 0.06}s both` }}
-              >
-                <div className="flex items-center gap-3">
-                  <span
-                    className={cn(
-                      "text-sm font-sans font-medium",
-                      role ? ROLE_COLORS[role] : "text-white/60"
-                    )}
-                  >
-                    {p.name}
-                    {p.id === playerId && " (toi)"}
-                  </span>
-                  {!p.alive && (
-                    <span className="text-[10px] text-white/20 font-sans">
-                      elimine
+              <div key={p.id} style={{
+                display: "flex", alignItems: "center", gap: 10,
+                padding: "6px 8px", borderRadius: 10,
+                background: isSpeak ? "rgba(255,210,63,0.12)" : "transparent",
+                border: isSpeak ? "1px solid rgba(255,210,63,0.45)" : "1px solid transparent",
+                opacity: p.isEliminated ? 0.4 : 1,
+              }}>
+                <Avatar id={p.id} name={p.name} size={28} dead={p.isEliminated} />
+                <span style={{ fontSize: 12, fontWeight: 700, color: p.isEliminated ? "rgba(255,255,255,0.4)" : "white", width: 70, flexShrink: 0 }}>
+                  {p.name}
+                </span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  {p.clue ? (
+                    <span style={{ fontSize: 12, color: "white", padding: "3px 9px", borderRadius: 99, background: "rgba(255,255,255,0.06)", fontWeight: 600 }}>
+                      « {p.clue} »
+                    </span>
+                  ) : (
+                    <span style={{ fontSize: 11, color: "rgba(255,255,255,0.45)", fontStyle: "italic" }}>
+                      {isSpeak ? "…en train de parler" : "en attente"}
                     </span>
                   )}
                 </div>
-                <span
-                  className={cn(
-                    "text-xs font-sans font-medium uppercase tracking-wider",
-                    getRoleColor(role)
-                  )}
-                >
-                  {getRoleLabel(role)}
-                </span>
+                {p.hasClue && !p.isEliminated && <span style={{ color: "#3DDC97", fontSize: 12 }}>✓</span>}
               </div>
             );
           })}
         </div>
+      </div>
+    </div>
+  );
+}
 
-        <p className="text-xs text-white/20 font-sans animate-pulse mt-4">
-          Retour au lobby...
-        </p>
+// ===========================================================
+//  PHASE — VOTE
+// ===========================================================
+function PhaseVote({ state, sendAction, myId }: { state: UCState; sendAction: (a: Record<string, unknown>) => void; myId: string }) {
+  const [picked, setPicked] = useState<string | null>(null);
+  const me = state.players.find((p) => p.id === myId);
+  const dead = me?.isEliminated ?? false;
+  const alive = state.players.filter((p) => !p.isEliminated);
+  const voted = alive.filter((p) => p.hasVoted).length;
+
+  const cast = () => { if (picked) sendAction({ action: "vote", targetId: picked }); };
+
+  return (
+    <div>
+      <NavBar
+        sub={`Manche ${state.round} · vote`}
+        title="Qui éliminer ?"
+        right={<Timer time={state.timeLeft} color="#FFD23F" />}
+      />
+
+      <div style={{ padding: "8px 12px", borderRadius: 12, background: "rgba(0,0,0,0.35)", border: "1px dashed rgba(255,255,255,0.12)", marginBottom: 12, fontSize: 11, color: "rgba(255,255,255,0.65)" }}>
+        Choisis qui doit sortir. Tu ne peux pas voter pour toi-même.
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+        {alive.map((p) => {
+          const isMe = p.id === myId;
+          const isPicked = picked === p.id;
+          const tally = state.voteTally?.[p.id] ?? 0;
+          return (
+            <button
+              key={p.id}
+              disabled={isMe || dead}
+              onClick={() => !isMe && setPicked(p.id)}
+              style={{
+                position: "relative", padding: "14px 12px 12px", borderRadius: 18,
+                background: isPicked
+                  ? "linear-gradient(160deg, rgba(255,62,165,0.3), rgba(0,0,0,0.4))"
+                  : "rgba(255,255,255,0.04)",
+                border: isPicked ? "2px solid #FF3EA5" : "1px solid rgba(255,255,255,0.10)",
+                boxShadow: isPicked ? "0 16px 36px rgba(255,62,165,0.35)" : "0 4px 10px rgba(0,0,0,0.3)",
+                opacity: isMe ? 0.5 : 1,
+                cursor: isMe || dead ? "not-allowed" : "pointer",
+                color: "white",
+              }}
+            >
+              {isMe && (
+                <span style={{ position: "absolute", top: 8, left: 8, padding: "1px 6px", borderRadius: 99, background: "#FFD23F", color: "#1A0E2E", fontSize: 8, fontWeight: 900 }}>
+                  TOI
+                </span>
+              )}
+              {tally > 0 && (
+                <span style={{ position: "absolute", top: 8, right: 8, padding: "1px 7px", borderRadius: 99, background: "#FF3EA5", color: "white", fontSize: 9, fontWeight: 800 }}>
+                  {tally} vote{tally > 1 ? "s" : ""}
+                </span>
+              )}
+              <div style={{ display: "flex", justifyContent: "center", marginTop: 4 }}>
+                <Avatar id={p.id} name={p.name} size={52} />
+              </div>
+              <div style={{ fontFamily: "var(--f-display, 'Bricolage Grotesque')", fontSize: 16, color: "white", textAlign: "center", marginTop: 8, lineHeight: 1 }}>
+                {p.name}
+              </div>
+              {p.clue && (
+                <div style={{ marginTop: 8, padding: "6px 8px", borderRadius: 8, background: "rgba(0,0,0,0.35)", border: "1px solid rgba(255,255,255,0.06)", fontSize: 10, color: "rgba(255,255,255,0.65)", textAlign: "center", fontStyle: "italic", minHeight: 28, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  « {p.clue} »
+                </div>
+              )}
+              {isPicked && (
+                <div style={{ marginTop: 8, padding: "5px 0", borderRadius: 8, background: "#FF3EA5", textAlign: "center", fontSize: 11, fontWeight: 800, letterSpacing: 0.4 }}>
+                  ✕ ton choix
+                </div>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      <div style={{ marginTop: 14, marginBottom: 10 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+          <span style={{ fontSize: 11, color: "rgba(255,255,255,0.5)", textTransform: "uppercase", letterSpacing: 1, fontWeight: 700 }}>
+            Participation
+          </span>
+          <span style={{ fontFamily: "var(--f-mono, 'JetBrains Mono')", fontSize: 11, fontWeight: 800 }}>
+            {voted} / {alive.length}
+          </span>
+        </div>
+        <div style={{ height: 6, borderRadius: 99, background: "rgba(255,255,255,0.08)", overflow: "hidden" }}>
+          <div style={{
+            height: "100%",
+            width: `${alive.length ? (voted / alive.length) * 100 : 0}%`,
+            background: "linear-gradient(90deg, #FF3EA5, #FFD23F)",
+            borderRadius: 99, transition: "width .25s",
+          }} />
         </div>
       </div>
-    );
-  }
 
-  // ── Fallback ──────────────────────────────────────────────
-  return (
-    <div className="flex flex-1 items-center justify-center">
-      {error && <p className="text-sm text-red-400 font-sans">{error}</p>}
+      <Btn tone="danger" disabled={!picked || dead || me?.hasVoted} onClick={cast}>
+        {me?.hasVoted ? "Vote envoyé · attends les autres" : "Confirmer le vote"}
+      </Btn>
     </div>
+  );
+}
+
+// ===========================================================
+//  PHASE — VOTE RESULT / ELIMINATION (also round-end)
+// ===========================================================
+function PhaseEliminate({ state }: { state: UCState }) {
+  const elim = state.players.find((p) => p.id === state.eliminatedThisRound);
+  const role = elim?.role ?? state.eliminatedRole;
+  const color = role ? ROLE_COLOR[role] : "#FFD23F";
+
+  return (
+    <div>
+      <NavBar sub={`Verdict · manche ${state.round}`} title={elim ? "Démasqué !" : "Égalité — personne d'éliminé"} right={<Tag color={color}>{role ? ROLE_LABEL[role].toUpperCase() : "—"}</Tag>} />
+
+      {elim ? (
+        <>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "12px 0 20px" }}>
+            <Avatar id={elim.id} name={elim.name} size={110} dead />
+            <div style={{
+              marginTop: -10, transform: "rotate(-10deg)",
+              border: `3px solid ${color}`, padding: "4px 14px", borderRadius: 6,
+              fontFamily: "var(--f-display, 'Bricolage Grotesque')", fontWeight: 900,
+              fontSize: 18, letterSpacing: 3, color, background: "rgba(0,0,0,0.2)",
+            }}>
+              ÉLIMINÉ
+            </div>
+            <div style={{ fontFamily: "var(--f-display, 'Bricolage Grotesque')", fontSize: 28, marginTop: 12 }}>{elim.name}</div>
+          </div>
+
+          <div style={{
+            padding: 14, borderRadius: 18,
+            background: `linear-gradient(160deg, ${color}26, rgba(0,0,0,0.45))`,
+            border: `1px solid ${color}55`,
+          }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div>
+                <div style={{ fontSize: 10, color: "rgba(255,255,255,0.55)", textTransform: "uppercase", letterSpacing: 1, fontWeight: 700 }}>Son mot</div>
+                <div style={{ fontFamily: "var(--f-display, 'Bricolage Grotesque')", fontSize: 24, color: color, marginTop: 2, fontWeight: 800 }}>
+                  {elim.word ?? "Aucun mot"}
+                </div>
+              </div>
+              <div style={{ textAlign: "right" }}>
+                <div style={{ fontSize: 10, color: "rgba(255,255,255,0.55)", textTransform: "uppercase", letterSpacing: 1, fontWeight: 700 }}>Rôle</div>
+                <div style={{ fontFamily: "var(--f-display, 'Bricolage Grotesque')", fontSize: 20, color: "white", marginTop: 2 }}>
+                  {role ? ROLE_LABEL[role] : "—"}
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
+      ) : (
+        <div style={{ textAlign: "center", padding: 40, color: "rgba(255,255,255,0.6)" }}>
+          Pas de majorité — personne ne sort cette manche.
+        </div>
+      )}
+
+      <div style={{ marginTop: 18, fontSize: 11, color: "rgba(255,255,255,0.5)", textAlign: "center" }}>
+        Préparation de la suite…
+      </div>
+    </div>
+  );
+}
+
+// ===========================================================
+//  PHASE — MR WHITE GUESS
+// ===========================================================
+function PhaseMrWhiteGuess({ state, sendAction, myId }: { state: UCState; sendAction: (a: Record<string, unknown>) => void; myId: string }) {
+  const [text, setText] = useState("");
+  const isMe = state.eliminatedThisRound === myId;
+  const target = state.players.find((p) => p.id === state.eliminatedThisRound);
+
+  return (
+    <div>
+      <NavBar sub="Coup du destin" title="Mr. White devine" right={<Timer time={state.timeLeft} color="#FFD23F" />} />
+
+      <div style={{
+        padding: 16, borderRadius: 18,
+        background: "linear-gradient(160deg, rgba(255,210,63,0.18) 0%, rgba(0,0,0,0.45) 100%)",
+        border: "1px solid rgba(255,210,63,0.40)",
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          {target && <Avatar id={target.id} name={target.name} size={56} />}
+          <div>
+            <div style={{ fontSize: 11, color: "#FFD23F", textTransform: "uppercase", letterSpacing: 2, fontWeight: 800 }}>Mr. White éliminé</div>
+            <div style={{ fontFamily: "var(--f-display, 'Bricolage Grotesque')", fontSize: 22 }}>{target?.name}</div>
+          </div>
+        </div>
+        <div style={{ marginTop: 14, fontSize: 13, color: "rgba(255,255,255,0.8)", lineHeight: 1.5 }}>
+          {isMe
+            ? "Une dernière chance. Tape le mot des civils pour gagner seul."
+            : "Mr. White a une seule chance. S'il tape le mot, il vole la victoire."}
+        </div>
+      </div>
+
+      {isMe && (
+        <div style={{ marginTop: 14 }}>
+          <div style={{
+            display: "flex", gap: 8, padding: 6, borderRadius: 14,
+            background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.10)",
+          }}>
+            <input
+              autoFocus
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && text.trim() && sendAction({ action: "mrwhite-guess", guess: text.trim() })}
+              placeholder="Ton pari…"
+              style={{ flex: 1, background: "transparent", border: "none", color: "white", fontSize: 18, padding: "10px 10px", outline: "none", fontWeight: 700, letterSpacing: 0.5 }}
+            />
+            <Btn tone="gold" full={false} onClick={() => text.trim() && sendAction({ action: "mrwhite-guess", guess: text.trim() })} style={{ padding: "10px 16px" }}>
+              Parier
+            </Btn>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ===========================================================
+//  PHASE — GAME OVER
+// ===========================================================
+function PhaseGameOver({ state, onReturnToLobby }: { state: UCState; onReturnToLobby?: () => void }) {
+  const reason = state.endReason;
+  const title =
+    reason === "civils-win" ? "Civils victorieux" :
+    reason === "undercover-wins" ? "Undercover gagne" :
+    reason === "mrwhite-wins" ? "Mr. White triomphe" : "Fin de partie";
+  const accent =
+    reason === "civils-win" ? "#3DDC97" :
+    reason === "undercover-wins" ? "#FF3EA5" :
+    reason === "mrwhite-wins" ? "#FFD23F" : "#FFD23F";
+
+  const sorted = useMemo(() => [...state.players].sort((a, b) => b.score - a.score), [state.players]);
+
+  return (
+    <div>
+      <NavBar sub={`Fin · ${state.round} manche${state.round > 1 ? "s" : ""}`} title={title} right={<Tag color={accent}>VICTOIRE</Tag>} />
+
+      <div style={{
+        padding: 14, borderRadius: 16,
+        background: "rgba(0,0,0,0.35)", border: "1px solid rgba(255,255,255,0.10)",
+        display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14,
+      }}>
+        <div>
+          <div style={{ fontSize: 10, color: "rgba(255,255,255,0.55)", textTransform: "uppercase", letterSpacing: 1.5, fontWeight: 700 }}>Mot civils</div>
+          <div style={{ fontFamily: "var(--f-display, 'Bricolage Grotesque')", fontSize: 20, color: "#3DDC97" }}>{state.civilWord}</div>
+        </div>
+        <div style={{ color: "rgba(255,255,255,0.4)", fontWeight: 800 }}>vs</div>
+        <div style={{ textAlign: "right" }}>
+          <div style={{ fontSize: 10, color: "rgba(255,255,255,0.55)", textTransform: "uppercase", letterSpacing: 1.5, fontWeight: 700 }}>Mot undercover</div>
+          <div style={{ fontFamily: "var(--f-display, 'Bricolage Grotesque')", fontSize: 20, color: "#FF3EA5" }}>{state.undercoverWord}</div>
+        </div>
+      </div>
+
+      <div style={{ fontFamily: "var(--f-mono, 'JetBrains Mono')", fontSize: 9, color: "rgba(255,255,255,0.5)", letterSpacing: 2, textTransform: "uppercase", marginBottom: 8 }}>
+        Rôles révélés · classement
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+        {sorted.map((p, i) => {
+          const r = p.role ?? "civil";
+          return (
+            <div key={p.id} style={{
+              display: "flex", alignItems: "center", gap: 10,
+              padding: "8px 10px", borderRadius: 12,
+              background: i === 0 ? "rgba(255,210,63,0.12)" : "rgba(255,255,255,0.04)",
+              border: `1px solid ${i === 0 ? "rgba(255,210,63,0.30)" : "rgba(255,255,255,0.08)"}`,
+            }}>
+              <span style={{ width: 18, fontFamily: "var(--f-mono, 'JetBrains Mono')", fontWeight: 800, fontSize: 12, color: i === 0 ? "#FFD23F" : "rgba(255,255,255,0.55)" }}>
+                #{i + 1}
+              </span>
+              <Avatar id={p.id} name={p.name} size={30} dead={p.isEliminated} />
+              <span style={{ flex: 1, fontWeight: 700, fontSize: 13 }}>{p.name}</span>
+              <span style={{
+                fontSize: 9, padding: "2px 7px", borderRadius: 99,
+                background: `${ROLE_COLOR[r]}26`, color: ROLE_COLOR[r],
+                fontWeight: 800, textTransform: "uppercase", letterSpacing: 0.4,
+              }}>
+                {ROLE_LABEL[r]}
+              </span>
+              <span style={{ fontFamily: "var(--f-mono, 'JetBrains Mono')", fontWeight: 800, fontSize: 13 }}>
+                {p.score}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+
+      <div style={{ marginTop: 18, display: "flex", gap: 8 }}>
+        {onReturnToLobby && (
+          <Btn tone="ghost" full={false} style={{ flex: 1 }} onClick={onReturnToLobby}>
+            Lobby
+          </Btn>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ===========================================================
+//  Mini-composants
+// ===========================================================
+function Timer({ time, color }: { time: number; color: string }) {
+  const mm = Math.floor(Math.max(0, time) / 60).toString().padStart(2, "0");
+  const ss = (Math.max(0, time) % 60).toString().padStart(2, "0");
+  return (
+    <span style={{
+      display: "inline-flex", alignItems: "center", gap: 6,
+      padding: "5px 10px", borderRadius: 99,
+      background: `${color}22`, border: `1px solid ${color}55`,
+      fontFamily: "var(--f-mono, 'JetBrains Mono')", fontWeight: 800,
+      fontSize: 11, letterSpacing: 1, color,
+    }}>
+      <span style={{ width: 6, height: 6, borderRadius: "50%", background: color }} />
+      {mm}:{ss}
+    </span>
   );
 }

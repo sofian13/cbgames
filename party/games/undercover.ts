@@ -2,1138 +2,634 @@ import type { Connection } from "partykit/server";
 import { BaseGame } from "./base-game";
 import type { GameRanking } from "../shared/types";
 
-// -- Config --------------------------------------------------
-const REVEAL_DURATION = 5000;
-const DESCRIBE_TIMEOUT = 30000;
-const VOTE_TIMEOUT = 30000;
-const RESULT_DISPLAY_TIME = 4000;
-const MR_WHITE_GUESS_TIMEOUT = 20000;
-const GAME_END_DISPLAY_TIME = 5000;
-const LOCAL_BOT_TARGET_PLAYERS = 4;
-const BOT_NAME_POOL = [
-  "Bot Alpha",
-  "Bot Bravo",
-  "Bot Charlie",
-  "Bot Delta",
-  "Bot Echo",
-  "Bot Foxtrot",
+// ===========================================================
+//  UNDERCOVER — Server logic
+//  Civils vs Undercover (vs Mr. White optionnel)
+//  Hébergé sur PartyKit, hérite de BaseGame.
+// ===========================================================
+
+// -- Config ------------------------------------------------
+const WORD_REVEAL_TIME  = 6_000;   // ms — temps de mémorisation auto
+const CLUE_TIME         = 25;      // sec par joueur pendant la phase d'indices
+const VOTE_TIME         = 30;      // sec total de vote
+const VOTE_RESULT_TIME  = 4_500;   // ms pour le tampon "éliminé"
+const GUESS_TIME        = 20;      // sec pour Mr. White (deviner le mot civil)
+const NEXT_ROUND_TIME   = 3_000;   // ms entre les manches
+
+// -- Word bank (paires civil / undercover) ------------------
+const WORD_PAIRS: [string, string][] = [
+  // Bouffe
+  ["Pizza", "Pâtes"], ["Hamburger", "Sandwich"], ["Sushi", "Maki"],
+  ["Croissant", "Brioche"], ["Crêpe", "Galette"], ["Kebab", "Tacos"],
+  ["Raclette", "Fondue"], ["Tiramisu", "Mousse au chocolat"], ["Café", "Thé"],
+  ["Bière", "Vin"], ["Vodka", "Rhum"], ["Coca", "Pepsi"],
+  // Lieux
+  ["Plage", "Piscine"], ["Montagne", "Colline"], ["Forêt", "Jungle"],
+  ["Hôpital", "Pharmacie"], ["Cinéma", "Théâtre"], ["Bibliothèque", "Librairie"],
+  ["Aéroport", "Gare"], ["Restaurant", "Cafétéria"], ["Hôtel", "Auberge"],
+  // Sports
+  ["Football", "Rugby"], ["Tennis", "Badminton"], ["Ski", "Snowboard"],
+  ["Boxe", "Karaté"], ["Natation", "Plongée"], ["Cyclisme", "Course à pied"],
+  // Animaux
+  ["Chien", "Chat"], ["Lion", "Tigre"], ["Aigle", "Faucon"],
+  ["Dauphin", "Requin"], ["Vache", "Chèvre"], ["Cheval", "Âne"],
+  ["Lapin", "Hamster"],
+  // Films / pop culture
+  ["Batman", "Superman"], ["Star Wars", "Star Trek"], ["Naruto", "One Piece"],
+  ["Harry Potter", "Le Seigneur des Anneaux"], ["Titanic", "Avatar"],
+  ["Mario", "Sonic"], ["Pokemon", "Digimon"],
+  // Objets
+  ["Voiture", "Moto"], ["Train", "Bus"], ["Avion", "Hélicoptère"],
+  ["Téléphone", "Tablette"], ["Ordinateur", "Console"], ["Livre", "Magazine"],
+  ["Stylo", "Crayon"], ["Lunettes", "Loupe"], ["Montre", "Bracelet"],
+  // Nature / temps
+  ["Soleil", "Lune"], ["Pluie", "Neige"], ["Été", "Hiver"],
+  ["Printemps", "Automne"], ["Mer", "Lac"], ["Volcan", "Geyser"],
+  // Evenements
+  ["Mariage", "Anniversaire"], ["Noël", "Pâques"], ["Halloween", "Carnaval"],
+  ["Festival", "Concert"], ["Enterrement", "Baptême"],
+  // Métiers
+  ["Médecin", "Infirmier"], ["Boulanger", "Pâtissier"], ["Avocat", "Juge"],
+  ["Pompier", "Policier"], ["Pilote", "Astronaute"], ["Coiffeur", "Barbier"],
+  ["Professeur", "Directeur"], ["Plombier", "Électricien"],
 ];
 
-// -- Word Pairs (70 pairs) -----------------------------------
-const CLASSIC_WORD_PAIRS: [string, string][] = [
-  ["Chat", "Chien"],
-  ["Coca-Cola", "Pepsi"],
-  ["Netflix", "YouTube"],
-  ["Pizza", "Burger"],
-  ["iPhone", "Samsung"],
-  ["Paris", "Londres"],
-  ["Football", "Rugby"],
-  ["Chocolat", "Caramel"],
-  ["Avion", "Helicoptere"],
-  ["Guitare", "Piano"],
-  ["Batman", "Superman"],
-  ["McDonald's", "Burger King"],
-  ["Instagram", "TikTok"],
-  ["Plage", "Piscine"],
-  ["Voiture", "Moto"],
-  ["Soleil", "Lune"],
-  ["Dentiste", "Medecin"],
-  ["Cinema", "Theatre"],
-  ["Cafe", "The"],
-  ["Montagne", "Colline"],
-  ["Pomme", "Poire"],
-  ["Ski", "Snowboard"],
-  ["Chemise", "T-shirt"],
-  ["Biere", "Vin"],
-  ["Violon", "Violoncelle"],
-  ["Manga", "Comics"],
-  ["Croissant", "Pain au chocolat"],
-  ["Sushi", "Maki"],
-  ["Tennis", "Badminton"],
-  ["Lion", "Tigre"],
-  ["Rose", "Tulipe"],
-  ["Pluie", "Neige"],
-  ["Train", "Metro"],
-  ["Livre", "Magazine"],
-  ["Canape", "Fauteuil"],
-  ["Email", "SMS"],
-  ["Gateau", "Tarte"],
-  ["Google", "Bing"],
-  ["Stylo", "Crayon"],
-  ["Fourchette", "Cuillere"],
-  ["Basket", "Running"],
-  ["Chapeau", "Casquette"],
-  ["Araignee", "Scorpion"],
-  ["Mer", "Ocean"],
-  ["Fromage", "Beurre"],
-  ["Radio", "Podcast"],
-  ["Aquarium", "Zoo"],
-  ["Chaussettes", "Chaussures"],
-  ["Marteau", "Tournevis"],
-  ["Fraise", "Framboise"],
-  ["Souris", "Rat"],
-  ["Crocodile", "Alligator"],
-  ["Trompette", "Saxophone"],
-  ["Bretagne", "Normandie"],
-  ["Hibou", "Chouette"],
-  ["Crevette", "Homard"],
-  ["Mars", "Snickers"],
-  ["Spotify", "Deezer"],
-  ["WhatsApp", "Telegram"],
-  ["Karate", "Judo"],
-  ["Opera", "Ballet"],
-  ["Camping", "Glamping"],
-  ["Bague", "Bracelet"],
-  ["Valise", "Sac a dos"],
-  ["Pyramide", "Tour Eiffel"],
-  ["Moustache", "Barbe"],
-  ["Aspirateur", "Balai"],
-  ["Parapluie", "Parasol"],
-  ["Vampire", "Loup-garou"],
-  ["Banane", "Ananas"],
-];
-
-const MANGA_WORD_PAIRS: [string, string][] = [
-  ["Naruto", "Sasuke"],
-  ["Goku", "Vegeta"],
-  ["Luffy", "Zoro"],
-  ["Itachi", "Madara"],
-  ["Gojo", "Sukuna"],
-  ["Tanjiro", "Zenitsu"],
-  ["Levi", "Eren"],
-  ["Mikasa", "Historia"],
-  ["Nami", "Robin"],
-  ["One Piece", "Bleach"],
-  ["Konoha", "Akatsuki"],
-  ["Shinigami", "Hollow"],
-  ["Sharingan", "Byakugan"],
-  ["Bankai", "Zanpakuto"],
-  ["Titan", "Geant"],
-  ["Jutsu", "Technique"],
-];
-
-const ADULT_WORD_PAIRS: [string, string][] = [
-  ["Tinder", "Bumble"],
-  ["Date", "Plan d'un soir"],
-  ["Crush", "Ex"],
-  ["Flirt", "Seduire"],
-  ["Love hotel", "Airbnb"],
-  ["String", "Culotte"],
-  ["Corset", "Porte-jarretelles"],
-  ["Strip-tease", "Lap dance"],
-  ["Fantasme", "Roleplay"],
-  ["Soumis", "Dominant"],
-  ["Latex", "Cuir"],
-  ["message mignon", "Nude"],
-  ["OnlyFans", "MYM"],
-  ["18+", "Tout public"],
-  ["Sensuel", "Sexuel"],
-  ["Tease", "Provoc"],
-  ["Kiss", "French kiss"],
-  ["Preliminaires", "Baiser"],
-  ["Infidele", "Fidele"],
-  ["Desir", "Tentation"],
-  ["Clara Morgane", "Lana Rhoades"],
-  ["Khalamite", "Mia Khalifa"],
-  ["Johnny Sins", "Manuel Ferrara"],
-  ["Missionnaire", "Levrette"],
-  ["Chatte", "Seins"],
-  ["Cunnilingus", "Pipe"],
-  ["Echangisme", "Partouze"],
-  ["Levre", "Clito"],
-  ["Sperme", "Jus"],
-  ["Gorge profonde", "Sodomie"],
-  ["Fellation", "Cunnilingus"],
-  ["Penetration", "Ejaculation"],
-  ["Fetichisme", "Voyeurisme"],
-  ["Plug anal", "Gode ceinture"],
-  ["Domination", "Soumission"],
-  ["Nymphomane", "Puceau"],
-  ["Menottes", "Chaines"],
-  ["Masque", "Ouvre-bouche"],
-  ["Soumis", "Dominateur"],
-  ["Poil", "Rase"],
-  ["Urine", "Cyprine"],
-  ["Gorge", "Oesophage"],
-  ["69", "Ciseaux"],
-  ["Golden Shower", "Snowballing"],
-  ["Lubrifiant", "Salive"],
-  ["BDSM", "Soft Dom"],
-  ["Cuckolding", "Echangiste"],
-  ["Footjob", "Handjob"],
-  ["Prepuce", "Clitoris"],
-  ["Pornhub", "Xvideos"],
-  ["Lingerie", "String troue"],
-  ["Date", "Plan cul"],
-  ["Brazzers", "xnxx"],
-  ["Jacquie et Michel", "YouPorn"],
-  ["XHamster", "RedTube"],
-  ["Riley Reid", "Adriana Chechik"],
-  ["Mia Khalifa", "Angela White"],
-  ["Lana Rhoades", "Abella Danger"],
-];
-
-type ThemeId = "classic" | "manga" | "adult" | "mixed";
-
-const THEME_LABELS: Record<ThemeId, string> = {
-  classic: "Classique",
-  manga: "Anime / Manga",
-  adult: "-18",
-  mixed: "Melange total",
-};
-
-const THEME_DESCRIPTIONS: Record<ThemeId, string> = {
-  classic: "Mots generalistes",
-  manga: "Persos et references anime/manga",
-  adult: "References reservees adultes",
-  mixed: "Pioche dans tous les themes",
-};
-
-const THEME_PAIR_MAP: Record<Exclude<ThemeId, "mixed">, [string, string][]> = {
-  classic: CLASSIC_WORD_PAIRS,
-  manga: MANGA_WORD_PAIRS,
-  adult: ADULT_WORD_PAIRS,
-};
-
-function getWordPairsForTheme(themeId: ThemeId): [string, string][] {
-  if (themeId === "mixed") {
-    return [
-      ...CLASSIC_WORD_PAIRS,
-      ...MANGA_WORD_PAIRS,
-      ...ADULT_WORD_PAIRS,
-    ];
-  }
-  return THEME_PAIR_MAP[themeId];
-}
-
-// -- Types ---------------------------------------------------
-
-type Role = "civilian" | "undercover" | "mrwhite";
-
-type GamePhase =
-  | "waiting"
-  | "role-reveal"
-  | "describe"
-  | "vote"
-  | "vote-result"
-  | "mrwhite-guess"
-  | "game-over";
+// -- Roles -------------------------------------------------
+type Role = "civil" | "undercover" | "mrwhite";
 
 interface UndercoverPlayer {
   id: string;
   name: string;
+  score: number;
   role: Role;
-  word: string | null;
-  alive: boolean;
-  description: string | null;
-  hasDescribed: boolean;
-  vote: string | null;
-  hasVoted: boolean;
+  word: string | null;            // null pour Mr. White
+  isEliminated: boolean;
+  hasClue: boolean;               // a parlé pour la manche en cours
+  clue: string | null;            // texte d'indice (multi)
+  votedFor: string | null;
+  eliminatedRound: number | null;
 }
 
 interface ClueEntry {
+  round: number;
   playerId: string;
   playerName: string;
-  text: string;
-  round: number;
+  clue: string;
 }
 
-interface RoleDistributionConfig {
-  undercoverCount: number;
-  mrWhiteCount: number;
-}
+type Phase =
+  | "waiting"
+  | "word-reveal"
+  | "clue"
+  | "vote"
+  | "vote-result"
+  | "mrwhite-guess"
+  | "round-end"
+  | "game-over";
 
-interface RoleDistributionOption extends RoleDistributionConfig {
-  civilianCount: number;
-}
+type EndReason = "civils-win" | "undercover-wins" | "mrwhite-wins" | null;
 
-// -- Game Class ----------------------------------------------
-
+// ===========================================================
 export class UndercoverGame extends BaseGame {
-  ucPlayers: Map<string, UndercoverPlayer> = new Map();
-  botIds: Set<string> = new Set();
-  selectedThemeId: ThemeId = "mixed";
-  selectedRoleDistribution: RoleDistributionConfig | null = null;
-  phase: GamePhase = "waiting";
-  round = 0;
-  civilianWord = "";
+  // -- Game-wide config (réglable par l'hôte avant `start`) --
+  config = {
+    undercoverCount: 1,            // recalculé au start si non touché
+    includeMrWhite: false,
+    autoBalance: true,             // recalcul auto selon le nb de joueurs
+  };
+
+  // -- State -------------------------------------------------
+  gamePlayers = new Map<string, UndercoverPlayer>();
+  phase: Phase = "waiting";
+
+  civilWord = "";
   undercoverWord = "";
-  turnOrder: string[] = [];
-  currentDescriberIndex = 0;
-  clueHistory: ClueEntry[] = [];
-  eliminatedPlayerId: string | null = null;
-  eliminatedRole: Role | null = null;
-  mrWhiteGuessCorrect: boolean | null = null;
-  winners: Role | null = null;
 
-  revealTimeout: ReturnType<typeof setTimeout> | null = null;
-  describeTimeout: ReturnType<typeof setTimeout> | null = null;
-  voteTimeout: ReturnType<typeof setTimeout> | null = null;
-  resultTimeout: ReturnType<typeof setTimeout> | null = null;
-  mrWhiteTimeout: ReturnType<typeof setTimeout> | null = null;
-  timerInterval: ReturnType<typeof setInterval> | null = null;
-  botActionTimeouts: Set<ReturnType<typeof setTimeout>> = new Set();
+  round = 0;
+  clueOrder: string[] = [];        // ids dans l'ordre de parole
+  currentClueIdx = 0;
   timeLeft = 0;
+  timer: ReturnType<typeof setInterval> | null = null;
 
-  getExpectedPlayerCount() {
-    const humanPlayerCount = this.players.size;
-    if (humanPlayerCount < 1) return 0;
-    if (humanPlayerCount < 3) {
-      return Math.max(LOCAL_BOT_TARGET_PLAYERS, humanPlayerCount);
-    }
-    return humanPlayerCount;
-  }
+  votes = new Map<string, string>(); // voter -> target
+  eliminatedThisRound: string | null = null;
+  eliminatedRole: Role | null = null;
 
-  getRoleDistributionOptions(playerCount: number): RoleDistributionOption[] {
-    if (playerCount <= 1) return [];
+  clueHistory: ClueEntry[] = [];
 
-    const minCivilians = 2;
-    const minThreats = playerCount >= 6 ? 2 : 1;
-    const maxThreatsByCount =
-      playerCount >= 10 ? 4 : playerCount >= 8 ? 3 : playerCount >= 6 ? 2 : 1;
-    const maxThreats = Math.min(maxThreatsByCount, playerCount - minCivilians);
-    const options: RoleDistributionOption[] = [];
+  lastGuess: string | null = null;
+  lastGuessCorrect: boolean | null = null;
+  endReason: EndReason = null;
 
-    for (let threats = maxThreats; threats >= minThreats; threats--) {
-      for (let mrWhiteCount = 0; mrWhiteCount <= threats; mrWhiteCount++) {
-        const undercoverCount = threats - mrWhiteCount;
-        const civilianCount = playerCount - threats;
-        if (civilianCount < minCivilians) continue;
-        options.push({ undercoverCount, mrWhiteCount, civilianCount });
-      }
-    }
-
-    return options;
-  }
-
-  getResolvedRoleDistribution(playerCount: number): RoleDistributionOption {
-    const options = this.getRoleDistributionOptions(playerCount);
-    if (options.length === 0) {
-      return {
-        undercoverCount: 1,
-        mrWhiteCount: 0,
-        civilianCount: Math.max(0, playerCount - 1),
-      };
-    }
-
-    if (this.selectedRoleDistribution) {
-      const picked = options.find(
-        (opt) =>
-          opt.undercoverCount === this.selectedRoleDistribution?.undercoverCount &&
-          opt.mrWhiteCount === this.selectedRoleDistribution?.mrWhiteCount
-      );
-      if (picked) return picked;
-    }
-
-    return options[0];
-  }
-
+  // ---------------------------------------------------------
+  //  Lifecycle
+  // ---------------------------------------------------------
   start() {
-    const humanPlayerCount = this.players.size;
-
-    if (humanPlayerCount < 1) {
-      this.broadcast({
-        type: "game-error",
-        payload: { message: "Aucun joueur connecte." },
-      });
-      return;
-    }
-
     this.started = true;
-    this.ucPlayers.clear();
-    this.botIds.clear();
-    this.clearBotActionTimeouts();
+    this.round = 0;
+    this.clueHistory = [];
+    this.endReason = null;
+    this.lastGuess = null;
+    this.lastGuessCorrect = null;
 
-    const roster: { id: string; name: string }[] = Array.from(
-      this.players.values()
-    ).map((p) => ({ id: p.id, name: p.name }));
-
-    if (humanPlayerCount < 3) {
-      const botCount = Math.max(0, LOCAL_BOT_TARGET_PLAYERS - humanPlayerCount);
-      for (let i = 0; i < botCount; i++) {
-        const botId = `bot-${i + 1}`;
-        const botName = BOT_NAME_POOL[i] ?? `Bot ${i + 1}`;
-        roster.push({ id: botId, name: botName });
-        this.botIds.add(botId);
-      }
+    // Auto-balance si activé
+    if (this.config.autoBalance) {
+      const n = this.players.size;
+      if (n <= 4)      { this.config.undercoverCount = 1; this.config.includeMrWhite = false; }
+      else if (n <= 6) { this.config.undercoverCount = 1; this.config.includeMrWhite = n >= 5; }
+      else             { this.config.undercoverCount = 2; this.config.includeMrWhite = true; }
     }
 
-    const playerCount = roster.length;
+    // Init des joueurs
+    this.gamePlayers.clear();
+    for (const [id, p] of this.players) {
+      this.gamePlayers.set(id, {
+        id, name: p.name,
+        score: 0, role: "civil", word: null,
+        isEliminated: false, hasClue: false, clue: null,
+        votedFor: null, eliminatedRound: null,
+      });
+    }
 
-    // Pick a random word pair from selected theme
-    const pairs = getWordPairsForTheme(this.selectedThemeId);
-    const safePairs = pairs.length > 0 ? pairs : CLASSIC_WORD_PAIRS;
-    const pairIndex = Math.floor(Math.random() * safePairs.length);
-    const pair = safePairs[pairIndex];
+    // Choix d'une paire de mots
+    const pair = WORD_PAIRS[Math.floor(Math.random() * WORD_PAIRS.length)];
+    // Aléatoirement, on inverse quel mot est "civil"
     if (Math.random() < 0.5) {
-      this.civilianWord = pair[0];
-      this.undercoverWord = pair[1];
+      this.civilWord = pair[0]; this.undercoverWord = pair[1];
     } else {
-      this.civilianWord = pair[1];
-      this.undercoverWord = pair[0];
+      this.civilWord = pair[1]; this.undercoverWord = pair[0];
     }
 
-    // Assign roles
-    const playerIds = roster.map((p) => p.id);
-    this.shuffleArray(playerIds);
-
-    const resolvedDistribution = this.getResolvedRoleDistribution(playerCount);
-    const undercoverCount = resolvedDistribution.undercoverCount;
-    const mrWhiteCount = resolvedDistribution.mrWhiteCount;
-
-    for (let i = 0; i < playerIds.length; i++) {
-      const pid = playerIds[i];
-      const player = roster.find((p) => p.id === pid);
-      if (!player) continue;
-      let role: Role = "civilian";
-      let word: string | null = this.civilianWord;
-
-      if (i < undercoverCount) {
-        role = "undercover";
-        word = this.undercoverWord;
-      } else if (i < undercoverCount + mrWhiteCount) {
-        role = "mrwhite";
-        word = null;
-      }
-
-      this.ucPlayers.set(pid, {
-        id: pid,
-        name: player.name,
-        role,
-        word,
-        alive: true,
-        description: null,
-        hasDescribed: false,
-        vote: null,
-        hasVoted: false,
-      });
+    // Distribution des rôles
+    const ids = Array.from(this.gamePlayers.keys());
+    const shuffled = [...ids].sort(() => Math.random() - 0.5);
+    let i = 0;
+    for (let u = 0; u < this.config.undercoverCount && i < shuffled.length; u++, i++) {
+      const p = this.gamePlayers.get(shuffled[i]);
+      if (p) { p.role = "undercover"; p.word = this.undercoverWord; }
+    }
+    if (this.config.includeMrWhite && i < shuffled.length) {
+      const p = this.gamePlayers.get(shuffled[i]);
+      if (p) { p.role = "mrwhite"; p.word = null; }
+      i++;
+    }
+    for (; i < shuffled.length; i++) {
+      const p = this.gamePlayers.get(shuffled[i]);
+      if (p) { p.role = "civil"; p.word = this.civilWord; }
     }
 
-    // Randomize turn order
-    this.turnOrder = Array.from(this.ucPlayers.keys());
-    this.shuffleArray(this.turnOrder);
-
-    // Start role reveal
-    this.phase = "role-reveal";
-    this.broadcastPersonalizedState();
-
-    this.revealTimeout = setTimeout(() => {
-      this.startDescribePhase();
-    }, REVEAL_DURATION);
+    this.startWordReveal();
   }
 
-  // -- Phase transitions -------------------------------------
-
-  startDescribePhase() {
-    this.clearTimers();
+  // ---------------------------------------------------------
+  //  Phase 1 : Reveal du mot
+  // ---------------------------------------------------------
+  startWordReveal() {
     this.round++;
-    this.currentDescriberIndex = 0;
-    this.phase = "describe";
+    this.phase = "word-reveal";
+    this.eliminatedThisRound = null;
+    this.eliminatedRole = null;
+    this.lastGuess = null;
+    this.lastGuessCorrect = null;
+    this.votes.clear();
 
-    for (const p of this.ucPlayers.values()) {
-      if (p.alive) {
-        p.description = null;
-        p.hasDescribed = false;
+    for (const p of this.gamePlayers.values()) {
+      if (!p.isEliminated) {
+        p.hasClue = false;
+        p.clue = null;
+        p.votedFor = null;
       }
     }
 
-    this.advanceToNextAliveDescriber();
-    this.startDescribeTimer();
     this.broadcastPersonalizedState();
-    this.scheduleBotDescribeIfNeeded();
+    setTimeout(() => {
+      if (this.phase === "word-reveal") this.startCluePhase();
+    }, WORD_REVEAL_TIME);
   }
 
-  advanceToNextAliveDescriber(): boolean {
-    while (this.currentDescriberIndex < this.turnOrder.length) {
-      const pid = this.turnOrder[this.currentDescriberIndex];
-      const p = this.ucPlayers.get(pid);
-      if (p && p.alive) return true;
-      this.currentDescriberIndex++;
-    }
-    return false;
+  // ---------------------------------------------------------
+  //  Phase 2 : Tour de parole / indices
+  // ---------------------------------------------------------
+  startCluePhase() {
+    this.phase = "clue";
+    // L'ordre de parole tourne à chaque manche : random shuffle des vivants
+    this.clueOrder = this.getAlive()
+      .map((p) => p.id)
+      .sort(() => Math.random() - 0.5);
+    this.currentClueIdx = 0;
+    this.timeLeft = CLUE_TIME;
+    this.broadcastPersonalizedState();
+    this.startTimer();
   }
 
-  startDescribeTimer() {
-    this.timeLeft = Math.ceil(DESCRIBE_TIMEOUT / 1000);
-    this.clearTimerInterval();
+  advanceClue() {
+    this.currentClueIdx++;
+    while (
+      this.currentClueIdx < this.clueOrder.length &&
+      this.gamePlayers.get(this.clueOrder[this.currentClueIdx])?.isEliminated
+    ) this.currentClueIdx++;
 
-    this.timerInterval = setInterval(() => {
-      this.timeLeft--;
-      if (this.timeLeft <= 0) {
-        this.clearTimerInterval();
-      }
-      this.broadcastPersonalizedState();
-    }, 1000);
-
-    this.describeTimeout = setTimeout(() => {
-      this.handleDescribeTimeout();
-    }, DESCRIBE_TIMEOUT);
-  }
-
-  handleDescribeTimeout() {
-    this.clearTimers();
-    const currentPid = this.turnOrder[this.currentDescriberIndex];
-    const p = this.ucPlayers.get(currentPid);
-    if (p && p.alive && !p.hasDescribed) {
-      p.hasDescribed = true;
-      p.description = "(pas de description)";
-      this.clueHistory.push({
-        playerId: p.id,
-        playerName: p.name,
-        text: "(pas de description)",
-        round: this.round,
-      });
-    }
-    this.moveToNextDescriber();
-  }
-
-  moveToNextDescriber() {
-    this.currentDescriberIndex++;
-    if (!this.advanceToNextAliveDescriber()) {
-      this.startVotePhase();
+    if (this.currentClueIdx >= this.clueOrder.length) {
+      this.startVote();
     } else {
-      this.startDescribeTimer();
+      this.timeLeft = CLUE_TIME;
       this.broadcastPersonalizedState();
-      this.scheduleBotDescribeIfNeeded();
+      this.startTimer();
     }
   }
 
-  startVotePhase() {
-    this.clearTimers();
+  // ---------------------------------------------------------
+  //  Phase 3 : Vote
+  // ---------------------------------------------------------
+  startVote() {
+    this.stopTimer();
     this.phase = "vote";
-
-    for (const p of this.ucPlayers.values()) {
-      p.vote = null;
-      p.hasVoted = false;
+    this.timeLeft = VOTE_TIME;
+    this.votes.clear();
+    for (const p of this.gamePlayers.values()) {
+      if (!p.isEliminated) p.votedFor = null;
     }
-
-    this.timeLeft = Math.ceil(VOTE_TIMEOUT / 1000);
-    this.clearTimerInterval();
-
-    this.timerInterval = setInterval(() => {
-      this.timeLeft--;
-      if (this.timeLeft <= 0) {
-        this.clearTimerInterval();
-      }
-      this.broadcastPersonalizedState();
-    }, 1000);
-
-    this.voteTimeout = setTimeout(() => {
-      this.resolveVotes();
-    }, VOTE_TIMEOUT);
-
     this.broadcastPersonalizedState();
-    this.scheduleBotVotes();
+    this.startTimer();
   }
 
   resolveVotes() {
-    this.clearTimers();
+    this.stopTimer();
 
-    const voteCounts: Record<string, number> = {};
-    for (const p of this.ucPlayers.values()) {
-      if (p.alive && p.vote) {
-        voteCounts[p.vote] = (voteCounts[p.vote] || 0) + 1;
-      }
+    // Tally
+    const counts = new Map<string, number>();
+    for (const tid of this.votes.values()) counts.set(tid, (counts.get(tid) ?? 0) + 1);
+
+    let max = 0;
+    const top: string[] = [];
+    for (const [pid, n] of counts) {
+      if (n > max) { max = n; top.length = 0; top.push(pid); }
+      else if (n === max) top.push(pid);
     }
 
-    let maxVotes = 0;
-    let eliminated: string | null = null;
-    let isTie = false;
-
-    for (const [pid, count] of Object.entries(voteCounts)) {
-      if (count > maxVotes) {
-        maxVotes = count;
-        eliminated = pid;
-        isTie = false;
-      } else if (count === maxVotes) {
-        isTie = true;
-      }
-    }
-
-    if (isTie || !eliminated || maxVotes === 0) {
-      this.eliminatedPlayerId = null;
+    // Pas de vote ou égalité parfaite → tirage au sort
+    if (top.length === 0) {
+      this.eliminatedThisRound = null;
       this.eliminatedRole = null;
       this.phase = "vote-result";
       this.broadcastPersonalizedState();
-
-      this.resultTimeout = setTimeout(() => {
-        this.afterVoteResult();
-      }, RESULT_DISPLAY_TIME);
+      setTimeout(() => this.afterEliminate(null), VOTE_RESULT_TIME);
       return;
     }
 
-    const ep = this.ucPlayers.get(eliminated);
-    if (!ep) return;
+    const eliminatedId = top[Math.floor(Math.random() * top.length)];
+    const target = this.gamePlayers.get(eliminatedId);
+    if (!target) return;
 
-    ep.alive = false;
-    this.eliminatedPlayerId = eliminated;
-    this.eliminatedRole = ep.role;
+    target.isEliminated = true;
+    target.eliminatedRound = this.round;
+    this.eliminatedThisRound = eliminatedId;
+    this.eliminatedRole = target.role;
 
-    // Mr. White gets a chance to guess
-    if (ep.role === "mrwhite") {
-      this.phase = "mrwhite-guess";
-      this.timeLeft = Math.ceil(MR_WHITE_GUESS_TIMEOUT / 1000);
-      this.broadcastPersonalizedState();
-
-      this.clearTimerInterval();
-      this.timerInterval = setInterval(() => {
-        this.timeLeft--;
-        if (this.timeLeft <= 0) {
-          this.clearTimerInterval();
+    // Récompenses pour avoir voté contre un undercover/mrwhite
+    if (target.role !== "civil") {
+      for (const [voterId, tId] of this.votes) {
+        if (tId === eliminatedId) {
+          const v = this.gamePlayers.get(voterId);
+          if (v && v.role === "civil") v.score += 2;
         }
-        this.broadcastPersonalizedState();
-      }, 1000);
-
-      this.mrWhiteTimeout = setTimeout(() => {
-        this.mrWhiteGuessCorrect = false;
-        this.phase = "vote-result";
-        this.broadcastPersonalizedState();
-        this.resultTimeout = setTimeout(() => {
-          this.afterVoteResult();
-        }, RESULT_DISPLAY_TIME);
-      }, MR_WHITE_GUESS_TIMEOUT);
-
-      this.scheduleBotMrWhiteGuess(ep.id);
-      return;
+      }
     }
 
     this.phase = "vote-result";
     this.broadcastPersonalizedState();
 
-    this.resultTimeout = setTimeout(() => {
-      this.afterVoteResult();
-    }, RESULT_DISPLAY_TIME);
-  }
-
-  afterVoteResult() {
-    this.clearTimers();
-    this.mrWhiteGuessCorrect = null;
-
-    const alive = Array.from(this.ucPlayers.values()).filter((p) => p.alive);
-    const aliveThreats = alive.filter(
-      (p) => p.role === "undercover" || p.role === "mrwhite"
-    ).length;
-    const aliveCivilians = alive.filter((p) => p.role === "civilian").length;
-
-    // Civilians win: all threats eliminated
-    if (aliveThreats === 0) {
-      this.winners = "civilian";
-      this.endUndercoverGame();
+    // Mr. White éliminé → il a une chance de deviner le mot civil
+    if (target.role === "mrwhite") {
+      setTimeout(() => this.startMrWhiteGuess(eliminatedId), VOTE_RESULT_TIME);
       return;
     }
 
-    // Undercover/MrWhite win: threats >= civilians
-    if (aliveThreats >= aliveCivilians) {
-      this.winners = "undercover";
-      this.endUndercoverGame();
+    setTimeout(() => this.afterEliminate(eliminatedId), VOTE_RESULT_TIME);
+  }
+
+  // ---------------------------------------------------------
+  //  Phase 4 : Mr. White devine
+  // ---------------------------------------------------------
+  startMrWhiteGuess(mrWhiteId: string) {
+    this.phase = "mrwhite-guess";
+    this.timeLeft = GUESS_TIME;
+    this.eliminatedThisRound = mrWhiteId;
+    this.lastGuess = null;
+    this.lastGuessCorrect = null;
+    this.broadcastPersonalizedState();
+    this.startTimer();
+  }
+
+  resolveMrWhiteGuess(guess: string | null) {
+    this.stopTimer();
+    const norm = (s: string) => s.toLowerCase().trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    this.lastGuess = guess;
+    this.lastGuessCorrect = !!guess && norm(guess) === norm(this.civilWord);
+
+    if (this.lastGuessCorrect) {
+      // Mr. White gagne seul
+      const mw = this.eliminatedThisRound ? this.gamePlayers.get(this.eliminatedThisRound) : null;
+      if (mw) mw.score += 5;
+      this.endGameUC("mrwhite-wins");
+      return;
+    }
+    // Sinon : on continue normalement
+    this.afterEliminate(this.eliminatedThisRound);
+  }
+
+  // ---------------------------------------------------------
+  //  Check victoire / suite
+  // ---------------------------------------------------------
+  afterEliminate(_lastEliminatedId: string | null) {
+    const alive = this.getAlive();
+    const aliveUC = alive.filter((p) => p.role === "undercover");
+    const aliveMW = alive.filter((p) => p.role === "mrwhite");
+    const aliveCv = alive.filter((p) => p.role === "civil");
+
+    // Tous les imposteurs out → civils gagnent
+    if (aliveUC.length === 0 && aliveMW.length === 0) {
+      for (const c of aliveCv) c.score += 3;
+      this.endGameUC("civils-win");
       return;
     }
 
-    // Continue
-    this.eliminatedPlayerId = null;
-    this.eliminatedRole = null;
-    this.startDescribePhase();
+    // Les imposteurs ≥ civils → undercover gagne
+    if (aliveUC.length + aliveMW.length >= aliveCv.length) {
+      for (const u of [...aliveUC, ...aliveMW]) u.score += 5;
+      this.endGameUC("undercover-wins");
+      return;
+    }
+
+    // Sinon : nouveau tour
+    // Petit bonus de survie aux civils
+    for (const c of aliveCv) c.score += 1;
+    setTimeout(() => this.startWordReveal(), NEXT_ROUND_TIME);
   }
 
-  endUndercoverGame() {
-    this.clearTimers();
+  // ---------------------------------------------------------
+  //  Fin de partie
+  // ---------------------------------------------------------
+  endGameUC(reason: Exclude<EndReason, null>) {
+    this.stopTimer();
     this.phase = "game-over";
+    this.endReason = reason;
 
-    const players = Array.from(this.ucPlayers.values());
-    const winnerRole = this.winners;
-    const rankings: GameRanking[] = [];
-
-    const isWinner = (p: UndercoverPlayer) => {
-      if (winnerRole === "civilian") return p.role === "civilian";
-      if (winnerRole === "mrwhite") return p.role === "mrwhite";
-      return p.role === "undercover" || p.role === "mrwhite";
-    };
-
-    const winners = players.filter(isWinner);
-    const losers = players.filter((p) => !isWinner(p));
-
-    let rank = 1;
-    for (const p of winners) {
-      rankings.push({
-        playerId: p.id,
-        playerName: p.name,
-        rank,
-        score: p.alive ? 100 : 50,
-      });
-    }
-    rank = winners.length + 1;
-    for (const p of losers) {
-      rankings.push({
-        playerId: p.id,
-        playerName: p.name,
-        rank,
-        score: 0,
-      });
-    }
+    const players = Array.from(this.gamePlayers.values());
+    players.sort((a, b) => b.score - a.score);
+    const rankings: GameRanking[] = players.map((p, i) => ({
+      playerId: p.id, playerName: p.name, rank: i + 1, score: p.score,
+    }));
 
     this.broadcastPersonalizedState();
-
-    setTimeout(() => {
-      this.endGame(rankings);
-    }, GAME_END_DISPLAY_TIME);
+    setTimeout(() => this.endGame(rankings), 800);
   }
 
-  // -- Message handling --------------------------------------
-
-  isBot(playerId: string): boolean {
-    return this.botIds.has(playerId);
+  // ---------------------------------------------------------
+  //  Timer
+  // ---------------------------------------------------------
+  startTimer() {
+    this.stopTimer();
+    this.timer = setInterval(() => {
+      this.timeLeft--;
+      this.broadcast({ type: "game-update", payload: { timeLeft: this.timeLeft } });
+      if (this.timeLeft <= 0) this.onTimerExpired();
+    }, 1000);
   }
 
-  queueBotAction(action: () => void, minDelayMs = 900, maxDelayMs = 2200) {
-    const delay =
-      minDelayMs + Math.floor(Math.random() * (maxDelayMs - minDelayMs + 1));
-    const timeout = setTimeout(() => {
-      this.botActionTimeouts.delete(timeout);
-      action();
-    }, delay);
-    this.botActionTimeouts.add(timeout);
+  stopTimer() {
+    if (this.timer) { clearInterval(this.timer); this.timer = null; }
   }
 
-  scheduleBotDescribeIfNeeded() {
-    if (this.phase !== "describe") return;
-    const currentPid = this.turnOrder[this.currentDescriberIndex];
-    if (!currentPid || !this.isBot(currentPid)) return;
-
-    this.queueBotAction(() => {
-      const current = this.turnOrder[this.currentDescriberIndex];
-      if (current !== currentPid || this.phase !== "describe") return;
-
-      const p = this.ucPlayers.get(currentPid);
-      if (!p || !p.alive || p.hasDescribed) return;
-
-      const clue = this.generateBotClue(p.role);
-      p.description = clue;
-      p.hasDescribed = true;
-      this.clueHistory.push({
-        playerId: p.id,
-        playerName: p.name,
-        text: clue,
-        round: this.round,
-      });
-
-      this.clearTimers();
-      this.moveToNextDescriber();
-    });
-  }
-
-  scheduleBotVotes() {
-    if (this.phase !== "vote") return;
-
-    for (const botId of this.botIds) {
-      const bot = this.ucPlayers.get(botId);
-      if (!bot || !bot.alive || bot.hasVoted) continue;
-
-      this.queueBotAction(() => {
-        if (this.phase !== "vote") return;
-        const currentBot = this.ucPlayers.get(botId);
-        if (!currentBot || !currentBot.alive || currentBot.hasVoted) return;
-
-        const aliveTargets = Array.from(this.ucPlayers.values()).filter(
-          (p) => p.alive && p.id !== botId
-        );
-        if (aliveTargets.length === 0) return;
-
-        const target =
-          aliveTargets[Math.floor(Math.random() * aliveTargets.length)];
-        currentBot.vote = target.id;
-        currentBot.hasVoted = true;
-
-        this.broadcastPersonalizedState();
-
-        const allVoted = Array.from(this.ucPlayers.values())
-          .filter((p) => p.alive)
-          .every((p) => p.hasVoted);
-        if (allVoted) {
-          this.resolveVotes();
-        }
-      });
+  onTimerExpired() {
+    this.stopTimer();
+    if (this.phase === "clue") {
+      const currentId = this.clueOrder[this.currentClueIdx];
+      const p = this.gamePlayers.get(currentId);
+      if (p && !p.hasClue) {
+        p.hasClue = true;
+        p.clue = "(temps écoulé)";
+        this.clueHistory.push({
+          round: this.round, playerId: p.id, playerName: p.name, clue: "(temps écoulé)",
+        });
+      }
+      this.advanceClue();
+    } else if (this.phase === "vote") {
+      this.resolveVotes();
+    } else if (this.phase === "mrwhite-guess") {
+      this.resolveMrWhiteGuess(null);
     }
   }
 
-  scheduleBotMrWhiteGuess(playerId: string) {
-    if (!this.isBot(playerId) || this.phase !== "mrwhite-guess") return;
-
-    this.queueBotAction(
-      () => {
-        if (this.phase !== "mrwhite-guess") return;
-        const bot = this.ucPlayers.get(playerId);
-        if (!bot || bot.role !== "mrwhite") return;
-
-        const guessPool = [this.civilianWord, this.undercoverWord];
-        const guess =
-          Math.random() < 0.35
-            ? this.civilianWord
-            : guessPool[Math.floor(Math.random() * guessPool.length)];
-        this.applyMrWhiteGuess(guess);
-      },
-      1200,
-      2600
-    );
-  }
-
-  applyMrWhiteGuess(guessText: string) {
-    const guess = guessText.trim().toLowerCase();
-    const correct = guess === this.civilianWord.toLowerCase();
-
-    this.clearTimers();
-    this.mrWhiteGuessCorrect = correct;
-
-    if (correct) {
-      this.winners = "mrwhite";
-      this.phase = "vote-result";
-      this.broadcastPersonalizedState();
-
-      this.resultTimeout = setTimeout(() => {
-        this.endUndercoverGame();
-      }, RESULT_DISPLAY_TIME);
-    } else {
-      this.phase = "vote-result";
-      this.broadcastPersonalizedState();
-
-      this.resultTimeout = setTimeout(() => {
-        this.afterVoteResult();
-      }, RESULT_DISPLAY_TIME);
-    }
-  }
-
-  generateBotClue(role: Role): string {
-    const commonClues = [
-      "C'est quelque chose de tres connu.",
-      "On peut le voir souvent.",
-      "Le mot est assez simple.",
-      "Je pense que tout le monde connait.",
-      "C'est plutot facile a imaginer.",
-    ];
-    const undercoverClues = [
-      "Je dirais que c'est un peu similaire.",
-      "Ca me fait penser a quelque chose de proche.",
-      "C'est dans la meme idee.",
-    ];
-    const mrWhiteClues = [
-      "Je dirais que c'est quelque chose de courant.",
-      "On en entend parler tres souvent.",
-      "Je vais rester vague sur ce tour.",
-    ];
-
-    if (role === "mrwhite") {
-      return mrWhiteClues[Math.floor(Math.random() * mrWhiteClues.length)];
-    }
-    if (role === "undercover" && Math.random() < 0.7) {
-      return undercoverClues[Math.floor(Math.random() * undercoverClues.length)];
-    }
-    return commonClues[Math.floor(Math.random() * commonClues.length)];
-  }
-
+  // ---------------------------------------------------------
+  //  Messages côté client
+  // ---------------------------------------------------------
   onMessage(payload: Record<string, unknown>, sender: Connection) {
     const action = payload.action as string;
-    const senderPlayer = this.findPlayerByConnection(sender.id);
-    if (!senderPlayer) return;
+    const sp = this.findPlayerByConnection(sender.id);
+    if (!sp) return;
+    const gp = this.gamePlayers.get(sp.id);
 
-    if (!this.started || this.phase === "waiting") {
-      if (action === "set-theme") {
-        const themeId = payload.themeId as ThemeId;
-        if (!themeId || !Object.keys(THEME_LABELS).includes(themeId)) return;
-        this.selectedThemeId = themeId;
-        this.broadcastPersonalizedState();
-        return;
-      }
-
-      if (action === "set-role-distribution") {
-        const undercoverCount = Number(payload.undercoverCount);
-        const mrWhiteCount = Number(payload.mrWhiteCount);
-        if (!Number.isFinite(undercoverCount) || !Number.isFinite(mrWhiteCount)) {
-          return;
+    // -- Avant que la partie ne commence : config par l'hôte
+    if (action === "configure" && !this.started) {
+      const newCfg = payload.config as Partial<typeof this.config> | undefined;
+      if (newCfg) {
+        if (typeof newCfg.undercoverCount === "number") {
+          this.config.undercoverCount = Math.max(1, Math.min(3, newCfg.undercoverCount));
+          this.config.autoBalance = false;
         }
-
-        const expectedCount = this.getExpectedPlayerCount();
-        const allowed = this.getRoleDistributionOptions(expectedCount).some(
-          (opt) =>
-            opt.undercoverCount === undercoverCount &&
-            opt.mrWhiteCount === mrWhiteCount
-        );
-        if (!allowed) return;
-
-        this.selectedRoleDistribution = {
-          undercoverCount,
-          mrWhiteCount,
-        };
+        if (typeof newCfg.includeMrWhite === "boolean") {
+          this.config.includeMrWhite = newCfg.includeMrWhite;
+          this.config.autoBalance = false;
+        }
+        if (typeof newCfg.autoBalance === "boolean") {
+          this.config.autoBalance = newCfg.autoBalance;
+        }
         this.broadcastPersonalizedState();
-        return;
       }
-
-      if (action === "start-game") {
-        this.start();
-        return;
-      }
+      return;
     }
 
-    const pid = senderPlayer.id;
-    const ucp = this.ucPlayers.get(pid);
-    if (!ucp) return;
+    // -- Confirmation "j'ai vu mon mot" (sert juste à logguer côté UI)
+    if (action === "ack-word" && this.phase === "word-reveal") {
+      // no-op serveur, l'auto-timer enchaîne
+      return;
+    }
 
-    switch (action) {
-      case "describe": {
-        if (this.phase !== "describe") return;
-        if (!ucp.alive || ucp.hasDescribed) return;
+    // -- Démarrage manuel par l'hôte (le routeur game.ts désactive l'auto-start)
+    if (action === "start-game" && !this.started) {
+      if (this.players.size < 3) return;
+      this.start();
+      return;
+    }
 
-        const currentPid = this.turnOrder[this.currentDescriberIndex];
-        if (pid !== currentPid) return;
+    if (!gp || gp.isEliminated) return;
 
-        const text = ((payload.text as string) || "").trim();
-        if (!text) return;
+    // -- Soumission d'indice
+    if (action === "clue" && this.phase === "clue") {
+      const currentId = this.clueOrder[this.currentClueIdx];
+      if (sp.id !== currentId) return;
+      const clue = ((payload.clue as string) ?? "").trim();
+      if (!clue) return;
 
-        ucp.description = text;
-        ucp.hasDescribed = true;
-        this.clueHistory.push({
-          playerId: pid,
-          playerName: ucp.name,
-          text,
-          round: this.round,
+      // Anti-triche basique : on refuse les mots qui contiennent exactement
+      // le mot du rôle (insensible aux accents)
+      const norm = (s: string) => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      if (gp.word && norm(clue).includes(norm(gp.word))) {
+        this.sendTo(sender.id, {
+          type: "game-error",
+          payload: { message: "Tu ne peux pas dire ton mot directement." },
         });
-
-        this.clearTimers();
-        this.moveToNextDescriber();
-        break;
+        return;
       }
 
-      case "vote": {
-        if (this.phase !== "vote") return;
-        if (!ucp.alive || ucp.hasVoted) return;
-
-        const targetId = payload.targetId as string;
-        if (!targetId || targetId === pid) return;
-
-        const target = this.ucPlayers.get(targetId);
-        if (!target || !target.alive) return;
-
-        ucp.vote = targetId;
-        ucp.hasVoted = true;
-
-        this.broadcastPersonalizedState();
-
-        const allVoted = Array.from(this.ucPlayers.values())
-          .filter((p) => p.alive)
-          .every((p) => p.hasVoted);
-
-        if (allVoted) {
-          this.resolveVotes();
-        }
-        break;
-      }
-
-      case "mrwhite-guess": {
-        if (this.phase !== "mrwhite-guess") return;
-        if (ucp.role !== "mrwhite") return;
-
-        const guess = (payload.guess as string) || "";
-        this.applyMrWhiteGuess(guess);
-        break;
-      }
-    }
-  }
-
-  // -- Personalized state ------------------------------------
-
-  broadcastPersonalizedState() {
-    for (const [playerId, player] of this.players) {
-      this.sendTo(player.connectionId, {
-        type: "game-state",
-        payload: this.getStateForPlayer(playerId),
+      gp.hasClue = true;
+      gp.clue = clue;
+      this.clueHistory.push({
+        round: this.round, playerId: gp.id, playerName: gp.name, clue,
       });
+      this.stopTimer();
+      this.advanceClue();
+      return;
+    }
+
+    // -- Vote
+    if (action === "vote" && this.phase === "vote") {
+      const target = payload.targetId as string;
+      if (!target || target === sp.id) return;
+      const t = this.gamePlayers.get(target);
+      if (!t || t.isEliminated) return;
+      gp.votedFor = target;
+      this.votes.set(sp.id, target);
+      this.broadcastPersonalizedState();
+
+      const alive = this.getAlive();
+      if (alive.every((p) => p.votedFor !== null)) {
+        this.resolveVotes();
+      }
+      return;
+    }
+
+    // -- Mr. White devine
+    if (action === "mrwhite-guess" && this.phase === "mrwhite-guess") {
+      if (sp.id !== this.eliminatedThisRound) return;
+      const guess = ((payload.guess as string) ?? "").trim();
+      if (!guess) return;
+      this.resolveMrWhiteGuess(guess);
+      return;
     }
   }
 
-  getStateForPlayer(playerId: string): Record<string, unknown> {
-    if (this.phase === "waiting" || !this.started) {
-      const expectedPlayerCount = this.getExpectedPlayerCount();
-      const availableRoleDistributions =
-        this.getRoleDistributionOptions(expectedPlayerCount);
-      const selectedRoleDistribution =
-        this.getResolvedRoleDistribution(expectedPlayerCount);
-      return {
-        phase: "waiting",
-        round: 0,
-        players: Array.from(this.players.values()).map((p) => ({
-          id: p.id,
-          name: p.name,
-          alive: true,
-          hasDescribed: false,
-          hasVoted: false,
-          description: null,
-          role: null,
-          word: null,
-        })),
-        turnOrder: [],
-        currentDescriberId: null,
-        clueHistory: [],
-        timeLeft: 0,
-        myRole: null,
-        myWord: null,
-        eliminatedPlayerId: null,
-        eliminatedRole: null,
-        mrWhiteGuessCorrect: null,
-        winners: null,
-        civilianWord: null,
-        undercoverWord: null,
-        selectedThemeId: this.selectedThemeId,
-        availableThemes: this.getAvailableThemes(),
-        expectedPlayerCount,
-        selectedRoleDistribution,
-        availableRoleDistributions,
-      };
-    }
-
-    const me = this.ucPlayers.get(playerId);
-    const visibleMyRole: Role | null =
-      this.phase === "game-over"
-        ? (me?.role ?? null)
-        : me?.role === "mrwhite"
-          ? "mrwhite"
-          : null;
-
-    const players = Array.from(this.ucPlayers.values()).map((p) => {
-      const isMe = p.id === playerId;
-      const isEliminated = !p.alive;
-
-      return {
-        id: p.id,
-        name: p.name,
-        alive: p.alive,
-        hasDescribed: p.hasDescribed,
-        hasVoted: p.hasVoted,
-        description: p.description,
-        role:
-          isMe
-            ? visibleMyRole
-            : isEliminated || this.phase === "game-over"
-              ? p.role
-              : null,
-        word:
-          isMe
-            ? p.word
-            : this.phase === "game-over"
-              ? p.word
-              : null,
-      };
-    });
-
-    let currentDescriberId: string | null = null;
-    if (
-      this.phase === "describe" &&
-      this.currentDescriberIndex < this.turnOrder.length
-    ) {
-      currentDescriberId = this.turnOrder[this.currentDescriberIndex];
-    }
-
-    return {
-      phase: this.phase,
-      round: this.round,
-      players,
-      turnOrder: this.turnOrder,
-      currentDescriberId,
-      clueHistory: this.clueHistory,
-      timeLeft: this.timeLeft,
-      myRole: visibleMyRole,
-      myWord: me?.word ?? null,
-      eliminatedPlayerId: this.eliminatedPlayerId,
-      eliminatedRole: this.eliminatedRole,
-      mrWhiteGuessCorrect: this.mrWhiteGuessCorrect,
-      winners: this.winners,
-      civilianWord: this.phase === "game-over" ? this.civilianWord : null,
-      undercoverWord: this.phase === "game-over" ? this.undercoverWord : null,
-      selectedThemeId: this.selectedThemeId,
-      availableThemes: this.getAvailableThemes(),
-    };
+  // ---------------------------------------------------------
+  //  Re-play sans recréer la salle
+  // ---------------------------------------------------------
+  restartIfFinished(): boolean {
+    if (this.phase !== "game-over") return false;
+    this.start();
+    return true;
   }
 
-  getState(): Record<string, unknown> {
-    if (!this.started || this.phase === "waiting") {
-      return this.getStateForPlayer("");
-    }
-    return {
-      phase: this.phase,
-      round: this.round,
-      players: Array.from(this.ucPlayers.values()).map((p) => ({
-        id: p.id,
-        name: p.name,
-        alive: p.alive,
-        hasDescribed: p.hasDescribed,
-        hasVoted: p.hasVoted,
-        description: p.description,
-        role: !p.alive || this.phase === "game-over" ? p.role : null,
-        word: null,
-      })),
-      turnOrder: this.turnOrder,
-      currentDescriberId: null,
-      clueHistory: this.clueHistory,
-      timeLeft: this.timeLeft,
-      myRole: null,
-      myWord: null,
-      eliminatedPlayerId: this.eliminatedPlayerId,
-      eliminatedRole: this.eliminatedRole,
-      mrWhiteGuessCorrect: this.mrWhiteGuessCorrect,
-      winners: this.winners,
-      civilianWord: null,
-      undercoverWord: null,
-      selectedThemeId: this.selectedThemeId,
-      availableThemes: this.getAvailableThemes(),
-    };
+  // ---------------------------------------------------------
+  //  Helpers
+  // ---------------------------------------------------------
+  getAlive(): UndercoverPlayer[] {
+    return Array.from(this.gamePlayers.values()).filter((p) => !p.isEliminated);
   }
-
-  // -- Utilities ---------------------------------------------
 
   findPlayerByConnection(connectionId: string) {
-    for (const [, player] of this.players) {
-      if (player.connectionId === connectionId) return player;
+    for (const [, p] of this.players) {
+      if (p.connectionId === connectionId) return p;
     }
     return null;
   }
 
-  getAvailableThemes() {
-    return (Object.keys(THEME_LABELS) as ThemeId[]).map((id) => ({
-      id,
-      label: THEME_LABELS[id],
-      description: THEME_DESCRIPTIONS[id],
-    }));
-  }
-
-  shuffleArray<T>(arr: T[]) {
-    for (let i = arr.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [arr[i], arr[j]] = [arr[j], arr[i]];
+  // ---------------------------------------------------------
+  //  State broadcast (personnalisé par joueur)
+  // ---------------------------------------------------------
+  broadcastPersonalizedState() {
+    for (const [, p] of this.players) {
+      this.sendTo(p.connectionId, {
+        type: "game-state",
+        payload: this.getStateForPlayer(p.id),
+      });
     }
   }
 
-  clearTimerInterval() {
-    if (this.timerInterval) {
-      clearInterval(this.timerInterval);
-      this.timerInterval = null;
+  getStateForPlayer(pid: string): Record<string, unknown> {
+    const base = this.buildPublicState();
+    const me = this.gamePlayers.get(pid);
+    if (me) {
+      base.myRole = me.role;
+      base.myWord = me.word;
+      base.myId = me.id;
     }
+    return base;
   }
 
-  clearTimers() {
-    this.clearTimerInterval();
-    this.clearBotActionTimeouts();
-    if (this.revealTimeout) { clearTimeout(this.revealTimeout); this.revealTimeout = null; }
-    if (this.describeTimeout) { clearTimeout(this.describeTimeout); this.describeTimeout = null; }
-    if (this.voteTimeout) { clearTimeout(this.voteTimeout); this.voteTimeout = null; }
-    if (this.resultTimeout) { clearTimeout(this.resultTimeout); this.resultTimeout = null; }
-    if (this.mrWhiteTimeout) { clearTimeout(this.mrWhiteTimeout); this.mrWhiteTimeout = null; }
+  buildPublicState(): Record<string, unknown> {
+    const revealAll = this.phase === "game-over";
+    const revealEliminated = this.phase === "vote-result" || this.phase === "mrwhite-guess" || this.phase === "round-end" || this.phase === "game-over";
+
+    let voteTally: Record<string, number> | null = null;
+    if (this.phase === "vote-result" || this.phase === "mrwhite-guess" || this.phase === "round-end" || this.phase === "game-over") {
+      voteTally = {};
+      for (const t of this.votes.values()) voteTally[t] = (voteTally[t] ?? 0) + 1;
+    }
+
+    const currentSpeakerId =
+      this.phase === "clue" && this.currentClueIdx < this.clueOrder.length
+        ? this.clueOrder[this.currentClueIdx]
+        : null;
+
+    return {
+      phase: this.phase,
+      round: this.round,
+      timeLeft: this.timeLeft,
+      config: this.config,
+      currentSpeakerId,
+      clueOrder: this.clueOrder,
+      currentClueIdx: this.currentClueIdx,
+      eliminatedThisRound: this.eliminatedThisRound,
+      eliminatedRole: this.eliminatedRole,
+      voteTally,
+      clueHistory: this.clueHistory,
+      civilWord: revealAll ? this.civilWord : null,
+      undercoverWord: revealAll ? this.undercoverWord : null,
+      lastGuess: this.lastGuess,
+      lastGuessCorrect: this.lastGuessCorrect,
+      endReason: this.endReason,
+      players: Array.from(this.gamePlayers.values()).map((p) => ({
+        id: p.id,
+        name: p.name,
+        score: p.score,
+        isEliminated: p.isEliminated,
+        hasClue: p.hasClue,
+        hasVoted: p.votedFor !== null,
+        clue: p.clue,
+        eliminatedRound: p.eliminatedRound,
+        // Le rôle n'est dévoilé qu'au moment où ça compte
+        role: revealAll
+          ? p.role
+          : revealEliminated && p.id === this.eliminatedThisRound
+          ? p.role
+          : null,
+        // Le mot n'est révélé à la fin que pour les undercover/mrwhite éliminés
+        word: revealAll
+          ? p.word
+          : revealEliminated && p.id === this.eliminatedThisRound
+          ? p.word
+          : null,
+      })),
+    };
   }
 
-  clearBotActionTimeouts() {
-    for (const timeout of this.botActionTimeouts) {
-      clearTimeout(timeout);
-    }
-    this.botActionTimeouts.clear();
+  getState(): Record<string, unknown> {
+    // Vue "publique" sans personnalisation (fallback)
+    return this.buildPublicState();
   }
 
   cleanup() {
-    this.clearTimers();
+    this.stopTimer();
+    this.clearBotTimeouts();
   }
 }
