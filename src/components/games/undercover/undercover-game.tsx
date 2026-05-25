@@ -1069,11 +1069,13 @@ export default function UndercoverGame({
       }
 
       return (
-        <div className="relative flex min-h-[100svh] flex-1 flex-col gap-5 overflow-hidden bg-[#040824] p-4 pb-8 text-white">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_25%,rgba(149,60,101,0.35),transparent_40%),radial-gradient(circle_at_50%_62%,rgba(36,224,224,0.3),transparent_34%),linear-gradient(180deg,#040424_0%,#05113a_42%,#01072a_100%)]" />
-          <div className="relative mt-6 text-center">
-            <h2 className="text-5xl font-sans font-semibold text-cyan-300">Joueur {localCardTurnIndex + 1}</h2>
-            <p className="mt-1 text-3xl font-sans text-white/90">Pioche une carte</p>
+        <div className="relative flex min-h-[100svh] flex-1 flex-col gap-5 overflow-hidden p-4 pb-8 text-white">
+          <UCBack tone="noir" />
+          <div className="relative z-[2] mt-[calc(env(safe-area-inset-top,0px)+1.25rem)] text-center">
+            <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, letterSpacing: 2, color: "var(--af-yellow)", fontWeight: 800 }}>
+              DISTRIBUTION · JOUEUR {localCardTurnIndex + 1}
+            </p>
+            <h2 className="cb-display-lg mt-1">Pioche ta carte</h2>
           </div>
 
           <div className="relative mx-auto flex w-full max-w-md gap-2">
@@ -1099,12 +1101,13 @@ export default function UndercoverGame({
                 onClick={drawLocalRandomCard}
                 disabled={!!localCardReveal}
                 className={cn(
-                  "group relative h-32 rounded-2xl border border-yellow-300/60 bg-[#ffc911] text-black shadow-[0_8px_25px_rgba(0,0,0,0.35)] transition-all hover:-translate-y-1 disabled:opacity-55",
+                  "group relative h-32 rounded-2xl border transition-all hover:-translate-y-1 disabled:opacity-55",
                   localDrawnSlot === i && "ring-2 ring-white/80"
                 )}
+                style={{ background: "linear-gradient(160deg, rgba(255,255,255,0.07), rgba(0,0,0,0.4))", borderColor: "rgba(255,210,63,0.4)", boxShadow: "0 8px 25px rgba(0,0,0,0.4)" }}
               >
                 <div className="relative flex h-full items-center justify-center">
-                  <span className="text-6xl font-sans font-bold text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.2)]">?</span>
+                  <span className="text-6xl font-sans font-black" style={{ color: "var(--af-yellow)", textShadow: "0 0 18px rgba(255,210,63,0.5)" }}>?</span>
                 </div>
               </button>
             ))}
