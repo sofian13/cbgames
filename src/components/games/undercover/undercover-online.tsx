@@ -844,8 +844,9 @@ function VotePhase({ state, sendAction, myId }: { state: UCState; sendAction: (a
 
 function EliminatePhase({ state }: { state: UCState }) {
   const elim = state.players.find((p) => p.id === state.eliminatedThisRound);
-  // Rôle/mot cachés à l'élimination — révélés seulement à la fin de partie.
-  const color = "#FFD23F";
+  // On révèle le RÔLE à l'élimination, mais jamais le mot.
+  const role = elim?.role ?? state.eliminatedRole;
+  const color = role ? ROLE_COLOR[role] : "#FFD23F";
 
   return (
     <>
@@ -858,7 +859,7 @@ function EliminatePhase({ state }: { state: UCState }) {
         maskImage: "radial-gradient(circle, transparent 25%, black 50%, transparent 85%)",
       }} />
 
-      <NavBar sub={`Verdict · manche ${state.round}`} title={elim ? "Éliminé !" : "Égalité"} right={<Tag color={color}>VOTE</Tag>} />
+      <NavBar sub={`Verdict · manche ${state.round}`} title={elim ? "Démasqué !" : "Égalité"} right={<Tag color={color}>{role ? ROLE_LABEL[role].toUpperCase() : "VOTE"}</Tag>} />
 
       {elim ? (
         <>
@@ -875,13 +876,15 @@ function EliminatePhase({ state }: { state: UCState }) {
 
           <div style={{
             padding: "16px 18px", borderRadius: 18,
-            background: "linear-gradient(160deg, rgba(255,210,63,0.16), rgba(0,0,0,0.45))",
-            border: "1px solid rgba(255,210,63,0.35)",
+            background: `linear-gradient(160deg, ${color}26, rgba(0,0,0,0.45))`,
+            border: `1px solid ${color}55`,
             textAlign: "center", marginBottom: 16,
           }}>
-            <div style={{ fontSize: 14, color: "rgba(255,255,255,0.75)", lineHeight: 1.4 }}>
-              Le groupe a voté contre <b>{elim.name}</b>.<br />Son rôle reste secret jusqu&apos;à la fin !
+            <Mono>C&apos;était un…</Mono>
+            <div style={{ fontFamily: "var(--font-display, system-ui)", fontSize: 30, color, fontWeight: 900, marginTop: 4 }}>
+              {role ? ROLE_LABEL[role] : "—"}
             </div>
+            <div style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", marginTop: 4 }}>son mot reste secret</div>
           </div>
         </>
       ) : (

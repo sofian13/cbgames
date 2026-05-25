@@ -112,6 +112,14 @@ const WORD_CATEGORIES: { id: string; label: string; emoji: string; pairs: [strin
     ["Cuisinier", "Serveur"], ["Acteur", "Chanteur"], ["Peintre", "Sculpteur"], ["Journaliste", "Écrivain"],
     ["Vétérinaire", "Dentiste"], ["Architecte", "Ingénieur"],
   ] },
+  { id: "adult", label: "+18", emoji: "🔞", pairs: [
+    ["Tinder", "Bumble"], ["Coup d'un soir", "Plan cul"], ["Gueule de bois", "Black-out"],
+    ["Préservatif", "Pilule"], ["Suçon", "Bisou baveux"], ["Strip-tease", "Pole dance"],
+    ["Nude", "Sextape"], ["Drague lourde", "Râteau"], ["Tequila", "Jägerbomb"],
+    ["Boîte de nuit", "After"], ["Célibataire", "Friendzone"], ["Pécho", "Date Tinder"],
+    ["Préliminaires", "Câlins"], ["Sexto", "Dick pic"], ["Threesome", "Couple libre"],
+    ["Apéro qui dérape", "Soirée mousse"],
+  ] },
 ];
 const ALL_WORD_PAIRS: [string, string][] = WORD_CATEGORIES.flatMap((c) => c.pairs);
 
@@ -205,7 +213,8 @@ export default function UndercoverLocal({ onReturnToLobby }: { onReturnToLobby?:
     const ids = players.map((p) => p.idx);
     const shuffled = [...ids].sort(() => Math.random() - 0.5);
 
-    const newPlayers = [...players];
+    // Nouvelle distribution = manche neuve : on remet tout le monde en vie.
+    const newPlayers: LocalPlayer[] = players.map((p) => ({ ...p, isEliminated: false, eliminatedRound: null, hasSpoken: false, role: "civil" as Role, word: a as string | null }));
     let i = 0;
     for (let u = 0; u < ucCount && i < shuffled.length; u++, i++) {
       const id = shuffled[i];
@@ -523,14 +532,14 @@ export default function UndercoverLocal({ onReturnToLobby }: { onReturnToLobby?:
         mrWhiteGuess={mrWhiteGuess}
         mrWhiteRight={mrWhiteRight}
         onReplay={() => {
-          // reset state, garder les noms
+          // Revanche : mêmes joueurs + même config de rôles, on redistribue
+          // juste un nouveau mot (pas besoin de repasser par les réglages).
           setRound(1);
           setEndReason(null);
-          setPlayers((ps) => ps.map((p) => ({ ...p, role: "civil", word: null, isEliminated: false, eliminatedRound: null, hasSpoken: false, score: 0 })));
           setEliminatedIdx(null);
           setMrWhiteGuess(null);
           setMrWhiteRight(null);
-          setPhase("setup-roles");
+          distributeRoles();
         }}
         onLobby={onReturnToLobby}
       />
@@ -981,9 +990,10 @@ function EliminateScreen({
   civilWord: string;
   onNext: () => void;
 }) {
-    // On ne révèle NI le mot NI le rôle à l'élimination (rôles cachés jusqu'à la fin).
+    // On révèle le RÔLE à l'élimination, mais jamais le mot.
     void civilWord;
-    const color = "#FFD23F";
+    const role = eliminated?.role ?? null;
+    const color = role ? ROLE_COLOR[role] : "#FFD23F";
 
   return (
     <LocalShell tone="danger">
@@ -998,8 +1008,8 @@ function EliminateScreen({
 
       <NavBar
         sub={`Verdict · manche ${round}`}
-        title={eliminated ? "Éliminé !" : "Égalité"}
-        right={<Tag color={color}>VOTE</Tag>}
+        title={eliminated ? "Démasqué !" : "Égalité"}
+        right={<Tag color={color}>{role ? ROLE_LABEL[role].toUpperCase() : "VOTE"}</Tag>}
       />
 
       {eliminated ? (
@@ -1017,14 +1027,15 @@ function EliminateScreen({
 
           <div style={{
             padding: "16px 18px", borderRadius: 18,
-            background: "linear-gradient(160deg, rgba(255,210,63,0.16), rgba(0,0,0,0.45))",
-            border: "1px solid rgba(255,210,63,0.35)",
+            background: `linear-gradient(160deg, ${color}26, rgba(0,0,0,0.45))`,
+            border: `1px solid ${color}55`,
             textAlign: "center", marginBottom: 16,
           }}>
-            <div style={{ fontSize: 14, color: "rgba(255,255,255,0.75)", lineHeight: 1.4 }}>
-              Le groupe a voté contre <b>{eliminated.name}</b>.<br />
-              Son rôle reste secret… on verra à la fin !
+            <Mono>C&apos;était un…</Mono>
+            <div style={{ fontFamily: "var(--font-display, system-ui)", fontSize: 30, color, fontWeight: 900, marginTop: 4 }}>
+              {role ? ROLE_LABEL[role] : "—"}
             </div>
+            <div style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", marginTop: 4 }}>son mot reste secret</div>
           </div>
         </>
       ) : (
