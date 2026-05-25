@@ -81,6 +81,33 @@ const PIECE_SYMBOL = PIECE_GLYPH;
 
 const TIME_OPTIONS = [5, 10, 15, 30] as const;
 
+type BoardTheme = "classic" | "ocean" | "rose" | "noir" | "emerald";
+const BOARD_THEMES: Record<BoardTheme, { light: string; dark: string; accent: string; name: string }> = {
+  classic: { light: "#EFE2C5", dark: "#A37553", accent: "#FFD23F", name: "Classique" },
+  ocean: { light: "#E8F0F4", dark: "#5A7E9B", accent: "#3DDC97", name: "Océan" },
+  rose: { light: "#F5E5E2", dark: "#B95F73", accent: "#FF3EA5", name: "Rose" },
+  noir: { light: "#2C2645", dark: "#1A1A2E", accent: "#7A4EE8", name: "Nuit" },
+  emerald: { light: "#E8F5E0", dark: "#3B6B43", accent: "#FFD23F", name: "Émeraude" },
+};
+
+type PlayColor = "w" | "random" | "b";
+type Cadence = { id: string; name: string; big: string; sub: string; minutes: number };
+const CADENCES: Cadence[] = [
+  { id: "none", name: "Sans timer", big: "∞", sub: "détente", minutes: 999 },
+  { id: "bullet", name: "Bullet", big: "1+0", sub: "très rapide", minutes: 1 },
+  { id: "blitz", name: "Blitz", big: "3+2", sub: "rapide", minutes: 3 },
+  { id: "rapide", name: "Rapide", big: "10+5", sub: "équilibré", minutes: 10 },
+  { id: "classique", name: "Classique", big: "30+0", sub: "long", minutes: 30 },
+  { id: "perso", name: "Personnalisé", big: "⚙", sub: "à toi", minutes: 15 },
+];
+
+const AI_LEVELS: Array<{ key: string; level: BotLevel; name: string; elo: string; desc: string; color: string; icon: string }> = [
+  { key: "beginner", level: "easy", name: "Débutant", elo: "~800", desc: "Joue au hasard parfois", color: "#65dfb2", icon: "🌱" },
+  { key: "easy", level: "easy", name: "Facile", elo: "~1200", desc: "Cherche 2 coups", color: "#5BA7E8", icon: "📘" },
+  { key: "medium", level: "medium", name: "Moyen", elo: "~1800", desc: "Cherche 4 coups", color: "#FFD23F", icon: "🔥" },
+  { key: "expert", level: "hard", name: "Expert", elo: "~2400", desc: "Stockfish full power", color: "#FF3EA5", icon: "⚡" },
+];
+
 function inside(x: number, y: number) {
   return x >= 0 && x < 8 && y >= 0 && y < 8;
 }
@@ -528,6 +555,42 @@ function LocalActionBtn({ icon, label, accent, onClick, disabled }: { icon: stri
   );
 }
 
+// En-tête d'étape (maquette CH02/03/04) : chip retour + sous-titre + titre + tag.
+function ChessStepHeader({ onBack, sub, title, tag, tagColor = "#FFD23F" }: {
+  onBack: () => void; sub: string; title: string; tag: string; tagColor?: string;
+}) {
+  return (
+    <div className="flex items-center gap-3">
+      <button onClick={onBack} aria-label="Retour" style={{
+        width: 38, height: 38, borderRadius: 12, flexShrink: 0,
+        background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.10)",
+        display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontSize: 18, lineHeight: 1,
+      }}>‹</button>
+      <div className="min-w-0 flex-1">
+        <div className="font-mono" style={{ fontSize: 10, color: "#FFD23F", fontWeight: 800, letterSpacing: 2, textTransform: "uppercase" }}>{sub}</div>
+        <div className="font-sans" style={{ fontSize: 22, color: "white", fontWeight: 800, letterSpacing: -0.5, lineHeight: 1, marginTop: 3 }}>{title}</div>
+      </div>
+      <span className="font-mono" style={{
+        fontSize: 9, fontWeight: 800, letterSpacing: 2, textTransform: "uppercase",
+        color: tagColor, padding: "4px 9px", borderRadius: 4,
+        border: `1px solid ${tagColor}55`, background: `${tagColor}11`, whiteSpace: "nowrap",
+      }}>{tag}</span>
+    </div>
+  );
+}
+
+// Roi unicode coloré (pour les cartes de choix de couleur CH03).
+function KingGlyph({ color, size = 34 }: { color: Color; size?: number }) {
+  return (
+    <span style={{
+      fontSize: size, lineHeight: 1,
+      color: color === "w" ? "#FAF6E8" : "#0F0F12",
+      WebkitTextStroke: color === "w" ? "0.6px #14101F" : "0.4px #5A4D7A",
+      textShadow: color === "w" ? "0 2px 3px rgba(0,0,0,0.45)" : "0 2px 3px rgba(0,0,0,0.55)",
+    }}>♚</span>
+  );
+}
+
 interface ChessBoardViewProps {
   board: Array<Piece | null>;
   selectedSquare: number | null;
@@ -536,6 +599,7 @@ interface ChessBoardViewProps {
   lastMove: ChessMove | null;
   orientation?: Color;
   inCheckSquare?: number | null;
+  theme?: BoardTheme;
 }
 
 const ChessBoardView = memo(function ChessBoardView({
@@ -546,7 +610,9 @@ const ChessBoardView = memo(function ChessBoardView({
   lastMove,
   orientation = "w",
   inCheckSquare = null,
+  theme = "classic",
 }: ChessBoardViewProps) {
+  const T = BOARD_THEMES[theme] ?? BOARD_THEMES.classic;
   const rows = orientation === "w" ? [...Array(8).keys()] : [...Array(8).keys()].reverse();
   const cols = orientation === "w" ? [...Array(8).keys()] : [...Array(8).keys()].reverse();
   const fileLabels = orientation === "w" ? ["a","b","c","d","e","f","g","h"] : ["h","g","f","e","d","c","b","a"];
@@ -595,13 +661,13 @@ const ChessBoardView = memo(function ChessBoardView({
                   key={idx}
                   onClick={() => onSquareClick(idx)}
                   className="relative flex aspect-square items-center justify-center leading-none"
-                  style={{ background: isLight ? "#EFE2C5" : "#A37553", fontSize: "clamp(1rem, 6vw, 2.8rem)" }}
+                  style={{ background: isLight ? T.light : T.dark, fontSize: "clamp(1rem, 6vw, 2.8rem)" }}
                 >
                   {isLastMove && (
-                    <span className="pointer-events-none absolute inset-0" style={{ background: "rgba(255,210,63,0.30)" }} />
+                    <span className="pointer-events-none absolute inset-0" style={{ background: `${T.accent}4D` }} />
                   )}
                   {isSelected && (
-                    <span className="pointer-events-none absolute inset-0" style={{ background: "rgba(255,210,63,0.40)", boxShadow: "inset 0 0 0 3px #FFD23F" }} />
+                    <span className="pointer-events-none absolute inset-0" style={{ background: `${T.accent}66`, boxShadow: `inset 0 0 0 3px ${T.accent}` }} />
                   )}
                   {isCheck && (
                     <span className="pointer-events-none absolute inset-0" style={{ background: "radial-gradient(circle, rgba(255,62,165,0.7) 0%, rgba(255,62,165,0) 70%)" }} />
@@ -646,10 +712,15 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
 
   const [selected, setSelected] = useState<number | null>(null);
   const [localMode, setLocalMode] = useState(false);
-  const [entryMode, setEntryMode] = useState<"choose" | "local" | "multi">("choose");
+  const [entryMode, setEntryMode] = useState<"choose" | "ai-level" | "setup" | "lobby">("choose");
   const [localKind, setLocalKind] = useState<"duel" | "bot">("duel");
   const [localBotLevel, setLocalBotLevel] = useState<BotLevel>("medium");
-  const [localTimeMinutes, setLocalTimeMinutes] = useState<number>(15);
+  const [aiLevelKey, setAiLevelKey] = useState<string>("easy");
+  const [playColor, setPlayColor] = useState<PlayColor>("w");
+  const [localHumanColor, setLocalHumanColor] = useState<Color>("w");
+  const [boardTheme, setBoardTheme] = useState<BoardTheme>("classic");
+  const [cadenceId, setCadenceId] = useState<string>("blitz");
+  const [localTimeMinutes, setLocalTimeMinutes] = useState<number>(3);
   const [localWhiteName, setLocalWhiteName] = useState("Joueur 1");
   const [localBlackName, setLocalBlackName] = useState("Joueur 2");
   const [localBoard, setLocalBoard] = useState<Array<Piece | null>>(() => initialBoard());
@@ -919,15 +990,17 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
   }, [localBoard, localTurn, localWinner]);
 
   useEffect(() => {
-    if (!localMode || localWinner || localKind !== "bot" || localTurn !== "b") return;
+    if (!localMode || localWinner || localKind !== "bot") return;
+    const botColor = otherColor(localHumanColor);
+    if (localTurn !== botColor) return;
     const timer = setTimeout(() => {
-      const legal = generateLegalMoves(localBoard, "b");
+      const legal = generateLegalMoves(localBoard, botColor);
       if (legal.length === 0) return;
-      const move = pickBotMove(localBoard, legal, localBotLevel, "b");
+      const move = pickBotMove(localBoard, legal, localBotLevel, botColor);
       applyLocalMove(move);
     }, 250);
     return () => clearTimeout(timer);
-  }, [applyLocalMove, localBoard, localBotLevel, localKind, localMode, localTurn, localWinner]);
+  }, [applyLocalMove, localBoard, localBotLevel, localHumanColor, localKind, localMode, localTurn, localWinner]);
 
   useEffect(() => {
     if (!localMode || localWinner) return;
@@ -1051,7 +1124,7 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
 
   const handleLocalClick = useCallback((index: number) => {
     if (localWinner) return;
-    if (localKind === "bot" && localTurn === "b") return;
+    if (localKind === "bot" && localTurn === otherColor(localHumanColor)) return;
     const piece = localBoard[index];
 
     if (localSelected !== null) {
@@ -1068,9 +1141,10 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
     } else {
       setLocalSelected(null);
     }
-  }, [applyLocalMove, localBoard, localKind, localLegalByFrom, localSelected, localTurn, localWinner]);
+  }, [applyLocalMove, localBoard, localHumanColor, localKind, localLegalByFrom, localSelected, localTurn, localWinner]);
 
-  const startLocalGame = useCallback(() => {
+  const startLocalGame = useCallback((minutesOverride?: number) => {
+    const minutes = minutesOverride ?? localTimeMinutes;
     setLocalBoard(initialBoard());
     setLocalTurn("w");
     setLocalWinner(null);
@@ -1080,10 +1154,19 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
     setLocalMoveCount(0);
     setLocalMoveLog([]);
     setLocalUndoStack([]);
-    setLocalWhiteTimeMs(localTimeMinutes * 60_000);
-    setLocalBlackTimeMs(localTimeMinutes * 60_000);
+    setLocalWhiteTimeMs(minutes * 60_000);
+    setLocalBlackTimeMs(minutes * 60_000);
     setLocalMode(true);
   }, [localTimeMinutes]);
+
+  // Lance une partie locale depuis l'écran de réglages (CH03).
+  const launchLocalFromSetup = useCallback(() => {
+    const human: Color = playColor === "random" ? (Math.random() < 0.5 ? "w" : "b") : playColor;
+    const cad = CADENCES.find((c) => c.id === cadenceId) ?? CADENCES[2];
+    setLocalHumanColor(human);
+    setLocalTimeMinutes(cad.minutes);
+    startLocalGame(cad.minutes);
+  }, [playColor, cadenceId, startLocalGame]);
 
   const focusBoardStyle = {
     width: "min(calc(100vw - 1.25rem), calc(100svh - 13.5rem), 940px)",
@@ -1107,6 +1190,17 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
           ? "Tour du bot"
           : `Tour des noirs (${localBlackName})`;
     const localWinnerName = localWinner === "w" ? localWhiteName : localWinner === "b" ? (localKind === "bot" ? "Bot" : localBlackName) : "";
+
+    const bottomColor: Color = localKind === "bot" ? localHumanColor : "w";
+    const topColor = otherColor(bottomColor);
+    const localOrient: Color = bottomColor;
+    const cardFor = (c: Color) => ({
+      name: localKind === "bot" ? (c === localHumanColor ? (localWhiteName || "Toi") : "Bot") : c === "w" ? localWhiteName : localBlackName,
+      color: c,
+      timeMs: c === "w" ? localWhiteTimeMs : localBlackTimeMs,
+      captures: c === "w" ? localCapturedBlack : localCapturedWhite,
+      isTurn: !localWinner && localTurn === c,
+    });
 
     if (isFocusView) {
       return (
@@ -1145,8 +1239,9 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
                 onSquareClick={handleLocalClick}
                 availableTargets={localTargets}
                 lastMove={localLastMove}
-                orientation="w"
+                orientation={localOrient}
                 inCheckSquare={localInCheckSquare}
+                theme={boardTheme}
               />
             </div>
 
@@ -1229,15 +1324,9 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
             </p>
           )}
 
-          {/* Adversaire (noir) — en haut */}
+          {/* Adversaire — en haut */}
           <div className="mt-3">
-            <CompactPlayerCard
-              name={localKind === "bot" ? "Bot" : localBlackName}
-              color="b"
-              timeMs={localBlackTimeMs}
-              captures={localCapturedWhite}
-              isTurn={!localWinner && localTurn === "b"}
-            />
+            <CompactPlayerCard {...cardFor(topColor)} />
           </div>
 
           {/* Board */}
@@ -1248,20 +1337,15 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
               onSquareClick={handleLocalClick}
               availableTargets={localTargets}
               lastMove={localLastMove}
-              orientation="w"
+              orientation={localOrient}
               inCheckSquare={localInCheckSquare}
+              theme={boardTheme}
             />
           </div>
 
-          {/* Moi (blanc) — en bas */}
+          {/* Moi — en bas */}
           <div className="mt-3">
-            <CompactPlayerCard
-              name={localWhiteName}
-              color="w"
-              timeMs={localWhiteTimeMs}
-              captures={localCapturedBlack}
-              isTurn={!localWinner && localTurn === "w"}
-            />
+            <CompactPlayerCard {...cardFor(bottomColor)} />
           </div>
 
           {/* Historique des coups (CH05) */}
@@ -1283,7 +1367,7 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
           {/* Actions (maquette CH05) */}
           <div className="mt-4 flex gap-2">
             {localWinner ? (
-              <button onClick={startLocalGame}
+              <button onClick={() => startLocalGame()}
                 className="flex-1 rounded-2xl bg-gradient-to-r from-[#65dfb2] to-[#4ecf8a] py-3 font-sans text-sm font-bold text-black shadow-[0_0_20px_rgba(78,207,138,0.25)]">
                 🔄 Rejouer
               </button>
@@ -1315,207 +1399,252 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
      ════════════════════════════════════════════════════════ */
   if (!state || state.phase === "waiting") {
     const onlinePlayers = state?.connectedPlayers ?? [];
+    const showColorPick = localKind === "bot";
+    const meName = onlinePlayers.find((p) => p.id === playerId)?.name ?? playerName ?? "Toi";
+    const oppName = onlinePlayers.find((p) => p.id !== playerId)?.name ?? null;
+    const isHost = onlinePlayers.length > 0 && onlinePlayers[0].id === playerId;
+    const lobbyCadence = CADENCES.find((c) => c.minutes === (state?.timeControlMinutes ?? 3));
+
+    const modeRows = [
+      { icon: "🤖", title: "Contre l'IA", sub: "4 niveaux · joue seul", accent: "#FFD23F", onClick: () => { setLocalKind("bot"); setEntryMode("ai-level"); } },
+      { icon: "📱", title: "Un seul téléphone", sub: "On se le passe · pass-and-play", accent: "#65dfb2", onClick: () => { setLocalKind("duel"); setEntryMode("setup"); } },
+      { icon: "🌐", title: "En ligne", sub: "Avec un code de salle", accent: "#FF3EA5", onClick: () => { setEntryMode("lobby"); sendAction({ action: "set-mode", mode: "online" }); } },
+    ];
+
     return (
-      <div className="relative flex flex-1 flex-col overflow-hidden p-4 font-sans sm:p-6">
-        {/* Background gradient */}
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_25%,rgba(251,191,36,0.14),transparent_40%),radial-gradient(circle_at_80%_80%,rgba(139,92,246,0.12),transparent_40%),linear-gradient(145deg,#0a0a1a,#111827)]" />
+      <div className="relative flex flex-1 flex-col overflow-y-auto font-sans" style={{
+        background: "radial-gradient(120% 70% at 50% 0%, rgba(122,78,232,0.22) 0%, transparent 60%), linear-gradient(180deg,#0F0A1F 0%,#1A1230 100%)",
+        padding: "calc(env(safe-area-inset-top,0px) + 18px) 16px calc(env(safe-area-inset-bottom,0px) + 26px)",
+      }}>
+        <div className="mx-auto flex w-full max-w-[460px] flex-1 flex-col">
 
-        {/* Main panel */}
-        <div className="relative mx-auto flex w-full max-w-4xl flex-1 flex-col rounded-3xl border border-white/18 bg-black/28 p-4 backdrop-blur-xl sm:p-7">
-          {/* Title + hero de blobs (la touche af.games) */}
-          <div className="flex flex-col items-center text-center">
-            <div className="mb-2 flex items-end justify-center gap-1">
-              <Mascot size={54} color="sky" mood="cool" delay={0.15} />
-              <Mascot size={82} color="yellow" mood="happy" crown arms cheering delay={0} />
-              <Mascot size={54} color="coral" mood="shocked" delay={0.3} />
-            </div>
-            <p className="font-sans text-[11px] uppercase tracking-[0.25em] text-white/45">af games · le roi des jeux</p>
-            <h2 className="mt-1 font-sans font-black text-white" style={{ fontSize: 46, letterSpacing: -2, lineHeight: 0.95 }}>
-              Échec<span style={{ background: "linear-gradient(120deg,#FFD23F,#fff)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>s</span>
-            </h2>
-            <p className="mt-2 font-sans text-sm text-white/50">2 joueurs, contre l&apos;IA ou en ligne.</p>
-          </div>
-
-          {/* Mode chooser */}
+          {/* ── CH01 · MODE ── */}
           {entryMode === "choose" && (
-            <div className="mt-7 grid gap-3 sm:grid-cols-2">
-              {([
-                { onClick: () => setEntryMode("local"), icon: "📱", color: "#65dfb2", glow: "rgba(101,223,178,0.15)", title: "Local", sub: "Même téléphone · vs bot ou un pote" },
-                { onClick: () => { setEntryMode("multi"); sendAction({ action: "set-mode", mode: "online" }); }, icon: "🌐", color: "#fbbf24", glow: "rgba(251,191,36,0.15)", title: "Multijoueur", sub: "Duel en ligne avec un code" },
-              ] as const).map((m) => (
-                <button key={m.title} onClick={m.onClick}
-                  className="group flex items-center gap-4 rounded-3xl border border-white/12 bg-white/[0.04] p-5 text-left backdrop-blur-sm transition active:scale-[0.98]"
-                  style={{ boxShadow: `0 8px 24px rgba(0,0,0,0.25)` }}>
-                  <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-2xl"
-                        style={{ background: `${m.color}1A`, border: `1px solid ${m.color}33` }}>{m.icon}</span>
-                  <span className="flex-1">
-                    <span className="block font-sans text-lg font-bold text-white">{m.title}</span>
-                    <span className="block font-sans text-xs text-white/45">{m.sub}</span>
-                  </span>
-                  <span style={{ color: m.color, fontSize: 22, fontWeight: 800 }}>›</span>
-                </button>
-              ))}
-            </div>
-          )}
-
-          {/* Multiplayer time control */}
-          {entryMode === "multi" && (
-            <section className="mt-6 rounded-2xl border border-white/25 bg-black/30 p-5 backdrop-blur-sm">
-              <p className="font-sans text-xs uppercase tracking-widest text-white/40">Cadence</p>
-              <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
-                {TIME_OPTIONS.map((minutes) => (
-                  <button
-                    key={`multi-${minutes}`}
-                    onClick={() => sendAction({ action: "set-time-control", minutes })}
-                    className={cn(
-                      "rounded-xl border px-3 py-2.5 font-mono text-sm transition",
-                      (state?.timeControlMinutes ?? 15) === minutes
-                        ? "border-amber-300/50 bg-amber-300/15 text-amber-200 shadow-[0_0_12px_rgba(251,191,36,0.15)]"
-                        : "border-white/10 bg-black/20 text-white/40 hover:border-white/25 hover:text-white/60"
-                    )}
-                  >
-                    {minutes} min
+            <>
+              <div className="flex flex-col items-center pt-2 text-center">
+                <div className="mb-3 flex items-end justify-center gap-1">
+                  <Mascot size={54} color="sky" mood="cool" delay={0.15} />
+                  <Mascot size={88} color="yellow" mood="happy" crown arms cheering delay={0} />
+                  <Mascot size={54} color="coral" mood="shocked" delay={0.3} />
+                </div>
+                <p className="text-[11px] uppercase tracking-[0.25em] text-white/45">af games · le roi des jeux</p>
+                <h2 className="mt-1 font-black text-white" style={{ fontSize: 52, letterSpacing: -2.2, lineHeight: 0.92, textShadow: "0 0 40px rgba(255,210,63,0.22)" }}>
+                  Échec<span style={{ background: "linear-gradient(120deg,#FFD23F,#fff)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>s</span>
+                </h2>
+                <p className="mt-2.5 text-sm text-white/55">Le roi des jeux. <em className="not-italic font-bold text-[#FFD23F]">2 joueurs</em>, IA ou en ligne.</p>
+              </div>
+              <div className="mt-7 flex flex-col gap-2.5">
+                {modeRows.map((m) => (
+                  <button key={m.title} onClick={m.onClick}
+                    className="flex items-center gap-3.5 rounded-2xl border border-white/10 bg-white/[0.04] p-3.5 text-left transition active:scale-[0.98]">
+                    <span className="flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-[14px] text-2xl"
+                      style={{ background: `${m.accent}1A`, border: `1px solid ${m.accent}33` }}>{m.icon}</span>
+                    <span className="flex-1">
+                      <span className="block text-[18px] font-extrabold leading-none text-white">{m.title}</span>
+                      <span className="mt-1.5 block text-xs text-white/45">{m.sub}</span>
+                    </span>
+                    <span style={{ color: m.accent, fontSize: 20, fontWeight: 800 }}>›</span>
                   </button>
                 ))}
               </div>
-            </section>
+            </>
           )}
 
-          {/* Multiplayer connected players */}
-          {entryMode === "multi" && (
-            <section className="mt-4 rounded-2xl border border-white/25 bg-black/30 p-5 backdrop-blur-sm">
-              <p className="font-sans text-xs uppercase tracking-widest text-white/40">
-                Joueurs connectes ({onlinePlayers.length})
-              </p>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {onlinePlayers.map((p) => (
-                  <span
-                    key={p.id}
-                    className="rounded-full border border-white/25 bg-white/5 px-4 py-1.5 font-sans text-xs text-white/90"
-                  >
-                    {p.name}
-                    {p.id === playerId ? " (toi)" : ""}
-                  </span>
-                ))}
+          {/* ── CH02 · NIVEAU IA ── */}
+          {entryMode === "ai-level" && (
+            <>
+              <ChessStepHeader onBack={() => setEntryMode("choose")} sub="Setup IA · 1/2" title="Niveau" tag="vs IA" tagColor="#65dfb2" />
+              <div className="mt-6 flex justify-center">
+                <div className="flex items-center justify-center" style={{
+                  width: 100, height: 100, borderRadius: 28, fontSize: 52,
+                  background: "linear-gradient(160deg, rgba(122,78,232,0.20) 0%, rgba(0,0,0,0.35) 100%)",
+                  border: "1px solid rgba(255,255,255,0.10)",
+                  boxShadow: "0 18px 40px rgba(122,78,232,0.30), inset 0 1px 0 rgba(255,255,255,0.10)",
+                }}>🤖</div>
               </div>
-            </section>
+              <div className="mt-6 flex flex-col gap-2">
+                {AI_LEVELS.map((l) => {
+                  const active = aiLevelKey === l.key;
+                  return (
+                    <button key={l.key} onClick={() => { setAiLevelKey(l.key); setLocalBotLevel(l.level); }}
+                      className="flex items-center gap-3 rounded-2xl px-3.5 py-3 text-left transition" style={{
+                        background: active ? `linear-gradient(160deg, ${l.color}22 0%, rgba(0,0,0,0.30) 100%)` : "rgba(255,255,255,0.03)",
+                        border: active ? `2px solid ${l.color}` : "1px solid rgba(255,255,255,0.08)",
+                        boxShadow: active ? `0 16px 30px ${l.color}33` : "none",
+                      }}>
+                      <span className="flex items-center justify-center" style={{ width: 44, height: 44, borderRadius: 12, fontSize: 20, background: `${l.color}1A`, border: `1px solid ${l.color}40` }}>{l.icon}</span>
+                      <span className="flex-1">
+                        <span className="flex items-baseline gap-2">
+                          <span className="text-[17px] font-extrabold text-white">{l.name}</span>
+                          <span className="font-mono text-[10px] font-extrabold tracking-wider" style={{ color: l.color }}>ELO {l.elo}</span>
+                        </span>
+                        <span className="mt-0.5 block text-[11px] text-white/45">{l.desc}</span>
+                      </span>
+                      <span className="flex items-center justify-center" style={{ width: 22, height: 22, borderRadius: "50%", flexShrink: 0, border: active ? `2px solid ${l.color}` : "1.5px solid rgba(255,255,255,0.25)", background: active ? l.color : "transparent", color: "#1A0E2E", fontSize: 12, fontWeight: 900 }}>{active ? "✓" : ""}</span>
+                    </button>
+                  );
+                })}
+              </div>
+              <button onClick={() => setEntryMode("setup")} className="mt-auto pt-6">
+                <span className="block rounded-2xl py-4 text-center text-base font-bold text-[#1A0E2E]" style={{ background: "linear-gradient(180deg,#FFD23F 0%,#C48800 100%)", boxShadow: "0 14px 30px rgba(255,210,63,0.40)" }}>Continuer →</span>
+              </button>
+            </>
           )}
 
-          {/* Local setup */}
-          {entryMode === "local" && (
-            <section className="mt-5 rounded-2xl border border-white/25 bg-black/30 p-5 backdrop-blur-sm">
-              <p className="font-sans text-xs uppercase tracking-widest text-white/40">Mode local 1 telephone</p>
+          {/* ── CH03 · CADENCE + THÈME ── */}
+          {entryMode === "setup" && (
+            <>
+              <ChessStepHeader onBack={() => setEntryMode(localKind === "bot" ? "ai-level" : "choose")} sub="Setup · 2/2" title="Ta partie" tag="RÉGLAGES" />
 
-              {/* Local kind selector */}
-              <div className="mt-4 grid grid-cols-2 gap-2">
-                <button
-                  onClick={() => setLocalKind("duel")}
-                  className={cn(
-                    "rounded-xl border px-3 py-2.5 font-sans text-xs transition",
-                    localKind === "duel"
-                      ? "border-[#65dfb2]/50 bg-[#65dfb2]/15 text-[#65dfb2] shadow-[0_0_12px_rgba(101,223,178,0.12)]"
-                      : "border-white/10 bg-black/20 text-white/40 hover:border-white/25"
-                  )}
-                >
-                  Vs collegue (meme tel)
-                </button>
-                <button
-                  onClick={() => setLocalKind("bot")}
-                  className={cn(
-                    "rounded-xl border px-3 py-2.5 font-sans text-xs transition",
-                    localKind === "bot"
-                      ? "border-[#65dfb2]/50 bg-[#65dfb2]/15 text-[#65dfb2] shadow-[0_0_12px_rgba(101,223,178,0.12)]"
-                      : "border-white/10 bg-black/20 text-white/40 hover:border-white/25"
-                  )}
-                >
-                  Vs bot
-                </button>
-              </div>
+              {showColorPick && (
+                <div className="mt-6">
+                  <p className="font-mono text-[10px] font-extrabold uppercase tracking-[2px] text-white/40">Tu joues les…</p>
+                  <div className="mt-2.5 grid grid-cols-3 gap-2">
+                    {([
+                      { c: "w", bg: "#F4F1E8", border: "#C9C2AC", label: "Blancs", txt: "#1A0E2E", icon: <KingGlyph color="w" size={32} /> },
+                      { c: "random", bg: "linear-gradient(135deg,#F4F1E8 0%,#F4F1E8 50%,#1A1A1A 50%,#1A1A1A 100%)", border: "#7A4EE8", label: "Au sort", txt: "#fff", icon: <span style={{ fontSize: 24 }}>🎲</span> },
+                      { c: "b", bg: "#1A1A1A", border: "#3A3A3A", label: "Noirs", txt: "#fff", icon: <KingGlyph color="b" size={32} /> },
+                    ] as const).map((o) => {
+                      const active = playColor === o.c;
+                      return (
+                        <button key={o.c} onClick={() => setPlayColor(o.c as PlayColor)} className="relative rounded-[14px] px-2 pb-3 pt-3.5 text-center" style={{
+                          background: o.bg, border: active ? "2px solid #FFD23F" : `1px solid ${o.border}`,
+                          boxShadow: active ? "0 12px 28px rgba(255,210,63,0.25)" : "0 4px 10px rgba(0,0,0,0.30)",
+                        }}>
+                          <span className="flex h-9 items-center justify-center">{o.icon}</span>
+                          <span className="mt-1.5 block text-[13px] font-extrabold" style={{ color: o.txt }}>{o.label}</span>
+                          {active && <span className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full text-[9px] font-black text-[#1A0E2E]" style={{ background: "#FFD23F" }}>✓</span>}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
 
-              <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                <div className="space-y-3">
-                  <p className="font-sans text-xs text-white/40">Temps par joueur</p>
-                  <div className="grid grid-cols-2 gap-2">
-                    {TIME_OPTIONS.map((minutes) => (
-                      <button
-                        key={`local-${minutes}`}
-                        onClick={() => setLocalTimeMinutes(minutes)}
-                        className={cn(
-                          "rounded-xl border px-2 py-2.5 font-mono text-xs transition",
-                          localTimeMinutes === minutes
-                            ? "border-[#65dfb2]/50 bg-[#65dfb2]/15 text-[#65dfb2] shadow-[0_0_12px_rgba(101,223,178,0.12)]"
-                            : "border-white/10 bg-black/20 text-white/40 hover:border-white/25"
-                        )}
-                      >
-                        {minutes} min
+              <div className="mt-6">
+                <p className="font-mono text-[10px] font-extrabold uppercase tracking-[2px] text-white/40">Cadence</p>
+                <div className="mt-2.5 grid grid-cols-2 gap-2">
+                  {CADENCES.map((c) => {
+                    const active = cadenceId === c.id;
+                    return (
+                      <button key={c.id} onClick={() => { setCadenceId(c.id); setLocalTimeMinutes(c.minutes); }} className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-left" style={{
+                        background: active ? "linear-gradient(160deg, rgba(255,210,63,0.18) 0%, rgba(255,210,63,0.04) 100%)" : "rgba(255,255,255,0.04)",
+                        border: active ? "1.5px solid #FFD23F" : "1px solid rgba(255,255,255,0.08)",
+                      }}>
+                        <span className="font-mono text-[22px] font-black leading-none" style={{ color: active ? "#FFD23F" : "#fff", letterSpacing: -0.5 }}>{c.big}</span>
+                        <span className="flex-1">
+                          <span className="block text-[13px] font-bold text-white">{c.name}</span>
+                          <span className="block text-[10px] text-white/40">{c.sub}</span>
+                        </span>
                       </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="mt-6">
+                <p className="font-mono text-[10px] font-extrabold uppercase tracking-[2px] text-white/40">Thème du plateau</p>
+                <div className="mt-2.5 flex gap-2">
+                  {(Object.keys(BOARD_THEMES) as BoardTheme[]).map((t) => {
+                    const T = BOARD_THEMES[t];
+                    const active = boardTheme === t;
+                    return (
+                      <button key={t} onClick={() => setBoardTheme(t)} className="flex-1 rounded-xl p-1.5" style={{
+                        background: "rgba(255,255,255,0.04)", border: active ? "2px solid #FFD23F" : "1px solid rgba(255,255,255,0.08)",
+                      }}>
+                        <span className="grid aspect-square w-full overflow-hidden rounded-md" style={{ gridTemplateColumns: "1fr 1fr", gridTemplateRows: "1fr 1fr" }}>
+                          <span style={{ background: T.light }} /><span style={{ background: T.dark }} />
+                          <span style={{ background: T.dark }} /><span style={{ background: T.light }} />
+                        </span>
+                        <span className="mt-1.5 block text-center text-[9px] font-bold text-white">{T.name}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <button onClick={launchLocalFromSetup} className="mt-auto pt-7">
+                <span className="flex items-center justify-center gap-2 rounded-2xl py-4 text-base font-bold text-[#1A0E2E]" style={{ background: "linear-gradient(180deg,#FFD23F 0%,#C48800 100%)", boxShadow: "0 14px 30px rgba(255,210,63,0.40)" }}>
+                  <span style={{ fontSize: 18 }}>♔</span> Commencer la partie
+                </span>
+              </button>
+            </>
+          )}
+
+          {/* ── CH04 · LOBBY ONLINE ── */}
+          {entryMode === "lobby" && (
+            <>
+              <ChessStepHeader onBack={() => setEntryMode("choose")} sub="En ligne · attente" title="Salle d'attente" tag="LIVE" tagColor="#65dfb2" />
+
+              {/* Code */}
+              <div className="mt-6 rounded-[22px] px-5 py-5 text-center" style={{
+                background: "linear-gradient(160deg, rgba(255,210,63,0.10) 0%, rgba(122,78,232,0.06) 100%)",
+                border: "1px solid rgba(255,210,63,0.25)", boxShadow: "0 18px 40px rgba(255,210,63,0.12)",
+              }}>
+                <p className="font-mono text-[10px] font-extrabold uppercase tracking-[2px] text-white/45">Code de salle</p>
+                <p className="mt-2 font-black text-white" style={{ fontSize: 56, letterSpacing: 10, lineHeight: 1, textShadow: "0 0 28px rgba(255,210,63,0.4)" }}>{roomCode}</p>
+                <div className="mt-4 flex justify-center gap-2">
+                  <button onClick={() => { navigator.clipboard?.writeText(roomCode); setInviteFeedback("Code copié"); }}
+                    className="rounded-full border border-white/12 bg-white/[0.06] px-3.5 py-2 text-xs font-bold text-white">📋 Copier</button>
+                  <button onClick={shareSpectatorLink} className="rounded-full border border-white/12 bg-white/[0.06] px-3.5 py-2 text-xs font-bold text-white">↗ Partager</button>
+                </div>
+              </div>
+
+              {/* Players */}
+              <p className="mt-6 font-mono text-[10px] font-extrabold uppercase tracking-[2px] text-white/40">Joueurs</p>
+              <div className="mt-3 flex items-center gap-2.5">
+                <div className="flex-1 rounded-2xl px-3 py-3.5 text-center" style={{ background: "linear-gradient(160deg, rgba(255,210,63,0.10) 0%, rgba(0,0,0,0.30) 100%)", border: "1px solid rgba(255,210,63,0.25)" }}>
+                  <div className="flex justify-center"><KingGlyph color="w" size={40} /></div>
+                  <div className="mt-1 text-[15px] font-extrabold text-white">{meName}</div>
+                  <div className="mt-1 text-[10px] font-bold text-[#65dfb2]">✓ Prêt</div>
+                </div>
+                <div className="text-xl font-black text-white/40">VS</div>
+                {oppName ? (
+                  <div className="flex-1 rounded-2xl px-3 py-3.5 text-center" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.10)" }}>
+                    <div className="flex justify-center"><KingGlyph color="b" size={40} /></div>
+                    <div className="mt-1 text-[15px] font-extrabold text-white">{oppName}</div>
+                    <div className="mt-1 text-[10px] font-bold text-[#65dfb2]">✓ Connecté</div>
+                  </div>
+                ) : (
+                  <div className="flex h-[110px] flex-1 flex-col items-center justify-center gap-2 rounded-2xl" style={{ border: "1.5px dashed rgba(255,255,255,0.20)", background: "rgba(255,255,255,0.02)" }}>
+                    <span className="h-9 w-9 animate-spin rounded-full border-2 border-[#FFD23F]/30 border-t-[#FFD23F]" />
+                    <span className="text-[11px] font-bold text-white/45">En attente…</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Cadence (host) */}
+              {isHost && (
+                <>
+                  <p className="mt-6 font-mono text-[10px] font-extrabold uppercase tracking-[2px] text-white/40">Cadence</p>
+                  <div className="mt-2.5 grid grid-cols-4 gap-2">
+                    {TIME_OPTIONS.map((minutes) => (
+                      <button key={`lob-${minutes}`} onClick={() => sendAction({ action: "set-time-control", minutes })} className={cn(
+                        "rounded-xl border px-2 py-2.5 font-mono text-sm transition",
+                        (state?.timeControlMinutes ?? 15) === minutes
+                          ? "border-amber-300/50 bg-amber-300/15 text-amber-200"
+                          : "border-white/10 bg-black/20 text-white/40")}>{minutes} min</button>
                     ))}
                   </div>
-                  {localKind === "bot" && (
-                    <div className="grid grid-cols-3 gap-2">
-                      {(["easy", "medium", "hard"] as BotLevel[]).map((level) => (
-                        <button
-                          key={level}
-                          onClick={() => setLocalBotLevel(level)}
-                          className={cn(
-                            "rounded-xl border px-2 py-2.5 font-sans text-xs capitalize transition",
-                            localBotLevel === level
-                              ? "border-purple-400/50 bg-purple-400/15 text-purple-300 shadow-[0_0_12px_rgba(168,85,247,0.12)]"
-                              : "border-white/10 bg-black/20 text-white/40 hover:border-white/25"
-                          )}
-                        >
-                          {level}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-                <div className="space-y-3">
-                  <p className="font-sans text-xs text-white/40">Noms joueurs</p>
-                  <input
-                    value={localWhiteName}
-                    onChange={(e) => setLocalWhiteName(e.target.value)}
-                    className="w-full rounded-xl border border-white/15 bg-black/30 px-4 py-2.5 font-sans text-sm text-white/90 outline-none transition focus:border-white/30 focus:shadow-[0_0_12px_rgba(255,255,255,0.05)]"
-                    placeholder="Nom joueur blanc"
-                  />
-                  <input
-                    value={localBlackName}
-                    onChange={(e) => setLocalBlackName(e.target.value)}
-                    className="w-full rounded-xl border border-white/15 bg-black/30 px-4 py-2.5 font-sans text-sm text-white/90 outline-none transition focus:border-white/30 focus:shadow-[0_0_12px_rgba(255,255,255,0.05)]"
-                    placeholder={localKind === "bot" ? "Nom joueur" : "Nom joueur noir"}
-                  />
-                </div>
+                </>
+              )}
+
+              {/* Waiting note */}
+              <div className="mt-6 flex items-center gap-2.5 rounded-xl px-3.5 py-2.5" style={{ background: "rgba(255,210,63,0.06)", border: "1px dashed rgba(255,210,63,0.30)" }}>
+                <span style={{ fontSize: 16 }}>⏳</span>
+                <span className="text-xs text-white/55">{oppName ? `Prêt à lancer · ${lobbyCadence?.name ?? `${state?.timeControlMinutes ?? 15} min`}` : "En attente d'un adversaire…"}</span>
               </div>
 
-              <button
-                onClick={startLocalGame}
-                className="mt-5 rounded-xl bg-gradient-to-r from-[#65dfb2] to-[#4ecf8a] px-6 py-3 font-sans text-sm font-semibold text-black shadow-[0_0_20px_rgba(78,207,138,0.25)] transition hover:shadow-[0_0_30px_rgba(78,207,138,0.4)]"
-              >
-                Lancer en local
-              </button>
-            </section>
-          )}
-
-          {/* Multiplayer start button */}
-          {entryMode === "multi" && (
-            <div className="mt-6 flex gap-3">
-              <button
-                onClick={() => sendAction({ action: "start-game" })}
-                className="rounded-xl bg-gradient-to-r from-amber-400 to-orange-400 px-6 py-3 font-sans text-sm font-semibold text-black shadow-[0_0_20px_rgba(251,191,36,0.25)] transition hover:shadow-[0_0_30px_rgba(251,191,36,0.4)]"
-              >
-                Lancer en multijoueur
-              </button>
-            </div>
-          )}
-
-          {/* Back button */}
-          {entryMode !== "choose" && (
-            <button
-              onClick={() => setEntryMode("choose")}
-              className="mt-4 w-fit rounded-xl border border-white/25 bg-black/30 px-4 py-2 font-sans text-xs text-white/90 backdrop-blur-sm transition hover:bg-white/10"
-            >
-              Retour
-            </button>
+              <div className="mt-auto flex flex-col gap-2.5 pt-6">
+                {isHost && (
+                  <button onClick={() => sendAction({ action: "start-game" })} disabled={!oppName} style={{ opacity: oppName ? 1 : 0.5 }}>
+                    <span className="block rounded-2xl py-4 text-center text-base font-bold text-[#1A0E2E]" style={{ background: "linear-gradient(180deg,#FFD23F 0%,#C48800 100%)", boxShadow: "0 14px 30px rgba(255,210,63,0.40)" }}>Lancer en multijoueur</span>
+                  </button>
+                )}
+                <button onClick={() => setEntryMode("choose")} className="rounded-2xl border border-white/12 bg-white/[0.06] py-3 text-sm font-semibold text-white/90">Annuler la salle</button>
+              </div>
+              {inviteFeedback && <p className="mt-2 text-center text-xs text-[#65dfb2]">{inviteFeedback}</p>}
+            </>
           )}
         </div>
       </div>
@@ -1574,6 +1703,7 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
               lastMove={state.lastMove ? { from: state.lastMove.from, to: state.lastMove.to } : null}
               orientation={orientation}
               inCheckSquare={onlineInCheckSquare}
+              theme={boardTheme}
             />
           </div>
 
@@ -1716,6 +1846,7 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
             lastMove={state.lastMove ? { from: state.lastMove.from, to: state.lastMove.to } : null}
             orientation={orientation}
             inCheckSquare={onlineInCheckSquare}
+            theme={boardTheme}
           />
         </div>
 
