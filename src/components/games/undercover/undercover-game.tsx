@@ -6,6 +6,9 @@ import { useGameStore } from "@/lib/stores/game-store";
 import type { GameProps } from "@/lib/games/types";
 import { cn } from "@/lib/utils";
 import { UCBack, PlayerCountPicker, SpyBlob, DossierTag, UCButton, Stamp, FileCard } from "./uc-kit";
+import { MascotAvatar, type MascotColor } from "@/components/Mascot";
+
+const UC_SEAT_COLORS: MascotColor[] = ["purple", "coral", "mint", "yellow", "pink", "sky", "lavender"];
 
 // ── Types (mirrors server state) ────────────────────────────
 
@@ -828,90 +831,61 @@ export default function UndercoverGame({
         localPlayerCount - localUndercoverCount - localMrWhiteCount;
 
       if (localSetupStep === "names") {
+        const nameAt = (i: number) => localCollectedNames[i] ?? "";
+        const setNameAt = (i: number, v: string) =>
+          setLocalCollectedNames((prev) => {
+            const n = [...prev];
+            while (n.length < localPlayerCount) n.push("");
+            n[i] = v.slice(0, 16);
+            return n;
+          });
         return (
-          <div className="relative flex min-h-[100svh] flex-1 flex-col overflow-hidden bg-[#030921] p-4 pb-8 sm:p-6">
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_25%,rgba(149,60,101,0.38),transparent_40%),radial-gradient(circle_at_50%_62%,rgba(36,224,224,0.35),transparent_34%),linear-gradient(180deg,#040424_0%,#05113a_42%,#01072a_100%)]" />
-            <div className="relative mx-auto flex w-full max-w-md flex-1 flex-col items-center text-white">
-              <p className="mt-8 rounded-full bg-white/15 px-4 py-1 text-sm font-sans uppercase tracking-[0.2em] text-white/80">
-                Etape 2/2
-              </p>
-              <p className="mt-4 text-xl font-sans uppercase tracking-[0.2em] text-white/70">
-                Entrer les noms
-              </p>
-              <p className="mt-2 text-5xl font-sans font-semibold">
-                Joueur {localNameIndex + 1}/{localPlayerCount}
-              </p>
-              <div className="mt-4 flex gap-2">
-                {Array.from({ length: localPlayerCount }).map((_, idx) => (
-                  <span
-                    key={`step-dot-${idx}`}
-                    className={cn(
-                      "h-2.5 w-8 rounded-full",
-                      idx < localNameIndex
-                        ? "bg-emerald-300"
-                        : idx === localNameIndex
-                          ? "bg-cyan-300"
-                          : "bg-white/25"
-                    )}
-                  />
+          <div className="relative flex min-h-[100svh] flex-1 flex-col overflow-hidden p-4 pb-8 text-white">
+            <UCBack tone="noir" />
+            <div className="relative z-[2] mx-auto flex w-full max-w-md flex-1 flex-col pt-[calc(env(safe-area-inset-top,0px)+1rem)]">
+              {/* header */}
+              <div className="mb-4 flex items-center justify-between">
+                <div>
+                  <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, letterSpacing: 2, color: "var(--af-yellow)", fontWeight: 800 }}>ÉTAPE 2/2</p>
+                  <h2 className="cb-display-md mt-1">Qui joue ?</h2>
+                </div>
+                <DossierTag>LOCAL</DossierTag>
+              </div>
+
+              {/* suspects list */}
+              <div className="mb-2 flex items-baseline justify-between">
+                <span className="text-xs uppercase tracking-[0.2em] text-white/60">Noms des suspects</span>
+                <span className="text-[10px] text-white/40">tape pour modifier</span>
+              </div>
+              <div className="flex flex-col gap-2 overflow-auto">
+                {Array.from({ length: localPlayerCount }).map((_, i) => (
+                  <div key={i} className="flex items-center gap-3 rounded-2xl border p-2.5"
+                       style={{ borderColor: "rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.04)" }}>
+                    <MascotAvatar color={UC_SEAT_COLORS[i % UC_SEAT_COLORS.length]} size={44} mood="happy" />
+                    <div className="flex-1">
+                      <input
+                        value={nameAt(i)}
+                        onChange={(e) => setNameAt(i, e.target.value)}
+                        placeholder={`Joueur ${i + 1}`}
+                        className="w-full bg-transparent text-lg font-bold text-white outline-none placeholder:text-white/35"
+                        style={{ fontFamily: "var(--font-display)" }}
+                      />
+                      <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9, letterSpacing: 1, color: "var(--text-muted)" }}>
+                        SUSPECT N°{String(i + 1).padStart(2, "0")}
+                      </p>
+                    </div>
+                  </div>
                 ))}
               </div>
 
-              <div className="mt-8 w-full rounded-3xl border border-white/25 bg-black/30 p-4">
-                <label className="text-sm font-sans text-white/75">
-                  Nom du joueur
-                </label>
-                <input
-                  type="text"
-                  value={localNameInput}
-                  onChange={(e) => setLocalNameInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      handleSubmitLocalName();
-                    }
-                  }}
-                  placeholder={`Joueur ${localNameIndex + 1}`}
-                  autoFocus
-                  className="mt-2 w-full rounded-xl border border-white/20 bg-black/35 px-4 py-3 text-lg text-white placeholder:text-white/35 focus:outline-none focus:border-cyan-300/50"
-                />
-                <button
-                  onClick={handleSubmitLocalName}
-                  className="mt-4 w-full rounded-full bg-gradient-to-r from-[#65dfb2] to-[#4ecf8a] px-8 py-3 text-2xl font-sans font-semibold text-white"
-                >
-                  {localNameIndex + 1 === localPlayerCount ? "Lancer la distribution" : "Continuer"}
+              <div className="mt-auto space-y-2 pt-5">
+                <UCButton tone="mint" onClick={() => startLocalGame(Array.from({ length: localPlayerCount }, (_, i) => nameAt(i).trim() || `Joueur ${i + 1}`))}>
+                  Lancer la distribution →
+                </UCButton>
+                <button onClick={() => setLocalSetupStep("config")} className="w-full text-center text-sm text-white/60 underline-offset-4 hover:underline">
+                  Retour configuration
                 </button>
               </div>
-
-              {localCollectedNames.length > 0 && (
-                <div className="mt-4 w-full rounded-2xl border border-white/20 bg-black/20 p-3">
-                  <p className="text-xs font-sans uppercase tracking-[0.2em] text-white/65">
-                    Deja saisis
-                  </p>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {localCollectedNames.map((name, idx) => (
-                      <span
-                        key={`${name}-${idx}`}
-                        className="rounded-full bg-white/15 px-3 py-1 text-sm font-sans text-white/90"
-                      >
-                        {idx + 1}. {name}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <button
-                onClick={() => {
-                  setLocalSetupStep("config");
-                  setLocalCollectedNames([]);
-                  setLocalNameIndex(0);
-                  setLocalNameInput("");
-                }}
-                className="mt-4 text-sm font-sans text-white/75 underline-offset-4 hover:underline"
-              >
-                Retour configuration
-              </button>
             </div>
           </div>
         );
