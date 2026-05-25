@@ -159,10 +159,11 @@ export class ContreeGame extends BaseGame {
       this.contreePlayers.get(id)!.hand.push(card);
       idx++;
     }
-    // Sort each hand
+    // Sort each hand — regroupé par logo (trèfle, pique, cœur, carreau).
+    const HAND_SUIT_ORDER: Suit[] = ["♣", "♠", "♥", "♦"];
     for (const p of this.contreePlayers.values()) {
       p.hand.sort((a, b) => {
-        if (a.suit !== b.suit) return SUITS.indexOf(a.suit) - SUITS.indexOf(b.suit);
+        if (a.suit !== b.suit) return HAND_SUIT_ORDER.indexOf(a.suit) - HAND_SUIT_ORDER.indexOf(b.suit);
         return RANKS.indexOf(a.rank) - RANKS.indexOf(b.rank);
       });
     }

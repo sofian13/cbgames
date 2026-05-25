@@ -27,6 +27,8 @@ interface Card { rank: Rank; suit: Suit; }
 
 const RANK_ORDER: Rank[] = ["3","4","5","6","7","8","9","10","V","D","R","A","2"];
 const SUITS: Suit[] = ["♠","♥","♦","♣"];
+// Ordre d'affichage de la main : regroupé par logo (trèfle, pique, cœur, carreau).
+const HAND_SUIT_ORDER: Suit[] = ["♣","♠","♥","♦"];
 
 interface PrePlayer {
   id: string;
@@ -110,10 +112,11 @@ export class PresidentGame extends BaseGame {
   }
 
   sortHand(a: Card, b: Card) {
-    const ar = RANK_ORDER.indexOf(a.rank);
-    const br = RANK_ORDER.indexOf(b.rank);
-    if (ar !== br) return ar - br;
-    return SUITS.indexOf(a.suit) - SUITS.indexOf(b.suit);
+    // Regroupé par couleur (trèfle, pique, cœur, carreau) puis par force de carte.
+    const as = HAND_SUIT_ORDER.indexOf(a.suit);
+    const bs = HAND_SUIT_ORDER.indexOf(b.suit);
+    if (as !== bs) return as - bs;
+    return RANK_ORDER.indexOf(a.rank) - RANK_ORDER.indexOf(b.rank);
   }
 
   startTurnTimer() {

@@ -106,7 +106,9 @@ export class HuitAmericainGame extends BaseGame {
     this.amPlayers.clear();
     for (const id of this.turnOrder) {
       const player = this.players.get(id)!;
-      this.amPlayers.set(id, { id, name: player.name, hand: this.draw(7) });
+      const hand = this.draw(7);
+      this.sortAmHand(hand);
+      this.amPlayers.set(id, { id, name: player.name, hand });
     }
 
     // First discard card — must not be a special-effect card; if it is, redraw
@@ -278,6 +280,17 @@ export class HuitAmericainGame extends BaseGame {
     this.broadcastState();
   }
 
+  // Regroupe la main par logo (trèfle, pique, cœur, carreau) puis par rang ; jokers en dernier.
+  sortAmHand(hand: Card[]) {
+    const order: Suit[] = ["♣", "♠", "♥", "♦"];
+    hand.sort((a, b) => {
+      const sa = a.suit ? order.indexOf(a.suit) : 4;
+      const sb = b.suit ? order.indexOf(b.suit) : 4;
+      if (sa !== sb) return sa - sb;
+      return RANKS.indexOf(a.rank) - RANKS.indexOf(b.rank);
+    });
+  }
+
   drawAction(playerId: string) {
     const p = this.amPlayers.get(playerId);
     if (!p) return;
@@ -297,6 +310,7 @@ export class HuitAmericainGame extends BaseGame {
         this.advanceTurn();
       }
     }
+    this.sortAmHand(p.hand);
     this.startTurnTimer();
     this.broadcastState();
   }
