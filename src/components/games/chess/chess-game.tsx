@@ -460,8 +460,11 @@ function GameOverPopup({
   iWon,
   xpEarned,
   totalXp,
+  moves,
+  durationMs,
   onClose,
   onReplay,
+  onMenu,
 }: {
   winnerName: string;
   reason: EndReason | null;
@@ -469,56 +472,79 @@ function GameOverPopup({
   iWon?: boolean;
   xpEarned?: number | null;
   totalXp?: number | null;
+  moves?: number;
+  durationMs?: number;
   onClose: () => void;
   onReplay?: () => void;
+  onMenu?: () => void;
 }) {
   const reasonLabel = reason === "checkmate" ? "Échec et mat" : reason === "resign" ? "Abandon" : reason === "timeout" ? "Temps écoulé" : reason === "stalemate" ? "Pat" : "Match nul";
   const lvl = typeof totalXp === "number" ? getLevel(totalXp) : null;
+  const lost = iWon === false && !isDraw;
+  const headline = isDraw ? "Match nul" : lost ? "Défaite" : "Tu gagnes";
+  const topLabel = isDraw ? `Partie nulle · ${reasonLabel}` : `${lost ? "Défaite" : "Victoire"} · ${reasonLabel}`;
+  const dur = typeof durationMs === "number" && durationMs > 0
+    ? `${Math.floor(durationMs / 60000)}:${String(Math.floor(durationMs / 1000) % 60).padStart(2, "0")}`
+    : null;
+  const bg = lost
+    ? "radial-gradient(circle at 50% 22%, rgba(255,62,165,0.30), transparent 55%), linear-gradient(180deg,#1A0414 0%,#0E0828 100%)"
+    : isDraw
+      ? "radial-gradient(circle at 50% 22%, rgba(181,161,255,0.22), transparent 55%), linear-gradient(180deg,#0F0A1F 0%,#1A1230 100%)"
+      : "radial-gradient(circle at 50% 22%, rgba(255,210,63,0.30), transparent 55%), linear-gradient(180deg,#1A1206 0%,#0F0A1F 100%)";
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/70 px-4 backdrop-blur-sm" style={{ animation: "fadeIn 0.3s ease" }}>
-      <div className="w-full max-w-sm rounded-3xl border border-white/25 bg-black/80 p-7 text-center backdrop-blur-md" style={{ animation: "scaleIn 0.3s ease" }}>
-        <p className="font-sans text-xs uppercase tracking-[0.2em] text-white/40">{reasonLabel}</p>
-        <div className="mt-3 flex justify-center">
-          {isDraw
-            ? <Mascot size={78} color="lavender" mood="neutral" />
-            : iWon === false
-              ? <Mascot size={78} color="coral" mood="dead" />
-              : <Mascot size={88} color="yellow" mood="happy" crown arms cheering />}
-        </div>
-        {isDraw ? (
-          <>
-            <p className="mt-3 font-serif text-3xl font-bold text-white/90">Match nul</p>
-            <p className="mt-1 font-sans text-sm text-white/50">Personne ne gagne</p>
-          </>
-        ) : (
-          <>
-            <p className="mt-3 font-serif text-3xl font-bold" style={{ color: iWon === false ? "#FF8B8B" : "#FFD23F" }}>{iWon === false ? "Défaite" : winnerName}</p>
-            <p className="mt-1 font-sans text-sm text-white/50">{iWon === false ? `${winnerName} remporte la partie` : "remporte la partie"}</p>
-          </>
-        )}
-        {typeof xpEarned === "number" && xpEarned > 0 && (
-          <div className="mt-4 flex items-center justify-center gap-3 rounded-2xl border border-amber-300/30 bg-amber-400/10 px-4 py-2.5">
-            <span className="font-serif text-xl font-black text-[#FFD23F]">+{xpEarned} XP</span>
-            {lvl && <span className="font-sans text-xs text-white/55">Niveau {lvl.level} · {lvl.title}</span>}
-          </div>
-        )}
-        <div className="mt-6 flex flex-col gap-2">
-          {onReplay && (
-            <button
-              onClick={() => { onClose(); onReplay(); }}
-              className="rounded-xl bg-gradient-to-r from-[#65dfb2] to-[#4ecf8a] px-6 py-3 font-sans text-sm font-semibold text-black shadow-[0_0_20px_rgba(78,207,138,0.25)] transition hover:shadow-[0_0_30px_rgba(78,207,138,0.4)]"
-            >
-              Rejouer
-            </button>
+    <div className="fixed inset-0 z-[200] flex flex-col items-center justify-center px-6 text-center" style={{ background: bg, animation: "fadeIn 0.3s ease", paddingTop: "calc(env(safe-area-inset-top,0px) + 1rem)", paddingBottom: "calc(env(safe-area-inset-bottom,0px) + 1rem)" }}>
+      <p className="font-mono text-[11px] font-extrabold uppercase tracking-[0.22em]" style={{ color: lost ? "#FF8B8B" : isDraw ? "#B5A1FF" : "#FFD23F" }}>{topLabel}</p>
+      <h1 className="mt-2 font-black" style={{ fontSize: 56, lineHeight: 0.9, letterSpacing: -2.4, textShadow: `0 0 36px ${lost ? "rgba(255,62,165,0.5)" : "rgba(255,210,63,0.5)"}` }}>
+        <span style={{ background: lost ? "linear-gradient(120deg,#FF6B5B,#fff)" : isDraw ? "linear-gradient(120deg,#B5A1FF,#fff)" : "linear-gradient(120deg,#FFD23F,#F4F1E8)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>{headline}</span>
+      </h1>
+      <div className="my-5">
+        {isDraw
+          ? <Mascot size={108} color="lavender" mood="neutral" />
+          : lost
+            ? <Mascot size={104} color="coral" mood="dead" />
+            : <Mascot size={120} color="yellow" mood="happy" crown arms cheering />}
+      </div>
+      {!isDraw && <p className="-mt-2 mb-3 text-sm text-white/55">{lost ? `${winnerName} remporte la partie` : `${winnerName} · ${reasonLabel.toLowerCase()}`}</p>}
+
+      {/* Stats */}
+      {(typeof moves === "number" || dur || (lvl && typeof xpEarned === "number")) && (
+        <div className="flex w-full max-w-sm items-stretch justify-center gap-2 rounded-2xl border border-white/10 bg-black/40 px-2 py-3">
+          {typeof xpEarned === "number" && xpEarned > 0 && (
+            <div className="flex-1 text-center">
+              <div className="font-black" style={{ fontSize: 22, color: "#FFD23F" }}>+{xpEarned}</div>
+              <div className="font-mono text-[8px] font-bold uppercase tracking-wide text-white/45">XP gagnée</div>
+            </div>
           )}
-          <button
-            onClick={onClose}
-            className="rounded-xl border border-white/25 bg-white/5 px-6 py-3 font-sans text-sm text-white/70 transition hover:bg-white/10"
-          >
-            Fermer
-          </button>
+          {typeof moves === "number" && moves > 0 && (
+            <div className="flex-1 text-center">
+              <div className="font-black" style={{ fontSize: 22, color: "#fff" }}>{moves}</div>
+              <div className="font-mono text-[8px] font-bold uppercase tracking-wide text-white/45">Coups</div>
+            </div>
+          )}
+          {dur && (
+            <div className="flex-1 text-center">
+              <div className="font-black" style={{ fontSize: 22, color: "#fff" }}>{dur}</div>
+              <div className="font-mono text-[8px] font-bold uppercase tracking-wide text-white/45">Durée</div>
+            </div>
+          )}
         </div>
+      )}
+      {lvl && typeof xpEarned === "number" && xpEarned > 0 && (
+        <p className="mt-2 text-xs text-white/55">Niveau {lvl.level} · {lvl.title}</p>
+      )}
+
+      <div className="mt-6 flex w-full max-w-sm flex-col gap-2.5">
+        {onReplay && (
+          <button onClick={() => { onClose(); onReplay(); }}
+            className="rounded-2xl py-4 text-base font-bold text-[#1A0E2E]" style={{ background: "linear-gradient(180deg,#FFD23F 0%,#C48800 100%)", boxShadow: "0 14px 30px rgba(255,210,63,0.40)" }}>
+            🔄 Revanche
+          </button>
+        )}
+        <button onClick={onMenu ?? onClose}
+          className="rounded-2xl border border-white/15 bg-white/[0.06] py-3 text-sm font-bold text-white/85">
+          {onMenu ? "Menu des jeux" : "Fermer"}
+        </button>
       </div>
     </div>
   );
@@ -927,6 +953,8 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
   const [vibrateOn, setVibrateOn] = useState(false);
   const [chessAward, setChessAward] = useState<{ earned: number; total: number } | null>(null);
   const awardKeyRef = useRef<string>("");
+  const chessStartRef = useRef<number>(0);
+  const chessEndRef = useRef<number>(0);
   const [inviteFeedback, setInviteFeedback] = useState<string>("");
   const audioContextRef = useRef<AudioContext | null>(null);
   const onlineLastMoveKeyRef = useRef<string | null>(null);
@@ -1267,7 +1295,9 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
 
   // XP — partie locale vs IA (le duel pass-and-play ne rapporte pas d'XP).
   useEffect(() => {
-    if (!localWinner || localKind !== "bot") return;
+    if (!localWinner) return;
+    if (!chessEndRef.current) chessEndRef.current = Date.now();
+    if (localKind !== "bot") return;
     const key = `local-${localWinner}-${localReason}`;
     if (awardKeyRef.current === key) return;
     awardKeyRef.current = key;
@@ -1282,7 +1312,9 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
 
   // XP — partie en ligne.
   useEffect(() => {
-    if (!state || state.phase !== "game-over" || !myColor) return;
+    if (!state || state.phase !== "game-over") return;
+    if (!chessEndRef.current) chessEndRef.current = Date.now();
+    if (!myColor) return;
     const key = `online-${state.winner}-${state.reason}`;
     if (awardKeyRef.current === key) return;
     awardKeyRef.current = key;
@@ -1320,6 +1352,8 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
       endSoundPlayedRef.current = false;
       awardKeyRef.current = "";
       setChessAward(null);
+      chessStartRef.current = Date.now();
+      chessEndRef.current = 0;
     }
   }, [state?.phase]);
 
@@ -1391,6 +1425,8 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
     setLocalMode(true);
     awardKeyRef.current = "";
     setChessAward(null);
+    chessStartRef.current = Date.now();
+    chessEndRef.current = 0;
   }, [localTimeMinutes]);
 
   // Lance une partie locale depuis l'écran de réglages (CH03).
@@ -1536,8 +1572,11 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
               reason={localReason}
               isDraw={localWinner === "draw"}
               iWon={localKind === "bot" ? localWinner === localHumanColor : undefined}
+              moves={localMoveLog.length}
               xpEarned={chessAward?.earned}
               totalXp={chessAward?.total}
+            durationMs={(chessEndRef.current || Date.now()) - chessStartRef.current}
+            onMenu={onReturnToLobby}
               onClose={() => setShowGameOverPopup(false)}
               onReplay={startLocalGame}
             />
@@ -1651,8 +1690,11 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
             reason={localReason}
             isDraw={localWinner === "draw"}
             iWon={localKind === "bot" ? localWinner === localHumanColor : undefined}
+            moves={localMoveLog.length}
             xpEarned={chessAward?.earned}
             totalXp={chessAward?.total}
+            durationMs={(chessEndRef.current || Date.now()) - chessStartRef.current}
+            onMenu={onReturnToLobby}
             onClose={() => setShowGameOverPopup(false)}
             onReplay={startLocalGame}
           />
@@ -2032,6 +2074,8 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
             iWon={state.winner === myColor}
             xpEarned={chessAward?.earned}
             totalXp={chessAward?.total}
+            durationMs={(chessEndRef.current || Date.now()) - chessStartRef.current}
+            onMenu={onReturnToLobby}
             onClose={() => setShowGameOverPopup(false)}
             onReplay={() => sendAction({ action: "start-game" })}
           />
@@ -2197,6 +2241,8 @@ export default function ChessGame({ roomCode, playerId, playerName, onReturnToLo
           iWon={state.winner === myColor}
           xpEarned={chessAward?.earned}
           totalXp={chessAward?.total}
+          durationMs={(chessEndRef.current || Date.now()) - chessStartRef.current}
+          onMenu={onReturnToLobby}
           onClose={() => setShowGameOverPopup(false)}
           onReplay={() => sendAction({ action: "start-game" })}
         />
