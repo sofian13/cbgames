@@ -581,6 +581,44 @@ export class UndercoverGame extends BaseGame {
         ? this.clueOrder[this.currentClueIdx]
         : null;
 
+    // En phase d'attente, la liste des "joueurs de la partie" n'existe pas
+    // encore (elle est initialisée dans start()). On retombe sur la liste
+    // brute des joueurs connectés (héritée de BaseGame) pour que le lobby
+    // affiche tout le monde.
+    const playersPayload = this.phase === "waiting"
+      ? Array.from(this.players.values()).map((p) => ({
+          id: p.id,
+          name: p.name,
+          score: 0,
+          isEliminated: false,
+          hasClue: false,
+          hasVoted: false,
+          clue: null,
+          eliminatedRound: null,
+          role: null,
+          word: null,
+        }))
+      : Array.from(this.gamePlayers.values()).map((p) => ({
+          id: p.id,
+          name: p.name,
+          score: p.score,
+          isEliminated: p.isEliminated,
+          hasClue: p.hasClue,
+          hasVoted: p.votedFor !== null,
+          clue: p.clue,
+          eliminatedRound: p.eliminatedRound,
+          role: revealAll
+            ? p.role
+            : revealEliminated && p.id === this.eliminatedThisRound
+            ? p.role
+            : null,
+          word: revealAll
+            ? p.word
+            : revealEliminated && p.id === this.eliminatedThisRound
+            ? p.word
+            : null,
+        }));
+
     return {
       phase: this.phase,
       round: this.round,
@@ -598,28 +636,7 @@ export class UndercoverGame extends BaseGame {
       lastGuess: this.lastGuess,
       lastGuessCorrect: this.lastGuessCorrect,
       endReason: this.endReason,
-      players: Array.from(this.gamePlayers.values()).map((p) => ({
-        id: p.id,
-        name: p.name,
-        score: p.score,
-        isEliminated: p.isEliminated,
-        hasClue: p.hasClue,
-        hasVoted: p.votedFor !== null,
-        clue: p.clue,
-        eliminatedRound: p.eliminatedRound,
-        // Le rôle n'est dévoilé qu'au moment où ça compte
-        role: revealAll
-          ? p.role
-          : revealEliminated && p.id === this.eliminatedThisRound
-          ? p.role
-          : null,
-        // Le mot n'est révélé à la fin que pour les undercover/mrwhite éliminés
-        word: revealAll
-          ? p.word
-          : revealEliminated && p.id === this.eliminatedThisRound
-          ? p.word
-          : null,
-      })),
+      players: playersPayload,
     };
   }
 
