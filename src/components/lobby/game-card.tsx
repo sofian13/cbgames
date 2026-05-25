@@ -16,64 +16,68 @@ interface GameCardProps {
 export function GameCard({ game, isSelected, isHost, onSelect }: GameCardProps) {
   const [showRules, setShowRules] = useState(false);
   const disabled = !game.implemented || !isHost;
-  const catColor = (CB_CAT[game.category] ?? CB_CAT.party).color;
+  const cat = CB_CAT[game.category] ?? CB_CAT.party;
 
   return (
     <>
-      <article
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => !disabled && onSelect()}
         className={cn(
-          "site-card-hover relative overflow-hidden rounded-2xl border transition",
+          "site-card-hover relative block w-full overflow-hidden rounded-[18px] border-0 p-0 text-left outline-none transition active:scale-[0.98]",
           disabled && "opacity-60"
         )}
         style={{
-          background: "rgba(255,255,255,0.03)",
-          borderColor: isSelected ? catColor : "var(--line-soft)",
-          boxShadow: isSelected ? `0 10px 28px ${catColor}55, inset 0 0 0 1px ${catColor}` : undefined,
+          height: 168,
+          cursor: disabled ? "default" : "pointer",
+          boxShadow: isSelected
+            ? `0 0 0 2.5px ${cat.color}, 0 10px 28px ${cat.color}66`
+            : `0 8px 20px rgba(0,0,0,0.30)`,
         }}
       >
-        <div
-          role={disabled ? undefined : "button"}
-          tabIndex={disabled ? -1 : 0}
-          onClick={() => !disabled && onSelect()}
-          onKeyDown={(event) => {
-            if (!disabled && (event.key === "Enter" || event.key === " ")) {
-              event.preventDefault();
-              onSelect();
-            }
-          }}
-          className={cn("cursor-pointer outline-none", disabled && "cursor-default")}
-        >
-          {/* Illustration */}
-          <div className="relative" style={{ height: 104 }}>
-            <GameArt game={game} rounded={0} />
-            {isSelected && (
-              <span className="absolute right-2 top-2 inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-white"
-                    style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(4px)" }}>
-                <CheckCircle2 className="h-2.5 w-2.5" /> Actif
-              </span>
-            )}
-          </div>
+        <GameArt game={game} rounded={18} />
 
-          {/* Texte */}
-          <div className="p-3">
-            <h4 className="cb-display-sm truncate" style={{ fontSize: "1rem", color: "#fff" }}>{game.name}</h4>
-            <p className="mt-0.5 line-clamp-2 text-xs leading-5" style={{ color: "var(--text-dim)" }}>{game.description}</p>
-            <div className="mt-2.5 flex items-center justify-between gap-2">
-              <span className="inline-flex items-center gap-1.5 text-xs">
-                <Users className="h-3.5 w-3.5" style={{ color: catColor }} />
-                <span className="cb-mono" style={{ color: "var(--text-dim)" }}>{game.minPlayers}-{game.maxPlayers}</span>
-              </span>
-              <button
-                onClick={(e) => { e.stopPropagation(); setShowRules(true); }}
-                className="flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider transition"
-                style={{ background: "rgba(255,255,255,0.08)", color: "#fff", border: "1px solid rgba(255,255,255,0.12)" }}
-              >
-                <BookOpen className="h-3 w-3" /> Règles
-              </button>
-            </div>
+        {/* Top: catégorie + Actif/Règles */}
+        <div className="absolute inset-x-2.5 top-2.5 flex items-start justify-between gap-1.5">
+          <span className="cb-mono rounded-full px-2 py-0.5 text-[8.5px] font-bold tracking-[0.14em] text-white"
+                style={{ background: "rgba(0,0,0,0.4)", backdropFilter: "blur(8px)" }}>
+            {cat.label.toUpperCase()}
+          </span>
+          {isSelected ? (
+            <span className="inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-white"
+                  style={{ background: cat.color }}>
+              <CheckCircle2 className="h-2.5 w-2.5" /> Actif
+            </span>
+          ) : (
+            <span
+              role="button"
+              tabIndex={0}
+              onClick={(e) => { e.stopPropagation(); setShowRules(true); }}
+              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); setShowRules(true); } }}
+              className="flex h-6 w-6 items-center justify-center rounded-full text-white"
+              style={{ background: "rgba(0,0,0,0.4)", backdropFilter: "blur(8px)" }}
+              aria-label="Règles"
+            >
+              <BookOpen className="h-3 w-3" />
+            </span>
+          )}
+        </div>
+
+        {/* Bottom: nom + joueurs */}
+        <div className="absolute inset-x-0 bottom-0 px-3 pb-2.5 pt-8"
+             style={{ background: "linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.6) 65%, rgba(0,0,0,0.82) 100%)" }}>
+          <div className="cb-display-sm leading-tight text-white" style={{ fontSize: 15, textShadow: "0 2px 8px rgba(0,0,0,0.5)" }}>
+            {game.name}
+          </div>
+          <div className="mt-1 flex items-center gap-1.5">
+            <Users className="h-3 w-3" style={{ color: "rgba(255,255,255,0.75)" }} />
+            <span className="cb-mono text-[9px] font-bold tracking-[0.08em]" style={{ color: "rgba(255,255,255,0.75)" }}>
+              {game.minPlayers}-{game.maxPlayers} joueurs
+            </span>
           </div>
         </div>
-      </article>
+      </button>
 
       {showRules && (
         <div
@@ -130,7 +134,7 @@ export function GameCard({ game, isSelected, isHost, onSelect }: GameCardProps) 
                 >
                   <span
                     className="mt-2.5 h-1.5 w-1.5 shrink-0 rounded-full"
-                    style={{ background: catColor }}
+                    style={{ background: cat.color }}
                   />
                   {rule}
                 </div>

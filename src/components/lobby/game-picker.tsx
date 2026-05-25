@@ -82,26 +82,32 @@ export function GamePicker({ selectedGameId, isHost, onSelectGame }: GamePickerP
           {CATEGORIES.map((category) => {
             const color = CATEGORY_COLOR[category.id] || "var(--af-pink)";
             const active = activeCategory === category.id;
+            const count = category.id === "all"
+              ? GAMES.length
+              : category.id === "local"
+              ? GAMES.filter((g) => g.local).length
+              : GAMES.filter((g) => g.category === category.id).length;
             return (
               <button
                 key={category.id}
                 onClick={() => setActiveCategory(category.id)}
-                className={cn("shrink-0 rounded-full border px-3.5 py-1.5 text-xs font-bold transition")}
+                className={cn("flex shrink-0 items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-xs font-bold transition")}
                 style={{
                   background: active ? `${color}22` : "rgba(255,255,255,0.04)",
                   color: active ? "#fff" : "var(--text-dim)",
                   borderColor: active ? color : "var(--line-soft)",
                 }}
               >
-                <span className="mr-1.5 inline-block h-1.5 w-1.5 rounded-full align-middle" style={{ background: color }} />
+                <span className="inline-block h-1.5 w-1.5 rounded-full" style={{ background: color }} />
                 {category.label}
+                <span className="cb-mono text-[10px] font-bold" style={{ color: active ? color : "var(--text-muted)" }}>{count}</span>
               </button>
             );
           })}
         </div>
       </div>
 
-      <div className="grid min-w-0 gap-3 sm:grid-cols-2">
+      <div className="grid min-w-0 grid-cols-2 gap-3">
         {filteredGames.length > 0 ? (
           filteredGames.map((game) => (
             <GameCard

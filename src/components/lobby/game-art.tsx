@@ -10,15 +10,15 @@ import { useId } from "react";
 
 const DISP = "var(--font-display), sans-serif";
 
-export const CB_CAT: Record<string, { color: string; color2: string }> = {
-  words:    { color: "#5BA3FF", color2: "#3D7DD0" },
-  trivia:   { color: "#FFD23F", color2: "#D9A60D" },
-  speed:    { color: "#FF6B5B", color2: "#D33D2A" },
-  strategy: { color: "#3DDC97", color2: "#1AA66A" },
-  social:   { color: "#FF3EA5", color2: "#C71B7A" },
-  cards:    { color: "#7A4EE8", color2: "#5526BA" },
-  party:    { color: "#C58CFF", color2: "#9555E0" },
-  sport:    { color: "#4ECDC4", color2: "#1F9C92" },
+export const CB_CAT: Record<string, { color: string; color2: string; label: string }> = {
+  words:    { color: "#5BA3FF", color2: "#3D7DD0", label: "Mots" },
+  trivia:   { color: "#FFD23F", color2: "#D9A60D", label: "Culture" },
+  speed:    { color: "#FF6B5B", color2: "#D33D2A", label: "Rapidité" },
+  strategy: { color: "#3DDC97", color2: "#1AA66A", label: "Stratégie" },
+  social:   { color: "#FF3EA5", color2: "#C71B7A", label: "Bluff" },
+  cards:    { color: "#7A4EE8", color2: "#5526BA", label: "Cartes" },
+  party:    { color: "#C58CFF", color2: "#9555E0", label: "Party" },
+  sport:    { color: "#4ECDC4", color2: "#1F9C92", label: "Sport" },
 };
 
 type Pattern = "dots" | "grid" | "diag" | "wave" | "blob" | "cards" | "stars" | "tri";
