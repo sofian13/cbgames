@@ -1466,17 +1466,15 @@ export default function UndercoverGame({
       : "Aucune repartition";
 
     return (
-      <div className="relative flex flex-1 flex-col overflow-hidden px-4 py-5 sm:px-6 sm:py-7">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_18%,rgba(77,237,255,0.12),transparent_30%),radial-gradient(circle_at_80%_72%,rgba(255,125,80,0.14),transparent_34%),linear-gradient(180deg,#050714,#050916_52%,#04050d)]" />
-        <div className="relative mx-auto flex w-full max-w-3xl flex-1 flex-col rounded-[2rem] border border-white/10 bg-black/35 p-4 shadow-[0_30px_90px_rgba(0,0,0,0.48)] backdrop-blur-xl sm:p-6">
+      <div className="relative flex min-h-[100svh] flex-1 flex-col overflow-hidden px-4 py-5 text-white sm:px-6 sm:py-7">
+        <UCBack tone="noir" />
+        <div className="relative z-[2] mx-auto flex w-full max-w-3xl flex-1 flex-col pt-[calc(env(safe-area-inset-top,0px)+0.5rem)]">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <p className="text-[11px] font-sans uppercase tracking-[0.3em] text-cyan-200/55">
-                Undercover
+              <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, letterSpacing: 3, fontWeight: 800, color: "var(--af-yellow)" }}>
+                DOSSIER · UNDERCOVER
               </p>
-              <h2 className="mt-2 text-3xl font-serif text-white sm:text-4xl">
-                Preparer la partie
-              </h2>
+              <h2 className="cb-display-lg mt-1.5">Préparer la partie</h2>
             </div>
             <div className="grid grid-cols-2 gap-2 self-start sm:self-auto">
               <div className="rounded-[1.3rem] border border-white/10 bg-white/[0.04] px-4 py-3">
@@ -1578,14 +1576,12 @@ export default function UndercoverGame({
             </section>
           </div>
 
-          <div className="mt-5 flex flex-col gap-3">
-            <button
-              onClick={() => sendAction({ action: "start-game" })}
-              className="w-full rounded-[1.4rem] bg-gradient-to-r from-[#ff8d52] via-[#ff6b3d] to-[#ff3d3d] px-6 py-4 text-base font-semibold text-white shadow-[0_0_35px_rgba(255,107,61,0.28)] transition hover:brightness-105"
-            >
-              Lancer la partie en ligne
-            </button>
-            <button
+          <div className="mt-5 flex flex-col gap-3 pb-4">
+            <UCButton tone="danger" onClick={() => sendAction({ action: "start-game" })}>
+              🎬 Lancer la partie en ligne
+            </UCButton>
+            <UCButton
+              tone="ghost"
               onClick={() => {
                 setLocalMode(true);
                 setLocalSetupStep("config");
@@ -1594,12 +1590,11 @@ export default function UndercoverGame({
                 setLocalNameInput("");
                 setLocalPhase("setup");
               }}
-              className="w-full rounded-[1.3rem] border border-white/14 bg-white/[0.04] px-5 py-3.5 text-sm font-medium text-white/76 transition hover:bg-white/[0.07] hover:text-white"
             >
-              Jouer sur un seul telephone
-            </button>
-            <p className="text-center text-xs text-white/36">
-              Configuration courte, ecran plus propre, puis lancement direct.
+              📱 Jouer sur un seul téléphone
+            </UCButton>
+            <p className="text-center text-xs text-white/40">
+              Configuration courte, lancement direct.
             </p>
           </div>
         </div>
