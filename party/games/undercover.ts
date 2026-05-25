@@ -463,6 +463,19 @@ export class UndercoverGame extends BaseGame {
       return;
     }
 
+    // -- Forçage du vote par l'hôte (si tout le monde a parlé)
+    if (action === "force-vote" && this.phase === "clue") {
+      // Seul l'hôte peut forcer (1er joueur connecté)
+      const firstId = Array.from(this.players.values())[0]?.id;
+      if (sp.id !== firstId) return;
+      // On vérifie quand même que tous les vivants ont parlé
+      const alive = this.getAlive();
+      if (alive.every((p) => p.hasClue || p.id === this.clueOrder[this.currentClueIdx])) {
+        this.startVote();
+      }
+      return;
+    }
+
     if (!gp || gp.isEliminated) return;
 
     // -- Soumission d'indice
