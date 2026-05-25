@@ -6,6 +6,7 @@ import { useGameStore } from "@/lib/stores/game-store";
 import type { GameProps } from "@/lib/games/types";
 import { cn } from "@/lib/utils";
 import { Mascot } from "@/components/Mascot";
+import { addGameResult, getLevel } from "@/lib/stores/global-points";
 
 // ── Types ──────────────────────────────────────────────
 type CellState = "empty" | "ship" | "hit" | "miss";
@@ -149,14 +150,67 @@ function BSStepHeader({ onBack, sub, title, tag, tagColor = BS_SONAR }: { onBack
   );
 }
 
-// Silhouette de navire (barre) pour la liste de flotte BS03.
-function ShipBar({ len }: { len: number }) {
+// Illustration de navire (portée du zip — silhouette par longueur).
+function ShipSVG({ len, sunk = false }: { len: number; sunk?: boolean }) {
+  const W = 100 * len;
+  const H = 100;
+  const hull = sunk ? "#3A1818" : "#3A4F66";
+  const deck = sunk ? "#5A2828" : "#6A8499";
+  const high = sunk ? "#7A2828" : "#A8BBCC";
+  const detail = sunk ? "#1A0808" : "#1F2A38";
+  const accent = sunk ? "#FF3838" : "#FFD23F";
+  let body: ReactNode;
+  if (len === 5) {
+    body = (<>
+      <path d={`M 40 60 L ${W - 40} 60 L ${W - 15} 75 L ${W - 25} 86 L 25 86 L 15 75 Z`} fill={hull} stroke={detail} strokeWidth="2" strokeLinejoin="round" />
+      <rect x={20} y={28} width={W - 40} height={32} rx="2" fill={deck} stroke={detail} strokeWidth="1.5" />
+      <line x1={35} y1={44} x2={W - 50} y2={44} stroke={accent} strokeWidth="2" strokeDasharray="6 4" opacity="0.85" />
+      <rect x={W - 95} y={14} width={28} height={20} rx="2" fill={high} stroke={detail} strokeWidth="1.5" />
+      <rect x={W - 85} y={6} width={8} height={10} fill={detail} />
+      {[0, 1, 2].map((i) => (<path key={i} d={`M ${W - 130 - i * 38} 40 L ${W - 118 - i * 38} 33 L ${W - 118 - i * 38} 47 Z`} fill={accent} opacity={sunk ? 0.4 : 0.9} />))}
+      <path d="M 15 60 L 40 60 L 40 75 L 24 75 Z" fill={high} opacity="0.5" />
+    </>);
+  } else if (len === 4) {
+    body = (<>
+      <path d={`M 30 60 L ${W - 25} 60 L ${W - 15} 76 L ${W - 25} 86 L 22 86 L 12 76 Z`} fill={hull} stroke={detail} strokeWidth="2" strokeLinejoin="round" />
+      <rect x={28} y={42} width={W - 60} height={18} rx="2" fill={deck} stroke={detail} strokeWidth="1.5" />
+      <rect x={W / 2 - 16} y={22} width={32} height={22} rx="2" fill={high} stroke={detail} strokeWidth="1.5" />
+      <rect x={W / 2 + 22} y={26} width={14} height={18} rx="2" fill={detail} />
+      <ellipse cx={W / 2 + 29} cy={26} rx="7" ry="2.5" fill="#0F0F12" />
+      <circle cx={50} cy={51} r="10" fill={detail} stroke={high} strokeWidth="1.5" />
+      <line x1={50} y1={51} x2={28} y2={51} stroke={high} strokeWidth="3" strokeLinecap="round" />
+      <circle cx={W - 50} cy={51} r="10" fill={detail} stroke={high} strokeWidth="1.5" />
+      <line x1={W - 50} y1={51} x2={W - 28} y2={51} stroke={high} strokeWidth="3" strokeLinecap="round" />
+      <line x1={W / 2} y1={22} x2={W / 2} y2={6} stroke={detail} strokeWidth="2" />
+      <circle cx={W / 2} cy={6} r="2.5" fill={accent} />
+    </>);
+  } else if (len === 3) {
+    body = (<>
+      <path d={`M 8 55 Q 30 38 ${W / 2} 38 Q ${W - 30} 38 ${W - 8} 55 L ${W - 15} 80 Q ${W / 2} 92 15 80 Z`} fill={hull} stroke={detail} strokeWidth="2" strokeLinejoin="round" />
+      <path d={`M ${W / 2 - 22} 38 L ${W / 2 - 16} 20 L ${W / 2 + 16} 20 L ${W / 2 + 22} 38 Z`} fill={high} stroke={detail} strokeWidth="1.5" strokeLinejoin="round" />
+      <line x1={W / 2 + 5} y1={20} x2={W / 2 + 5} y2={6} stroke={detail} strokeWidth="2" />
+      <circle cx={W / 2 + 5} cy={6} r="2" fill={accent} />
+      <circle cx={W / 2 - 8} cy={29} r="2.5" fill={detail} />
+      <circle cx={W / 2 + 12} cy={29} r="2.5" fill={detail} />
+      <line x1={20} y1={64} x2={W - 20} y2={64} stroke={detail} strokeWidth="1" opacity="0.5" />
+    </>);
+  } else {
+    body = (<>
+      <path d={`M 8 58 Q 22 50 50 50 L ${W - 10} 50 L ${W - 2} 70 L ${W - 12} 84 L 18 84 Z`} fill={hull} stroke={detail} strokeWidth="2" strokeLinejoin="round" />
+      <rect x={30} y={34} width={W - 60} height={18} rx="2" fill={deck} stroke={detail} strokeWidth="1.5" />
+      <rect x={W / 2 - 12} y={18} width={24} height={18} rx="2" fill={high} stroke={detail} strokeWidth="1.5" />
+      <line x1={W / 2 + 2} y1={18} x2={W / 2 + 2} y2={5} stroke={detail} strokeWidth="1.8" />
+      <circle cx={W / 2 + 2} cy={5} r="2" fill={accent} />
+      <line x1={48} y1={45} x2={28} y2={45} stroke={detail} strokeWidth="3" strokeLinecap="round" />
+      <circle cx={48} cy={45} r="5" fill={detail} stroke={high} strokeWidth="1" />
+    </>);
+  }
   return (
-    <div className="flex gap-[3px]">
-      {Array.from({ length: len }).map((_, i) => (
-        <span key={i} className="h-3 w-3 rounded-[3px]" style={{ background: i === 0 ? "#A8B8C5" : "#5A7691" }} />
-      ))}
-    </div>
+    <svg viewBox={`0 0 ${W} ${H}`} width="100%" height="100%" preserveAspectRatio="xMidYMid meet" style={{ display: "block" }}>
+      <ellipse cx={W / 2} cy={H - 4} rx={W * 0.42} ry="4" fill="rgba(0,0,0,0.5)" />
+      {body}
+      {!sunk && <line x1={10} y1={H - 8} x2={W - 10} y2={H - 8} stroke={BS_SONAR} strokeWidth="1" opacity="0.3" />}
+    </svg>
   );
 }
 
@@ -457,13 +511,15 @@ function BattleGrid({
 }
 
 // ── Local Mode ──────────────────────────────────────────
-function LocalBattleship({ onReturnToLobby, onBackToModes, initialBot = false }: { onReturnToLobby?: () => void; onBackToModes?: () => void; initialBot?: boolean }) {
+function LocalBattleship({ onReturnToLobby, onBackToModes, initialBot = false, playerId, playerName }: { onReturnToLobby?: () => void; onBackToModes?: () => void; initialBot?: boolean; playerId?: string; playerName?: string }) {
   const [localPhase, setLocalPhase] = useState<"setup" | "placing-1" | "placing-2" | "handoff" | "playing" | "game-over">("setup");
   const [vsBot] = useState(initialBot);
   const [botLevel, setBotLevel] = useState<BotLevel2>("capitaine");
   const [botTurn, setBotTurn] = useState(false);
   const [botTick, setBotTick] = useState(0);
   const botQueueRef = useRef<number[]>([]);
+  const pickedUpRef = useRef(false);
+  const gameStartRef = useRef<number>(0);
   const [player1Name, setPlayer1Name] = useState("Joueur 1");
   const [player2Name, setPlayer2Name] = useState(initialBot ? "L'IA" : "Joueur 2");
   const [p1Grid, setP1Grid] = useState(makeEmptyGrid);
@@ -476,7 +532,10 @@ function LocalBattleship({ onReturnToLobby, onBackToModes, initialBot = false }:
   const [hoverCells, setHoverCells] = useState<Set<number>>(new Set());
   const [winner, setWinner] = useState<1 | 2 | null>(null);
   const [lastShotResult, setLastShotResult] = useState<"hit" | "miss" | "sunk" | null>(null);
+  const [lastFiredLabel, setLastFiredLabel] = useState<string>("");
   const [showingBoard, setShowingBoard] = useState(false);
+  const [bsAward, setBsAward] = useState<{ earned: number; total: number } | null>(null);
+  const bsAwardRef = useRef(false);
 
   // Refs pour le bot (lecture de l'état frais sans relancer l'effet).
   const p1GridRef = useRef(p1Grid);
@@ -512,6 +571,23 @@ function LocalBattleship({ onReturnToLobby, onBackToModes, initialBot = false }:
     return () => clearTimeout(t);
   }, [vsBot, botTurn, botTick, localPhase, winner, botLevel]);
 
+  // Démarre le chrono de la partie.
+  useEffect(() => {
+    if (localPhase === "playing" && gameStartRef.current === 0) gameStartRef.current = Date.now();
+  }, [localPhase]);
+
+  // XP en fin de partie locale (profil + classement bataille navale).
+  useEffect(() => {
+    if (!winner || bsAwardRef.current || !playerId) return;
+    bsAwardRef.current = true;
+    const won = vsBot ? winner === 1 : true;
+    const rank = vsBot ? (winner === 1 ? 1 : 2) : 1;
+    const score = won ? 110 : 30;
+    addGameResult(playerId, playerName ?? "Joueur", rank, score, "battleship", "strategy")
+      .then((r) => setBsAward({ earned: r.earnedPoints, total: r.stats.totalPoints }))
+      .catch(() => {});
+  }, [winner, vsBot, playerId, playerName]);
+
   const currentGrid = currentPlayer === 1 ? p1Grid : p2Grid;
   const currentShips = currentPlayer === 1 ? p1Ships : p2Ships;
   const setCurrentGrid = currentPlayer === 1 ? setP1Grid : setP2Grid;
@@ -526,6 +602,26 @@ function LocalBattleship({ onReturnToLobby, onBackToModes, initialBot = false }:
   const remainingShips = DEFAULT_SHIPS.filter((s) => !placedIds.has(s.id));
 
   const handlePlacementClick = useCallback((idx: number) => {
+    // Le long-press (drag) a déjà ramassé le navire : on ignore ce clic.
+    if (pickedUpRef.current) { pickedUpRef.current = false; return; }
+
+    // Appui sur un navire déjà placé → rotation sur place (autour de la proue).
+    const existing = currentShips.find((s) => s.cells.includes(idx));
+    if (existing) {
+      const cfg = DEFAULT_SHIPS.find((s) => s.id === existing.id);
+      if (!cfg) return;
+      const head = existing.cells[0];
+      const wasHoriz = existing.cells.length > 1 && Math.abs(existing.cells[0] - existing.cells[1]) === 1;
+      const gridCopy = [...currentGrid];
+      for (const c of existing.cells) gridCopy[c] = "empty";
+      if (canPlaceShip(gridCopy, head, cfg.size, !wasHoriz)) {
+        const cells = placeShipOnGrid(gridCopy, head, cfg.size, !wasHoriz);
+        setCurrentGrid(gridCopy);
+        setCurrentShips((prev) => prev.map((s) => (s.id === existing.id ? { ...s, cells } : s)));
+      }
+      return;
+    }
+
     if (!selectedShipId) return;
     const cfg = DEFAULT_SHIPS.find((s) => s.id === selectedShipId);
     if (!cfg) return;
@@ -537,7 +633,7 @@ function LocalBattleship({ onReturnToLobby, onBackToModes, initialBot = false }:
     // Auto-select next ship
     const nextShip = DEFAULT_SHIPS.find((s) => !placedIds.has(s.id) && s.id !== selectedShipId);
     setSelectedShipId(nextShip?.id ?? null);
-  }, [selectedShipId, horizontal, currentGrid, setCurrentGrid, setCurrentShips, placedIds]);
+  }, [selectedShipId, horizontal, currentGrid, currentShips, setCurrentGrid, setCurrentShips, placedIds]);
 
   const handleRandomPlace = useCallback(() => {
     const { grid, ships } = randomPlacement();
@@ -592,6 +688,7 @@ function LocalBattleship({ onReturnToLobby, onBackToModes, initialBot = false }:
     if (vsBot && botTurn) return; // l'IA joue, pas le joueur
     const cell = enemyGrid[idx];
     if (cell === "hit" || cell === "miss") return;
+    setLastFiredLabel(`${LETTERS[idx % 10]}${Math.floor(idx / 10) + 1}`);
 
     const newGrid = [...enemyGrid];
     if (cell === "ship") {
@@ -705,7 +802,7 @@ function LocalBattleship({ onReturnToLobby, onBackToModes, initialBot = false }:
                 <div className="text-xs font-bold" style={{ color: BS_INK }}>{s.label ?? s.id}</div>
                 <div className="font-mono text-[9px] font-bold tracking-wide" style={{ color: BS_INKMUTE }}>{s.size} CASES</div>
               </div>
-              <ShipBar len={s.size} />
+              <div style={{ width: 118, height: 22 }}><ShipSVG len={s.size} /></div>
             </div>
           ))}
         </div>
@@ -752,43 +849,6 @@ function LocalBattleship({ onReturnToLobby, onBackToModes, initialBot = false }:
           tagColor={BS_SONAR}
         />
         <div className="mt-4 flex flex-col items-center gap-4">
-          {/* Ship selection */}
-          <div className="flex flex-wrap gap-2 justify-center">
-            {DEFAULT_SHIPS.map((s) => {
-              const placed = placedIds.has(s.id);
-              const style = SHIP_STYLES[s.id] ?? DEFAULT_SHIP_STYLE;
-              return (
-                <button key={s.id} disabled={placed}
-                  onClick={() => setSelectedShipId(s.id)}
-                  className={cn(
-                    "rounded-lg border px-3 py-1.5 text-xs font-sans transition-all flex items-center gap-1.5",
-                    placed ? "border-white/5 bg-white/[0.02] text-white/20 line-through" :
-                    selectedShipId === s.id ? "border-cyan-300/50 bg-cyan-300/10 text-cyan-200" :
-                    "border-white/10 bg-white/[0.03] text-white/60 hover:border-cyan-300/30"
-                  )}>
-                  <span className="text-[11px]">{style.icon}</span>
-                  {s.label ?? s.id} ({s.size})
-                </button>
-              );
-            })}
-          </div>
-          <p className="text-[10px] text-white/20 font-sans sm:hidden">Maintiens un navire pour le deplacer</p>
-
-          <div className="flex gap-3">
-            <button onClick={() => setHorizontal((h) => !h)}
-              className="rounded-lg border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs font-sans text-white/60 hover:border-cyan-300/30">
-              {horizontal ? "↔ Horizontal" : "↕ Vertical"}
-            </button>
-            <button onClick={handleRandomPlace}
-              className="rounded-lg border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs font-sans text-white/60 hover:border-cyan-300/30">
-              Aleatoire
-            </button>
-            <button onClick={handleResetPlacement}
-              className="rounded-lg border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs font-sans text-white/60 hover:border-red-300/30">
-              Reset
-            </button>
-          </div>
-
           {/* Grid for placement */}
           <div onMouseLeave={() => setHoverCells(new Set())}>
             <div className="flex flex-col items-center gap-1">
@@ -827,6 +887,7 @@ function LocalBattleship({ onReturnToLobby, onBackToModes, initialBot = false }:
                             if (!ship) return;
                             const timer = setTimeout(() => {
                               // Long press: pick up ship to move it
+                              pickedUpRef.current = true;
                               const newGrid = [...currentGrid];
                               for (const c of ship.cells) newGrid[c] = "empty";
                               setCurrentGrid(newGrid);
@@ -880,13 +941,46 @@ function LocalBattleship({ onReturnToLobby, onBackToModes, initialBot = false }:
             </div>
           </div>
 
-          {allPlaced && (
-            <button onClick={handleConfirmPlacement}
-              className="rounded-xl px-8 py-3 text-sm font-bold"
-              style={{ background: `linear-gradient(180deg, ${BS_SONAR} 0%, #00A878 100%)`, color: "#031826", boxShadow: "0 14px 30px rgba(0,255,180,0.40)", animation: "scaleIn 0.3s ease" }}>
-              {vsBot ? "Lancer l'assaut ⚓" : "Confirmer"}
-            </button>
-          )}
+        </div>
+
+        {/* Dock — reste à placer (illustrations) + ROTATE */}
+        {!allPlaced && (
+          <>
+            <p className="mt-4 font-mono text-[10px] font-extrabold uppercase tracking-[2px]" style={{ color: BS_INKMUTE }}>Reste à placer · glisser / appuyer pour tourner</p>
+            <div className="mt-2.5 flex items-stretch gap-2.5">
+              <div className="flex flex-1 flex-col gap-2">
+                {remainingShips.map((s) => {
+                  const sel = selectedShipId === s.id;
+                  return (
+                    <button key={s.id} onClick={() => setSelectedShipId(s.id)} className="flex items-center gap-3 rounded-[14px] px-3 py-2 text-left" style={{
+                      background: sel ? `linear-gradient(160deg, ${BS_SONAR}1C 0%, rgba(0,0,0,0.20) 100%)` : "rgba(168,184,197,0.04)",
+                      border: sel ? `1.5px solid ${BS_SONAR}` : "1px solid rgba(168,184,197,0.15)",
+                    }}>
+                      <div style={{ width: 70, height: 22 }}><ShipSVG len={s.size} /></div>
+                      <span className="flex-1">
+                        <span className="block text-[13px] font-bold" style={{ color: BS_INK }}>{s.label ?? s.id}</span>
+                        <span className="block font-mono text-[9px] font-bold tracking-wide" style={{ color: BS_INKMUTE }}>{s.size} cases</span>
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+              <button onClick={() => setHorizontal((h) => !h)} className="flex w-[78px] flex-col items-center justify-center gap-1.5 rounded-[14px]" style={{ border: `1px solid ${BS_SONAR}40`, background: `${BS_SONAR}0F`, color: BS_SONAR }}>
+                <span style={{ fontSize: 20 }}>⟳</span>
+                <span className="font-mono text-[9px] font-extrabold uppercase tracking-wider">{horizontal ? "Horiz." : "Vertic."}</span>
+              </button>
+            </div>
+          </>
+        )}
+
+        <div className="mt-4 flex gap-2.5">
+          <button onClick={handleResetPlacement} className="rounded-xl px-4 py-3 text-sm font-bold" style={{ border: "1px solid rgba(168,184,197,0.20)", background: "rgba(168,184,197,0.04)", color: BS_INKMUTE }}>↺</button>
+          <button onClick={handleRandomPlace} className="flex items-center gap-2 rounded-xl px-4 py-3 text-sm font-bold" style={{ border: "1px solid rgba(168,184,197,0.20)", background: "rgba(168,184,197,0.04)", color: BS_INK }}>🎲 Aléatoire</button>
+          <button onClick={handleConfirmPlacement} disabled={!allPlaced} className="flex-1 rounded-xl py-3 text-sm font-bold" style={{
+            background: allPlaced ? `linear-gradient(180deg, ${BS_SONAR} 0%, #00A878 100%)` : "rgba(168,184,197,0.10)",
+            color: allPlaced ? "#031826" : "rgba(168,184,197,0.5)",
+            boxShadow: allPlaced ? "0 14px 30px rgba(0,255,180,0.40)" : "none",
+          }}>Prêt au combat →</button>
         </div>
       </NavalShell>
     );
@@ -961,44 +1055,91 @@ function LocalBattleship({ onReturnToLobby, onBackToModes, initialBot = false }:
     );
   }
 
-  // ── Game Over ──
+  // ── Game Over (BS — stats + XP) ──
   if (localPhase === "game-over") {
     const winnerName = winner === 1 ? player1Name : player2Name;
     const playerLost = vsBot && winner === 2;
     const accent = playerLost ? "#FF3838" : BS_SONAR;
+    const targetGrid = winner === 1 ? p2Grid : p1Grid;
+    const tirs = targetGrid.filter((c) => c === "hit" || c === "miss").length;
+    const touches = targetGrid.filter((c) => c === "hit").length;
+    const precision = tirs > 0 ? Math.round((touches / tirs) * 100) : 0;
+    const durMs = gameStartRef.current ? Date.now() - gameStartRef.current : 0;
+    const dur = `${String(Math.floor(durMs / 60000)).padStart(2, "0")}:${String(Math.floor(durMs / 1000) % 60).padStart(2, "0")}`;
+    const lvl = bsAward ? getLevel(bsAward.total) : null;
+    const replay = () => {
+      setLocalPhase("setup");
+      setP1Grid(makeEmptyGrid());
+      setP2Grid(makeEmptyGrid());
+      setP1Ships([]);
+      setP2Ships([]);
+      setWinner(null);
+      setLastShotResult(null);
+      setLastFiredLabel("");
+      setBotTurn(false);
+      botQueueRef.current = [];
+      gameStartRef.current = 0;
+      bsAwardRef.current = false;
+      setBsAward(null);
+    };
     return (
       <NavalShell>
         <div className="flex flex-1 flex-col items-center justify-center text-center">
-          <p className="font-mono text-[11px] font-extrabold uppercase tracking-[3px]" style={{ color: BS_INKMUTE }}>
-            {playerLost ? "Flotte coulée" : "Victoire"}
+          <p className="font-mono text-[11px] font-extrabold uppercase tracking-[3px]" style={{ color: playerLost ? "#FF8A8A" : BS_SONAR }}>
+            {playerLost ? "Flotte perdue" : "Victoire"}
           </p>
-          <div className="mt-3">
-            {playerLost
-              ? <Mascot size={92} color="coral" mood="dead" />
-              : <Mascot size={104} color="yellow" mood="happy" crown arms cheering />}
+          <h2 className="mt-1 font-black leading-[0.9]" style={{ fontSize: 52, letterSpacing: -2, color: BS_INK, textShadow: `0 0 36px ${accent}55` }}>
+            {playerLost ? "Défaite" : <>Flotte<br /><span style={{ background: `linear-gradient(120deg, ${BS_SONAR}, #FFD23F)`, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>coulée</span></>}
+          </h2>
+          <p className="mt-2 text-[13px]" style={{ color: BS_INKMUTE }}>
+            {playerLost ? `${winnerName} a coulé ta flotte` : `Tu as détruit les ${DEFAULT_SHIPS.length} navires en ${tirs} tirs`}
+          </p>
+          <div className="my-3">
+            {playerLost ? <Mascot size={84} color="coral" mood="dead" /> : <Mascot size={96} color="yellow" mood="happy" crown arms cheering />}
           </div>
-          <h2 className="mt-2 text-4xl font-black" style={{ color: accent, textShadow: `0 0 30px ${accent}66` }}>{winnerName}</h2>
-          <p className="mt-1 text-sm" style={{ color: BS_INKMUTE }}>
-            {playerLost ? "a coulé ta flotte…" : "a coulé toute la flotte !"}
-          </p>
-          <div className="mt-8 flex gap-3">
-            <button onClick={() => {
-              setLocalPhase("setup");
-              setP1Grid(makeEmptyGrid());
-              setP2Grid(makeEmptyGrid());
-              setP1Ships([]);
-              setP2Ships([]);
-              setWinner(null);
-              setLastShotResult(null);
-              setBotTurn(false);
-              botQueueRef.current = [];
-            }}
-              className="rounded-xl px-6 py-3 text-sm font-bold" style={{ background: `linear-gradient(180deg, ${BS_SONAR} 0%, #00A878 100%)`, color: "#031826", boxShadow: "0 14px 30px rgba(0,255,180,0.40)" }}>
-              Rejouer
+
+          {/* Stats */}
+          <div className="grid w-full grid-cols-4 gap-1 rounded-2xl px-2 py-3" style={{ background: "rgba(0,0,0,0.32)", border: "1px solid rgba(168,184,197,0.12)" }}>
+            {[
+              { v: String(tirs), k: "Tirs", c: BS_SONAR },
+              { v: String(touches), k: "Touchés", c: "#FFD23F" },
+              { v: `${precision}%`, k: "Précision", c: "#FFD23F" },
+              { v: dur, k: "Durée", c: BS_INK },
+            ].map((s) => (
+              <div key={s.k} className="text-center">
+                <div className="font-black" style={{ fontSize: 22, color: s.c }}>{s.v}</div>
+                <div className="font-mono text-[8px] font-bold uppercase tracking-wide" style={{ color: BS_INKMUTE }}>{s.k}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* XP */}
+          {bsAward && bsAward.earned > 0 && (
+            <div className="mt-2.5 flex w-full items-center justify-center gap-3 rounded-2xl px-4 py-2.5" style={{ background: "rgba(255,210,63,0.10)", border: "1px solid rgba(255,210,63,0.30)" }}>
+              <span className="font-black" style={{ fontSize: 18, color: "#FFD23F" }}>+{bsAward.earned} XP</span>
+              {lvl && <span className="text-xs" style={{ color: BS_INKMUTE }}>Niveau {lvl.level} · {lvl.title}</span>}
+            </div>
+          )}
+
+          {/* Tir final */}
+          {lastFiredLabel && (
+            <div className="mt-2.5 flex w-full items-center gap-3 rounded-2xl px-4 py-2.5" style={{ background: "rgba(0,0,0,0.32)", border: "1px dashed rgba(168,184,197,0.15)" }}>
+              <span className="font-black" style={{ fontSize: 20, color: "#FFD23F" }}>{lastFiredLabel}</span>
+              <span className="flex-1 text-left">
+                <span className="block font-mono text-[9px] font-extrabold uppercase tracking-wider" style={{ color: BS_SONAR }}>Tir final</span>
+                <span className="block text-[13px] font-bold" style={{ color: BS_INK }}>{playerLost ? "tir de l'ennemi" : "coup de grâce"}</span>
+              </span>
+              <span style={{ fontSize: 20 }}>💥</span>
+            </div>
+          )}
+
+          <div className="mt-4 w-full">
+            <button onClick={replay} className="flex w-full items-center justify-center gap-2 rounded-2xl py-3.5 text-base font-bold" style={{ background: `linear-gradient(180deg, ${BS_SONAR} 0%, #00A878 100%)`, color: "#031826", boxShadow: "0 14px 30px rgba(0,255,180,0.40)" }}>
+              🔄 Revanche
             </button>
             {onReturnToLobby && (
-              <button onClick={onReturnToLobby} className="rounded-xl px-6 py-3 text-sm" style={{ border: `1px solid ${BS_SONAR}33`, color: BS_INKMUTE }}>
-                Retour
+              <button onClick={onReturnToLobby} className="mt-2.5 w-full rounded-2xl py-3 text-sm font-bold" style={{ border: "1px solid rgba(168,184,197,0.20)", background: "rgba(168,184,197,0.04)", color: BS_INK }}>
+                Menu
               </button>
             )}
           </div>
@@ -1062,7 +1203,7 @@ export default function BattleshipGame({ roomCode, playerId, playerName, onRetur
   }
 
   if (entryMode === "local") {
-    return <LocalBattleship onReturnToLobby={onReturnToLobby} onBackToModes={() => setEntryMode("choose")} initialBot={botStart} />;
+    return <LocalBattleship onReturnToLobby={onReturnToLobby} onBackToModes={() => setEntryMode("choose")} initialBot={botStart} playerId={playerId} playerName={playerName} />;
   }
 
   // ── Online Mode ──
