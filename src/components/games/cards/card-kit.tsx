@@ -7,7 +7,7 @@
  * SeatAvatar et FanHand. Réutilisé par Président, Contrée et 8 Américain.
  */
 
-import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 
 export type Suit = "♠" | "♥" | "♦" | "♣";
 export type Rank = "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" | "10" | "V" | "D" | "R";
@@ -548,9 +548,24 @@ export function FanHand({
   const n = hand.length;
   const d = CARD_SIZES[cardSize];
   const mid = (n - 1) / 2;
-  const spacing = Math.min(d.w * 0.72, (maxWidth - d.w) / Math.max(1, n - 1));
+  // Mesure la largeur réelle disponible : sans ça, une grande main (17-18 cartes
+  // au président) déborde hors de l'écran et les cartes deviennent intouchables.
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const [boxW, setBoxW] = useState(0);
+  useEffect(() => {
+    const el = wrapRef.current;
+    if (!el) return;
+    const measure = () => setBoxW(el.clientWidth);
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  // On garde une marge (la carte est ancrée au centre, donc elle déborde de d.w/2 de chaque côté).
+  const avail = Math.max(d.w, (boxW > 0 ? Math.min(maxWidth, boxW) : maxWidth) - 8);
+  const spacing = n > 1 ? Math.min(d.w * 0.72, (avail - d.w) / (n - 1)) : 0;
   return (
-    <div style={{ position: "relative", width: "100%", height: d.h + 28, pointerEvents: n > 0 ? "auto" : "none" }}>
+    <div ref={wrapRef} style={{ position: "relative", width: "100%", height: d.h + 28, pointerEvents: n > 0 ? "auto" : "none" }}>
       {hand.map((c, i) => {
         const offset = i - mid;
         const rot = offset * Math.min(3.5, 14 / Math.max(1, n - 1));
