@@ -608,27 +608,58 @@ export function FanHand({
   // On garde une marge (la carte est ancrée au centre, donc elle déborde de d.w/2 de chaque côté).
   const avail = Math.max(d.w, (boxW > 0 ? Math.min(maxWidth, boxW) : maxWidth) - 8);
   const spacing = n > 1 ? Math.min(d.w * 0.72, (avail - d.w) / (n - 1)) : 0;
+
+  // ── Animation : distribution (cartes qui arrivent du paquet) puis tri ──
+  // order[i] = position visuelle de la carte i. Sur une nouvelle distribution,
+  // les cartes apparaissent du paquet dans un ordre mélangé, puis se trient.
+  const [order, setOrder] = useState<number[]>([]);
+  const [phase, setPhase] = useState<"deck" | "fan">("fan");
+  const prevLenRef = useRef(0);
+  useEffect(() => {
+    const prev = prevLenRef.current;
+    prevLenRef.current = n;
+    if (n === 0) { setOrder([]); return; }
+    const isNewDeal = prev === 0 || n - prev >= 4; // grande distribution (pas une pioche d'1 carte)
+    if (isNewDeal && n >= 2) {
+      const perm = [...Array(n).keys()];
+      for (let k = perm.length - 1; k > 0; k--) { const j = Math.floor(Math.random() * (k + 1)); [perm[k], perm[j]] = [perm[j], perm[k]]; }
+      setOrder(perm);
+      setPhase("deck");
+      const r = requestAnimationFrame(() => requestAnimationFrame(() => setPhase("fan"))); // → étalement (distribution)
+      const t = setTimeout(() => setOrder([...Array(n).keys()]), 760); // → tri
+      return () => { cancelAnimationFrame(r); clearTimeout(t); };
+    }
+    setOrder([...Array(n).keys()]);
+    setPhase("fan");
+  }, [n]);
+
   return (
     <div ref={wrapRef} style={{ position: "relative", width: "100%", height: d.h + 28, pointerEvents: n > 0 ? "auto" : "none" }}>
       {hand.map((c, i) => {
-        const offset = i - mid;
+        const slot = order[i] ?? i;
+        const offset = slot - mid;
         const rot = offset * Math.min(3.5, 14 / Math.max(1, n - 1));
         const x = offset * spacing;
         const y = Math.abs(offset) * 1.8;
         const playable = !disabled && isLegal(c);
         const isSel = !!selectedSet && selectedSet.has(i);
+        const deck = phase === "deck";
+        const transform = deck
+          ? `translateX(${-d.w / 2}px) translateY(54px) rotate(0deg) scale(0.7)`
+          : `translateX(${x - d.w / 2}px) translateY(${-y - (isSel ? 16 : 0)}px) rotate(${rot}deg)`;
         return (
           <button
             key={`${c.rank}${c.suit}-${i}`}
             onClick={() => onClickIndex && onClickIndex(i)}
             style={{
               position: "absolute", left: "50%", bottom: 0,
-              transform: `translateX(${x - d.w / 2}px) translateY(${-y - (isSel ? 16 : 0)}px) rotate(${rot}deg)`,
+              transform,
               transformOrigin: `center ${d.h + 60}px`,
               zIndex: isSel ? 200 + i : i,
               background: "transparent", border: 0, padding: 0,
               cursor: playable ? "pointer" : "default",
-              transition: "transform 220ms cubic-bezier(0.22, 1, 0.36, 1)",
+              opacity: deck ? 0 : 1,
+              transition: `transform 460ms cubic-bezier(0.22, 1, 0.36, 1) ${deck ? 0 : slot * 0.03}s, opacity 280ms ease ${deck ? 0 : slot * 0.03}s`,
               filter: playable || isSel ? "none" : "saturate(0.45) brightness(0.7)",
             }}
             aria-label={`${c.rank} de ${c.suit}`}

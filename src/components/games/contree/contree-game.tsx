@@ -299,6 +299,24 @@ function BottomHand({
   const pressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const cardStyle = useCardStyle();
 
+  // Distribution animée puis tri (les cartes arrivent du paquet, mélangées, puis se rangent).
+  const [order, setOrder] = useState<number[]>([]);
+  const [dealPhase, setDealPhase] = useState<"deck" | "fan">("fan");
+  const prevLenRef = useRef(0);
+  useEffect(() => {
+    const prev = prevLenRef.current; const n = hand.length; prevLenRef.current = n;
+    if (n === 0) { setOrder([]); return; }
+    if ((prev === 0 || n - prev >= 4) && n >= 2) {
+      const perm = [...Array(n).keys()];
+      for (let k = perm.length - 1; k > 0; k--) { const j = Math.floor(Math.random() * (k + 1)); [perm[k], perm[j]] = [perm[j], perm[k]]; }
+      setOrder(perm); setDealPhase("deck");
+      const r = requestAnimationFrame(() => requestAnimationFrame(() => setDealPhase("fan")));
+      const t = setTimeout(() => setOrder([...Array(n).keys()]), 760);
+      return () => { cancelAnimationFrame(r); clearTimeout(t); };
+    }
+    setOrder([...Array(n).keys()]); setDealPhase("fan");
+  }, [hand.length]);
+
   const startPress = () => {
     if (pressTimerRef.current) clearTimeout(pressTimerRef.current);
     pressTimerRef.current = setTimeout(() => setPreviewMode(true), 260);
@@ -340,11 +358,13 @@ function BottomHand({
         {hand.map((c, i) => {
           const n = hand.length;
           const mid = (n - 1) / 2;
-          const offset = i - mid;
+          const slot = order[i] ?? i;
+          const offset = slot - mid;
           const spacing = Math.min(66, 640 / Math.max(1, n));
           const rot = offset * Math.min(3.5, 14 / Math.max(1, n - 1));
           const x = offset * spacing;
           const y = Math.abs(offset) * 2;
+          const deck = dealPhase === "deck";
           const playable = canPlay && (isLegal ? isLegal(c) : true);
 
           let filter = "none";
@@ -365,14 +385,18 @@ function BottomHand({
               key={`${c.rank}${c.suit}-${i}`}
               type="button"
               onClick={() => { if (playable) onPlay(i); }}
-              className="absolute outline-none transition-all duration-300 ease-out hover:-translate-y-4 focus-visible:-translate-y-4"
+              className="absolute outline-none"
               style={{
                 left: "50%", bottom: 12,
-                transform: `translateX(${x - 37}px) translateY(${-y}px) rotate(${rot}deg)`,
+                transform: deck
+                  ? `translateX(-37px) translateY(60px) rotate(0deg) scale(0.7)`
+                  : `translateX(${x - 37}px) translateY(${-y}px) rotate(${rot}deg)`,
                 transformOrigin: "center 140px",
                 zIndex: previewMode && playable ? 100 + i : i,
                 cursor: playable ? "pointer" : "default",
                 pointerEvents: "auto",
+                opacity: deck ? 0 : 1,
+                transition: `transform 460ms cubic-bezier(0.22,1,0.36,1) ${deck ? 0 : slot * 0.04}s, opacity 280ms ease ${deck ? 0 : slot * 0.04}s, filter 200ms ease`,
                 filter,
               }}
             >
