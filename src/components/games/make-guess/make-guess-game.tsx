@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import type { GameProps } from "@/lib/games/types";
 import { cn } from "@/lib/utils";
 import { Mascot, MASCOT_COLORS, type MascotColor } from "@/components/Mascot";
+import { registerSoftReplay } from "@/lib/game-replay";
 
 // Couleurs de blob par équipe (DA du site).
 const TEAM_BLOB: MascotColor[] = ["yellow", "sky", "coral", "mint", "pink", "lavender"];
@@ -582,13 +583,20 @@ export default function MakeGuessGame({
     startGame();
   }, [startGame]);
 
+  // « Relancer la partie » (menu paramètres) : revient au setup en GARDANT les
+  // noms d'équipes/joueurs + les réglages (pas besoin de tout réécrire).
+  useEffect(() => {
+    registerSoftReplay(() => resetGame());
+    return () => registerSoftReplay(null);
+  }, [resetGame]);
+
   // ── Final scores (for game-over, include last turn) ──
   const finalScores = teams.map((t, tIdx) => {
     // allResults already contains everything by the time we reach game-over
     const score = allResults
       .filter((r) => r.teamIndex === tIdx)
       .reduce((sum, r) => sum + r.score, 0);
-    return { name: t.name, score };
+    return { name: t.name, score, idx: tIdx };
   });
 
   const sortedFinal = [...finalScores].sort((a, b) => b.score - a.score);
@@ -950,86 +958,74 @@ export default function MakeGuessGame({
       )}
 
       {/* ── GAME OVER ─────────────────────────────────────── */}
-      {phase === "game-over" && (
-        <div className="flex min-h-screen flex-col items-center justify-center px-4 py-8">
-          <div
-            className="w-full max-w-md rounded-3xl border border-cyan-300/20 bg-black/35 p-8 text-center backdrop-blur-xl"
-            style={{ animation: "scaleIn 0.5s ease-out" }}
-          >
-            <p className="mb-2 font-sans text-xs uppercase tracking-wider text-cyan-200/50">
-              Partie terminee
-            </p>
+      {phase === "game-over" && (() => {
+        const top3 = sortedFinal.slice(0, 3);
+        const podiumOrder = top3.length === 3 ? [top3[1], top3[0], top3[2]] : top3;
+        const PODIUM_BG: Record<number, string> = {
+          1: "linear-gradient(180deg, #FFD23F 0%, #B27800 100%)",
+          2: "linear-gradient(180deg, #E8E8E8 0%, #888 100%)",
+          3: "linear-gradient(180deg, #FF8B5C 0%, #A04020 100%)",
+        };
+        const heights: Record<number, number> = { 1: 118, 2: 92, 3: 74 };
+        return (
+        <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-[560px] flex-col items-center px-4 pb-10"
+          style={{ paddingTop: "calc(env(safe-area-inset-top,0px) + 2rem)", fontFamily: "var(--font-sans)" }}>
+          <div className="fixed inset-0 -z-10" style={{ background: "radial-gradient(120% 70% at 50% 0%, rgba(255,210,63,0.18) 0%, transparent 55%), linear-gradient(180deg,#1A1206 0%,#0F0A1F 100%)" }} />
 
-            {/* Winner */}
-            {sortedFinal[0] && (
-              <div
-                className="mb-6"
-                style={{ animation: "fadeUp 0.7s ease-out" }}
-              >
-                <p className="mb-1 font-sans text-sm text-yellow-300/70">
-                  Vainqueur
-                </p>
-                <h2 className="font-serif text-3xl font-bold text-yellow-200">
-                  {sortedFinal[0].name}
-                </h2>
-                <p className="font-mono text-5xl font-bold text-cyan-300">
-                  {sortedFinal[0].score}
-                </p>
-              </div>
-            )}
+          <p className="font-mono text-[11px] font-extrabold uppercase tracking-[0.22em]" style={{ color: "#FFD23F" }}>✦ Partie terminée</p>
+          {sortedFinal[0] && (
+            <h2 className="mt-1 text-center font-black text-white" style={{ fontFamily: "var(--font-display)", fontSize: 40, letterSpacing: -1.5, lineHeight: 0.95 }}>
+              <span style={{ background: "linear-gradient(120deg,#FFD23F,#FF3EA5)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>{sortedFinal[0].name}</span> l&apos;emporte !
+            </h2>
+          )}
 
-            {/* Full ranking */}
-            <div className="mb-8 space-y-2">
-              {sortedFinal.map((t, i) => (
-                <div
-                  key={i}
-                  className={cn(
-                    "flex items-center justify-between rounded-xl border px-4 py-3",
-                    i === 0
-                      ? "border-yellow-400/30 bg-yellow-500/10"
-                      : i === 1
-                      ? "border-cyan-300/20 bg-cyan-500/5"
-                      : "border-cyan-300/10 bg-black/20"
-                  )}
-                  style={{ animation: `fadeUp ${0.5 + i * 0.1}s ease-out` }}
-                >
-                  <span className="font-sans text-sm text-cyan-100">
-                    {i === 0 ? "1er" : `${i + 1}e`} - {t.name}
-                  </span>
-                  <span className="font-mono text-lg font-bold text-cyan-300">
-                    {t.score}
-                  </span>
+          {/* Podium */}
+          {top3.length >= 2 && (
+            <div className="mt-7 grid w-full max-w-md grid-cols-3 items-end gap-2.5">
+              {podiumOrder.map((t) => {
+                const place = sortedFinal.indexOf(t) + 1;
+                return (
+                  <div key={t.idx} className="flex flex-col items-center">
+                    <Mascot size={place === 1 ? 76 : 56} color={TEAM_BLOB[t.idx % TEAM_BLOB.length]} mood="happy" arms cheering={place === 1} crown={place === 1} delay={place * 0.12} />
+                    <div className="mt-2 flex w-full flex-col items-center rounded-t-2xl border border-b-0 pt-2.5"
+                      style={{ height: heights[place], background: PODIUM_BG[place], borderColor: "rgba(255,255,255,0.18)" }}>
+                      <div className="font-black" style={{ fontFamily: "var(--font-display)", fontSize: place === 1 ? 30 : 22, color: place === 1 ? "#3A2700" : "rgba(0,0,0,0.6)", lineHeight: 1 }}>{place}</div>
+                      <div className="mt-1 px-1 text-center text-[11px] font-bold leading-tight" style={{ color: place === 1 ? "#3A2700" : "rgba(0,0,0,0.7)" }}>{t.name}</div>
+                      <div className="font-mono text-[11px] font-bold" style={{ color: place === 1 ? "rgba(58,39,0,0.7)" : "rgba(0,0,0,0.55)" }}>{t.score} pts</div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Classement (4e et +) */}
+          {sortedFinal.length > 3 && (
+            <div className="mt-4 w-full max-w-md space-y-1.5">
+              {sortedFinal.slice(3).map((t, i) => (
+                <div key={t.idx} className="flex items-center justify-between rounded-xl px-4 py-2.5" style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }}>
+                  <span className="text-sm font-bold text-white/85">{i + 4}ᵉ · {t.name}</span>
+                  <span className="font-mono text-base font-black text-white">{t.score}</span>
                 </div>
               ))}
             </div>
+          )}
 
-            {/* Action buttons */}
-            <div className="flex gap-3">
-              <button
-                onClick={replay}
-                className="press-effect flex-1 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 py-3 font-sans text-sm font-semibold text-white shadow-lg shadow-cyan-500/25 transition-all hover:shadow-cyan-500/40"
-              >
-                Rejouer
-              </button>
-              <button
-                onClick={resetGame}
-                className="flex-1 rounded-xl border border-cyan-300/20 bg-black/30 py-3 font-sans text-sm text-cyan-300/70 backdrop-blur-xl transition-colors hover:bg-cyan-500/10"
-              >
-                Nouvelle partie
-              </button>
+          <div className="mt-8 flex w-full max-w-md flex-col gap-2.5">
+            <button onClick={replay} className="w-full rounded-2xl py-4 text-base font-bold transition active:scale-[0.99]"
+              style={{ background: "linear-gradient(180deg,#FFD23F,#C48800)", color: "#1A0E2E", boxShadow: "0 14px 30px rgba(255,210,63,0.4)", fontFamily: "var(--font-display)" }}>
+              🔄 Revanche (mêmes équipes)
+            </button>
+            <div className="flex gap-2.5">
+              <button onClick={resetGame} className="flex-1 rounded-2xl py-3 text-sm font-bold text-white/85" style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)" }}>Nouvelle partie</button>
+              {onReturnToLobby && (
+                <button onClick={onReturnToLobby} className="flex-1 rounded-2xl py-3 text-sm font-bold text-white/60" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)" }}>Menu</button>
+              )}
             </div>
-
-            {onReturnToLobby && (
-              <button
-                onClick={onReturnToLobby}
-                className="mt-4 font-sans text-sm text-cyan-300/40 transition-colors hover:text-cyan-300/70"
-              >
-                Retour au lobby
-              </button>
-            )}
           </div>
         </div>
-      )}
+        );
+      })()}
     </div>
   );
 }
