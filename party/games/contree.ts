@@ -94,6 +94,8 @@ export class ContreeGame extends BaseGame {
   beloteHolder: string | null = null; // player who has R+D of trump
   belotePartialClaimed = false; // after playing first of R/D
   targetPoints = TARGET_DEFAULT;
+  // Récap de la dernière manche (pour l'écran de fin de manche).
+  lastHand: { delta: [number, number]; success: boolean; bidderTeam: 0 | 1; contract: Bid } | null = null;
   timeLeft = TURN_TIME;
   timer: ReturnType<typeof setInterval> | null = null;
   handNumber = 1;
@@ -484,6 +486,7 @@ export class ContreeGame extends BaseGame {
 
     this.matchScore[0] += handFinal[0];
     this.matchScore[1] += handFinal[1];
+    this.lastHand = { delta: handFinal, success, bidderTeam, contract: this.currentBid };
 
     // Broadcast hand result
     this.broadcast({
@@ -552,6 +555,7 @@ export class ContreeGame extends BaseGame {
       trickPoints: this.trickPoints,
       matchScore: this.matchScore,
       targetPoints: this.targetPoints,
+      lastHand: this.lastHand,
       beloteHolder: this.beloteHolder,
       seats: this.seatOrder.map((id, idx) => {
         const p = this.contreePlayers.get(id);

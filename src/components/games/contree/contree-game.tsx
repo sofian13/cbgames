@@ -34,6 +34,7 @@ interface ContreeState {
   trickPoints?: [number, number];
   matchScore: [number, number];
   targetPoints: number;
+  lastHand?: { delta: [number, number]; success: boolean; bidderTeam: 0 | 1; contract: Bid } | null;
   beloteHolder: string | null;
   bubbles?: Record<string, { text: string; tone: "bid" | "pass" | "coincher" | "belote" }>;
   seats: Seat[];
@@ -360,10 +361,11 @@ function BottomHand({
           const mid = (n - 1) / 2;
           const slot = order[i] ?? i;
           const offset = slot - mid;
-          const spacing = Math.min(66, 640 / Math.max(1, n));
-          const rot = offset * Math.min(3.5, 14 / Math.max(1, n - 1));
+          const spacing = Math.min(68, 660 / Math.max(1, n));
+          // Main posée à plat (pas d'éventail) et alignée, comme un vrai jeu de belote.
+          const rot = 0;
           const x = offset * spacing;
-          const y = Math.abs(offset) * 2;
+          const y = 0;
           const deck = dealPhase === "deck";
           const playable = canPlay && (isLegal ? isLegal(c) : true);
 
@@ -419,6 +421,43 @@ function BottomHand({
             </button>
           );
         })}
+      </div>
+    </div>
+  );
+}
+
+// Récap de fin de manche (barres de progression vers la cible + points gagnés).
+function HandRecap({ state }: { state: ContreeState }) {
+  const lh = state.lastHand;
+  if (!lh) return null;
+  const target = state.targetPoints || 1000;
+  const names = (t: 0 | 1) => state.seats.filter((s) => s.team === t).map((s) => s.name).join(" & ") || (t === 0 ? "Nous" : "Eux");
+  const greener: 0 | 1 = lh.delta[0] >= lh.delta[1] ? 0 : 1;
+  return (
+    <div className="absolute inset-0 z-[60] flex items-center justify-center px-4" style={{ background: "rgba(8,14,40,0.6)", backdropFilter: "blur(3px)" }}>
+      <div className="w-full max-w-[460px] rounded-[24px] p-5" style={{ background: "linear-gradient(180deg, rgba(40,70,150,0.9), rgba(20,38,90,0.95))", border: "1.5px solid rgba(130,180,255,0.45)", boxShadow: "0 0 60px rgba(80,140,255,0.3), 0 24px 60px rgba(0,0,0,0.6)", animation: "scaleIn 0.3s ease" }}>
+        <p className="text-center text-[13px] font-bold" style={{ color: "rgba(255,255,255,0.8)", fontFamily: "var(--font-display)" }}>Première équipe à {target} points gagne</p>
+        <div className="mt-3 inline-flex w-full justify-center">
+          <span className="rounded-full px-3 py-1 text-[11px] font-extrabold uppercase tracking-wider" style={{ background: lh.success ? "rgba(34,197,94,0.2)" : "rgba(255,107,91,0.2)", color: lh.success ? "#7CF0A8" : "#FF9B8A", border: `1px solid ${lh.success ? "rgba(34,197,94,0.45)" : "rgba(255,107,91,0.45)"}` }}>
+            {lh.success ? "Contrat réussi" : "Chute"} · {lh.contract.amount === 250 ? "Capot" : lh.contract.amount === 500 ? "Géné." : lh.contract.amount} {lh.contract.suit}
+          </span>
+        </div>
+        <div className="mt-4 space-y-3.5">
+          {([0, 1] as const).map((t) => {
+            const color = t === greener ? "#3DDC97" : "#FFD23F";
+            const pct = Math.max(6, Math.min(100, Math.round((state.matchScore[t] / target) * 100)));
+            return (
+              <div key={t} className="flex items-center gap-3">
+                <div className="w-[110px] shrink-0 text-right text-[12px] font-bold leading-tight text-white">{names(t)}</div>
+                <div className="relative h-8 flex-1 overflow-hidden rounded-full" style={{ background: "rgba(0,0,0,0.4)" }}>
+                  <div className="absolute inset-y-0 left-0 rounded-full" style={{ width: `${pct}%`, background: color, transition: "width 600ms cubic-bezier(0.22,1,0.36,1)" }} />
+                  <span className="absolute inset-0 flex items-center justify-center font-black text-white" style={{ fontFamily: "var(--font-display)", fontSize: 16, textShadow: "0 1px 3px rgba(0,0,0,0.6)" }}>{state.matchScore[t]}</span>
+                </div>
+                <div className="w-[44px] shrink-0 text-[13px] font-black" style={{ color, fontFamily: "var(--font-display)" }}>+{lh.delta[t]}</div>
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
@@ -731,6 +770,9 @@ export default function ContreeGame({ roomCode, playerId, playerName }: GameProp
         canPlay={isMyTurn && state.lastTrickWinnerSeat === null}
         isLegal={(c) => isLegalLocal(c, state, myHand)}
       />
+
+      {/* Récap de fin de manche (barres de progression + points gagnés) */}
+      {state.phase === "hand-over" && <HandRecap state={state} />}
     </BoardBackground>
   );
 }
