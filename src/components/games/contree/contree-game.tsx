@@ -511,9 +511,8 @@ export default function ContreeGame({ roomCode, playerId, playerName }: GameProp
         {/* Contrôles d'enchère — affichés UNIQUEMENT quand c'est à toi (sinon : bulles). */}
         {isMyBid && (
         <div
-          className="absolute left-1/2 z-[55] -translate-x-1/2 rounded-[22px] p-3.5"
+          className="absolute left-1/2 top-1/2 z-[55] -translate-x-1/2 -translate-y-1/2 rounded-[22px] p-3.5"
           style={{
-            top: "calc(env(safe-area-inset-top,0px) + 78px)",
             width: "min(90vw, 400px)",
             background: "linear-gradient(180deg, rgba(52,92,182,0.62), rgba(24,44,104,0.9))",
             border: "1.5px solid rgba(130,180,255,0.45)",
