@@ -3,6 +3,10 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import type { GameProps } from "@/lib/games/types";
 import { cn } from "@/lib/utils";
+import { Mascot, MASCOT_COLORS, type MascotColor } from "@/components/Mascot";
+
+// Couleurs de blob par équipe (DA du site).
+const TEAM_BLOB: MascotColor[] = ["yellow", "sky", "coral", "mint", "pink", "lavender"];
 
 // ── Word lists ─────────────────────────────────────────────
 
@@ -613,119 +617,85 @@ export default function MakeGuessGame({
         />
       )}
 
-      {/* ── SETUP ─────────────────────────────────────────── */}
+      {/* ── SETUP (DA af.games) ───────────────────────────── */}
       {phase === "setup" && (
-        <div className="mx-auto flex min-h-screen max-w-2xl flex-col items-center justify-center px-4 py-8">
-          <h1
-            className="mb-2 text-center font-serif text-4xl font-bold tracking-tight text-cyan-100"
-            style={{ animation: "fadeUp 0.5s ease-out" }}
-          >
-            Fais Deviner
-          </h1>
-          <p
-            className="mb-8 text-center font-sans text-sm text-cyan-200/60"
-            style={{ animation: "fadeUp 0.6s ease-out" }}
-          >
-            Decris, fais deviner, marque des points !
-          </p>
+        <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-[560px] flex-col items-center px-4 pb-10"
+          style={{ paddingTop: "calc(env(safe-area-inset-top,0px) + 1.5rem)", fontFamily: "var(--font-sans)" }}>
+          {/* Fond premium DA */}
+          <div className="fixed inset-0 -z-10" style={{ background: "radial-gradient(120% 70% at 50% 0%, rgba(122,78,232,0.25) 0%, transparent 55%), linear-gradient(180deg,#0F0A1F 0%,#1A1230 100%)" }} />
 
-          {/* Teams */}
-          <div className="mb-6 w-full space-y-4">
+          {/* Hero blobs + titre */}
+          <div className="flex flex-col items-center text-center">
+            <div className="mb-2 flex items-end justify-center gap-1">
+              <Mascot size={50} color="sky" mood="thinking" delay={0.15} />
+              <Mascot size={82} color="yellow" mood="happy" arms cheering delay={0} />
+              <Mascot size={50} color="coral" mood="laughing" delay={0.3} />
+            </div>
+            <p className="text-[11px] uppercase tracking-[0.25em] text-white/45">af games · party</p>
+            <h1 className="mt-1 font-black text-white" style={{ fontFamily: "var(--font-display)", fontSize: 46, letterSpacing: -2, lineHeight: 0.95 }}>
+              Fais <span style={{ background: "linear-gradient(120deg,#FFD23F,#FF3EA5)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>Deviner</span>
+            </h1>
+            <p className="mt-2 text-sm text-white/55">Décris, fais deviner, marque des points !</p>
+          </div>
+
+          {/* Équipes */}
+          <div className="mt-7 w-full space-y-2.5">
             {teams.map((team, i) => (
-              <div
-                key={i}
-                className="rounded-2xl border border-cyan-300/20 bg-black/35 p-4 backdrop-blur-xl"
-                style={{ animation: `fadeUp ${0.4 + i * 0.1}s ease-out` }}
-              >
-                <div className="mb-3 flex items-center justify-between">
+              <div key={i} className="rounded-2xl p-3.5" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)" }}>
+                <div className="mb-2.5 flex items-center gap-3">
+                  <Mascot size={36} color={TEAM_BLOB[i % TEAM_BLOB.length]} mood="happy" bob={false} shadow={false} />
                   <input
-                    type="text"
-                    value={team.name}
-                    onChange={(e) => updateTeam(i, "name", e.target.value)}
-                    placeholder="Nom de l'equipe"
-                    className="w-48 rounded-lg border border-cyan-300/20 bg-black/30 px-3 py-1.5 font-sans text-sm text-cyan-100 placeholder-cyan-300/30 outline-none focus:border-cyan-400/40"
+                    type="text" value={team.name} onChange={(e) => updateTeam(i, "name", e.target.value)} placeholder="Nom de l'équipe"
+                    className="flex-1 rounded-xl px-3 py-2 text-[15px] font-bold text-white outline-none"
+                    style={{ background: "rgba(0,0,0,0.25)", border: "1px solid rgba(255,255,255,0.1)", fontFamily: "var(--font-display)" }}
                   />
                   {teams.length > 2 && (
-                    <button
-                      onClick={() => removeTeam(i)}
-                      className="rounded-lg px-2 py-1 text-xs text-red-400/70 transition-colors hover:bg-red-500/10 hover:text-red-400"
-                    >
-                      Supprimer
-                    </button>
+                    <button onClick={() => removeTeam(i)} aria-label="Supprimer"
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm" style={{ background: "rgba(255,107,91,0.12)", border: "1px solid rgba(255,107,91,0.3)", color: "#FF8B7A" }}>✕</button>
                   )}
                 </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <input
-                    type="text"
-                    value={team.player1}
-                    onChange={(e) => updateTeam(i, "player1", e.target.value)}
-                    placeholder="Joueur 1"
-                    className="rounded-lg border border-cyan-300/20 bg-black/30 px-3 py-2 font-sans text-sm text-cyan-100 placeholder-cyan-300/30 outline-none focus:border-cyan-400/40"
-                  />
-                  <input
-                    type="text"
-                    value={team.player2}
-                    onChange={(e) => updateTeam(i, "player2", e.target.value)}
-                    placeholder="Joueur 2"
-                    className="rounded-lg border border-cyan-300/20 bg-black/30 px-3 py-2 font-sans text-sm text-cyan-100 placeholder-cyan-300/30 outline-none focus:border-cyan-400/40"
-                  />
+                <div className="grid grid-cols-2 gap-2.5">
+                  <input type="text" value={team.player1} onChange={(e) => updateTeam(i, "player1", e.target.value)} placeholder="Joueur 1"
+                    className="rounded-xl px-3 py-2 text-sm text-white outline-none" style={{ background: "rgba(0,0,0,0.25)", border: "1px solid rgba(255,255,255,0.1)" }} />
+                  <input type="text" value={team.player2} onChange={(e) => updateTeam(i, "player2", e.target.value)} placeholder="Joueur 2"
+                    className="rounded-xl px-3 py-2 text-sm text-white outline-none" style={{ background: "rgba(0,0,0,0.25)", border: "1px solid rgba(255,255,255,0.1)" }} />
                 </div>
               </div>
             ))}
           </div>
 
-          <button
-            onClick={addTeam}
-            className="mb-6 rounded-xl border border-cyan-300/20 bg-black/30 px-5 py-2 font-sans text-sm text-cyan-300/80 backdrop-blur-xl transition-colors hover:bg-cyan-500/10"
-          >
-            + Ajouter une equipe
+          <button onClick={addTeam} className="mt-3 rounded-xl px-5 py-2.5 text-sm font-bold text-white/80"
+            style={{ background: "rgba(122,78,232,0.14)", border: "1px solid rgba(122,78,232,0.4)" }}>
+            + Ajouter une équipe
           </button>
 
-          {/* Themes */}
-          <div
-            className="mb-6 w-full rounded-2xl border border-cyan-300/20 bg-black/35 p-5 backdrop-blur-xl"
-            style={{ animation: "fadeUp 0.65s ease-out" }}
-          >
+          {/* Thèmes */}
+          <div className="mt-6 w-full rounded-2xl p-4" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)" }}>
             <div className="mb-3 flex items-center justify-between">
-              <label className="font-sans text-xs uppercase tracking-wider text-cyan-200/50">
-                Thèmes
-              </label>
-              <button
-                onClick={selectAllThemes}
-                className={cn(
-                  "rounded-lg px-3 py-1 font-sans text-xs transition-colors",
-                  selectedThemes.length === 0
-                    ? "bg-cyan-500/20 text-cyan-100"
-                    : "text-cyan-300/50 hover:text-cyan-300/80"
-                )}
-              >
+              <span className="font-mono text-[10px] font-extrabold uppercase tracking-[2px] text-white/45">Thèmes</span>
+              <button onClick={selectAllThemes} className="rounded-full px-3 py-1.5 text-[11px] font-extrabold uppercase tracking-wider"
+                style={{ background: selectedThemes.length === 0 ? "rgba(255,210,63,0.2)" : "rgba(255,255,255,0.06)", border: `1px solid ${selectedThemes.length === 0 ? "rgba(255,210,63,0.5)" : "rgba(255,255,255,0.12)"}`, color: selectedThemes.length === 0 ? "#FFD23F" : "rgba(255,255,255,0.6)" }}>
                 Tout mélanger
               </button>
             </div>
             <div className="flex flex-wrap gap-2">
               {THEMES.map((theme) => {
-                const isSelected =
-                  selectedThemes.length === 0 || selectedThemes.includes(theme.id);
+                const isSelected = selectedThemes.length === 0 || selectedThemes.includes(theme.id);
                 return (
-                  <button
-                    key={theme.id}
-                    onClick={() => toggleTheme(theme.id)}
-                    className={cn(
-                      "rounded-xl px-3 py-2 font-sans text-xs transition-all",
-                      isSelected
-                        ? "border border-cyan-300/30 bg-cyan-500/15 text-cyan-100"
-                        : "border border-white/8 bg-black/20 text-white/30"
-                    )}
-                  >
-                    {theme.emoji} {theme.label}
-                    <span className="ml-1 text-[10px] text-white/30">
-                      {theme.words.length}
-                    </span>
+                  <button key={theme.id} onClick={() => toggleTheme(theme.id)}
+                    className="flex items-center gap-1.5 rounded-xl px-3 py-2 text-[13px] font-bold transition-all"
+                    style={{
+                      background: isSelected ? "linear-gradient(160deg, rgba(122,78,232,0.28), rgba(0,0,0,0.2))" : "rgba(255,255,255,0.03)",
+                      border: isSelected ? "1.5px solid rgba(122,78,232,0.7)" : "1px solid rgba(255,255,255,0.1)",
+                      color: isSelected ? "#fff" : "rgba(255,255,255,0.4)",
+                    }}>
+                    <span style={{ fontSize: 15 }}>{theme.emoji}</span>{theme.label}
+                    <span className="text-[10px]" style={{ color: isSelected ? "rgba(255,255,255,0.55)" : "rgba(255,255,255,0.3)" }}>{theme.words.length}</span>
                   </button>
                 );
               })}
             </div>
-            <p className="mt-2 font-sans text-[11px] text-cyan-200/30">
+            <p className="mt-2.5 text-[11px] text-white/35">
               {selectedThemes.length === 0
                 ? `Tous les thèmes (${THEMES.reduce((s, t) => s + t.words.length, 0)} mots)`
                 : `${getWordsForThemes(selectedThemes).length} mots sélectionnés`}
@@ -733,83 +703,43 @@ export default function MakeGuessGame({
           </div>
 
           {/* Options */}
-          <div
-            className="mb-6 w-full rounded-2xl border border-cyan-300/20 bg-black/35 p-5 backdrop-blur-xl"
-            style={{ animation: "fadeUp 0.7s ease-out" }}
-          >
-            {/* Timer duration */}
-            <div className="mb-4">
-              <label className="mb-2 block font-sans text-xs uppercase tracking-wider text-cyan-200/50">
-                Duree du timer
-              </label>
-              <div className="flex gap-2">
-                {[30, 60, 90, 120].map((d) => (
-                  <button
-                    key={d}
-                    onClick={() => setTimerDuration(d)}
-                    className={cn(
-                      "rounded-xl px-4 py-2 font-mono text-sm transition-all",
-                      timerDuration === d
-                        ? "bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-lg shadow-cyan-500/20"
-                        : "border border-cyan-300/20 bg-black/30 text-cyan-300/60 hover:bg-cyan-500/10"
-                    )}
-                  >
+          <div className="mt-4 w-full rounded-2xl p-4" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)" }}>
+            <p className="mb-2 font-mono text-[10px] font-extrabold uppercase tracking-[2px] text-white/45">Durée du timer</p>
+            <div className="flex gap-2">
+              {[30, 60, 90, 120].map((d) => {
+                const active = timerDuration === d;
+                return (
+                  <button key={d} onClick={() => setTimerDuration(d)} className="flex-1 rounded-xl py-2.5 text-sm font-black"
+                    style={{ background: active ? "linear-gradient(180deg,#FFD23F,#C48800)" : "rgba(255,255,255,0.05)", color: active ? "#1A0E2E" : "rgba(255,255,255,0.6)", border: active ? "1.5px solid transparent" : "1px solid rgba(255,255,255,0.1)", boxShadow: active ? "0 8px 20px rgba(255,210,63,0.3)" : "none", fontFamily: "var(--font-mono, monospace)" }}>
                     {d}s
                   </button>
-                ))}
-              </div>
+                );
+              })}
             </div>
-
-            {/* Rounds */}
-            <div>
-              <label className="mb-2 block font-sans text-xs uppercase tracking-wider text-cyan-200/50">
-                Nombre de manches
-              </label>
-              <div className="flex gap-2">
-                {[1, 2, 3].map((r) => (
-                  <button
-                    key={r}
-                    onClick={() => setTotalRounds(r)}
-                    className={cn(
-                      "rounded-xl px-4 py-2 font-mono text-sm transition-all",
-                      totalRounds === r
-                        ? "bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-lg shadow-cyan-500/20"
-                        : "border border-cyan-300/20 bg-black/30 text-cyan-300/60 hover:bg-cyan-500/10"
-                    )}
-                  >
+            <p className="mb-2 mt-4 font-mono text-[10px] font-extrabold uppercase tracking-[2px] text-white/45">Nombre de manches</p>
+            <div className="flex gap-2">
+              {[1, 2, 3].map((r) => {
+                const active = totalRounds === r;
+                return (
+                  <button key={r} onClick={() => setTotalRounds(r)} className="flex h-11 w-11 items-center justify-center rounded-full text-base font-black"
+                    style={{ background: active ? "linear-gradient(180deg,#FFD23F,#C48800)" : "rgba(255,255,255,0.05)", color: active ? "#1A0E2E" : "rgba(255,255,255,0.6)", border: active ? "1.5px solid transparent" : "1px solid rgba(255,255,255,0.1)", boxShadow: active ? "0 8px 20px rgba(255,210,63,0.3)" : "none", fontFamily: "var(--font-display)" }}>
                     {r}
                   </button>
-                ))}
-              </div>
+                );
+              })}
             </div>
           </div>
 
-          {/* Start button */}
-          <button
-            onClick={startGame}
-            disabled={!canStart}
-            className={cn(
-              "press-effect rounded-xl px-8 py-3 font-sans text-lg font-semibold transition-all",
-              canStart
-                ? "bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-lg shadow-cyan-500/25 hover:shadow-cyan-500/40"
-                : "cursor-not-allowed bg-gray-700/50 text-gray-500"
-            )}
-          >
-            Commencer
+          {/* Commencer */}
+          <button onClick={startGame} disabled={!canStart} className="mt-6 w-full rounded-2xl py-4 text-base font-bold transition active:scale-[0.99]"
+            style={{ background: canStart ? "linear-gradient(180deg,#FFD23F,#C48800)" : "rgba(255,255,255,0.06)", color: canStart ? "#1A0E2E" : "rgba(255,255,255,0.35)", boxShadow: canStart ? "0 14px 30px rgba(255,210,63,0.4)" : "none", fontFamily: "var(--font-display)", cursor: canStart ? "pointer" : "not-allowed" }}>
+            🎬 Commencer la partie
           </button>
           {!canStart && (
-            <p className="mt-2 font-sans text-xs text-cyan-300/40">
-              Remplis tous les champs (min. 2 equipes)
-            </p>
+            <p className="mt-2 text-xs text-white/40">Remplis tous les champs (min. 2 équipes)</p>
           )}
-
           {onReturnToLobby && (
-            <button
-              onClick={onReturnToLobby}
-              className="mt-4 font-sans text-sm text-cyan-300/40 transition-colors hover:text-cyan-300/70"
-            >
-              Retour au lobby
-            </button>
+            <button onClick={onReturnToLobby} className="mt-3 text-sm text-white/40 transition hover:text-white/70">Retour au lobby</button>
           )}
         </div>
       )}
