@@ -322,7 +322,7 @@ const THEMES: { id: string; label: string; emoji: string; words: string[] }[] = 
 const ALL_THEME_IDS = THEMES.map((t) => t.id);
 
 function getWordsForThemes(selectedIds: string[]): string[] {
-  if (selectedIds.length === 0) return THEMES.flatMap((t) => t.words);
+  // Aucun thème coché = aucun mot (le bouton "Tout mélanger" sert à tout (re)cocher).
   return THEMES.filter((t) => selectedIds.includes(t.id)).flatMap((t) => t.words);
 }
 
@@ -379,7 +379,7 @@ export default function MakeGuessGame({
   ]);
   const [timerDuration, setTimerDuration] = useState(60);
   const [totalRounds, setTotalRounds] = useState(1);
-  const [selectedThemes, setSelectedThemes] = useState<string[]>([]);
+  const [selectedThemes, setSelectedThemes] = useState<string[]>([...ALL_THEME_IDS]);
 
   // ── Game state ──
   const [phase, setPhase] = useState<Phase>("setup");
@@ -466,9 +466,11 @@ export default function MakeGuessGame({
     setTeams((prev) => prev.filter((_, i) => i !== index));
   }, []);
 
+  const allThemesSelected = selectedThemes.length >= ALL_THEME_IDS.length;
   const canStart =
     teams.length >= 2 &&
-    teams.every((t) => t.name.trim() && t.player1.trim() && t.player2.trim());
+    teams.every((t) => t.name.trim() && t.player1.trim() && t.player2.trim()) &&
+    getWordsForThemes(selectedThemes).length > 0;
 
   const toggleTheme = useCallback((id: string) => {
     setSelectedThemes((prev) =>
@@ -476,8 +478,9 @@ export default function MakeGuessGame({
     );
   }, []);
 
+  // Toggle global : tout cocher si pas tout coché, sinon tout décocher.
   const selectAllThemes = useCallback(() => {
-    setSelectedThemes([]);
+    setSelectedThemes((prev) => (prev.length >= ALL_THEME_IDS.length ? [] : [...ALL_THEME_IDS]));
   }, []);
 
   const startGame = useCallback(() => {
@@ -674,13 +677,13 @@ export default function MakeGuessGame({
             <div className="mb-3 flex items-center justify-between">
               <span className="font-mono text-[10px] font-extrabold uppercase tracking-[2px] text-white/45">Thèmes</span>
               <button onClick={selectAllThemes} className="rounded-full px-3 py-1.5 text-[11px] font-extrabold uppercase tracking-wider"
-                style={{ background: selectedThemes.length === 0 ? "rgba(255,210,63,0.2)" : "rgba(255,255,255,0.06)", border: `1px solid ${selectedThemes.length === 0 ? "rgba(255,210,63,0.5)" : "rgba(255,255,255,0.12)"}`, color: selectedThemes.length === 0 ? "#FFD23F" : "rgba(255,255,255,0.6)" }}>
-                Tout mélanger
+                style={{ background: allThemesSelected ? "rgba(255,210,63,0.2)" : "rgba(255,255,255,0.06)", border: `1px solid ${allThemesSelected ? "rgba(255,210,63,0.5)" : "rgba(255,255,255,0.12)"}`, color: allThemesSelected ? "#FFD23F" : "rgba(255,255,255,0.6)" }}>
+                {allThemesSelected ? "Tout retirer" : "Tout mélanger"}
               </button>
             </div>
             <div className="flex flex-wrap gap-2">
               {THEMES.map((theme) => {
-                const isSelected = selectedThemes.length === 0 || selectedThemes.includes(theme.id);
+                const isSelected = selectedThemes.includes(theme.id);
                 return (
                   <button key={theme.id} onClick={() => toggleTheme(theme.id)}
                     className="flex items-center gap-1.5 rounded-xl px-3 py-2 text-[13px] font-bold transition-all"
@@ -696,8 +699,8 @@ export default function MakeGuessGame({
               })}
             </div>
             <p className="mt-2.5 text-[11px] text-white/35">
-              {selectedThemes.length === 0
-                ? `Tous les thèmes (${THEMES.reduce((s, t) => s + t.words.length, 0)} mots)`
+              {getWordsForThemes(selectedThemes).length === 0
+                ? "Choisis au moins un thème"
                 : `${getWordsForThemes(selectedThemes).length} mots sélectionnés`}
             </p>
           </div>
