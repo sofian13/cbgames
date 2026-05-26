@@ -278,22 +278,36 @@ function GameIcon({ id }: { id: string }) {
     case "chess":
       return (
         <g>
-          <g transform="translate(50 64) skewX(-22)">
+          {/* Échiquier en perspective */}
+          <g transform="translate(50 70) skewX(-26)">
             {Array.from({ length: 6 }).map((_, i) => Array.from({ length: 6 }).map((_, j) => (
-              <rect key={`${i}-${j}`} x={-36 + j * 12} y={-18 + i * 6} width="12" height="6" fill={(i + j) % 2 === 0 ? "rgba(0,0,0,0.6)" : "rgba(255,255,255,0.85)"} stroke="rgba(0,0,0,0.35)" strokeWidth="0.4" />
+              <rect key={`${i}-${j}`} x={-36 + j * 12} y={-15 + i * 5} width="12" height="5" fill={(i + j) % 2 === 0 ? "rgba(10,20,15,0.72)" : "rgba(255,255,255,0.9)"} />
             )))}
+            <rect x={-36} y={-15} width={72} height={30} fill="none" stroke="rgba(0,0,0,0.3)" strokeWidth="0.6" />
           </g>
-          <g transform="translate(50 50)">
-            <path d="M-2 -28 Q-12 -24 -14 -14 Q-18 -10 -16 -4 L-12 -2 Q-14 4 -10 8 L-14 16 L14 16 L14 8 Q14 0 12 -6 Q14 -10 12 -16 Q10 -22 4 -24 Q2 -28 -2 -28 Z" fill={lite} stroke="rgba(0,0,0,0.55)" strokeWidth="1.2" />
-            <path d="M0 -26 Q-8 -22 -10 -16 L-6 -14 Q-2 -22 0 -26 Z" fill="rgba(0,0,0,0.25)" />
-            <ellipse cx="-6" cy="-10" rx="1.4" ry="2" fill="rgba(0,0,0,0.85)" />
-            <circle cx="-13" cy="-4" r="0.8" fill="rgba(0,0,0,0.7)" />
-            <path d="M2 -26 L0 -32 L6 -28 Z" fill={lite} stroke="rgba(0,0,0,0.5)" strokeWidth="0.6" />
+          {/* Ombre portée du roi */}
+          <ellipse cx="46" cy="70" rx="20" ry="4.5" fill="rgba(0,0,0,0.3)" />
+          {/* Roi blanc */}
+          <g transform="translate(46 46)">
+            {/* socle */}
+            <path d="M-15 22 L15 22 L11 16 L-11 16 Z" fill={lite} stroke="rgba(0,0,0,0.5)" strokeWidth="1.1" strokeLinejoin="round" />
+            <rect x="-13" y="11" width="26" height="5" rx="1.5" fill={lite} stroke="rgba(0,0,0,0.5)" strokeWidth="1.1" />
+            {/* corps en cloche */}
+            <path d="M-11 11 C -13 -1, -8 -9, 0 -11 C 8 -9, 13 -1, 11 11 Z" fill={lite} stroke="rgba(0,0,0,0.5)" strokeWidth="1.1" strokeLinejoin="round" />
+            {/* couronne */}
+            <path d="M-8 -10 L-8 -17 L8 -17 L8 -10 Z" fill={lite} stroke="rgba(0,0,0,0.5)" strokeWidth="1.1" strokeLinejoin="round" />
+            {/* croix */}
+            <rect x="-1.8" y="-30" width="3.6" height="14" rx="1" fill={lite} stroke="rgba(0,0,0,0.5)" strokeWidth="1" />
+            <rect x="-6" y="-26" width="12" height="3.6" rx="1" fill={lite} stroke="rgba(0,0,0,0.5)" strokeWidth="1" />
+            {/* ombrage doux */}
+            <path d="M-9 -8 C -10 0, -7 8, -4 10 L-2 10 C -6 6, -7 -2, -5 -9 Z" fill="rgba(0,0,0,0.12)" />
           </g>
-          <g transform="translate(78 56)" opacity="0.7">
-            <circle cx="0" cy="-8" r="3.4" fill="rgba(0,0,0,0.85)" />
-            <rect x="-3" y="-5" width="6" height="3" fill="rgba(0,0,0,0.85)" />
-            <path d="M-5 -2 L5 -2 L4 6 L-4 6 Z" fill="rgba(0,0,0,0.85)" />
+          {/* Petit pion noir derrière */}
+          <g transform="translate(76 58)">
+            <ellipse cx="0" cy="11" rx="9" ry="2.6" fill="rgba(0,0,0,0.25)" />
+            <circle cx="0" cy="-7" r="3.6" fill="rgba(8,16,12,0.9)" />
+            <path d="M-3.4 -4 L3.4 -4 L2 0 L-2 0 Z" fill="rgba(8,16,12,0.9)" />
+            <path d="M-6 0 L6 0 L8 10 L-8 10 Z" fill="rgba(8,16,12,0.9)" />
           </g>
         </g>
       );
