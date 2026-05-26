@@ -80,14 +80,26 @@ function GameIcon({ id }: { id: string }) {
     case "bomb-party":
       return (
         <g>
-          <circle cx="44" cy="58" r="24" fill={dark} />
-          <circle cx="44" cy="58" r="24" fill="rgba(0,0,0,0.85)" />
-          <circle cx="38" cy="52" r="6" fill="rgba(255,255,255,0.18)" />
-          <path d="M62 38 Q70 30 80 28 Q72 36 70 44" fill="none" stroke={lite} strokeWidth={SW + 0.6} strokeLinecap="round" />
-          <circle cx="79" cy="27" r="3.5" fill="#FFD23F" />
-          <circle cx="79" cy="27" r="2" fill="#FF6B5B" />
-          <g stroke={lite} strokeWidth="1.5" strokeLinecap="round">
-            <line x1="83" y1="20" x2="86" y2="14" /><line x1="88" y1="28" x2="93" y2="28" /><line x1="76" y1="18" x2="74" y2="13" />
+          {/* corps de bombe — sphère noire brillante */}
+          <ellipse cx="44" cy="80" rx="22" ry="4" fill="rgba(0,0,0,0.3)" />
+          <circle cx="44" cy="58" r="25" fill="#0E0E14" />
+          <circle cx="44" cy="58" r="25" fill="url(#bomb-shine)" />
+          <defs>
+            <radialGradient id="bomb-shine" cx="36%" cy="32%" r="72%">
+              <stop offset="0%" stopColor="rgba(255,255,255,0.45)" />
+              <stop offset="32%" stopColor="rgba(255,255,255,0.08)" />
+              <stop offset="100%" stopColor="rgba(0,0,0,0)" />
+            </radialGradient>
+          </defs>
+          <ellipse cx="35" cy="48" rx="7" ry="4.5" fill="rgba(255,255,255,0.5)" transform="rotate(-30 35 48)" />
+          {/* embout métallique */}
+          <rect x="50" y="33" width="14" height="9" rx="2" fill="#3A3A44" transform="rotate(-32 57 37)" />
+          {/* mèche + étincelle */}
+          <path d="M60 36 Q72 26 82 30 Q74 34 78 42" fill="none" stroke="#C9A227" strokeWidth={SW + 0.8} strokeLinecap="round" />
+          <circle cx="80" cy="28" r="5" fill="#FFD23F" />
+          <circle cx="80" cy="28" r="2.6" fill="#FF6B5B" />
+          <g stroke="#FFD23F" strokeWidth="1.6" strokeLinecap="round">
+            <line x1="84" y1="20" x2="88" y2="14" /><line x1="89" y1="28" x2="94" y2="27" /><line x1="76" y1="18" x2="74" y2="12" /><line x1="86" y1="34" x2="91" y2="37" />
           </g>
         </g>
       );
@@ -222,11 +234,25 @@ function GameIcon({ id }: { id: string }) {
     case "la-taupe":
       return (
         <g>
-          <ellipse cx="50" cy="62" rx="22" ry="16" fill="rgba(0,0,0,0.35)" />
-          <ellipse cx="50" cy="58" rx="20" ry="14" fill={lite} />
-          <circle cx="42" cy="56" r="2" fill="rgba(0,0,0,0.7)" /><circle cx="58" cy="56" r="2" fill="rgba(0,0,0,0.7)" />
-          <ellipse cx="50" cy="63" rx="3" ry="2" fill="#FF3EA5" />
-          <path d="M14 84 Q50 76 86 84" fill="none" stroke={lite} strokeOpacity="0.4" strokeWidth={SW} strokeDasharray="4 4" />
+          {/* monticule de terre + trou */}
+          <ellipse cx="50" cy="76" rx="34" ry="9" fill="rgba(0,0,0,0.45)" />
+          <ellipse cx="50" cy="73" rx="26" ry="6.5" fill="rgba(0,0,0,0.55)" />
+          {/* corps de taupe qui sort */}
+          <ellipse cx="50" cy="52" rx="21" ry="19" fill="#6E6678" />
+          <ellipse cx="50" cy="47" rx="16" ry="13" fill="#867E92" />
+          {/* pattes griffues */}
+          <g fill="#F4B6C8">
+            <path d="M30 60 l-5 3 m5 -3 l-5 0 m5 0 l-3 -4" stroke="#F4B6C8" strokeWidth="2" strokeLinecap="round" fill="none" />
+            <path d="M70 60 l5 3 m-5 -3 l5 0 m-5 0 l3 -4" stroke="#F4B6C8" strokeWidth="2" strokeLinecap="round" fill="none" />
+          </g>
+          {/* museau rose */}
+          <ellipse cx="50" cy="58" rx="8" ry="6" fill="#FF8FB0" />
+          <circle cx="46.5" cy="59" r="1.3" fill="#0A0A0A" /><circle cx="53.5" cy="59" r="1.3" fill="#0A0A0A" />
+          {/* yeux fermés (taupe aveugle) */}
+          <path d="M40 47 q3 2 6 0" fill="none" stroke="#0A0A0A" strokeWidth="1.6" strokeLinecap="round" />
+          <path d="M54 47 q3 2 6 0" fill="none" stroke="#0A0A0A" strokeWidth="1.6" strokeLinecap="round" />
+          {/* terre projetée */}
+          <circle cx="22" cy="70" r="2" fill="rgba(0,0,0,0.4)" /><circle cx="78" cy="68" r="2.4" fill="rgba(0,0,0,0.4)" /><circle cx="16" cy="64" r="1.4" fill="rgba(0,0,0,0.35)" />
         </g>
       );
     case "black-market":
