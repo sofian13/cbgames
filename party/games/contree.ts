@@ -413,29 +413,35 @@ export class ContreeGame extends BaseGame {
     }
     this.trickPoints[winnerTeam] += pts;
 
-    // Pause + animate: keep trick visible, mark winner
     this.stopTurnTimer();
-    this.lastTrickWinnerSeat = winnerSeat;
+    // Phase 1 : on montre les 4 cartes EN PLACE (sans encore désigner le gagnant)
+    // pour qu'on voie bien la dernière carte jouée.
     this.broadcastState();
 
     setTimeout(() => {
-      this.lastTrickWinnerSeat = null;
-
-      // Check if hand over (8 tricks)
-      const totalTricks = this.pliCounts[0] + this.pliCounts[1];
-      if (totalTricks === 8) {
-        this.trickPoints[winnerTeam] += 10;
-        this.endHand();
-        return;
-      }
-
-      // Next trick: winner leads
-      this.currentTurn = winnerSeat;
-      this.trick = [];
-      this.trickLeadSuit = null;
-      this.startTurnTimer();
+      // Phase 2 : le gagnant ramasse (les cartes filent vers lui).
+      this.lastTrickWinnerSeat = winnerSeat;
       this.broadcastState();
-    }, 2300); // laisse le temps de voir la 4e carte avant que le gagnant ramasse
+
+      setTimeout(() => {
+        this.lastTrickWinnerSeat = null;
+
+        // Check if hand over (8 tricks)
+        const totalTricks = this.pliCounts[0] + this.pliCounts[1];
+        if (totalTricks === 8) {
+          this.trickPoints[winnerTeam] += 10;
+          this.endHand();
+          return;
+        }
+
+        // Next trick: winner leads
+        this.currentTurn = winnerSeat;
+        this.trick = [];
+        this.trickLeadSuit = null;
+        this.startTurnTimer();
+        this.broadcastState();
+      }, 1000);
+    }, 1400); // 1.4s pour voir la 4e carte, puis 1s d'animation de ramassage
   }
 
   endHand() {

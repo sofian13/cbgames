@@ -132,6 +132,7 @@ function Scoreboard({ state, myTeam }: { state: ContreeState; myTeam: 0 | 1 }) {
 type BubbleData = { text: string; tone: "bid" | "pass" | "coincher" | "belote" };
 
 function SpeechBubble({ text, tone, position }: { text: string; tone: BubbleData["tone"]; position: "top" | "left" | "right" }) {
+  if (!text || !text.trim()) return null;
   const palette: Record<BubbleData["tone"], { bg: string; border: string; color: string; shadow: string }> = {
     bid:      { bg: "linear-gradient(180deg,#FFFFFF,#E8EEFB)", border: "rgba(120,170,255,0.55)", color: "#0F1840", shadow: "0 0 24px rgba(120,170,255,0.5)" },
     pass:     { bg: "linear-gradient(180deg,rgba(60,110,200,0.95),rgba(30,60,150,0.95))", border: "rgba(180,210,255,0.6)", color: "#fff", shadow: "0 0 16px rgba(80,130,220,0.4)" },
@@ -279,7 +280,10 @@ function SeatAvatar({
 
 function getBubble(seatId: string | undefined, state: ContreeState): BubbleData | null {
   if (!seatId) return null;
-  return state.bubbles?.[seatId] ?? null;
+  const b = state.bubbles?.[seatId];
+  // Pas de bulle vide (évite le "rectangle fantôme" après un passe).
+  if (!b || !b.text || !b.text.trim()) return null;
+  return b;
 }
 
 function BottomHand({
@@ -363,7 +367,7 @@ function BottomHand({
               onClick={() => { if (playable) onPlay(i); }}
               className="absolute outline-none transition-all duration-300 ease-out hover:-translate-y-4 focus-visible:-translate-y-4"
               style={{
-                left: "50%", bottom: 38,
+                left: "50%", bottom: 12,
                 transform: `translateX(${x - 37}px) translateY(${-y}px) rotate(${rot}deg)`,
                 transformOrigin: "center 140px",
                 zIndex: previewMode && playable ? 100 + i : i,
@@ -507,62 +511,63 @@ export default function ContreeGame({ roomCode, playerId, playerName }: GameProp
         {/* Contrôles d'enchère — affichés UNIQUEMENT quand c'est à toi (sinon : bulles). */}
         {isMyBid && (
         <div
-          className="absolute left-1/2 top-1/2 z-[55] -translate-x-1/2 -translate-y-1/2 rounded-[26px] p-5"
+          className="absolute left-1/2 z-[55] -translate-x-1/2 rounded-[22px] p-3.5"
           style={{
-            width: "min(92vw, 440px)",
-            background: "linear-gradient(180deg, rgba(52,92,182,0.55), rgba(24,44,104,0.82))",
+            top: "calc(env(safe-area-inset-top,0px) + 78px)",
+            width: "min(90vw, 400px)",
+            background: "linear-gradient(180deg, rgba(52,92,182,0.62), rgba(24,44,104,0.9))",
             border: "1.5px solid rgba(130,180,255,0.45)",
-            boxShadow: "0 0 70px rgba(80,140,255,0.3), 0 30px 80px rgba(0,0,0,0.55)",
+            boxShadow: "0 0 60px rgba(80,140,255,0.3), 0 24px 60px rgba(0,0,0,0.55)",
             backdropFilter: "blur(12px)",
           }}
         >
           {/* Stepper : montant courant + suivant + flèches */}
-          <div className="flex items-center justify-center gap-3">
+          <div className="flex items-center justify-center gap-2.5">
             <button onClick={() => stepAmount(-1)} disabled={curIdx <= 0}
-              className="flex h-10 w-10 items-center justify-center rounded-full text-xl text-white transition disabled:opacity-25"
+              className="flex h-9 w-9 items-center justify-center rounded-full text-lg text-white transition disabled:opacity-25"
               style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.18)" }} aria-label="Moins">‹</button>
-            <div className="flex h-14 min-w-[110px] items-center justify-center rounded-2xl px-4 text-3xl font-black text-white"
+            <div className="flex h-11 min-w-[92px] items-center justify-center rounded-xl px-3 text-2xl font-black text-white"
               style={{ background: "linear-gradient(180deg, rgba(255,255,255,0.2), rgba(255,255,255,0.06))", border: "1.5px solid rgba(190,215,255,0.5)", boxShadow: "inset 0 1px 0 rgba(255,255,255,0.25), 0 6px 18px rgba(0,0,0,0.3)", fontFamily: "var(--font-display)" }}>
               {amountLabel(bidAmount)}
             </div>
             {validAmounts[curIdx + 1] != null && (
-              <span className="text-xl font-black" style={{ color: "rgba(255,255,255,0.35)", fontFamily: "var(--font-display)" }}>{amountLabel(validAmounts[curIdx + 1])}</span>
+              <span className="text-lg font-black" style={{ color: "rgba(255,255,255,0.35)", fontFamily: "var(--font-display)" }}>{amountLabel(validAmounts[curIdx + 1])}</span>
             )}
             <button onClick={() => stepAmount(1)} disabled={curIdx >= validAmounts.length - 1}
-              className="flex h-10 w-10 items-center justify-center rounded-full text-xl text-white transition disabled:opacity-25"
+              className="flex h-9 w-9 items-center justify-center rounded-full text-lg text-white transition disabled:opacity-25"
               style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.18)" }} aria-label="Plus">›</button>
           </div>
 
           {/* Couleurs */}
-          <div className="mt-5 flex justify-center gap-3">
+          <div className="mt-3 flex justify-center gap-2.5">
             {(["♦","♠","♥","♣"] as Suit[]).map((s) => {
               const active = bidSuit === s;
               const red = SUIT_RED(s);
               return (
                 <button key={s} onClick={() => setBidSuit(s)}
-                  className="flex h-14 w-12 items-center justify-center rounded-lg transition-transform active:scale-95"
+                  className="flex h-11 w-9 items-center justify-center rounded-lg transition-transform active:scale-95"
                   style={{ background: "#FAFAF9", border: active ? "3px solid #6BB1FF" : "2px solid transparent", boxShadow: active ? "0 0 16px rgba(107,177,255,0.6)" : "0 2px 6px rgba(0,0,0,0.25)" }}>
-                  <span className="text-3xl font-black" style={{ color: red ? "#E23434" : "#0A0A0A" }}>{s}</span>
+                  <span className="text-2xl font-black" style={{ color: red ? "#E23434" : "#0A0A0A" }}>{s}</span>
                 </button>
               );
             })}
           </div>
 
           {/* Actions */}
-          <div className="mt-5 flex gap-2.5">
+          <div className="mt-3 flex gap-2">
             <button onClick={pass}
-              className="flex-1 rounded-2xl py-3.5 text-sm font-black tracking-wider transition-transform active:scale-95"
+              className="flex-1 rounded-xl py-2.5 text-[13px] font-black tracking-wider transition-transform active:scale-95"
               style={{ background: "linear-gradient(180deg, #3B82F6, #1D4ED8)", color: "#fff", border: "1.5px solid rgba(180,210,255,0.5)", fontFamily: "var(--font-display)", boxShadow: "0 0 18px rgba(59,130,246,0.35), inset 0 1px 0 rgba(255,255,255,0.2)" }}>
               JE PASSE
             </button>
             <button onClick={placeBid}
-              className="flex-1 rounded-2xl py-3.5 text-sm font-black tracking-wider transition-transform active:scale-95"
+              className="flex-1 rounded-xl py-2.5 text-[13px] font-black tracking-wider transition-transform active:scale-95"
               style={{ background: "linear-gradient(180deg, #22C55E, #15803D)", color: "#fff", border: "1.5px solid rgba(180,255,200,0.4)", fontFamily: "var(--font-display)", boxShadow: "0 0 18px rgba(34,197,94,0.35), inset 0 1px 0 rgba(255,255,255,0.2)" }}>
               {state.currentBid ? "ENCHÉRIR" : "ANNONCER"}
             </button>
             {oppHasBid && (
               <button onClick={coincher}
-                className="flex-1 rounded-2xl py-3.5 text-sm font-black tracking-wider transition-transform active:scale-95"
+                className="flex-1 rounded-xl py-2.5 text-[13px] font-black tracking-wider transition-transform active:scale-95"
                 style={{ background: "linear-gradient(180deg, #B91C1C, #7F1D1D)", color: "#fff", border: "1.5px solid rgba(255,150,150,0.4)", fontFamily: "var(--font-display)", boxShadow: "inset 0 1px 0 rgba(255,255,255,0.1)" }}>
                 CONTRE
               </button>

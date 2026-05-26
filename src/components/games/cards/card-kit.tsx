@@ -150,7 +150,6 @@ export function PlayingCard({
           width: d.w, height: d.h,
           borderRadius: Math.max(4, d.w * 0.085),
           boxShadow: ring || shadow,
-          border: "1px solid rgba(0,0,0,0.18)",
           background: "#fff",
           position: "relative", overflow: "hidden",
           opacity: dim ? 0.45 : 1,
@@ -164,7 +163,9 @@ export function PlayingCard({
           src={`/cards/svg/${svgRankName(String(rank))}${svgSuitName(suit)}.svg`}
           alt={`${label} ${suit}`}
           draggable={false}
-          style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", userSelect: "none" }}
+          // "fill" : la carte occupe tout le cadre sans rognage (ratios quasi identiques),
+          // donc l'indice de rang reste toujours visible.
+          style={{ width: "100%", height: "100%", objectFit: "fill", display: "block", userSelect: "none" }}
         />
       </div>
     );
