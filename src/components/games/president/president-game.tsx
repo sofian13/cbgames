@@ -1,10 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useGame } from "@/lib/party/use-game";
 import { useGameStore } from "@/lib/stores/game-store";
 import type { GameProps } from "@/lib/games/types";
 import { TableBg, SeatAvatar, FanHand, PlayingCard, opponentSlots, useCardStyle, type Suit, type Rank } from "@/components/games/cards/card-kit";
+import { useAudio } from "@/lib/hooks/useAudio";
+import { sfxCardPlay, sfxTrickWin, sfxHandChime } from "@/lib/card-sfx";
 
 interface OtherPlayer {
   id: string;
@@ -37,9 +39,27 @@ export default function PresidentGame({ roomCode, playerId, playerName }: GamePr
   const state = useGameStore((s) => s.gameState) as unknown as PresidentState | null;
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const cardStyle = useCardStyle();
+  const { muted } = useAudio();
 
   const myHand = state?.hands?.[playerId] ?? [];
   const isMyTurn = state?.currentPlayerId === playerId;
+
+  // ── Bruitages : combo posé, pli emporté (relance), fin de manche ──
+  const sfxComboRef = useRef("");
+  const sfxStatusRef = useRef("");
+  useEffect(() => {
+    if (!state) return;
+    const sig = `${state.lastComboPlayer ?? ""}:${state.lastCombo.map((c) => `${c.rank}${c.suit}`).join(",")}`;
+    if (!muted) {
+      if (sig !== sfxComboRef.current) {
+        if (state.lastCombo.length > 0) sfxCardPlay();        // un combo vient d'être posé
+        else if (sfxComboRef.current && sfxComboRef.current.split(":")[1]) sfxTrickWin(); // pli nettoyé → relance
+      }
+      if (state.status === "round-over" && sfxStatusRef.current !== "round-over") sfxHandChime(true);
+    }
+    sfxComboRef.current = sig;
+    sfxStatusRef.current = state.status;
+  }, [state, muted]);
 
   function toggle(i: number) {
     // When a rank is locked, only that rank can be selected.

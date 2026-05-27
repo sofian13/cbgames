@@ -1,10 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useGame } from "@/lib/party/use-game";
 import { useGameStore } from "@/lib/stores/game-store";
 import type { GameProps } from "@/lib/games/types";
 import { TableBg, SeatAvatar, PlayingCard, opponentSlots, useCardStyle, CARD_SIZES, SUIT_RED, type Suit, type Rank } from "@/components/games/cards/card-kit";
+import { useAudio } from "@/lib/hooks/useAudio";
+import { sfxCardPlay, sfxTrickWin, sfxHandChime } from "@/lib/card-sfx";
 
 interface OtherPlayer {
   id: string;
@@ -52,11 +54,29 @@ export default function HuitAmericainGame({ roomCode, playerId, playerName }: Ga
   const state = useGameStore((s) => s.gameState) as unknown as AmState | null;
   const [pickingSuit, setPickingSuit] = useState<{ index: number } | null>(null);
   const cardStyle = useCardStyle();
+  const { muted } = useAudio();
 
   const myHand = state?.hands?.[playerId] ?? [];
   const isMyTurn = state?.currentPlayerId === playerId;
 
   useEffect(() => { if (!isMyTurn) setPickingSuit(null); }, [isMyTurn]);
+
+  // ── Bruitages : carte posée, pioche d'attaque (A/JK/D♣), fin de partie ──
+  const sfxTopRef = useRef("");
+  const sfxDrawsRef = useRef(0);
+  const sfxStatusRef = useRef("");
+  useEffect(() => {
+    if (!state) return;
+    const top = state.discardTop ? `${state.discardTop.rank}${state.discardTop.suit ?? "JK"}` : "";
+    if (!muted) {
+      if (top && top !== sfxTopRef.current && sfxTopRef.current !== "") sfxCardPlay();
+      if ((state.pendingDraws ?? 0) > sfxDrawsRef.current) sfxTrickWin(); // pénalité de pioche empilée
+      if (state.status === "game-over" && sfxStatusRef.current !== "game-over") sfxHandChime(true);
+    }
+    sfxTopRef.current = top;
+    sfxDrawsRef.current = state.pendingDraws ?? 0;
+    sfxStatusRef.current = state.status;
+  }, [state, muted]);
 
   function canPlay(card: Card): boolean {
     if (!state?.discardTop) return false;
