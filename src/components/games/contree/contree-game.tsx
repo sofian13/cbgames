@@ -6,6 +6,8 @@ import { useGameStore } from "@/lib/stores/game-store";
 import type { GameProps } from "@/lib/games/types";
 import type { Suit, Rank } from "@/components/shared/playing-card";
 import { PlayingCard, useCardStyle } from "@/components/games/cards/card-kit";
+import { useAudio } from "@/lib/hooks/useAudio";
+import { sfxCardPlay, sfxTrickWin, sfxBidPop, sfxHandChime, sfxBarFill } from "@/lib/card-sfx";
 
 interface Seat {
   id: string;
@@ -429,6 +431,12 @@ function BottomHand({
 // Récap de fin de manche (barres de progression vers la cible + points gagnés).
 function HandRecap({ state }: { state: ContreeState }) {
   const lh = state.lastHand;
+  // La barre démarre à l'ancien score puis grimpe jusqu'au nouveau.
+  const [grown, setGrown] = useState(false);
+  useEffect(() => {
+    const r = requestAnimationFrame(() => requestAnimationFrame(() => setGrown(true)));
+    return () => cancelAnimationFrame(r);
+  }, []);
   if (!lh) return null;
   const target = state.targetPoints || 1000;
   const names = (t: 0 | 1) => state.seats.filter((s) => s.team === t).map((s) => s.name).join(" & ") || (t === 0 ? "Nous" : "Eux");
@@ -445,13 +453,16 @@ function HandRecap({ state }: { state: ContreeState }) {
         <div className="mt-4 space-y-3.5">
           {([0, 1] as const).map((t) => {
             const color = t === greener ? "#3DDC97" : "#FFD23F";
-            const pct = Math.max(6, Math.min(100, Math.round((state.matchScore[t] / target) * 100)));
+            const newScore = state.matchScore[t];
+            const oldScore = newScore - lh.delta[t];
+            const pct = (v: number) => Math.max(4, Math.min(100, (v / target) * 100));
+            const width = grown ? pct(newScore) : pct(oldScore);
             return (
               <div key={t} className="flex items-center gap-3">
                 <div className="w-[110px] shrink-0 text-right text-[12px] font-bold leading-tight text-white">{names(t)}</div>
                 <div className="relative h-8 flex-1 overflow-hidden rounded-full" style={{ background: "rgba(0,0,0,0.4)" }}>
-                  <div className="absolute inset-y-0 left-0 rounded-full" style={{ width: `${pct}%`, background: color, transition: "width 600ms cubic-bezier(0.22,1,0.36,1)" }} />
-                  <span className="absolute inset-0 flex items-center justify-center font-black text-white" style={{ fontFamily: "var(--font-display)", fontSize: 16, textShadow: "0 1px 3px rgba(0,0,0,0.6)" }}>{state.matchScore[t]}</span>
+                  <div className="absolute inset-y-0 left-0 rounded-full" style={{ width: `${width}%`, background: color, transition: "width 760ms cubic-bezier(0.22,1,0.36,1)" }} />
+                  <span className="absolute inset-0 flex items-center justify-center font-black text-white" style={{ fontFamily: "var(--font-display)", fontSize: 16, textShadow: "0 1px 3px rgba(0,0,0,0.6)" }}>{newScore}</span>
                 </div>
                 <div className="w-[44px] shrink-0 text-[13px] font-black" style={{ color, fontFamily: "var(--font-display)" }}>+{lh.delta[t]}</div>
               </div>
@@ -467,10 +478,40 @@ export default function ContreeGame({ roomCode, playerId, playerName }: GameProp
   const { sendAction, sendRaw } = useGame(roomCode, "contree", playerId, playerName);
   const state = useGameStore((s) => s.gameState) as unknown as ContreeState | null;
   const cardStyle = useCardStyle();
+  const { muted } = useAudio();
 
   // Bidding UI state
   const [bidAmount, setBidAmount] = useState(80);
   const [bidSuit, setBidSuit] = useState<Suit>("♥");
+
+  // ── Bruitages : carte posée, pli ramassé, enchère, fin de manche ──
+  const sfxTrickLenRef = useRef(0);
+  const sfxWinnerRef = useRef<number | null>(null);
+  const sfxPhaseRef = useRef<string>("");
+  const sfxBidSigRef = useRef<string>("");
+  useEffect(() => {
+    if (!state || muted) {
+      if (state) { sfxTrickLenRef.current = state.trick?.length ?? 0; sfxWinnerRef.current = state.lastTrickWinnerSeat; sfxPhaseRef.current = state.phase; }
+      return;
+    }
+    const tl = state.trick?.length ?? 0;
+    if (tl > sfxTrickLenRef.current) sfxCardPlay();
+    sfxTrickLenRef.current = tl;
+
+    const w = state.lastTrickWinnerSeat;
+    if (w !== null && sfxWinnerRef.current === null) sfxTrickWin();
+    sfxWinnerRef.current = w;
+
+    const bidSig = state.currentBid ? `${state.currentBid.bidder}:${state.currentBid.amount}:${state.currentBid.multiplier}` : "";
+    if (state.phase === "bidding" && bidSig && bidSig !== sfxBidSigRef.current) sfxBidPop();
+    sfxBidSigRef.current = bidSig;
+
+    if (state.phase === "hand-over" && sfxPhaseRef.current !== "hand-over") {
+      sfxHandChime(state.lastHand?.success ?? true);
+      sfxBarFill(0.7);
+    }
+    sfxPhaseRef.current = state.phase;
+  }, [state, muted]);
 
   const myHand = state?.hands?.[playerId] ?? [];
   const me = state?.seats?.find((s) => s.id === playerId);
