@@ -4,7 +4,8 @@ import type { GameRanking } from "../shared/types";
 
 // -- Config -----------------------------------------------
 const INTRO_TIME = 3200;
-const REVEAL_TIME = 9000;
+const ORDER_TIME = 75000; // garde-fou : on resout meme si quelqu'un ne valide pas
+const REVEAL_TIME = 11000;
 const START_DELAY = 1300; // laisse tout le monde se connecter avant de figer les joueurs
 
 // -- Themes (18+) -----------------------------------------
@@ -63,8 +64,14 @@ interface TopTenPlayer {
   id: string;
   name: string;
   score: number;
-  number: number | null; // numero secret 1-10 (null si capitaine ce tour)
-  isCaptain: boolean;
+  number: number | null; // numero secret 1-10
+}
+
+interface RoundResult {
+  correct: number;
+  total: number;
+  perfect: boolean;
+  points: number;
 }
 
 type GamePhase = "waiting" | "intro" | "answering" | "ordering" | "reveal" | "game-over";
@@ -75,16 +82,11 @@ export class TopTenGame extends BaseGame {
   phase: GamePhase = "waiting";
   round = 0;
   totalRounds = 0;
-  captainQueue: string[] = [];
-  currentCaptainId: string | null = null;
   currentTheme: Theme | null = null;
   usedThemes: Set<number> = new Set();
-  numberedOrder: string[] = []; // ordre melange affiche au capitaine
-  captainGuess: string[] = []; // classement valide par le capitaine (soft -> hard)
-  correctPairs = 0;
-  totalPairs = 0;
-  perfect = false;
-  roundPoints: Record<string, number> = {};
+  numberedOrder: string[] = []; // ordre melange propose a tous pour classer
+  submissions: Record<string, string[]> = {}; // classement valide par chaque joueur
+  roundResults: Record<string, RoundResult> = {};
   timer: ReturnType<typeof setTimeout> | null = null;
 
   start() {
@@ -103,13 +105,11 @@ export class TopTenGame extends BaseGame {
         name: player.name,
         score: 0,
         number: null,
-        isCaptain: false,
       });
     }
 
     const ids = Array.from(this.gamePlayers.keys());
-    this.captainQueue = [...ids].sort(() => Math.random() - 0.5);
-    this.totalRounds = ids.length; // chaque joueur est capitaine une fois
+    this.totalRounds = Math.min(8, Math.max(4, ids.length)); // une poignee de manches
     this.round = 0;
     this.usedThemes.clear();
 
@@ -120,19 +120,8 @@ export class TopTenGame extends BaseGame {
   startRound() {
     this.round++;
     this.phase = "intro";
-    this.captainGuess = [];
-    this.correctPairs = 0;
-    this.totalPairs = 0;
-    this.perfect = false;
-    this.roundPoints = {};
-
-    this.currentCaptainId = this.captainQueue[(this.round - 1) % this.captainQueue.length];
-
-    // Reset numbers
-    for (const p of this.gamePlayers.values()) {
-      p.number = null;
-      p.isCaptain = p.id === this.currentCaptainId;
-    }
+    this.submissions = {};
+    this.roundResults = {};
 
     // Pick a theme (no repeat until bank exhausted)
     if (this.usedThemes.size >= THEMES.length) this.usedThemes.clear();
@@ -141,14 +130,14 @@ export class TopTenGame extends BaseGame {
     this.usedThemes.add(idx);
     this.currentTheme = THEMES[idx];
 
-    // Assign distinct numbers 1-10 to non-captain players
-    const numbered = Array.from(this.gamePlayers.values()).filter((p) => !p.isCaptain);
+    // Assign distinct numbers 1-10 to every player
+    const everyone = Array.from(this.gamePlayers.values());
     const pool = Array.from({ length: 10 }, (_, i) => i + 1).sort(() => Math.random() - 0.5);
-    numbered.forEach((p, i) => {
+    everyone.forEach((p, i) => {
       p.number = pool[i];
     });
 
-    this.numberedOrder = numbered.map((p) => p.id).sort(() => Math.random() - 0.5);
+    this.numberedOrder = everyone.map((p) => p.id).sort(() => Math.random() - 0.5);
 
     this.broadcastPersonalizedState();
 
@@ -160,33 +149,28 @@ export class TopTenGame extends BaseGame {
   }
 
   // -- Scoring & Reveal ------------------------------------
-  resolveOrder(guess: string[]) {
-    this.clearTimer();
-    this.captainGuess = guess;
-
-    this.totalPairs = Math.max(0, guess.length - 1);
-    this.correctPairs = 0;
+  scoreGuess(guess: string[]): { correct: number; total: number; perfect: boolean } {
+    const total = Math.max(0, guess.length - 1);
+    let correct = 0;
     for (let i = 0; i < guess.length - 1; i++) {
       const a = this.gamePlayers.get(guess[i]);
       const b = this.gamePlayers.get(guess[i + 1]);
-      if (a?.number != null && b?.number != null && a.number < b.number) {
-        this.correctPairs++;
-      }
+      if (a?.number != null && b?.number != null && a.number < b.number) correct++;
     }
-    this.perfect = this.totalPairs > 0 && this.correctPairs === this.totalPairs;
+    return { correct, total, perfect: total > 0 && correct === total };
+  }
 
-    // Points : collaboratif. Tout le monde gagne sur les bonnes paires,
-    // le capitaine touche un bonus pour avoir fait le classement.
-    this.roundPoints = {};
-    const base = this.correctPairs * 2;
-    const perfectBonus = this.perfect ? 5 : 0;
+  resolveRound() {
+    this.clearTimer();
+
+    this.roundResults = {};
     for (const p of this.gamePlayers.values()) {
-      let pts = base + perfectBonus;
-      if (p.id === this.currentCaptainId) {
-        pts += this.correctPairs + (this.perfect ? 3 : 0);
-      }
-      p.score += pts;
-      this.roundPoints[p.id] = pts;
+      // si un joueur n'a pas valide, on prend l'ordre melange affiche par defaut
+      const guess = this.submissions[p.id] ?? this.numberedOrder;
+      const { correct, total, perfect } = this.scoreGuess(guess);
+      const points = correct * 2 + (perfect ? 5 : 0);
+      p.score += points;
+      this.roundResults[p.id] = { correct, total, perfect, points };
     }
 
     this.phase = "reveal";
@@ -227,11 +211,11 @@ export class TopTenGame extends BaseGame {
     const senderPlayer = this.findPlayerByConnection(sender.id);
     if (!senderPlayer) return;
 
-    // Seul le capitaine du tour agit
-    if (senderPlayer.id !== this.currentCaptainId) return;
-
+    // N'importe quel joueur peut lancer la phase de classement une fois tout le monde a parle.
     if (action === "start-ordering" && this.phase === "answering") {
       this.phase = "ordering";
+      this.clearTimer();
+      this.timer = setTimeout(() => this.resolveRound(), ORDER_TIME);
       this.broadcastPersonalizedState();
       return;
     }
@@ -239,10 +223,16 @@ export class TopTenGame extends BaseGame {
     if (action === "submit-order" && this.phase === "ordering") {
       const order = payload.order as string[];
       if (!Array.isArray(order)) return;
-      // Valide : doit contenir exactement les joueurs numerotes
+      // Valide : doit contenir exactement les joueurs proposes
       const expected = new Set(this.numberedOrder);
       if (order.length !== expected.size || !order.every((id) => expected.has(id))) return;
-      this.resolveOrder(order);
+      this.submissions[senderPlayer.id] = order;
+      // Tout le monde a valide ? on resout tout de suite.
+      if (Object.keys(this.submissions).length >= this.gamePlayers.size) {
+        this.resolveRound();
+      } else {
+        this.broadcastPersonalizedState();
+      }
       return;
     }
   }
@@ -275,33 +265,32 @@ export class TopTenGame extends BaseGame {
   getStateForPlayer(pid: string): Record<string, unknown> {
     const state = this.buildPublicState();
     const me = this.gamePlayers.get(pid);
-    state.amCaptain = pid === this.currentCaptainId;
     state.myNumber = me?.number ?? null;
+    state.iSubmitted = this.submissions[pid] != null;
+    state.myGuess = this.submissions[pid] ?? null;
     return state;
   }
 
   buildPublicState(): Record<string, unknown> {
-    const captain = this.currentCaptainId ? this.gamePlayers.get(this.currentCaptainId) : null;
     const isReveal = this.phase === "reveal" || this.phase === "game-over";
 
-    // Vrai classement (soft -> hard) des joueurs numerotes
-    const trueOrder = this.numberedOrder
-      .map((id) => this.gamePlayers.get(id))
-      .filter((p): p is TopTenPlayer => !!p && p.number != null)
-      .sort((a, b) => (a.number! - b.number!))
+    // Vrai classement (soft -> hard) de tous les joueurs
+    const trueOrder = Array.from(this.gamePlayers.values())
+      .filter((p) => p.number != null)
+      .sort((a, b) => a.number! - b.number!)
       .map((p) => p.id);
 
     return {
       phase: this.phase,
       round: this.round,
       totalRounds: this.totalRounds,
-      captainId: this.currentCaptainId,
-      captainName: captain?.name ?? null,
       theme: this.currentTheme,
       // Liste melangee a classer (numeros caches)
       numberedOrder: this.numberedOrder,
+      // Suivi des validations pendant le classement
+      submittedCount: Object.keys(this.submissions).length,
+      submittedIds: this.phase === "ordering" ? Object.keys(this.submissions) : null,
       // Pendant le reveal seulement
-      captainGuess: isReveal ? this.captainGuess : null,
       trueOrder: isReveal ? trueOrder : null,
       revealNumbers: isReveal
         ? Object.fromEntries(
@@ -310,15 +299,11 @@ export class TopTenGame extends BaseGame {
               .map((p) => [p.id, p.number])
           )
         : null,
-      correctPairs: isReveal ? this.correctPairs : null,
-      totalPairs: isReveal ? this.totalPairs : null,
-      perfect: isReveal ? this.perfect : null,
-      roundPoints: isReveal ? this.roundPoints : null,
+      roundResults: isReveal ? this.roundResults : null,
       players: Array.from(this.gamePlayers.values()).map((p) => ({
         id: p.id,
         name: p.name,
         score: p.score,
-        isCaptain: p.isCaptain,
       })),
     };
   }

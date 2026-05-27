@@ -13,7 +13,6 @@ interface TopTenPlayerState {
   id: string;
   name: string;
   score: number;
-  isCaptain: boolean;
 }
 
 interface ThemeState {
@@ -22,24 +21,28 @@ interface ThemeState {
   high: string;
 }
 
+interface RoundResult {
+  correct: number;
+  total: number;
+  perfect: boolean;
+  points: number;
+}
+
 interface TopTenState {
   phase: "waiting" | "intro" | "answering" | "ordering" | "reveal" | "game-over";
   round: number;
   totalRounds: number;
-  captainId: string | null;
-  captainName: string | null;
   theme: ThemeState | null;
   numberedOrder: string[];
-  captainGuess: string[] | null;
+  submittedCount: number;
+  submittedIds: string[] | null;
   trueOrder: string[] | null;
   revealNumbers: Record<string, number> | null;
-  correctPairs: number | null;
-  totalPairs: number | null;
-  perfect: boolean | null;
-  roundPoints: Record<string, number> | null;
+  roundResults: Record<string, RoundResult> | null;
   players: TopTenPlayerState[];
-  amCaptain: boolean;
   myNumber: number | null;
+  iSubmitted: boolean;
+  myGuess: string[] | null;
 }
 
 const ACCENT = "#ff5a8a";
@@ -72,13 +75,24 @@ const LOCAL_THEMES: ThemeState[] = [
   { theme: "Le niveau d'un texto à 3h du matin", low: "« Tu dors ? »", high: "« Viens, je suis seul(e) »" },
 ];
 
+// Score un classement (paires adjacentes bien ordonnées soft→hard)
+function scorePairs(orderedNums: number[]): { correct: number; total: number; perfect: boolean; points: number } {
+  const total = Math.max(0, orderedNums.length - 1);
+  let correct = 0;
+  for (let i = 0; i < orderedNums.length - 1; i++) {
+    if (orderedNums[i] < orderedNums[i + 1]) correct++;
+  }
+  const perfect = total > 0 && correct === total;
+  return { correct, total, perfect, points: correct * 2 + (perfect ? 5 : 0) };
+}
+
 // ── WRAPPER : le joueur choisit local ou online ───────────
 export default function TopTenGame(props: GameProps) {
   const [mode, setMode] = useState<GameMode | null>(null);
   if (mode === null) {
     return (
       <ModeSelect emoji="🔥" name="Top Ten"
-        tagline="Un thème osé, un numéro secret de 1 à 10. Joue l'intensité, fais deviner ton classement. (18+)"
+        tagline="Un thème osé, un numéro secret de 1 à 10. Chacun joue l'intensité… puis tout le monde classe la table du plus soft au plus hard. (18+)"
         onPick={setMode} />
     );
   }
@@ -87,52 +101,57 @@ export default function TopTenGame(props: GameProps) {
 }
 
 // ══════════════════════════════════════════════════════════
-// MODE LOCAL (pass-and-play — numéros secrets révélés un par un)
+// MODE LOCAL (pass-and-play — chacun voit son numéro, puis chacun classe)
 // ══════════════════════════════════════════════════════════
 function TopTenLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) {
-  type Phase = "setup" | "pass-number" | "show-number" | "answer" | "pass-captain" | "order" | "reveal" | "over";
+  type Phase = "setup" | "pass-number" | "show-number" | "answer" | "pass-rank" | "rank" | "reveal" | "over";
   const [phase, setPhase] = useState<Phase>("setup");
   const [players, setPlayers] = useState<string[]>([]);
   const [scores, setScores] = useState<number[]>([]);
   const [round, setRound] = useState(0);
-  const [captain, setCaptain] = useState(0);
   const [themes] = useState(() => [...LOCAL_THEMES].sort(() => Math.random() - 0.5));
-  const [numbers, setNumbers] = useState<Record<number, number>>({});
-  const [order, setOrder] = useState<number[]>([]); // non-captain indices (reveal order)
-  const [revealIdx, setRevealIdx] = useState(0);
-  const [guess, setGuess] = useState<number[]>([]); // captain's ordering (player indices)
+  const [numbers, setNumbers] = useState<Record<number, number>>({}); // playerIdx -> numéro
+  const [passOrder, setPassOrder] = useState<number[]>([]); // ordre de passage (mélangé)
+  const [stepIdx, setStepIdx] = useState(0); // index dans passOrder (voir numéro / classer)
+  const [guesses, setGuesses] = useState<Record<number, number[]>>({}); // playerIdx -> classement (player indices)
+  const [results, setResults] = useState<Record<number, RoundResult>>({});
 
   const total = players.length;
   const theme = themes[(round - 1) % themes.length] ?? null;
+  const totalRounds = Math.min(8, Math.max(4, total));
 
-  const startRound = (r: number, cap: number, names = players) => {
-    const nonCap = names.map((_, i) => i).filter((i) => i !== cap);
+  const startRound = (r: number, names = players) => {
+    const all = names.map((_, i) => i);
     const pool = Array.from({ length: 10 }, (_, i) => i + 1).sort(() => Math.random() - 0.5);
     const nums: Record<number, number> = {};
-    nonCap.forEach((idx, k) => { nums[idx] = pool[k]; });
+    all.forEach((idx, k) => { nums[idx] = pool[k]; });
     setNumbers(nums);
-    setOrder([...nonCap].sort(() => Math.random() - 0.5));
-    setRevealIdx(0);
-    setRound(r); setCaptain(cap); setGuess([]);
+    setPassOrder([...all].sort(() => Math.random() - 0.5));
+    setStepIdx(0);
+    setGuesses({});
+    setResults({});
+    setRound(r);
     setPhase("pass-number");
   };
 
   const begin = (names: string[]) => {
     setPlayers(names); setScores(names.map(() => 0));
-    startRound(1, 0, names);
+    startRound(1, names);
   };
 
-  // -- scoring on captain submit --
-  const submitOrder = (orderedIdx: number[]) => {
-    let correct = 0;
-    for (let i = 0; i < orderedIdx.length - 1; i++) {
-      if (numbers[orderedIdx[i]] < numbers[orderedIdx[i + 1]]) correct++;
-    }
-    const totalPairs = Math.max(0, orderedIdx.length - 1);
-    const perfect = totalPairs > 0 && correct === totalPairs;
-    const pts = correct * 2 + (perfect ? 5 : 0);
-    setScores((s) => s.map((v, i) => (i === captain ? v + pts : v)));
-    setGuess(orderedIdx);
+  // Quand tout le monde a classé → score + reveal
+  const finishRanking = (allGuesses: Record<number, number[]>) => {
+    const res: Record<number, RoundResult> = {};
+    const gained: number[] = players.map(() => 0);
+    players.forEach((_, idx) => {
+      const guess = allGuesses[idx] ?? passOrder;
+      const nums = guess.map((pIdx) => numbers[pIdx]);
+      const r = scorePairs(nums);
+      res[idx] = r;
+      gained[idx] = r.points;
+    });
+    setResults(res);
+    setScores((s) => s.map((v, i) => v + gained[i]));
     setPhase("reveal");
   };
 
@@ -140,20 +159,20 @@ function TopTenLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) {
     return <PlayersSetup emoji="🔥" name="Top Ten" min={3} max={10} accent="#ff5a8a" onStart={begin} onBack={onReturnToLobby} />;
   }
   if (phase === "pass-number") {
-    const idx = order[revealIdx];
+    const idx = passOrder[stepIdx];
     return <PassScreen toName={players[idx]} colorIndex={idx} accent="#ff5a8a"
       hint="Toi seul : tu vas voir ton numéro secret (1 = soft, 10 = hard)." onReady={() => setPhase("show-number")} />;
   }
   if (phase === "show-number") {
-    const idx = order[revealIdx];
+    const idx = passOrder[stepIdx];
     return (
       <div className="flex min-h-[100svh] flex-col items-center justify-center p-6 text-white"
         style={{ background: `radial-gradient(circle at 50% 25%, ${ACCENT}30, transparent 45%), #0E0828` }}>
         <p className="af-eyebrow mb-2">{players[idx]} · ton numéro</p>
         <NumberCard myNumber={numbers[idx]} />
         <button onClick={() => {
-          if (revealIdx < order.length - 1) { setRevealIdx(revealIdx + 1); setPhase("pass-number"); }
-          else setPhase("answer");
+          if (stepIdx < passOrder.length - 1) { setStepIdx(stepIdx + 1); setPhase("pass-number"); }
+          else { setStepIdx(0); setPhase("answer"); }
         }} className="af-btn af-btn-primary mt-8 w-full max-w-xs">J&apos;ai vu — cacher</button>
       </div>
     );
@@ -162,7 +181,7 @@ function TopTenLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) {
     return (
       <div className="flex min-h-[100svh] flex-col items-center p-5 text-white"
         style={{ background: `radial-gradient(circle at 50% 15%, ${ACCENT}26, transparent 45%), #0E0828` }}>
-        <p className="af-eyebrow mt-3">Manche {round}/{total} · Capitaine : {players[captain]}</p>
+        <p className="af-eyebrow mt-3">Manche {round}/{totalRounds}</p>
         <div className="mt-4 w-full max-w-md rounded-3xl border p-6" style={{ borderColor: "rgba(255,255,255,0.1)", background: "rgba(0,0,0,0.4)" }}>
           <p className="af-eyebrow mb-2 text-center" style={{ color: ACCENT }}>Thème 18+</p>
           <p className="cb-display-sm text-center">{theme?.theme}</p>
@@ -172,44 +191,73 @@ function TopTenLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) {
           </div>
         </div>
         <p className="mt-5 max-w-xs text-center text-sm" style={{ color: "var(--text-dim)" }}>
-          Chacun annonce sa réponse <b>à voix haute</b> selon l&apos;intensité de son numéro. Le Capitaine écoute.
+          Chacun annonce sa réponse <b>à voix haute</b> selon l&apos;intensité de son numéro. Écoutez bien : ensuite <b>chacun</b> classera la table à son tour.
         </p>
-        <button onClick={() => setPhase("pass-captain")} className="af-btn af-btn-primary mt-6 w-full max-w-md">Tout le monde a parlé →</button>
+        <button onClick={() => { setStepIdx(0); setPhase("pass-rank"); }} className="af-btn af-btn-primary mt-6 w-full max-w-md">Tout le monde a parlé → classer</button>
       </div>
     );
   }
-  if (phase === "pass-captain") {
-    return <PassScreen toName={players[captain]} colorIndex={captain} accent="#ff5a8a"
-      buttonLabel="C'est moi, le Capitaine" hint="À toi de classer les joueurs du plus soft au plus hard." onReady={() => setPhase("order")} />;
+  if (phase === "pass-rank") {
+    const idx = passOrder[stepIdx];
+    return <PassScreen toName={players[idx]} colorIndex={idx} accent="#ff5a8a"
+      buttonLabel="C'est moi, je classe" hint="Personne ne regarde ! Classe la table du plus soft au plus hard, selon ce que t'as entendu." onReady={() => setPhase("rank")} />;
   }
-  if (phase === "order") {
+  if (phase === "rank") {
+    const ranker = passOrder[stepIdx];
     return (
-      <OrderingBoard ids={order.map(String)} nameOf={(id) => players[+id]} round={round} total={total}
-        onSubmit={(o) => submitOrder(o.map(Number))} />
+      <OrderingBoard
+        key={`${round}-${stepIdx}`}
+        ids={passOrder.map(String)}
+        nameOf={(id) => players[+id]}
+        rankerName={players[ranker]}
+        round={round} total={totalRounds}
+        onSubmit={(o) => {
+          const g = o.map(Number);
+          const next = { ...guesses, [ranker]: g };
+          setGuesses(next);
+          if (stepIdx < passOrder.length - 1) { setStepIdx(stepIdx + 1); setPhase("pass-rank"); }
+          else finishRanking(next);
+        }} />
     );
   }
   if (phase === "reveal") {
+    // Vrai classement (soft → hard)
+    const trueOrder = [...passOrder].sort((a, b) => numbers[a] - numbers[b]);
+    const perRound = players
+      .map((name, i) => ({ name, i, ...results[i] }))
+      .sort((a, b) => (b.points ?? 0) - (a.points ?? 0));
     return (
       <div className="flex min-h-[100svh] flex-col items-center overflow-y-auto p-5 text-white"
         style={{ background: `radial-gradient(circle at 50% 15%, ${ACCENT}26, transparent 45%), #0E0828` }}>
-        <p className="af-eyebrow mt-3">Classement de {players[captain]} (soft → hard)</p>
-        <div className="mt-4 w-full max-w-md space-y-2">
-          {guess.map((idx, i) => {
+        <p className="af-eyebrow mt-3">Manche {round}/{totalRounds} — Résultat</p>
+        <p className="cb-display-sm mt-1 mb-3">Le vrai classement</p>
+        <div className="w-full max-w-md space-y-1.5">
+          {trueOrder.map((idx, i) => {
             const num = numbers[idx];
-            const prev = i > 0 ? numbers[guess[i - 1]] : -1;
-            const ok = i === 0 || prev < num;
             return (
-              <div key={idx} className={cn("flex items-center gap-3 rounded-2xl border px-4 py-3", ok ? "border-emerald-500/30 bg-emerald-500/[0.07]" : "border-rose-500/30 bg-rose-500/[0.08]")}>
+              <div key={idx} className="flex items-center gap-3 rounded-2xl border border-white/10 bg-black/30 px-4 py-2.5">
                 <span className="cb-mono w-5 text-white/40">{i + 1}.</span>
                 <span className="flex h-9 w-9 items-center justify-center rounded-full font-mono font-bold text-white" style={{ background: ACCENT, opacity: 0.3 + (num / 10) * 0.7 }}>{num}</span>
                 <span className="flex-1 font-semibold">{players[idx]}</span>
-                <span className={ok ? "text-emerald-400" : "text-rose-400"}>{ok ? "✓" : "✗"}</span>
               </div>
             );
           })}
         </div>
-        <button onClick={() => { if (round >= total) setPhase("over"); else startRound(round + 1, (captain + 1) % total); }}
-          className="af-btn af-btn-primary mt-6 w-full max-w-md">{round >= total ? "Voir les scores" : "Manche suivante"}</button>
+
+        <p className="af-eyebrow mt-6 mb-2" style={{ color: ACCENT }}>Précision de chacun</p>
+        <div className="w-full max-w-md space-y-2">
+          {perRound.map((p) => (
+            <div key={p.i} className={cn("flex items-center gap-3 rounded-2xl border px-4 py-3", p.perfect ? "border-emerald-500/40 bg-emerald-500/[0.1]" : "border-white/10 bg-black/30")}>
+              <MascotAvatar color={colorForIndex(p.i)} size={30} mood={p.perfect ? "wink" : "happy"} />
+              <span className="flex-1 font-semibold">{p.name}</span>
+              <span className="cb-mono text-sm text-white/60">{p.correct}/{p.total}{p.perfect ? " 🎉" : ""}</span>
+              <span className="cb-mono font-bold" style={{ color: ACCENT }}>+{p.points}</span>
+            </div>
+          ))}
+        </div>
+
+        <button onClick={() => { if (round >= totalRounds) setPhase("over"); else startRound(round + 1); }}
+          className="af-btn af-btn-primary mt-6 mb-4 w-full max-w-md">{round >= totalRounds ? "Voir les scores" : "Manche suivante"}</button>
       </div>
     );
   }
@@ -219,7 +267,7 @@ function TopTenLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) {
     <div className="flex min-h-[100svh] flex-col items-center justify-center p-6 text-white"
       style={{ background: `radial-gradient(circle at 50% 25%, ${ACCENT}2e, transparent 45%), #0E0828` }}>
       <p className="af-eyebrow" style={{ color: ACCENT }}>Partie terminée</p>
-      <h2 className="cb-display-lg mt-1 mb-5">🔥 Meilleur Capitaine</h2>
+      <h2 className="cb-display-lg mt-1 mb-5">🔥 Meilleur flair</h2>
       <div className="w-full max-w-sm space-y-2">
         {ranking.map((p, idx) => (
           <div key={p.i} className="flex items-center justify-between rounded-2xl border p-4"
@@ -242,7 +290,7 @@ function TopTenLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) {
 }
 
 // ══════════════════════════════════════════════════════════
-// MODE ONLINE (multi-appareils) — inchangé
+// MODE ONLINE (multi-appareils) — tout le monde classe
 // ══════════════════════════════════════════════════════════
 function TopTenOnline({ roomCode, playerId, playerName }: GameProps) {
   const { sendAction } = useGame(roomCode, "top-ten", playerId, playerName);
@@ -280,18 +328,12 @@ function TopTenOnline({ roomCode, playerId, playerName }: GameProps) {
         <span className="text-xs text-white/25 font-sans uppercase tracking-[0.2em] mb-6">
           Manche {state.round} / {state.totalRounds}
         </span>
-        <p className="text-sm text-white/40 font-sans mb-3">Le Capitaine de ce tour est</p>
-        <p
-          className="text-5xl font-serif font-semibold text-white/90 mb-8"
-          style={{ textShadow: `0 0 50px ${ACCENT}33` }}
-        >
-          {state.captainName}
-          {state.amCaptain && <span className="text-white/40 text-2xl"> (toi)</span>}
+        <p className="text-5xl mb-6">🔥</p>
+        <p className="text-2xl font-serif font-semibold text-white/90 mb-3 text-center px-6" style={{ textShadow: `0 0 40px ${ACCENT}33` }}>
+          Chacun reçoit un numéro secret
         </p>
         <p className="text-xs text-white/30 font-sans max-w-xs text-center animate-pulse">
-          {state.amCaptain
-            ? "Tu ne tires pas de numéro. Écoute bien tout le monde..."
-            : "Tu vas recevoir un numéro secret de 1 à 10"}
+          De 1 (soft) à 10 (hard). Joue l&apos;intensité… puis tout le monde classera la table.
         </p>
       </Centered>
     );
@@ -304,7 +346,7 @@ function TopTenOnline({ roomCode, playerId, playerName }: GameProps) {
         className="flex flex-1 flex-col items-center p-5 md:p-6"
         style={{ background: `radial-gradient(circle at 50% 20%, ${ACCENT}14, transparent 45%), #060606` }}
       >
-        <Header round={state.round} total={state.totalRounds} captain={state.captainName} amCaptain={state.amCaptain} />
+        <Header round={state.round} total={state.totalRounds} />
 
         {/* Theme card */}
         <div
@@ -330,53 +372,68 @@ function TopTenOnline({ roomCode, playerId, playerName }: GameProps) {
           </div>
         </div>
 
-        {/* My number / captain panel */}
-        {state.amCaptain ? (
-          <CaptainAnswering onStart={() => sendAction({ action: "start-ordering" })} />
-        ) : (
-          <NumberCard myNumber={state.myNumber} />
-        )}
+        {/* My secret number */}
+        <NumberCard myNumber={state.myNumber} />
+
+        <button
+          onClick={() => sendAction({ action: "start-ordering" })}
+          className="mt-7 w-full max-w-md py-4 rounded-2xl font-sans text-sm font-semibold text-white transition-all hover:brightness-110 active:scale-[0.98]"
+          style={{ background: `linear-gradient(135deg, #2bd47a, ${ACCENT})`, boxShadow: `0 0 25px ${ACCENT}44` }}
+        >
+          Tout le monde a parlé → Classer
+        </button>
+        <p className="text-[11px] text-white/25 font-sans mt-3 text-center max-w-xs">
+          Quand chacun a donné sa réponse à voix haute, lance le classement (n&apos;importe qui peut le faire).
+        </p>
       </div>
     );
   }
 
-  // ── ORDERING (captain reorders) ─────────────────────────
+  // ── ORDERING (tout le monde classe) ─────────────────────
   if (state.phase === "ordering") {
-    if (state.amCaptain) {
+    if (state.iSubmitted) {
       return (
-        <OrderingBoard
-          key={`${state.round}-${state.numberedOrder.join(",")}`}
-          ids={state.numberedOrder}
-          nameOf={nameOf}
-          onSubmit={(order) => sendAction({ action: "submit-order", order })}
-          round={state.round}
-          total={state.totalRounds}
-        />
+        <Centered>
+          <span className="text-xs text-white/25 font-sans uppercase tracking-[0.2em] mb-6">
+            Manche {state.round} / {state.totalRounds}
+          </span>
+          <p className="text-3xl mb-4">✅</p>
+          <p className="text-2xl font-serif font-semibold text-white/90 mb-3 text-center px-6">
+            Classement envoyé
+          </p>
+          <p className="text-sm text-white/40 font-sans animate-pulse">
+            {state.submittedCount}/{state.players.length} ont validé…
+          </p>
+        </Centered>
       );
     }
     return (
-      <Centered>
-        <span className="text-xs text-white/25 font-sans uppercase tracking-[0.2em] mb-6">
-          Manche {state.round} / {state.totalRounds}
-        </span>
-        <p className="text-3xl font-serif font-semibold text-white/90 mb-3 text-center px-6">
-          {state.captainName} fait son classement...
-        </p>
-        <p className="text-sm text-white/30 font-sans animate-pulse">
-          Du plus soft au plus hard
-        </p>
-      </Centered>
+      <OrderingBoard
+        key={`${state.round}-${state.numberedOrder.join(",")}`}
+        ids={state.numberedOrder}
+        nameOf={nameOf}
+        myId={playerId}
+        onSubmit={(order) => sendAction({ action: "submit-order", order })}
+        round={state.round}
+        total={state.totalRounds}
+        submittedCount={state.submittedCount}
+        playerCount={state.players.length}
+      />
     );
   }
 
   // ── REVEAL ──────────────────────────────────────────────
   if (state.phase === "reveal") {
-    const guess = state.captainGuess ?? [];
+    const trueOrder = state.trueOrder ?? [];
+    const myResult = state.roundResults?.[playerId];
+    const ranking = [...(state.players ?? [])]
+      .map((p) => ({ ...p, res: state.roundResults?.[p.id] }))
+      .sort((a, b) => (b.res?.points ?? 0) - (a.res?.points ?? 0));
     return (
       <div
         className="flex flex-1 flex-col items-center p-5 md:p-6 overflow-y-auto"
         style={{
-          background: state.perfect
+          background: myResult?.perfect
             ? `radial-gradient(circle at 50% 20%, ${ACCENT}22, transparent 50%), #060606`
             : "radial-gradient(circle at 50% 20%, rgba(255,255,255,0.04), transparent 45%), #060606",
         }}
@@ -386,37 +443,27 @@ function TopTenOnline({ roomCode, playerId, playerName }: GameProps) {
         </span>
 
         <p
-          className={cn("text-3xl font-serif font-semibold mb-1 text-center", state.perfect ? "text-white/95" : "text-white/80")}
-          style={state.perfect ? { textShadow: `0 0 40px ${ACCENT}55` } : undefined}
+          className={cn("text-3xl font-serif font-semibold mb-1 text-center", myResult?.perfect ? "text-white/95" : "text-white/85")}
+          style={myResult?.perfect ? { textShadow: `0 0 40px ${ACCENT}55` } : undefined}
         >
-          {state.perfect ? "🎉 Classement parfait !" : `${state.correctPairs}/${state.totalPairs} bien placés`}
+          {myResult?.perfect
+            ? "🎉 Classement parfait !"
+            : myResult
+            ? `Toi : ${myResult.correct}/${myResult.total} bien placés`
+            : "Résultat"}
         </p>
-        <p className="text-xs text-white/35 font-sans mb-5 text-center">
-          Classement de {state.captainName} (soft → hard)
-        </p>
+        <p className="text-xs text-white/35 font-sans mb-4 text-center">Le vrai classement (soft → hard)</p>
 
-        {/* Captain's guess with revealed numbers */}
-        <div className="w-full max-w-md space-y-2">
-          {guess.map((id, i) => {
+        {/* Vrai classement */}
+        <div className="w-full max-w-md space-y-1.5 mb-5">
+          {trueOrder.map((id, i) => {
             const num = state.revealNumbers?.[id] ?? 0;
-            const prev = i > 0 ? state.revealNumbers?.[guess[i - 1]] ?? 0 : -1;
-            const orderOk = i === 0 || prev < num;
             return (
-              <div
-                key={id}
-                className={cn(
-                  "flex items-center gap-3 rounded-2xl border px-4 py-3 backdrop-blur-sm",
-                  orderOk ? "border-emerald-500/25 bg-emerald-500/[0.07]" : "border-rose-500/30 bg-rose-500/[0.08]"
-                )}
-              >
+              <div key={id} className="flex items-center gap-3 rounded-2xl border border-white/10 bg-black/30 px-4 py-2.5 backdrop-blur-sm">
                 <span className="text-xs text-white/30 font-mono w-5">{i + 1}.</span>
                 <span
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full font-mono font-bold text-sm"
-                  style={{
-                    background: `linear-gradient(135deg, #2bd47a ${(num / 10) * 0}%, ${ACCENT} 100%)`,
-                    opacity: 0.25 + (num / 10) * 0.75,
-                    color: "#fff",
-                  }}
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full font-mono font-bold text-sm text-white"
+                  style={{ background: ACCENT, opacity: 0.25 + (num / 10) * 0.75 }}
                 >
                   {num}
                 </span>
@@ -424,15 +471,34 @@ function TopTenOnline({ roomCode, playerId, playerName }: GameProps) {
                   {nameOf(id)}
                   {id === playerId && <span className="text-white/35"> (toi)</span>}
                 </span>
-                <span className={cn("text-xs font-mono", orderOk ? "text-emerald-400/70" : "text-rose-400/80")}>
-                  {orderOk ? "✓" : "✗"}
-                </span>
-                {state.roundPoints?.[id] != null && (
-                  <span className="text-xs font-mono text-white/40">+{state.roundPoints[id]}</span>
-                )}
               </div>
             );
           })}
+        </div>
+
+        {/* Précision de chacun */}
+        <p className="text-[10px] text-white/30 font-sans uppercase tracking-[0.25em] mb-2" style={{ color: `${ACCENT}cc` }}>
+          Précision de chacun
+        </p>
+        <div className="w-full max-w-md space-y-2">
+          {ranking.map((p) => (
+            <div
+              key={p.id}
+              className={cn(
+                "flex items-center gap-3 rounded-2xl border px-4 py-2.5 backdrop-blur-sm",
+                p.res?.perfect ? "border-emerald-500/35 bg-emerald-500/[0.09]" : "border-white/10 bg-black/30"
+              )}
+            >
+              <span className="text-sm font-sans font-semibold text-white/85 flex-1 truncate">
+                {p.name}
+                {p.id === playerId && <span className="text-white/35"> (toi)</span>}
+              </span>
+              <span className="text-xs font-mono text-white/50">
+                {p.res ? `${p.res.correct}/${p.res.total}` : "—"}{p.res?.perfect ? " 🎉" : ""}
+              </span>
+              <span className="text-sm font-mono font-bold" style={{ color: ACCENT }}>+{p.res?.points ?? 0}</span>
+            </div>
+          ))}
         </div>
 
         <p className="text-[11px] text-white/25 font-sans mt-5 animate-pulse">Manche suivante...</p>
@@ -506,17 +572,7 @@ function Centered({ children }: { children: React.ReactNode }) {
   );
 }
 
-function Header({
-  round,
-  total,
-  captain,
-  amCaptain,
-}: {
-  round: number;
-  total: number;
-  captain: string | null;
-  amCaptain: boolean;
-}) {
+function Header({ round, total }: { round: number; total: number }) {
   return (
     <div className="flex w-full max-w-md items-center justify-between">
       <span className="text-xs text-white/25 font-sans tracking-wide">
@@ -526,7 +582,7 @@ function Header({
         className="text-[10px] px-3 py-1 rounded-full border font-sans font-semibold uppercase tracking-wider"
         style={{ color: ACCENT, borderColor: `${ACCENT}40`, background: `${ACCENT}14` }}
       >
-        {amCaptain ? "Tu es Capitaine" : `Capitaine: ${captain}`}
+        Th&egrave;me 18+
       </span>
     </div>
   );
@@ -550,33 +606,8 @@ function NumberCard({ myNumber }: { myNumber: number | null }) {
       </div>
       <p className="text-sm text-white/45 font-sans mt-5 max-w-xs text-center leading-relaxed">
         Donne une r&eacute;ponse <span className="text-white/80">à voix haute</span> qui colle à
-        l&apos;intensit&eacute; de ton num&eacute;ro. Ni trop, ni trop peu — le Capitaine doit te ranger au bon endroit !
+        l&apos;intensit&eacute; de ton num&eacute;ro. Ni trop, ni trop peu — les autres devront te ranger au bon endroit !
       </p>
-    </div>
-  );
-}
-
-function CaptainAnswering({ onStart }: { onStart: () => void }) {
-  return (
-    <div className="flex flex-col items-center mt-2 max-w-xs text-center">
-      <div
-        className="flex h-24 w-24 items-center justify-center rounded-full border border-white/10 bg-black/40 backdrop-blur-sm mb-5"
-        style={{ boxShadow: `0 0 40px ${ACCENT}22` }}
-      >
-        <span className="text-4xl">🎧</span>
-      </div>
-      <p className="text-sm text-white/45 font-sans leading-relaxed mb-6">
-        Chaque joueur dit sa r&eacute;ponse à voix haute. &Eacute;coute bien, puis classe-les du
-        <span className="text-emerald-400"> plus soft</span> au
-        <span style={{ color: ACCENT }}> plus hard</span>.
-      </p>
-      <button
-        onClick={onStart}
-        className="px-8 py-3.5 rounded-2xl font-sans text-sm font-semibold text-white transition-all hover:brightness-110 active:scale-[0.98]"
-        style={{ background: `linear-gradient(135deg, #2bd47a, ${ACCENT})`, boxShadow: `0 0 25px ${ACCENT}44` }}
-      >
-        Tout le monde a parl&eacute; → Classer
-      </button>
     </div>
   );
 }
@@ -588,12 +619,20 @@ function OrderingBoard({
   onSubmit,
   round,
   total,
+  myId,
+  rankerName,
+  submittedCount,
+  playerCount,
 }: {
   ids: string[];
   nameOf: (id: string) => string;
   onSubmit: (order: string[]) => void;
   round: number;
   total: number;
+  myId?: string;
+  rankerName?: string;
+  submittedCount?: number;
+  playerCount?: number;
 }) {
   const [order, setOrder] = useState<string[]>(ids);
   const [dragId, setDragId] = useState<string | null>(null);
@@ -666,7 +705,7 @@ function OrderingBoard({
           className="text-[10px] px-3 py-1 rounded-full border font-sans font-semibold uppercase tracking-wider"
           style={{ color: ACCENT, borderColor: `${ACCENT}40`, background: `${ACCENT}14` }}
         >
-          Classement
+          {rankerName ? rankerName : "Ton classement"}
         </span>
       </div>
       <p className="text-center text-lg font-serif font-semibold text-white/90 mt-2 mb-1">
@@ -680,6 +719,7 @@ function OrderingBoard({
       <div className="flex-1 w-full max-w-md mx-auto space-y-2 select-none" style={{ touchAction: "none" }}>
         {order.map((id, i) => {
           const isDragging = id === dragId;
+          const isMe = myId != null && id === myId;
           return (
             <div
               key={id}
@@ -691,6 +731,8 @@ function OrderingBoard({
                 "flex items-center gap-3 rounded-2xl border px-3 py-3.5 backdrop-blur-sm transition-shadow",
                 isDragging
                   ? "border-white/40 bg-black/60 shadow-2xl scale-[1.02]"
+                  : isMe
+                  ? "border-white/20 bg-white/[0.06]"
                   : "border-white/10 bg-black/35"
               )}
               style={isDragging ? { boxShadow: `0 0 30px ${ACCENT}44` } : undefined}
@@ -703,7 +745,10 @@ function OrderingBoard({
               >
                 <DotsIcon />
               </div>
-              <span className="flex-1 text-sm font-sans font-semibold text-white/90 truncate">{nameOf(id)}</span>
+              <span className="flex-1 text-sm font-sans font-semibold text-white/90 truncate">
+                {nameOf(id)}
+                {isMe && <span className="text-white/35"> (toi)</span>}
+              </span>
               <div className="flex flex-col gap-1">
                 <button
                   onClick={() => move(id, -1)}
@@ -731,7 +776,11 @@ function OrderingBoard({
         className="mt-4 w-full max-w-md mx-auto py-4 rounded-2xl font-sans text-sm font-semibold text-white transition-all hover:brightness-110 active:scale-[0.98] disabled:opacity-50"
         style={{ background: `linear-gradient(135deg, #2bd47a, ${ACCENT})`, boxShadow: `0 0 25px ${ACCENT}44` }}
       >
-        {submitted ? "Classement envoyé..." : "Valider le classement"}
+        {submitted
+          ? submittedCount != null
+            ? `Envoyé — ${submittedCount}/${playerCount}…`
+            : "Classement envoyé..."
+          : "Valider mon classement"}
       </button>
     </div>
   );
