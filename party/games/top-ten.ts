@@ -57,6 +57,25 @@ const THEMES: Theme[] = [
   { theme: "Le niveau d'un texto a 3h du matin", low: "« Tu dors ? »", high: "« Viens, je suis seul(e) »" },
   { theme: "Ce que tu reveles lors d'un strip-poker", low: "Une chaussette", high: "Tout, j'ai trop perdu" },
   { theme: "Une audace en vacances", low: "Bronzer sur la plage", high: "Se baigner sans maillot la nuit" },
+  // -- Malaise / vie quotidienne (drole) ------------------
+  { theme: "Tu ouvres un tiroir dans la chambre de tes parents, ya quoi ?", low: "De vieilles photos de vacances", high: "Un truc que t'aurais préféré ne jamais voir" },
+  { theme: "Tu envoies un message dans le groupe famille, c'est quoi ?", low: "« Bon dimanche à tous »", high: "Un message tres prive destine a quelqu'un d'autre" },
+  { theme: "Le dernier truc dans ton historique de recherche", low: "La meteo de demain", high: "Quelque chose a effacer d'urgence" },
+  { theme: "Ce que ta mere trouverait en fouillant ton telephone", low: "Des memes debiles", high: "Une conversation qu'elle doit jamais lire" },
+  { theme: "La derniere photo de ta galerie", low: "Un plat au resto", high: "Une photo carrement intime" },
+  { theme: "Ce que tu caches quand quelqu'un entre dans ta chambre", low: "Le bazar par terre", high: "Un objet super genant" },
+  { theme: "Le niveau de honte de ta photo de profil de 2014", low: "Une coupe de cheveux discutable", high: "A supprimer immediatement" },
+  { theme: "Le dernier mensonge que t'as raconte", low: "« J'arrive dans 5 minutes »", high: "Un gros mensonge bien assume" },
+  { theme: "Ce que tu fais quand t'es seul(e) a la maison", low: "Je chante sous la douche", high: "Un truc que j'avouerai jamais" },
+  { theme: "Ce que ton ex pourrait balancer sur toi", low: "« Il/elle ronflait un peu »", high: "Un secret bien embarrassant" },
+  { theme: "Le contenu de tes notes de telephone", low: "Une liste de courses", high: "Des trucs que personne doit lire" },
+  { theme: "Ce que tu dirais a ton boss s'il y avait zero consequence", low: "« Faut qu'on parle salaire »", high: "Tout ce que je pense vraiment de lui" },
+  { theme: "Le truc le plus louche que t'as commande a 2h du mat", low: "Une pizza", high: "Un truc franchement honteux" },
+  { theme: "Ce que tu mettrais jamais sur ton CV", low: "Mon vrai niveau d'anglais", high: "La vraie raison de mon dernier depart" },
+  { theme: "Le truc le plus genant dans ton panier de linge sale", low: "Des chaussettes trouees", high: "Quelque chose d'inavouable" },
+  { theme: "Ce que tu googles en pleine nuit, panique", low: "« Pourquoi mon chat me fixe »", high: "Un symptome flippant que t'as invente" },
+  { theme: "Le dernier truc pour lequel t'as pleure", low: "Une pub trop mignonne", high: "Un truc completement ridicule" },
+  { theme: "Ce que t'as deja fait croire a un date", low: "« J'adore la rando »", high: "Un mensonge enorme sur ma vie" },
 ];
 
 // -- Player state -----------------------------------------
@@ -74,7 +93,7 @@ interface RoundResult {
   points: number;
 }
 
-type GamePhase = "waiting" | "intro" | "answering" | "ordering" | "reveal" | "game-over";
+type GamePhase = "waiting" | "intro" | "theme" | "answering" | "ordering" | "reveal" | "game-over";
 
 // ==========================================================
 export class TopTenGame extends BaseGame {
@@ -123,12 +142,7 @@ export class TopTenGame extends BaseGame {
     this.submissions = {};
     this.roundResults = {};
 
-    // Pick a theme (no repeat until bank exhausted)
-    if (this.usedThemes.size >= THEMES.length) this.usedThemes.clear();
-    let idx = Math.floor(Math.random() * THEMES.length);
-    while (this.usedThemes.has(idx)) idx = Math.floor(Math.random() * THEMES.length);
-    this.usedThemes.add(idx);
-    this.currentTheme = THEMES[idx];
+    this.pickTheme();
 
     // Assign distinct numbers 1-10 to every player
     const everyone = Array.from(this.gamePlayers.values());
@@ -141,11 +155,21 @@ export class TopTenGame extends BaseGame {
 
     this.broadcastPersonalizedState();
 
+    // Splash rapide -> on montre la phrase (avec bouton "changer") AVANT les numeros.
     this.clearTimer();
     this.timer = setTimeout(() => {
-      this.phase = "answering";
+      this.phase = "theme";
       this.broadcastPersonalizedState();
     }, INTRO_TIME);
+  }
+
+  // Choisit un theme jamais vu cette partie (recycle si banque epuisee)
+  pickTheme() {
+    if (this.usedThemes.size >= THEMES.length) this.usedThemes.clear();
+    let idx = Math.floor(Math.random() * THEMES.length);
+    while (this.usedThemes.has(idx)) idx = Math.floor(Math.random() * THEMES.length);
+    this.usedThemes.add(idx);
+    this.currentTheme = THEMES[idx];
   }
 
   // -- Scoring & Reveal ------------------------------------
@@ -210,6 +234,18 @@ export class TopTenGame extends BaseGame {
     const action = payload.action as string;
     const senderPlayer = this.findPlayerByConnection(sender.id);
     if (!senderPlayer) return;
+
+    // Phase "theme" : n'importe qui peut changer la phrase ou la valider.
+    if (action === "change-theme" && this.phase === "theme") {
+      this.pickTheme();
+      this.broadcastPersonalizedState();
+      return;
+    }
+    if (action === "start-answering" && this.phase === "theme") {
+      this.phase = "answering";
+      this.broadcastPersonalizedState();
+      return;
+    }
 
     // N'importe quel joueur peut lancer la phase de classement une fois tout le monde a parle.
     if (action === "start-ordering" && this.phase === "answering") {

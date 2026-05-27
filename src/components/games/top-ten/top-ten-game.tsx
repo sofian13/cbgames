@@ -29,7 +29,7 @@ interface RoundResult {
 }
 
 interface TopTenState {
-  phase: "waiting" | "intro" | "answering" | "ordering" | "reveal" | "game-over";
+  phase: "waiting" | "intro" | "theme" | "answering" | "ordering" | "reveal" | "game-over";
   round: number;
   totalRounds: number;
   theme: ThemeState | null;
@@ -73,6 +73,22 @@ const LOCAL_THEMES: ThemeState[] = [
   { theme: "Le degré d'une danse en boîte", low: "Je bouge gentiment", high: "Collé-serré très rapproché" },
   { theme: "Une audace en vacances", low: "Bronzer sur la plage", high: "Se baigner sans maillot la nuit" },
   { theme: "Le niveau d'un texto à 3h du matin", low: "« Tu dors ? »", high: "« Viens, je suis seul(e) »" },
+  // Malaise / vie quotidienne (drôle)
+  { theme: "Tu ouvres un tiroir dans la chambre de tes parents, ya quoi ?", low: "De vieilles photos de vacances", high: "Un truc que t'aurais préféré ne jamais voir" },
+  { theme: "Tu envoies un message dans le groupe famille, c'est quoi ?", low: "« Bon dimanche à tous »", high: "Un message très privé destiné à quelqu'un d'autre" },
+  { theme: "Le dernier truc dans ton historique de recherche", low: "La météo de demain", high: "Quelque chose à effacer d'urgence" },
+  { theme: "Ce que ta mère trouverait en fouillant ton téléphone", low: "Des memes débiles", high: "Une conversation qu'elle doit jamais lire" },
+  { theme: "La dernière photo de ta galerie", low: "Un plat au resto", high: "Une photo carrément intime" },
+  { theme: "Ce que tu caches quand quelqu'un entre dans ta chambre", low: "Le bazar par terre", high: "Un objet super gênant" },
+  { theme: "Le niveau de honte de ta photo de profil de 2014", low: "Une coupe discutable", high: "À supprimer immédiatement" },
+  { theme: "Le dernier mensonge que t'as raconté", low: "« J'arrive dans 5 min »", high: "Un gros mensonge bien assumé" },
+  { theme: "Ce que tu fais quand t'es seul(e) à la maison", low: "Je chante sous la douche", high: "Un truc que j'avouerai jamais" },
+  { theme: "Ce que ton ex pourrait balancer sur toi", low: "« Il/elle ronflait »", high: "Un secret bien embarrassant" },
+  { theme: "Le contenu de tes notes de téléphone", low: "Une liste de courses", high: "Des trucs que personne doit lire" },
+  { theme: "Ce que tu dirais à ton boss sans conséquence", low: "« Faut parler salaire »", high: "Tout ce que je pense vraiment de lui" },
+  { theme: "Le truc le plus louche commandé à 2h du mat", low: "Une pizza", high: "Un truc franchement honteux" },
+  { theme: "Ce que tu mettrais jamais sur ton CV", low: "Mon vrai niveau d'anglais", high: "La vraie raison de mon départ" },
+  { theme: "Ce que t'as déjà fait croire à un date", low: "« J'adore la rando »", high: "Un mensonge énorme sur ma vie" },
 ];
 
 // Score un classement (paires adjacentes bien ordonnées soft→hard)
@@ -104,12 +120,13 @@ export default function TopTenGame(props: GameProps) {
 // MODE LOCAL (pass-and-play — chacun voit son numéro, puis chacun classe)
 // ══════════════════════════════════════════════════════════
 function TopTenLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) {
-  type Phase = "setup" | "pass-number" | "show-number" | "answer" | "pass-rank" | "rank" | "reveal" | "over";
+  type Phase = "setup" | "theme" | "pass-number" | "show-number" | "answer" | "pass-rank" | "rank" | "reveal" | "over";
   const [phase, setPhase] = useState<Phase>("setup");
   const [players, setPlayers] = useState<string[]>([]);
   const [scores, setScores] = useState<number[]>([]);
   const [round, setRound] = useState(0);
   const [themes] = useState(() => [...LOCAL_THEMES].sort(() => Math.random() - 0.5));
+  const [themeCursor, setThemeCursor] = useState(0); // avance à chaque manche / changement
   const [numbers, setNumbers] = useState<Record<number, number>>({}); // playerIdx -> numéro
   const [passOrder, setPassOrder] = useState<number[]>([]); // ordre de passage (mélangé)
   const [stepIdx, setStepIdx] = useState(0); // index dans passOrder (voir numéro / classer)
@@ -117,9 +134,11 @@ function TopTenLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) {
   const [results, setResults] = useState<Record<number, RoundResult>>({});
 
   const total = players.length;
-  const theme = themes[(round - 1) % themes.length] ?? null;
+  const theme = themes[themeCursor % themes.length] ?? null;
   const totalRounds = Math.min(8, Math.max(4, total));
 
+  // Prépare une manche : numéros + ordre de passage. La phrase est montrée
+  // en phase "theme" AVANT que chacun voie son numéro (avec bouton "changer").
   const startRound = (r: number, names = players) => {
     const all = names.map((_, i) => i);
     const pool = Array.from({ length: 10 }, (_, i) => i + 1).sort(() => Math.random() - 0.5);
@@ -131,11 +150,12 @@ function TopTenLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) {
     setGuesses({});
     setResults({});
     setRound(r);
-    setPhase("pass-number");
+    setPhase("theme");
   };
 
   const begin = (names: string[]) => {
     setPlayers(names); setScores(names.map(() => 0));
+    setThemeCursor(0);
     startRound(1, names);
   };
 
@@ -157,6 +177,19 @@ function TopTenLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) {
 
   if (phase === "setup") {
     return <PlayersSetup emoji="🔥" name="Top Ten" min={3} max={10} accent="#ff5a8a" onStart={begin} onBack={onReturnToLobby} />;
+  }
+  if (phase === "theme") {
+    return (
+      <div className="flex min-h-[100svh] flex-col items-center justify-center p-5 text-white"
+        style={{ background: `radial-gradient(circle at 50% 18%, ${ACCENT}26, transparent 45%), #0E0828` }}>
+        <p className="af-eyebrow mb-4">Manche {round}/{totalRounds}</p>
+        <ThemeCard theme={theme} />
+        <button onClick={() => { setStepIdx(0); setPhase("pass-number"); }}
+          className="af-btn af-btn-primary mt-7 w-full max-w-md">C&apos;est bon → distribuer les numéros</button>
+        <button onClick={() => setThemeCursor((c) => c + 1)}
+          className="af-btn af-btn-ghost mt-3 w-full max-w-md">🔄 Changer de thème</button>
+      </div>
+    );
   }
   if (phase === "pass-number") {
     const idx = passOrder[stepIdx];
@@ -256,7 +289,7 @@ function TopTenLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) {
           ))}
         </div>
 
-        <button onClick={() => { if (round >= totalRounds) setPhase("over"); else startRound(round + 1); }}
+        <button onClick={() => { if (round >= totalRounds) setPhase("over"); else { setThemeCursor((c) => c + 1); startRound(round + 1); } }}
           className="af-btn af-btn-primary mt-6 mb-4 w-full max-w-md">{round >= totalRounds ? "Voir les scores" : "Manche suivante"}</button>
       </div>
     );
@@ -339,6 +372,37 @@ function TopTenOnline({ roomCode, playerId, playerName }: GameProps) {
     );
   }
 
+  // ── THEME (on voit la phrase AVANT les numéros) ─────────
+  if (state.phase === "theme") {
+    return (
+      <div
+        className="flex flex-1 flex-col items-center justify-center p-5 md:p-6"
+        style={{ background: `radial-gradient(circle at 50% 20%, ${ACCENT}16, transparent 45%), #060606` }}
+      >
+        <Header round={state.round} total={state.totalRounds} />
+        <div className="flex-1 flex flex-col items-center justify-center w-full">
+          <ThemeCard theme={state.theme} />
+          <button
+            onClick={() => sendAction({ action: "start-answering" })}
+            className="mt-7 w-full max-w-md py-4 rounded-2xl font-sans text-sm font-semibold text-white transition-all hover:brightness-110 active:scale-[0.98]"
+            style={{ background: `linear-gradient(135deg, #2bd47a, ${ACCENT})`, boxShadow: `0 0 25px ${ACCENT}44` }}
+          >
+            C&apos;est bon → voir mon numéro
+          </button>
+          <button
+            onClick={() => sendAction({ action: "change-theme" })}
+            className="mt-3 w-full max-w-md py-3 rounded-2xl font-sans text-sm font-semibold text-white/70 border border-white/15 bg-white/[0.04] transition-all hover:bg-white/[0.08] active:scale-[0.98]"
+          >
+            🔄 Changer de thème
+          </button>
+          <p className="text-[11px] text-white/25 font-sans mt-3 text-center max-w-xs">
+            N&apos;importe qui peut changer la phrase ou lancer la distribution.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   // ── ANSWERING ───────────────────────────────────────────
   if (state.phase === "answering") {
     return (
@@ -349,27 +413,8 @@ function TopTenOnline({ roomCode, playerId, playerName }: GameProps) {
         <Header round={state.round} total={state.totalRounds} />
 
         {/* Theme card */}
-        <div
-          className="w-full max-w-md rounded-3xl border border-white/10 bg-black/40 backdrop-blur-sm p-6 mt-4 mb-6"
-          style={{ boxShadow: `0 0 40px ${ACCENT}1a` }}
-        >
-          <p className="text-[10px] text-white/30 font-sans uppercase tracking-[0.25em] mb-3 text-center">
-            Th&egrave;me 18+
-          </p>
-          <p className="text-2xl font-serif font-semibold text-white/95 text-center leading-snug">
-            {state.theme?.theme}
-          </p>
-          <div className="mt-5 flex items-stretch gap-2 text-center">
-            <div className="flex-1 rounded-2xl border border-emerald-500/20 bg-emerald-500/5 px-3 py-2.5">
-              <p className="text-emerald-400 font-mono font-bold text-lg">1</p>
-              <p className="text-[11px] text-white/45 font-sans leading-tight mt-1">{state.theme?.low}</p>
-            </div>
-            <div className="flex items-center text-white/20 text-xs font-sans">vers</div>
-            <div className="flex-1 rounded-2xl border border-rose-500/25 bg-rose-500/10 px-3 py-2.5">
-              <p className="font-mono font-bold text-lg" style={{ color: ACCENT }}>10</p>
-              <p className="text-[11px] text-white/45 font-sans leading-tight mt-1">{state.theme?.high}</p>
-            </div>
-          </div>
+        <div className="mt-4 mb-6 w-full max-w-md">
+          <ThemeCard theme={state.theme} />
         </div>
 
         {/* My secret number */}
@@ -584,6 +629,33 @@ function Header({ round, total }: { round: number; total: number }) {
       >
         Th&egrave;me 18+
       </span>
+    </div>
+  );
+}
+
+function ThemeCard({ theme }: { theme: ThemeState | null }) {
+  return (
+    <div
+      className="w-full max-w-md rounded-3xl border border-white/10 bg-black/40 backdrop-blur-sm p-6"
+      style={{ boxShadow: `0 0 40px ${ACCENT}1a` }}
+    >
+      <p className="text-[10px] text-white/30 font-sans uppercase tracking-[0.25em] mb-3 text-center">
+        Th&egrave;me 18+
+      </p>
+      <p className="text-2xl font-serif font-semibold text-white/95 text-center leading-snug">
+        {theme?.theme}
+      </p>
+      <div className="mt-5 flex items-stretch gap-2 text-center">
+        <div className="flex-1 rounded-2xl border border-emerald-500/20 bg-emerald-500/5 px-3 py-2.5">
+          <p className="text-emerald-400 font-mono font-bold text-lg">1</p>
+          <p className="text-[11px] text-white/45 font-sans leading-tight mt-1">{theme?.low}</p>
+        </div>
+        <div className="flex items-center text-white/20 text-xs font-sans">vers</div>
+        <div className="flex-1 rounded-2xl border border-rose-500/25 bg-rose-500/10 px-3 py-2.5">
+          <p className="font-mono font-bold text-lg" style={{ color: ACCENT }}>10</p>
+          <p className="text-[11px] text-white/45 font-sans leading-tight mt-1">{theme?.high}</p>
+        </div>
+      </div>
     </div>
   );
 }
