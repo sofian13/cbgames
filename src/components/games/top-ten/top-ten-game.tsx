@@ -31,7 +31,8 @@ interface RoundResult {
 interface TopTenState {
   phase: "waiting" | "config" | "intro" | "theme" | "answering" | "ordering" | "reveal" | "game-over";
   round: number;
-  targetScore: number;
+  totalRounds: number;
+  numberRange: number;
   theme: ThemeState | null;
   numberedOrder: string[];
   submittedCount: number;
@@ -141,7 +142,7 @@ function TopTenLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) {
   const [players, setPlayers] = useState<string[]>([]);
   const [scores, setScores] = useState<number[]>([]);
   const [round, setRound] = useState(0);
-  const [targetScore, setTargetScore] = useState<10 | 25 | 50 | 100>(25);
+  const [numberRange, setNumberRange] = useState<10 | 25 | 50>(10);
   const [themes] = useState(() => [...LOCAL_THEMES].sort(() => Math.random() - 0.5));
   const [themeCursor, setThemeCursor] = useState(0); // avance à chaque manche / changement
   const [numbers, setNumbers] = useState<Record<number, number>>({}); // playerIdx -> numéro
@@ -151,12 +152,15 @@ function TopTenLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) {
   const [results, setResults] = useState<Record<number, RoundResult>>({});
 
   const theme = themes[themeCursor % themes.length] ?? null;
+  const total = players.length;
+  const totalRounds = Math.min(8, Math.max(4, total));
 
   // Prépare une manche : numéros + ordre de passage. La phrase est montrée
   // en phase "theme" AVANT que chacun voie son numéro (avec bouton "changer").
   const startRound = (r: number, names = players) => {
     const all = names.map((_, i) => i);
-    const pool = Array.from({ length: 10 }, (_, i) => i + 1).sort(() => Math.random() - 0.5);
+    const range = Math.max(numberRange, all.length); // sécurise si numberRange < #joueurs
+    const pool = Array.from({ length: range }, (_, i) => i + 1).sort(() => Math.random() - 0.5);
     const nums: Record<number, number> = {};
     all.forEach((idx, k) => { nums[idx] = pool[k]; });
     setNumbers(nums);
@@ -195,14 +199,14 @@ function TopTenLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) {
     return <PlayersSetup emoji="🔥" name="Top Ten" min={3} max={10} accent="#ff5a8a" onStart={begin} onBack={onReturnToLobby} />;
   }
   if (phase === "target") {
-    return <TargetPicker target={targetScore} onPick={setTargetScore} onStart={launch} onBack={() => setPhase("setup")} />;
+    return <RangePicker range={numberRange} onPick={setNumberRange} onStart={launch} onBack={() => setPhase("setup")} />;
   }
   if (phase === "theme") {
     return (
       <div className="flex min-h-[100svh] flex-col items-center justify-center p-5 text-white"
         style={{ background: `radial-gradient(circle at 50% 18%, ${ACCENT}26, transparent 45%), #0E0828` }}>
-        <p className="af-eyebrow mb-4">Manche {round} · 1<sup>er</sup> à {targetScore} pts</p>
-        <ThemeCard theme={theme} />
+        <p className="af-eyebrow mb-4">Manche {round}/{totalRounds} · sur {numberRange}</p>
+        <ThemeCard theme={theme} range={numberRange} />
         <button onClick={() => { setStepIdx(0); setPhase("pass-number"); }}
           className="af-btn af-btn-primary mt-7 w-full max-w-md">C&apos;est bon → distribuer les numéros</button>
         <button onClick={() => setThemeCursor((c) => c + 1)}
@@ -221,7 +225,7 @@ function TopTenLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) {
       <div className="flex min-h-[100svh] flex-col items-center justify-center p-6 text-white"
         style={{ background: `radial-gradient(circle at 50% 25%, ${ACCENT}30, transparent 45%), #0E0828` }}>
         <p className="af-eyebrow mb-2">{players[idx]} · ton numéro</p>
-        <NumberCard myNumber={numbers[idx]} />
+        <NumberCard myNumber={numbers[idx]} range={numberRange} />
         <button onClick={() => {
           if (stepIdx < passOrder.length - 1) { setStepIdx(stepIdx + 1); setPhase("pass-number"); }
           else { setStepIdx(0); setPhase("answer"); }
@@ -233,7 +237,7 @@ function TopTenLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) {
     return (
       <div className="flex min-h-[100svh] flex-col items-center p-5 text-white"
         style={{ background: `radial-gradient(circle at 50% 15%, ${ACCENT}26, transparent 45%), #0E0828` }}>
-        <p className="af-eyebrow mt-3">Manche {round} · 1<sup>er</sup> à {targetScore} pts</p>
+        <p className="af-eyebrow mt-3">Manche {round}/{totalRounds} · sur {numberRange}</p>
         <div className="mt-4 w-full max-w-md rounded-3xl border p-6" style={{ borderColor: "rgba(255,255,255,0.1)", background: "rgba(0,0,0,0.4)" }}>
           <p className="af-eyebrow mb-2 text-center" style={{ color: ACCENT }}>Thème 18+</p>
           <p className="cb-display-sm text-center">{theme?.theme}</p>
@@ -262,7 +266,7 @@ function TopTenLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) {
         ids={passOrder.map(String)}
         nameOf={(id) => players[+id]}
         rankerName={players[ranker]}
-        round={round} target={targetScore}
+        round={round} total={totalRounds} range={numberRange}
         onSubmit={(o) => {
           const g = o.map(Number);
           const next = { ...guesses, [ranker]: g };
@@ -281,7 +285,7 @@ function TopTenLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) {
     return (
       <div className="flex min-h-[100svh] flex-col items-center overflow-y-auto p-5 text-white"
         style={{ background: `radial-gradient(circle at 50% 15%, ${ACCENT}26, transparent 45%), #0E0828` }}>
-        <p className="af-eyebrow mt-3">Manche {round} — Résultat (1<sup>er</sup> à {targetScore})</p>
+        <p className="af-eyebrow mt-3">Manche {round}/{totalRounds} — Résultat · sur {numberRange}</p>
         <p className="cb-display-sm mt-1 mb-3">Le vrai classement</p>
         <div className="w-full max-w-md space-y-1.5">
           {trueOrder.map((idx, i) => {
@@ -289,7 +293,7 @@ function TopTenLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) {
             return (
               <div key={idx} className="flex items-center gap-3 rounded-2xl border border-white/10 bg-black/30 px-4 py-2.5">
                 <span className="cb-mono w-5 text-white/40">{i + 1}.</span>
-                <span className="flex h-9 w-9 items-center justify-center rounded-full font-mono font-bold text-white" style={{ background: ACCENT, opacity: 0.3 + (num / 10) * 0.7 }}>{num}</span>
+                <span className="flex h-9 w-9 items-center justify-center rounded-full font-mono font-bold text-white" style={{ background: ACCENT, opacity: 0.3 + (num / numberRange) * 0.7 }}>{num}</span>
                 <span className="flex-1 font-semibold">{players[idx]}</span>
               </div>
             );
@@ -308,8 +312,8 @@ function TopTenLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) {
           ))}
         </div>
 
-        <button onClick={() => { const reached = scores.some((s) => s >= targetScore); if (reached) setPhase("over"); else { setThemeCursor((c) => c + 1); startRound(round + 1); } }}
-          className="af-btn af-btn-primary mt-6 mb-4 w-full max-w-md">{scores.some((s) => s >= targetScore) ? "Voir les scores" : "Manche suivante"}</button>
+        <button onClick={() => { if (round >= totalRounds) setPhase("over"); else { setThemeCursor((c) => c + 1); startRound(round + 1); } }}
+          className="af-btn af-btn-primary mt-6 mb-4 w-full max-w-md">{round >= totalRounds ? "Voir les scores" : "Manche suivante"}</button>
       </div>
     );
   }
@@ -378,9 +382,9 @@ function TopTenOnline({ roomCode, playerId, playerName }: GameProps) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center p-6"
         style={{ background: `radial-gradient(circle at 50% 20%, ${ACCENT}1c, transparent 45%), #060606` }}>
-        <TargetPicker
-          target={(state.targetScore as 10 | 25 | 50 | 100) ?? 25}
-          onPick={(t) => sendAction({ action: "set-target", target: t })}
+        <RangePicker
+          range={(state.numberRange as 10 | 25 | 50) ?? 10}
+          onPick={(r) => sendAction({ action: "set-range", range: r })}
           onStart={() => sendAction({ action: "begin-game" })}
           shared
         />
@@ -393,14 +397,14 @@ function TopTenOnline({ roomCode, playerId, playerName }: GameProps) {
     return (
       <Centered>
         <span className="text-xs text-white/25 font-sans uppercase tracking-[0.2em] mb-6">
-          Manche {state.round} · 1<sup>er</sup> à {state.targetScore} pts
+          Manche {state.round}/{state.totalRounds} · sur {state.numberRange}
         </span>
         <p className="text-5xl mb-6">🔥</p>
         <p className="text-2xl font-serif font-semibold text-white/90 mb-3 text-center px-6" style={{ textShadow: `0 0 40px ${ACCENT}33` }}>
           Chacun reçoit un numéro secret
         </p>
         <p className="text-xs text-white/30 font-sans max-w-xs text-center animate-pulse">
-          De 1 (soft) à 10 (hard). Joue l&apos;intensité… puis tout le monde classera la table.
+          De 1 (soft) à {state.numberRange} (hard). Joue l&apos;intensité… puis tout le monde classera la table.
         </p>
       </Centered>
     );
@@ -413,9 +417,9 @@ function TopTenOnline({ roomCode, playerId, playerName }: GameProps) {
         className="flex flex-1 flex-col items-center justify-center p-5 md:p-6"
         style={{ background: `radial-gradient(circle at 50% 20%, ${ACCENT}16, transparent 45%), #060606` }}
       >
-        <Header round={state.round} target={state.targetScore} />
+        <Header round={state.round} total={state.totalRounds} range={state.numberRange} />
         <div className="flex-1 flex flex-col items-center justify-center w-full">
-          <ThemeCard theme={state.theme} />
+          <ThemeCard theme={state.theme} range={state.numberRange} />
           <button
             onClick={() => sendAction({ action: "start-answering" })}
             className="mt-7 w-full max-w-md py-4 rounded-2xl font-sans text-sm font-semibold text-white transition-all hover:brightness-110 active:scale-[0.98]"
@@ -444,15 +448,15 @@ function TopTenOnline({ roomCode, playerId, playerName }: GameProps) {
         className="flex flex-1 flex-col items-center p-5 md:p-6"
         style={{ background: `radial-gradient(circle at 50% 20%, ${ACCENT}14, transparent 45%), #060606` }}
       >
-        <Header round={state.round} target={state.targetScore} />
+        <Header round={state.round} total={state.totalRounds} range={state.numberRange} />
 
         {/* Theme card */}
         <div className="mt-4 mb-6 w-full max-w-md">
-          <ThemeCard theme={state.theme} />
+          <ThemeCard theme={state.theme} range={state.numberRange} />
         </div>
 
         {/* My secret number */}
-        <NumberCard myNumber={state.myNumber} />
+        <NumberCard myNumber={state.myNumber} range={state.numberRange} />
 
         <button
           onClick={() => sendAction({ action: "start-ordering" })}
@@ -474,7 +478,7 @@ function TopTenOnline({ roomCode, playerId, playerName }: GameProps) {
       return (
         <Centered>
           <span className="text-xs text-white/25 font-sans uppercase tracking-[0.2em] mb-6">
-            Manche {state.round} · 1<sup>er</sup> à {state.targetScore} pts
+            Manche {state.round}/{state.totalRounds} · sur {state.numberRange}
           </span>
           <p className="text-3xl mb-4">✅</p>
           <p className="text-2xl font-serif font-semibold text-white/90 mb-3 text-center px-6">
@@ -494,7 +498,8 @@ function TopTenOnline({ roomCode, playerId, playerName }: GameProps) {
         myId={playerId}
         onSubmit={(order) => sendAction({ action: "submit-order", order })}
         round={state.round}
-        target={state.targetScore}
+        total={state.totalRounds}
+        range={state.numberRange}
         submittedCount={state.submittedCount}
         playerCount={state.players.length}
       />
@@ -518,7 +523,7 @@ function TopTenOnline({ roomCode, playerId, playerName }: GameProps) {
         }}
       >
         <span className="text-xs text-white/25 font-sans uppercase tracking-[0.2em] mb-3 mt-1">
-          Manche {state.round} · 1<sup>er</sup> à {state.targetScore} pts — R&eacute;sultat
+          Manche {state.round}/{state.totalRounds} · sur {state.numberRange} — R&eacute;sultat
         </span>
 
         <p
@@ -542,7 +547,7 @@ function TopTenOnline({ roomCode, playerId, playerName }: GameProps) {
                 <span className="text-xs text-white/30 font-mono w-5">{i + 1}.</span>
                 <span
                   className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full font-mono font-bold text-sm text-white"
-                  style={{ background: ACCENT, opacity: 0.25 + (num / 10) * 0.75 }}
+                  style={{ background: ACCENT, opacity: 0.25 + (num / (state.numberRange ?? 10)) * 0.75 }}
                 >
                   {num}
                 </span>
@@ -651,11 +656,11 @@ function Centered({ children }: { children: React.ReactNode }) {
   );
 }
 
-function Header({ round, target }: { round: number; target: number }) {
+function Header({ round, total, range }: { round: number; total: number; range: number }) {
   return (
     <div className="flex w-full max-w-md items-center justify-between">
       <span className="text-xs text-white/25 font-sans tracking-wide">
-        Manche {round} · 1<sup>er</sup> à {target}
+        Manche {round}/{total} · sur {range}
       </span>
       <span
         className="text-[10px] px-3 py-1 rounded-full border font-sans font-semibold uppercase tracking-wider"
@@ -667,40 +672,39 @@ function Header({ round, target }: { round: number; target: number }) {
   );
 }
 
-// ── Choix du score cible (10/25/50/100) ─────────────────
-function TargetPicker({
-  target,
+// ── Choix de l'échelle des numéros (1→10 / 25 / 50) ─────
+function RangePicker({
+  range,
   onPick,
   onStart,
   onBack,
   shared,
 }: {
-  target: 10 | 25 | 50 | 100;
-  onPick: (t: 10 | 25 | 50 | 100) => void;
+  range: 10 | 25 | 50;
+  onPick: (r: 10 | 25 | 50) => void;
   onStart: () => void;
   onBack?: () => void;
   shared?: boolean;
 }) {
-  const OPTIONS: { v: 10 | 25 | 50 | 100; label: string; sub: string }[] = [
-    { v: 10, label: "Sprint", sub: "~3-4 manches" },
-    { v: 25, label: "Normal", sub: "~6-8 manches" },
-    { v: 50, label: "Long", sub: "~12 manches" },
-    { v: 100, label: "Marathon", sub: "On a la nuit" },
+  const OPTIONS: { v: 10 | 25 | 50; label: string; sub: string }[] = [
+    { v: 10, label: "Classique", sub: "Numéros entre 1 et 10" },
+    { v: 25, label: "Nuance", sub: "Numéros entre 1 et 25" },
+    { v: 50, label: "Sniper", sub: "Numéros entre 1 et 50" },
   ];
   return (
     <div className="flex w-full max-w-md flex-col items-center text-white">
       <p className="text-[10px] uppercase tracking-[0.25em] mb-2" style={{ color: `${ACCENT}cc` }}>
-        Score à atteindre
+        Échelle des numéros
       </p>
       <h2 className="text-3xl font-serif font-semibold text-white/95 mb-1 text-center">
-        Première personne à…
+        Les numéros vont jusqu&apos;à…
       </h2>
-      <p className="text-xs text-white/35 font-sans mb-6 text-center">
-        Plus le score est haut, plus la partie est longue.
+      <p className="text-xs text-white/35 font-sans mb-6 text-center px-3">
+        Plus l&apos;échelle est haute, plus il faut être précis à l&apos;oral pour placer les autres.
       </p>
-      <div className="grid w-full grid-cols-2 gap-2.5">
+      <div className="grid w-full grid-cols-3 gap-2.5">
         {OPTIONS.map((o) => {
-          const active = o.v === target;
+          const active = o.v === range;
           return (
             <button
               key={o.v}
@@ -719,7 +723,7 @@ function TargetPicker({
                 {o.v}
               </p>
               <p className="text-xs font-semibold mt-0.5 text-white/85">{o.label}</p>
-              <p className="text-[10px] text-white/40 mt-0.5">{o.sub}</p>
+              <p className="text-[9px] text-white/40 mt-0.5 leading-tight">{o.sub}</p>
             </button>
           );
         })}
@@ -733,7 +737,7 @@ function TargetPicker({
       </button>
       {shared && (
         <p className="text-[11px] text-white/25 font-sans mt-3 text-center">
-          N&apos;importe qui peut changer le score ou lancer.
+          N&apos;importe qui peut changer l&apos;échelle ou lancer.
         </p>
       )}
       {onBack && (
@@ -743,14 +747,14 @@ function TargetPicker({
   );
 }
 
-function ThemeCard({ theme }: { theme: ThemeState | null }) {
+function ThemeCard({ theme, range = 10 }: { theme: ThemeState | null; range?: number }) {
   return (
     <div
       className="w-full max-w-md rounded-3xl border border-white/10 bg-black/40 backdrop-blur-sm p-6"
       style={{ boxShadow: `0 0 40px ${ACCENT}1a` }}
     >
       <p className="text-[10px] text-white/30 font-sans uppercase tracking-[0.25em] mb-3 text-center">
-        Th&egrave;me 18+
+        Th&egrave;me 18+ · échelle 1 → {range}
       </p>
       <p className="text-2xl font-serif font-semibold text-white/95 text-center leading-snug">
         {theme?.theme}
@@ -762,7 +766,7 @@ function ThemeCard({ theme }: { theme: ThemeState | null }) {
         </div>
         <div className="flex items-center text-white/20 text-xs font-sans">vers</div>
         <div className="flex-1 rounded-2xl border border-rose-500/25 bg-rose-500/10 px-3 py-2.5">
-          <p className="font-mono font-bold text-lg" style={{ color: ACCENT }}>10</p>
+          <p className="font-mono font-bold text-lg" style={{ color: ACCENT }}>{range}</p>
           <p className="text-[11px] text-white/45 font-sans leading-tight mt-1">{theme?.high}</p>
         </div>
       </div>
@@ -770,10 +774,10 @@ function ThemeCard({ theme }: { theme: ThemeState | null }) {
   );
 }
 
-function NumberCard({ myNumber }: { myNumber: number | null }) {
+function NumberCard({ myNumber, range = 10 }: { myNumber: number | null; range?: number }) {
   return (
     <div className="flex flex-col items-center mt-2">
-      <p className="text-xs text-white/35 font-sans mb-3 uppercase tracking-[0.15em]">Ton num&eacute;ro secret</p>
+      <p className="text-xs text-white/35 font-sans mb-3 uppercase tracking-[0.15em]">Ton num&eacute;ro secret · sur {range}</p>
       <div
         className="flex h-32 w-32 items-center justify-center rounded-3xl border backdrop-blur-sm"
         style={{
@@ -788,7 +792,7 @@ function NumberCard({ myNumber }: { myNumber: number | null }) {
       </div>
       <p className="text-sm text-white/45 font-sans mt-5 max-w-xs text-center leading-relaxed">
         Donne une r&eacute;ponse <span className="text-white/80">à voix haute</span> qui colle à
-        l&apos;intensit&eacute; de ton num&eacute;ro. Ni trop, ni trop peu — les autres devront te ranger au bon endroit !
+        l&apos;intensit&eacute; de ton num&eacute;ro <span className="text-white/75">(sur {range})</span>. Les autres devront te ranger au bon endroit !
       </p>
     </div>
   );
@@ -800,7 +804,8 @@ function OrderingBoard({
   nameOf,
   onSubmit,
   round,
-  target,
+  total,
+  range,
   myId,
   rankerName,
   submittedCount,
@@ -810,7 +815,8 @@ function OrderingBoard({
   nameOf: (id: string) => string;
   onSubmit: (order: string[]) => void;
   round: number;
-  target: number;
+  total: number;
+  range: number;
   myId?: string;
   rankerName?: string;
   submittedCount?: number;
@@ -882,7 +888,7 @@ function OrderingBoard({
       onPointerUp={handlePointerUp}
     >
       <div className="flex items-center justify-between mb-1">
-        <span className="text-xs text-white/25 font-sans tracking-wide">Manche {round} · 1<sup>er</sup> à {target}</span>
+        <span className="text-xs text-white/25 font-sans tracking-wide">Manche {round}/{total} · sur {range}</span>
         <span
           className="text-[10px] px-3 py-1 rounded-full border font-sans font-semibold uppercase tracking-wider"
           style={{ color: ACCENT, borderColor: `${ACCENT}40`, background: `${ACCENT}14` }}

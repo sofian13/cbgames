@@ -9,7 +9,8 @@ export type PicoletteType =
   | "duel"
   | "rule"
   | "avoue"
-  | "gage"
+  | "prefere"
+  | "valise"
   | "coquin"
   | "joker";
 
@@ -21,6 +22,8 @@ export interface PicoletteCard {
   text: string;        // ce que le lecteur lit à voix haute
   hint?: string;       // mini-règle d'exécution
   ruleSec?: number;    // pour les cartes "rule" : durée en secondes
+  a?: string;          // option "main en haut" (cartes "prefere")
+  b?: string;          // option "main en bas"  (cartes "prefere")
 }
 
 // 70 cartes — un mélange équilibré. Le contenu est l'âme du jeu, l'utilisateur en ajoutera.
@@ -59,8 +62,69 @@ export const PICOLETTE_CARDS: PicoletteCard[] = [
   { type: "rule", pack: "soft", text: "Pendant 4 min : interdit de dire « grave »", hint: "1er qui dérape paye.", ruleSec: 240 },
   { type: "rule", pack: "soft", text: "Pendant 4 min : interdit de dire « trop »", hint: "1er qui dérape paye.", ruleSec: 240 },
 
-  { type: "gage", pack: "soft", text: "Le lecteur désigne quelqu'un : pendant 30 sec, parle uniquement en chantant. Si tu refuses, tu perds.", hint: "Le groupe valide ou non." },
-  { type: "gage", pack: "soft", text: "Le lecteur désigne quelqu'un : raconte ta plus grosse honte en 30 sec.", hint: "Refus = peine." },
+  // ── TU PRÉFÈRES (vote main haut / main bas, minorité boit) ──
+  { type: "prefere", pack: "soft", text: "Tu préfères :",
+    a: "Ne plus jamais rire de ta vie",
+    b: "Ne plus jamais pleurer de ta vie",
+    hint: "3-2-1 : main en haut pour le choix du haut, main en bas pour le bas. Le côté avec le MOINS de mains boit." },
+  { type: "prefere", pack: "soft", text: "Tu préfères :",
+    a: "Vivre 1000 ans tout(e) seul(e)",
+    b: "Vivre 30 ans entouré(e) de gens qui t'aiment",
+    hint: "Vote main haut / bas. Minorité = peine." },
+  { type: "prefere", pack: "soft", text: "Tu préfères :",
+    a: "Lire dans les pensées",
+    b: "Être invisible quand tu veux",
+    hint: "Vote main haut / bas. Minorité = peine." },
+  { type: "prefere", pack: "soft", text: "Tu préfères :",
+    a: "Pas de musique pendant 1 an",
+    b: "Pas de séries / films pendant 1 an",
+    hint: "Vote main haut / bas. Minorité = peine." },
+  { type: "prefere", pack: "soft", text: "Tu préfères :",
+    a: "Tes parents lisent TOUS tes messages",
+    b: "Tes potes lisent TOUS tes messages",
+    hint: "Vote main haut / bas. Minorité = peine." },
+  { type: "prefere", pack: "soft", text: "Tu préfères :",
+    a: "Bouffer que de l'italien toute ta vie",
+    b: "Bouffer que de l'asiatique toute ta vie",
+    hint: "Vote main haut / bas. Minorité = peine." },
+  { type: "prefere", pack: "trash", text: "Tu préfères :",
+    a: "Ta mère perd une jambe",
+    b: "Ta copine / ton copain devient paralysé(e)",
+    hint: "3-2-1, main haut / bas. Minorité = peine. Bienvenue chez les pourris." },
+  { type: "prefere", pack: "trash", text: "Tu préfères :",
+    a: "Personne ne t'aime mais tu fais ce que tu veux",
+    b: "Tout le monde t'adore mais tu n'as plus aucun libre arbitre",
+    hint: "Main haut / bas. Minorité = peine." },
+  { type: "prefere", pack: "trash", text: "Tu préfères :",
+    a: "Trouver 1M€ en cash mais tu peux jamais l'avouer",
+    b: "Gagner 50K€ légalement",
+    hint: "Main haut / bas. Minorité = peine." },
+  { type: "prefere", pack: "coquin", text: "Tu préfères :",
+    a: "Plus jamais coucher de ta vie",
+    b: "Coucher pour toujours sans jamais aimer",
+    hint: "Main haut / bas. Minorité = peine." },
+  { type: "prefere", pack: "coquin", text: "Tu préfères :",
+    a: "Ton crush lit tout ton historique web",
+    b: "Ta famille apprend tout sur ta vie sexuelle",
+    hint: "Main haut / bas. Minorité = peine." },
+  { type: "prefere", pack: "coquin", text: "Tu préfères :",
+    a: "Faire l'amour pour toujours sans en avoir envie",
+    b: "En avoir envie sans jamais pouvoir en faire",
+    hint: "Main haut / bas. Minorité = peine." },
+
+  // ── DANS MA VALISE (mémoire cumulative tour de table) ──────
+  { type: "valise", pack: "soft", text: "Dans ma valise il y a…",
+    hint: "Chacun à son tour répète TOUTE la liste et ajoute un objet. Le premier qui oublie ou se trompe perd." },
+  { type: "valise", pack: "soft", text: "Dans le coffre de la voiture il y a…",
+    hint: "Chacun répète + ajoute. 1er qui oublie un truc perd." },
+  { type: "valise", pack: "soft", text: "Dans la cave de mes parents il y a…",
+    hint: "Chacun répète + ajoute. 1er qui oublie perd." },
+  { type: "valise", pack: "quiz", text: "Dans mon frigo il y a…",
+    hint: "Chacun répète + ajoute. 1er qui oublie perd." },
+  { type: "valise", pack: "coquin", text: "Dans mon tiroir de chevet il y a…",
+    hint: "Chacun répète + ajoute. 1er qui oublie perd. Coquin autorisé." },
+  { type: "valise", pack: "trash", text: "Dans mon historique de recherche il y a…",
+    hint: "Chacun répète + ajoute. 1er qui oublie ou refuse de proposer perd." },
 
   // ── MUSIQUE / CINE ──────────────────────────────────
   { type: "chant", pack: "musique", text: "Fredonne une chanson au choix. Si personne devine en 30 sec, tu perds.", hint: "Pas de paroles, juste la mélodie." },
@@ -91,7 +155,6 @@ export const PICOLETTE_CARDS: PicoletteCard[] = [
   { type: "coquin", pack: "trash", text: "Le pire endroit où t'as fini une soirée ?", hint: "Tour de table. Personne ne croit ton histoire = peine." },
   { type: "avoue", pack: "trash", text: "T'as déjà menti sur quelque chose d'important à un partenaire ?", hint: "Ceux qui disent oui boivent." },
   { type: "avoue", pack: "trash", text: "T'as déjà fait quelque chose dont t'as vraiment honte sous l'effet d'un truc ?", hint: "Ceux qui disent oui boivent." },
-  { type: "gage", pack: "trash", text: "Le lecteur désigne : tu donnes ton téléphone à ton voisin pendant 10 sec.", hint: "Refus = double peine." },
 
   // ── QUIZ DÉBILE ─────────────────────────────────────
   { type: "table", pack: "quiz", text: "Citez chacun un emoji que vous utilisez jamais. Pas de répétition.", hint: "Premier qui sèche perd." },
@@ -131,14 +194,15 @@ export const PACK_INFO: Record<Pack, { emoji: string; label: string; sub: string
 };
 
 export const TYPE_INFO: Record<PicoletteType, { emoji: string; label: string; tint: string }> = {
-  vote:   { emoji: "🗳️",  label: "Vote groupe",    tint: "#FF6B5B" },
-  table:  { emoji: "🎤",  label: "Tour de table",  tint: "#3DDC97" },
-  chant:  { emoji: "🎵",  label: "Devine la chanson", tint: "#FFD23F" },
-  cine:   { emoji: "🎬",  label: "Devine le film", tint: "#FFD23F" },
-  duel:   { emoji: "🤝",  label: "Duel verbal",    tint: "#5BA3FF" },
-  rule:   { emoji: "📝",  label: "Règle live",     tint: "#C58CFF" },
-  avoue:  { emoji: "🤫",  label: "Avoue…",         tint: "#FF3EA5" },
-  gage:   { emoji: "🎯",  label: "Gage",           tint: "#FF6B5B" },
-  coquin: { emoji: "💋",  label: "Coquin 18+",     tint: "#FF3EA5" },
-  joker:  { emoji: "🃏",  label: "Joker",          tint: "#7A4EE8" },
+  vote:    { emoji: "🗳️",  label: "Vote groupe",        tint: "#FF6B5B" },
+  table:   { emoji: "🎤",  label: "Tour de table",      tint: "#3DDC97" },
+  chant:   { emoji: "🎵",  label: "Devine la chanson",  tint: "#FFD23F" },
+  cine:    { emoji: "🎬",  label: "Devine le film",     tint: "#FFD23F" },
+  duel:    { emoji: "🤝",  label: "Duel verbal",        tint: "#5BA3FF" },
+  rule:    { emoji: "📝",  label: "Règle live",         tint: "#C58CFF" },
+  avoue:   { emoji: "🤫",  label: "Avoue…",             tint: "#FF3EA5" },
+  prefere: { emoji: "🪙",  label: "Tu préfères",        tint: "#FF8C42" },
+  valise:  { emoji: "🧳",  label: "Dans ma valise…",    tint: "#3DDC97" },
+  coquin:  { emoji: "💋",  label: "Coquin 18+",         tint: "#FF3EA5" },
+  joker:   { emoji: "🃏",  label: "Joker",              tint: "#7A4EE8" },
 };

@@ -228,6 +228,26 @@ export default function PicoletteGame({ onReturnToLobby }: GameProps) {
             <p className="text-2xl md:text-3xl font-serif font-semibold text-white text-center leading-snug">
               {card.text}
             </p>
+            {card.type === "prefere" && card.a && card.b && (
+              <div className="mt-4 space-y-2">
+                <div className="rounded-2xl border px-4 py-3 flex items-center gap-3"
+                  style={{ borderColor: `${t.tint}66`, background: `${t.tint}14` }}>
+                  <span className="text-2xl">☝️</span>
+                  <div className="flex-1">
+                    <p className="text-[10px] uppercase tracking-wider mb-0.5" style={{ color: t.tint }}>Main en haut</p>
+                    <p className="text-base font-semibold text-white leading-snug">{card.a}</p>
+                  </div>
+                </div>
+                <div className="rounded-2xl border px-4 py-3 flex items-center gap-3"
+                  style={{ borderColor: `${t.tint}66`, background: `${t.tint}14` }}>
+                  <span className="text-2xl">👇</span>
+                  <div className="flex-1">
+                    <p className="text-[10px] uppercase tracking-wider mb-0.5" style={{ color: t.tint }}>Main en bas</p>
+                    <p className="text-base font-semibold text-white leading-snug">{card.b}</p>
+                  </div>
+                </div>
+              </div>
+            )}
             {card.hint && (
               <p className="mt-3 text-xs text-center" style={{ color: "var(--text-dim)" }}>
                 {card.hint}

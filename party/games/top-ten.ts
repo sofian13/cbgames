@@ -111,14 +111,15 @@ interface RoundResult {
 
 type GamePhase = "waiting" | "config" | "intro" | "theme" | "answering" | "ordering" | "reveal" | "game-over";
 
-const ALLOWED_TARGETS = [10, 25, 50, 100];
+const ALLOWED_RANGES = [10, 25, 50];
 
 // ==========================================================
 export class TopTenGame extends BaseGame {
   gamePlayers: Map<string, TopTenPlayer> = new Map();
   phase: GamePhase = "waiting";
   round = 0;
-  targetScore = 25; // premiere personne a atteindre ce score gagne
+  totalRounds = 0;
+  numberRange = 10; // echelle des numeros secrets (1..numberRange)
   currentTheme: Theme | null = null;
   usedThemes: Set<number> = new Set();
   numberedOrder: string[] = []; // ordre melange propose a tous pour classer
@@ -148,6 +149,8 @@ export class TopTenGame extends BaseGame {
       });
     }
 
+    const ids = Array.from(this.gamePlayers.keys());
+    this.totalRounds = Math.min(8, Math.max(4, ids.length));
     this.round = 0;
     this.usedThemes.clear();
 
@@ -163,9 +166,10 @@ export class TopTenGame extends BaseGame {
 
     this.pickTheme();
 
-    // Assign distinct numbers 1-10 to every player
+    // Assign distinct numbers from 1..numberRange (echelle choisie au setup)
     const everyone = Array.from(this.gamePlayers.values());
-    const pool = Array.from({ length: 10 }, (_, i) => i + 1).sort(() => Math.random() - 0.5);
+    const range = Math.max(this.numberRange, everyone.length); // sécurise
+    const pool = Array.from({ length: range }, (_, i) => i + 1).sort(() => Math.random() - 0.5);
     everyone.forEach((p, i) => {
       p.number = pool[i];
     });
@@ -221,9 +225,7 @@ export class TopTenGame extends BaseGame {
 
     this.clearTimer();
     this.timer = setTimeout(() => {
-      // Fin si au moins un joueur a atteint le score cible
-      const reached = Array.from(this.gamePlayers.values()).some((p) => p.score >= this.targetScore);
-      if (reached) this.endTopTen();
+      if (this.round >= this.totalRounds) this.endTopTen();
       else this.startRound();
     }, REVEAL_TIME);
   }
@@ -253,11 +255,11 @@ export class TopTenGame extends BaseGame {
     const senderPlayer = this.findPlayerByConnection(sender.id);
     if (!senderPlayer) return;
 
-    // Phase "config" : n'importe qui choisit le score cible et lance la partie.
-    if (action === "set-target" && this.phase === "config") {
-      const t = Number(payload.target);
-      if (ALLOWED_TARGETS.includes(t)) {
-        this.targetScore = t;
+    // Phase "config" : n'importe qui choisit l'echelle (1..N) et lance la partie.
+    if (action === "set-range" && this.phase === "config") {
+      const r = Number(payload.range);
+      if (ALLOWED_RANGES.includes(r)) {
+        this.numberRange = r;
         this.broadcastPersonalizedState();
       }
       return;
@@ -351,7 +353,8 @@ export class TopTenGame extends BaseGame {
     return {
       phase: this.phase,
       round: this.round,
-      targetScore: this.targetScore,
+      totalRounds: this.totalRounds,
+      numberRange: this.numberRange,
       theme: this.currentTheme,
       // Liste melangee a classer (numeros caches)
       numberedOrder: this.numberedOrder,
