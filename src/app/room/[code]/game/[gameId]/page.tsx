@@ -138,6 +138,14 @@ const GameComponents = {
     () => import("@/components/games/longueur-onde/longueur-onde-game"),
     { ssr: false }
   ),
+  "tgv": dynamic(
+    () => import("@/components/games/tgv/tgv-game"),
+    { ssr: false }
+  ),
+  "picolette": dynamic(
+    () => import("@/components/games/picolette/picolette-game"),
+    { ssr: false }
+  ),
 } as const;
 
 export default function GamePage() {
