@@ -46,6 +46,7 @@ export default function PicoletteGame({ onReturnToLobby }: GameProps) {
   const [pickingFromRule, setPickingFromRule] = useState(false);
   const [rouletteFor, setRouletteFor] = useState<number | null>(null); // index du joueur qui boit
   const [rouletteSym, setRouletteSym] = useState<string>("…");
+  const [lastLoserIdx, setLastLoserIdx] = useState<number | null>(null); // pour l'undo
 
   const { muted } = useAudio();
   const audioGate = !muted;
@@ -125,6 +126,9 @@ export default function PicoletteGame({ onReturnToLobby }: GameProps) {
         const final = penalty === "shot" ? "🥃" : penalty === "cbd" ? "🌿" : Math.random() < 0.5 ? "🥃" : "🌿";
         setRouletteSym(final);
         setLosses((prev) => prev.map((n, i) => (i === idx ? n + 1 : n)));
+        setLastLoserIdx(idx);
+        // petite vibration au moment où la peine tombe (si l'appareil le supporte)
+        if (typeof navigator !== "undefined" && navigator.vibrate) navigator.vibrate(90);
         setTimeout(() => {
           setRouletteFor(null);
           setRouletteSym("…");
@@ -136,6 +140,13 @@ export default function PicoletteGame({ onReturnToLobby }: GameProps) {
   };
 
   const finishGame = () => { if (audioGate) sfxHandChime(true); setPhase("over"); };
+
+  // Annule la dernière peine désignée (au cas où on se serait planté de joueur)
+  const undoLastLoss = () => {
+    if (lastLoserIdx == null) return;
+    setLosses((prev) => prev.map((n, i) => (i === lastLoserIdx ? Math.max(0, n - 1) : n)));
+    setLastLoserIdx(null);
+  };
 
   // ── Render par phase ─────────────────────────────────────
   if (phase === "setup") {
@@ -223,7 +234,7 @@ export default function PicoletteGame({ onReturnToLobby }: GameProps) {
                 style={{ color: t.tint, borderColor: `${t.tint}66`, background: `${t.tint}1a` }}>
                 <span className="text-sm">{t.emoji}</span>{t.label}
               </span>
-              <span className="text-[10px] text-white/30 cb-mono">#{cardIdx + 1}</span>
+              <span className="text-[10px] text-white/30 cb-mono">{cardIdx + 1} / {deck.length}</span>
             </div>
             <p className="text-2xl md:text-3xl font-serif font-semibold text-white text-center leading-snug">
               {card.text}
@@ -277,8 +288,18 @@ export default function PicoletteGame({ onReturnToLobby }: GameProps) {
           </button>
         </div>
 
+        {/* Undo dernière peine (si on s'est planté de joueur) */}
+        {lastLoserIdx != null && (
+          <div className="mt-2 flex justify-center">
+            <button onClick={undoLastLoss}
+              className="rounded-full border border-white/20 bg-black/40 px-3 py-1 text-[11px] text-white/65 hover:text-white/95 hover:bg-white/10 transition-all">
+              ↩ Annuler la peine de {players[lastLoserIdx]}
+            </button>
+          </div>
+        )}
+
         {/* Losses recap */}
-        <LossRecap players={players} losses={losses} />
+        <LossRecap players={players} losses={losses} highlight={lastLoserIdx ?? -1} />
 
         {/* Picker overlay */}
         {picking && (
@@ -449,18 +470,27 @@ function RouletteOverlay({ sym, playerName }: { sym: string; playerName: string 
   );
 }
 
-function LossRecap({ players, losses }: { players: string[]; losses: number[] }) {
+function LossRecap({ players, losses, highlight = -1 }: { players: string[]; losses: number[]; highlight?: number }) {
   return (
-    <div className="mt-4 flex w-full max-w-md mx-auto flex-wrap items-center justify-center gap-1.5 text-xs">
-      {players.map((name, i) => (
-        <div key={i}
-          className="flex items-center gap-1.5 rounded-full border border-white/10 bg-black/30 px-2.5 py-1">
-          <MascotAvatar color={colorForIndex(i)} size={16} mood="happy" />
-          <span className="font-semibold text-xs">{name}</span>
-          <span className="text-white/30">·</span>
-          <span className="cb-mono text-white/70 text-xs">{losses[i]}</span>
-        </div>
-      ))}
+    <div className="mt-3 flex w-full max-w-md mx-auto flex-wrap items-center justify-center gap-1.5 text-xs">
+      {players.map((name, i) => {
+        const hot = i === highlight;
+        return (
+          <div key={i}
+            className={cn(
+              "flex items-center gap-1.5 rounded-full border px-2.5 py-1 transition-all",
+              hot ? "scale-105" : ""
+            )}
+            style={hot
+              ? { borderColor: `${ACCENT}88`, background: `${ACCENT}22`, boxShadow: `0 0 18px ${ACCENT}55` }
+              : { borderColor: "rgba(255,255,255,0.10)", background: "rgba(0,0,0,0.3)" }}>
+            <MascotAvatar color={colorForIndex(i)} size={16} mood={hot ? "sad" : "happy"} />
+            <span className="font-semibold text-xs">{name}</span>
+            <span className="text-white/30">·</span>
+            <span className="cb-mono text-xs" style={{ color: hot ? "#fff" : "rgba(255,255,255,0.7)" }}>{losses[i]}</span>
+          </div>
+        );
+      })}
     </div>
   );
 }

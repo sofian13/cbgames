@@ -11,6 +11,7 @@ export type PicoletteType =
   | "avoue"
   | "prefere"
   | "valise"
+  | "hasard"
   | "coquin"
   | "joker";
 
@@ -170,6 +171,101 @@ export const PICOLETTE_CARDS: PicoletteCard[] = [
   { type: "joker", pack: "soft", text: "🃏 DOUBLON — La prochaine peine désignée compte double.", hint: "Le lecteur applique sur la prochaine peine." },
   { type: "joker", pack: "soft", text: "🃏 CHOISIS — Le lecteur désigne directement qui boit, sans débat.", hint: "Choisis vite, c'est ton heure." },
   { type: "joker", pack: "trash", text: "🃏 INVERSION — Le perdant désigné fait boire qui il veut à la place.", hint: "Le pouvoir change de main." },
+
+  // ── HASARD (caractéristique / pioche collective) ─────────
+  { type: "hasard", pack: "soft", text: "Si t'as un tatouage, bois 2 fois.", hint: "Pas de tatouage = tu passes." },
+  { type: "hasard", pack: "soft", text: "Le plus jeune de la voiture boit.", hint: "Date de naissance fait foi." },
+  { type: "hasard", pack: "soft", text: "Le plus vieux de la voiture boit.", hint: "Désigne le doyen, il s'exécute." },
+  { type: "hasard", pack: "soft", text: "Si t'es né(e) en hiver (déc-mars), bois.", hint: "Tous les concernés ramassent." },
+  { type: "hasard", pack: "soft", text: "Si t'as plus de 3 abonnements payants sur ton tel, bois.", hint: "Netflix + Spotify + … comptez !" },
+  { type: "hasard", pack: "soft", text: "Si t'as déjà vomi en public, bois.", hint: "L'honnêteté paie. Ou pas." },
+  { type: "hasard", pack: "soft", text: "Le dernier qui a eu un match Tinder, bois.", hint: "Match récent = peine." },
+  { type: "hasard", pack: "soft", text: "Si t'es enfant unique, bois.", hint: "Les Roi(ne)s de la maison ramassent." },
+  { type: "hasard", pack: "soft", text: "Tous les gauchers boivent.", hint: "Avantage à la majorité droitière." },
+  { type: "hasard", pack: "coquin", text: "Si t'as fait l'amour cette semaine, bois 2 fois.", hint: "Allez, soyez honnêtes." },
+  { type: "hasard", pack: "coquin", text: "Si t'as plus d'un(e) ex marqué(e) dans le téléphone, bois.", hint: "Pas eu le courage de supprimer." },
+  { type: "hasard", pack: "trash", text: "Si t'as déjà couché avec quelqu'un dans cette voiture, bois.", hint: "Pas de balance, juste tu bois." },
+  { type: "hasard", pack: "trash", text: "Si t'as déjà été largué(e) par texto, bois.", hint: "Solidarité des largués." },
+
+  // ── VOTES supplémentaires ────────────────────────────────
+  { type: "vote", pack: "soft", text: "Qui pourrait écrire un livre qui se vendra ?", hint: "3-2-1, crie un nom." },
+  { type: "vote", pack: "soft", text: "Qui ferait le meilleur acteur dans un film d'horreur ?", hint: "3-2-1, crie un nom." },
+  { type: "vote", pack: "soft", text: "Qui ferait le pire colocataire ?", hint: "3-2-1, crie un nom." },
+  { type: "vote", pack: "soft", text: "Qui a la pire playlist Spotify ?", hint: "3-2-1, crie un nom." },
+  { type: "vote", pack: "soft", text: "Qui a le plus de chance de gagner au loto un jour ?", hint: "3-2-1, crie un nom." },
+  { type: "vote", pack: "trash", text: "Qui pourrait avoir un enfant non reconnu quelque part ?", hint: "3-2-1, crie un nom." },
+  { type: "vote", pack: "trash", text: "Qui finirait premier en taule ?", hint: "3-2-1, crie un nom." },
+  { type: "vote", pack: "coquin", text: "Qui a la double-vie la plus crédible ?", hint: "3-2-1, crie un nom." },
+
+  // ── TOUR DE TABLE supplémentaires ────────────────────────
+  { type: "table", pack: "soft", text: "Citez chacun un personnage de One Piece (ou anime).", hint: "1er qui sèche perd." },
+  { type: "table", pack: "soft", text: "Citez chacun une boisson chaude.", hint: "1er qui sèche perd." },
+  { type: "table", pack: "soft", text: "Citez chacun une couleur (pas de répétition).", hint: "1er qui sèche perd." },
+  { type: "table", pack: "soft", text: "Citez chacun un sport olympique.", hint: "1er qui sèche perd." },
+  { type: "table", pack: "quiz", text: "Citez chacun une capitale africaine.", hint: "1er qui sèche perd." },
+  { type: "table", pack: "quiz", text: "Citez chacun un pays asiatique.", hint: "1er qui sèche perd." },
+  { type: "table", pack: "quiz", text: "Citez chacun un super-héros Marvel.", hint: "1er qui sèche perd." },
+  { type: "table", pack: "quiz", text: "Citez chacun un instrument de musique.", hint: "1er qui sèche perd." },
+  { type: "table", pack: "quiz", text: "Citez chacun un sport collectif.", hint: "1er qui sèche perd." },
+
+  // ── AVOUE supplémentaires ────────────────────────────────
+  { type: "avoue", pack: "soft", text: "T'as déjà espionné le téléphone de quelqu'un ?", hint: "Ceux qui disent oui boivent." },
+  { type: "avoue", pack: "soft", text: "T'as déjà fait semblant d'avoir lu un message vu ?", hint: "Ceux qui disent oui boivent." },
+  { type: "avoue", pack: "soft", text: "T'as déjà cuisiné en t'engueulant avec quelqu'un ?", hint: "Ceux qui disent oui boivent." },
+  { type: "avoue", pack: "coquin", text: "T'as déjà eu un crush sur quelqu'un de la famille de ton/ta partenaire ?", hint: "Ceux qui disent oui boivent." },
+  { type: "avoue", pack: "coquin", text: "T'as déjà fait l'amour pendant que quelqu'un dormait à côté ?", hint: "Ceux qui disent oui boivent." },
+  { type: "avoue", pack: "trash", text: "T'as déjà cassé un truc important et fait semblant que c'était pas toi ?", hint: "Ceux qui disent oui boivent." },
+  { type: "avoue", pack: "trash", text: "T'as déjà laissé tomber un(e) ami(e) au pire moment ?", hint: "Ceux qui disent oui boivent." },
+
+  // ── TU PRÉFÈRES supplémentaires ──────────────────────────
+  { type: "prefere", pack: "soft", text: "Tu préfères :",
+    a: "Toujours dire la vérité, même quand c'est cruel",
+    b: "Mentir tout le temps pour rendre les gens heureux",
+    hint: "Vote main haut / bas. Minorité = peine." },
+  { type: "prefere", pack: "soft", text: "Tu préfères :",
+    a: "Connaître la date exacte de ta mort",
+    b: "Savoir comment tu vas mourir",
+    hint: "Vote main haut / bas. Minorité = peine." },
+  { type: "prefere", pack: "trash", text: "Tu préfères :",
+    a: "Tes parents se font passer pour toi sur tes réseaux pendant 1 an",
+    b: "Toi tu te fais passer pour tes parents sur les leurs pendant 1 an",
+    hint: "Vote main haut / bas. Minorité = peine." },
+  { type: "prefere", pack: "coquin", text: "Tu préfères :",
+    a: "Coucher avec ton/ta ex, personne le sait",
+    b: "Coucher avec un(e) inconnu(e), ton crush l'apprend",
+    hint: "Vote main haut / bas. Minorité = peine." },
+  { type: "prefere", pack: "coquin", text: "Tu préfères :",
+    a: "Quelqu'un raconte ton historique sexuel devant toi",
+    b: "Quelqu'un balance toutes tes recherches Google de l'année",
+    hint: "Vote main haut / bas. Minorité = peine." },
+
+  // ── DUEL supplémentaires ─────────────────────────────────
+  { type: "duel", pack: "soft", text: "Bras de fer verbal : le premier qui rit ou sourit perd.", hint: "Le lecteur fixe 2 joueurs. 10 sec de fixité totale." },
+  { type: "duel", pack: "soft", text: "Le lecteur désigne 2 joueurs : qui peut tenir « aaaaaa » le plus longtemps.", hint: "Le 1er qui s'arrête perd." },
+  { type: "duel", pack: "musique", text: "Le lecteur désigne 2 joueurs : battle de fredonnage de 5s chacun(e). Le groupe vote.", hint: "Le perdant boit." },
+
+  // ── CHANT / CINE supplémentaires ─────────────────────────
+  { type: "chant", pack: "musique", text: "Chante les premières paroles de la dernière chanson que t'as écoutée.", hint: "Si personne reconnaît, tu perds." },
+  { type: "chant", pack: "musique", text: "Fredonne un générique de série connue.", hint: "Si personne ne trouve en 30s, tu perds." },
+  { type: "cine", pack: "musique", text: "Cite ta réplique culte préférée. Le groupe note de 1 à 10.", hint: "Note ≤ 5 = tu perds." },
+  { type: "cine", pack: "musique", text: "Cite un film que tu détestes que tout le monde adore. Défends-toi en 20s.", hint: "Personne ne te suit = peine." },
+  { type: "cine", pack: "musique", text: "Devine le film : « May the force be with you »", hint: "Premier qui trouve gagne. Si personne, le lecteur boit." },
+  { type: "cine", pack: "musique", text: "Devine le film : « Houston, we have a problem »", hint: "Premier qui trouve gagne. Personne = lecteur perd." },
+
+  // ── COQUIN supplémentaires ───────────────────────────────
+  { type: "coquin", pack: "coquin", text: "Le pire surnom au lit que t'as déjà entendu ?", hint: "Tour de table à voix haute." },
+  { type: "coquin", pack: "coquin", text: "La phrase la plus chaude de ta dernière conversation : lis-la (ou invente).", hint: "Lecteur désigne. Refus = peine double." },
+  { type: "coquin", pack: "trash", text: "Le truc le plus chelou que t'as déjà fait au lit ?", hint: "Lecteur désigne. Bouche cousue = peine." },
+
+  // ── RÈGLES live supplémentaires ──────────────────────────
+  { type: "rule", pack: "soft", text: "Pendant 4 min : interdit de dire « voilà »", hint: "1er qui dérape paye.", ruleSec: 240 },
+  { type: "rule", pack: "soft", text: "Pendant 5 min : interdit de prononcer le mot « non »", hint: "Esquive avec créativité.", ruleSec: 300 },
+  { type: "rule", pack: "soft", text: "Pendant 3 min : tout le monde parle à la 3ᵉ personne", hint: "« Léa pense que… » Sinon peine.", ruleSec: 180 },
+  { type: "rule", pack: "trash", text: "Pendant 4 min : interdit de rire ou de sourire", hint: "1er qui craque ramasse 2 fois.", ruleSec: 240 },
+
+  // ── JOKER supplémentaires ────────────────────────────────
+  { type: "joker", pack: "soft", text: "🃏 STOP ! — Le lecteur peut transférer son tour de lecture à n'importe qui.", hint: "Garde-la mentalement, joue-la plus tard." },
+  { type: "joker", pack: "soft", text: "🃏 BOUCLIER — Tu peux refuser une peine au cours de cette partie. (Une seule fois.)", hint: "Le lecteur retient ton bouclier." },
 ];
 
 export function filterDeck(packs: Set<Pack>): PicoletteCard[] {
@@ -203,6 +299,7 @@ export const TYPE_INFO: Record<PicoletteType, { emoji: string; label: string; ti
   avoue:   { emoji: "🤫",  label: "Avoue…",             tint: "#FF3EA5" },
   prefere: { emoji: "🪙",  label: "Tu préfères",        tint: "#FF8C42" },
   valise:  { emoji: "🧳",  label: "Dans ma valise…",    tint: "#3DDC97" },
+  hasard:  { emoji: "🎲",  label: "Hasard",             tint: "#C58CFF" },
   coquin:  { emoji: "💋",  label: "Coquin 18+",         tint: "#FF3EA5" },
   joker:   { emoji: "🃏",  label: "Joker",              tint: "#7A4EE8" },
 };
