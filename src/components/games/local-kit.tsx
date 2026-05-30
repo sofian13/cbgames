@@ -97,48 +97,63 @@ export function PlayersSetup({
   const remove = (i: number) => setNames((p) => p.filter((_, idx) => idx !== i));
 
   return (
-    <div className={SHELL} style={{ background: BG(`${accent}30`), padding: "32px 20px" }}>
-      <div className="mt-4 text-4xl sm:text-6xl">{emoji}</div>
-      <h1 className="cb-display-md mt-2 sm:text-4xl">{name}</h1>
-      <p className="mb-6 text-xs sm:text-sm" style={{ color: "var(--text-dim)" }}>Qui joue ? ({min}–{max} joueurs)</p>
+    <div
+      className="relative flex min-h-[100svh] flex-col items-center justify-center text-white p-4"
+      style={{ background: BG(`${accent}30`) }}
+    >
+      {/* Header compact : emoji + titre + min/max alignés */}
+      <div className="flex items-center gap-3 mb-3 sm:mb-4">
+        <div className="text-3xl sm:text-4xl">{emoji}</div>
+        <div className="text-left">
+          <h1 className="cb-display-sm leading-tight sm:cb-display-md">{name}</h1>
+          <p className="text-[11px] sm:text-xs" style={{ color: "var(--text-dim)" }}>
+            Qui joue ? ({min}–{max} joueurs)
+          </p>
+        </div>
+      </div>
 
-      <div className="w-full max-w-md space-y-2 sm:max-w-xl sm:space-y-3">
+      {/* Saisie des joueurs : 1 colonne en portrait, 2 colonnes en landscape (sm+) */}
+      <div className="w-full max-w-3xl grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-x-3 sm:gap-y-2">
         {names.map((n, i) => (
-          <div key={i} className="flex items-center gap-2 sm:gap-3">
-            <MascotAvatar color={colorForIndex(i)} size={38} mood="happy" />
+          <div key={i} className="flex items-center gap-2">
+            <MascotAvatar color={colorForIndex(i)} size={32} mood="happy" />
             <input
               value={n}
               onChange={(e) => update(i, e.target.value)}
               placeholder={`Joueur ${i + 1}`}
-              className="flex-1 rounded-2xl border px-4 py-3 text-sm outline-none sm:py-4 sm:text-base"
+              className="flex-1 min-w-0 rounded-2xl border px-3 py-2 text-sm outline-none"
               style={{ background: "rgba(255,255,255,0.06)", borderColor: "var(--line-soft)", color: "#fff" }}
             />
             {names.length > min && (
-              <button onClick={() => remove(i)} className="px-2 text-lg" style={{ color: "var(--text-muted)" }}>×</button>
+              <button onClick={() => remove(i)} className="px-1.5 text-lg" style={{ color: "var(--text-muted)" }}>×</button>
             )}
           </div>
         ))}
       </div>
 
-      {names.length < max && (
-        <button onClick={add} className="mt-3 rounded-full border px-4 py-2 text-xs font-semibold"
-          style={{ borderColor: "var(--line-soft)", color: "var(--text-dim)" }}>
-          + Ajouter un joueur
+      {/* Boutons sur une seule ligne pour ne pas dépasser */}
+      <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+        {names.length < max && (
+          <button onClick={add} className="rounded-full border px-3 py-1.5 text-xs font-semibold"
+            style={{ borderColor: "var(--line-soft)", color: "var(--text-dim)" }}>
+            + Ajouter
+          </button>
+        )}
+        <button
+          onClick={() => onStart(filled)}
+          disabled={!canStart}
+          className="af-btn af-btn-primary py-2.5 px-7 text-sm disabled:opacity-40"
+        >
+          C&apos;est parti !
         </button>
-      )}
-
-      <button
-        onClick={() => onStart(filled)}
-        disabled={!canStart}
-        className="af-btn af-btn-primary mt-8 w-full max-w-md disabled:opacity-40 sm:max-w-xl"
-        style={{ fontSize: 16 }}
-      >
-        C&apos;est parti !
-      </button>
-      {!canStart && <p className="mt-2 text-xs" style={{ color: "var(--text-muted)" }}>Minimum {min} joueurs</p>}
-
-      {onBack && (
-        <button onClick={onBack} className="mt-4 text-sm" style={{ color: "var(--text-muted)" }}>← Changer de mode</button>
+        {onBack && (
+          <button onClick={onBack} className="text-xs" style={{ color: "var(--text-muted)" }}>
+            ← Mode
+          </button>
+        )}
+      </div>
+      {!canStart && (
+        <p className="mt-2 text-[11px]" style={{ color: "var(--text-muted)" }}>Minimum {min} joueurs</p>
       )}
     </div>
   );

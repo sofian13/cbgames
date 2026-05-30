@@ -74,6 +74,7 @@ export default function TgvGame({ onReturnToLobby }: GameProps) {
   const [, setBet] = useState<"plus" | "moins" | null>(null);
   const [rouletteOpen, setRouletteOpen] = useState(false);
   const [rouletteSym, setRouletteSym] = useState("…");
+  const [suspending, setSuspending] = useState(false); // roulement de tambour avant la dernière carte
 
   const { muted } = useAudio();
   const audioGate = !muted;
@@ -149,7 +150,7 @@ export default function TgvGame({ onReturnToLobby }: GameProps) {
   };
 
   const makeBet = (b: "plus" | "moins") => {
-    if (verdict) return;
+    if (verdict || suspending) return;
     const next = drawCard();
     let v: "win" | "loss" | "tie" = "tie";
     if (next.v === card.v) v = "tie";
@@ -157,7 +158,20 @@ export default function TgvGame({ onReturnToLobby }: GameProps) {
     else v = next.v < card.v ? "win" : "loss";
     setBet(b);
     setNextCard(next);
-    setVerdict(v);
+
+    // 🥁 Suspense sur la DERNIÈRE carte du TGV : on attend ~1.6s
+    // avant de révéler la carte et le verdict.
+    const isLast = pileIdx === totalPiles - 1;
+    if (isLast) {
+      setSuspending(true);
+      if (audioGate) sfxCardPlay();
+      setTimeout(() => {
+        setSuspending(false);
+        setVerdict(v);
+      }, 1700);
+    } else {
+      setVerdict(v);
+    }
   };
 
   // Bouton « Tas suivant » après une bonne réponse
@@ -257,21 +271,31 @@ export default function TgvGame({ onReturnToLobby }: GameProps) {
         <div className="flex-1 flex flex-row items-center justify-center gap-4 px-4 py-2 min-h-0">
           {/* Card stack */}
           <div className="flex items-center gap-2 shrink-0">
-            <PlayingCard card={card} highlight={!verdict} />
-            {verdict && nextCard && (
+            <PlayingCard card={card} highlight={!verdict && !suspending} />
+            {(verdict || suspending) && (
               <>
                 <span className="text-2xl text-white/40">→</span>
-                <PlayingCard card={nextCard} small />
+                {suspending ? <MysteryCard /> : nextCard ? <PlayingCard card={nextCard} small /> : null}
               </>
             )}
           </div>
 
           {/* Côté droit : verdict + boutons */}
           <div className="flex flex-col justify-center gap-2 w-40 sm:w-52">
-            {!verdict ? (
+            {suspending ? (
+              <div className="text-center">
+                <div className="text-4xl mb-1 animate-bounce">🥁</div>
+                <p className="cb-display-sm" style={{ color: ACCENT, textShadow: `0 0 14px ${ACCENT}88` }}>
+                  Allez…
+                </p>
+                <p className="text-[11px] text-white/60 mt-1">
+                  Dernière carte du TGV. Roule, roule, roule…
+                </p>
+              </div>
+            ) : !verdict ? (
               <>
                 <p className="text-[10px] uppercase tracking-wider text-white/40 text-center mb-1">
-                  Prochaine carte ?
+                  {pileIdx === totalPiles - 1 ? "Dernière carte · TGV final 🚄" : "Prochaine carte ?"}
                 </p>
                 <BetButton label="PLUS" icon="↑" tint="#FF6B5B" onClick={() => makeBet("plus")} compact />
                 <BetButton label="MOINS" icon="↓" tint="#5BA3FF" onClick={() => makeBet("moins")} compact />
@@ -282,7 +306,7 @@ export default function TgvGame({ onReturnToLobby }: GameProps) {
                 <button onClick={advanceAfterWin}
                   className="w-full py-3 rounded-2xl font-semibold text-white"
                   style={{ background: `linear-gradient(135deg, #2bd47a, ${ACCENT})`, boxShadow: `0 0 25px ${ACCENT}55` }}>
-                  Tas suivant →
+                  {pileIdx === totalPiles - 1 ? "TGV terminé 🚄" : "Tas suivant →"}
                 </button>
               </>
             ) : (
@@ -473,6 +497,21 @@ function PlayingCard({ card, highlight, small }: { card: Card; highlight?: boole
       }}>
       <img alt="" src={`/cards/svg/${card.r}${card.suit}.svg`}
         style={{ width: "100%", height: "100%", objectFit: "fill", borderRadius: 14 }} />
+    </div>
+  );
+}
+
+function MysteryCard() {
+  return (
+    <div
+      className="rounded-2xl border-2 flex items-center justify-center animate-pulse"
+      style={{
+        width: 64, height: 90,
+        borderColor: `${ACCENT}cc`,
+        background: `linear-gradient(135deg, #1a0a2e, #2a0f4a)`,
+        boxShadow: `0 0 35px ${ACCENT}88`,
+      }}>
+      <span className="text-3xl font-bold" style={{ color: ACCENT, textShadow: `0 0 12px ${ACCENT}` }}>?</span>
     </div>
   );
 }
