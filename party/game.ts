@@ -65,6 +65,8 @@ const GAME_REGISTRY: Record<string, () => BaseGame> = {
   "huit-americain": () => new HuitAmericainGame(),
   "president": () => new PresidentGame(),
   "contree": () => new ContreeGame(),
+  "tgv": () => new LocalGame(),
+  "picolette": () => new LocalGame(),
 };
 
 export default class GameServer {
@@ -122,7 +124,7 @@ export default class GameServer {
 
       // Auto-start when enough players join and game hasn't started
       // Motion tennis can start solo (vs bot)
-      if (this.gameId === "undercover" || this.gameId === "chess" || this.gameId === "block-runner" || this.gameId === "guess-word" || this.gameId === "make-guess" || this.gameId === "category-chrono") {
+      if (this.gameId === "undercover" || this.gameId === "chess" || this.gameId === "block-runner" || this.gameId === "guess-word" || this.gameId === "make-guess" || this.gameId === "category-chrono" || this.gameId === "tgv" || this.gameId === "picolette") {
         return;
       }
       const minToStart =

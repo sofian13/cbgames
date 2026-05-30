@@ -76,6 +76,22 @@ const THEMES: Theme[] = [
   { theme: "Ce que tu googles en pleine nuit, panique", low: "« Pourquoi mon chat me fixe »", high: "Un symptome flippant que t'as invente" },
   { theme: "Le dernier truc pour lequel t'as pleure", low: "Une pub trop mignonne", high: "Un truc completement ridicule" },
   { theme: "Ce que t'as deja fait croire a un date", low: "« J'adore la rando »", high: "Un mensonge enorme sur ma vie" },
+  // -- HARDCORE +18 (gros niveau, deconseille en famille) -
+  { theme: "Le nombre de partenaires que t'as eu", low: "Tres peu, je compte sur une main", high: "J'ai arrete de compter" },
+  { theme: "La plus grosse difference d'age avec qui t'as couche", low: "1 ou 2 ans", high: "Plus de 15 ans" },
+  { theme: "Le truc le plus chelou que t'as deja insere quelque part", low: "Rien que de classique", high: "Un objet pas du tout fait pour ca" },
+  { theme: "Le compliment le plus sale a dire pendant l'acte", low: "« T'es beau/belle »", high: "Une phrase carrement crue" },
+  { theme: "Ton tabou sexuel le plus profond", low: "Un truc bizarre mais avouable", high: "Le secret que personne saura jamais" },
+  { theme: "Le plan le plus louche que t'as eu sur une appli", low: "Un date qui parlait que de son chat", high: "Une rencontre vraiment chelou" },
+  { theme: "Ce que tu regardes en cachette", low: "Une serie niaise", high: "Quelque chose de bien embarrassant" },
+  { theme: "Une histoire dont t'as honte mais que tu referais", low: "Un texto envoye bourre", high: "Une nuit que personne doit savoir" },
+  { theme: "Le pire endroit ou t'as fini la nuit", low: "Sur le canape d'un(e) inconnu(e)", high: "Un lieu carrement interdit" },
+  { theme: "Le sexto le plus chaud que t'as deja envoye", low: "Un emoji bien place", high: "Une description tres detaillee et imagee" },
+  { theme: "Le partenaire le plus surprenant que t'as eu", low: "Un(e) ami(e) d'ami(e)", high: "Quelqu'un qu'on aurait jamais imagine" },
+  { theme: "Une chose interdite que t'as deja faite en cachette", low: "Voler un truc dans un magasin", high: "Quelque chose dont je n'avouerai jamais" },
+  { theme: "Le delire d'un soir qui a vraiment derape", low: "On a fini en after", high: "Une nuit completement folle, vrai chaos" },
+  { theme: "Ce que t'as deja fait dans des toilettes publiques", low: "Refaire mon maquillage", high: "Un truc carrement pas reglementaire" },
+  { theme: "Ce que t'as deja fait sous l'effet d'un truc", low: "Rire trop fort en soiree", high: "Un truc que je pensais pas pouvoir faire" },
 ];
 
 // -- Player state -----------------------------------------
@@ -93,14 +109,16 @@ interface RoundResult {
   points: number;
 }
 
-type GamePhase = "waiting" | "intro" | "theme" | "answering" | "ordering" | "reveal" | "game-over";
+type GamePhase = "waiting" | "config" | "intro" | "theme" | "answering" | "ordering" | "reveal" | "game-over";
+
+const ALLOWED_TARGETS = [10, 25, 50, 100];
 
 // ==========================================================
 export class TopTenGame extends BaseGame {
   gamePlayers: Map<string, TopTenPlayer> = new Map();
   phase: GamePhase = "waiting";
   round = 0;
-  totalRounds = 0;
+  targetScore = 25; // premiere personne a atteindre ce score gagne
   currentTheme: Theme | null = null;
   usedThemes: Set<number> = new Set();
   numberedOrder: string[] = []; // ordre melange propose a tous pour classer
@@ -109,11 +127,14 @@ export class TopTenGame extends BaseGame {
   timer: ReturnType<typeof setTimeout> | null = null;
 
   start() {
-    // Marque demarre tout de suite (anti double-start), mais attend un court instant
-    // pour que tous les joueurs du lobby finissent de se connecter avant de figer la liste.
+    // Anti double-start. On passe en phase "config" pour laisser le groupe choisir
+    // le score cible (10/25/50/100) avant de demarrer reellement la partie.
     this.started = true;
+    this.phase = "config";
     this.clearTimer();
-    this.timer = setTimeout(() => this.beginGame(), START_DELAY);
+    this.timer = setTimeout(() => {
+      this.broadcastPersonalizedState();
+    }, START_DELAY);
   }
 
   beginGame() {
@@ -127,8 +148,6 @@ export class TopTenGame extends BaseGame {
       });
     }
 
-    const ids = Array.from(this.gamePlayers.keys());
-    this.totalRounds = Math.min(8, Math.max(4, ids.length)); // une poignee de manches
     this.round = 0;
     this.usedThemes.clear();
 
@@ -202,11 +221,10 @@ export class TopTenGame extends BaseGame {
 
     this.clearTimer();
     this.timer = setTimeout(() => {
-      if (this.round >= this.totalRounds) {
-        this.endTopTen();
-      } else {
-        this.startRound();
-      }
+      // Fin si au moins un joueur a atteint le score cible
+      const reached = Array.from(this.gamePlayers.values()).some((p) => p.score >= this.targetScore);
+      if (reached) this.endTopTen();
+      else this.startRound();
     }, REVEAL_TIME);
   }
 
@@ -234,6 +252,20 @@ export class TopTenGame extends BaseGame {
     const action = payload.action as string;
     const senderPlayer = this.findPlayerByConnection(sender.id);
     if (!senderPlayer) return;
+
+    // Phase "config" : n'importe qui choisit le score cible et lance la partie.
+    if (action === "set-target" && this.phase === "config") {
+      const t = Number(payload.target);
+      if (ALLOWED_TARGETS.includes(t)) {
+        this.targetScore = t;
+        this.broadcastPersonalizedState();
+      }
+      return;
+    }
+    if (action === "begin-game" && this.phase === "config") {
+      this.beginGame();
+      return;
+    }
 
     // Phase "theme" : n'importe qui peut changer la phrase ou la valider.
     if (action === "change-theme" && this.phase === "theme") {
@@ -319,7 +351,7 @@ export class TopTenGame extends BaseGame {
     return {
       phase: this.phase,
       round: this.round,
-      totalRounds: this.totalRounds,
+      targetScore: this.targetScore,
       theme: this.currentTheme,
       // Liste melangee a classer (numeros caches)
       numberedOrder: this.numberedOrder,

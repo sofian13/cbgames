@@ -563,6 +563,45 @@ function GameIcon({ id }: { id: string }) {
           <path d="M70 18 Q76 24 82 18 M70 28 Q76 22 82 28" stroke="rgba(0,0,0,0.4)" strokeWidth="1" fill="none" />
         </g>
       );
+    case "tgv":
+      return (
+        <g>
+          {/* TGV nose : front view with windshields + wheels */}
+          <path d="M30 32 Q30 22 50 22 Q70 22 70 32 L70 70 Q70 76 64 76 L36 76 Q30 76 30 70 Z" fill={lite} />
+          <path d="M36 34 Q36 28 50 28 Q64 28 64 34 L64 50 L36 50 Z" fill="#0E0828" opacity="0.9" />
+          <line x1="50" y1="28" x2="50" y2="50" stroke={lite} strokeOpacity="0.4" strokeWidth="1" />
+          <rect x="34" y="54" width="32" height="3" rx="1.5" fill={dark} />
+          <circle cx="40" cy="74" r="4" fill={dark} />
+          <circle cx="50" cy="74" r="4" fill={dark} />
+          <circle cx="60" cy="74" r="4" fill={dark} />
+          {/* PLUS / MOINS arrows around */}
+          <text x="20" y="40" fontFamily={DISP} fontWeight="900" fontSize="14" fill="#FFD23F">↑</text>
+          <text x="76" y="74" fontFamily={DISP} fontWeight="900" fontSize="14" fill="#FF6B5B">↓</text>
+        </g>
+      );
+    case "picolette":
+      return (
+        <g>
+          {/* Two clinking shot glasses */}
+          <g transform="rotate(-12 38 56)">
+            <path d="M30 38 L46 38 L42 70 L34 70 Z" fill={lite} />
+            <rect x="30" y="38" width="16" height="3" fill={dark} />
+            <ellipse cx="38" cy="46" rx="6" ry="3" fill="#FF3EA5" opacity="0.7" />
+          </g>
+          <g transform="rotate(12 64 56)">
+            <path d="M56 38 L72 38 L68 70 L60 70 Z" fill={lite} />
+            <rect x="56" y="38" width="16" height="3" fill={dark} />
+            <ellipse cx="64" cy="46" rx="6" ry="3" fill="#3DDC97" opacity="0.7" />
+          </g>
+          {/* CBD leaf accent */}
+          <path d="M50 18 L52 24 L58 22 L54 28 L60 30 L52 30 L50 36 L48 30 L40 30 L46 28 L42 22 L48 24 Z" fill="#3DDC97" opacity="0.85" />
+          {/* Spark dots */}
+          <circle cx="22" cy="22" r="1.5" fill={lite} />
+          <circle cx="80" cy="28" r="1.2" fill={lite} />
+          <circle cx="20" cy="78" r="1.2" fill={lite} />
+          <circle cx="80" cy="76" r="1.5" fill={lite} />
+        </g>
+      );
     default:
       return (
         <g>
@@ -583,6 +622,7 @@ const GAME_PATTERN: Record<string, Pattern> = {
   "blind-control": "grid", "block-runner": "grid", "top-ten": "blob", "le-bluffeur": "stars", "longueur-onde": "wave",
   "guess-word": "blob", "category-chrono": "dots", "make-guess": "blob",
   "motion-tennis": "wave",
+  "tgv": "diag", "picolette": "stars",
 };
 
 export function GameArt({ game, rounded = 18, style = {} }: { game: { id: string; category: string }; rounded?: number; style?: React.CSSProperties }) {

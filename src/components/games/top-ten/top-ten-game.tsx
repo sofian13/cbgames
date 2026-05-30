@@ -29,9 +29,9 @@ interface RoundResult {
 }
 
 interface TopTenState {
-  phase: "waiting" | "intro" | "theme" | "answering" | "ordering" | "reveal" | "game-over";
+  phase: "waiting" | "config" | "intro" | "theme" | "answering" | "ordering" | "reveal" | "game-over";
   round: number;
-  totalRounds: number;
+  targetScore: number;
   theme: ThemeState | null;
   numberedOrder: string[];
   submittedCount: number;
@@ -89,6 +89,22 @@ const LOCAL_THEMES: ThemeState[] = [
   { theme: "Le truc le plus louche commandé à 2h du mat", low: "Une pizza", high: "Un truc franchement honteux" },
   { theme: "Ce que tu mettrais jamais sur ton CV", low: "Mon vrai niveau d'anglais", high: "La vraie raison de mon départ" },
   { theme: "Ce que t'as déjà fait croire à un date", low: "« J'adore la rando »", high: "Un mensonge énorme sur ma vie" },
+  // Hardcore +18 (gros niveau)
+  { theme: "Le nombre de partenaires que t'as eu", low: "Très peu, je compte sur une main", high: "J'ai arrêté de compter" },
+  { theme: "La plus grosse différence d'âge avec qui t'as couché", low: "1 ou 2 ans", high: "Plus de 15 ans" },
+  { theme: "Le truc le plus chelou inséré quelque part", low: "Rien que de classique", high: "Un objet pas du tout fait pour ça" },
+  { theme: "Le compliment le plus sale à dire pendant l'acte", low: "« T'es beau/belle »", high: "Une phrase carrément crue" },
+  { theme: "Ton tabou sexuel le plus profond", low: "Un truc bizarre mais avouable", high: "Le secret que personne saura jamais" },
+  { theme: "Le plan le plus louche sur une appli", low: "Un date qui parlait que de son chat", high: "Une rencontre vraiment chelou" },
+  { theme: "Ce que tu regardes en cachette", low: "Une série niaise", high: "Quelque chose d'embarrassant" },
+  { theme: "Une histoire dont t'as honte mais que tu referais", low: "Un texto envoyé bourré", high: "Une nuit que personne doit savoir" },
+  { theme: "Le pire endroit où t'as fini la nuit", low: "Sur le canapé d'un(e) inconnu(e)", high: "Un lieu carrément interdit" },
+  { theme: "Le sexto le plus chaud que t'as envoyé", low: "Un emoji bien placé", high: "Une description très détaillée et imagée" },
+  { theme: "Le partenaire le plus surprenant", low: "Un(e) ami(e) d'ami(e)", high: "Quelqu'un qu'on aurait jamais imaginé" },
+  { theme: "Une chose interdite que t'as déjà faite", low: "Voler un truc dans un magasin", high: "Quelque chose dont j'avouerai jamais" },
+  { theme: "Le délire d'un soir qui a vraiment dérapé", low: "On a fini en after", high: "Une nuit complètement folle" },
+  { theme: "Ce que t'as déjà fait dans des toilettes publiques", low: "Refaire mon maquillage", high: "Un truc carrément pas réglementaire" },
+  { theme: "Ce que t'as déjà fait sous l'effet d'un truc", low: "Rire trop fort en soirée", high: "Un truc que je pensais pas pouvoir faire" },
 ];
 
 // Score un classement (paires adjacentes bien ordonnées soft→hard)
@@ -120,11 +136,12 @@ export default function TopTenGame(props: GameProps) {
 // MODE LOCAL (pass-and-play — chacun voit son numéro, puis chacun classe)
 // ══════════════════════════════════════════════════════════
 function TopTenLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) {
-  type Phase = "setup" | "theme" | "pass-number" | "show-number" | "answer" | "pass-rank" | "rank" | "reveal" | "over";
+  type Phase = "setup" | "target" | "theme" | "pass-number" | "show-number" | "answer" | "pass-rank" | "rank" | "reveal" | "over";
   const [phase, setPhase] = useState<Phase>("setup");
   const [players, setPlayers] = useState<string[]>([]);
   const [scores, setScores] = useState<number[]>([]);
   const [round, setRound] = useState(0);
+  const [targetScore, setTargetScore] = useState<10 | 25 | 50 | 100>(25);
   const [themes] = useState(() => [...LOCAL_THEMES].sort(() => Math.random() - 0.5));
   const [themeCursor, setThemeCursor] = useState(0); // avance à chaque manche / changement
   const [numbers, setNumbers] = useState<Record<number, number>>({}); // playerIdx -> numéro
@@ -133,9 +150,7 @@ function TopTenLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) {
   const [guesses, setGuesses] = useState<Record<number, number[]>>({}); // playerIdx -> classement (player indices)
   const [results, setResults] = useState<Record<number, RoundResult>>({});
 
-  const total = players.length;
   const theme = themes[themeCursor % themes.length] ?? null;
-  const totalRounds = Math.min(8, Math.max(4, total));
 
   // Prépare une manche : numéros + ordre de passage. La phrase est montrée
   // en phase "theme" AVANT que chacun voie son numéro (avec bouton "changer").
@@ -156,8 +171,9 @@ function TopTenLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) {
   const begin = (names: string[]) => {
     setPlayers(names); setScores(names.map(() => 0));
     setThemeCursor(0);
-    startRound(1, names);
+    setPhase("target"); // on choisit le score cible avant la 1re manche
   };
+  const launch = () => { startRound(1, players); };
 
   // Quand tout le monde a classé → score + reveal
   const finishRanking = (allGuesses: Record<number, number[]>) => {
@@ -178,11 +194,14 @@ function TopTenLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) {
   if (phase === "setup") {
     return <PlayersSetup emoji="🔥" name="Top Ten" min={3} max={10} accent="#ff5a8a" onStart={begin} onBack={onReturnToLobby} />;
   }
+  if (phase === "target") {
+    return <TargetPicker target={targetScore} onPick={setTargetScore} onStart={launch} onBack={() => setPhase("setup")} />;
+  }
   if (phase === "theme") {
     return (
       <div className="flex min-h-[100svh] flex-col items-center justify-center p-5 text-white"
         style={{ background: `radial-gradient(circle at 50% 18%, ${ACCENT}26, transparent 45%), #0E0828` }}>
-        <p className="af-eyebrow mb-4">Manche {round}/{totalRounds}</p>
+        <p className="af-eyebrow mb-4">Manche {round} · 1<sup>er</sup> à {targetScore} pts</p>
         <ThemeCard theme={theme} />
         <button onClick={() => { setStepIdx(0); setPhase("pass-number"); }}
           className="af-btn af-btn-primary mt-7 w-full max-w-md">C&apos;est bon → distribuer les numéros</button>
@@ -214,7 +233,7 @@ function TopTenLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) {
     return (
       <div className="flex min-h-[100svh] flex-col items-center p-5 text-white"
         style={{ background: `radial-gradient(circle at 50% 15%, ${ACCENT}26, transparent 45%), #0E0828` }}>
-        <p className="af-eyebrow mt-3">Manche {round}/{totalRounds}</p>
+        <p className="af-eyebrow mt-3">Manche {round} · 1<sup>er</sup> à {targetScore} pts</p>
         <div className="mt-4 w-full max-w-md rounded-3xl border p-6" style={{ borderColor: "rgba(255,255,255,0.1)", background: "rgba(0,0,0,0.4)" }}>
           <p className="af-eyebrow mb-2 text-center" style={{ color: ACCENT }}>Thème 18+</p>
           <p className="cb-display-sm text-center">{theme?.theme}</p>
@@ -243,7 +262,7 @@ function TopTenLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) {
         ids={passOrder.map(String)}
         nameOf={(id) => players[+id]}
         rankerName={players[ranker]}
-        round={round} total={totalRounds}
+        round={round} target={targetScore}
         onSubmit={(o) => {
           const g = o.map(Number);
           const next = { ...guesses, [ranker]: g };
@@ -262,7 +281,7 @@ function TopTenLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) {
     return (
       <div className="flex min-h-[100svh] flex-col items-center overflow-y-auto p-5 text-white"
         style={{ background: `radial-gradient(circle at 50% 15%, ${ACCENT}26, transparent 45%), #0E0828` }}>
-        <p className="af-eyebrow mt-3">Manche {round}/{totalRounds} — Résultat</p>
+        <p className="af-eyebrow mt-3">Manche {round} — Résultat (1<sup>er</sup> à {targetScore})</p>
         <p className="cb-display-sm mt-1 mb-3">Le vrai classement</p>
         <div className="w-full max-w-md space-y-1.5">
           {trueOrder.map((idx, i) => {
@@ -289,8 +308,8 @@ function TopTenLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) {
           ))}
         </div>
 
-        <button onClick={() => { if (round >= totalRounds) setPhase("over"); else { setThemeCursor((c) => c + 1); startRound(round + 1); } }}
-          className="af-btn af-btn-primary mt-6 mb-4 w-full max-w-md">{round >= totalRounds ? "Voir les scores" : "Manche suivante"}</button>
+        <button onClick={() => { const reached = scores.some((s) => s >= targetScore); if (reached) setPhase("over"); else { setThemeCursor((c) => c + 1); startRound(round + 1); } }}
+          className="af-btn af-btn-primary mt-6 mb-4 w-full max-w-md">{scores.some((s) => s >= targetScore) ? "Voir les scores" : "Manche suivante"}</button>
       </div>
     );
   }
@@ -354,12 +373,27 @@ function TopTenOnline({ roomCode, playerId, playerName }: GameProps) {
     );
   }
 
+  // ── CONFIG (choix du score cible avant la 1re manche) ───
+  if (state.phase === "config") {
+    return (
+      <div className="flex flex-1 flex-col items-center justify-center p-6"
+        style={{ background: `radial-gradient(circle at 50% 20%, ${ACCENT}1c, transparent 45%), #060606` }}>
+        <TargetPicker
+          target={(state.targetScore as 10 | 25 | 50 | 100) ?? 25}
+          onPick={(t) => sendAction({ action: "set-target", target: t })}
+          onStart={() => sendAction({ action: "begin-game" })}
+          shared
+        />
+      </div>
+    );
+  }
+
   // ── INTRO ───────────────────────────────────────────────
   if (state.phase === "intro") {
     return (
       <Centered>
         <span className="text-xs text-white/25 font-sans uppercase tracking-[0.2em] mb-6">
-          Manche {state.round} / {state.totalRounds}
+          Manche {state.round} · 1<sup>er</sup> à {state.targetScore} pts
         </span>
         <p className="text-5xl mb-6">🔥</p>
         <p className="text-2xl font-serif font-semibold text-white/90 mb-3 text-center px-6" style={{ textShadow: `0 0 40px ${ACCENT}33` }}>
@@ -379,7 +413,7 @@ function TopTenOnline({ roomCode, playerId, playerName }: GameProps) {
         className="flex flex-1 flex-col items-center justify-center p-5 md:p-6"
         style={{ background: `radial-gradient(circle at 50% 20%, ${ACCENT}16, transparent 45%), #060606` }}
       >
-        <Header round={state.round} total={state.totalRounds} />
+        <Header round={state.round} target={state.targetScore} />
         <div className="flex-1 flex flex-col items-center justify-center w-full">
           <ThemeCard theme={state.theme} />
           <button
@@ -410,7 +444,7 @@ function TopTenOnline({ roomCode, playerId, playerName }: GameProps) {
         className="flex flex-1 flex-col items-center p-5 md:p-6"
         style={{ background: `radial-gradient(circle at 50% 20%, ${ACCENT}14, transparent 45%), #060606` }}
       >
-        <Header round={state.round} total={state.totalRounds} />
+        <Header round={state.round} target={state.targetScore} />
 
         {/* Theme card */}
         <div className="mt-4 mb-6 w-full max-w-md">
@@ -440,7 +474,7 @@ function TopTenOnline({ roomCode, playerId, playerName }: GameProps) {
       return (
         <Centered>
           <span className="text-xs text-white/25 font-sans uppercase tracking-[0.2em] mb-6">
-            Manche {state.round} / {state.totalRounds}
+            Manche {state.round} · 1<sup>er</sup> à {state.targetScore} pts
           </span>
           <p className="text-3xl mb-4">✅</p>
           <p className="text-2xl font-serif font-semibold text-white/90 mb-3 text-center px-6">
@@ -460,7 +494,7 @@ function TopTenOnline({ roomCode, playerId, playerName }: GameProps) {
         myId={playerId}
         onSubmit={(order) => sendAction({ action: "submit-order", order })}
         round={state.round}
-        total={state.totalRounds}
+        target={state.targetScore}
         submittedCount={state.submittedCount}
         playerCount={state.players.length}
       />
@@ -484,7 +518,7 @@ function TopTenOnline({ roomCode, playerId, playerName }: GameProps) {
         }}
       >
         <span className="text-xs text-white/25 font-sans uppercase tracking-[0.2em] mb-3 mt-1">
-          Manche {state.round} / {state.totalRounds} — R&eacute;sultat
+          Manche {state.round} · 1<sup>er</sup> à {state.targetScore} pts — R&eacute;sultat
         </span>
 
         <p
@@ -617,11 +651,11 @@ function Centered({ children }: { children: React.ReactNode }) {
   );
 }
 
-function Header({ round, total }: { round: number; total: number }) {
+function Header({ round, target }: { round: number; target: number }) {
   return (
     <div className="flex w-full max-w-md items-center justify-between">
       <span className="text-xs text-white/25 font-sans tracking-wide">
-        Manche {round}/{total}
+        Manche {round} · 1<sup>er</sup> à {target}
       </span>
       <span
         className="text-[10px] px-3 py-1 rounded-full border font-sans font-semibold uppercase tracking-wider"
@@ -629,6 +663,82 @@ function Header({ round, total }: { round: number; total: number }) {
       >
         Th&egrave;me 18+
       </span>
+    </div>
+  );
+}
+
+// ── Choix du score cible (10/25/50/100) ─────────────────
+function TargetPicker({
+  target,
+  onPick,
+  onStart,
+  onBack,
+  shared,
+}: {
+  target: 10 | 25 | 50 | 100;
+  onPick: (t: 10 | 25 | 50 | 100) => void;
+  onStart: () => void;
+  onBack?: () => void;
+  shared?: boolean;
+}) {
+  const OPTIONS: { v: 10 | 25 | 50 | 100; label: string; sub: string }[] = [
+    { v: 10, label: "Sprint", sub: "~3-4 manches" },
+    { v: 25, label: "Normal", sub: "~6-8 manches" },
+    { v: 50, label: "Long", sub: "~12 manches" },
+    { v: 100, label: "Marathon", sub: "On a la nuit" },
+  ];
+  return (
+    <div className="flex w-full max-w-md flex-col items-center text-white">
+      <p className="text-[10px] uppercase tracking-[0.25em] mb-2" style={{ color: `${ACCENT}cc` }}>
+        Score à atteindre
+      </p>
+      <h2 className="text-3xl font-serif font-semibold text-white/95 mb-1 text-center">
+        Première personne à…
+      </h2>
+      <p className="text-xs text-white/35 font-sans mb-6 text-center">
+        Plus le score est haut, plus la partie est longue.
+      </p>
+      <div className="grid w-full grid-cols-2 gap-2.5">
+        {OPTIONS.map((o) => {
+          const active = o.v === target;
+          return (
+            <button
+              key={o.v}
+              onClick={() => onPick(o.v)}
+              className={cn(
+                "rounded-3xl border p-4 text-center transition-all active:scale-[0.97]",
+                active ? "shadow-lg" : "hover:bg-white/[0.04]"
+              )}
+              style={{
+                borderColor: active ? `${ACCENT}aa` : "rgba(255,255,255,0.10)",
+                background: active ? `${ACCENT}1e` : "rgba(0,0,0,0.32)",
+                boxShadow: active ? `0 0 30px ${ACCENT}44` : undefined,
+              }}
+            >
+              <p className="cb-mono text-3xl font-bold text-white" style={{ color: active ? ACCENT : "#fff" }}>
+                {o.v}
+              </p>
+              <p className="text-xs font-semibold mt-0.5 text-white/85">{o.label}</p>
+              <p className="text-[10px] text-white/40 mt-0.5">{o.sub}</p>
+            </button>
+          );
+        })}
+      </div>
+      <button
+        onClick={onStart}
+        className="mt-7 w-full py-4 rounded-2xl font-sans text-sm font-semibold text-white transition-all hover:brightness-110 active:scale-[0.98]"
+        style={{ background: `linear-gradient(135deg, #2bd47a, ${ACCENT})`, boxShadow: `0 0 25px ${ACCENT}44` }}
+      >
+        Lancer la partie
+      </button>
+      {shared && (
+        <p className="text-[11px] text-white/25 font-sans mt-3 text-center">
+          N&apos;importe qui peut changer le score ou lancer.
+        </p>
+      )}
+      {onBack && (
+        <button onClick={onBack} className="mt-3 text-sm text-white/40">← Modifier les joueurs</button>
+      )}
     </div>
   );
 }
@@ -690,7 +800,7 @@ function OrderingBoard({
   nameOf,
   onSubmit,
   round,
-  total,
+  target,
   myId,
   rankerName,
   submittedCount,
@@ -700,7 +810,7 @@ function OrderingBoard({
   nameOf: (id: string) => string;
   onSubmit: (order: string[]) => void;
   round: number;
-  total: number;
+  target: number;
   myId?: string;
   rankerName?: string;
   submittedCount?: number;
@@ -772,7 +882,7 @@ function OrderingBoard({
       onPointerUp={handlePointerUp}
     >
       <div className="flex items-center justify-between mb-1">
-        <span className="text-xs text-white/25 font-sans tracking-wide">Manche {round}/{total}</span>
+        <span className="text-xs text-white/25 font-sans tracking-wide">Manche {round} · 1<sup>er</sup> à {target}</span>
         <span
           className="text-[10px] px-3 py-1 rounded-full border font-sans font-semibold uppercase tracking-wider"
           style={{ color: ACCENT, borderColor: `${ACCENT}40`, background: `${ACCENT}14` }}
