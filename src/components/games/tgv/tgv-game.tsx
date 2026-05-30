@@ -71,8 +71,9 @@ export default function TgvGame({ onReturnToLobby }: GameProps) {
   const [card, setCard] = useState<Card>(() => drawCard());
   const [nextCard, setNextCard] = useState<Card | null>(null);
   const [verdict, setVerdict] = useState<"win" | "loss" | "tie" | null>(null);
-  const [bet, setBet] = useState<"plus" | "moins" | null>(null);
-  const [rouletteSpin, setRouletteSpin] = useState<string | null>(null);
+  const [, setBet] = useState<"plus" | "moins" | null>(null);
+  const [rouletteOpen, setRouletteOpen] = useState(false);
+  const [rouletteSym, setRouletteSym] = useState("…");
 
   const { muted } = useAudio();
   const audioGate = !muted;
@@ -88,6 +89,41 @@ export default function TgvGame({ onReturnToLobby }: GameProps) {
     }
     lastVerdictRef.current = verdict;
   }, [verdict, audioGate]);
+
+  // Auto-déclenche la roulette quand on perd ou qu'on fait égalité
+  // (court délai pour laisser voir la carte suivante + le verdict)
+  useEffect(() => {
+    if (verdict !== "loss" && verdict !== "tie") return;
+    const startTimer = setTimeout(() => {
+      setRouletteOpen(true);
+      setRouletteSym("…");
+      let ticks = 0;
+      const total = 14 + Math.floor(Math.random() * 6);
+      const spinInt = setInterval(() => {
+        ticks++;
+        setRouletteSym(Math.random() < 0.5 ? "🥃" : "🌿");
+        if (ticks >= total) {
+          clearInterval(spinInt);
+          const final = rouletteOutcome(penalty);
+          setRouletteSym(final);
+          setLosses((prev) => prev.map((n, i) => (i === currentIdx ? n + 1 : n)));
+          setTimeout(() => {
+            setRouletteOpen(false);
+            // Tie = on bois mais on reste sur le tas.
+            // Loss = retour à zéro.
+            if (verdict === "loss") { setPileIdx(0); setConquered(0); }
+            setCard(drawCard());
+            setNextCard(null);
+            setVerdict(null);
+            setBet(null);
+            setRouletteSym("…");
+          }, 1700);
+        }
+      }, 70);
+    }, 950); // laisse voir la carte suivante avant la roulette
+    return () => clearTimeout(startTimer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [verdict]);
 
   // ── Helpers ───────────────────────────────────────────────
   const totalPiles = numPiles;
@@ -107,7 +143,8 @@ export default function TgvGame({ onReturnToLobby }: GameProps) {
     setNextCard(null);
     setVerdict(null);
     setBet(null);
-    setRouletteSpin(null);
+    setRouletteOpen(false);
+    setRouletteSym("…");
     setPhase("intro");
   };
 
@@ -123,52 +160,22 @@ export default function TgvGame({ onReturnToLobby }: GameProps) {
     setVerdict(v);
   };
 
-  const continueAfter = () => {
-    if (!verdict) return;
-    if (verdict === "win") {
-      const nextPile = pileIdx + 1;
-      const newConquered = conquered + 1;
-      setConquered(newConquered);
-      if (nextPile >= totalPiles) {
-        // TGV terminé !
-        if (audioGate) sfxHandChime(true);
-        setPhase("win");
-      } else {
-        setPileIdx(nextPile);
-        setCard(nextCard!);
-        setNextCard(null);
-        setVerdict(null);
-        setBet(null);
-      }
-      return;
+  // Bouton « Tas suivant » après une bonne réponse
+  const advanceAfterWin = () => {
+    if (verdict !== "win") return;
+    const nextPile = pileIdx + 1;
+    const newConquered = conquered + 1;
+    setConquered(newConquered);
+    if (nextPile >= totalPiles) {
+      if (audioGate) sfxHandChime(true);
+      setPhase("win");
+    } else {
+      setPileIdx(nextPile);
+      setCard(nextCard!);
+      setNextCard(null);
+      setVerdict(null);
+      setBet(null);
     }
-    // loss ou tie → roulette
-    setRouletteSpin("…");
-    let ticks = 0;
-    const total = 14 + Math.floor(Math.random() * 6);
-    const t = setInterval(() => {
-      ticks++;
-      const sym = Math.random() < 0.5 ? "🥃" : "🌿";
-      setRouletteSpin(sym);
-      if (ticks >= total) {
-        clearInterval(t);
-        const final = rouletteOutcome(penalty);
-        setRouletteSpin(final);
-        setLosses((prev) => prev.map((n, i) => (i === currentIdx ? n + 1 : n)));
-        setTimeout(() => {
-          // Tie = on bois mais on reste sur le tas. Loss = retour à zéro.
-          if (verdict === "loss") {
-            setPileIdx(0);
-            setConquered(0);
-          }
-          setCard(drawCard());
-          setNextCard(null);
-          setVerdict(null);
-          setBet(null);
-          setRouletteSpin(null);
-        }, 1800);
-      }
-    }, 70);
   };
 
   const nextPlayer = () => {
@@ -200,98 +207,124 @@ export default function TgvGame({ onReturnToLobby }: GameProps) {
 
   if (phase === "intro") {
     return (
-      <div className="flex min-h-[100svh] flex-col items-center justify-center p-6 text-white"
-        style={{ background: BG_GRAD }}>
-        <p className="af-eyebrow mb-2" style={{ color: ACCENT }}>À toi de monter dans le TGV</p>
-        <Mascot size={130} color={colorForIndex(currentIdx)} mood="wink" arms />
-        <h1 className="cb-display-lg mt-3 text-center">{currentName}</h1>
-        <p className="mt-3 max-w-sm text-center text-sm" style={{ color: "var(--text-dim)" }}>
-          {totalPiles} tas à enchaîner sans erreur. Plus ou moins ?
-          Tu te plantes → roulette {penalty === "any" ? "🥃 ou 🌿" : penalty === "shot" ? "🥃" : "🌿"} + retour à zéro.
-        </p>
-        <button onClick={() => setPhase("play")} className="af-btn af-btn-primary mt-7 w-full max-w-xs">
-          Embarquer 🚄
-        </button>
+      <div className="flex flex-1 flex-row items-center justify-center gap-6 p-4 text-white"
+        style={{ background: BG_GRAD, minHeight: "100svh" }}>
+        <Mascot size={92} color={colorForIndex(currentIdx)} mood="wink" arms />
+        <div className="flex flex-col items-start max-w-md">
+          <p className="af-eyebrow" style={{ color: ACCENT }}>À toi de monter dans le TGV</p>
+          <h1 className="cb-display-md mt-1">{currentName}</h1>
+          <p className="mt-2 text-xs" style={{ color: "var(--text-dim)" }}>
+            {totalPiles} tas à enchaîner sans erreur. Plus ou moins ?
+            Tu te plantes → roulette {penalty === "any" ? "🥃 ou 🌿" : penalty === "shot" ? "🥃" : "🌿"} + retour à zéro.
+          </p>
+          <button onClick={() => setPhase("play")}
+            className="mt-3 py-2.5 px-5 rounded-2xl font-semibold text-white text-sm"
+            style={{ background: `linear-gradient(135deg, #2bd47a, ${ACCENT})`, boxShadow: `0 0 22px ${ACCENT}55` }}>
+            Embarquer 🚄
+          </button>
+        </div>
       </div>
     );
   }
 
   if (phase === "play") {
     return (
-      <div className="relative flex min-h-[100svh] flex-col items-center p-5 text-white"
-        style={{ background: BG_GRAD }}>
-        {/* Train wagons */}
-        <TrainProgress total={totalPiles} conquered={conquered} pileIdx={pileIdx} />
-
-        {/* Player ribbon */}
-        <div className="mt-4 flex items-center gap-3 rounded-full border border-white/10 bg-black/40 px-3 py-1.5 backdrop-blur-sm">
-          <MascotAvatar color={colorForIndex(currentIdx)} size={26} mood="wink" />
-          <span className="text-sm font-semibold">{currentName}</span>
-          <span className="text-xs text-white/40">·</span>
-          <span className="text-xs text-white/55">Tas {pileIdx + 1}/{totalPiles}</span>
+      <div className="relative flex flex-1 flex-col text-white overflow-hidden"
+        style={{ background: BG_GRAD, minHeight: "100svh" }}>
+        {/* Top bar : train + ribbon + chips de peines + fin */}
+        <div className="flex items-center gap-2 px-3 py-2 border-b border-white/5">
+          <TrainProgress total={totalPiles} conquered={conquered} pileIdx={pileIdx} compact />
+          <div className="flex items-center gap-2 rounded-full border border-white/10 bg-black/40 px-2.5 py-1 shrink-0">
+            <MascotAvatar color={colorForIndex(currentIdx)} size={22} mood="wink" />
+            <span className="text-xs font-bold">{currentName}</span>
+            <span className="text-[10px] text-white/45 cb-mono">{pileIdx + 1}/{totalPiles}</span>
+          </div>
+          <div className="flex-1 flex justify-end gap-1.5 overflow-hidden">
+            {players.map((name, i) => (
+              <div key={i}
+                className={cn("flex items-center gap-1 rounded-full border px-1.5 py-0.5 shrink-0",
+                  i === currentIdx ? "border-white/30 bg-white/[0.08]" : "border-white/10 bg-black/30")}>
+                <MascotAvatar color={colorForIndex(i)} size={14} mood="happy" />
+                <span className="cb-mono text-[10px] text-white/75">{losses[i]}</span>
+              </div>
+            ))}
+          </div>
+          <button onClick={finishGame}
+            className="rounded-full border border-white/15 bg-black/40 px-2 py-1 text-[10px] shrink-0">Fin</button>
         </div>
 
-        {/* Card */}
-        <div className="relative mt-6 flex flex-col items-center">
-          <PlayingCard card={card} highlight={!verdict} />
-          {/* Si on a un verdict, on affiche aussi la carte suivante à côté */}
-          {verdict && nextCard && (
-            <div className="mt-3 flex items-center gap-3 animate-[fadein_0.4s_ease]">
-              <span className="text-2xl">→</span>
-              <PlayingCard card={nextCard} small />
-            </div>
-          )}
+        {/* Center : card à gauche, contrôles à droite */}
+        <div className="flex-1 flex flex-row items-center justify-center gap-4 px-4 py-2 min-h-0">
+          {/* Card stack */}
+          <div className="flex items-center gap-2 shrink-0">
+            <PlayingCard card={card} highlight={!verdict} />
+            {verdict && nextCard && (
+              <>
+                <span className="text-2xl text-white/40">→</span>
+                <PlayingCard card={nextCard} small />
+              </>
+            )}
+          </div>
+
+          {/* Côté droit : verdict + boutons */}
+          <div className="flex flex-col justify-center gap-2 w-40 sm:w-52">
+            {!verdict ? (
+              <>
+                <p className="text-[10px] uppercase tracking-wider text-white/40 text-center mb-1">
+                  Prochaine carte ?
+                </p>
+                <BetButton label="PLUS" icon="↑" tint="#FF6B5B" onClick={() => makeBet("plus")} compact />
+                <BetButton label="MOINS" icon="↓" tint="#5BA3FF" onClick={() => makeBet("moins")} compact />
+              </>
+            ) : verdict === "win" ? (
+              <>
+                <p className="cb-display-sm text-center" style={{ color: "#3DDC97" }}>✅ Bien vu !</p>
+                <button onClick={advanceAfterWin}
+                  className="w-full py-3 rounded-2xl font-semibold text-white"
+                  style={{ background: `linear-gradient(135deg, #2bd47a, ${ACCENT})`, boxShadow: `0 0 25px ${ACCENT}55` }}>
+                  Tas suivant →
+                </button>
+              </>
+            ) : (
+              <p className="cb-display-sm text-center"
+                style={{ color: verdict === "tie" ? "#FFD23F" : ACCENT }}>
+                {verdict === "tie" ? "🟡 Égalité" : "💥 Raté"}
+                <span className="block text-xs text-white/50 mt-1 normal-case">Roulette de la peine…</span>
+              </p>
+            )}
+          </div>
         </div>
 
-        {/* Verdict */}
-        {verdict && (
-          <p className="mt-4 cb-display-sm text-center"
-            style={{ color: verdict === "win" ? "#3DDC97" : verdict === "tie" ? "#FFD23F" : ACCENT }}>
-            {verdict === "win" ? "✅ Bien vu !" : verdict === "tie" ? "🟡 Égalité — tu bois quand même" : "💥 Raté !"}
-          </p>
+        {/* Roulette en overlay quand on perd / égalité */}
+        {rouletteOpen && (
+          <RouletteOverlay sym={rouletteSym} playerName={currentName} />
         )}
-
-        {/* Buttons */}
-        {!verdict ? (
-          <div className="mt-7 grid w-full max-w-md grid-cols-2 gap-3">
-            <BetButton label="MOINS" icon="↓" tint="#5BA3FF" onClick={() => makeBet("moins")} />
-            <BetButton label="PLUS" icon="↑" tint="#FF6B5B" onClick={() => makeBet("plus")} />
-          </div>
-        ) : rouletteSpin ? (
-          <div className="mt-7 flex flex-col items-center">
-            <div className="flex h-32 w-32 items-center justify-center rounded-3xl border bg-black/50 text-7xl"
-              style={{ borderColor: `${ACCENT}66`, boxShadow: `0 0 50px ${ACCENT}55` }}>
-              {rouletteSpin}
-            </div>
-            <p className="af-eyebrow mt-3" style={{ color: ACCENT }}>La peine tombe…</p>
-          </div>
-        ) : (
-          <button onClick={continueAfter} className="af-btn af-btn-primary mt-7 w-full max-w-md">
-            {verdict === "win" ? "Tas suivant →" : "Roulette 🥃/🌿"}
-          </button>
-        )}
-
-        {/* Losses recap */}
-        <LossRecap players={players} losses={losses} currentIdx={currentIdx} />
       </div>
     );
   }
 
   if (phase === "win") {
     return (
-      <div className="flex min-h-[100svh] flex-col items-center justify-center p-6 text-white relative overflow-hidden"
-        style={{ background: BG_GRAD }}>
-        <div className="text-7xl mb-2 animate-[pulse_1.4s_ease_infinite]">🚄</div>
-        <p className="af-eyebrow" style={{ color: ACCENT }}>TGV terminé</p>
-        <h2 className="cb-display-lg mt-1 mb-2 text-center">{currentName} a passé tous les tas !</h2>
-        <p className="text-sm max-w-sm text-center mb-7" style={{ color: "var(--text-dim)" }}>
-          Pas une goutte. Bravo champion. À ton tour de regarder les autres galérer.
-        </p>
-        <div className="flex w-full max-w-md flex-col gap-2.5">
-          <button onClick={nextPlayer} className="af-btn af-btn-primary">Joueur suivant →</button>
-          <button onClick={finishGame} className="af-btn af-btn-ghost">Terminer la partie</button>
+      <div className="flex flex-1 flex-row items-center justify-center gap-6 p-4 text-white"
+        style={{ background: BG_GRAD, minHeight: "100svh" }}>
+        <div className="text-7xl animate-[pulse_1.4s_ease_infinite]">🚄</div>
+        <div className="flex flex-col items-start max-w-md">
+          <p className="af-eyebrow" style={{ color: ACCENT }}>TGV terminé</p>
+          <h2 className="cb-display-md mt-1 mb-1">{currentName} a passé tous les tas !</h2>
+          <p className="text-xs mb-3" style={{ color: "var(--text-dim)" }}>
+            Pas une goutte. Bravo champion·ne — à ton tour de regarder les autres galérer.
+          </p>
+          <div className="flex gap-2">
+            <button onClick={nextPlayer}
+              className="py-2 px-4 rounded-2xl font-semibold text-white text-sm"
+              style={{ background: `linear-gradient(135deg, #2bd47a, ${ACCENT})`, boxShadow: `0 0 22px ${ACCENT}55` }}>
+              Joueur suivant →
+            </button>
+            <button onClick={finishGame} className="py-2 px-4 rounded-2xl text-sm border border-white/15 bg-black/30">
+              Terminer
+            </button>
+          </div>
         </div>
-        <LossRecap players={players} losses={losses} currentIdx={currentIdx} />
       </div>
     );
   }
@@ -399,22 +432,24 @@ function ConfigScreen({
   );
 }
 
-function TrainProgress({ total, conquered, pileIdx }: { total: number; conquered: number; pileIdx: number }) {
+function TrainProgress({ total, conquered, pileIdx, compact }: { total: number; conquered: number; pileIdx: number; compact?: boolean }) {
   const wagons = useMemo(() => Array.from({ length: total }, (_, i) => i), [total]);
+  const sz = compact ? "h-6 w-7" : "h-8 w-10";
+  const txt = compact ? "text-[10px]" : "text-xs";
   return (
-    <div className="mt-4 flex items-center gap-1.5">
-      <span className="text-2xl mr-1">🚂</span>
+    <div className={cn("flex items-center gap-1 shrink-0", compact ? "" : "mt-4 gap-1.5")}>
+      <span className={compact ? "text-lg mr-0.5" : "text-2xl mr-1"}>🚂</span>
       {wagons.map((i) => {
         const done = i < conquered;
         const here = i === pileIdx;
         return (
           <div key={i}
-            className="h-8 w-10 rounded-md border flex items-center justify-center text-xs font-bold transition-all"
+            className={cn(sz, "rounded-md border flex items-center justify-center font-bold transition-all", txt)}
             style={{
               background: done ? "#3DDC97" : here ? `${ACCENT}40` : "rgba(255,255,255,0.04)",
               borderColor: done ? "#1AA66A" : here ? `${ACCENT}aa` : "rgba(255,255,255,0.10)",
               color: done ? "#0a0420" : "#fff",
-              boxShadow: here && !done ? `0 0 15px ${ACCENT}55` : undefined,
+              boxShadow: here && !done ? `0 0 12px ${ACCENT}55` : undefined,
             }}>
             {done ? "✓" : i + 1}
           </div>
@@ -425,8 +460,9 @@ function TrainProgress({ total, conquered, pileIdx }: { total: number; conquered
 }
 
 function PlayingCard({ card, highlight, small }: { card: Card; highlight?: boolean; small?: boolean }) {
-  const w = small ? 78 : 138;
-  const h = small ? 110 : 196;
+  // Tailles compactes pour tenir en landscape téléphone sans scroll
+  const w = small ? 64 : 110;
+  const h = small ? 90 : 154;
   return (
     <div key={`${card.r}${card.suit}-${Math.random()}`}
       className="rounded-2xl border bg-white shadow-2xl animate-[cardFlip_0.45s_ease]"
@@ -441,33 +477,34 @@ function PlayingCard({ card, highlight, small }: { card: Card; highlight?: boole
   );
 }
 
-function BetButton({ label, icon, tint, onClick }: { label: string; icon: string; tint: string; onClick: () => void }) {
+function BetButton({ label, icon, tint, onClick, compact }: { label: string; icon: string; tint: string; onClick: () => void; compact?: boolean }) {
   return (
     <button onClick={onClick}
-      className="rounded-3xl py-6 text-center font-bold text-white transition-all hover:brightness-110 active:scale-[0.97]"
+      className={cn(
+        "rounded-2xl text-center font-bold text-white transition-all hover:brightness-110 active:scale-[0.97] flex items-center justify-center gap-2",
+        compact ? "py-2.5 px-3" : "py-6"
+      )}
       style={{
         background: `linear-gradient(135deg, ${tint}, ${tint}88)`,
-        boxShadow: `0 0 30px ${tint}55`,
+        boxShadow: `0 0 22px ${tint}55`,
       }}>
-      <div className="text-4xl mb-1">{icon}</div>
-      <div className="cb-mono text-sm tracking-wider">{label}</div>
+      <div className={compact ? "text-2xl" : "text-4xl mb-1"}>{icon}</div>
+      <div className={cn("cb-mono tracking-wider", compact ? "text-sm" : "text-sm")}>{label}</div>
     </button>
   );
 }
 
-function LossRecap({ players, losses, currentIdx }: { players: string[]; losses: number[]; currentIdx: number }) {
+function RouletteOverlay({ sym, playerName }: { sym: string; playerName: string }) {
   return (
-    <div className="mt-7 mb-6 flex w-full max-w-md flex-wrap items-center justify-center gap-2 text-xs">
-      {players.map((name, i) => (
-        <div key={i}
-          className={cn("flex items-center gap-1.5 rounded-full border px-2.5 py-1",
-            i === currentIdx ? "border-white/30 bg-white/[0.06]" : "border-white/10 bg-black/30")}>
-          <MascotAvatar color={colorForIndex(i)} size={18} mood="happy" />
-          <span className="font-semibold">{name}</span>
-          <span className="text-white/50">·</span>
-          <span className="cb-mono text-white/70">{losses[i]} 🥃🌿</span>
-        </div>
-      ))}
+    <div className="absolute inset-0 z-50 flex flex-col items-center justify-center backdrop-blur-md"
+      style={{ background: "rgba(0,0,0,0.85)" }}>
+      <p className="af-eyebrow mb-3" style={{ color: ACCENT }}>{playerName} prend la peine</p>
+      <div className="flex h-32 w-32 sm:h-40 sm:w-40 items-center justify-center rounded-[2rem] border bg-black/60 text-[72px] sm:text-[100px]"
+        style={{ borderColor: `${ACCENT}aa`, boxShadow: `0 0 80px ${ACCENT}88` }}>
+        {sym}
+      </div>
+      <p className="mt-3 text-xs sm:text-sm" style={{ color: "var(--text-dim)" }}>Allez, santé. 🥂</p>
     </div>
   );
 }
+
