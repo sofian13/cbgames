@@ -401,6 +401,11 @@ export default function DoubleSautGame({ roomCode, playerId, playerName, onRetur
         </div>
       </div>
 
+      {/* DEBUG (temporaire) */}
+      <div className="absolute left-2 top-14 z-30 rounded bg-black/70 px-2 py-1 font-mono text-[10px] text-lime-300">
+        started={String(state.started)} status={state.status} idx={state.index} players={(state.players || []).length} canvas={canvasRef.current ? `${canvasRef.current.width}x${canvasRef.current.height}` : "null"}
+      </div>
+
       {/* aire de jeu */}
       <div className="flex flex-1 items-center justify-center p-1">
         <canvas
