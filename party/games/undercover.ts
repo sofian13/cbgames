@@ -52,6 +52,51 @@ const WORD_PAIRS: [string, string][] = [
   ["Médecin", "Infirmier"], ["Boulanger", "Pâtissier"], ["Avocat", "Juge"],
   ["Pompier", "Policier"], ["Pilote", "Astronaute"], ["Coiffeur", "Barbier"],
   ["Professeur", "Directeur"], ["Plombier", "Électricien"],
+  // -- Extension ----------------------------------------------
+  // Bouffe
+  ["Glace", "Sorbet"], ["Chocolat", "Bonbon"], ["Frites", "Chips"],
+  ["Soupe", "Velouté"], ["Ketchup", "Mayonnaise"], ["Baguette", "Pain de mie"],
+  ["Steak", "Escalope"], ["Saumon", "Thon"], ["Gaufre", "Pancake"],
+  ["Nuggets", "Cordon bleu"],
+  // Fruits / légumes
+  ["Pomme", "Poire"], ["Fraise", "Framboise"], ["Citron", "Orange"],
+  ["Carotte", "Navet"], ["Tomate", "Poivron"], ["Champignon", "Truffe"],
+  // Boissons
+  ["Jus d'orange", "Limonade"], ["Smoothie", "Milkshake"],
+  ["Champagne", "Cidre"], ["Whisky", "Cognac"],
+  // Lieux
+  ["Musée", "Galerie"], ["Parc", "Jardin"], ["Église", "Cathédrale"],
+  ["Château", "Palais"], ["Désert", "Savane"], ["Île", "Presqu'île"],
+  ["Métro", "Tramway"], ["Supermarché", "Épicerie"], ["Stade", "Arène"],
+  ["Prison", "Donjon"],
+  // Sports
+  ["Basket", "Handball"], ["Golf", "Mini-golf"], ["Escalade", "Randonnée"],
+  ["Surf", "Skate"], ["Judo", "Taekwondo"], ["Volley", "Beach-volley"],
+  ["Patinage", "Hockey"],
+  // Animaux
+  ["Loup", "Renard"], ["Éléphant", "Rhinocéros"], ["Grenouille", "Crapaud"],
+  ["Abeille", "Guêpe"], ["Papillon", "Libellule"], ["Pingouin", "Manchot"],
+  ["Tortue", "Escargot"], ["Singe", "Gorille"], ["Crocodile", "Alligator"],
+  ["Souris", "Rat"], ["Corbeau", "Pie"], ["Hibou", "Chouette"],
+  // Pop culture
+  ["Spider-Man", "Iron Man"], ["Pikachu", "Dracaufeu"], ["Goku", "Vegeta"],
+  ["Minecraft", "Roblox"], ["Fortnite", "PUBG"], ["Netflix", "Disney+"],
+  ["TikTok", "Instagram"], ["iPhone", "Samsung"], ["PlayStation", "Xbox"],
+  // Objets
+  ["Vélo", "Trottinette"], ["Bateau", "Voilier"], ["Casque", "Écouteurs"],
+  ["Réfrigérateur", "Congélateur"], ["Aspirateur", "Balai"],
+  ["Parapluie", "Parasol"], ["Valise", "Sac à dos"], ["Bague", "Collier"],
+  ["Marteau", "Tournevis"],
+  // Nature / temps
+  ["Étoile", "Planète"], ["Orage", "Tempête"], ["Rivière", "Fleuve"],
+  ["Caillou", "Rocher"], ["Nuage", "Brouillard"], ["Cascade", "Source"],
+  // Métiers
+  ["Acteur", "Chanteur"], ["Peintre", "Sculpteur"],
+  ["Journaliste", "Présentateur"], ["Serveur", "Cuisinier"],
+  ["Jardinier", "Fleuriste"], ["Vétérinaire", "Éleveur"],
+  ["Architecte", "Ingénieur"], ["Magicien", "Jongleur"],
+  // Événements
+  ["Noël", "Nouvel An"], ["Vacances", "Week-end"], ["Examen", "Concours"],
 ];
 
 // -- Roles -------------------------------------------------
