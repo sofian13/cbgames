@@ -57,16 +57,16 @@ const WORD_BANK: string[] = [
   "Tinder", "Snapchat", "Photomaton", "Karaoke", "Escape Game",
   "Trampoline", "Jacuzzi", "Sauna", "Limousine",
   // Lieux (suite)
-  "Plage", "Camping", "Refuge", "Phare", "Chateau", "Prison", "Tribunal",
+  "Refuge", "Phare", "Chateau", "Prison", "Tribunal",
   "Banque", "Poste", "Mairie", "Theatre", "Opera", "Planetarium",
   "Vignoble", "Ferme", "Ranch", "Chantier", "Mine", "Garage", "Station-service",
-  "Salle de sport", "Coiffeur", "Tatoueur", "Notaire", "Auto-ecole",
+  "Salle de sport", "Tatoueur", "Notaire", "Auto-ecole",
   // Animaux
   "Lion", "Elephant", "Pingouin", "Dauphin", "Requin", "Crocodile",
   "Kangourou", "Panda", "Girafe", "Hamster", "Perroquet", "Hibou",
   "Pieuvre", "Abeille", "Coccinelle", "Licorne", "Dinosaure", "Loup",
   // Metiers (suite)
-  "Juge", "President", "Espion", "Youtubeur", "Influenceur", "DJ",
+  "Juge", "President", "Espion", "Youtubeur", "Influenceur",
   "Cuisinier", "Serveur", "Mecanicien", "Jardinier", "Architecte",
   "Journaliste", "Photographe", "Steward", "Marin", "Berger", "Apiculteur",
   // Nourriture (suite)
@@ -94,7 +94,7 @@ const WORD_BANK: string[] = [
   "Apple", "Nike", "Adidas", "Coca-Cola", "Samsung", "Google", "Amazon",
   "Tesla", "Lego", "Ferrari", "Gucci", "Sephora", "Zara", "Lacoste",
   // Personnages celebres / fiction
-  "Mickey", "Pikachu", "Goku", "Spider-Man", "Dark Vador", "Iron Man",
+  "Mickey", "Pikachu", "Goku", "Dark Vador", "Iron Man",
   "Superman", "Sherlock", "James Bond", "Tintin", "Asterix", "Le Joker",
   // Objets / Concepts (suite)
   "Drone", "Trottinette", "Hoverboard", "Casque VR", "Selfie", "QR Code",
