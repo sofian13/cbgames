@@ -75,7 +75,7 @@ export default function DoubleSautGame({ roomCode, playerId, playerName, onRetur
   const [orientation, setOrientation] = useState<"ok" | "portrait">("ok");
 
   const lobby = state?.lobby ?? [];
-  const mySlot = state ? state.slotIds.indexOf(playerId) : -1;
+  const mySlot = state?.slotIds ? state.slotIds.indexOf(playerId) : -1;
   mySlotRef.current = mySlot;
   const amSpectator = !!state?.started && mySlot < 0;
 
