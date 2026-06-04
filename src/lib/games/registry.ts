@@ -336,9 +336,9 @@ export const GAMES: GameMeta[] = [
   {
     id: "double-saut",
     name: "Double Saut",
-    description: "Platformer coop a deux: chacun son tel, atteignez la sortie ensemble.",
+    description: "Platformer coop: seul (partenaire IA) ou a deux, atteignez la sortie ensemble.",
     category: "party",
-    minPlayers: 2,
+    minPlayers: 1,
     maxPlayers: 2,
     icon: "🦘",
     implemented: true,

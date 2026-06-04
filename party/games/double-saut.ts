@@ -56,6 +56,8 @@ export class DoubleSautGame extends BaseGame {
   coins: SimCoin[] = [];
   crumbles: Map<string, { state: CrumbleState; t: number }> = new Map();
   starsTotal = 0;
+  // historique de J1 pour le mode solo (J2 = partenaire IA qui suit)
+  history: { x: number; y: number; facing: number; atGoal: boolean; vx: number; onGround: boolean }[] = [];
 
   tickTimer: ReturnType<typeof setInterval> | null = null;
   acc = 0;
@@ -120,6 +122,7 @@ export class DoubleSautGame extends BaseGame {
     this.shooters = e.shooters.map((o) => ({ x: o.x, y: o.y, dir: o.dir, t: Math.random() * PINTERVAL }));
     this.coins = e.coins.map((o) => ({ x: o.x, y: o.y, taken: false }));
     this.projectiles = [];
+    this.history = [];
     for (const c of this.crumbles.values()) { c.state = "idle"; c.t = 0; }
     this.cameraX = this.clampCam(this.blobs[0].x - VW / 2);
   }
@@ -198,6 +201,21 @@ export class DoubleSautGame extends BaseGame {
     p.x = Math.max(0, Math.min(this.pixelW - p.w, p.x));
     p.squash += (0 - p.squash) * Math.min(1, dt * 12);
     if (p.onGround && Math.abs(p.vx) > 30) p.runT += dt * 14; else p.runT *= 0.9;
+  }
+
+  // Mode solo : J2 = partenaire lié qui retrace le chemin de J1 (différé)
+  updateFollower(dt: number) {
+    const p2 = this.blobs[1];
+    p2.alive = true;
+    const DELAY = 34;
+    const h = this.history;
+    const ref = h.length > DELAY ? h[h.length - 1 - DELAY] : (h[0] ?? { x: p2.x, y: p2.y, facing: 1, atGoal: false, vx: 0, onGround: true });
+    p2.x += (ref.x - p2.x) * Math.min(1, dt * 14);
+    p2.y += (ref.y - p2.y) * Math.min(1, dt * 14);
+    p2.facing = ref.facing;
+    p2.atGoal = ref.atGoal && Math.abs(ref.x - p2.x) < 12;
+    p2.vx = ref.vx; p2.onGround = ref.onGround;
+    p2.runT += dt * 14 * (Math.abs(ref.vx) > 30 ? 1 : 0);
   }
 
   killPlayer(p: SimPlayer) {
@@ -295,10 +313,15 @@ export class DoubleSautGame extends BaseGame {
 
     // ── play ──
     const ids = this.activeIds();
-    for (let i = 0; i < 2; i++) {
-      const ctrl = this.controls.get(ids[i]) ?? { moveX: 0, jumpHeld: false, jumpQueued: false };
-      this.updatePlayer(this.blobs[i], ctrl, dt);
-    }
+    const solo = ids.length < 2;
+    const c0 = this.controls.get(ids[0]) ?? { moveX: 0, jumpHeld: false, jumpQueued: false };
+    this.updatePlayer(this.blobs[0], c0, dt);
+    if (solo) this.updateFollower(dt);
+    else this.updatePlayer(this.blobs[1], this.controls.get(ids[1]) ?? { moveX: 0, jumpHeld: false, jumpQueued: false }, dt);
+    // historique J1 (pour le partenaire IA)
+    const p1 = this.blobs[0];
+    this.history.push({ x: p1.x, y: p1.y, facing: p1.facing, atGoal: p1.atGoal, vx: p1.vx, onGround: p1.onGround });
+    if (this.history.length > 600) this.history.shift();
     this.enemies.forEach((e) => this.updateEnemy(e, dt));
     this.shooters.forEach((sh) => this.updateShooter(sh, dt));
     this.updateProjectiles(dt);
@@ -338,7 +361,7 @@ export class DoubleSautGame extends BaseGame {
   // ─────────── Cycle de vie ───────────
   start() {
     if (this.started) return;
-    if (this.activeIds().length < 2) return;
+    if (this.activeIds().length < 1) return;
     this.started = true;
     this.carryDeaths = false;
     for (const c of this.controls.values()) { c.moveX = 0; c.jumpHeld = false; c.jumpQueued = false; }
@@ -424,6 +447,7 @@ export class DoubleSautGame extends BaseGame {
       sky: def?.sky ?? "purple",
       pixelW: this.pixelW,
       cameraX: this.cameraX,
+      solo: ids.length < 2,
       slotIds: ids,
       lobby: this.playerOrder
         .filter((id) => this.players.has(id))

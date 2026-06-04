@@ -38,6 +38,7 @@ type SrvState = {
   statusT: number;
   index: number; levelCount: number; deaths: number; starsTotal: number;
   name: string; accent: string; sky: string; pixelW: number; cameraX: number;
+  solo?: boolean;
   slotIds: string[];
   lobby: { id: string; name: string }[];
   players: SrvPlayer[];
@@ -345,13 +346,14 @@ export default function DoubleSautGame({ roomCode, playerId, playerName, onRetur
 
   // ─────────── SALON (avant départ) ───────────
   if (!state?.started) {
-    const ready = lobby.length >= 2;
+    const ready = lobby.length >= 1;
+    const willSolo = lobby.length < 2;
     return (
       <div className="fixed inset-0 z-[140] flex flex-col items-center justify-center gap-6 bg-[radial-gradient(120%_70%_at_50%_0%,rgba(122,78,232,0.35),transparent_60%),linear-gradient(180deg,#0A0420,#150834)] px-6 text-white select-none">
         <div className="text-center">
           <div className="text-[11px] font-bold uppercase tracking-[0.3em] text-emerald-300/80">Coop · 2 joueurs</div>
           <h1 className="mt-1 text-4xl font-black" style={{ fontFamily: "var(--font-display,'Bricolage Grotesque'),sans-serif" }}>Double Saut</h1>
-          <p className="mt-2 max-w-sm text-sm text-white/60">Deux blobs, six niveaux. Atteignez la sortie <b>ensemble</b> — si l&apos;un tombe, on recommence le niveau à deux.</p>
+          <p className="mt-2 max-w-sm text-sm text-white/60">Deux blobs, six niveaux. Atteignez la sortie <b>ensemble</b> — si l&apos;un tombe, on recommence le niveau à deux. Jouable seul (partenaire IA) ou à deux.</p>
         </div>
         <div className="flex min-w-[260px] flex-col gap-2 rounded-3xl border border-white/10 bg-white/[0.04] p-4">
           <div className="text-[10px] font-bold uppercase tracking-[0.28em] text-white/40">Joueurs en piste</div>
@@ -361,7 +363,7 @@ export default function DoubleSautGame({ roomCode, playerId, playerName, onRetur
             return (
               <div key={i} className="flex items-center gap-3 rounded-2xl bg-black/20 px-3 py-2">
                 <span className="h-7 w-7 rounded-full" style={{ background: color, opacity: pl ? 1 : 0.25, boxShadow: pl ? `0 0 14px ${color}` : "none" }} />
-                <span className={pl ? "font-semibold" : "text-white/35"}>{pl ? `${pl.name}${pl.id === playerId ? " (toi)" : ""}` : "En attente…"}</span>
+                <span className={pl ? "font-semibold" : "text-white/35"}>{pl ? `${pl.name}${pl.id === playerId ? " (toi)" : ""}` : i === 1 ? "Partenaire IA (ou un 2e joueur)" : "En attente…"}</span>
               </div>
             );
           })}
@@ -376,7 +378,7 @@ export default function DoubleSautGame({ roomCode, playerId, playerName, onRetur
             disabled={!ready}
             className="rounded-full bg-[linear-gradient(180deg,#8A63F2,#5B36D6)] px-7 py-3 text-sm font-bold text-white shadow-[0_14px_28px_rgba(91,54,214,0.5)] transition disabled:opacity-40 active:scale-95"
           >
-            {ready ? "Lancer la partie" : "En attente d'un 2e joueur…"}
+            {willSolo ? "Lancer en solo (partenaire IA)" : "Lancer la partie"}
           </button>
         </div>
       </div>
