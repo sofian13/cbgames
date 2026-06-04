@@ -126,6 +126,10 @@ const GameComponents = {
     () => import("@/components/games/contree/contree-game"),
     { ssr: false }
   ),
+  "double-saut": dynamic(
+    () => import("@/components/games/double-saut/double-saut-game"),
+    { ssr: false }
+  ),
   "top-ten": dynamic(
     () => import("@/components/games/top-ten/top-ten-game"),
     { ssr: false }
