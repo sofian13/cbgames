@@ -56,6 +56,52 @@ const WORD_BANK: string[] = [
   "TikTok", "Netflix", "Uber", "Ikea", "McDonald's",
   "Tinder", "Snapchat", "Photomaton", "Karaoke", "Escape Game",
   "Trampoline", "Jacuzzi", "Sauna", "Limousine",
+  // Lieux (suite)
+  "Plage", "Camping", "Refuge", "Phare", "Chateau", "Prison", "Tribunal",
+  "Banque", "Poste", "Mairie", "Theatre", "Opera", "Planetarium",
+  "Vignoble", "Ferme", "Ranch", "Chantier", "Mine", "Garage", "Station-service",
+  "Salle de sport", "Coiffeur", "Tatoueur", "Notaire", "Auto-ecole",
+  // Animaux
+  "Lion", "Elephant", "Pingouin", "Dauphin", "Requin", "Crocodile",
+  "Kangourou", "Panda", "Girafe", "Hamster", "Perroquet", "Hibou",
+  "Pieuvre", "Abeille", "Coccinelle", "Licorne", "Dinosaure", "Loup",
+  // Metiers (suite)
+  "Juge", "President", "Espion", "Youtubeur", "Influenceur", "DJ",
+  "Cuisinier", "Serveur", "Mecanicien", "Jardinier", "Architecte",
+  "Journaliste", "Photographe", "Steward", "Marin", "Berger", "Apiculteur",
+  // Nourriture (suite)
+  "Frites", "Nuggets", "Gaufre", "Donut", "Cookie", "Churros", "Barbe a papa",
+  "Fondant", "Quiche", "Lasagne", "Risotto", "Burrito", "Nems", "Dim sum",
+  "Falafel", "Houmous", "Cordon bleu", "Hot-dog", "Pop-corn",
+  // Boissons
+  "Coca", "Cafe", "The", "Smoothie", "Mojito", "Champagne", "Limonade",
+  "Chocolat chaud", "Milkshake", "Jus d'orange", "Red Bull", "Biere",
+  // Jeux video (suite)
+  "Call of Duty", "League of Legends", "Valorant", "Animal Crossing",
+  "Mario Kart", "Sonic", "Pac-Man", "Candy Crush", "Clash Royale", "Brawl Stars",
+  // Sports (suite)
+  "Golf", "Baseball", "Hockey", "Volley", "Badminton", "Athletisme",
+  "Gymnastique", "Equitation", "Plongee", "Parkour", "Bmx", "Karate",
+  // Films / Series (suite)
+  "Le Parrain", "Fast and Furious", "Game of Thrones", "Breaking Bad",
+  "La Casa de Papel", "Friends", "The Office", "Dragon Ball", "Demon Slayer",
+  "Le Seigneur des anneaux", "Pirates des Caraibes", "Toy Story", "Shrek",
+  // Villes / Pays (suite)
+  "Berlin", "Madrid", "Lisbonne", "Athenes", "Istanbul", "Bangkok",
+  "Los Angeles", "Las Vegas", "Hong Kong", "Casablanca", "Dakar", "Montreal",
+  "Le Japon", "Le Bresil", "L'Italie", "Le Canada", "L'Australie",
+  // Marques
+  "Apple", "Nike", "Adidas", "Coca-Cola", "Samsung", "Google", "Amazon",
+  "Tesla", "Lego", "Ferrari", "Gucci", "Sephora", "Zara", "Lacoste",
+  // Personnages celebres / fiction
+  "Mickey", "Pikachu", "Goku", "Spider-Man", "Dark Vador", "Iron Man",
+  "Superman", "Sherlock", "James Bond", "Tintin", "Asterix", "Le Joker",
+  // Objets / Concepts (suite)
+  "Drone", "Trottinette", "Hoverboard", "Casque VR", "Selfie", "QR Code",
+  "Distributeur", "Borne d'arcade", "Flipper", "Baby-foot", "Roue de la fortune",
+  "Photobooth", "Manege", "Grande roue", "Montagnes russes", "Tyrolienne",
+  // Nature (suite)
+  "Banquise", "Canyon", "Lagon", "Geyser", "Marecage", "Oasis", "Toundra",
 ];
 
 // -- Player state -----------------------------------------
