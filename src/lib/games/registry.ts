@@ -333,6 +333,24 @@ export const GAMES: GameMeta[] = [
     ],
     component: () => import("@/components/games/block-runner/block-runner-game"),
   },
+  {
+    id: "double-saut",
+    name: "Double Saut",
+    description: "Platformer coop a deux: chacun son tel, atteignez la sortie ensemble.",
+    category: "party",
+    minPlayers: 2,
+    maxPlayers: 2,
+    icon: "🦘",
+    implemented: true,
+    rules: [
+      "Coop a deux: chaque joueur controle un blob sur son telephone.",
+      "Joystick a droite pour courir, bouton SAUT a gauche.",
+      "Si un blob tombe ou se fait toucher, le niveau recommence a deux.",
+      "Ramassez les etoiles et atteignez la sortie ENSEMBLE.",
+      "Enchainez les 6 niveaux pour gagner.",
+    ],
+    component: () => import("@/components/games/double-saut/double-saut-game"),
+  },
   // -- Cartes --
   {
     id: "uno",
