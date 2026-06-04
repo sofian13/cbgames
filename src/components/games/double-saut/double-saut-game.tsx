@@ -73,6 +73,8 @@ export default function DoubleSautGame({ roomCode, playerId, playerName, onRetur
   const moveXRef = useRef(0);
   const mySlotRef = useRef(-1);
   const [orientation, setOrientation] = useState<"ok" | "portrait">("ok");
+  const [dbg, setDbg] = useState({ frames: 0, err: "" });
+  const dbgRef = useRef({ frames: 0, err: "" });
 
   const lobby = state?.lobby ?? [];
   const mySlot = state?.slotIds ? state.slotIds.indexOf(playerId) : -1;
@@ -137,6 +139,16 @@ export default function DoubleSautGame({ roomCode, playerId, playerName, onRetur
 
     const frame = (t: number) => {
       raf = requestAnimationFrame(frame);
+      try { drawFrame(t); } catch (e) {
+        dbgRef.current = { frames: dbgRef.current.frames, err: (e as Error)?.message || String(e) };
+        setDbg({ ...dbgRef.current });
+        cancelAnimationFrame(raf);
+        return;
+      }
+    };
+    const drawFrame = (t: number) => {
+      dbgRef.current.frames++;
+      if (dbgRef.current.frames % 30 === 0) setDbg({ ...dbgRef.current });
       if (!last) last = t;
       let dt = (t - last) / 1000; last = t;
       if (dt > 0.1) dt = 0.1;
@@ -402,8 +414,9 @@ export default function DoubleSautGame({ roomCode, playerId, playerName, onRetur
       </div>
 
       {/* DEBUG (temporaire) */}
-      <div className="absolute left-2 top-14 z-30 rounded bg-black/70 px-2 py-1 font-mono text-[10px] text-lime-300">
-        started={String(state.started)} status={state.status} idx={state.index} players={(state.players || []).length} canvas={canvasRef.current ? `${canvasRef.current.width}x${canvasRef.current.height}` : "null"}
+      <div className="absolute left-2 top-14 z-30 max-w-[96vw] rounded bg-black/80 px-2 py-1 font-mono text-[10px] text-lime-300">
+        started={String(state.started)} status={state.status} idx={state.index} players={(state.players || []).length} canvas={canvasRef.current ? `${canvasRef.current.width}x${canvasRef.current.height}` : "null"} frames={dbg.frames}
+        {dbg.err && <span className="text-red-400"> · ERR: {dbg.err}</span>}
       </div>
 
       {/* aire de jeu */}
