@@ -422,7 +422,7 @@ export default function DoubleSautGame({ roomCode, playerId, playerName, onRetur
             onPointerDown={(e) => { e.preventDefault(); if (mySlotRef.current >= 0) sendAction({ action: "jump-down" }); (e.currentTarget as HTMLElement).classList.add("scale-90"); }}
             onPointerUp={(e) => { if (mySlotRef.current >= 0) sendAction({ action: "jump-up" }); (e.currentTarget as HTMLElement).classList.remove("scale-90"); }}
             onPointerCancel={(e) => { if (mySlotRef.current >= 0) sendAction({ action: "jump-up" }); (e.currentTarget as HTMLElement).classList.remove("scale-90"); }}
-            className="absolute bottom-6 left-6 z-20 grid h-28 w-28 place-items-center rounded-full border-2 border-white/25 transition active:scale-90"
+            className="absolute bottom-6 right-6 z-20 grid h-28 w-28 place-items-center rounded-full border-2 border-white/25 transition active:scale-90"
             style={{ background: "radial-gradient(circle at 38% 30%, #8A63F2, #5B36D6 55%, #3A1F9C)", boxShadow: "0 14px 30px rgba(91,54,214,0.55), inset 0 3px 0 rgba(255,255,255,0.35)", touchAction: "none" }}
           >
             <span className="text-2xl">▲</span>
@@ -431,7 +431,7 @@ export default function DoubleSautGame({ roomCode, playerId, playerName, onRetur
           <div
             ref={joyRef}
             onPointerDown={(e) => { e.preventDefault(); joyId.current = e.pointerId; try { (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId); } catch {} onJoyMove(e.clientX, e.clientY); }}
-            className="absolute bottom-6 right-6 z-20 h-36 w-36 rounded-full border-2 border-white/16"
+            className="absolute bottom-6 left-6 z-20 h-36 w-36 rounded-full border-2 border-white/16"
             style={{ background: "radial-gradient(circle at 50% 45%, rgba(255,255,255,0.10), rgba(255,255,255,0.04))", touchAction: "none" }}
           >
             <div ref={joyThumbRef} className="absolute left-1/2 top-1/2 h-16 w-16 rounded-full border border-white/30" style={{ transform: "translate(-50%,-50%)", background: "radial-gradient(circle at 35% 30%, #fff, #B59CFF 40%, #5B36D6)" }} />
