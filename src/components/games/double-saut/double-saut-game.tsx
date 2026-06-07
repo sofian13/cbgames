@@ -410,8 +410,8 @@ export default function DoubleSautGame({ roomCode, playerId, playerName, onRetur
           ref={canvasRef}
           width={VW}
           height={VH}
-          className="rounded-2xl"
-          style={{ width: "auto", height: "auto", maxWidth: "100%", maxHeight: "100%", aspectRatio: "16 / 9", objectFit: "contain", touchAction: "none" }}
+          className="block max-h-full max-w-full rounded-2xl"
+          style={{ touchAction: "none" }}
         />
       </div>
 
