@@ -351,6 +351,24 @@ export const GAMES: GameMeta[] = [
     ],
     component: () => import("@/components/games/double-saut/double-saut-game"),
   },
+  {
+    id: "escape-duo",
+    name: "Escape Duo",
+    description: "Escape game coop a 2 : l'un voit la piece, l'autre les indices. Parlez-vous pour vous echapper !",
+    category: "strategy",
+    minPlayers: 2,
+    maxPlayers: 2,
+    icon: "🔐",
+    implemented: true,
+    rules: [
+      "Coop a 2 telephones : J1 = Atelier/Cave, J2 = Bibliotheque/Observatoire.",
+      "Tout ce qui ouvre TA piece est cache dans celle de ton binome.",
+      "Parlez-vous a l'oral : dictez les codes et symboles trouves.",
+      "Resolvez les enigmes, ouvrez vos deux portes ensemble.",
+      "Enchainez les 2 niveaux (Manoir puis Cave & Observatoire) pour sortir.",
+    ],
+    component: () => import("@/components/games/escape-duo/escape-duo-game"),
+  },
   // -- Cartes --
   {
     id: "uno",

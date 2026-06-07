@@ -535,3 +535,28 @@
     50%      { opacity: 1;   transform: scale(1.12); }
   }
 }
+
+/* ── Escape Duo (jeu d'énigme) ── */
+:root {
+  --f-display: var(--font-display, "Bricolage Grotesque", "DM Sans", system-ui, sans-serif);
+  --f-mono: "JetBrains Mono", ui-monospace, "SF Mono", monospace;
+}
+.edu-hot { transition: filter .15s, transform .15s; }
+.edu-hot:hover { filter: brightness(1.12) drop-shadow(0 0 10px rgba(255,210,63,0.45)); }
+.edu-hot:active { transform: scale(0.98); }
+.edu-hot-hint::after {
+  content: ""; position: absolute; inset: -6px; border-radius: inherit;
+  border: 2px solid rgba(255,210,63,0.85); animation: edu-hot-pulse 1.6s ease-in-out infinite; pointer-events: none;
+}
+@keyframes edu-hot-pulse { 0%,100% { opacity: 0.25; transform: scale(1); } 50% { opacity: 0.9; transform: scale(1.04); } }
+@keyframes edu-duo-glow { 0%,100% { opacity: 0.85; transform: translateX(-50%) scale(1); } 50% { opacity: 1; transform: translateX(-50%) scale(1.08); } }
+@keyframes edu-shake { 0%,100% { transform: translateX(0); } 15% { transform: translateX(-9px); } 30% { transform: translateX(8px); } 45% { transform: translateX(-7px); } 60% { transform: translateX(6px); } 75% { transform: translateX(-4px); } }
+@keyframes edu-flash-in { from { transform: translateY(12px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+.edu-confetti {
+  position: absolute; top: 0; width: 10px; height: 14px; border-radius: 2px; --cx: 0px;
+  animation: edu-confetti-fall 2.4s linear infinite;
+}
+@keyframes edu-confetti-fall {
+  0%   { transform: translate3d(var(--cx,0), -120%, 0) rotate(0); opacity: 1; }
+  100% { transform: translate3d(var(--cx,0), 120vh, 0) rotate(720deg); opacity: 1; }
+}
