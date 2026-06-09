@@ -134,6 +134,14 @@ const GameComponents = {
     () => import("@/components/games/escape-duo/escape-duo-game"),
     { ssr: false }
   ),
+  "tu-prefere": dynamic(
+    () => import("@/components/games/tu-prefere/tu-prefere-game"),
+    { ssr: false }
+  ),
+  "couple-quiz": dynamic(
+    () => import("@/components/games/couple-quiz/couple-quiz-game"),
+    { ssr: false }
+  ),
   "top-ten": dynamic(
     () => import("@/components/games/top-ten/top-ten-game"),
     { ssr: false }

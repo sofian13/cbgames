@@ -71,6 +71,8 @@ const GAME_REGISTRY: Record<string, () => BaseGame> = {
   "escape-duo": () => new EscapeDuoGame(),
   "tgv": () => new LocalGame(),
   "picolette": () => new LocalGame(),
+  "tu-prefere": () => new LocalGame(),
+  "couple-quiz": () => new LocalGame(),
 };
 
 export default class GameServer {
@@ -128,7 +130,7 @@ export default class GameServer {
 
       // Auto-start when enough players join and game hasn't started
       // Motion tennis can start solo (vs bot)
-      if (this.gameId === "undercover" || this.gameId === "chess" || this.gameId === "block-runner" || this.gameId === "double-saut" || this.gameId === "escape-duo" || this.gameId === "guess-word" || this.gameId === "make-guess" || this.gameId === "category-chrono" || this.gameId === "tgv" || this.gameId === "picolette") {
+      if (this.gameId === "undercover" || this.gameId === "chess" || this.gameId === "block-runner" || this.gameId === "double-saut" || this.gameId === "escape-duo" || this.gameId === "guess-word" || this.gameId === "make-guess" || this.gameId === "category-chrono" || this.gameId === "tgv" || this.gameId === "picolette" || this.gameId === "tu-prefere" || this.gameId === "couple-quiz") {
         return;
       }
       const minToStart =
