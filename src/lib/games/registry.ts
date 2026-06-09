@@ -391,7 +391,7 @@ export const GAMES: GameMeta[] = [
   {
     id: "couple-quiz",
     name: "Tu me connais ?",
-    description: "Quiz de couple/duo : l'un répond sur lui, l'autre devine. Mesurez votre complicité !",
+    description: "Quiz de couple/duo : l'un répond sur lui, l'autre devine. Sur un seul tél OU chacun le sien à distance. Mesurez votre complicité !",
     category: "party",
     minPlayers: 2,
     maxPlayers: 2,
@@ -399,7 +399,7 @@ export const GAMES: GameMeta[] = [
     implemented: true,
     local: true,
     rules: [
-      "À 2 sur un seul téléphone (pass-and-play).",
+      "À 2 : sur un seul téléphone (pass-and-play) OU chacun le sien en ligne.",
       "À chaque manche, l'un répond sur lui-même en secret.",
       "L'autre devine sa réponse : juste = 1 point.",
       "Les rôles s'alternent à chaque question.",

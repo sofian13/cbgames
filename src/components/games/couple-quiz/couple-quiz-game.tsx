@@ -9,10 +9,31 @@
 
 import { useState } from "react";
 import type { GameProps } from "@/lib/games/types";
-import { LocalShell, PassScreen, PlayersSetup, colorForIndex } from "@/components/games/local-kit";
+import { useGame } from "@/lib/party/use-game";
+import { useGameStore } from "@/lib/stores/game-store";
+import { LocalShell, ModeSelect, PassScreen, PlayersSetup, colorForIndex, type GameMode } from "@/components/games/local-kit";
 
 const ACCENT = "#FF6BAE";
 const ROUNDS = 12;
+
+function verdictFor(pct: number) {
+  return pct >= 85 ? { t: "Âmes sœurs 💍", c: "#3DDC97" }
+    : pct >= 65 ? { t: "Sacrée complicité ❤️", c: "#FFD23F" }
+    : pct >= 45 ? { t: "Encore des choses à découvrir 👀", c: "#FF8A3D" }
+    : { t: "Premier rendez-vous ? 😅", c: "#FF6B5B" };
+}
+
+// ── WRAPPER : choix local / en ligne ──
+export default function CoupleQuizGame(props: GameProps) {
+  const [mode, setMode] = useState<GameMode | null>(null);
+  if (mode === null) {
+    return <ModeSelect emoji="❤️" name="Tu me connais ?"
+      tagline="Quiz de couple : l'un répond sur lui, l'autre devine. Ensemble sur un tél, ou chacun le sien à distance."
+      onPick={setMode} />;
+  }
+  if (mode === "local") return <CoupleQuizLocal onReturnToLobby={props.onReturnToLobby} />;
+  return <CoupleQuizOnline {...props} />;
+}
 
 interface Q { a: string; b: string; }
 // Chaque question = « plutôt A ou B ? » à propos de celui qui répond.
@@ -51,7 +72,7 @@ function shuffle<T>(arr: T[]): T[] {
 
 type Phase = "setup" | "pass-answer" | "answer" | "pass-guess" | "guess" | "reveal" | "over";
 
-export default function CoupleQuizGame({ onReturnToLobby }: GameProps) {
+function CoupleQuizLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) {
   const [phase, setPhase] = useState<Phase>("setup");
   const [names, setNames] = useState<string[]>([]);
   const [deck, setDeck] = useState<Q[]>([]);
@@ -210,4 +231,149 @@ function ScorePill({ name, score, idx, big }: { name: string; score: number; idx
       <div className="mt-1 text-xs font-semibold">{name}</div>
     </div>
   );
+}
+
+/* ════════════════ MODE EN LIGNE (2 téléphones à distance) ════════════════ */
+interface OnlineState {
+  started: boolean;
+  phase: "lobby" | "answer" | "guess" | "reveal" | "over";
+  round: number;
+  total: number;
+  players: { id: string; name: string }[];
+  answererId: string | null;
+  guesserId: string | null;
+  question: { a: string; b: string } | null;
+  truth: "a" | "b" | null;
+  guess: "a" | "b" | null;
+  scores: Record<string, number>;
+}
+
+function Waiting({ title, sub }: { title: string; sub?: string }) {
+  return (
+    <LocalShell accent={ACCENT} center>
+      <div className="text-5xl mb-3">⏳</div>
+      <h2 className="cb-display-md text-center">{title}</h2>
+      {sub && <p className="mt-2 max-w-sm text-center text-sm" style={{ color: "var(--text-dim)" }}>{sub}</p>}
+    </LocalShell>
+  );
+}
+
+function CoupleQuizOnline({ roomCode, playerId, playerName, onReturnToLobby }: GameProps) {
+  const { sendAction } = useGame(roomCode, "couple-quiz", playerId, playerName);
+  const state = useGameStore((s) => s.gameState) as unknown as OnlineState | null;
+
+  // salon d'attente
+  if (!state || !state.started) {
+    const here = state?.players?.length ?? 0;
+    return (
+      <LocalShell accent={ACCENT} center>
+        <div className="text-6xl mb-3">❤️</div>
+        <h1 className="cb-display-lg text-center sm:text-5xl">Tu me connais ?</h1>
+        <p className="mt-2 text-sm" style={{ color: "var(--text-dim)" }}>En ligne · <b style={{ color: "#fff" }}>{here}/2</b> joueurs connectés</p>
+        <p className="mt-4 max-w-sm text-center text-sm" style={{ color: "var(--text-dim)" }}>
+          Ton/ta partenaire doit rejoindre <b style={{ color: "#fff" }}>la même salle</b> (code <b style={{ color: ACCENT }}>{roomCode}</b>) et choisir « Plusieurs téléphones ». Le jeu démarre dès que vous êtes 2.
+        </p>
+        <button onClick={onReturnToLobby} className="mt-7 text-sm" style={{ color: "var(--text-muted)" }}>← Quitter</button>
+      </LocalShell>
+    );
+  }
+
+  const players = state.players ?? [];
+  const me = players.find((p) => p.id === playerId);
+  const answererName = players.find((p) => p.id === state.answererId)?.name ?? "?";
+  const guesserName = players.find((p) => p.id === state.guesserId)?.name ?? "?";
+  const amAnswerer = state.answererId === playerId;
+  const amGuesser = state.guesserId === playerId;
+  const q = state.question;
+
+  if (!me) return <Waiting title="Partie en cours" sub="« Tu me connais ? » se joue à 2. Les deux places sont prises." />;
+
+  // fin
+  if (state.phase === "over") {
+    const s0 = state.scores[players[0]?.id] ?? 0;
+    const s1 = state.scores[players[1]?.id] ?? 0;
+    const total = s0 + s1;
+    const pct = state.total ? Math.round((total / state.total) * 100) : 0;
+    const v = verdictFor(pct);
+    return (
+      <LocalShell accent={ACCENT} center>
+        <div className="af-eyebrow" style={{ color: "var(--text-dim)" }}>Taux de complicité</div>
+        <div className="my-1 text-7xl font-extrabold" style={{ color: v.c }}>{pct}%</div>
+        <h1 className="cb-display-md text-center" style={{ color: v.c }}>{v.t}</h1>
+        <p className="mt-2 text-sm" style={{ color: "var(--text-dim)" }}>{total} bonnes devinettes sur {state.total}</p>
+        <div className="mt-5 flex gap-5">
+          <ScorePill name={players[0]?.name ?? "J1"} score={s0} idx={0} big />
+          <ScorePill name={players[1]?.name ?? "J2"} score={s1} idx={1} big />
+        </div>
+        <div className="mt-7 flex w-full max-w-xs flex-col gap-2">
+          <button onClick={() => sendAction({ action: "restart" })} className="af-btn af-btn-primary" style={{ fontSize: 16 }}>Rejouer</button>
+          <button onClick={onReturnToLobby} className="text-sm" style={{ color: "var(--text-muted)" }}>Quitter</button>
+        </div>
+      </LocalShell>
+    );
+  }
+
+  // phase réponse
+  if (state.phase === "answer") {
+    if (amAnswerer && q) {
+      return (
+        <LocalShell accent={ACCENT} center>
+          <div className="af-eyebrow mb-2" style={{ color: ACCENT }}>Manche {state.round + 1}/{state.total} · à toi</div>
+          <h2 className="cb-display-sm mb-1 text-center sm:cb-display-md">Toi, tu es plutôt…</h2>
+          <p className="mb-6 text-sm" style={{ color: "var(--text-muted)" }}>Réponds honnêtement — {guesserName} va deviner.</p>
+          <Choice a={q.a} b={q.b} onPick={(p) => sendAction({ action: "answer", pick: p })} />
+        </LocalShell>
+      );
+    }
+    return <Waiting title={`${answererName} répond…`} sub="Patiente, ce sera bientôt à toi de deviner." />;
+  }
+
+  // phase devinette
+  if (state.phase === "guess") {
+    if (amGuesser && q) {
+      return (
+        <LocalShell accent={ACCENT} center>
+          <div className="af-eyebrow mb-2" style={{ color: ACCENT }}>Manche {state.round + 1}/{state.total} · devine</div>
+          <h2 className="cb-display-sm mb-1 text-center sm:cb-display-md">{answererName} est plutôt…</h2>
+          <p className="mb-6 text-sm" style={{ color: "var(--text-muted)" }}>À ton avis, qu&apos;a répondu {answererName} ?</p>
+          <Choice a={q.a} b={q.b} onPick={(p) => sendAction({ action: "guess", pick: p })} />
+        </LocalShell>
+      );
+    }
+    return <Waiting title={`${guesserName} devine…`} sub={`${guesserName} essaie de retrouver ta réponse.`} />;
+  }
+
+  // révélation
+  if (state.phase === "reveal" && q) {
+    const correct = state.guess === state.truth;
+    const truthText = state.truth === "a" ? q.a : q.b;
+    const guessText = state.guess === "a" ? q.a : q.b;
+    const s0 = state.scores[players[0]?.id] ?? 0;
+    const s1 = state.scores[players[1]?.id] ?? 0;
+    return (
+      <LocalShell accent={ACCENT} center>
+        <div className="text-6xl mb-2">{correct ? "💞" : "💔"}</div>
+        <h1 className="cb-display-md text-center" style={{ color: correct ? "#3DDC97" : "#FF6B5B" }}>{correct ? "Dans le mille !" : "Raté !"}</h1>
+        <div className="mt-5 w-full max-w-sm space-y-2">
+          <div className="rounded-2xl border p-3 text-center" style={{ borderColor: `${ACCENT}66`, background: `${ACCENT}18` }}>
+            <div className="text-[11px]" style={{ color: "var(--text-dim)" }}>{answererName} est plutôt</div>
+            <div className="text-lg font-bold">{truthText}</div>
+          </div>
+          <div className="rounded-2xl border p-3 text-center" style={{ borderColor: "var(--line-soft)" }}>
+            <div className="text-[11px]" style={{ color: "var(--text-dim)" }}>{guesserName} avait deviné</div>
+            <div className="text-lg font-bold" style={{ color: correct ? "#3DDC97" : "#FF6B5B" }}>{guessText}</div>
+          </div>
+        </div>
+        <div className="mt-4 flex gap-4 text-center">
+          <ScorePill name={players[0]?.name ?? "J1"} score={s0} idx={0} />
+          <ScorePill name={players[1]?.name ?? "J2"} score={s1} idx={1} />
+        </div>
+        <button onClick={() => sendAction({ action: "next" })} className="af-btn af-btn-primary mt-6 w-full max-w-xs" style={{ fontSize: 16 }}>
+          {state.round + 1 >= state.total ? "Voir le résultat →" : "Manche suivante →"}
+        </button>
+      </LocalShell>
+    );
+  }
+
+  return <Waiting title="Connexion…" />;
 }
