@@ -33,6 +33,7 @@ import { ContreeGame } from "./games/contree";
 import { DoubleSautGame } from "./games/double-saut";
 import { EscapeDuoGame } from "./games/escape-duo";
 import { CoupleQuizGame } from "./games/couple-quiz";
+import { PensezPareilGame } from "./games/pensez-pareil";
 
 // Registry of game constructors
 const GAME_REGISTRY: Record<string, () => BaseGame> = {
@@ -70,6 +71,7 @@ const GAME_REGISTRY: Record<string, () => BaseGame> = {
   "contree": () => new ContreeGame(),
   "double-saut": () => new DoubleSautGame(),
   "escape-duo": () => new EscapeDuoGame(),
+  "pensez-pareil": () => new PensezPareilGame(),
   "tgv": () => new LocalGame(),
   "picolette": () => new LocalGame(),
   "tu-prefere": () => new LocalGame(),
