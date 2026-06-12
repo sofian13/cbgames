@@ -4,7 +4,8 @@
   "main": "party/lobby.ts",
   "parties": {
     "game": "party/game.ts",
-    "stats": "party/stats.ts"
+    "stats": "party/stats.ts",
+    "island": "party/island.ts"
   },
   "compatibilityDate": "2025-01-01"
 }
