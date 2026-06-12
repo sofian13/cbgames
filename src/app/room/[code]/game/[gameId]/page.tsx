@@ -142,6 +142,10 @@ const GameComponents = {
     () => import("@/components/games/couple-quiz/couple-quiz-game"),
     { ssr: false }
   ),
+  "pensez-pareil": dynamic(
+    () => import("@/components/games/pensez-pareil/pensez-pareil-game"),
+    { ssr: false }
+  ),
   "top-ten": dynamic(
     () => import("@/components/games/top-ten/top-ten-game"),
     { ssr: false }
