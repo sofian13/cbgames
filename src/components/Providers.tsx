@@ -15,7 +15,13 @@
  */
 
 import { AudioProvider } from "@/lib/hooks/useAudio";
+import { ServiceWorkerRegister } from "@/components/ServiceWorkerRegister";
 
 export function Providers({ children }: { children: React.ReactNode }) {
-  return <AudioProvider>{children}</AudioProvider>;
+  return (
+    <AudioProvider>
+      <ServiceWorkerRegister />
+      {children}
+    </AudioProvider>
+  );
 }
