@@ -37,7 +37,7 @@ export default function PicoletteGame({ onReturnToLobby }: GameProps) {
   const [phase, setPhase] = useState<Phase>("setup");
   const [players, setPlayers] = useState<string[]>([]);
   const [losses, setLosses] = useState<number[]>([]);
-  const [packs, setPacks] = useState<Set<Pack>>(new Set<Pack>(["soft", "coquin", "musique", "quiz"]));
+  const [packs, setPacks] = useState<Set<Pack>>(new Set<Pack>(["soft", "coquin", "quiz"]));
   const [penalty, setPenalty] = useState<Penalty>("any");
   const [deck, setDeck] = useState<PicoletteCard[]>([]);
   const [cardIdx, setCardIdx] = useState(0);
