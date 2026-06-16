@@ -4,7 +4,6 @@
 export type PicoletteType =
   | "vote"
   | "table"
-  | "duel"
   | "rule"
   | "prefere"
   | "valise"
@@ -39,10 +38,6 @@ export const PICOLETTE_CARDS: PicoletteCard[] = [
   { type: "table", pack: "soft", text: "Citez chacun un Pokémon. Pas de répétition.", hint: "Le premier qui sèche perd." },
   { type: "table", pack: "soft", text: "Citez chacun un président français.", hint: "Tour de table, premier qui sèche perd." },
   { type: "table", pack: "soft", text: "Citez chacun un fruit qui commence par une voyelle.", hint: "Premier qui sèche perd." },
-
-  { type: "duel", pack: "soft", text: "Duel : pierre-feuille-ciseaux. Le lecteur désigne 2 joueurs au pif.", hint: "Compte « pierre-feuille-ciseaux » à voix haute. Le perdant boit." },
-  { type: "duel", pack: "soft", text: "Battle de blagues : 2 joueurs au pif. Chacun raconte sa meilleure. Le groupe vote.", hint: "Le moins drôle perd." },
-  { type: "duel", pack: "soft", text: "Bras de fer verbal : qui peut tenir « aaaaaa » le plus longtemps en une expiration.", hint: "Le premier qui s'arrête perd." },
 
   { type: "rule", pack: "soft", text: "Pendant 5 min : interdit de dire « genre »", hint: "1er qui dérape paye une peine.", ruleSec: 300 },
   { type: "rule", pack: "soft", text: "Pendant 4 min : interdit de dire « oui »", hint: "Réponds autrement. 1er qui craque paye.", ruleSec: 240 },
@@ -183,6 +178,16 @@ export const PICOLETTE_CARDS: PicoletteCard[] = [
   { type: "table", pack: "soft", text: "Citez chacun une boisson chaude.", hint: "1er qui sèche perd." },
   { type: "table", pack: "soft", text: "Citez chacun une couleur (pas de répétition).", hint: "1er qui sèche perd." },
   { type: "table", pack: "soft", text: "Citez chacun un sport olympique.", hint: "1er qui sèche perd." },
+  { type: "table", pack: "soft", text: "Citez chacun une excuse pour arriver en retard.", hint: "1er qui sèche ou répète une excuse perd." },
+  { type: "table", pack: "soft", text: "Citez chacun un objet qu'on trouve dans une cuisine.", hint: "Pas de répétition. 1er qui bloque perd." },
+  { type: "table", pack: "soft", text: "Citez chacun une chose qu'on oublie toujours avant de partir.", hint: "1er qui sèche perd." },
+  { type: "table", pack: "soft", text: "Citez chacun un truc qu'on fait quand on s'ennuie.", hint: "Pas de répétition. 1er qui bloque perd." },
+  { type: "table", pack: "soft", text: "Citez chacun un prénom qui commence par A.", hint: "1er qui sèche perd." },
+  { type: "table", pack: "soft", text: "Citez chacun une appli de téléphone.", hint: "Pas de répétition. 1er qui bloque perd." },
+  { type: "table", pack: "soft", text: "Citez chacun une chose qu'on dit quand on ment mal.", hint: "1er qui sèche perd." },
+  { type: "table", pack: "soft", text: "Citez chacun un truc qu'on peut acheter à la station-service.", hint: "Pas de répétition. 1er qui bloque perd." },
+  { type: "table", pack: "soft", text: "Citez chacun un métier que personne ne voulait faire enfant.", hint: "1er qui sèche perd." },
+  { type: "table", pack: "soft", text: "Citez chacun un truc qui coûte trop cher pour rien.", hint: "Pas de répétition. 1er qui bloque perd." },
   { type: "table", pack: "quiz", text: "Citez chacun une capitale africaine.", hint: "1er qui sèche perd." },
   { type: "table", pack: "quiz", text: "Citez chacun un pays asiatique.", hint: "1er qui sèche perd." },
   { type: "table", pack: "quiz", text: "Citez chacun un super-héros Marvel.", hint: "1er qui sèche perd." },
@@ -211,12 +216,6 @@ export const PICOLETTE_CARDS: PicoletteCard[] = [
     b: "Quelqu'un balance toutes tes recherches Google de l'année",
     hint: "Vote main haut / bas. Minorité = peine." },
 
-  // ── DUEL supplémentaires ─────────────────────────────────
-  { type: "duel", pack: "soft", text: "Bras de fer verbal : le premier qui rit ou sourit perd.", hint: "Le lecteur fixe 2 joueurs. 10 sec de fixité totale." },
-  { type: "duel", pack: "soft", text: "Le lecteur désigne 2 joueurs : qui peut tenir « aaaaaa » le plus longtemps.", hint: "Le 1er qui s'arrête perd." },
-  { type: "duel", pack: "soft", text: "Deux joueurs font pierre feuille ciseaux.", hint: "Le lecteur désigne 2 joueurs. Le perdant prend la pénalité." },
-  { type: "duel", pack: "soft", text: "Pile ou face entre deux joueurs.", hint: "Le lecteur désigne 2 joueurs : pile = joueur de gauche, face = joueur de droite. Le perdant prend la pénalité." },
-  { type: "duel", pack: "soft", text: "Le lecteur choisit un joueur : 30 secondes de ni oui ni non.", hint: "Tout le monde peut poser des questions. S'il dit oui ou non, il prend la pénalité." },
   // ── COQUIN supplémentaires ───────────────────────────────
   { type: "coquin", pack: "coquin", text: "Le pire surnom au lit que t'as déjà entendu ?", hint: "Tour de table à voix haute." },
   { type: "coquin", pack: "coquin", text: "La phrase la plus chaude de ta dernière conversation : lis-la (ou invente).", hint: "Lecteur désigne. Refus = peine double." },
@@ -257,7 +256,6 @@ export const PACK_INFO: Record<Pack, { emoji: string; label: string; sub: string
 export const TYPE_INFO: Record<PicoletteType, { emoji: string; label: string; tint: string }> = {
   vote:    { emoji: "🗳️",  label: "Vote groupe",        tint: "#FF6B5B" },
   table:   { emoji: "🎤",  label: "Tour de table",      tint: "#3DDC97" },
-  duel:    { emoji: "🤝",  label: "Duel verbal",        tint: "#5BA3FF" },
   rule:    { emoji: "📝",  label: "Règle live",         tint: "#C58CFF" },
   prefere: { emoji: "🪙",  label: "Tu préfères",        tint: "#FF8C42" },
   valise:  { emoji: "🧳",  label: "Dans ma valise…",    tint: "#3DDC97" },
