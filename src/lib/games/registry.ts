@@ -664,7 +664,7 @@ export const GAMES: GameMeta[] = [
     local: true,
     rules: [
       "Choisis le nombre de tas (3 à 6) avant de lancer",
-      "À ton tour : une carte est posée, tu paries Plus ou Moins sur la suivante",
+      "À ton tour : une carte est posée, tu paries Plus, Moins ou Égalité sur la suivante",
       "Bien joué → tu passes au tas suivant (un wagon de plus dans ton TGV)",
       "Raté → roulette 🥃 / 🌿 et retour au tas 1",
       "Tous les tas enchaînés = TGV terminé, tu passes au joueur suivant",

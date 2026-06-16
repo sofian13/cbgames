@@ -71,7 +71,7 @@ export default function TgvGame({ onReturnToLobby }: GameProps) {
   const [card, setCard] = useState<Card>(() => drawCard());
   const [nextCard, setNextCard] = useState<Card | null>(null);
   const [verdict, setVerdict] = useState<"win" | "loss" | "tie" | null>(null);
-  const [, setBet] = useState<"plus" | "moins" | null>(null);
+  const [, setBet] = useState<"plus" | "moins" | "egalite" | null>(null);
   const [rouletteOpen, setRouletteOpen] = useState(false);
   const [rouletteSym, setRouletteSym] = useState("…");
   const [suspending, setSuspending] = useState(false); // roulement de tambour avant la dernière carte
@@ -149,11 +149,12 @@ export default function TgvGame({ onReturnToLobby }: GameProps) {
     setPhase("intro");
   };
 
-  const makeBet = (b: "plus" | "moins") => {
+  const makeBet = (b: "plus" | "moins" | "egalite") => {
     if (verdict || suspending) return;
     const next = drawCard();
     let v: "win" | "loss" | "tie" = "tie";
-    if (next.v === card.v) v = "tie";
+    if (next.v === card.v) v = b === "egalite" ? "win" : "tie";
+    else if (b === "egalite") v = "loss";
     else if (b === "plus") v = next.v > card.v ? "win" : "loss";
     else v = next.v < card.v ? "win" : "loss";
     setBet(b);
@@ -298,6 +299,7 @@ export default function TgvGame({ onReturnToLobby }: GameProps) {
                   {pileIdx === totalPiles - 1 ? "Dernière carte · TGV final 🚄" : "Prochaine carte ?"}
                 </p>
                 <BetButton label="PLUS" icon="↑" tint="#FF6B5B" onClick={() => makeBet("plus")} compact />
+                <BetButton label="ÉGALITÉ" icon="=" tint="#FFD23F" onClick={() => makeBet("egalite")} compact />
                 <BetButton label="MOINS" icon="↓" tint="#5BA3FF" onClick={() => makeBet("moins")} compact />
               </>
             ) : verdict === "win" ? (
@@ -546,4 +548,3 @@ function RouletteOverlay({ sym, playerName }: { sym: string; playerName: string 
     </div>
   );
 }
-
