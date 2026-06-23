@@ -1,35 +1,12 @@
 import type { Connection } from "partykit/server";
 import { BaseGame } from "./base-game";
 import type { GameRanking } from "../shared/types";
-import { ALL_QUESTIONS, type QuizQuestion } from "./quiz-questions";
+import { QCM_QUESTIONS, type QcmQuestion } from "./quiz-qcm";
 
 // ── Config ───────────────────────────────────────────────
-const TOTAL_ROUNDS = 10;
-const QUESTION_TIME = 15; // secondes pour repondre (petit timer facon "12 coups de midi")
-const REVEAL_TIME = 4500; // ms d'affichage de la bonne reponse avant la question suivante
-
-// ── Normalisation / auto-validation ──────────────────────
-// On compare la reponse tapee aux reponses de reference apres nettoyage
-// (minuscules, accents, ponctuation, articles). Plus besoin d'un "host".
-function normalize(s: string): string {
-  return s
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "") // accents
-    .replace(/[^a-z0-9\s]/g, " ") // ponctuation -> espace
-    .replace(/\b(le|la|les|l|un|une|des|du|de|d|au|aux)\b/g, " ") // articles
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-function isCorrect(answer: string, refs: string[]): boolean {
-  const a = normalize(answer);
-  if (!a) return false;
-  return refs.some((r) => {
-    const n = normalize(r);
-    return n.length > 0 && n === a;
-  });
-}
+const TIME_OPTIONS = [10, 15, 20, 30]; // secondes par question (choisi avant de lancer)
+const ROUND_OPTIONS = [10, 15, 20]; // nombre de questions
+const START_DELAY = 1200; // laisse tout le monde se connecter avant d'afficher le setup
 
 // ── Player state ─────────────────────────────────────────
 interface QuizPlayer {
@@ -37,7 +14,7 @@ interface QuizPlayer {
   name: string;
   score: number;
   hasAnswered: boolean;
-  submittedAnswer: string | null;
+  choiceIndex: number | null;
   answerTime: number | null;
   lastCorrect: boolean;
   lastGained: number;
@@ -46,45 +23,44 @@ interface QuizPlayer {
 // ══════════════════════════════════════════════════════════
 export class SpeedQuizGame extends BaseGame {
   quizPlayers: Map<string, QuizPlayer> = new Map();
-  questions: QuizQuestion[] = [];
+  questions: QcmQuestion[] = [];
   currentQuestionIndex = 0;
-  timeLeft = QUESTION_TIME;
+  timeLeft = 15;
+  questionTime = 15;
+  totalRounds = 10;
   timer: ReturnType<typeof setInterval> | null = null;
-  revealTimer: ReturnType<typeof setTimeout> | null = null;
-  status: "waiting" | "question" | "reveal" | "game-over" = "waiting";
+  setupTimer: ReturnType<typeof setTimeout> | null = null;
+  status: "config" | "question" | "reveal" | "game-over" = "config";
   questionStartTime = 0;
 
-  pickQuestions() {
-    const shuffle = <T>(arr: T[]): T[] => [...arr].sort(() => Math.random() - 0.5);
-    const easy = shuffle(ALL_QUESTIONS.filter((q) => q.difficulty === "easy"));
-    const medium = shuffle(ALL_QUESTIONS.filter((q) => q.difficulty === "medium"));
-    // Majorite de questions faciles ("pas trop dures") : 6 faciles + 4 moyennes
-    const picked: QuizQuestion[] = [...easy.slice(0, 6), ...medium.slice(0, 4)];
-    // Complete si un pool etait trop court
-    if (picked.length < TOTAL_ROUNDS) {
-      const rest = shuffle(ALL_QUESTIONS.filter((q) => !picked.includes(q)));
-      picked.push(...rest.slice(0, TOTAL_ROUNDS - picked.length));
-    }
-    this.questions = shuffle(picked).slice(0, TOTAL_ROUNDS);
+  start() {
+    // On passe d'abord par un écran de config (timer + nombre de questions).
+    this.started = true;
+    this.status = "config";
+    if (this.setupTimer) clearTimeout(this.setupTimer);
+    this.setupTimer = setTimeout(() => this.broadcastState(), START_DELAY);
   }
 
-  start() {
-    this.started = true;
-    this.pickQuestions();
+  pickQuestions() {
+    const shuffled = [...QCM_QUESTIONS].sort(() => Math.random() - 0.5);
+    this.questions = shuffled.slice(0, Math.min(this.totalRounds, shuffled.length));
+  }
 
+  beginGame() {
+    this.pickQuestions();
+    this.quizPlayers.clear();
     for (const [id, player] of this.players) {
       this.quizPlayers.set(id, {
         id,
         name: player.name,
         score: 0,
         hasAnswered: false,
-        submittedAnswer: null,
+        choiceIndex: null,
         answerTime: null,
         lastCorrect: false,
         lastGained: 0,
       });
     }
-
     this.currentQuestionIndex = 0;
     this.startQuestion();
   }
@@ -96,12 +72,12 @@ export class SpeedQuizGame extends BaseGame {
     }
 
     this.status = "question";
-    this.timeLeft = QUESTION_TIME;
+    this.timeLeft = this.questionTime;
     this.questionStartTime = Date.now();
 
     for (const p of this.quizPlayers.values()) {
       p.hasAnswered = false;
-      p.submittedAnswer = null;
+      p.choiceIndex = null;
       p.answerTime = null;
       p.lastCorrect = false;
       p.lastGained = 0;
@@ -127,69 +103,87 @@ export class SpeedQuizGame extends BaseGame {
     }
   }
 
-  // ── Reveal : on montre la bonne reponse, puis on enchaine ──
+  // ── Reveal : montre la bonne réponse + l'explication.
+  // PAS d'auto-avance : on attend un clic « Suivant » (action "next").
   reveal() {
     this.stopTimer();
     this.status = "reveal";
     this.broadcastState();
-
-    if (this.revealTimer) clearTimeout(this.revealTimer);
-    this.revealTimer = setTimeout(() => {
-      this.currentQuestionIndex++;
-      this.startQuestion();
-    }, REVEAL_TIME);
   }
 
   onMessage(payload: Record<string, unknown>, sender: Connection) {
     const action = payload.action as string;
+    const senderPlayer = this.findGamePlayerByConnection(sender.id);
+    if (!senderPlayer) return;
 
-    // ── Le joueur tape sa reponse pendant la phase question ──
+    // ── Config : n'importe qui règle le timer / le nombre de questions et lance ──
+    if (action === "set-time" && this.status === "config") {
+      const t = Number(payload.time);
+      if (TIME_OPTIONS.includes(t)) {
+        this.questionTime = t;
+        this.broadcastState();
+      }
+      return;
+    }
+    if (action === "set-rounds" && this.status === "config") {
+      const r = Number(payload.rounds);
+      if (ROUND_OPTIONS.includes(r)) {
+        this.totalRounds = r;
+        this.broadcastState();
+      }
+      return;
+    }
+    if (action === "begin" && this.status === "config") {
+      if (this.setupTimer) { clearTimeout(this.setupTimer); this.setupTimer = null; }
+      this.beginGame();
+      return;
+    }
+
+    // ── Le joueur choisit une proposition pendant la phase question ──
     if (action === "answer" && this.status === "question") {
-      const answer = ((payload.answer as string) ?? "").trim();
-      if (!answer) return;
-
-      const senderPlayer = this.findGamePlayerByConnection(sender.id);
-      if (!senderPlayer) return;
-
       const qp = this.quizPlayers.get(senderPlayer.id);
       if (!qp || qp.hasAnswered) return;
-
+      const idx = Number(payload.choiceIndex);
       const q = this.questions[this.currentQuestionIndex];
+      if (!q || !Number.isInteger(idx) || idx < 0 || idx >= q.choices.length) return;
+
       qp.hasAnswered = true;
-      qp.submittedAnswer = answer;
+      qp.choiceIndex = idx;
       qp.answerTime = Date.now() - this.questionStartTime;
 
-      const correct = q ? isCorrect(answer, q.answers) : false;
+      const correct = idx === q.correct;
       qp.lastCorrect = correct;
       if (correct) {
-        // 100 pts + bonus de vitesse (plus tu reponds tot, plus le bonus est gros)
-        const frac = Math.max(0, 1 - qp.answerTime / (QUESTION_TIME * 1000));
+        // 100 pts + bonus de vitesse (plus tu réponds tôt, plus c'est gros)
+        const frac = Math.max(0, 1 - qp.answerTime / (this.questionTime * 1000));
         qp.lastGained = 100 + Math.round(frac * 100);
         qp.score += qp.lastGained;
       } else {
         qp.lastGained = 0;
       }
 
-      // On diffuse juste l'etat "a repondu" (pas la reponse) aux autres
       this.broadcast({
         type: "game-update",
         payload: { players: this.publicPlayers() },
       });
 
-      // Tout le monde a repondu -> reveal immediat
+      // Tout le monde a répondu -> reveal immédiat
       if (Array.from(this.quizPlayers.values()).every((p) => p.hasAnswered)) {
         this.reveal();
       }
+      return;
+    }
+
+    // ── « Suivant » : n'importe qui enchaîne après le reveal ──
+    if (action === "next" && this.status === "reveal") {
+      this.currentQuestionIndex++;
+      this.startQuestion();
       return;
     }
   }
 
   endQuiz() {
     this.stopTimer();
-    if (this.revealTimer) {
-      clearTimeout(this.revealTimer);
-      this.revealTimer = null;
-    }
     this.status = "game-over";
 
     const players = Array.from(this.quizPlayers.values()).sort((a, b) => b.score - a.score);
@@ -220,33 +214,45 @@ export class SpeedQuizGame extends BaseGame {
     }));
   }
 
+  // Pendant la config, quizPlayers n'est pas encore peuplé : on liste les joueurs bruts.
+  lobbyPlayers() {
+    return Array.from(this.players.values()).map((p) => ({
+      id: p.id,
+      name: p.name,
+      score: 0,
+      hasAnswered: false,
+    }));
+  }
+
   getState(): Record<string, unknown> {
     const q = this.questions[this.currentQuestionIndex];
     const revealing = this.status === "reveal";
     return {
+      status: this.status,
+      timeOptions: TIME_OPTIONS,
+      roundOptions: ROUND_OPTIONS,
+      questionTime: this.questionTime,
+      totalRounds: this.totalRounds,
+      round: this.currentQuestionIndex + 1,
+      timeLeft: this.timeLeft,
       currentQuestion: q
         ? {
             text: q.text,
+            choices: q.choices,
             category: q.category,
-            difficulty: q.difficulty,
-            image: q.image ?? null,
             index: this.currentQuestionIndex,
             total: this.questions.length,
           }
         : null,
-      players: this.publicPlayers(),
-      timeLeft: this.timeLeft,
-      questionTime: QUESTION_TIME,
-      status: this.status,
-      round: this.currentQuestionIndex + 1,
-      // Phase reveal : la bonne reponse + le detail de chacun
-      correctAnswer: revealing && q ? q.answers[0] : null,
-      acceptedAnswers: revealing && q ? q.answers : null,
+      players: this.status === "config" ? this.lobbyPlayers() : this.publicPlayers(),
+      // Phase reveal
+      correctIndex: revealing && q ? q.correct : null,
+      explanation: revealing && q ? q.explanation : null,
       results: revealing
         ? Array.from(this.quizPlayers.values()).map((p) => ({
             playerId: p.id,
             playerName: p.name,
-            answer: p.submittedAnswer ?? "",
+            choiceIndex: p.choiceIndex,
             correct: p.lastCorrect,
             gained: p.lastGained,
           }))
@@ -260,9 +266,9 @@ export class SpeedQuizGame extends BaseGame {
 
   cleanup() {
     this.stopTimer();
-    if (this.revealTimer) {
-      clearTimeout(this.revealTimer);
-      this.revealTimer = null;
+    if (this.setupTimer) {
+      clearTimeout(this.setupTimer);
+      this.setupTimer = null;
     }
   }
 }

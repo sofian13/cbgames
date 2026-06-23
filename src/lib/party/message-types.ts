@@ -86,22 +86,25 @@ export type BombPartyAction =
 
 // ===== Speed Quiz Specific =====
 export interface SpeedQuizState {
+  status: "config" | "question" | "reveal" | "game-over";
   currentQuestion: {
     text: string;
+    choices: string[];
     category: string;
-    difficulty: "easy" | "medium" | "hard";
-    image?: string | null;
     index: number;
     total: number;
   } | null;
   players: SpeedQuizPlayer[];
   timeLeft: number;
-  questionTime?: number; // durée totale d'une question (s), pour l'arc du timer
-  status: "waiting" | "question" | "reveal" | "game-over";
+  questionTime?: number; // durée d'une question (s) — choisie en config, sert aussi à l'arc du timer
+  totalRounds?: number;
   round: number;
-  // Reveal phase (auto-validation)
-  correctAnswer?: string | null;
-  acceptedAnswers?: string[] | null;
+  // Config phase
+  timeOptions?: number[];
+  roundOptions?: number[];
+  // Reveal phase (QCM)
+  correctIndex?: number | null;
+  explanation?: string | null;
   results?: SpeedQuizResult[] | null;
 }
 
@@ -115,7 +118,7 @@ export interface SpeedQuizPlayer {
 export interface SpeedQuizResult {
   playerId: string;
   playerName: string;
-  answer: string;
+  choiceIndex: number | null;
   correct: boolean;
   gained: number;
 }
