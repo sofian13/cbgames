@@ -137,14 +137,17 @@ export default class GameServer {
         return;
       }
       const minToStart =
-        this.gameId === "contree"
-          ? 4
-          : this.gameId === "president" ||
-              this.gameId === "top-ten" ||
-              this.gameId === "le-bluffeur" ||
-              this.gameId === "longueur-onde"
-            ? 3
-            : 2;
+        // Les quiz se jouent très bien en solo (auto-validés / QCM, aucun adversaire requis)
+        this.gameId === "speed-quiz" || this.gameId === "roast-quiz"
+          ? 1
+          : this.gameId === "contree"
+            ? 4
+            : this.gameId === "president" ||
+                this.gameId === "top-ten" ||
+                this.gameId === "le-bluffeur" ||
+                this.gameId === "longueur-onde"
+              ? 3
+              : 2;
       if (this.game.players.size >= minToStart && !this.game.started) {
         this.game.start();
       }

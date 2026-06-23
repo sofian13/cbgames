@@ -94,6 +94,38 @@ const THEMES: Theme[] = [
   { theme: "Ce que t'as deja fait sous l'effet d'un truc", low: "Rire trop fort en soiree", high: "Un truc que je pensais pas pouvoir faire" },
 ];
 
+// -- Pack Culture pop & Classements -----------------------
+// Meme principe : 1 = le plus faible/nul -> 10 = le plus fort/ouf.
+// Chacun nomme un truc connu qui colle a son numero, puis on classe.
+const CULTURE_THEMES: Theme[] = [
+  { theme: "Un perso de Dragon Ball, par puissance", low: "Yamcha", high: "Zeno, le roi de tout" },
+  { theme: "Un Pokemon, par puissance", low: "Magicarpe", high: "Arceus" },
+  { theme: "Un perso de One Piece, par prime", low: "Un pirate sans prime", high: "Un Yonko (Empereur)" },
+  { theme: "Un perso de Naruto, par force", low: "Un genin de l'academie", high: "Kaguya" },
+  { theme: "Un super-heros Marvel, par puissance", low: "Oeil-de-Faucon", high: "Thanos" },
+  { theme: "Une ville de France, de la plus stylee a la plus pourrie", low: "Une ville de reve", high: "Le trou paume le plus pourri" },
+  { theme: "Un joueur de foot, par talent", low: "Un amateur du dimanche", high: "Messi" },
+  { theme: "Un rappeur FR, par notoriete", low: "Un rappeur inconnu", high: "Une legende du game" },
+  { theme: "Une marque de voiture, du low-cost au luxe", low: "Une Dacia", high: "Une Ferrari" },
+  { theme: "Un animal, du plus inoffensif au plus dangereux", low: "Un lapin", high: "Un grand requin blanc" },
+  { theme: "Un fast-food, du pire au meilleur", low: "Le pire endroit", high: "Ton resto prefere" },
+  { theme: "Un reseau social, par temps perdu dessus", low: "LinkedIn", high: "TikTok" },
+  { theme: "Une matiere a l'ecole, de la plus cool a la plus chiante", low: "La plus cool", high: "La plus soulante" },
+  { theme: "Un metier, par salaire", low: "Stagiaire non paye", high: "PDG du CAC 40" },
+  { theme: "Une console de jeu, par puissance", low: "Une vieille Game Boy", high: "Une PS5 / PC de gamer" },
+  { theme: "Un plat, du plus light au plus lourd", low: "Une salade verte", high: "Une raclette" },
+  { theme: "Une destination de vacances, du nul au paradis", low: "Camping sous la pluie", high: "Les Maldives" },
+  { theme: "Un streamer/youtubeur FR, par notoriete", low: "Un inconnu a 10 vues", high: "Squeezie" },
+  { theme: "Un film de super-heros, du flop au chef-d'oeuvre", low: "Le gros navet", high: "Le chef-d'oeuvre culte" },
+  { theme: "Un perso de Disney, du plus gentil au plus mechant", low: "Le gentil tout mignon", high: "Le grand mechant" },
+  { theme: "Un moyen de transport, du plus lent au plus rapide", low: "Une trottinette", high: "Un avion de chasse" },
+  { theme: "Un mechant de film ou d'anime, du soft au terrifiant", low: "Un sbire de base", high: "Le boss final ultime" },
+  { theme: "Un telephone, du plus pourri au plus haut de gamme", low: "Un vieux Nokia 3310", high: "Le dernier iPhone" },
+  { theme: "Une soiree, du flop au legendaire", low: "Seul devant la TV", high: "La soiree dont on parle encore" },
+];
+
+type Pack = "adult" | "culture";
+
 // -- Player state -----------------------------------------
 interface TopTenPlayer {
   id: string;
@@ -120,6 +152,7 @@ export class TopTenGame extends BaseGame {
   round = 0;
   totalRounds = 0;
   numberRange = 10; // echelle des numeros secrets (1..numberRange)
+  selectedPack: Pack = "adult"; // banque de themes choisie au setup
   currentTheme: Theme | null = null;
   usedThemes: Set<number> = new Set();
   numberedOrder: string[] = []; // ordre melange propose a tous pour classer
@@ -188,11 +221,12 @@ export class TopTenGame extends BaseGame {
 
   // Choisit un theme jamais vu cette partie (recycle si banque epuisee)
   pickTheme() {
-    if (this.usedThemes.size >= THEMES.length) this.usedThemes.clear();
-    let idx = Math.floor(Math.random() * THEMES.length);
-    while (this.usedThemes.has(idx)) idx = Math.floor(Math.random() * THEMES.length);
+    const pool = this.selectedPack === "culture" ? CULTURE_THEMES : THEMES;
+    if (this.usedThemes.size >= pool.length) this.usedThemes.clear();
+    let idx = Math.floor(Math.random() * pool.length);
+    while (this.usedThemes.has(idx)) idx = Math.floor(Math.random() * pool.length);
     this.usedThemes.add(idx);
-    this.currentTheme = THEMES[idx];
+    this.currentTheme = pool[idx];
   }
 
   // -- Scoring & Reveal ------------------------------------
@@ -260,6 +294,14 @@ export class TopTenGame extends BaseGame {
       const r = Number(payload.range);
       if (ALLOWED_RANGES.includes(r)) {
         this.numberRange = r;
+        this.broadcastPersonalizedState();
+      }
+      return;
+    }
+    if (action === "set-pack" && this.phase === "config") {
+      const p = payload.pack;
+      if (p === "adult" || p === "culture") {
+        this.selectedPack = p;
         this.broadcastPersonalizedState();
       }
       return;
@@ -355,6 +397,7 @@ export class TopTenGame extends BaseGame {
       round: this.round,
       totalRounds: this.totalRounds,
       numberRange: this.numberRange,
+      pack: this.selectedPack,
       theme: this.currentTheme,
       // Liste melangee a classer (numeros caches)
       numberedOrder: this.numberedOrder,

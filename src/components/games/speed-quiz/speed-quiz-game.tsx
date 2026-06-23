@@ -4,12 +4,7 @@ import { useCallback, useEffect, useRef } from "react";
 import { useGame } from "@/lib/party/use-game";
 import { useGameStore } from "@/lib/stores/game-store";
 import type { GameProps } from "@/lib/games/types";
-import type {
-  SpeedQuizState,
-  SpeedQuizPlayer,
-  SpeedQuizAnswer,
-} from "@/lib/party/message-types";
-import { cn } from "@/lib/utils";
+import type { SpeedQuizState, SpeedQuizPlayer } from "@/lib/party/message-types";
 import { useKeyedState } from "@/lib/use-keyed-state";
 
 const palette = ["#FF6A3D","#2B6DE8","#18A957","#E63CA0","#6B4FE8","#E89A2B","#00B3A6","#E23434"];
@@ -27,6 +22,7 @@ export default function SpeedQuizGame({ roomCode, playerId, playerName }: GamePr
   const { gameState, error } = useGameStore();
   const state = gameState as unknown as SpeedQuizState;
   const roundKey = state?.round ?? 0;
+  // input/submitted réinitialisés à chaque question (clés sur la manche)
   const [input, setInput] = useKeyedState<string>(roundKey, "");
   const [submitted, setSubmitted] = useKeyedState<boolean>(roundKey, false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -44,25 +40,19 @@ export default function SpeedQuizGame({ roomCode, playerId, playerName }: GamePr
     sendAction({ action: "answer", answer: trimmed });
   }, [input, sendAction, setSubmitted, submitted]);
 
-  const handleValidate = useCallback(
-    (correct: boolean) => sendAction({ action: "validate", correct }),
-    [sendAction]
-  );
-
   if (!state || state.status === "waiting") {
     return (
       <div className="flex h-full items-center justify-center px-6 text-center text-white">
         <div>
           <span className="cb-eyebrow" style={{ color: "rgba(255,255,255,0.5)" }}>
-            en attente
+            préparation
           </span>
-          <h2 className="cb-display-lg mt-2">Préparation…</h2>
+          <h2 className="cb-display-lg mt-2">Le quiz arrive…</h2>
         </div>
       </div>
     );
   }
 
-  const isHost = playerId === state.hostId;
   const me = state.players?.find((p) => p.id === playerId);
 
   // ── QUESTION PHASE ─────────────────────────────────────
@@ -70,9 +60,10 @@ export default function SpeedQuizGame({ roomCode, playerId, playerName }: GamePr
     const total = state.currentQuestion.total;
     const idx = state.currentQuestion.index;
     const timeLeft = state.timeLeft ?? 0;
+    const qTime = state.questionTime ?? 15;
     const urgent = timeLeft <= 5;
     const dashLen = 238.7;
-    const dashOffset = dashLen * (1 - timeLeft / 20);
+    const dashOffset = dashLen * (1 - Math.max(0, timeLeft) / qTime);
 
     return (
       <div className="relative flex h-full flex-col">
@@ -117,14 +108,14 @@ export default function SpeedQuizGame({ roomCode, playerId, playerName }: GamePr
                       style={{ transition: "stroke-dashoffset 1s linear" }} />
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <span className="cb-display-md text-white">{timeLeft}</span>
+              <span className="cb-display-md text-white">{Math.max(0, timeLeft)}</span>
               <span className="cb-eyebrow text-[8px]" style={{ color: "rgba(255,255,255,0.5)" }}>
                 sec
               </span>
             </div>
           </div>
           <span className="cb-eyebrow mt-2" style={{ color: "rgba(255,255,255,0.5)" }}>
-            {state.currentQuestion.category} · {state.currentQuestion.difficulty}
+            {state.currentQuestion.category}
           </span>
         </div>
 
@@ -192,7 +183,7 @@ export default function SpeedQuizGame({ roomCode, playerId, playerName }: GamePr
               <p className="text-sm font-bold" style={{ fontFamily: "var(--font-display)" }}>
                 Réponse envoyée
               </p>
-              <p className="text-xs mt-0.5 opacity-75">en attente des autres...</p>
+              <p className="text-xs mt-0.5 opacity-75">la bonne réponse arrive…</p>
             </div>
           )}
         </div>
@@ -235,169 +226,92 @@ export default function SpeedQuizGame({ roomCode, playerId, playerName }: GamePr
     );
   }
 
-  // ── VALIDATING PHASE ───────────────────────────────────
-  if (state.status === "validating" && state.currentQuestion && state.answers) {
-    const currentIdx = state.currentValidationIndex ?? 0;
+  // ── REVEAL PHASE (auto, façon "12 coups de midi") ──────
+  if (state.status === "reveal" && state.currentQuestion) {
+    const myResult = state.results?.find((r) => r.playerId === playerId);
+    const good = myResult?.correct;
+    const sorted = state.players?.slice().sort((a, b) => b.score - a.score) ?? [];
+
     return (
-      <div className="relative flex h-full flex-col">
-        <div className="px-4 pt-2">
-          <span className="cb-eyebrow" style={{ color: "rgba(255,255,255,0.5)" }}>
-            validation · Q {state.currentQuestion.index + 1}/{state.currentQuestion.total}
-          </span>
-          <h2 className="cb-display-sm mt-1 text-white text-balance">
-            {state.currentQuestion.text}
-          </h2>
-          {isHost && state.referenceAnswers && (
-            <p
-              className="mt-2 rounded-lg px-3 py-1.5 text-xs cb-mono"
-              style={{
-                background: "var(--cb-brand-tint)",
-                color: "var(--cb-brand)",
-              }}
-            >
-              Indice : {state.referenceAnswers.join(" / ")}
-            </p>
-          )}
+      <div className="flex h-full flex-col px-4 pt-3">
+        <span className="cb-eyebrow" style={{ color: "rgba(255,255,255,0.5)" }}>
+          réponse · Q {state.currentQuestion.index + 1}/{state.currentQuestion.total}
+        </span>
+        <h2 className="cb-display-sm mt-1 text-white text-balance">
+          {state.currentQuestion.text}
+        </h2>
+
+        {/* Bonne réponse */}
+        <div
+          className="mt-3 rounded-2xl border px-4 py-4 text-center"
+          style={{ background: "rgba(24,169,87,0.12)", borderColor: "rgba(24,169,87,0.4)" }}
+        >
+          <p className="cb-eyebrow" style={{ color: "var(--cb-strategy)" }}>la réponse</p>
+          <p className="cb-display-md mt-1" style={{ color: "#fff" }}>{state.correctAnswer}</p>
         </div>
 
-        <div className="cb-scroll flex-1 overflow-y-auto px-4 py-3 space-y-2">
-          {state.answers.map((a: SpeedQuizAnswer, i: number) => {
-            if (!a.validated && i !== currentIdx) return null;
-            const isCurrent = i === currentIdx && !a.validated;
-            const okBg = "rgba(24,169,87,0.15)";
-            const noBg = "rgba(226,52,52,0.10)";
+        {/* Mon résultat */}
+        {myResult && (
+          <div
+            className="mt-3 flex items-center gap-3 rounded-xl border px-4 py-3"
+            style={{
+              background: good ? "rgba(24,169,87,0.12)" : "rgba(226,52,52,0.10)",
+              borderColor: good ? "rgba(24,169,87,0.4)" : "rgba(226,52,52,0.3)",
+            }}
+          >
+            <span className="cb-display-sm" style={{ color: good ? "var(--cb-strategy)" : "var(--cb-social)" }}>
+              {good ? "✓" : "✗"}
+            </span>
+            <div className="flex-1">
+              <p className="text-xs" style={{ color: "rgba(255,255,255,0.55)" }}>ta réponse</p>
+              <p className="text-sm font-bold" style={{ color: "#fff", fontFamily: "var(--font-display)" }}>
+                {myResult.answer || "(rien)"}
+              </p>
+            </div>
+            <span className="cb-display-sm" style={{ color: good ? "var(--cb-strategy)" : "rgba(255,255,255,0.4)" }}>
+              +{myResult.gained}
+            </span>
+          </div>
+        )}
 
+        {/* Classement compact */}
+        <div className="cb-scroll mt-3 flex-1 overflow-y-auto space-y-1.5">
+          {sorted.map((p, i) => {
+            const r = state.results?.find((x) => x.playerId === p.id);
             return (
               <div
-                key={a.playerId}
-                className="rounded-xl border px-3 py-3 transition"
+                key={p.id}
+                className="flex items-center gap-2 rounded-lg border px-3 py-2"
                 style={{
-                  background: isCurrent ? "var(--cb-brand-tint)" :
-                              a.validated && a.correct ? okBg :
-                              a.validated && !a.correct ? noBg :
-                              "rgba(255,255,255,0.04)",
-                  borderColor: isCurrent ? "var(--cb-brand)" :
-                               a.validated && a.correct ? "rgba(24,169,87,0.4)" :
-                               a.validated && !a.correct ? "rgba(226,52,52,0.3)" :
-                               "rgba(255,255,255,0.08)",
-                  opacity: !isCurrent && !a.validated ? 0.3 : 1,
+                  background: i === 0 ? "rgba(227,184,58,0.12)" : "rgba(255,255,255,0.04)",
+                  borderColor: i === 0 ? "rgba(227,184,58,0.35)" : "rgba(255,255,255,0.08)",
                 }}
               >
-                <div className="flex items-center gap-2">
-                  <span
-                    className="flex h-7 w-7 items-center justify-center rounded-full text-[10px] font-black"
-                    style={{
-                      background: colorFor(a.playerName),
-                      color: "#fff",
-                      fontFamily: "var(--font-display)",
-                    }}
-                  >
-                    {initialsOf(a.playerName)}
-                  </span>
-                  <span className="text-xs font-bold" style={{ color: "#fff" }}>
-                    {a.playerName}
-                  </span>
-                  <div className="ml-auto flex items-center gap-2">
-                    {a.validated && a.correct && (
-                      <span className="cb-display-sm" style={{ color: "var(--cb-strategy)" }}>+1</span>
-                    )}
-                    {a.validated && !a.correct && (
-                      <span className="cb-display-sm" style={{ color: "var(--cb-social)" }}>0</span>
-                    )}
-                  </div>
-                </div>
-                {a.answer !== null ? (
-                  <p
-                    className="mt-1 cb-display-sm"
-                    style={{
-                      color: isCurrent ? "#fff" :
-                             a.correct ? "var(--cb-strategy)" :
-                             "rgba(255,80,80,0.7)",
-                    }}
-                  >
-                    {a.answer || "(pas de réponse)"}
-                  </p>
-                ) : (
-                  <p className="mt-1 text-sm" style={{ color: "rgba(255,255,255,0.3)" }}>???</p>
+                <span className="cb-mono w-5 text-center text-[11px]" style={{ color: i === 0 ? "#E3B83A" : "rgba(255,255,255,0.4)" }}>
+                  {i + 1}
+                </span>
+                <span
+                  className="flex h-7 w-7 items-center justify-center rounded-full text-[10px] font-black"
+                  style={{ background: colorFor(p.name), color: "#fff", fontFamily: "var(--font-display)" }}
+                >
+                  {initialsOf(p.name)}
+                </span>
+                <span className="flex-1 text-sm font-bold" style={{ color: "#fff", fontFamily: "var(--font-display)" }}>
+                  {p.name}{p.id === playerId && <span style={{ color: "rgba(255,255,255,0.4)" }}> (toi)</span>}
+                </span>
+                {r && r.gained > 0 && (
+                  <span className="cb-mono text-[11px]" style={{ color: "var(--cb-strategy)" }}>+{r.gained}</span>
                 )}
-
-                {isCurrent && isHost && (
-                  <div className="mt-3 flex gap-2">
-                    <button
-                      onClick={() => handleValidate(false)}
-                      className="cb-btn flex-1"
-                      style={{ background: "var(--cb-social)", color: "#fff" }}
-                    >
-                      Faux
-                    </button>
-                    <button
-                      onClick={() => handleValidate(true)}
-                      className="cb-btn flex-1"
-                      style={{ background: "var(--cb-strategy)", color: "#fff" }}
-                    >
-                      Correct
-                    </button>
-                  </div>
-                )}
-                {isCurrent && !isHost && (
-                  <p className="mt-2 text-xs" style={{ color: "rgba(255,255,255,0.5)" }}>
-                    L&apos;hôte valide...
-                  </p>
-                )}
+                <span className="cb-mono text-sm font-bold" style={{ color: i === 0 ? "#E3B83A" : "rgba(255,255,255,0.6)" }}>
+                  {p.score}
+                </span>
               </div>
             );
           })}
         </div>
-      </div>
-    );
-  }
 
-  // ── SCORES PHASE ───────────────────────────────────────
-  if (state.status === "scores") {
-    const sorted = state.players?.slice().sort((a, b) => b.score - a.score);
-    return (
-      <div className="flex h-full flex-col items-center justify-center px-4 text-white">
-        <span className="cb-eyebrow" style={{ color: "rgba(255,255,255,0.5)" }}>
-          classement
-        </span>
-        <div className="mt-3 w-full max-w-md space-y-2">
-          {sorted?.map((p, i) => (
-            <div
-              key={p.id}
-              className="flex items-center gap-3 rounded-xl border px-3 py-3"
-              style={{
-                background: i === 0 ? "rgba(227,184,58,0.12)" : "rgba(255,255,255,0.04)",
-                borderColor: i === 0 ? "rgba(227,184,58,0.4)" : "rgba(255,255,255,0.08)",
-              }}
-            >
-              <span
-                className="cb-display-sm w-8 text-center"
-                style={{ color: i === 0 ? "#E3B83A" : "rgba(255,255,255,0.4)" }}
-              >
-                #{i + 1}
-              </span>
-              <span
-                className="flex h-9 w-9 items-center justify-center rounded-full text-xs font-black"
-                style={{
-                  background: colorFor(p.name),
-                  color: "#fff",
-                  fontFamily: "var(--font-display)",
-                }}
-              >
-                {initialsOf(p.name)}
-              </span>
-              <span className="flex-1 text-sm font-bold" style={{ fontFamily: "var(--font-display)" }}>
-                {p.name}
-              </span>
-              <span className="cb-mono text-base font-bold"
-                    style={{ color: i === 0 ? "#E3B83A" : "rgba(255,255,255,0.6)" }}>
-                {p.score}
-              </span>
-            </div>
-          ))}
-        </div>
-        <p className="mt-6 text-xs animate-pulse" style={{ color: "rgba(255,255,255,0.45)" }}>
-          Prochaine question...
+        <p className="py-3 text-center text-xs animate-pulse" style={{ color: "rgba(255,255,255,0.45)" }}>
+          Question suivante…
         </p>
       </div>
     );

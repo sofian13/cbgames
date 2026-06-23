@@ -33,6 +33,7 @@ interface TopTenState {
   round: number;
   totalRounds: number;
   numberRange: number;
+  pack: Pack;
   theme: ThemeState | null;
   numberedOrder: string[];
   submittedCount: number;
@@ -108,6 +109,43 @@ const LOCAL_THEMES: ThemeState[] = [
   { theme: "Ce que t'as déjà fait sous l'effet d'un truc", low: "Rire trop fort en soirée", high: "Un truc que je pensais pas pouvoir faire" },
 ];
 
+// ── Pack Culture pop & Classements (1 = le plus faible/nul → 10 = le plus fort/ouf) ──
+const CULTURE_THEMES: ThemeState[] = [
+  { theme: "Un perso de Dragon Ball, par puissance", low: "Yamcha", high: "Zeno, le roi de tout" },
+  { theme: "Un Pokémon, par puissance", low: "Magicarpe", high: "Arceus" },
+  { theme: "Un perso de One Piece, par prime", low: "Un pirate sans prime", high: "Un Yonko (Empereur)" },
+  { theme: "Un perso de Naruto, par force", low: "Un genin de l'académie", high: "Kaguya" },
+  { theme: "Un super-héros Marvel, par puissance", low: "Œil-de-Faucon", high: "Thanos" },
+  { theme: "Une ville de France, de la plus stylée à la plus pourrie", low: "Une ville de rêve", high: "Le trou paumé le plus pourri" },
+  { theme: "Un joueur de foot, par talent", low: "Un amateur du dimanche", high: "Messi" },
+  { theme: "Un rappeur FR, par notoriété", low: "Un rappeur inconnu", high: "Une légende du game" },
+  { theme: "Une marque de voiture, du low-cost au luxe", low: "Une Dacia", high: "Une Ferrari" },
+  { theme: "Un animal, du plus inoffensif au plus dangereux", low: "Un lapin", high: "Un grand requin blanc" },
+  { theme: "Un fast-food, du pire au meilleur", low: "Le pire endroit", high: "Ton resto préféré" },
+  { theme: "Un réseau social, par temps perdu dessus", low: "LinkedIn", high: "TikTok" },
+  { theme: "Une matière à l'école, de la plus cool à la plus chiante", low: "La plus cool", high: "La plus soûlante" },
+  { theme: "Un métier, par salaire", low: "Stagiaire non payé", high: "PDG du CAC 40" },
+  { theme: "Une console de jeu, par puissance", low: "Une vieille Game Boy", high: "Une PS5 / PC de gamer" },
+  { theme: "Un plat, du plus light au plus lourd", low: "Une salade verte", high: "Une raclette" },
+  { theme: "Une destination de vacances, du nul au paradis", low: "Camping sous la pluie", high: "Les Maldives" },
+  { theme: "Un streamer/youtubeur FR, par notoriété", low: "Un inconnu à 10 vues", high: "Squeezie" },
+  { theme: "Un film de super-héros, du flop au chef-d'œuvre", low: "Le gros navet", high: "Le chef-d'œuvre culte" },
+  { theme: "Un perso de Disney, du plus gentil au plus méchant", low: "Le gentil tout mignon", high: "Le grand méchant" },
+  { theme: "Un moyen de transport, du plus lent au plus rapide", low: "Une trottinette", high: "Un avion de chasse" },
+  { theme: "Un méchant de film ou d'anime, du soft au terrifiant", low: "Un sbire de base", high: "Le boss final ultime" },
+  { theme: "Un téléphone, du plus pourri au plus haut de gamme", low: "Un vieux Nokia 3310", high: "Le dernier iPhone" },
+  { theme: "Une soirée, du flop au légendaire", low: "Seul devant la TV", high: "La soirée dont on parle encore" },
+];
+
+type Pack = "adult" | "culture";
+const PACK_LABEL: Record<Pack, string> = { adult: "Thème 18+", culture: "Culture pop 🏆" };
+// Vocabulaire de l'échelle selon le pack (soft↔hard pour 18+, faible↔fort pour les classements)
+const SCALE: Record<Pack, { low: string; high: string; lowFull: string; highFull: string }> = {
+  adult: { low: "Soft", high: "Hard", lowFull: "plus soft", highFull: "plus hard" },
+  culture: { low: "Faible", high: "Fort", lowFull: "plus faible", highFull: "plus fort" },
+};
+const themesForPack = (p: Pack) => (p === "culture" ? CULTURE_THEMES : LOCAL_THEMES);
+
 // Score un classement (paires adjacentes bien ordonnées soft→hard)
 function scorePairs(orderedNums: number[]): { correct: number; total: number; perfect: boolean; points: number } {
   const total = Math.max(0, orderedNums.length - 1);
@@ -125,7 +163,7 @@ export default function TopTenGame(props: GameProps) {
   if (mode === null) {
     return (
       <ModeSelect emoji="🔥" name="Top Ten"
-        tagline="Un thème osé, un numéro secret de 1 à 10. Chacun joue l'intensité… puis tout le monde classe la table du plus soft au plus hard. (18+)"
+        tagline="Un thème, un numéro secret de 1 à 10. Chacun joue l'intensité… puis tout le monde classe la table. Deux ambiances : Soirée 18+ ou Culture pop (classements animés, villes, foot…)."
         onPick={setMode} />
     );
   }
@@ -143,7 +181,8 @@ function TopTenLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) {
   const [scores, setScores] = useState<number[]>([]);
   const [round, setRound] = useState(0);
   const [numberRange, setNumberRange] = useState<10 | 25 | 50>(10);
-  const [themes] = useState(() => [...LOCAL_THEMES].sort(() => Math.random() - 0.5));
+  const [pack, setPack] = useState<Pack>("adult");
+  const [themes, setThemes] = useState<ThemeState[]>(() => [...LOCAL_THEMES].sort(() => Math.random() - 0.5));
   const [themeCursor, setThemeCursor] = useState(0); // avance à chaque manche / changement
   const [numbers, setNumbers] = useState<Record<number, number>>({}); // playerIdx -> numéro
   const [passOrder, setPassOrder] = useState<number[]>([]); // ordre de passage (mélangé)
@@ -177,7 +216,11 @@ function TopTenLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) {
     setThemeCursor(0);
     setPhase("target"); // on choisit le score cible avant la 1re manche
   };
-  const launch = () => { startRound(1, players); };
+  const launch = () => {
+    setThemes([...themesForPack(pack)].sort(() => Math.random() - 0.5));
+    setThemeCursor(0);
+    startRound(1, players);
+  };
 
   // Quand tout le monde a classé → score + reveal
   const finishRanking = (allGuesses: Record<number, number[]>) => {
@@ -199,14 +242,14 @@ function TopTenLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) {
     return <PlayersSetup emoji="🔥" name="Top Ten" min={3} max={10} accent="#ff5a8a" onStart={begin} onBack={onReturnToLobby} />;
   }
   if (phase === "target") {
-    return <RangePicker range={numberRange} onPick={setNumberRange} onStart={launch} onBack={() => setPhase("setup")} />;
+    return <RangePicker range={numberRange} onPick={setNumberRange} pack={pack} onPickPack={setPack} onStart={launch} onBack={() => setPhase("setup")} />;
   }
   if (phase === "theme") {
     return (
       <div className="flex min-h-[100svh] flex-col items-center justify-center p-5 text-white"
         style={{ background: `radial-gradient(circle at 50% 18%, ${ACCENT}26, transparent 45%), #0E0828` }}>
         <p className="af-eyebrow mb-4">Manche {round}/{totalRounds} · sur {numberRange}</p>
-        <ThemeCard theme={theme} range={numberRange} />
+        <ThemeCard theme={theme} range={numberRange} pack={pack} />
         <button onClick={() => { setStepIdx(0); setPhase("pass-number"); }}
           className="af-btn af-btn-primary mt-7 w-full max-w-md">C&apos;est bon → distribuer les numéros</button>
         <button onClick={() => setThemeCursor((c) => c + 1)}
@@ -239,11 +282,11 @@ function TopTenLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) {
         style={{ background: `radial-gradient(circle at 50% 15%, ${ACCENT}26, transparent 45%), #0E0828` }}>
         <p className="af-eyebrow mt-3">Manche {round}/{totalRounds} · sur {numberRange}</p>
         <div className="mt-4 w-full max-w-md rounded-3xl border p-6" style={{ borderColor: "rgba(255,255,255,0.1)", background: "rgba(0,0,0,0.4)" }}>
-          <p className="af-eyebrow mb-2 text-center" style={{ color: ACCENT }}>Thème 18+</p>
+          <p className="af-eyebrow mb-2 text-center" style={{ color: ACCENT }}>{PACK_LABEL[pack]}</p>
           <p className="cb-display-sm text-center">{theme?.theme}</p>
           <div className="mt-4 flex gap-2 text-center text-xs">
             <div className="flex-1 rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-2"><b className="text-emerald-400">1</b><br/>{theme?.low}</div>
-            <div className="flex-1 rounded-2xl border p-2" style={{ borderColor: `${ACCENT}40`, background: `${ACCENT}14` }}><b style={{ color: ACCENT }}>10</b><br/>{theme?.high}</div>
+            <div className="flex-1 rounded-2xl border p-2" style={{ borderColor: `${ACCENT}40`, background: `${ACCENT}14` }}><b style={{ color: ACCENT }}>{numberRange}</b><br/>{theme?.high}</div>
           </div>
         </div>
         <p className="mt-5 max-w-xs text-center text-sm" style={{ color: "var(--text-dim)" }}>
@@ -266,7 +309,7 @@ function TopTenLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) {
         ids={passOrder.map(String)}
         nameOf={(id) => players[+id]}
         rankerName={players[ranker]}
-        round={round} total={totalRounds} range={numberRange}
+        round={round} total={totalRounds} range={numberRange} pack={pack}
         onSubmit={(o) => {
           const g = o.map(Number);
           const next = { ...guesses, [ranker]: g };
@@ -385,6 +428,8 @@ function TopTenOnline({ roomCode, playerId, playerName }: GameProps) {
         <RangePicker
           range={(state.numberRange as 10 | 25 | 50) ?? 10}
           onPick={(r) => sendAction({ action: "set-range", range: r })}
+          pack={state.pack ?? "adult"}
+          onPickPack={(p) => sendAction({ action: "set-pack", pack: p })}
           onStart={() => sendAction({ action: "begin-game" })}
           shared
         />
@@ -417,9 +462,9 @@ function TopTenOnline({ roomCode, playerId, playerName }: GameProps) {
         className="flex flex-1 flex-col items-center justify-center p-5 md:p-6"
         style={{ background: `radial-gradient(circle at 50% 20%, ${ACCENT}16, transparent 45%), #060606` }}
       >
-        <Header round={state.round} total={state.totalRounds} range={state.numberRange} />
+        <Header round={state.round} total={state.totalRounds} range={state.numberRange} pack={state.pack ?? "adult"} />
         <div className="flex-1 flex flex-col items-center justify-center w-full">
-          <ThemeCard theme={state.theme} range={state.numberRange} />
+          <ThemeCard theme={state.theme} range={state.numberRange} pack={state.pack ?? "adult"} />
           <button
             onClick={() => sendAction({ action: "start-answering" })}
             className="mt-7 w-full max-w-md py-4 rounded-2xl font-sans text-sm font-semibold text-white transition-all hover:brightness-110 active:scale-[0.98]"
@@ -448,11 +493,11 @@ function TopTenOnline({ roomCode, playerId, playerName }: GameProps) {
         className="flex flex-1 flex-col items-center p-5 md:p-6"
         style={{ background: `radial-gradient(circle at 50% 20%, ${ACCENT}14, transparent 45%), #060606` }}
       >
-        <Header round={state.round} total={state.totalRounds} range={state.numberRange} />
+        <Header round={state.round} total={state.totalRounds} range={state.numberRange} pack={state.pack ?? "adult"} />
 
         {/* Theme card */}
         <div className="mt-4 mb-6 w-full max-w-md">
-          <ThemeCard theme={state.theme} range={state.numberRange} />
+          <ThemeCard theme={state.theme} range={state.numberRange} pack={state.pack ?? "adult"} />
         </div>
 
         {/* My secret number */}
@@ -500,6 +545,7 @@ function TopTenOnline({ roomCode, playerId, playerName }: GameProps) {
         round={state.round}
         total={state.totalRounds}
         range={state.numberRange}
+        pack={state.pack ?? "adult"}
         submittedCount={state.submittedCount}
         playerCount={state.players.length}
       />
@@ -656,7 +702,7 @@ function Centered({ children }: { children: React.ReactNode }) {
   );
 }
 
-function Header({ round, total, range }: { round: number; total: number; range: number }) {
+function Header({ round, total, range, pack = "adult" }: { round: number; total: number; range: number; pack?: Pack }) {
   return (
     <div className="flex w-full max-w-md items-center justify-between">
       <span className="text-xs text-white/25 font-sans tracking-wide">
@@ -666,7 +712,7 @@ function Header({ round, total, range }: { round: number; total: number; range: 
         className="text-[10px] px-3 py-1 rounded-full border font-sans font-semibold uppercase tracking-wider"
         style={{ color: ACCENT, borderColor: `${ACCENT}40`, background: `${ACCENT}14` }}
       >
-        Th&egrave;me 18+
+        {PACK_LABEL[pack]}
       </span>
     </div>
   );
@@ -676,12 +722,16 @@ function Header({ round, total, range }: { round: number; total: number; range: 
 function RangePicker({
   range,
   onPick,
+  pack,
+  onPickPack,
   onStart,
   onBack,
   shared,
 }: {
   range: 10 | 25 | 50;
   onPick: (r: 10 | 25 | 50) => void;
+  pack?: Pack;
+  onPickPack?: (p: Pack) => void;
   onStart: () => void;
   onBack?: () => void;
   shared?: boolean;
@@ -691,8 +741,43 @@ function RangePicker({
     { v: 25, label: "Nuance", sub: "Numéros entre 1 et 25" },
     { v: 50, label: "Sniper", sub: "Numéros entre 1 et 50" },
   ];
+  const PACKS: { v: Pack; emoji: string; label: string; sub: string }[] = [
+    { v: "adult", emoji: "🔥", label: "Soirée 18+", sub: "Thèmes osés & malaise" },
+    { v: "culture", emoji: "🏆", label: "Culture pop", sub: "Classements : animés, villes, foot…" },
+  ];
   return (
     <div className="flex w-full max-w-md flex-col items-center text-white">
+      {pack != null && onPickPack && (
+        <>
+          <p className="text-[10px] uppercase tracking-[0.25em] mb-2" style={{ color: `${ACCENT}cc` }}>
+            Type de thèmes
+          </p>
+          <div className="grid w-full grid-cols-2 gap-2.5 mb-6">
+            {PACKS.map((o) => {
+              const active = o.v === pack;
+              return (
+                <button
+                  key={o.v}
+                  onClick={() => onPickPack(o.v)}
+                  className={cn(
+                    "rounded-3xl border p-4 text-center transition-all active:scale-[0.97]",
+                    active ? "shadow-lg" : "hover:bg-white/[0.04]"
+                  )}
+                  style={{
+                    borderColor: active ? `${ACCENT}aa` : "rgba(255,255,255,0.10)",
+                    background: active ? `${ACCENT}1e` : "rgba(0,0,0,0.32)",
+                    boxShadow: active ? `0 0 30px ${ACCENT}44` : undefined,
+                  }}
+                >
+                  <p className="text-2xl">{o.emoji}</p>
+                  <p className="text-xs font-semibold mt-1 text-white/90">{o.label}</p>
+                  <p className="text-[9px] text-white/40 mt-0.5 leading-tight">{o.sub}</p>
+                </button>
+              );
+            })}
+          </div>
+        </>
+      )}
       <p className="text-[10px] uppercase tracking-[0.25em] mb-2" style={{ color: `${ACCENT}cc` }}>
         Échelle des numéros
       </p>
@@ -747,14 +832,14 @@ function RangePicker({
   );
 }
 
-function ThemeCard({ theme, range = 10 }: { theme: ThemeState | null; range?: number }) {
+function ThemeCard({ theme, range = 10, pack = "adult" }: { theme: ThemeState | null; range?: number; pack?: Pack }) {
   return (
     <div
       className="w-full max-w-md rounded-3xl border border-white/10 bg-black/40 backdrop-blur-sm p-6"
       style={{ boxShadow: `0 0 40px ${ACCENT}1a` }}
     >
       <p className="text-[10px] text-white/30 font-sans uppercase tracking-[0.25em] mb-3 text-center">
-        Th&egrave;me 18+ · échelle 1 → {range}
+        {PACK_LABEL[pack]} · échelle 1 → {range}
       </p>
       <p className="text-2xl font-serif font-semibold text-white/95 text-center leading-snug">
         {theme?.theme}
@@ -806,6 +891,7 @@ function OrderingBoard({
   round,
   total,
   range,
+  pack = "adult",
   myId,
   rankerName,
   submittedCount,
@@ -817,6 +903,7 @@ function OrderingBoard({
   round: number;
   total: number;
   range: number;
+  pack?: Pack;
   myId?: string;
   rankerName?: string;
   submittedCount?: number;
@@ -897,11 +984,11 @@ function OrderingBoard({
         </span>
       </div>
       <p className="text-center text-lg font-serif font-semibold text-white/90 mt-2 mb-1">
-        Classe-les du plus soft au plus hard
+        Classe-les du {SCALE[pack].lowFull} au {SCALE[pack].highFull}
       </p>
       <div className="flex items-center justify-between max-w-md w-full mx-auto px-1 mb-3">
-        <span className="text-[10px] text-emerald-400 font-sans uppercase tracking-wider">↑ 1 · Soft</span>
-        <span className="text-[10px] font-sans uppercase tracking-wider" style={{ color: ACCENT }}>10 · Hard ↓</span>
+        <span className="text-[10px] text-emerald-400 font-sans uppercase tracking-wider">↑ 1 · {SCALE[pack].low}</span>
+        <span className="text-[10px] font-sans uppercase tracking-wider" style={{ color: ACCENT }}>{range} · {SCALE[pack].high} ↓</span>
       </div>
 
       <div className="flex-1 w-full max-w-md mx-auto space-y-2 select-none" style={{ touchAction: "none" }}>

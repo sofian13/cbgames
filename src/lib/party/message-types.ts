@@ -96,13 +96,13 @@ export interface SpeedQuizState {
   } | null;
   players: SpeedQuizPlayer[];
   timeLeft: number;
-  status: "waiting" | "question" | "validating" | "scores" | "game-over";
+  questionTime?: number; // durée totale d'une question (s), pour l'arc du timer
+  status: "waiting" | "question" | "reveal" | "game-over";
   round: number;
-  hostId: string | null;
-  // Validation phase
-  answers?: SpeedQuizAnswer[];
-  currentValidationIndex?: number;
-  referenceAnswers?: string[]; // hint for the host
+  // Reveal phase (auto-validation)
+  correctAnswer?: string | null;
+  acceptedAnswers?: string[] | null;
+  results?: SpeedQuizResult[] | null;
 }
 
 export interface SpeedQuizPlayer {
@@ -112,12 +112,12 @@ export interface SpeedQuizPlayer {
   hasAnswered: boolean;
 }
 
-export interface SpeedQuizAnswer {
+export interface SpeedQuizResult {
   playerId: string;
   playerName: string;
-  answer: string | null; // null if not yet revealed
-  validated: boolean;
-  correct: boolean | null;
+  answer: string;
+  correct: boolean;
+  gained: number;
 }
 
 // ===== Word Chain Specific =====

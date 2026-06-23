@@ -115,7 +115,9 @@ export class RoastQuizGame extends BaseGame {
     this.clearTimers();
     this.status = "reveal";
     this.broadcastState();
-    if (this.lastCorrectPlayerId) {
+    // On ne propose un malus que s'il y a au moins une autre cible (sinon, ex. en solo, on enchaine)
+    const hasTarget = Array.from(this.rPlayers.keys()).some((id) => id !== this.lastCorrectPlayerId);
+    if (this.lastCorrectPlayerId && hasTarget) {
       this.timer = setTimeout(() => this.startMalusChoice(), REVEAL_TIME);
     } else {
       this.timer = setTimeout(() => this.nextRound(), REVEAL_TIME);
