@@ -143,9 +143,10 @@ export class BattleshipGame extends BaseGame {
     if (bp.board.ships.some((s) => s.id === shipId)) return;
 
     if (!canPlaceShip(bp.board.grid, startIdx, shipConfig.size, horizontal)) {
+      // Erreur via game-error (ne PAS écraser l'état complet du client)
       this.sendToPlayer(playerId, {
-        type: "game-state",
-        payload: { error: "Placement invalide" },
+        type: "game-error",
+        payload: { message: "Placement invalide" },
       });
       return;
     }

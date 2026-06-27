@@ -303,7 +303,7 @@ export default function PicoletteGame({ onReturnToLobby }: GameProps) {
 
         {/* Picker overlay */}
         {picking && (
-          <PickerOverlay players={players} onPick={pickLoser} onCancel={() => setPicking(false)} />
+          <PickerOverlay players={players} onPick={pickLoser} onCancel={() => { setPicking(false); setPickingFromRule(false); }} />
         )}
 
         {/* Roulette overlay */}

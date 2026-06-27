@@ -473,14 +473,15 @@ export class CodeNamesGame extends BaseGame {
     if (this.phase !== "team-pick") return;
     if (senderId !== this.hostId) return;
 
-    // Validate: at least 2 players per team, or at least 1 per team for small groups
+    // Chaque équipe a besoin d'au moins 2 joueurs : 1 Espion + 1 opérative (sinon
+    // l'équipe ne peut jamais deviner ni gagner).
     const redTeam = Array.from(this.cnPlayers.values()).filter(p => p.team === "red");
     const blueTeam = Array.from(this.cnPlayers.values()).filter(p => p.team === "blue");
 
-    if (redTeam.length < 1 || blueTeam.length < 1) {
+    if (redTeam.length < 2 || blueTeam.length < 2) {
       this.sendToPlayer(senderId, {
         type: "game-error",
-        payload: { message: "Chaque equipe doit avoir au moins 1 joueur." },
+        payload: { message: "Chaque equipe doit avoir au moins 2 joueurs (1 Espion + 1 devineur)." },
       });
       return;
     }

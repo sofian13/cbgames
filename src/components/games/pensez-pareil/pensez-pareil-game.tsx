@@ -151,12 +151,12 @@ function PensezPareilLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }
   const [streak, setStreak] = useState(0);
   const [bestStreak, setBestStreak] = useState(0);
   const [teamScore, setTeamScore] = useState(0);
+  // Résultat figé de la manche (évite de lire un ansB encore périmé au moment de scorer)
+  const [lastResult, setLastResult] = useState<{ matched: boolean; points: number; streak: number; syncs: number }>({ matched: false, points: 0, streak: 0, syncs: 0 });
   const [inputA, setInputA] = useKeyedState<string>(`${round}-A`, "");
   const [inputB, setInputB] = useKeyedState<string>(`${round}-B`, "");
 
   const prompt = deck[round] ?? null;
-  const matched = isMatch(ansA, ansB);
-  const lastPoints = matched ? SYNC_BASE + streak * COMBO_STEP : 0;
 
   const begin = (n: [string, string], p: Pack) => {
     setNames(n); setPack(p); setDeck(buildDeck(p));
@@ -164,16 +164,20 @@ function PensezPareilLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }
     setPhase("passA");
   };
 
-  const resolveReveal = () => {
-    if (matched) {
-      setSyncs((s) => s + 1);
-      const ns = streak + 1;
-      setStreak(ns);
-      setBestStreak((b) => Math.max(b, ns));
-      setTeamScore((t) => t + lastPoints);
+  const resolveReveal = (bAns: string) => {
+    const m = isMatch(ansA, bAns);
+    const pts = m ? SYNC_BASE + streak * COMBO_STEP : 0;
+    const nStreak = m ? streak + 1 : 0;
+    const nSyncs = syncs + (m ? 1 : 0);
+    if (m) {
+      setStreak(nStreak);
+      setBestStreak((b) => Math.max(b, nStreak));
+      setSyncs(nSyncs);
+      setTeamScore((t) => t + pts);
     } else {
       setStreak(0);
     }
+    setLastResult({ matched: m, points: pts, streak: nStreak, syncs: nSyncs });
   };
 
   if (phase === "setup") {
@@ -197,14 +201,14 @@ function PensezPareilLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }
   if (phase === "typeB") {
     return <TypeScreen prompt={prompt} player={names[1] || "Joueur 2"} idx={1}
       value={inputB} onChange={setInputB}
-      onSubmit={() => { setAnsB(inputB.trim()); resolveReveal(); setPhase("reveal"); }} />;
+      onSubmit={() => { const b = inputB.trim(); setAnsB(b); resolveReveal(b); setPhase("reveal"); }} />;
   }
   if (phase === "reveal") {
     return (
       <RevealScreen
-        prompt={prompt} matched={matched} points={lastPoints} streak={matched ? streak + 1 : 0}
+        prompt={prompt} matched={lastResult.matched} points={lastResult.points} streak={lastResult.streak}
         names={[names[0] || "Joueur 1", names[1] || "Joueur 2"]} answers={[ansA, ansB]}
-        round={round + 1} total={TOTAL_ROUNDS} syncs={syncs + (matched ? 1 : 0)}
+        round={round + 1} total={TOTAL_ROUNDS} syncs={lastResult.syncs}
         onNext={() => {
           if (round + 1 >= TOTAL_ROUNDS) setPhase("over");
           else { setRound((r) => r + 1); setPhase("passA"); }

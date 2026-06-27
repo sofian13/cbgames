@@ -130,7 +130,8 @@ export class LaTaupeGame extends BaseGame {
       } else { detail = "Pas de majorite ! Reponses trop variees."; }
     } else {
       let pot = 0;
-      active.forEach(p => { pot += p.submission === "contribuer" ? 100 : -100; });
+      // Ne compter que ceux qui ont vraiment répondu (un AFK n'est pas un saboteur)
+      active.filter(p => p.hasSubmitted).forEach(p => { pot += p.submission === "contribuer" ? 100 : -100; });
       success = pot > 0;
       detail = `Pot: ${pot > 0 ? "+" : ""}${pot}. ${success ? "Le groupe a coopere !" : "Trop de sabotage..."}`;
     }

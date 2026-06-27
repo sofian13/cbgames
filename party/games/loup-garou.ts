@@ -738,8 +738,12 @@ export class LoupGarouGame extends BaseGame {
       players: this.getPublicPlayerList(playerId, isDead),
     };
 
+    // Exception : le Chasseur mort doit pouvoir tirer — il ne passe pas en mode spectateur
+    const isShootingHunter =
+      this.phase === "hunter-shot" && lgPlayer?.role === "chasseur" && this.hunterPendingShot;
+
     // Dead players see everything (spectator mode)
-    if (isDead && this.phase !== "role-reveal") {
+    if (isDead && this.phase !== "role-reveal" && !isShootingHunter) {
       base.isSpectator = true;
       base.allRoles = this.getAllRoles();
       base.wolfTarget = this.wolfTarget;

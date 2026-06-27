@@ -91,7 +91,8 @@ export class ReactionTimeGame extends BaseGame {
 
     for (const p of this.reactionPlayers.values()) {
       if (p.clicked) {
-        const time = p.penalty ? (p.roundTime ?? 9999) + PENALTY_MS : (p.roundTime ?? 9999);
+        // Clic trop tôt (rouge) = pénalité non-scorante, classé dernier (jamais sous 9999)
+        const time = p.penalty ? 9999 + PENALTY_MS : (p.roundTime ?? 9999);
         results.push({ playerId: p.id, time, penalty: p.penalty });
       } else {
         results.push({ playerId: p.id, time: 9999, penalty: false });

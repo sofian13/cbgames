@@ -513,7 +513,7 @@ function LeBluffeurOnline({ roomCode, playerId, playerName }: GameProps) {
                   </div>
                   {voterCount > 0 ? (
                     <span className="cb-mono text-xs font-bold" style={{ color: "var(--af-mint)" }}>
-                      +{voterCount * 500}
+                      +{voterCount * 20}
                     </span>
                   ) : (
                     <span className="text-[11px]" style={{ color: "var(--text-muted)" }}>0 piégé</span>

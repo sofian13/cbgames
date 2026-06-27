@@ -39,6 +39,7 @@ export class HuitAmericainGame extends BaseGame {
   amPlayers: Map<string, AmPlayer> = new Map();
   deck: Card[] = [];
   discardTop: Card | null = null;
+  discardPile: Card[] = []; // cartes jouées (hors top) — recyclées quand la pioche est vide
   askedSuit: Suit | null = null; // when 8 or joker forces a color
   turnOrder: string[] = [];
   currentIdx = 0;
@@ -77,17 +78,10 @@ export class HuitAmericainGame extends BaseGame {
   }
 
   refillDeck() {
-    if (!this.discardTop) return;
-    // Recycle all but the current top
-    if (this.deck.length === 0) {
-      // No safe recycling source here (we don't keep a separate pile) — generate fresh deck minus visible cards
-      const fresh = this.buildDeck();
-      // Remove cards currently in hands and on top
-      const inHands = new Set<string>();
-      for (const p of this.amPlayers.values())
-        for (const c of p.hand) inHands.add(this.cardKey(c));
-      inHands.add(this.cardKey(this.discardTop));
-      this.deck = fresh.filter(c => !inHands.has(this.cardKey(c)));
+    // Recycle la défausse (tout sauf la carte visible du dessus) dans la pioche.
+    if (this.deck.length === 0 && this.discardPile.length > 0) {
+      this.deck = this.discardPile;
+      this.discardPile = [];
       this.shuffle(this.deck);
     }
   }
@@ -101,6 +95,7 @@ export class HuitAmericainGame extends BaseGame {
 
     this.deck = this.buildDeck();
     this.shuffle(this.deck);
+    this.discardPile = [];
 
     this.turnOrder = Array.from(this.players.keys());
     this.amPlayers.clear();
@@ -160,6 +155,17 @@ export class HuitAmericainGame extends BaseGame {
       const p = this.amPlayers.get(id);
       if (!p) return;
       const top = this.discardTop;
+      // Si une pile de pioche est en cours, le bot ne peut que contrer (A/JK/D♣) ou subir.
+      if (this.pendingDraws > 0) {
+        const sIdx = p.hand.findIndex((c) => c.rank === "A" || c.rank === "JK" || (c.rank === "D" && c.suit === "♣"));
+        if (sIdx >= 0) {
+          const chosen = p.hand[sIdx].rank === "JK" ? SUITS[Math.floor(Math.random() * 4)] : null;
+          this.playCard(id, sIdx, chosen);
+        } else {
+          this.drawAction(id); // subit la pile et passe
+        }
+        return;
+      }
       const idx = p.hand.findIndex((c) => this.canPlay(c, top, this.askedSuit));
       if (idx >= 0) {
         const card = p.hand[idx];
@@ -232,6 +238,7 @@ export class HuitAmericainGame extends BaseGame {
     }
 
     p.hand.splice(cardIndex, 1);
+    if (this.discardTop) this.discardPile.push(this.discardTop);
     this.discardTop = card;
     this.askedSuit = null;
 
@@ -254,6 +261,8 @@ export class HuitAmericainGame extends BaseGame {
     if (p.hand.length === 0) {
       const rank = this.ranks.length + 1;
       this.ranks.push({ playerId: p.id, playerName: p.name, rank, score: 100 - (rank - 1) * 20 });
+      // Qui joue ensuite (en tenant compte du sens + skip du 7), AVANT de retirer le gagnant
+      const nextId = this.turnOrder[this.nextIdx(skip)];
       this.amPlayers.delete(p.id);
       this.turnOrder = this.turnOrder.filter(id => id !== p.id);
       if (this.turnOrder.length <= 1) {
@@ -268,8 +277,10 @@ export class HuitAmericainGame extends BaseGame {
         this.endRound();
         return;
       }
-      // Adjust currentIdx since we removed a player
-      this.currentIdx = this.currentIdx % this.turnOrder.length;
+      // Repositionne le tour sur le joueur suivant calculé + relance timer/bot
+      const ni = this.turnOrder.indexOf(nextId);
+      this.currentIdx = ni >= 0 ? ni : this.currentIdx % this.turnOrder.length;
+      this.startTurnTimer();
       this.broadcastState();
       return;
     }
@@ -304,7 +315,7 @@ export class HuitAmericainGame extends BaseGame {
       const drawn = this.draw(1);
       p.hand.push(...drawn);
       // Check if drawn is playable; if not, pass; if yes, allow one extra action
-      if (this.discardTop && this.canPlay(drawn[0], this.discardTop, this.askedSuit)) {
+      if (this.discardTop && drawn.length > 0 && this.canPlay(drawn[0], this.discardTop, this.askedSuit)) {
         // Player can play immediately — leave turn open
       } else {
         this.advanceTurn();

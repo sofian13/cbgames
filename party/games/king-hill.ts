@@ -96,8 +96,9 @@ export class KingHillGame extends BaseGame {
     const stealers = Array.from(this.kPlayers.values()).filter(p => p.action === "steal");
     for (const s of stealers) {
       if (king && !king.shieldActive && king.id !== s.id) {
-        const stolen = 5;
+        const stolen = Math.min(5, Math.max(0, king.score));
         s.score += stolen;
+        king.score -= stolen; // le roi perd vraiment les points volés
         this.roundLog.push(`${s.name} vole ${stolen} pts au roi`);
       } else if (king?.shieldActive) {
         this.roundLog.push(`${s.name} ne peut pas voler (bouclier)`);
