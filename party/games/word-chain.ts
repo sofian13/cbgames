@@ -8,8 +8,13 @@ import frenchWordsData from "../data/french-words.json";
 const stripAccents = (s: string) =>
   s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
-// Dictionnaire complet français (~194k mots), stocké sans accents
-const FRENCH_WORDS = new Set((frenchWordsData as string[]).map(stripAccents));
+// Dictionnaire FR (JSON déjà normalisé : minuscules, sans accents). Construit à la
+// DEMANDE (paresseux + mémoïsé) pour ne pas plomber le boot du Worker PartyKit.
+let frenchWordSet: Set<string> | null = null;
+function getFrenchWords(): Set<string> {
+  if (!frenchWordSet) frenchWordSet = new Set(frenchWordsData as string[]);
+  return frenchWordSet;
+}
 
 const INITIAL_TIME = 8;
 const MIN_TIME = 4;
@@ -198,7 +203,7 @@ export class WordChainGame extends BaseGame {
         return;
       }
 
-      if (!FRENCH_WORDS.has(word)) {
+      if (!getFrenchWords().has(word)) {
         this.sendTo(sender.id, {
           type: "game-error",
           payload: { message: "Ce mot n'est pas dans le dictionnaire" },

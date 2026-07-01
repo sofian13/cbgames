@@ -7,8 +7,16 @@ import frenchWordsData from "../data/french-words.json";
 const stripAccents = (s: string) =>
   s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
 
-// Comprehensive French word list (~194k words, 3-10 letters), stored accent-insensitive
-const FRENCH_WORDS = new Set((frenchWordsData as string[]).map(stripAccents));
+// Dictionnaire FR (le JSON est déjà normalisé : minuscules, sans accents, dédupé).
+// On construit le Set à la DEMANDE (paresseux + mémoïsé) au lieu du chargement du
+// module : sinon chaque salle payait ce coût au boot du Worker PartyKit (194k
+// normalize()), ce qui dépassait le budget CPU de démarrage → salle qui ne se
+// lançait pas ("faut relancer PartyKit").
+let frenchWordSet: Set<string> | null = null;
+function getFrenchWords(): Set<string> {
+  if (!frenchWordSet) frenchWordSet = new Set(frenchWordsData as string[]);
+  return frenchWordSet;
+}
 
 // Common French syllables for the game
 const SYLLABLES = [
@@ -222,7 +230,7 @@ export class BombPartyGame extends BaseGame {
         return;
       }
 
-      if (!FRENCH_WORDS.has(word)) {
+      if (!getFrenchWords().has(word)) {
         this.sendTo(sender.id, {
           type: "game-error",
           payload: { message: "Ce mot n'est pas dans le dictionnaire" },
