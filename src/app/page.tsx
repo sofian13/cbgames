@@ -85,6 +85,7 @@ export default function HomePage() {
   const router = useRouter();
   const [code, setCode] = useState("");
   const [localOpen, setLocalOpen] = useState(false);
+  const [online, setOnline] = useState(true);
   // Init empty so SSR and first client render match; populate after mount.
   const [guestName, setGuestNameState] = useState("");
   useEffect(() => {
@@ -93,6 +94,16 @@ export default function HomePage() {
     router.prefetch("/room/_warm");
     // Met en cache les jeux jouables hors-ligne (tant qu'on a du réseau).
     import("@/lib/warm-offline").then((m) => m.warmOfflineGames()).catch(() => {});
+
+    // Suivi de l'état réseau : hors-ligne, les salles en ligne sont impossibles.
+    const sync = () => setOnline(navigator.onLine);
+    sync();
+    window.addEventListener("online", sync);
+    window.addEventListener("offline", sync);
+    return () => {
+      window.removeEventListener("online", sync);
+      window.removeEventListener("offline", sync);
+    };
   }, [router]);
 
   const implementedGames = GAMES.filter((game) => game.implemented);
@@ -111,6 +122,11 @@ export default function HomePage() {
   }, []);
 
   const handleCreate = useCallback(() => {
+    // Hors-ligne : une salle en ligne est impossible → on ouvre le mode local.
+    if (typeof navigator !== "undefined" && !navigator.onLine) {
+      setLocalOpen(true);
+      return;
+    }
     const roomCode = generateRoomCode();
     if (typeof window !== "undefined") {
       sessionStorage.setItem("af-created-room-code", roomCode);
@@ -119,6 +135,10 @@ export default function HomePage() {
   }, [router]);
 
   const handleJoin = useCallback(() => {
+    if (typeof navigator !== "undefined" && !navigator.onLine) {
+      setLocalOpen(true);
+      return;
+    }
     const trimmed = code.trim().toUpperCase();
     if (trimmed.length === ROOM_CODE_LENGTH) {
       router.push(`/room/${trimmed}`);
@@ -163,6 +183,19 @@ export default function HomePage() {
               Un code, une salle, on joue.<br/>
               Pas de compte, pas d&apos;install — juste ton tel et tes potes.
             </p>
+
+            {!online && (
+              <button
+                onClick={() => setLocalOpen(true)}
+                className="mt-6 flex w-full max-w-md items-center gap-3 rounded-2xl border px-4 py-3 text-left transition active:scale-[0.99]"
+                style={{ background: "rgba(255,210,63,0.10)", borderColor: "rgba(255,210,63,0.35)" }}
+              >
+                <WifiOff className="h-5 w-5 shrink-0" style={{ color: "var(--af-yellow)" }} />
+                <span className="text-sm" style={{ color: "var(--text-dim)" }}>
+                  <b style={{ color: "#fff" }}>Tu es hors-ligne.</b> Les salles en ligne sont indispo — appuie ici pour jouer sur ce téléphone.
+                </span>
+              </button>
+            )}
 
             <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
               <button onClick={handleCreate} className="af-btn af-btn-primary group flex items-center gap-3" style={{ padding: "18px 28px", fontSize: 16 }}>
