@@ -2,7 +2,11 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRight, Plus } from "lucide-react";
+import dynamic from "next/dynamic";
+import { ArrowRight, Plus, WifiOff } from "lucide-react";
+
+// Chargé à la demande : mode local pass-and-play (sans salle ni WebSocket → marche hors-ligne)
+const LocalPlay = dynamic(() => import("@/components/local/local-play").then((m) => m.LocalPlay), { ssr: false });
 import { generateRoomCode, ROOM_CODE_LENGTH } from "@/lib/party/constants";
 import { getOrCreateGuest, setGuestName } from "@/lib/guest";
 import { GAMES } from "@/lib/games/registry";
@@ -80,6 +84,7 @@ function UsernameEditor({ initialName, onSave }: { initialName: string; onSave: 
 export default function HomePage() {
   const router = useRouter();
   const [code, setCode] = useState("");
+  const [localOpen, setLocalOpen] = useState(false);
   // Init empty so SSR and first client render match; populate after mount.
   const [guestName, setGuestNameState] = useState("");
   useEffect(() => {
@@ -121,6 +126,8 @@ export default function HomePage() {
   return (
     <main className="relative min-h-screen overflow-hidden text-white">
       <Sparkles count={14} />
+
+      {localOpen && <LocalPlay onClose={() => setLocalOpen(false)} />}
       <InstallApp />
 
       {/* HEADER */}
@@ -189,6 +196,15 @@ export default function HomePage() {
                 </button>
               </div>
             </div>
+
+            <button
+              onClick={() => setLocalOpen(true)}
+              className="mt-4 inline-flex items-center gap-2 self-start rounded-full border px-4 py-2 text-sm font-semibold transition hover:bg-white/[0.06]"
+              style={{ borderColor: "var(--line-soft)", color: "var(--text-dim)" }}
+            >
+              <WifiOff className="h-4 w-4" />
+              Jouer sur ce tél · hors-ligne
+            </button>
           </div>
 
           {/* Mascots cluster */}

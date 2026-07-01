@@ -1,4 +1,4 @@
-const CACHE_VERSION = "af-games-v1";
+const CACHE_VERSION = "af-games-v2";
 const APP_CACHE = `${CACHE_VERSION}-app`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
 
