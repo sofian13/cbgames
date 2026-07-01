@@ -15,15 +15,17 @@ export function warmOfflineGames() {
     Promise.allSettled([
       import("@/components/local/local-play"),
       import("@/components/games/tu-prefere/tu-prefere-game"),
+      import("@/components/games/le-bluffeur/le-bluffeur-game"),
+      import("@/components/games/top-ten/top-ten-game"),
+      import("@/components/games/longueur-onde/longueur-onde-game"),
+      import("@/components/games/pensez-pareil/pensez-pareil-game"),
+      import("@/components/games/couple-quiz/couple-quiz-game"),
       import("@/components/games/guess-word/guess-word-game"),
-      import("@/components/games/category-chrono/category-chrono-game"),
       import("@/components/games/make-guess/make-guess-game"),
+      import("@/components/games/category-chrono/category-chrono-game"),
       import("@/components/games/tgv/tgv-game"),
       import("@/components/games/picolette/picolette-game"),
       import("@/components/games/undercover/undercover-game"),
-      import("@/components/games/couple-quiz/couple-quiz-game"),
-      import("@/components/games/battleship/battleship-game"),
-      import("@/components/games/chess/chess-game"),
     ]).catch(() => {});
   };
 

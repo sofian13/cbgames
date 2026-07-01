@@ -7,19 +7,22 @@ import { getOrCreateGuest } from "@/lib/guest";
 import { getGameById } from "@/lib/games/registry";
 import type { GameProps } from "@/lib/games/types";
 
-// Jeux jouables sur UN seul téléphone, sans salle ni WebSocket → fonctionnent hors-ligne.
-// (les 6 premiers sont 100% client ; les suivants montrent un choix de mode avant toute connexion.)
+// Jeux jouables sur UN SEUL téléphone (pass-and-play), sans salle ni WebSocket
+// → fonctionnent hors-ligne. Les jeux « party » ouvrent d'abord un choix de mode :
+// choisis « Sur ce téléphone » (le mode en ligne, lui, a besoin de réseau).
 const OFFLINE_IDS = [
   "tu-prefere",
+  "le-bluffeur",
+  "top-ten",
+  "longueur-onde",
+  "pensez-pareil",
+  "couple-quiz",
   "guess-word",
-  "category-chrono",
   "make-guess",
+  "category-chrono",
   "tgv",
   "picolette",
   "undercover",
-  "couple-quiz",
-  "battleship",
-  "chess",
 ] as const;
 
 const loading = () => (
@@ -30,15 +33,17 @@ const loading = () => (
 
 const LOCAL_COMPONENTS: Record<string, ComponentType<GameProps>> = {
   "tu-prefere": dynamic(() => import("@/components/games/tu-prefere/tu-prefere-game"), { ssr: false, loading }),
+  "le-bluffeur": dynamic(() => import("@/components/games/le-bluffeur/le-bluffeur-game"), { ssr: false, loading }),
+  "top-ten": dynamic(() => import("@/components/games/top-ten/top-ten-game"), { ssr: false, loading }),
+  "longueur-onde": dynamic(() => import("@/components/games/longueur-onde/longueur-onde-game"), { ssr: false, loading }),
+  "pensez-pareil": dynamic(() => import("@/components/games/pensez-pareil/pensez-pareil-game"), { ssr: false, loading }),
+  "couple-quiz": dynamic(() => import("@/components/games/couple-quiz/couple-quiz-game"), { ssr: false, loading }),
   "guess-word": dynamic(() => import("@/components/games/guess-word/guess-word-game"), { ssr: false, loading }),
-  "category-chrono": dynamic(() => import("@/components/games/category-chrono/category-chrono-game"), { ssr: false, loading }),
   "make-guess": dynamic(() => import("@/components/games/make-guess/make-guess-game"), { ssr: false, loading }),
+  "category-chrono": dynamic(() => import("@/components/games/category-chrono/category-chrono-game"), { ssr: false, loading }),
   "tgv": dynamic(() => import("@/components/games/tgv/tgv-game"), { ssr: false, loading }),
   "picolette": dynamic(() => import("@/components/games/picolette/picolette-game"), { ssr: false, loading }),
   "undercover": dynamic(() => import("@/components/games/undercover/undercover-game"), { ssr: false, loading }),
-  "couple-quiz": dynamic(() => import("@/components/games/couple-quiz/couple-quiz-game"), { ssr: false, loading }),
-  "battleship": dynamic(() => import("@/components/games/battleship/battleship-game"), { ssr: false, loading }),
-  "chess": dynamic(() => import("@/components/games/chess/chess-game"), { ssr: false, loading }),
 };
 
 export function LocalPlay({ onClose }: { onClose: () => void }) {

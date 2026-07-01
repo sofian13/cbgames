@@ -234,11 +234,11 @@ export default function HomePage() {
 
             <button
               onClick={() => setLocalOpen(true)}
-              className="mt-4 inline-flex items-center gap-2 self-start rounded-full border px-4 py-2 text-sm font-semibold transition hover:bg-white/[0.06]"
-              style={{ borderColor: "var(--line-soft)", color: "var(--text-dim)" }}
+              className="mt-4 inline-flex items-center gap-2 self-start rounded-full border px-5 py-2.5 text-sm font-bold transition hover:bg-white/[0.06]"
+              style={{ borderColor: "rgba(61,220,151,0.35)", background: "rgba(61,220,151,0.08)", color: "#fff" }}
             >
-              <WifiOff className="h-4 w-4" />
-              Jouer sur ce tél · hors-ligne
+              <WifiOff className="h-4 w-4" style={{ color: "var(--af-mint)" }} />
+              Mode hors-ligne · sur un seul tél
             </button>
           </div>
 
