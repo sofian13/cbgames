@@ -91,6 +91,8 @@ export default function HomePage() {
     setGuestNameState(getOrCreateGuest().name);
     // Précharge le bundle de la salle pour que "Créer une salle" soit instantané.
     router.prefetch("/room/_warm");
+    // Met en cache les jeux jouables hors-ligne (tant qu'on a du réseau).
+    import("@/lib/warm-offline").then((m) => m.warmOfflineGames()).catch(() => {});
   }, [router]);
 
   const implementedGames = GAMES.filter((game) => game.implemented);
