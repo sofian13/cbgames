@@ -1,10 +1,11 @@
 "use client";
 
-import { useMemo, useState, type ComponentType } from "react";
+import { useEffect, useMemo, useState, type ComponentType } from "react";
 import dynamic from "next/dynamic";
-import { X } from "lucide-react";
+import { X, Download, Check, Loader2, WifiOff } from "lucide-react";
 import { getOrCreateGuest } from "@/lib/guest";
 import { getGameById } from "@/lib/games/registry";
+import { warmOfflineGames, isOfflineReady } from "@/lib/warm-offline";
 import type { GameProps } from "@/lib/games/types";
 
 // Jeux jouables sur UN SEUL téléphone (pass-and-play), sans salle ni WebSocket
@@ -53,6 +54,29 @@ export function LocalPlay({ onClose }: { onClose: () => void }) {
   }, []);
 
   const [selected, setSelected] = useState<string | null>(null);
+  const [ready, setReady] = useState(false);
+  const [priming, setPriming] = useState(false);
+  const [online, setOnline] = useState(true);
+
+  useEffect(() => {
+    setReady(isOfflineReady());
+    setOnline(navigator.onLine);
+    const sync = () => setOnline(navigator.onLine);
+    window.addEventListener("online", sync);
+    window.addEventListener("offline", sync);
+    return () => {
+      window.removeEventListener("online", sync);
+      window.removeEventListener("offline", sync);
+    };
+  }, []);
+
+  const prime = async () => {
+    if (priming || !navigator.onLine) return;
+    setPriming(true);
+    await warmOfflineGames();
+    setReady(isOfflineReady());
+    setPriming(false);
+  };
 
   // ── Un jeu est en cours ────────────────────────────────
   if (selected) {
@@ -89,7 +113,29 @@ export function LocalPlay({ onClose }: { onClose: () => void }) {
           Pas besoin d&apos;internet ni de code : passez-vous le tél entre potes. Idéal quand il n&apos;y a pas de réseau.
         </p>
 
-        <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3">
+        {/* Statut hors-ligne : télécharger les jeux tant qu'on a du réseau */}
+        {ready ? (
+          <div className="mt-4 flex items-center gap-2 rounded-2xl border px-4 py-3 text-sm"
+               style={{ background: "rgba(61,220,151,0.1)", borderColor: "rgba(61,220,151,0.35)", color: "#fff" }}>
+            <Check className="h-4 w-4 shrink-0" style={{ color: "var(--af-mint)" }} />
+            <span>Jeux téléchargés — jouables même sans réseau.</span>
+          </div>
+        ) : online ? (
+          <button onClick={prime} disabled={priming}
+                  className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl px-4 py-3.5 text-sm font-bold text-white transition active:scale-[0.99] disabled:opacity-70"
+                  style={{ background: "linear-gradient(120deg, var(--cb-brand), var(--af-pink))" }}>
+            {priming ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+            {priming ? "Téléchargement des jeux…" : "Télécharger les jeux pour le hors-ligne"}
+          </button>
+        ) : (
+          <div className="mt-4 flex items-center gap-2 rounded-2xl border px-4 py-3 text-sm"
+               style={{ background: "rgba(255,210,63,0.1)", borderColor: "rgba(255,210,63,0.35)", color: "var(--text-dim)" }}>
+            <WifiOff className="h-4 w-4 shrink-0" style={{ color: "var(--af-yellow)" }} />
+            <span>Reconnecte-toi une fois, puis appuie sur « Télécharger » pour jouer ensuite sans réseau.</span>
+          </div>
+        )}
+
+        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
           {OFFLINE_IDS.map((id) => {
             const g = getGameById(id);
             if (!g) return null;
