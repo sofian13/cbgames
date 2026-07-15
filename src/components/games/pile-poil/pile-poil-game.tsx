@@ -107,6 +107,10 @@ function DuelPad({ roomCode, playerId, playerName }: GameProps) {
     }
   }, [raw, sendAction]);
 
+  // Chrono cumulatif : pause = on fige, ré-appui = on CONTINUE d'où on était.
+  // Seul « Réinitialiser » remet à zéro.
+  const accumRef = useRef(0);
+
   const go = () => {
     startRef.current = performance.now();
     setSt("running");
@@ -117,16 +121,19 @@ function DuelPad({ roomCode, playerId, playerName }: GameProps) {
       target: maxTime,
       mode: "free",
       startAt: Date.now(), // horodatage exact du tap → l'écran affiche le vrai temps écoulé
+      base: accumRef.current, // temps déjà accumulé avant cette reprise
     });
   };
   const stop = () => {
-    const e = performance.now() - startRef.current;
+    const e = accumRef.current + (performance.now() - startRef.current);
+    accumRef.current = e;
     setElapsed(e);
     setSt("done");
     sendAction({ action: "pp-stop", seq: Math.floor(Math.random() * 1e9), elapsedMs: e, target: maxTime, mode: "free" });
   };
 
   const reset = () => {
+    accumRef.current = 0;
     setSt("idle");
     setElapsed(0);
     sendAction({ action: "pp-reset", seq: Math.floor(Math.random() * 1e9) });
@@ -147,7 +154,7 @@ function DuelPad({ roomCode, playerId, playerName }: GameProps) {
         {running
           ? "🤫 Compte dans ta tête…"
           : st === "done"
-            ? "⏸️ Pause — le temps s'affiche sur l'autre tél. Réappuie pour repartir."
+            ? "⏸️ Pause — le temps est figé sur l'autre tél. Réappuie pour CONTINUER."
             : "Appuie pour lancer — l'autre tél voit tout"}
       </p>
       <button
@@ -163,7 +170,7 @@ function DuelPad({ roomCode, playerId, playerName }: GameProps) {
           boxShadow: running ? "0 0 60px rgba(226,52,52,0.5)" : "0 0 60px rgba(0,194,168,0.45)",
         }}
       >
-        {running ? "⏸ PAUSE" : "GO"}
+        {running ? "⏸ PAUSE" : st === "done" ? "▶ GO" : "GO"}
       </button>
       {st === "done" && (
         <button onClick={reset} className="af-btn af-btn-ghost mt-6 w-full max-w-[14rem]" style={{ fontSize: 15 }}>
@@ -589,6 +596,7 @@ interface ScreenSnap {
   relay?: boolean;
   // Sync d'horloge (ping NTP-style) + départ horodaté
   startAt?: number; // Date.now() du tél bouton au moment exact du tap GO
+  base?: number; // ms déjà accumulées avant cette reprise (pause → continuer)
   t0?: number; // Date.now() de l'écran à l'envoi du ping
   tPad?: number; // Date.now() du pad à l'écho
   sid?: string; // identifiant de l'écran qui a pingé (chaque écran garde ses pongs)
@@ -718,10 +726,11 @@ function ScreenView({ roomCode, playerId, playerName }: GameProps) {
       // au vrai temps écoulé (latence réseau annulée par l'offset).
       const off = offsetRef.current?.off;
       const startScreen = raw.startAt != null && off != null ? raw.startAt - off : Date.now();
+      const base = raw.base ?? 0; // reprise après pause : on repart du temps figé
       setDisplay("running");
       setOfficial(null);
       const loop = () => {
-        setNow(Math.max(0, Date.now() - startScreen));
+        setNow(base + Math.max(0, Date.now() - startScreen));
         runningRef.current = { t0: startScreen, raf: requestAnimationFrame(loop) };
       };
       if (runningRef.current) cancelAnimationFrame(runningRef.current.raf);
