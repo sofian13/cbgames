@@ -579,6 +579,42 @@ function GameIcon({ id }: { id: string }) {
           <text x="76" y="74" fontFamily={DISP} fontWeight="900" fontSize="14" fill="#FF6B5B">↓</text>
         </g>
       );
+    case "pile-poil":
+      return (
+        <g>
+          {/* Chronomètre */}
+          <circle cx="50" cy="54" r="26" fill={lite} />
+          <circle cx="50" cy="54" r="20" fill="#0E0828" opacity="0.88" />
+          <rect x="45" y="20" width="10" height="7" rx="2" fill={lite} />
+          <rect x="47" y="16" width="6" height="5" rx="1.5" fill={dark} />
+          <g transform="rotate(38 68 32)">
+            <rect x="65" y="28" width="7" height="5" rx="1.5" fill={lite} />
+          </g>
+          {/* Aiguille + graduations */}
+          <line x1="50" y1="54" x2="59" y2="41" stroke="#FFD23F" strokeWidth="3" strokeLinecap="round" />
+          <circle cx="50" cy="54" r="3" fill="#FFD23F" />
+          {[0, 90, 180, 270].map((r) => (
+            <line key={r} x1="50" y1="37" x2="50" y2="40.5" stroke={lite} strokeWidth="2" transform={`rotate(${r} 50 54)`} />
+          ))}
+          {/* Yeux fermés qui comptent */}
+          <text x="50" y="86" fontFamily={DISP} fontWeight="900" fontSize="10" textAnchor="middle" fill={lite}>1… 2… 3…</text>
+        </g>
+      );
+    case "neon-rush":
+      return (
+        <g>
+          {/* Courbes néon qui s'évitent */}
+          <path d="M14 78 Q18 40 40 44 Q60 48 56 66 Q52 80 36 74" fill="none" stroke="#7DF9FF" strokeWidth={SW + 1.5} strokeLinecap="round" />
+          <path d="M84 20 Q60 24 62 42 Q64 58 82 56 Q92 54 90 42" fill="none" stroke="#FF3EA5" strokeWidth={SW + 1.5} strokeLinecap="round" />
+          <path d="M20 22 Q40 16 46 30" fill="none" stroke="#FFD23F" strokeWidth={SW + 1.5} strokeLinecap="round" strokeDasharray="10 6" />
+          {/* Têtes lumineuses */}
+          <circle cx="36" cy="74" r="4.5" fill="#7DF9FF" />
+          <circle cx="90" cy="42" r="4.5" fill="#FF3EA5" />
+          <circle cx="46" cy="30" r="4.5" fill="#FFD23F" />
+          {/* Étincelle de crash */}
+          <path d="M70 74 L74 66 L78 74 L86 70 L80 78 L86 84 L77 82 L73 90 L71 81 L62 82 Z" fill={lite} opacity="0.9" />
+        </g>
+      );
     case "le-bus":
       return (
         <g>
@@ -645,7 +681,7 @@ const GAME_PATTERN: Record<string, Pattern> = {
   "blind-control": "grid", "block-runner": "grid", "top-ten": "blob", "le-bluffeur": "stars", "longueur-onde": "wave",
   "guess-word": "blob", "category-chrono": "dots", "make-guess": "blob",
   "motion-tennis": "wave",
-  "tgv": "diag", "picolette": "stars", "le-bus": "cards",
+  "tgv": "diag", "picolette": "stars", "le-bus": "cards", "neon-rush": "wave", "pile-poil": "dots",
 };
 
 export function GameArt({ game, rounded = 18, style = {} }: { game: { id: string; category: string }; rounded?: number; style?: React.CSSProperties }) {

@@ -34,6 +34,7 @@ export function warmOfflineGames(): Promise<void> {
     import("@/components/games/category-chrono/category-chrono-game"),
     import("@/components/games/tgv/tgv-game"),
     import("@/components/games/picolette/picolette-game"),
+    import("@/components/games/pile-poil/pile-poil-game"),
     import("@/components/games/undercover/undercover-game"),
   ]).then(() => {
     try {

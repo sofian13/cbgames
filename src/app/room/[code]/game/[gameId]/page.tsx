@@ -170,6 +170,14 @@ const GameComponents = {
     () => import("@/components/games/le-bus/le-bus-game"),
     { ssr: false }
   ),
+  "neon-rush": dynamic(
+    () => import("@/components/games/neon-rush/neon-rush-game"),
+    { ssr: false }
+  ),
+  "pile-poil": dynamic(
+    () => import("@/components/games/pile-poil/pile-poil-game"),
+    { ssr: false }
+  ),
   "picolette": dynamic(
     () => import("@/components/games/picolette/picolette-game"),
     { ssr: false }

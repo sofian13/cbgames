@@ -35,6 +35,8 @@ import { EscapeDuoGame } from "./games/escape-duo";
 import { CoupleQuizGame } from "./games/couple-quiz";
 import { PensezPareilGame } from "./games/pensez-pareil";
 import { LeBusGame } from "./games/le-bus";
+import { NeonRushGame } from "./games/neon-rush";
+import { PilePoilGame } from "./games/pile-poil";
 
 // Registry of game constructors
 const GAME_REGISTRY: Record<string, () => BaseGame> = {
@@ -74,6 +76,8 @@ const GAME_REGISTRY: Record<string, () => BaseGame> = {
   "escape-duo": () => new EscapeDuoGame(),
   "pensez-pareil": () => new PensezPareilGame(),
   "le-bus": () => new LeBusGame(),
+  "neon-rush": () => new NeonRushGame(),
+  "pile-poil": () => new PilePoilGame(),
   "tgv": () => new LocalGame(),
   "picolette": () => new LocalGame(),
   "tu-prefere": () => new LocalGame(),
@@ -135,7 +139,7 @@ export default class GameServer {
 
       // Auto-start when enough players join and game hasn't started
       // Motion tennis can start solo (vs bot)
-      if (this.gameId === "undercover" || this.gameId === "chess" || this.gameId === "block-runner" || this.gameId === "double-saut" || this.gameId === "escape-duo" || this.gameId === "guess-word" || this.gameId === "make-guess" || this.gameId === "category-chrono" || this.gameId === "tgv" || this.gameId === "picolette" || this.gameId === "tu-prefere") {
+      if (this.gameId === "undercover" || this.gameId === "chess" || this.gameId === "block-runner" || this.gameId === "double-saut" || this.gameId === "escape-duo" || this.gameId === "guess-word" || this.gameId === "make-guess" || this.gameId === "category-chrono" || this.gameId === "tgv" || this.gameId === "picolette" || this.gameId === "tu-prefere" || this.gameId === "pile-poil") {
         return;
       }
       const minToStart =

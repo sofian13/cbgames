@@ -149,6 +149,9 @@ export const GAMES: GameMeta[] = [
     component: () => import("@/components/games/king-hill/king-hill-game"),
   },
   // -- Bluff / Social --
+  // NOTE : "neon-rush" (Curve Fever) est codé et câblé (party/games/neon-rush.ts,
+  // composant + page map) mais volontairement absent du catalogue — pas encore testé.
+  // Pour le sortir : remettre son entrée GameMeta ici.
   {
     id: "loup-garou",
     name: "Loup-Garou",
@@ -690,6 +693,27 @@ export const GAMES: GameMeta[] = [
       "Le plus sobre gagne. À consommer avec modération 😉",
     ],
     component: () => import("@/components/games/le-bus/le-bus-game"),
+  },
+  {
+    id: "pile-poil",
+    name: "Pile Poil ⏱️",
+    description:
+      "Compte les secondes dans ta tête et arrête le chrono pile sur la cible ! Le tél passe de main en main — et un 2ᵉ tél peut afficher le chrono en direct pour le public. Le perdant boit.",
+    category: "party",
+    minPlayers: 1,
+    maxPlayers: 10,
+    icon: "⏱️",
+    implemented: true,
+    local: true,
+    rules: [
+      "Une cible s'affiche (ex. 7 s) : appuie sur GO, compte dans ta tête, appuie sur STOP",
+      "Le chrono est INVISIBLE pour toi — ton temps s'affiche seulement après",
+      "Chacun passe à tour de rôle sur le même téléphone",
+      "2 règles : « Le plus proche » (le plus éloigné boit) ou « Sans dépasser » (tu dépasses = perdu)",
+      "Bonus : un 2ᵉ tél en mode « Écran » (même room) montre le chrono défiler en direct au public 👀",
+      "À moins de 0,15 s de la cible : PILE POIL ! 🎯",
+    ],
+    component: () => import("@/components/games/pile-poil/pile-poil-game"),
   },
   {
     id: "picolette",
