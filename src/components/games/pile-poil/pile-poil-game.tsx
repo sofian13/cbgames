@@ -94,17 +94,30 @@ function DuelPad({ roomCode, playerId, playerName }: GameProps) {
   }, [isConnected, sendAction]);
 
   // Temps max (optionnel) poussé par l'écran à tout moment
-  const raw = gameState as unknown as { action?: string; seq?: number; target?: number | null };
+  const raw = gameState as unknown as { action?: string; seq?: number; target?: number | null; t0?: number; sid?: string };
   useEffect(() => {
-    if (raw?.action !== "pp-target" || raw.seq === undefined || raw.seq === seenSeq.current) return;
+    if (!raw?.action || raw.seq === undefined || raw.seq === seenSeq.current) return;
     seenSeq.current = raw.seq;
-    setMaxTime(typeof raw.target === "number" ? raw.target : null);
-  }, [raw]);
+    if (raw.action === "pp-target") {
+      setMaxTime(typeof raw.target === "number" ? raw.target : null);
+    }
+    // Écho de sync d'horloge : réponse immédiate, l'écran calcule son décalage
+    if (raw.action === "pp-ping" && raw.t0 != null) {
+      sendAction({ action: "pp-pong", seq: Math.floor(Math.random() * 1e9), t0: raw.t0, sid: raw.sid, tPad: Date.now() });
+    }
+  }, [raw, sendAction]);
 
   const go = () => {
     startRef.current = performance.now();
     setSt("running");
-    sendAction({ action: "pp-start", seq: Math.floor(Math.random() * 1e9), playerName: "Le joueur", target: maxTime, mode: "free" });
+    sendAction({
+      action: "pp-start",
+      seq: Math.floor(Math.random() * 1e9),
+      playerName: "Le joueur",
+      target: maxTime,
+      mode: "free",
+      startAt: Date.now(), // horodatage exact du tap → l'écran affiche le vrai temps écoulé
+    });
   };
   const stop = () => {
     const e = performance.now() - startRef.current;
@@ -113,9 +126,14 @@ function DuelPad({ roomCode, playerId, playerName }: GameProps) {
     sendAction({ action: "pp-stop", seq: Math.floor(Math.random() * 1e9), elapsedMs: e, target: maxTime, mode: "free" });
   };
 
+  const reset = () => {
+    setSt("idle");
+    setElapsed(0);
+    sendAction({ action: "pp-reset", seq: Math.floor(Math.random() * 1e9) });
+  };
+
   const running = st === "running";
-  const over = maxTime != null && elapsed > maxTime * 1000;
-  const perfect = maxTime != null && Math.abs(elapsed - maxTime * 1000) <= 150;
+  void elapsed; // le temps ne s'affiche JAMAIS sur ce tél — seul l'écran le voit
 
   return (
     <div
@@ -125,22 +143,13 @@ function DuelPad({ roomCode, playerId, playerName }: GameProps) {
       <p className="af-eyebrow" style={{ color: "rgba(255,255,255,0.5)" }}>
         {maxTime != null ? `Temps max : ${maxTime} s` : "Chrono libre"}
       </p>
-      {st === "done" ? (
-        <>
-          <p className="mt-3 font-black tabular-nums text-white" style={{ fontFamily: "var(--font-display)", fontSize: 60, lineHeight: 1 }}>
-            {fmt(elapsed)}
-          </p>
-          {maxTime != null && (
-            <p className="mt-1 text-xl font-black" style={{ fontFamily: "var(--font-display)", color: perfect ? "#FFD23F" : over ? "#FF6A5B" : "#5FF5DD" }}>
-              {perfect ? "PILE POIL ! 🎯" : `${fmtDelta(elapsed, maxTime)}${over ? " · dépassé !" : ""}`}
-            </p>
-          )}
-        </>
-      ) : (
-        <p className="mt-2 text-sm" style={{ color: "rgba(255,255,255,0.55)" }}>
-          {running ? "🤫 Compte dans ta tête…" : "Appuie pour lancer — l'autre tél voit tout"}
-        </p>
-      )}
+      <p className="mt-2 text-sm" style={{ color: "rgba(255,255,255,0.55)" }}>
+        {running
+          ? "🤫 Compte dans ta tête…"
+          : st === "done"
+            ? "⏸️ Pause — le temps s'affiche sur l'autre tél. Réappuie pour repartir."
+            : "Appuie pour lancer — l'autre tél voit tout"}
+      </p>
       <button
         onClick={running ? stop : go}
         className="mt-8 flex h-56 w-56 items-center justify-center rounded-full text-3xl font-black transition-transform active:scale-95"
@@ -154,11 +163,16 @@ function DuelPad({ roomCode, playerId, playerName }: GameProps) {
           boxShadow: running ? "0 0 60px rgba(226,52,52,0.5)" : "0 0 60px rgba(0,194,168,0.45)",
         }}
       >
-        {running ? "STOP" : "GO"}
+        {running ? "⏸ PAUSE" : "GO"}
       </button>
-      {!running && (
+      {st === "done" && (
+        <button onClick={reset} className="af-btn af-btn-ghost mt-6 w-full max-w-[14rem]" style={{ fontSize: 15 }}>
+          ↺ Réinitialiser
+        </button>
+      )}
+      {st === "idle" && (
         <p className="mt-6 max-w-xs text-[11px]" style={{ color: "rgba(255,255,255,0.35)" }}>
-          Le temps max se règle sur l&apos;autre tél (optionnel) — sinon on l&apos;annonce à l&apos;oral et le temps parle.
+          Le temps max se règle sur l&apos;autre tél (optionnel) — sinon on l&apos;annonce à l&apos;oral.
         </p>
       )}
     </div>
@@ -221,12 +235,16 @@ function PadView({ roomCode, playerId, playerName }: GameProps) {
 
   // La cible peut être choisie sur le tél « écran » (annoncée à l'oral ici)
   const padSeq = useRef(-1);
-  const raw = gameState as unknown as { action?: string; seq?: number; target?: number };
+  const raw = gameState as unknown as { action?: string; seq?: number; target?: number; t0?: number; sid?: string };
   useEffect(() => {
-    if (raw?.action !== "pp-target" || raw.seq === undefined || raw.seq === padSeq.current) return;
+    if (!raw?.action || raw.seq === undefined || raw.seq === padSeq.current) return;
     padSeq.current = raw.seq;
-    if (phase === "await-target" && typeof raw.target === "number" && raw.target >= 1 && raw.target <= 120) {
+    if (raw.action === "pp-target" && phase === "await-target" && typeof raw.target === "number" && raw.target >= 1 && raw.target <= 120) {
       beginRound(raw.target);
+    }
+    // Écho de sync d'horloge pour l'écran (précision du chrono live)
+    if (raw.action === "pp-ping" && raw.t0 != null) {
+      sendAction({ action: "pp-pong", seq: Math.floor(Math.random() * 1e9), t0: raw.t0, sid: raw.sid, tPad: Date.now() });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [raw?.seq]);
@@ -234,7 +252,7 @@ function PadView({ roomCode, playerId, playerName }: GameProps) {
   const onStartTap = () => {
     startRef.current = performance.now();
     setPhase("running");
-    sendAction({ action: "pp-start", seq: ++seqRef.current, playerName: players[turnIdx], target, mode });
+    sendAction({ action: "pp-start", seq: ++seqRef.current, playerName: players[turnIdx], target, mode, startAt: Date.now() });
   };
 
   const onStopTap = () => {
@@ -569,6 +587,11 @@ interface ScreenSnap {
   elapsedMs?: number;
   snapshot?: ScreenSnap | null;
   relay?: boolean;
+  // Sync d'horloge (ping NTP-style) + départ horodaté
+  startAt?: number; // Date.now() du tél bouton au moment exact du tap GO
+  t0?: number; // Date.now() de l'écran à l'envoi du ping
+  tPad?: number; // Date.now() du pad à l'écho
+  sid?: string; // identifiant de l'écran qui a pingé (chaque écran garde ses pongs)
 }
 
 // Réglage du temps max — optionnel, modifiable à tout moment depuis l'écran
@@ -642,7 +665,7 @@ function HistoryRow({ history, target }: { history: number[]; target: number | n
 
 function ScreenView({ roomCode, playerId, playerName }: GameProps) {
   const { sendAction } = useGame(roomCode, "pile-poil", playerId, playerName);
-  const { gameState } = useGameStore();
+  const { gameState, isConnected } = useGameStore();
   // Choix de cible depuis l'écran (obligatoire avant validation)
   const [chosen, setChosen] = useState<number | null>(null);
   const raw = gameState as unknown as ScreenSnap;
@@ -661,18 +684,45 @@ function ScreenView({ roomCode, playerId, playerName }: GameProps) {
   const [maxSet, setMaxSet] = useState<number | null>(null);
   const [history, setHistory] = useState<number[]>([]);
 
+  // ── Sync d'horloge NTP-style : offset = horloge du pad − horloge d'ici.
+  // On garde l'échantillon au RTT le plus court (le plus fiable). Avec ça,
+  // le chrono affiche le VRAI temps écoulé depuis le tap, latence comprise.
+  const sidRef = useRef(Math.random().toString(36).slice(2, 10));
+  const offsetRef = useRef<{ off: number; rtt: number } | null>(null);
+  useEffect(() => {
+    if (!isConnected) return;
+    const ping = () =>
+      sendAction({ action: "pp-ping", seq: Math.floor(Math.random() * 1e9), t0: Date.now(), sid: sidRef.current });
+    // Rafale initiale pour converger vite, puis entretien régulier
+    const burst = [0, 250, 500, 800, 1200].map((d) => setTimeout(ping, d));
+    const iv = setInterval(ping, 4000);
+    return () => {
+      burst.forEach(clearTimeout);
+      clearInterval(iv);
+    };
+  }, [isConnected, sendAction]);
+
   // Réagit aux événements relayés (chaque message a un seq unique)
   useEffect(() => {
     if (!raw?.action || raw.seq === undefined || raw.seq === lastSeq.current) return;
     lastSeq.current = raw.seq;
 
+    if (raw.action === "pp-pong" && raw.sid === sidRef.current && raw.t0 != null && raw.tPad != null) {
+      const t1 = Date.now();
+      const rtt = t1 - raw.t0;
+      const off = raw.tPad - (raw.t0 + t1) / 2;
+      if (!offsetRef.current || rtt <= offsetRef.current.rtt) offsetRef.current = { off, rtt };
+    }
     if (raw.action === "pp-start") {
-      const t0 = performance.now();
+      // Départ replacé dans l'horloge de CE téléphone : le chrono démarre déjà
+      // au vrai temps écoulé (latence réseau annulée par l'offset).
+      const off = offsetRef.current?.off;
+      const startScreen = raw.startAt != null && off != null ? raw.startAt - off : Date.now();
       setDisplay("running");
       setOfficial(null);
       const loop = () => {
-        setNow(performance.now() - t0);
-        runningRef.current = { t0, raf: requestAnimationFrame(loop) };
+        setNow(Math.max(0, Date.now() - startScreen));
+        runningRef.current = { t0: startScreen, raf: requestAnimationFrame(loop) };
       };
       if (runningRef.current) cancelAnimationFrame(runningRef.current.raf);
       loop();
@@ -683,6 +733,14 @@ function ScreenView({ roomCode, playerId, playerName }: GameProps) {
       setOfficial(raw.elapsedMs ?? null);
       setDisplay("stopped");
       if (raw.elapsedMs != null) setHistory((h) => [raw.elapsedMs!, ...h].slice(0, 5));
+    }
+    if (raw.action === "pp-reset") {
+      if (runningRef.current) cancelAnimationFrame(runningRef.current.raf);
+      runningRef.current = null;
+      setNow(0);
+      setOfficial(null);
+      setHistory([]);
+      setDisplay("idle");
     }
     if (raw.action === "pp-sync") {
       if (runningRef.current) cancelAnimationFrame(runningRef.current.raf);
