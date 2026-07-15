@@ -41,7 +41,7 @@ function rankAttempts(attempts: Attempt[], target: number, mode: PPMode): Attemp
 }
 
 export default function PilePoilGame({ roomCode, playerId, playerName }: GameProps) {
-  const [role, setRole] = useState<"pick" | "pad" | "screen">("pick");
+  const [role, setRole] = useState<"pick" | "duel" | "screen" | "pad">("pick");
 
   if (role === "pick") {
     return (
@@ -49,26 +49,120 @@ export default function PilePoilGame({ roomCode, playerId, playerName }: GamePro
         <span className="text-6xl">⏱️</span>
         <h1 className="cb-display-lg mt-3 text-center">Pile Poil</h1>
         <p className="mt-2 max-w-sm text-center text-sm" style={{ color: "var(--text-dim)" }}>
-          Compte les secondes dans ta tête et arrête le chrono pile sur la cible.
-          Le tél passe de main en main — et un 2ᵉ tél peut servir d&apos;écran public.
+          Compte les secondes dans ta tête, l&apos;autre voit ton chrono en direct.
         </p>
         <div className="mt-8 flex w-full max-w-xs flex-col gap-3">
-          <button onClick={() => setRole("pad")} className="af-btn af-btn-primary" style={{ fontSize: 16 }}>
-            🎮 Manette — on joue sur CE tél
+          <button onClick={() => setRole("duel")} className="af-btn af-btn-primary" style={{ fontSize: 16 }}>
+            🔘 Le Bouton — c&apos;est moi qui joue
           </button>
-          <button onClick={() => setRole("screen")} className="af-btn af-btn-ghost" style={{ fontSize: 15 }}>
-            📺 Écran — ce tél affiche le chrono en direct
+          <button onClick={() => setRole("screen")} className="af-btn af-btn-primary" style={{ fontSize: 16, background: "linear-gradient(160deg,#4180D8,#2A5BB0)" }}>
+            📺 L&apos;Écran — je vois son chrono
+          </button>
+          <button onClick={() => setRole("pad")} className="af-btn af-btn-ghost" style={{ fontSize: 14 }}>
+            👥 Tournoi — tout sur ce tél (2-10 joueurs)
           </button>
         </div>
         <p className="mt-4 max-w-xs text-center text-[11px]" style={{ color: "var(--text-dim)" }}>
-          L&apos;écran est optionnel : ouvre ce jeu depuis la même room sur l&apos;autre tél et choisis « Écran ».
+          À 2 : un tél prend « Le Bouton », l&apos;autre « L&apos;Écran » (même room). Le temps max se règle sur l&apos;écran — ou pas, il est optionnel.
         </p>
       </LocalShell>
     );
   }
 
+  if (role === "duel") return <DuelPad roomCode={roomCode} playerId={playerId} playerName={playerName} />;
   if (role === "screen") return <ScreenView roomCode={roomCode} playerId={playerId} playerName={playerName} />;
   return <PadView roomCode={roomCode} playerId={playerId} playerName={playerName} />;
+}
+
+// ══════════════════════════════════════════════════════════
+// LE BOUTON (duel 2 téls) — zéro config : GO, STOP, résultat
+// ══════════════════════════════════════════════════════════
+function DuelPad({ roomCode, playerId, playerName }: GameProps) {
+  const { sendAction } = useGame(roomCode, "pile-poil", playerId, playerName);
+  const { gameState, isConnected } = useGameStore();
+  const [st, setSt] = useState<"idle" | "running" | "done">("idle");
+  const [elapsed, setElapsed] = useState(0);
+  const [maxTime, setMaxTime] = useState<number | null>(null); // réglé sur l'écran, optionnel
+  const startRef = useRef(0);
+  const seenSeq = useRef(-1);
+
+  // Annonce le mode duel à chaque (re)connexion — idempotent, et résiste au
+  // double-montage du Strict Mode (le 1er envoi part sur un socket déjà fermé).
+  useEffect(() => {
+    if (!isConnected) return;
+    sendAction({ action: "pp-sync", seq: Math.floor(Math.random() * 1e9), view: "duel" });
+  }, [isConnected, sendAction]);
+
+  // Temps max (optionnel) poussé par l'écran à tout moment
+  const raw = gameState as unknown as { action?: string; seq?: number; target?: number | null };
+  useEffect(() => {
+    if (raw?.action !== "pp-target" || raw.seq === undefined || raw.seq === seenSeq.current) return;
+    seenSeq.current = raw.seq;
+    setMaxTime(typeof raw.target === "number" ? raw.target : null);
+  }, [raw]);
+
+  const go = () => {
+    startRef.current = performance.now();
+    setSt("running");
+    sendAction({ action: "pp-start", seq: Math.floor(Math.random() * 1e9), playerName: "Le joueur", target: maxTime, mode: "free" });
+  };
+  const stop = () => {
+    const e = performance.now() - startRef.current;
+    setElapsed(e);
+    setSt("done");
+    sendAction({ action: "pp-stop", seq: Math.floor(Math.random() * 1e9), elapsedMs: e, target: maxTime, mode: "free" });
+  };
+
+  const running = st === "running";
+  const over = maxTime != null && elapsed > maxTime * 1000;
+  const perfect = maxTime != null && Math.abs(elapsed - maxTime * 1000) <= 150;
+
+  return (
+    <div
+      className="flex min-h-dvh select-none flex-col items-center justify-center px-6 text-center"
+      style={{ background: "radial-gradient(120% 80% at 50% 0%, #06302A 0%, #020D0B 100%)", touchAction: "manipulation" }}
+    >
+      <p className="af-eyebrow" style={{ color: "rgba(255,255,255,0.5)" }}>
+        {maxTime != null ? `Temps max : ${maxTime} s` : "Chrono libre"}
+      </p>
+      {st === "done" ? (
+        <>
+          <p className="mt-3 font-black tabular-nums text-white" style={{ fontFamily: "var(--font-display)", fontSize: 60, lineHeight: 1 }}>
+            {fmt(elapsed)}
+          </p>
+          {maxTime != null && (
+            <p className="mt-1 text-xl font-black" style={{ fontFamily: "var(--font-display)", color: perfect ? "#FFD23F" : over ? "#FF6A5B" : "#5FF5DD" }}>
+              {perfect ? "PILE POIL ! 🎯" : `${fmtDelta(elapsed, maxTime)}${over ? " · dépassé !" : ""}`}
+            </p>
+          )}
+        </>
+      ) : (
+        <p className="mt-2 text-sm" style={{ color: "rgba(255,255,255,0.55)" }}>
+          {running ? "🤫 Compte dans ta tête…" : "Appuie pour lancer — l'autre tél voit tout"}
+        </p>
+      )}
+      <button
+        onClick={running ? stop : go}
+        className="mt-8 flex h-56 w-56 items-center justify-center rounded-full text-3xl font-black transition-transform active:scale-95"
+        style={{
+          fontFamily: "var(--font-display)",
+          color: running ? "#2A0808" : "#04211C",
+          background: running
+            ? "radial-gradient(circle at 35% 30%, #FF8A7A, #E23434)"
+            : "radial-gradient(circle at 35% 30%, #5FF5DD, #00C2A8)",
+          border: "4px solid rgba(255,255,255,0.35)",
+          boxShadow: running ? "0 0 60px rgba(226,52,52,0.5)" : "0 0 60px rgba(0,194,168,0.45)",
+        }}
+      >
+        {running ? "STOP" : "GO"}
+      </button>
+      {!running && (
+        <p className="mt-6 max-w-xs text-[11px]" style={{ color: "rgba(255,255,255,0.35)" }}>
+          Le temps max se règle sur l&apos;autre tél (optionnel) — sinon on l&apos;annonce à l&apos;oral et le temps parle.
+        </p>
+      )}
+    </div>
+  );
 }
 
 // ══════════════════════════════════════════════════════════
@@ -477,20 +571,95 @@ interface ScreenSnap {
   relay?: boolean;
 }
 
+// Réglage du temps max — optionnel, modifiable à tout moment depuis l'écran
+function TargetControl({ value, onChange }: { value: number | null; onChange: (v: number | null) => void }) {
+  const chip = (selected: boolean) => ({
+    fontFamily: "var(--font-display)",
+    background: selected ? "#00C2A8" : "rgba(255,255,255,0.06)",
+    color: selected ? "#04211C" : "#fff",
+    border: `1.5px solid ${selected ? "#00C2A8" : "rgba(255,255,255,0.15)"}`,
+  });
+  return (
+    <div className="mt-6 w-full max-w-sm rounded-2xl p-3" style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.12)" }}>
+      <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.18em] text-white/50">⏱ Temps max — optionnel</p>
+      <div className="flex flex-wrap items-center justify-center gap-1.5">
+        <button onClick={() => onChange(null)} className="rounded-xl px-3 py-2 text-sm font-black" style={chip(value == null)}>
+          Aucun
+        </button>
+        {[5, 7, 10, 15].map((t) => (
+          <button key={t} onClick={() => onChange(t)} className="rounded-xl px-3 py-2 text-sm font-black" style={chip(value === t)}>
+            {t} s
+          </button>
+        ))}
+        <button
+          onClick={() => onChange(Math.max(1, Math.round(((value ?? 7) - 0.5) * 2) / 2))}
+          className="rounded-xl px-3 py-2 text-sm font-black"
+          style={chip(false)}
+        >
+          −
+        </button>
+        <button
+          onClick={() => onChange(Math.min(120, Math.round(((value ?? 7) + 0.5) * 2) / 2))}
+          className="rounded-xl px-3 py-2 text-sm font-black"
+          style={chip(false)}
+        >
+          +
+        </button>
+      </div>
+      {value != null && (
+        <p className="mt-2 text-center text-[12px] font-bold" style={{ color: "#5FF5DD" }}>
+          Réglé sur {value} s — « DÉPASSÉ » s&apos;affichera en direct
+        </p>
+      )}
+    </div>
+  );
+}
+
+function HistoryRow({ history, target }: { history: number[]; target: number | null }) {
+  if (!history.length) return null;
+  return (
+    <div className="mt-3 flex flex-wrap justify-center gap-1.5">
+      {history.map((ms, i) => {
+        const over = target != null && ms > target * 1000;
+        return (
+          <span
+            key={i}
+            className="rounded-full px-2.5 py-1 text-[11px] font-black tabular-nums"
+            style={{
+              background: "rgba(255,255,255,0.06)",
+              border: "1px solid rgba(255,255,255,0.12)",
+              color: over ? "#FF6A5B" : "#5FF5DD",
+              opacity: i === 0 ? 1 : 0.6,
+            }}
+          >
+            {fmt(ms)}
+          </span>
+        );
+      })}
+    </div>
+  );
+}
+
 function ScreenView({ roomCode, playerId, playerName }: GameProps) {
   const { sendAction } = useGame(roomCode, "pile-poil", playerId, playerName);
   const { gameState } = useGameStore();
   // Choix de cible depuis l'écran (obligatoire avant validation)
   const [chosen, setChosen] = useState<number | null>(null);
   const raw = gameState as unknown as ScreenSnap;
-  // Un écran qui rejoint en cours de partie récupère le dernier snapshot serveur
-  const snap: ScreenSnap = raw?.action ? raw : (raw?.snapshot ?? raw ?? {});
+  // Base = dernier snapshot serveur (écran qui rejoint en cours de partie),
+  // écrasée par les événements relayés en direct (fusionnés au niveau racine).
+  // Sans cette fusion, un champ posé par le snapshot (ex. view:"duel") serait
+  // perdu dès le premier pp-start reçu.
+  const snap: ScreenSnap = { ...(raw?.snapshot ?? {}), ...(raw ?? {}) };
 
   const [now, setNow] = useState(0); // ms écoulées affichées
   const runningRef = useRef<{ t0: number; raf: number } | null>(null);
   const [display, setDisplay] = useState<"idle" | "running" | "stopped">("idle");
   const [official, setOfficial] = useState<number | null>(null);
   const lastSeq = useRef(-1);
+  // Mode duel : temps max optionnel (autorité = cet écran) + historique
+  const [maxSet, setMaxSet] = useState<number | null>(null);
+  const [history, setHistory] = useState<number[]>([]);
 
   // Réagit aux événements relayés (chaque message a un seq unique)
   useEffect(() => {
@@ -513,6 +682,7 @@ function ScreenView({ roomCode, playerId, playerName }: GameProps) {
       runningRef.current = null;
       setOfficial(raw.elapsedMs ?? null);
       setDisplay("stopped");
+      if (raw.elapsedMs != null) setHistory((h) => [raw.elapsedMs!, ...h].slice(0, 5));
     }
     if (raw.action === "pp-sync") {
       if (runningRef.current) cancelAnimationFrame(runningRef.current.raf);
@@ -528,24 +698,34 @@ function ScreenView({ roomCode, playerId, playerName }: GameProps) {
     };
   }, []);
 
-  const target = snap?.target ?? 7;
-  const over = display === "running" && now > target * 1000;
+  const duel = snap?.view === "duel";
+  const target: number | null = duel ? maxSet : (snap?.target ?? 7);
   const shown = display === "stopped" && official != null ? official : now;
 
+  const setMax = (v: number | null) => {
+    setMaxSet(v);
+    sendAction({ action: "pp-target", seq: Math.floor(Math.random() * 1e9), target: v });
+  };
+
   if (display === "running" || display === "stopped") {
-    const gapMs = Math.abs((official ?? now) - target * 1000);
-    const perfect = display === "stopped" && gapMs <= 150;
+    const overNow = target != null && (display === "running" ? now : official ?? 0) > target * 1000;
+    const gapMs = target != null ? Math.abs((official ?? now) - target * 1000) : 0;
+    const perfect = target != null && display === "stopped" && gapMs <= 150;
     return (
       <div
         className="flex min-h-dvh flex-col items-center justify-center px-6 text-center transition-colors"
         style={{
-          background: over
+          background: overNow
             ? "radial-gradient(120% 80% at 50% 0%, #4A0A0A 0%, #170202 100%)"
             : "radial-gradient(120% 80% at 50% 0%, #06302A 0%, #020D0B 100%)",
         }}
       >
         <p className="af-eyebrow" style={{ color: "rgba(255,255,255,0.5)" }}>
-          {snap?.playerName ?? "…"} vise {target} s
+          {duel
+            ? target != null
+              ? `Temps max : ${target} s`
+              : "Chrono libre"
+            : `${snap?.playerName ?? "…"} vise ${target} s`}
         </p>
         <p
           className="mt-4 font-black tabular-nums"
@@ -553,27 +733,56 @@ function ScreenView({ roomCode, playerId, playerName }: GameProps) {
             fontFamily: "var(--font-display)",
             fontSize: "min(24vw, 9rem)",
             lineHeight: 1,
-            color: display === "stopped" ? (perfect ? "#FFD23F" : over ? "#FF6A5B" : "#5FF5DD") : over ? "#FF6A5B" : "#fff",
-            textShadow: over ? "0 0 40px rgba(255,80,60,0.6)" : "0 0 40px rgba(0,194,168,0.35)",
+            color: display === "stopped" ? (perfect ? "#FFD23F" : overNow ? "#FF6A5B" : "#5FF5DD") : overNow ? "#FF6A5B" : "#fff",
+            textShadow: overNow ? "0 0 40px rgba(255,80,60,0.6)" : "0 0 40px rgba(0,194,168,0.35)",
           }}
         >
           {(shown / 1000).toFixed(display === "stopped" ? 2 : 1)}
         </p>
-        {display === "running" && over && (
+        {display === "running" && overNow && (
           <p className="mt-4 animate-pulse text-3xl font-black" style={{ fontFamily: "var(--font-display)", color: "#FF6A5B" }}>
             DÉPASSÉ !!! 🚨
           </p>
         )}
-        {display === "running" && !over && (
+        {display === "running" && !overNow && (
           <p className="mt-4 text-sm" style={{ color: "rgba(255,255,255,0.45)" }}>
             Chut… il/elle compte 🤫
           </p>
         )}
-        {display === "stopped" && (
-          <p className="mt-4 text-2xl font-black" style={{ fontFamily: "var(--font-display)", color: perfect ? "#FFD23F" : over ? "#FF6A5B" : "#5FF5DD" }}>
+        {display === "stopped" && target != null && (
+          <p className="mt-4 text-2xl font-black" style={{ fontFamily: "var(--font-display)", color: perfect ? "#FFD23F" : overNow ? "#FF6A5B" : "#5FF5DD" }}>
             {perfect ? "PILE POIL ! 🎯" : fmtDelta(official ?? 0, target)}
           </p>
         )}
+        {duel && display === "stopped" && (
+          <>
+            <TargetControl value={maxSet} onChange={setMax} />
+            <HistoryRow history={history} target={maxSet} />
+            <p className="mt-3 text-[11px]" style={{ color: "rgba(255,255,255,0.4)" }}>
+              En attente du prochain essai…
+            </p>
+          </>
+        )}
+      </div>
+    );
+  }
+
+  // Duel au repos : prêt + réglage du temps max (optionnel)
+  if (duel) {
+    return (
+      <div
+        className="flex min-h-dvh flex-col items-center justify-center px-6 text-center"
+        style={{ background: "radial-gradient(120% 80% at 50% 0%, #06302A 0%, #020D0B 100%)" }}
+      >
+        <span className="text-5xl">👀</span>
+        <p className="mt-3 text-xl font-black text-white" style={{ fontFamily: "var(--font-display)" }}>
+          Prêt à mater son chrono
+        </p>
+        <p className="mt-1 max-w-xs text-sm" style={{ color: "rgba(255,255,255,0.55)" }}>
+          Dès qu&apos;il appuie sur GO, le temps défile ici en direct.
+        </p>
+        <TargetControl value={maxSet} onChange={setMax} />
+        <HistoryRow history={history} target={maxSet} />
       </div>
     );
   }
