@@ -74,10 +74,11 @@ export default function PilePoilGame({ roomCode, playerId, playerName }: GamePro
 // ══════════════════════════════════════════════════════════
 // MANETTE — toute la logique de jeu, temps mesuré ICI
 // ══════════════════════════════════════════════════════════
-type PadPhase = "setup" | "config" | "pass" | "ready" | "running" | "reveal" | "board" | "recap";
+type PadPhase = "setup" | "config" | "await-target" | "pass" | "ready" | "running" | "reveal" | "board" | "recap";
 
 function PadView({ roomCode, playerId, playerName }: GameProps) {
   const { sendAction } = useGame(roomCode, "pile-poil", playerId, playerName);
+  const { gameState } = useGameStore();
 
   const [phase, setPhase] = useState<PadPhase>("setup");
   const [players, setPlayers] = useState<string[]>([]);
@@ -116,12 +117,25 @@ function PadView({ roomCode, playerId, playerName }: GameProps) {
     setPhase("config");
   };
 
-  const beginRound = () => {
+  const beginRound = (targetOverride?: number) => {
+    if (targetOverride != null) setTarget(targetOverride);
     setAttempts([]);
     setTurnIdx(0);
     setPhase("pass");
-    sync({ view: "pass", turnIdx: 0, attempts: [] });
+    sync({ view: "pass", turnIdx: 0, attempts: [], ...(targetOverride != null ? { target: targetOverride } : {}) });
   };
+
+  // La cible peut être choisie sur le tél « écran » (annoncée à l'oral ici)
+  const padSeq = useRef(-1);
+  const raw = gameState as unknown as { action?: string; seq?: number; target?: number };
+  useEffect(() => {
+    if (raw?.action !== "pp-target" || raw.seq === undefined || raw.seq === padSeq.current) return;
+    padSeq.current = raw.seq;
+    if (phase === "await-target" && typeof raw.target === "number" && raw.target >= 1 && raw.target <= 120) {
+      beginRound(raw.target);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [raw?.seq]);
 
   const onStartTap = () => {
     startRef.current = performance.now();
@@ -231,8 +245,46 @@ function PadView({ roomCode, playerId, playerName }: GameProps) {
             </button>
           ))}
         </div>
-        <button onClick={beginRound} className="af-btn af-btn-primary mt-7 w-full max-w-xs" style={{ fontSize: 16 }}>
+        <button onClick={() => beginRound()} className="af-btn af-btn-primary mt-7 w-full max-w-xs" style={{ fontSize: 16 }}>
           C&apos;est parti !
+        </button>
+        <button
+          onClick={() => {
+            setPhase("await-target");
+            sync({ view: "pick-target" });
+          }}
+          className="af-btn af-btn-ghost mt-2 w-full max-w-xs"
+          style={{ fontSize: 14 }}
+        >
+          📺 C&apos;est l&apos;écran qui choisit la cible
+        </button>
+        <p className="mt-2 max-w-xs text-center text-[11px]" style={{ color: "var(--text-dim)" }}>
+          Quelqu&apos;un annonce la cible à l&apos;oral ? Le tél « Écran » la saisit et la manche démarre toute seule.
+        </p>
+      </LocalShell>
+    );
+  }
+
+  if (phase === "await-target") {
+    return (
+      <LocalShell accent="#00C2A8" center>
+        <span className="text-6xl">📺</span>
+        <h2 className="cb-display-lg mt-3 text-center">L&apos;écran choisit…</h2>
+        <p className="mt-2 max-w-xs text-center text-sm" style={{ color: "var(--text-dim)" }}>
+          En attente de la cible saisie sur le tél « Écran ». Dès qu&apos;elle est validée, la manche démarre ici.
+        </p>
+        <div className="mt-6 flex items-center gap-2 text-sm font-bold text-white/60">
+          <span className="inline-block h-2 w-2 animate-ping rounded-full" style={{ background: "#00C2A8" }} />
+          En attente…
+        </div>
+        <button
+          onClick={() => {
+            setPhase("config");
+            sync({ view: "board" });
+          }}
+          className="af-btn af-btn-ghost mt-8 w-full max-w-xs"
+        >
+          ← Revenir au réglage manuel
         </button>
       </LocalShell>
     );
@@ -426,8 +478,10 @@ interface ScreenSnap {
 }
 
 function ScreenView({ roomCode, playerId, playerName }: GameProps) {
-  useGame(roomCode, "pile-poil", playerId, playerName);
+  const { sendAction } = useGame(roomCode, "pile-poil", playerId, playerName);
   const { gameState } = useGameStore();
+  // Choix de cible depuis l'écran (obligatoire avant validation)
+  const [chosen, setChosen] = useState<number | null>(null);
   const raw = gameState as unknown as ScreenSnap;
   // Un écran qui rejoint en cours de partie récupère le dernier snapshot serveur
   const snap: ScreenSnap = raw?.action ? raw : (raw?.snapshot ?? raw ?? {});
@@ -520,6 +574,70 @@ function ScreenView({ roomCode, playerId, playerName }: GameProps) {
             {perfect ? "PILE POIL ! 🎯" : fmtDelta(official ?? 0, target)}
           </p>
         )}
+      </div>
+    );
+  }
+
+  // La manette attend que CET écran saisisse la cible (annoncée à l'oral)
+  if (snap?.view === "pick-target") {
+    return (
+      <div
+        className="flex min-h-dvh flex-col items-center justify-center px-6 text-center"
+        style={{ background: "radial-gradient(120% 80% at 50% 0%, #06302A 0%, #020D0B 100%)" }}
+      >
+        <span className="text-5xl">🎯</span>
+        <p className="mt-3 text-xl font-black text-white" style={{ fontFamily: "var(--font-display)" }}>
+          À toi de fixer la cible !
+        </p>
+        <p className="mt-1 max-w-xs text-sm" style={{ color: "rgba(255,255,255,0.55)" }}>
+          Annonce-la à voix haute (ou pas 😈) et saisis-la ici — obligatoire pour lancer la manche.
+        </p>
+        <div className="mt-6 flex max-w-sm flex-wrap justify-center gap-2">
+          {[3, 5, 7, 10, 12, 15, 20, 30].map((t) => (
+            <button
+              key={t}
+              onClick={() => setChosen(t)}
+              className="rounded-2xl px-4 py-2.5 text-base font-black"
+              style={{
+                fontFamily: "var(--font-display)",
+                background: chosen === t ? "#00C2A8" : "rgba(255,255,255,0.06)",
+                color: chosen === t ? "#04211C" : "#fff",
+                border: `1.5px solid ${chosen === t ? "#00C2A8" : "rgba(255,255,255,0.15)"}`,
+              }}
+            >
+              {t} s
+            </button>
+          ))}
+        </div>
+        <div className="mt-4 flex items-center gap-3">
+          <button
+            onClick={() => setChosen((c) => Math.max(1, Math.round(((c ?? 7) - 0.5) * 2) / 2))}
+            className="af-btn af-btn-ghost h-11 w-11 !p-0 text-xl"
+          >
+            −
+          </button>
+          <span className="w-24 text-center text-2xl font-black tabular-nums text-white" style={{ fontFamily: "var(--font-display)" }}>
+            {chosen != null ? `${chosen} s` : "— s"}
+          </span>
+          <button
+            onClick={() => setChosen((c) => Math.min(120, Math.round(((c ?? 7) + 0.5) * 2) / 2))}
+            className="af-btn af-btn-ghost h-11 w-11 !p-0 text-xl"
+          >
+            +
+          </button>
+        </div>
+        <button
+          disabled={chosen == null}
+          onClick={() => {
+            if (chosen == null) return;
+            sendAction({ action: "pp-target", seq: Math.floor(Math.random() * 1e9), target: chosen });
+            setChosen(null);
+          }}
+          className="af-btn af-btn-primary mt-6 w-full max-w-xs disabled:opacity-40"
+          style={{ fontSize: 16 }}
+        >
+          Valider la cible ✓
+        </button>
       </div>
     );
   }
