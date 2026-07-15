@@ -64,7 +64,8 @@ export function GameShell({
 
   const gameMeta = getGameById(gameId);
   const level = stats ? getLevel(stats.totalPoints) : null;
-  const isCardGame = gameMeta?.category === "cards";
+  // Le Bus fait exception : 4 cartes max en main, l'UI est pensée portrait.
+  const isCardGame = gameMeta?.category === "cards" && gameId !== "le-bus";
 
   // Orientation : les jeux de cartes se jouent en paysage (sinon main illisible sur mobile).
   const [portrait, setPortrait] = useState(false);

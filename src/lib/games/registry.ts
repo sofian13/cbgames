@@ -672,6 +672,26 @@ export const GAMES: GameMeta[] = [
     component: () => import("@/components/games/tgv/tgv-game"),
   },
   {
+    id: "le-bus",
+    name: "Le Bus 🚌",
+    description:
+      "LE jeu de cartes à boire : questions, pyramide, et le perdant prend le bus ! Raté = tu bois, réussi = tu distribues. (18+)",
+    category: "cards",
+    minPlayers: 2,
+    maxPlayers: 8,
+    icon: "🚌",
+    implemented: true,
+    rules: [
+      "Phase 1 — 4 questions : Rouge/Noir (1 gorgée), Plus/Moins (2), Intérieur/Extérieur (3), la Couleur (4)",
+      "Raté → tu bois les gorgées · Réussi → tu les distribues à qui tu veux",
+      "Phase 2 — la Pyramide : une carte se retourne toutes les 8 s, pose tes doublons pour faire boire (bas = 1 gorgée, sommet = 4)",
+      "Celui qui garde le plus de cartes en main monte dans le bus…",
+      "Phase 3 — le Bus : 5 Plus/Moins d'affilée pour descendre. Chaque erreur se boit et on repart de zéro !",
+      "Le plus sobre gagne. À consommer avec modération 😉",
+    ],
+    component: () => import("@/components/games/le-bus/le-bus-game"),
+  },
+  {
     id: "picolette",
     name: "Picolette",
     description: "Cartes orales pour la voiture / le canapé / la fin de soirée. Vote, tour de table, duels, règles live. (18+)",

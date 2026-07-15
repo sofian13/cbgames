@@ -166,6 +166,10 @@ const GameComponents = {
     () => import("@/components/games/tgv/tgv-game"),
     { ssr: false }
   ),
+  "le-bus": dynamic(
+    () => import("@/components/games/le-bus/le-bus-game"),
+    { ssr: false }
+  ),
   "picolette": dynamic(
     () => import("@/components/games/picolette/picolette-game"),
     { ssr: false }

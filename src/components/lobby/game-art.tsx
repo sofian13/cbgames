@@ -579,6 +579,29 @@ function GameIcon({ id }: { id: string }) {
           <text x="76" y="74" fontFamily={DISP} fontWeight="900" fontSize="14" fill="#FF6B5B">↓</text>
         </g>
       );
+    case "le-bus":
+      return (
+        <g>
+          {/* Bus : vue de face avec pare-brise + roues */}
+          <rect x="26" y="24" width="48" height="48" rx="8" fill={lite} />
+          <rect x="32" y="30" width="36" height="16" rx="4" fill="#0E0828" opacity="0.9" />
+          <line x1="50" y1="30" x2="50" y2="46" stroke={lite} strokeOpacity="0.4" strokeWidth="1" />
+          <rect x="32" y="52" width="10" height="8" rx="2" fill={dark} />
+          <rect x="58" y="52" width="10" height="8" rx="2" fill={dark} />
+          <rect x="44" y="52" width="12" height="20" rx="2" fill={dark} />
+          <circle cx="36" cy="74" r="5" fill={dark} />
+          <circle cx="64" cy="74" r="5" fill={dark} />
+          {/* Cartes qui s'envolent */}
+          <g transform="rotate(-16 18 34)">
+            <rect x="12" y="26" width="12" height="17" rx="2" fill="#FFD23F" />
+            <text x="18" y="38" fontFamily={DISP} fontWeight="900" fontSize="9" textAnchor="middle" fill="#B3261E">♥</text>
+          </g>
+          <g transform="rotate(14 84 60)">
+            <rect x="78" y="52" width="12" height="17" rx="2" fill={lite} />
+            <text x="84" y="64" fontFamily={DISP} fontWeight="900" fontSize="9" textAnchor="middle" fill="#0E0828">♠</text>
+          </g>
+        </g>
+      );
     case "picolette":
       return (
         <g>
@@ -622,7 +645,7 @@ const GAME_PATTERN: Record<string, Pattern> = {
   "blind-control": "grid", "block-runner": "grid", "top-ten": "blob", "le-bluffeur": "stars", "longueur-onde": "wave",
   "guess-word": "blob", "category-chrono": "dots", "make-guess": "blob",
   "motion-tennis": "wave",
-  "tgv": "diag", "picolette": "stars",
+  "tgv": "diag", "picolette": "stars", "le-bus": "cards",
 };
 
 export function GameArt({ game, rounded = 18, style = {} }: { game: { id: string; category: string }; rounded?: number; style?: React.CSSProperties }) {
