@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ArrowRight, Lock, Settings } from "lucide-react";
+import { ArrowRight, Lock, Settings, Users } from "lucide-react";
 import { FEATURED, SECTIONS, getZGame, type ZFeatured, type ZGame } from "../catalog";
 import { ZBlob, ZPALETTE } from "./ZBlob";
 import { RoundBtn, Tag } from "./common";
-import { gameInfo, haptic, playersLabel, reducedMotion } from "./util";
+import { gameInfo, haptic, reducedMotion } from "./util";
 
 export function isLocked(g: ZGame, premium: boolean) {
   return !premium && !g.free;
@@ -263,25 +263,33 @@ function GameCard({
       aria-label={`${info.name}${locked ? " (verrouillé)" : ""}`}
     >
       {/* Blob qui dépasse du haut de la carte */}
-      <div className="absolute" style={{ right: 6, top: -blob * 0.34 }}>
+      <div className="absolute" style={{ right: big ? 6 : -10, top: -blob * 0.34 }}>
         <ZBlob size={blob} color={game.color} mood={game.mood} seed={seed} speed={2.4} shadow={false} outline costume={game.costume} />
       </div>
 
-      {/* Étiquettes */}
-      <div className="relative z-[2] flex flex-wrap items-start gap-1.5 px-3 pt-3" style={{ paddingRight: blob * 0.62 }}>
-        {locked && (
-          <span className="grid h-7 w-7 place-items-center rounded-full" style={{ background: "var(--zz-ink)", color: "#fff" }} aria-hidden>
-            <Lock size={14} strokeWidth={2.8} />
-          </span>
-        )}
-        {game.isNew && <Tag bg="#fff" tilt={-5}>Nouveau</Tag>}
-        {game.adult && <Tag bg="var(--zz-ink)" color="#fff" tilt={4}>18+</Tag>}
-        {showFree && <Tag bg="#fff" tilt={3}>Gratuit</Tag>}
+      {/* Coin haut-gauche : sticker joueurs (+ cadenas), sur une ligne, à l'écart du blob */}
+      <div className="relative z-[2] px-3 pt-3">
+        <span
+          className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1 text-[13px] font-extrabold"
+          style={{ background: locked ? "var(--zz-ink)" : "#fff", color: locked ? "#fff" : "var(--zz-ink)", border: "2.5px solid var(--zz-ink)", boxShadow: "0 3px 0 var(--zz-ink)", rotate: "-3deg" }}
+        >
+          {/* Verrouillé : cadenas à la place de l'icône joueurs (sticker plus court) */}
+          {locked ? <Lock size={13} strokeWidth={3} aria-hidden /> : <Users size={14} strokeWidth={3} aria-hidden />}
+          {game.players.replace("-", "–")}
+        </span>
       </div>
 
       <div className="flex-1" />
 
       <div className="relative px-4 pb-4">
+        {/* Étiquettes juste au-dessus du titre (jamais sous le blob) */}
+        {(game.isNew || game.adult || showFree) && (
+          <div className="mb-2 flex flex-wrap items-center gap-1.5">
+            {game.isNew && <Tag bg="#fff" tilt={-4}>Nouveau</Tag>}
+            {game.adult && <Tag bg="var(--zz-ink)" color="#fff" tilt={3}>18+</Tag>}
+            {showFree && <Tag bg="#fff" tilt={3}>Gratuit</Tag>}
+          </div>
+        )}
         <div className="zz-title" style={{ fontSize: big ? 30 : 24, lineHeight: 0.95 }}>
           {info.name}
         </div>
@@ -291,7 +299,6 @@ function GameCard({
         >
           {info.pitch}
         </p>
-        <div className="mt-2 text-[13px] font-bold" style={{ opacity: 0.9 }}>{playersLabel(game.players)}</div>
       </div>
     </button>
   );
