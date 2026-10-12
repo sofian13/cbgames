@@ -42,8 +42,8 @@ Version provisoire du 12/10/2026, à relire par un pro avant la sortie. Les text
 - **Public cible :** 18+ uniquement, pas « conçu pour les enfants ».
 
 ## 4. Ce qu'il te reste à faire (obligatoire avant de vendre)
-1. **Statut juridique :** EI existante (SIREN 109 518 910, APE 47.91B vente à distance), déjà renseignée dans `EDITOR`. **Ajouter l'activité** « édition / vente d'applications et de jeux mobiles » (ex. APE 58.21Z) via le guichet unique (formalites.entreprises.gouv.fr). Confirmer avec l'URSSAF ou un comptable le régime de cette activité et la franchise de TVA, que j'ai supposée (mention « art. 293 B »). L'adresse personnelle est publique dans les mentions légales ; une domiciliation est possible si tu préfères la masquer.
-2. **Médiateur de la consommation :** obligatoire dès qu'on vend à des particuliers. Il faut adhérer à un médiateur (il en existe à quelques dizaines d'euros par an) puis remplir `EDITOR.mediator`.
+1. **Statut juridique :** EI immatriculée au RCS de Marseille (n° 109 518 910, nom commercial Safiri), déjà renseignée dans `EDITOR`. Activités déclarées : vente de prêt-à-porter et prestations de services/conseil IT. **Ajouter l'activité « édition et commercialisation d'applications mobiles et de jeux »** via le guichet unique (formalites.entreprises.gouv.fr, gratuit). Confirmer avec l'URSSAF ou un comptable le régime fiscal et social de ces recettes, ainsi que la franchise de TVA (« art. 293 B » supposée).
+2. **Médiateur de la consommation :** obligatoire pour la vente aux particuliers (art. L612-1), reporté pour l'instant. Dès qu'il est choisi, renseigner `EDITOR.mediator` : la clause apparaît alors automatiquement dans les conditions.
 3. **Adresse e-mail de contact :** créer `contact@…` sur ton domaine (remplacer `contact@zinzin.app` si tu n'as pas ce domaine).
 4. **RevenueCat :** accepter leur DPA (accord de sous-traitance RGPD) dans le dashboard et créer un ID utilisateur anonyme (c'est le comportement par défaut).
 5. **Marque :** vérifier « Zinzin » sur data.inpi.fr (classes 9 et 41), puis déposer.

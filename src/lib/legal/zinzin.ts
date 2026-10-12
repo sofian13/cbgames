@@ -3,9 +3,8 @@
  * Source unique : affichés dans l'app (zinzin/) ET sur le site (/zinzin/<doc>),
  * dont les URL publiques sont à renseigner dans App Store Connect / Play Console.
  *
- * ⚠️ Version provisoire : les champs entre crochets [À COMPLÉTER] doivent être
- * remplis (identité de l'éditeur, médiateur…) avant la publication sur les stores,
- * puis le tout relu par un professionnel.
+ * ⚠️ Version provisoire : à faire relire par un professionnel avant la publication.
+ * Reste à faire : désigner un médiateur de la consommation (EDITOR.mediator).
  */
 
 export const LEGAL_UPDATED_AT = "12 octobre 2026";
@@ -13,14 +12,15 @@ export const LEGAL_UPDATED_AT = "12 octobre 2026";
 /** Infos éditeur : à compléter une fois le statut juridique créé. */
 export const EDITOR = {
   name: "Sofian Zerkouni EI",
-  status: "entrepreneur individuel inscrit au Registre national des entreprises",
+  status: "entrepreneur individuel (nom commercial : Safiri), immatriculé au RCS de Marseille sous le n° 109 518 910",
   address: "8 rue Pastoret, 13006 Marseille, France",
   siret: "SIRET 109 518 910 00012",
   // Hypothèse : micro-entreprise en franchise en base de TVA (à confirmer)
   vat: "TVA non applicable, art. 293 B du CGI",
   email: "contact@zinzin.app",
   director: "Sofian Zerkouni",
-  mediator: "[À COMPLÉTER : médiateur de la consommation (nom, site web)]",
+  /** Médiateur de la consommation : vide tant qu'aucun n'est désigné (la clause s'adapte). */
+  mediator: "",
 };
 
 export type LegalDocId = "mentions-legales" | "confidentialite" | "conditions";
@@ -199,7 +199,11 @@ export const LEGAL_DOCS: Record<LegalDocId, LegalDoc> = {
       {
         title: "10. Litiges et médiation",
         paragraphs: [
-          `Pour toute question ou réclamation : ${E.email}. En cas de litige non résolu, tu peux recourir gratuitement au médiateur de la consommation : ${E.mediator}.`,
+          "Les achats sont encaissés par Apple (App Store) ou Google (Google Play) : toute demande liée au paiement ou au remboursement se fait d'abord auprès d'eux (reportaproblem.apple.com, ou Google Play › Paiements et abonnements).",
+          `Pour toute autre question ou réclamation sur l'application : ${E.email}. Nous nous engageons à répondre sous 15 jours et à rechercher une solution amiable.`,
+          ...(E.mediator
+            ? [`En cas de litige non résolu, tu peux recourir gratuitement au médiateur de la consommation : ${E.mediator}.`]
+            : []),
           "Les présentes conditions sont soumises au droit français. À défaut d'accord amiable, les tribunaux compétents sont ceux prévus par la loi.",
         ],
       },
