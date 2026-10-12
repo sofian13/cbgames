@@ -124,7 +124,7 @@ export const GAMES: ZGame[] = [
         "Le perdant fait un gage (ou 1 à 3 gorgées, eau acceptée) et lance la manche suivante",
       ],
     } },
-  { id: "purete", costume: "angeldevil", color: "lavender", mood: "wink", isNew: true, players: "2-12",
+  { id: "purete", costume: "angeldevil", color: "lavender", mood: "wink", isNew: true, players: "1-12",
     story: [
       { text: "As-tu déjà écrit à ton ex en pleine nuit ?" },
       { who: "Léa", text: "Jamais. Je suis une sainte." },
@@ -139,12 +139,13 @@ export const GAMES: ZGame[] = [
     ],
     load: () => import("@/components/games/purete/purete-game"),
     meta: {
-      name: "Test de pureté", icon: "😇", minPlayers: 2, maxPlayers: 12,
+      name: "Test de pureté", icon: "😇", minPlayers: 1, maxPlayers: 12,
       pitch: "« As-tu déjà… ? » : plus tu dis oui, moins tu es pur. Qui est l'ange de la table, et qui est le démon ?",
       example: "« As-tu déjà écrit à ton ex en pleine nuit ? » Léa tape « Jamais » en secret, Tom tape « Oui »… À la fin, le compteur de Tom dégringole jusqu'à 12 % : « Casier bien rempli », cornes sur la tête. Et l'appli balance : « 3 personnes sur 4 ont déjà dormi dans une voiture après une soirée ».",
       rules: [
         "Une question « As-tu déjà… ? » à la fois : Oui = tu perds de la pureté, Jamais = tu restes un ange",
         "Chacun son tour : on se passe le tél et chacun répond en secret, puis grande révélation du classement",
+        "Solo : réponds seul et découvre ton score… et tes aveux",
         "Tous ensemble : on lit à voix haute, ceux qui l'ont fait lèvent la main, on compte sur l'écran",
         "Score final en % de pureté avec un titre, de « Ange tombé du ciel » à « Démon certifié »",
         "Option peines : le moins pur prend un gage ou 1 à 3 gorgées (eau ou soft, ça compte). Pack Coquin 18+ facultatif",

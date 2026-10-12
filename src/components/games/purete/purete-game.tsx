@@ -15,7 +15,7 @@ import { Mascot, MascotAvatar, MASCOT_PALETTE, type MascotColor, type MascotMood
 import { ConfettiBurst } from "@/components/ConfettiBurst";
 import { sfxBarFill, sfxBidPop, sfxHandChime, sfxCardPlay } from "@/lib/card-sfx";
 import { QUESTION_PACKS, GAGES, type PackId } from "@/components/games/purete/questions";
-import { ArrowLeft, BarChart3, CupSoda, EyeOff, Flame, Hand, Heart, Info, PartyPopper, RotateCcw, Sparkles, Target, type LucideIcon } from "lucide-react";
+import { ArrowLeft, BarChart3, CupSoda, EyeOff, Flame, Hand, Heart, Info, PartyPopper, RotateCcw, Sparkles, Target, User, type LucideIcon } from "lucide-react";
 import { GameIconBadge, GameIconButton, GameInlineIcon } from "@/components/games/game-icon-button";
 
 // ── Constantes visuelles ─────────────────────────────────
@@ -82,7 +82,7 @@ const sfx = (fn: () => void) => {
 };
 
 interface Question { text: string; pack: PackId }
-type Mode = "secret" | "groupe";
+type Mode = "solo" | "secret" | "groupe";
 
 type Phase =
   | { k: "setup" }
@@ -328,7 +328,8 @@ export default function PureteGame({ onReturnToLobby }: GameProps) {
     setQuestions(deck);
     setAnswers(names.map(() => deck.map(() => false)));
     setCounts(deck.map(() => 0));
-    if (mode === "secret") setPhase({ k: "pass", p: 0 });
+    if (mode === "solo") setPhase({ k: "answer", p: 0, q: 0 });
+    else if (mode === "secret") setPhase({ k: "pass", p: 0 });
     else setPhase({ k: "group", q: 0 });
   };
 
@@ -356,7 +357,7 @@ export default function PureteGame({ onReturnToLobby }: GameProps) {
   const goResults = () => {
     const showNames = !anonymousMode && !(mode === "secret" && anonymous);
     const who = showNames ? questions.map((_, qi) => players.map((_, pi) => pi).filter((pi) => answers[pi]?.[qi])) : null;
-    setRevelations(buildRevelations(questions, yesCounts, nbPlayers, who));
+    setRevelations(mode === "solo" ? [] : buildRevelations(questions, yesCounts, nbPlayers, who));
     setGage(GAGES[Math.floor(Math.random() * GAGES.length)]);
     setPhase({ k: "results" });
   };
@@ -387,6 +388,8 @@ export default function PureteGame({ onReturnToLobby }: GameProps) {
     const goNext = () => {
       if (!canGo) return;
       if (mode === "groupe" && !withNames) startGame([]);
+      // Solo : pas de saisie, on joue direct
+      else if (mode === "solo") startGame(["Toi"]);
       else setPhase({ k: "players" });
     };
     return (
@@ -409,12 +412,15 @@ export default function PureteGame({ onReturnToLobby }: GameProps) {
             {([
               ["secret", EyeOff, "Chacun son tour", "En secret, on se passe le tél"],
               ["groupe", Hand, "Tous ensemble", "À voix haute, main levée"],
+              ["solo", User, "Solo", "Rien que toi : découvre ton score"],
             ] as const).map(([m, e, l, s]) => (
-              <button key={m} onClick={() => setMode(m)} className="pur-btn flex flex-col items-start gap-1 p-3.5 text-left"
+              <button key={m} onClick={() => setMode(m)} className={`pur-btn flex gap-1 p-3.5 text-left ${m === "solo" ? "col-span-2 flex-row items-center gap-3" : "flex-col items-start"}`}
                 style={{ ...block(mode === m ? YELLOW : CREAM, 20, mode === m ? 5 : 3), transform: mode === m ? "rotate(-1.5deg)" : undefined }}>
                 <GameIconBadge icon={e} />
-                <span className="text-[19px] leading-tight" style={DISPLAY}>{l}</span>
-                <span className="text-[13px] font-medium leading-snug" style={{ color: "#4A3A66" }}>{s}</span>
+                <span className="flex flex-col gap-1">
+                  <span className="text-[19px] leading-tight" style={DISPLAY}>{l}</span>
+                  <span className="text-[13px] font-medium leading-snug" style={{ color: "#4A3A66" }}>{s}</span>
+                </span>
               </button>
             ))}
           </div>
@@ -457,7 +463,7 @@ export default function PureteGame({ onReturnToLobby }: GameProps) {
 
           {/* Options */}
           <div className="space-y-2.5">
-            {mode === "secret" ? (
+            {mode === "solo" ? null : mode === "secret" ? (
               <Toggle on={anonymous} onChange={setAnonymous} label="Révélations anonymes" sub="« 3 personnes sur 5 ont déjà… » sans dire qui" />
             ) : (
               <Toggle on={withNames} onChange={setWithNames} label="Avec les prénoms" sub="Pour avoir le score de chacun. Sinon, on compte juste les mains." />
@@ -470,13 +476,13 @@ export default function PureteGame({ onReturnToLobby }: GameProps) {
                 <button onClick={() => setTableSize((n) => Math.min(30, n + 1))} aria-label="Plus" className="pur-btn h-11 w-11 text-2xl" style={{ ...block(YELLOW, 999, 2), ...DISPLAY }}>+</button>
               </div>
             )}
-            <Toggle on={peines && !anonymousMode} onChange={setPeines} disabled={anonymousMode}
+            {mode !== "solo" && <Toggle on={peines && !anonymousMode} onChange={setPeines} disabled={anonymousMode}
               label="Peines pour le moins pur"
-              sub={anonymousMode ? "Il faut les prénoms pour savoir qui est le moins pur." : "Un gage, ou 1 à 3 gorgées (eau ou soft, ça compte)"} />
+              sub={anonymousMode ? "Il faut les prénoms pour savoir qui est le moins pur." : "Un gage, ou 1 à 3 gorgées (eau ou soft, ça compte)"} />}
           </div>
 
           <Btn onClick={goNext} disabled={!canGo} bg={PINK} color="#fff" className="w-full text-[22px]" style={{ minHeight: 60 }}>
-            {mode === "groupe" && !withNames ? "C'est parti !" : "Qui joue ? →"}
+            {(mode === "groupe" && !withNames) || mode === "solo" ? "C'est parti !" : "Qui joue ? →"}
           </Btn>
         </div>
       </Screen>
@@ -549,8 +555,17 @@ export default function PureteGame({ onReturnToLobby }: GameProps) {
             <PureBlob key={i} color={colorForIndex(i)} purity={50} size={58} show={false} />
           ))}
         </div>
-        <h1 className="mt-4 text-center text-[clamp(40px,12vw,58px)] leading-[0.92]" style={DISPLAY}>Tout le monde<br />a répondu !</h1>
-        <p className="mt-3 max-w-xs text-center text-[17px] font-semibold">Posez le téléphone au milieu de la table. L&apos;heure de vérité a sonné.</p>
+        {mode === "solo" ? (
+          <>
+            <h1 className="mt-4 text-center text-[clamp(40px,12vw,58px)] leading-[0.92]" style={DISPLAY}>C&apos;est fini !</h1>
+            <p className="mt-3 max-w-xs text-center text-[17px] font-semibold">Ange ou démon ? Prépare-toi à assumer.</p>
+          </>
+        ) : (
+          <>
+            <h1 className="mt-4 text-center text-[clamp(40px,12vw,58px)] leading-[0.92]" style={DISPLAY}>Tout le monde<br />a répondu !</h1>
+            <p className="mt-3 max-w-xs text-center text-[17px] font-semibold">Posez le téléphone au milieu de la table. L&apos;heure de vérité a sonné.</p>
+          </>
+        )}
         <Btn onClick={() => { sfx(() => sfxHandChime(true)); setPhase({ k: "suspense", i: 0 }); }} bg={PINK} color="#fff" className="mt-8 w-full max-w-xs text-[24px]" style={{ minHeight: 64 }}>
           Révéler 🥁
         </Btn>
@@ -640,8 +655,9 @@ export default function PureteGame({ onReturnToLobby }: GameProps) {
     }
     const pi = order[phase.i];
     const isLast = phase.i === order.length - 1;
-    const label = isLast ? "Et le moins pur de la table est…" : phase.i === 0 ? "Le plus pur de la table…" : `Révélation ${phase.i + 1} / ${order.length}`;
-    return <SuspenseReveal key={phase.i} label={label} name={players[pi]} color={colorForIndex(pi)} purity={purities[pi]} last={isLast}
+    const label = mode === "solo" ? "Ton score de pureté…" : isLast ? "Et le moins pur de la table est…" : phase.i === 0 ? "Le plus pur de la table…" : `Révélation ${phase.i + 1} / ${order.length}`;
+    return <SuspenseReveal key={phase.i} label={label} name={mode === "solo" ? undefined : players[pi]} color={colorForIndex(pi)} purity={purities[pi]} last={isLast}
+      nextLabel={mode === "solo" ? "Voir mon verdict →" : undefined}
       onNext={() => (isLast ? goResults() : setPhase({ k: "suspense", i: phase.i + 1 }))} />;
   }
 
@@ -655,11 +671,13 @@ export default function PureteGame({ onReturnToLobby }: GameProps) {
     <Screen bg={VIOLET}>
       <RulesButton />
       <h1 className="text-center text-[clamp(38px,11vw,54px)] leading-[0.92] text-white" style={{ ...DISPLAY, textShadow: `4px 4px 0 ${INK}` }}>
-        {anonymousMode ? "Bilan de la table" : "Classement de pureté"}
+        {anonymousMode ? "Bilan de la table" : mode === "solo" ? "Ton verdict" : "Classement de pureté"}
       </h1>
 
       <div className="mt-5 w-full max-w-md space-y-3">
-        {anonymousMode ? (
+        {mode === "solo" ? (
+          <SoloVerdict purity={purities[0] ?? 100} confessions={questions.filter((_, qi) => answers[0]?.[qi]).map((q) => q.text)} />
+        ) : anonymousMode ? (
           <div className="pur-rise flex items-center gap-4 p-4" style={block(YELLOW, 24, 5)}>
             <PureBlob color="lavender" purity={tablePurity} size={84} />
             <div>
@@ -713,7 +731,7 @@ export default function PureteGame({ onReturnToLobby }: GameProps) {
         </div>
       )}
 
-      {peines && !anonymousMode && losers.length > 0 && (
+      {peines && mode !== "solo" && !anonymousMode && losers.length > 0 && (
         <div className="pur-rise mt-7 w-full max-w-md p-4" style={block(RED, 24, 5)}>
           <div className="flex items-center gap-3">
             <PureBlob color={colorForIndex(losers[0].i)} purity={0} size={64} />
@@ -734,7 +752,7 @@ export default function PureteGame({ onReturnToLobby }: GameProps) {
       <div className="mt-8 grid w-full max-w-md gap-3">
         <Btn onClick={replay} bg={YELLOW} className="text-[22px]" style={{ minHeight: 60 }}><GameInlineIcon icon={RotateCcw} /> Rejouer</Btn>
         <div className="grid grid-cols-2 gap-3">
-          <Btn onClick={changePlayers} bg={CREAM} className="text-[17px]">Changer les joueurs</Btn>
+          <Btn onClick={mode === "solo" ? () => setPhase({ k: "setup" }) : changePlayers} bg={CREAM} className="text-[17px]">{mode === "solo" ? "Jouer à plusieurs" : "Changer les joueurs"}</Btn>
           <Btn onClick={() => (onReturnToLobby ? onReturnToLobby() : setPhase({ k: "setup" }))} bg={INK} color="#fff" className="text-[17px]">Quitter</Btn>
         </div>
       </div>
@@ -759,8 +777,37 @@ function BarFill({ pct, color, delay }: { pct: number; color: string; delay: num
 }
 
 // ── Un joueur : compteur qui défile jusqu'à son % ──
-function SuspenseReveal({ label, name, color, purity, last, onNext }: {
-  label: string; name: string; color: MascotColor; purity: number; last: boolean; onNext: () => void;
+/** Mode solo : grosse carte « à capturer » + les aveux (questions où on a dit oui). */
+function SoloVerdict({ purity, confessions }: { purity: number; confessions: string[] }) {
+  const t = titleFor(purity);
+  const pure = purity >= 50;
+  const shown = confessions.slice(0, 5);
+  return (
+    <>
+      <div className="pur-rise flex flex-col items-center p-5 text-center" style={{ ...block(pure ? YELLOW : RED, 28, 6), transform: "rotate(-1.5deg)" }}>
+        <PureBlob color={pure ? "white" : "coral"} purity={purity} size={110} cheering={pure} />
+        <div className="mt-3 text-[clamp(72px,22vw,104px)] leading-none" style={{ ...DISPLAY, color: pure ? INK : "#fff" }}>{purity} %</div>
+        <div className="mt-2 text-[clamp(22px,7vw,30px)] leading-tight" style={{ ...DISPLAY, color: pure ? INK : "#fff" }}>{t.emoji} {t.title}</div>
+      </div>
+      {shown.length > 0 && (
+        <div className="pur-rise mt-6 p-4" style={{ ...block(CREAM, 22, 5), animationDelay: "0.15s" }}>
+          <h2 className="text-[24px] leading-tight" style={DISPLAY}>Tes aveux 👀</h2>
+          <ul className="mt-2 space-y-2">
+            {shown.map((c) => (
+              <li key={c} className="text-[16px] font-semibold leading-snug">« {c} » <span style={{ color: RED }}>Oui.</span></li>
+            ))}
+          </ul>
+          {confessions.length > shown.length && (
+            <p className="mt-2 text-[14px] font-bold" style={{ color: "#4A3A66" }}>… et {confessions.length - shown.length} autre{confessions.length - shown.length > 1 ? "s" : ""}. On ne juge pas. Un peu.</p>
+          )}
+        </div>
+      )}
+    </>
+  );
+}
+
+function SuspenseReveal({ label, name, color, purity, last, onNext, nextLabel = "Voir le classement →" }: {
+  label: string; name?: string; color: MascotColor; purity: number; last: boolean; onNext: () => void; nextLabel?: string;
 }) {
   const [go, setGo] = useState(false);
   useEffect(() => {
@@ -781,7 +828,7 @@ function SuspenseReveal({ label, name, color, purity, last, onNext }: {
       <RulesButton />
       {done && purity >= 90 && <ConfettiBurst count={50} />}
       <p className="px-12 text-center text-[20px] leading-tight" style={DISPLAY}>{label}</p>
-      <h1 className="mt-1 max-w-full truncate text-center text-[clamp(40px,12vw,60px)] leading-none" style={{ ...DISPLAY, color: done && !pure ? "#fff" : INK, textShadow: done && !pure ? `3px 3px 0 ${INK}` : undefined }}>{name}</h1>
+      {name && <h1 className="mt-1 max-w-full truncate text-center text-[clamp(40px,12vw,60px)] leading-none" style={{ ...DISPLAY, color: done && !pure ? "#fff" : INK, textShadow: done && !pure ? `3px 3px 0 ${INK}` : undefined }}>{name}</h1>}
       <div className={`mt-6 ${!done && go ? "pur-shake" : ""}`}>
         <PureBlob key={done ? "d" : "w"} color={color} purity={purity} size={150} show={done} cheering={done && pure} />
       </div>
@@ -798,7 +845,7 @@ function SuspenseReveal({ label, name, color, purity, last, onNext }: {
       <div className="mt-6 h-[60px] w-full max-w-xs">
         {done && (
           <Btn onClick={onNext} bg={pure ? PINK : YELLOW} color={pure ? "#fff" : INK} className="pur-rise h-full w-full text-[21px]">
-            {last ? "Voir le classement →" : "Suivant →"}
+            {last ? nextLabel : "Suivant →"}
           </Btn>
         )}
       </div>
