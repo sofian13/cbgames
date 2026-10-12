@@ -47,13 +47,13 @@ const LOCAL_COMPONENTS: Record<string, ComponentType<GameProps>> = {
   "undercover": dynamic(() => import("@/components/games/undercover/undercover-game"), { ssr: false, loading }),
 };
 
-export function LocalPlay({ onClose }: { onClose: () => void }) {
+export function LocalPlay({ onClose, initialGame }: { onClose: () => void; initialGame?: string }) {
   const { id: playerId, name: playerName } = useMemo(() => {
     const guest = getOrCreateGuest();
     return { id: guest.id, name: guest.name };
   }, []);
 
-  const [selected, setSelected] = useState<string | null>(null);
+  const [selected, setSelected] = useState<string | null>(initialGame ?? null);
   const [ready, setReady] = useState(false);
   const [priming, setPriming] = useState(false);
   const [online, setOnline] = useState(true);
@@ -88,7 +88,7 @@ export function LocalPlay({ onClose }: { onClose: () => void }) {
             roomCode="LOCAL"
             playerId={playerId}
             playerName={playerName}
-            onReturnToLobby={() => setSelected(null)}
+            onReturnToLobby={() => (initialGame ? onClose() : setSelected(null))}
           />
         )}
       </div>

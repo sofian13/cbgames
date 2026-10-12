@@ -62,6 +62,15 @@ export default function LobbyPage() {
     hostId === playerId ||
     !!me?.isHost ||
     (connectedPlayers.length === 1 && connectedPlayers[0]?.id === playerId);
+  // Partie créée depuis la fiche d'un jeu (app) : l'hôte le sélectionne d'office.
+  useEffect(() => {
+    if (!isConnected || !isHost || selectedGameId) return;
+    const preselect = sessionStorage.getItem("zz-preselect-game");
+    if (!preselect) return;
+    sessionStorage.removeItem("zz-preselect-game");
+    selectGame(preselect);
+  }, [isConnected, isHost, selectedGameId, selectGame]);
+
   const selectedGame = selectedGameId ? getGameById(selectedGameId) : null;
   const gameColor: MascotColor = selectedGame ? (CAT_COLOR[selectedGame.category] ?? "purple") : "purple";
 

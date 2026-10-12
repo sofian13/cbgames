@@ -3,7 +3,13 @@
 import { useDeferredValue, useMemo, useState } from "react";
 import { Search } from "lucide-react";
 import { GameCard } from "./game-card";
-import { CATEGORIES, GAMES } from "@/lib/games/registry";
+import { CATEGORIES, GAMES as ALL_GAMES } from "@/lib/games/registry";
+import { APP_GAMES } from "@/lib/games/app-catalog";
+import { isNativeApp } from "@/lib/app-mode";
+
+// Dans l'app native : uniquement les jeux phares jouables en ligne.
+const APP_ONLINE_IDS = new Set(APP_GAMES.filter((g) => g.online).map((g) => g.id));
+const GAMES = isNativeApp() ? ALL_GAMES.filter((g) => APP_ONLINE_IDS.has(g.id)) : ALL_GAMES;
 import { cn } from "@/lib/utils";
 
 interface GamePickerProps {

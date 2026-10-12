@@ -12,6 +12,7 @@
 import { useEffect, useState } from "react";
 import { X, Share, Plus } from "lucide-react";
 import { MascotAvatar } from "@/components/Mascot";
+import { isNativeApp } from "@/lib/app-mode";
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -28,6 +29,7 @@ export function InstallApp() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
+    if (isNativeApp()) return; // déjà dans l'app native
 
     const standalone =
       window.matchMedia("(display-mode: standalone)").matches ||

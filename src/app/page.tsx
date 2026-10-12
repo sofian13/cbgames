@@ -14,6 +14,7 @@ import { Mascot, MascotAvatar, MASCOT_PALETTE, type MascotColor } from "@/compon
 import { Sparkles } from "@/components/ConfettiBurst";
 import { SiteNav } from "@/components/SiteNav";
 import { InstallApp } from "@/components/InstallApp";
+import { isNativeApp } from "@/lib/app-mode";
 
 type CategoryMeta = {
   label: string;
@@ -89,6 +90,11 @@ export default function HomePage() {
   // Init empty so SSR and first client render match; populate after mount.
   const [guestName, setGuestNameState] = useState("");
   useEffect(() => {
+    // Dans l'app native, l'accueil est /app
+    if (isNativeApp()) {
+      router.replace("/app");
+      return;
+    }
     setGuestNameState(getOrCreateGuest().name);
     // Précharge le bundle de la salle pour que "Créer une salle" soit instantané.
     router.prefetch("/room/_warm");
