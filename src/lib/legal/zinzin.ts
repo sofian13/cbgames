@@ -12,13 +12,14 @@ export const LEGAL_UPDATED_AT = "12 octobre 2026";
 
 /** Infos éditeur : à compléter une fois le statut juridique créé. */
 export const EDITOR = {
-  name: "[À COMPLÉTER : nom et prénom, ou raison sociale]",
-  status: "[À COMPLÉTER : entrepreneur individuel (micro-entreprise) / société, capital]",
-  address: "[À COMPLÉTER : adresse postale]",
-  siret: "[À COMPLÉTER : SIRET / RCS]",
-  vat: "[À COMPLÉTER : n° TVA intracommunautaire, ou « TVA non applicable, art. 293 B du CGI »]",
+  name: "Sofian Zerkouni EI",
+  status: "entrepreneur individuel inscrit au Registre national des entreprises",
+  address: "8 rue Pastoret, 13006 Marseille, France",
+  siret: "SIRET 109 518 910 00012",
+  // Hypothèse : micro-entreprise en franchise en base de TVA (à confirmer)
+  vat: "TVA non applicable, art. 293 B du CGI",
   email: "contact@zinzin.app",
-  director: "[À COMPLÉTER : directeur de la publication]",
+  director: "Sofian Zerkouni",
   mediator: "[À COMPLÉTER : médiateur de la consommation (nom, site web)]",
 };
 
