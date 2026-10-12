@@ -15,6 +15,7 @@ import { Mascot, MascotAvatar, MASCOT_PALETTE, type MascotColor } from "@/compon
 import { ConfettiBurst, Sparkles } from "@/components/ConfettiBurst";
 import { GameReactions } from "@/components/reactions";
 import { PlayingCard, useCardStyle, setCardStyle, type CardStyle } from "@/components/games/cards/card-kit";
+import { GameExplainer } from "@/components/lobby/game-explainer";
 
 function MenuRow({ icon: Icon, label, onClick, danger }: { icon: typeof Settings; label: string; onClick: () => void; danger?: boolean }) {
   return (
@@ -109,6 +110,16 @@ export function GameShell({
 
   // Podium config — top 3 in order 2nd, 1st, 3rd for visual placement
   const top3 = rankings.slice(0, 3);
+  const winners = rankings.filter((r) => r.rank === 1);
+
+  // Laisse le jeu afficher sa propre révélation (rôles, mots, mains) avant le podium.
+  const [resultsShown, setResultsShown] = useKeyedState<boolean>(pointsRecordKey, false);
+  useEffect(() => {
+    if (!isGameOver || resultsShown) return;
+    const t = setTimeout(() => setResultsShown(true), 6000);
+    return () => clearTimeout(t);
+  }, [isGameOver, resultsShown, setResultsShown]);
+  const showResults = isGameOver && resultsShown;
   const others = rankings.slice(3);
   const podiumOrder = top3.length === 3 ? [top3[1], top3[0], top3[2]] : top3;
   const PODIUM_BG: Record<number, string> = {
@@ -137,7 +148,7 @@ export function GameShell({
       <div className="relative z-10 flex min-h-[100svh] flex-col">
 
         {/* FLOATING MENU (gear) — top-right, notch-aware. Replaces the top bar. */}
-        {!isGameOver && (
+        {!showResults && (
           <>
             <button onClick={() => setMenuOpen(true)} aria-label="Menu de la partie"
               className="fixed right-3 top-[calc(env(safe-area-inset-top,0px)+0.6rem)] z-[90] flex h-11 w-11 items-center justify-center rounded-full border backdrop-blur-md transition active:scale-95"
@@ -204,7 +215,7 @@ export function GameShell({
         )}
 
         <div className="flex w-full flex-1 flex-col px-0">
-          {isGameOver ? (
+          {showResults ? (
             <main className="relative flex flex-1 items-center justify-center p-4 sm:p-6">
               <ConfettiBurst count={60} />
               <Sparkles count={14} />
@@ -213,7 +224,14 @@ export function GameShell({
                 {/* HERO — winner reveal */}
                 <div className="text-center mb-6">
                   <p className="af-eyebrow" style={{ color: "var(--af-yellow)" }}>✦ Partie terminée</p>
-                  {top3[0] && (
+                  {winners.length > 1 ? (
+                    <h2 className="cb-display-xl mt-2" style={{ letterSpacing: -2, fontSize: "clamp(2rem, 7vw, 4.5rem)", lineHeight: 0.92 }}>
+                      <span style={{
+                        background: "linear-gradient(120deg, var(--af-yellow), var(--af-pink))",
+                        WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
+                      }}>{winners.map((w) => w.playerName).join(" & ")}</span> l&apos;emportent !
+                    </h2>
+                  ) : top3[0] && (
                     <h2 className="cb-display-xl mt-2" style={{ letterSpacing: -2, fontSize: "clamp(2.5rem, 7vw, 4.5rem)", lineHeight: 0.92 }}>
                       <span style={{
                         background: "linear-gradient(120deg, var(--af-yellow), var(--af-pink))",
@@ -353,6 +371,14 @@ export function GameShell({
           )}
         </div>
 
+        {isGameOver && !resultsShown && (
+          <button onClick={() => setResultsShown(true)}
+                  className="cb-btn cb-btn-brand fixed inset-x-4 bottom-[calc(env(safe-area-inset-bottom,0px)+1rem)] z-[95] mx-auto max-w-sm justify-center"
+                  style={{ animation: "scaleIn 0.25s ease" }}>
+            🏆 Voir le classement
+          </button>
+        )}
+
         {/* REACTIONS (pendant le jeu) */}
         {!isGameOver && <GameReactions roomCode={roomCode} gameId={gameId} />}
 
@@ -361,7 +387,7 @@ export function GameShell({
         {showRules && gameMeta && (
           <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/60 p-4 backdrop-blur-md sm:items-center"
                onClick={() => setShowRules(false)}>
-            <div className="w-full max-w-lg rounded-3xl border p-6"
+            <div className="max-h-[85dvh] w-full max-w-lg overflow-y-auto overscroll-contain rounded-3xl border p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))]"
                  style={{ background: "var(--surface)", borderColor: "rgba(255,255,255,0.08)" }}
                  onClick={(e) => e.stopPropagation()}>
               <div className="mb-5 flex items-start justify-between gap-4">
@@ -383,15 +409,7 @@ export function GameShell({
                   <X className="h-4 w-4" />
                 </button>
               </div>
-              <div className="space-y-2">
-                {gameMeta.rules.map((rule, index) => (
-                  <div key={index} className="flex items-start gap-3 rounded-xl border px-4 py-2.5 text-sm leading-6"
-                       style={{ background: "rgba(255,255,255,0.03)", borderColor: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.85)" }}>
-                    <span className="mt-2.5 h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: "var(--cb-brand)" }} />
-                    {rule}
-                  </div>
-                ))}
-              </div>
+              <GameExplainer game={gameMeta} accent="var(--cb-brand)" />
             </div>
           </div>
         )}

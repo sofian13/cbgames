@@ -9,6 +9,7 @@ import { useKeyedState } from "@/lib/use-keyed-state";
 
 // ── Types ────────────────────────────────────────────────
 type Phase =
+  | "setup"
   | "role-reveal"
   | "night-wolves"
   | "night-seer"
@@ -20,13 +21,15 @@ type Phase =
   | "hunter-shot"
   | "game-over";
 
-type Role =
-  | "villageois"
-  | "loup-garou"
-  | "voyante"
-  | "sorciere"
-  | "chasseur"
-  | "cupidon";
+type Role = "villageois" | "loup-garou" | "voyante" | "sorciere" | "chasseur";
+
+type Mode = "irl" | "remote";
+
+interface HunterShotInfo {
+  hunterName: string;
+  targetName: string;
+  targetRole: Role;
+}
 
 interface PlayerInfo {
   id: string;
@@ -69,6 +72,8 @@ interface LoupGarouState {
   myId: string;
   myRole: Role | null;
   myAlive: boolean;
+  mode?: Mode;
+  hunterShot?: HunterShotInfo | null;
   players: PlayerInfo[];
   chatMessages: ChatMessage[];
   isSpectator?: boolean;
@@ -120,7 +125,7 @@ const ROLE_CONFIG: Record<
     glowColor: "rgba(56,189,248,0.25)",
     gradientFrom: "#38bdf8",
     gradientTo: "#0ea5e9",
-    description: "Vote le jour pour eliminer les loups.",
+    description: "Débats et vote le jour pour éliminer les loups.",
   },
   "loup-garou": {
     label: "Loup-Garou",
@@ -129,7 +134,7 @@ const ROLE_CONFIG: Record<
     glowColor: "rgba(248,113,113,0.3)",
     gradientFrom: "#f87171",
     gradientTo: "#dc2626",
-    description: "Devore un villageois chaque nuit.",
+    description: "Chaque nuit, la meute choisit une victime. Le jour, fais-toi passer pour un innocent.",
   },
   voyante: {
     label: "Voyante",
@@ -138,16 +143,16 @@ const ROLE_CONFIG: Record<
     glowColor: "rgba(167,139,250,0.3)",
     gradientFrom: "#a78bfa",
     gradientTo: "#7c3aed",
-    description: "Decouvre le role d\u2019un joueur chaque nuit.",
+    description: "Chaque nuit, découvre le rôle secret d\u2019un joueur.",
   },
   sorciere: {
-    label: "Sorciere",
+    label: "Sorcière",
     icon: "\u{1F9D9}",
     color: "text-emerald-400",
     glowColor: "rgba(52,211,153,0.25)",
     gradientFrom: "#34d399",
     gradientTo: "#059669",
-    description: "Possede une potion de soin et une de mort.",
+    description: "Une potion de soin et une potion de mort, chacune utilisable une seule fois.",
   },
   chasseur: {
     label: "Chasseur",
@@ -156,18 +161,13 @@ const ROLE_CONFIG: Record<
     glowColor: "rgba(251,191,36,0.25)",
     gradientFrom: "#fbbf24",
     gradientTo: "#d97706",
-    description: "Emporte un joueur dans sa mort.",
-  },
-  cupidon: {
-    label: "Cupidon",
-    icon: "\u{1F498}",
-    color: "text-pink-400",
-    glowColor: "rgba(244,114,182,0.3)",
-    gradientFrom: "#f472b6",
-    gradientTo: "#db2777",
-    description: "Lie deux amoureux la premiere nuit.",
+    description: "S\u2019il meurt, il tire une dernière balle et emporte un joueur avec lui.",
   },
 };
+
+/** Marges sûres (encoche / barre d'accueil) pour les conteneurs racine. */
+const SAFE_PAD =
+  "px-6 pt-[max(env(safe-area-inset-top),24px)] pb-[max(env(safe-area-inset-bottom),24px)]";
 
 function isNightPhase(phase: Phase): boolean {
   return (
@@ -187,6 +187,10 @@ export default function LoupGarouGame({
   const { gameState, error } = useGameStore();
   const state = gameState as unknown as LoupGarouState;
   const [chatInput, setChatInput] = useKeyedState<string>(state?.phase ?? "waiting", "");
+  const [pendingKill, setPendingKill] = useKeyedState<string | null>(
+    `${state?.phase ?? "waiting"}-${state?.dayCount ?? 0}`,
+    null
+  );
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   // Scroll chat to bottom on new messages
@@ -230,6 +234,21 @@ export default function LoupGarouGame({
     [sendAction]
   );
 
+  const handleSetMode = useCallback(
+    (mode: Mode) => sendAction({ action: "set-mode", mode }),
+    [sendAction]
+  );
+
+  const handleBegin = useCallback(
+    () => sendAction({ action: "begin" }),
+    [sendAction]
+  );
+
+  const handleEndDiscussion = useCallback(
+    () => sendAction({ action: "end-discussion" }),
+    [sendAction]
+  );
+
   const handleChat = useCallback(() => {
     const msg = chatInput.trim();
     if (!msg) return;
@@ -265,7 +284,7 @@ export default function LoupGarouGame({
             {"\u{1F43A}"}
           </div>
           <p className="text-white/40 animate-pulse font-sans text-lg">
-            En attente des joueurs...
+            En attente des joueurs…
           </p>
           {error && (
             <p className="text-sm text-red-400 font-sans mt-3">{error}</p>
@@ -291,11 +310,13 @@ export default function LoupGarouGame({
   function renderDeadOverlay(children: React.ReactNode) {
     if (myAlive && !state.isSpectator) return <>{children}</>;
     return (
-      <div className="relative flex flex-1 flex-col">
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 rounded-3xl border border-white/25 bg-black/30 backdrop-blur-sm px-5 py-2.5 shadow-[0_0_20px_rgba(255,255,255,0.05)]">
-          <p className="text-sm font-sans text-white/40 text-center">
-            {"\u{1F47B}"} Tu es mort &mdash; Mode spectateur
-          </p>
+      <div className="relative flex flex-1 flex-col bg-[#09090b]">
+        <div className="flex justify-center px-6 pr-16 pt-[max(env(safe-area-inset-top),12px)]">
+          <div className="rounded-3xl border border-white/25 bg-black/30 backdrop-blur-sm px-5 py-2.5 shadow-[0_0_20px_rgba(255,255,255,0.05)]">
+            <p className="text-sm font-sans text-white/60 text-center">
+              {"\u{1F47B}"} Tu es mort &mdash; mode spectateur
+            </p>
+          </div>
         </div>
         <div className="flex flex-1 flex-col opacity-60 saturate-[0.6]">
           {children}
@@ -375,7 +396,7 @@ export default function LoupGarouGame({
       <div
         className={cn(
           "inline-flex items-center gap-2 rounded-full border font-sans backdrop-blur-sm",
-          small ? "px-2.5 py-0.5 text-[10px]" : "px-3.5 py-1.5 text-xs"
+          small ? "px-2.5 py-0.5 text-xs" : "px-3.5 py-1.5 text-sm"
         )}
         style={{
           borderColor: `${roleConfig.gradientFrom}40`,
@@ -408,11 +429,11 @@ export default function LoupGarouGame({
               onClick={() => !disabled && onSelect(t.id)}
               disabled={disabled}
               className={cn(
-                "px-4 py-3.5 rounded-2xl border text-sm font-sans font-medium transition-all duration-200",
+                "min-h-[48px] px-4 py-3.5 rounded-2xl border text-sm font-sans font-medium break-words transition-all duration-200",
                 isSelected
                   ? "text-white scale-[1.03]"
-                  : "border-white/25 bg-black/30 backdrop-blur-sm text-white/70 hover:bg-white/[0.08] hover:border-white/40 hover:scale-[1.02]",
-                disabled && "opacity-40 cursor-not-allowed hover:scale-100"
+                  : "border-white/25 bg-black/30 backdrop-blur-sm text-white/70 active:bg-white/[0.08] active:border-white/40 active:scale-[0.98]",
+                disabled && "opacity-40 cursor-not-allowed active:scale-100"
               )}
               style={
                 isSelected
@@ -463,10 +484,10 @@ export default function LoupGarouGame({
                   {p.name}
                 </span>
                 {p.isMe && (
-                  <span className="text-[9px] text-white/25">(toi)</span>
+                  <span className="text-xs text-white/40">(toi)</span>
                 )}
                 {p.role && state.phase === "game-over" && pRole && (
-                  <span className={cn("text-[9px]", pRole.color)}>
+                  <span className={cn("text-xs", pRole.color)}>
                     {pRole.icon}
                   </span>
                 )}
@@ -482,8 +503,8 @@ export default function LoupGarouGame({
     if (!state.isSpectator || !state.allRoles) return null;
     return (
       <div className="w-full max-w-lg mx-auto mb-5 rounded-3xl border border-white/25 bg-black/30 backdrop-blur-sm px-4 py-3">
-        <p className="text-[10px] text-white/25 font-sans uppercase tracking-widest mb-2">
-          Roles (spectateur)
+        <p className="text-xs text-white/40 font-sans uppercase tracking-widest mb-2">
+          Rôles (spectateur)
         </p>
         <div className="flex flex-wrap gap-2">
           {state.allRoles.map((r) => {
@@ -492,7 +513,7 @@ export default function LoupGarouGame({
               <span
                 key={r.id}
                 className={cn(
-                  "text-[10px] font-sans px-2 py-1 rounded-full border",
+                  "text-xs font-sans px-2 py-1 rounded-full border",
                   !r.alive && "opacity-30 line-through",
                   rc?.color
                 )}
@@ -510,18 +531,148 @@ export default function LoupGarouGame({
     );
   }
 
+  function renderHunterShot() {
+    const shot = state.hunterShot;
+    if (!shot) return null;
+    const rc = ROLE_CONFIG[shot.targetRole];
+    return (
+      <div
+        className="px-6 py-4 rounded-2xl border backdrop-blur-sm text-center"
+        style={{
+          borderColor: "rgba(251,191,36,0.3)",
+          background:
+            "linear-gradient(135deg, rgba(251,191,36,0.1), rgba(217,119,6,0.04))",
+          boxShadow: "0 0 20px rgba(251,191,36,0.12)",
+        }}
+      >
+        <p className="text-sm text-amber-300/80 font-sans mb-1">
+          {"\u{1F3AF}"} Dans son dernier souffle, {shot.hunterName} (Chasseur) a emporté :
+        </p>
+        <p className="text-2xl font-serif font-semibold text-amber-400 break-words">
+          {shot.targetName}
+        </p>
+        {rc && (
+          <p className={cn("text-sm font-sans mt-1", rc.color)}>
+            {rc.icon} {rc.label}
+          </p>
+        )}
+      </div>
+    );
+  }
+
   function renderNightWait(subtitle: string) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center">
         {renderPhaseHeader(
-          "La nuit tombe...",
+          "La nuit tombe…",
           subtitle,
           "\u{1F319}",
           "text-indigo-300/80"
         )}
         <p className="text-sm text-white/25 font-sans animate-pulse">
-          Rendors-toi paisiblement...
+          Rendors-toi paisiblement…
         </p>
+      </div>
+    );
+  }
+
+  // ══════════════════════════════════════════════════════════
+  // SETUP (choix du mode + règles)
+  // ══════════════════════════════════════════════════════════
+  if (state.phase === "setup") {
+    const mode: Mode = state.mode ?? "irl";
+    const modes: Array<{ id: Mode; icon: string; title: string; desc: string }> = [
+      {
+        id: "irl",
+        icon: "\u{1F5E3}\u{FE0F}",
+        title: "En vrai",
+        desc: "Tout le monde est dans la même pièce : on débat à voix haute.",
+      },
+      {
+        id: "remote",
+        icon: "\u{1F4AC}",
+        title: "À distance",
+        desc: "Chacun chez soi : le débat se fait par chat écrit.",
+      },
+    ];
+    return (
+      <div
+        className={cn("flex flex-1 flex-col items-center overflow-y-auto", SAFE_PAD)}
+        style={{
+          background:
+            "radial-gradient(circle at 50% 25%, rgba(88,28,135,0.3), transparent 50%), radial-gradient(circle at 80% 70%, rgba(30,27,75,0.25), transparent 45%), #09090b",
+        }}
+      >
+        <div className="w-full max-w-md">
+          <div className="text-center mb-6 px-10">
+            <div
+              className="text-5xl mb-3"
+              style={{ filter: "drop-shadow(0 0 20px rgba(248,113,113,0.4))" }}
+            >
+              {"\u{1F43A}"}
+            </div>
+            <h2 className="text-3xl font-serif font-semibold text-white/90">
+              Loup-Garou
+            </h2>
+            <p className="text-sm text-white/50 font-sans mt-2">
+              Comment jouez-vous ce soir ?
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 mb-6">
+            {modes.map((m) => {
+              const selected = mode === m.id;
+              return (
+                <button
+                  key={m.id}
+                  onClick={() => handleSetMode(m.id)}
+                  className={cn(
+                    "min-h-[44px] rounded-2xl border p-4 text-left font-sans transition-all duration-200 active:scale-[0.98]",
+                    selected
+                      ? "border-violet-400/60 bg-violet-500/15 text-white"
+                      : "border-white/20 bg-black/30 text-white/60"
+                  )}
+                  style={
+                    selected
+                      ? { boxShadow: "0 0 20px rgba(167,139,250,0.25)" }
+                      : undefined
+                  }
+                >
+                  <div className="text-2xl mb-1">{m.icon}</div>
+                  <p className="text-base font-semibold">{m.title}</p>
+                  <p className="text-xs text-white/50 mt-1 leading-snug">{m.desc}</p>
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="rounded-3xl border border-white/20 bg-black/30 backdrop-blur-sm p-5 mb-6">
+            <p className="text-xs text-white/40 font-sans uppercase tracking-widest mb-3">
+              Règles
+            </p>
+            <ul className="space-y-2 text-sm text-white/70 font-sans leading-relaxed">
+              <li>{"\u{1F319}"} La nuit, les Loups choisissent une victime en secret. La Voyante découvre un rôle, la Sorcière peut sauver ou empoisonner.</li>
+              <li>{"\u{2600}\u{FE0F}"} Le jour, on découvre les morts, on débat puis on vote pour éliminer un suspect.</li>
+              <li>{"\u{1F3AF}"} Si le Chasseur meurt, il emporte un joueur avec lui.</li>
+              <li>{"\u{1F3E1}"} Le Village gagne quand tous les Loups sont éliminés.</li>
+              <li>{"\u{1F43A}"} Les Loups gagnent dès qu&apos;ils sont aussi nombreux que les villageois.</li>
+            </ul>
+          </div>
+
+          <button
+            onClick={handleBegin}
+            className="w-full min-h-[52px] rounded-2xl font-sans text-base font-semibold text-[#0a0a0a] active:scale-[0.98] transition-all"
+            style={{
+              background: "linear-gradient(to right, #65dfb2, #4ecf8a)",
+              boxShadow: "0 0 20px rgba(101,223,178,0.25)",
+            }}
+          >
+            Distribuer les rôles
+          </button>
+          <p className="text-xs text-white/40 font-sans text-center mt-3">
+            N&apos;importe quel joueur peut lancer la partie.
+          </p>
+        </div>
       </div>
     );
   }
@@ -532,7 +683,7 @@ export default function LoupGarouGame({
   if (state.phase === "role-reveal") {
     return (
       <div
-        className="flex flex-1 flex-col items-center justify-center p-6"
+        className={cn("flex flex-1 flex-col items-center justify-center", SAFE_PAD)}
         style={{
           background:
             "radial-gradient(circle at 50% 25%, rgba(88,28,135,0.3), transparent 50%), radial-gradient(circle at 80% 70%, rgba(30,27,75,0.25), transparent 45%), #09090b",
@@ -540,7 +691,7 @@ export default function LoupGarouGame({
       >
         <div className="text-center">
           <p className="text-xs text-white/25 font-sans uppercase tracking-[0.25em] mb-8">
-            Ton role secret
+            Ton rôle secret
           </p>
           {roleConfig && (
             <div
@@ -576,7 +727,7 @@ export default function LoupGarouGame({
             </div>
           )}
           <p className="text-xs text-white/25 font-sans mt-8 animate-pulse tracking-wide">
-            Memorise ton role, la nuit va tomber...
+            Mémorise ton rôle, la nuit va tomber…
           </p>
         </div>
       </div>
@@ -592,7 +743,7 @@ export default function LoupGarouGame({
 
     return renderDeadOverlay(
       <div
-        className="flex flex-1 flex-col items-center p-6"
+        className={cn("flex flex-1 flex-col items-center", SAFE_PAD)}
         style={{
           background:
             "radial-gradient(circle at 50% 20%, rgba(127,29,29,0.18), transparent 45%), " +
@@ -611,7 +762,7 @@ export default function LoupGarouGame({
         {isWolf ? (
           <>
             {renderPhaseHeader(
-              "Les Loups se reveillent",
+              "Les Loups se réveillent",
               "Choisissez une victime",
               "\u{1F43A}",
               "text-red-400"
@@ -626,7 +777,7 @@ export default function LoupGarouGame({
                     "linear-gradient(135deg, rgba(248,113,113,0.08), rgba(220,38,38,0.04))",
                 }}
               >
-                <p className="text-[11px] text-red-400/60 font-sans">
+                <p className="text-xs text-red-400/70 font-sans">
                   Meute : {state.wolfPlayers.map((w) => w.name).join(", ")}
                 </p>
               </div>
@@ -668,7 +819,7 @@ export default function LoupGarouGame({
               )}
           </>
         ) : (
-          renderNightWait("Les Loups-Garous se reveillent")
+          renderNightWait("Les Loups-Garous se réveillent")
         )}
 
         {renderPlayerList()}
@@ -684,7 +835,7 @@ export default function LoupGarouGame({
 
     return renderDeadOverlay(
       <div
-        className="flex flex-1 flex-col items-center p-6"
+        className={cn("flex flex-1 flex-col items-center", SAFE_PAD)}
         style={{
           background:
             "radial-gradient(circle at 50% 20%, rgba(109,40,217,0.18), transparent 45%), " +
@@ -703,8 +854,8 @@ export default function LoupGarouGame({
         {isSeer ? (
           <>
             {renderPhaseHeader(
-              "La Voyante se reveille",
-              "Choisis un joueur a inspecter",
+              "La Voyante se réveille",
+              "Choisis un joueur à inspecter",
               "\u{1F441}\u{FE0F}",
               "text-violet-400"
             )}
@@ -719,7 +870,7 @@ export default function LoupGarouGame({
                 }}
               >
                 <p className="text-sm text-white/40 font-sans mb-3">
-                  {state.seerResult.targetName} est...
+                  {state.seerResult.targetName} est…
                 </p>
                 <div
                   className="text-4xl mb-3"
@@ -769,7 +920,7 @@ export default function LoupGarouGame({
 
     return renderDeadOverlay(
       <div
-        className="flex flex-1 flex-col items-center p-6"
+        className={cn("flex flex-1 flex-col items-center", SAFE_PAD)}
         style={{
           background:
             "radial-gradient(circle at 50% 20%, rgba(6,95,70,0.18), transparent 45%), " +
@@ -788,7 +939,7 @@ export default function LoupGarouGame({
         {isWitch ? (
           <>
             {renderPhaseHeader(
-              "La Sorciere se reveille",
+              "La Sorcière se réveille",
               "Utilise tes potions avec sagesse",
               "\u{1F9D9}",
               "text-emerald-400"
@@ -805,7 +956,7 @@ export default function LoupGarouGame({
                 }}
               >
                 <p className="text-xs text-red-400/60 font-sans mb-2">
-                  Cette nuit, les loups ont attaque :
+                  Cette nuit, les loups ont attaqué :
                 </p>
                 <p
                   className="text-xl font-serif font-semibold text-red-400"
@@ -822,7 +973,7 @@ export default function LoupGarouGame({
                 !state.hasHealed && (
                   <button
                     onClick={handleWitchHeal}
-                    className="w-full px-5 py-3.5 rounded-2xl border text-sm font-sans font-medium transition-all duration-200 hover:scale-[1.02]"
+                    className="w-full min-h-[48px] px-5 py-3.5 rounded-2xl border text-sm font-sans font-medium transition-all duration-200 active:scale-[0.98]"
                     style={{
                       borderColor: "rgba(52,211,153,0.3)",
                       background:
@@ -847,24 +998,57 @@ export default function LoupGarouGame({
                   }}
                 >
                   <p className="text-sm text-emerald-400 font-sans font-medium">
-                    {"\u{2705}"} Potion de soin utilisee !
+                    {"\u{2705}"} Potion de soin utilisée !
                   </p>
                 </div>
               )}
 
               {state.canKill && !state.killTarget && (
                 <div className="mt-3">
-                  <p className="text-xs text-white/25 font-sans text-center mb-3 tracking-wide">
+                  <p className="text-xs text-white/40 font-sans text-center mb-3 tracking-wide">
                     {"\u{1F480}"} Potion de mort
                   </p>
                   {state.targets &&
                     renderTargetGrid(
                       state.targets,
-                      handleWitchKill,
+                      (id) => setPendingKill(id),
                       "#f87171",
                       "#dc2626",
-                      "rgba(248,113,113,0.25)"
+                      "rgba(248,113,113,0.25)",
+                      pendingKill
                     )}
+                  {pendingKill && (
+                    <div className="mt-4 rounded-2xl border border-red-500/30 bg-red-500/10 p-4 text-center">
+                      <p className="text-sm text-white/80 font-sans mb-3">
+                        Empoisonner{" "}
+                        <span className="font-semibold text-red-400">
+                          {state.targets?.find((t) => t.id === pendingKill)?.name ?? "?"}
+                        </span>{" "}
+                        ? C&apos;est définitif.
+                      </p>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => setPendingKill(null)}
+                          className="flex-1 min-h-[44px] rounded-2xl border border-white/25 bg-black/30 text-white/70 font-sans text-sm active:scale-[0.98] transition-all"
+                        >
+                          Annuler
+                        </button>
+                        <button
+                          onClick={() => {
+                            handleWitchKill(pendingKill);
+                            setPendingKill(null);
+                          }}
+                          className="flex-1 min-h-[44px] rounded-2xl font-sans text-sm font-semibold text-white active:scale-[0.98] transition-all"
+                          style={{
+                            background: "linear-gradient(135deg, #f87171, #dc2626)",
+                            boxShadow: "0 0 15px rgba(248,113,113,0.25)",
+                          }}
+                        >
+                          Confirmer
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -879,21 +1063,21 @@ export default function LoupGarouGame({
                   }}
                 >
                   <p className="text-sm text-red-400 font-sans font-medium">
-                    {"\u{1F480}"} Potion de mort utilisee !
+                    {"\u{1F480}"} Potion de mort utilisée !
                   </p>
                 </div>
               )}
 
               <button
                 onClick={handleWitchSkip}
-                className="w-full px-4 py-2.5 rounded-2xl border border-white/25 bg-black/30 backdrop-blur-sm text-white/40 font-sans text-xs hover:bg-white/[0.06] hover:border-white/40 transition-all duration-200 mt-2"
+                className="w-full min-h-[44px] px-4 py-2.5 rounded-2xl border border-white/25 bg-black/30 backdrop-blur-sm text-white/60 font-sans text-sm active:bg-white/[0.06] active:border-white/40 transition-all duration-200 mt-2"
               >
-                Ne rien faire
+                {state.hasHealed || state.killTarget ? "Terminer" : "Ne rien faire"}
               </button>
             </div>
           </>
         ) : (
-          renderNightWait("La Sorciere prepare ses potions")
+          renderNightWait("La Sorcière prépare ses potions")
         )}
 
         {renderPlayerList()}
@@ -909,7 +1093,7 @@ export default function LoupGarouGame({
 
     return renderDeadOverlay(
       <div
-        className="flex flex-1 flex-col items-center justify-center p-6"
+        className={cn("flex flex-1 flex-col items-center justify-center", SAFE_PAD)}
         style={{
           background:
             "radial-gradient(circle at 50% 20%, rgba(234,179,8,0.12), transparent 45%), " +
@@ -918,17 +1102,19 @@ export default function LoupGarouGame({
       >
         {renderSpectatorInfo()}
         {renderPhaseHeader(
-          "Le village se reveille",
+          "Le village se réveille",
           `Jour ${state.dayCount}`,
           "\u{2600}\u{FE0F}",
           "text-amber-300/90"
         )}
 
-        {deaths.length > 0 ? (
+        {deaths.length > 0 || state.hunterShot ? (
           <div className="space-y-4 text-center">
-            <p className="text-sm text-white/40 font-sans tracking-wide">
-              Cette nuit, le village a perdu :
-            </p>
+            {deaths.length > 0 && (
+              <p className="text-sm text-white/40 font-sans tracking-wide">
+                Cette nuit, le village a perdu :
+              </p>
+            )}
             {deaths.map((d: DeathInfo) => (
               <div
                 key={d.id}
@@ -948,6 +1134,7 @@ export default function LoupGarouGame({
                 </p>
               </div>
             ))}
+            {renderHunterShot()}
           </div>
         ) : (
           <div className="text-center">
@@ -958,7 +1145,7 @@ export default function LoupGarouGame({
               Personne n&apos;est mort cette nuit !
             </p>
             <p className="text-sm text-white/25 font-sans mt-2">
-              Les loups ont rate leur coup...
+              Les loups ont raté leur coup…
             </p>
           </div>
         )}
@@ -972,115 +1159,121 @@ export default function LoupGarouGame({
   // DAY - DISCUSSION
   // ══════════════════════════════════════════════════════════
   if (state.phase === "day-discussion") {
+    const isRemote = state.mode === "remote";
     return renderDeadOverlay(
       <div
-        className="flex flex-1 flex-col p-6"
+        className={cn("flex flex-1 flex-col", SAFE_PAD)}
         style={{ background: dayBg }}
       >
         {renderSpectatorInfo()}
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-3">
-            <span className="text-xs text-white/25 font-sans tracking-wide">
-              Jour {state.dayCount}
-            </span>
-            {renderRoleBadge(true)}
-          </div>
-          <span
-            className={cn(
-              "text-sm font-mono font-bold px-4 py-1 rounded-full border backdrop-blur-sm",
-              state.timeLeft <= 10
-                ? "text-red-400 border-red-500/40 bg-red-500/10"
-                : "text-white/90 border-white/25 bg-black/30"
-            )}
-            style={
-              state.timeLeft <= 10
-                ? { boxShadow: "0 0 15px rgba(248,113,113,0.2)" }
-                : undefined
-            }
-          >
-            {state.timeLeft}s
+        <div className="flex items-center justify-center gap-3 mb-3">
+          <span className="text-xs text-white/40 font-sans tracking-wide">
+            Jour {state.dayCount}
           </span>
+          {renderRoleBadge(true)}
         </div>
+        {renderTimer()}
 
         {renderPhaseHeader(
-          "Discussion",
-          "Debattez et trouvez les Loups-Garous !",
-          "\u{1F4AC}",
+          "Débat",
+          isRemote
+            ? "Discutez par écrit et trouvez les Loups-Garous !"
+            : "Parlez à voix haute et trouvez les Loups-Garous !",
+          isRemote ? "\u{1F4AC}" : "\u{1F5E3}\u{FE0F}",
           "text-amber-200/90"
         )}
 
-        {/* Chat area */}
-        <div
-          className="flex-1 w-full max-w-lg mx-auto flex flex-col rounded-3xl border border-white/25 bg-black/30 backdrop-blur-sm overflow-hidden"
-          style={{ boxShadow: "0 0 30px rgba(0,0,0,0.3)" }}
-        >
-          <div className="flex-1 overflow-y-auto p-4 space-y-2.5 min-h-[200px] max-h-[400px]">
-            {(!state.chatMessages ||
-              state.chatMessages.length === 0) && (
-              <p className="text-xs text-white/25 font-sans text-center py-10 tracking-wide">
-                Aucun message pour le moment...
-              </p>
-            )}
-            {state.chatMessages?.map((msg: ChatMessage) => (
-              <div key={msg.id} className="flex gap-2.5">
-                <span
-                  className={cn(
-                    "text-xs font-sans font-semibold shrink-0",
-                    msg.playerId === playerId
-                      ? "text-amber-400"
-                      : "text-white/40"
-                  )}
-                >
-                  {msg.playerName}
-                </span>
-                <p className="text-xs text-white/70 font-sans break-words leading-relaxed">
-                  {msg.message}
-                </p>
-              </div>
-            ))}
-            <div ref={chatEndRef} />
-          </div>
-
-          {myAlive ? (
-            <div className="flex gap-2 p-3 border-t border-white/[0.08]">
-              <input
-                type="text"
-                value={chatInput}
-                onChange={(e) => setChatInput(e.target.value)}
-                onKeyDown={handleChatKeyDown}
-                placeholder="Ton message..."
-                maxLength={200}
-                autoComplete="off"
-                className="flex-1 px-4 py-2.5 rounded-2xl border border-white/25 bg-black/40 text-white/90 font-sans text-xs placeholder:text-white/25 focus:outline-none focus:border-white/40 transition-all"
-                style={{ boxShadow: "inset 0 2px 8px rgba(0,0,0,0.2)" }}
-              />
+        {!isRemote ? (
+          <div className="flex flex-1 flex-col items-center w-full max-w-md mx-auto">
+            <p className="text-sm text-white/60 font-sans text-center leading-relaxed mb-6">
+              Accusez, défendez-vous, bluffez… Quand le village est prêt,
+              n&apos;importe quel joueur vivant peut lancer le vote.
+            </p>
+            {myAlive ? (
               <button
-                onClick={handleChat}
-                disabled={!chatInput.trim()}
-                className="px-5 py-2.5 rounded-2xl font-sans text-xs font-semibold transition-all duration-200 disabled:opacity-30 disabled:cursor-not-allowed hover:scale-[1.03]"
+                onClick={handleEndDiscussion}
+                className="w-full min-h-[52px] rounded-2xl font-sans text-base font-semibold text-[#0a0a0a] active:scale-[0.98] transition-all"
                 style={{
-                  background: chatInput.trim()
-                    ? "linear-gradient(to right, #65dfb2, #4ecf8a)"
-                    : "rgba(255,255,255,0.06)",
-                  color: chatInput.trim()
-                    ? "#0a0a0a"
-                    : "rgba(255,255,255,0.2)",
-                  boxShadow: chatInput.trim()
-                    ? "0 0 20px rgba(101,223,178,0.25)"
-                    : "none",
+                  background: "linear-gradient(to right, #fbbf24, #d97706)",
+                  boxShadow: "0 0 20px rgba(251,191,36,0.25)",
                 }}
               >
-                Envoyer
+                {"\u{2696}\u{FE0F}"} On passe au vote
               </button>
-            </div>
-          ) : (
-            <div className="p-3 border-t border-white/[0.08] text-center">
-              <p className="text-xs text-white/25 font-sans">
-                {"\u{1F47B}"} Les morts ne peuvent pas parler
+            ) : (
+              <p className="text-sm text-white/40 font-sans">
+                {"\u{1F47B}"} Les morts ne parlent pas&hellip; chut !
               </p>
+            )}
+          </div>
+        ) : (
+          <div
+            className="flex-1 w-full max-w-lg mx-auto flex flex-col rounded-3xl border border-white/25 bg-black/30 backdrop-blur-sm overflow-hidden"
+            style={{ boxShadow: "0 0 30px rgba(0,0,0,0.3)" }}
+          >
+            <div className="flex-1 overflow-y-auto p-4 space-y-2.5 min-h-[200px] max-h-[400px]">
+              {(!state.chatMessages || state.chatMessages.length === 0) && (
+                <p className="text-sm text-white/40 font-sans text-center py-10 tracking-wide">
+                  Aucun message pour le moment…
+                </p>
+              )}
+              {state.chatMessages?.map((msg: ChatMessage) => (
+                <div key={msg.id} className="flex gap-2.5">
+                  <span
+                    className={cn(
+                      "text-sm font-sans font-semibold shrink-0",
+                      msg.playerId === playerId ? "text-amber-400" : "text-white/50"
+                    )}
+                  >
+                    {msg.playerName}
+                  </span>
+                  <p className="text-[15px] text-white/80 font-sans break-words min-w-0 leading-relaxed">
+                    {msg.message}
+                  </p>
+                </div>
+              ))}
+              <div ref={chatEndRef} />
             </div>
-          )}
-        </div>
+
+            {myAlive ? (
+              <div className="flex gap-2 p-3 border-t border-white/[0.08]">
+                <input
+                  type="text"
+                  value={chatInput}
+                  onChange={(e) => setChatInput(e.target.value)}
+                  onKeyDown={handleChatKeyDown}
+                  placeholder="Ton message…"
+                  maxLength={200}
+                  autoComplete="off"
+                  className="flex-1 min-w-0 min-h-[44px] px-4 py-2.5 rounded-2xl border border-white/25 bg-black/40 text-white/90 font-sans text-base placeholder:text-white/30 focus:outline-none focus:border-white/40 transition-all"
+                  style={{ boxShadow: "inset 0 2px 8px rgba(0,0,0,0.2)" }}
+                />
+                <button
+                  onClick={handleChat}
+                  disabled={!chatInput.trim()}
+                  className="min-h-[44px] px-5 py-2.5 rounded-2xl font-sans text-sm font-semibold transition-all duration-200 disabled:opacity-30 disabled:cursor-not-allowed active:scale-[0.97]"
+                  style={{
+                    background: chatInput.trim()
+                      ? "linear-gradient(to right, #65dfb2, #4ecf8a)"
+                      : "rgba(255,255,255,0.06)",
+                    color: chatInput.trim() ? "#0a0a0a" : "rgba(255,255,255,0.2)",
+                    boxShadow: chatInput.trim()
+                      ? "0 0 20px rgba(101,223,178,0.25)"
+                      : "none",
+                  }}
+                >
+                  Envoyer
+                </button>
+              </div>
+            ) : (
+              <div className="p-3 border-t border-white/[0.08] text-center">
+                <p className="text-sm text-white/40 font-sans">
+                  {"\u{1F47B}"} Les morts ne peuvent pas parler
+                </p>
+              </div>
+            )}
+          </div>
+        )}
 
         {renderPlayerList()}
       </div>
@@ -1093,7 +1286,7 @@ export default function LoupGarouGame({
   if (state.phase === "day-vote") {
     return renderDeadOverlay(
       <div
-        className="flex flex-1 flex-col items-center p-6"
+        className={cn("flex flex-1 flex-col items-center", SAFE_PAD)}
         style={{
           background:
             "radial-gradient(circle at 50% 20%, rgba(217,119,6,0.1), transparent 45%), " +
@@ -1111,7 +1304,7 @@ export default function LoupGarouGame({
 
         {renderPhaseHeader(
           "Vote du village",
-          "Qui sera elimine ?",
+          "Qui sera éliminé ?",
           "\u{2696}\u{FE0F}",
           "text-amber-200/90"
         )}
@@ -1124,9 +1317,9 @@ export default function LoupGarouGame({
                 <button
                   key={t.id}
                   onClick={() => handleDayVote(t.id)}
-                  className="w-full flex items-center justify-between px-5 py-3.5 rounded-2xl border border-white/25 bg-black/30 backdrop-blur-sm text-white/70 font-sans text-sm font-medium hover:bg-white/[0.08] hover:border-white/40 hover:scale-[1.01] transition-all duration-200"
+                  className="w-full min-h-[48px] flex items-center justify-between gap-3 px-5 py-3.5 rounded-2xl border border-white/25 bg-black/30 backdrop-blur-sm text-white/70 font-sans text-sm font-medium active:bg-white/[0.08] active:border-white/40 active:scale-[0.99] transition-all duration-200"
                 >
-                  <span>{t.name}</span>
+                  <span className="min-w-0 break-words text-left">{t.name}</span>
                   {voteCount > 0 && (
                     <span
                       className="text-xs text-red-400 font-mono px-2 py-0.5 rounded-full"
@@ -1147,12 +1340,12 @@ export default function LoupGarouGame({
         {state.hasVoted && (
           <div className="text-center">
             <div className="rounded-3xl border border-white/25 bg-black/30 backdrop-blur-sm px-6 py-4">
-              <p className="text-sm text-white/40 font-sans">
-                Vote enregistre
+              <p className="text-sm text-emerald-400 font-sans font-medium">
+                {"\u2705"} Vote enregistré
               </p>
             </div>
             <p className="text-xs text-white/25 font-sans mt-3 animate-pulse">
-              En attente des autres joueurs...
+              En attente des autres joueurs…
             </p>
           </div>
         )}
@@ -1204,7 +1397,7 @@ export default function LoupGarouGame({
                     );
                   })}
               </div>
-              <p className="text-[10px] text-white/20 font-sans text-center mt-2">
+              <p className="text-xs text-white/40 font-sans text-center mt-2">
                 {state.voterIds?.length ?? 0} /{" "}
                 {state.players?.filter((p: PlayerInfo) => p.alive)
                   .length ?? 0}{" "}
@@ -1224,12 +1417,12 @@ export default function LoupGarouGame({
   if (state.phase === "day-result") {
     return renderDeadOverlay(
       <div
-        className="flex flex-1 flex-col items-center justify-center p-6"
+        className={cn("flex flex-1 flex-col items-center justify-center", SAFE_PAD)}
         style={{ background: dayBg }}
       >
         {renderSpectatorInfo()}
         {renderPhaseHeader(
-          "Resultat du vote",
+          "Résultat du vote",
           `Jour ${state.dayCount}`,
           "\u{2696}\u{FE0F}",
           "text-amber-200/90"
@@ -1247,7 +1440,7 @@ export default function LoupGarouGame({
               }}
             >
               <p className="text-sm text-white/40 font-sans mb-2">
-                Le village a decide d&apos;eliminer :
+                Le village a décidé d&apos;éliminer :
               </p>
               <p
                 className="text-3xl font-serif font-semibold text-red-400"
@@ -1268,6 +1461,7 @@ export default function LoupGarouGame({
                 </p>
               )}
             </div>
+            {renderHunterShot()}
           </div>
         ) : (
           <div className="text-center">
@@ -1275,13 +1469,13 @@ export default function LoupGarouGame({
               className="text-xl font-serif font-semibold text-white/40"
               style={{ textShadow: "0 0 20px rgba(255,255,255,0.05)" }}
             >
-              Aucune majorite &mdash; personne n&apos;est elimine.
+              Aucun vote &mdash; personne n&apos;est éliminé.
             </p>
           </div>
         )}
 
         <p className="text-xs text-white/25 font-sans mt-8 animate-pulse tracking-wide">
-          La nuit va bientot tomber...
+          La nuit va bientôt tomber…
         </p>
 
         {renderPlayerList()}
@@ -1295,7 +1489,7 @@ export default function LoupGarouGame({
   if (state.phase === "hunter-shot") {
     return renderDeadOverlay(
       <div
-        className="flex flex-1 flex-col items-center justify-center p-6"
+        className={cn("flex flex-1 flex-col items-center justify-center", SAFE_PAD)}
         style={{
           background:
             "radial-gradient(circle at 50% 30%, rgba(217,119,6,0.15), transparent 45%), radial-gradient(circle at 70% 60%, rgba(180,83,9,0.08), transparent 40%), #09090b",
@@ -1325,12 +1519,12 @@ export default function LoupGarouGame({
           <>
             {renderPhaseHeader(
               "Le Chasseur tire !",
-              "Il emporte quelqu\u2019un dans sa mort...",
+              "Il emporte quelqu\u2019un dans sa mort…",
               "\u{1F3AF}",
               "text-amber-400/60"
             )}
             <p className="text-sm text-white/25 font-sans animate-pulse">
-              En attente du tir du chasseur...
+              En attente du tir du Chasseur…
             </p>
           </>
         )}
@@ -1352,7 +1546,7 @@ export default function LoupGarouGame({
 
     return (
       <div
-        className="flex flex-1 flex-col items-center justify-center p-6"
+        className={cn("flex flex-1 flex-col items-center justify-center", SAFE_PAD)}
         style={{
           background: isWolfWin
             ? "radial-gradient(circle at 50% 25%, rgba(153,27,27,0.2), transparent 50%), radial-gradient(circle at 80% 70%, rgba(127,29,29,0.1), transparent 40%), #09090b"
@@ -1396,14 +1590,19 @@ export default function LoupGarouGame({
                 : undefined
             }
           >
-            {myTeamWon ? "Victoire !" : "Defaite..."}
+            {myTeamWon ? "Victoire !" : "Défaite…"}
           </p>
+          {isWolfWin && (
+            <p className="text-sm text-white/50 font-sans mt-2">
+              Les Loups gagnent dès qu&apos;ils sont aussi nombreux que les villageois.
+            </p>
+          )}
         </div>
 
         {state.allRoles && (
           <div className="w-full max-w-md space-y-2.5 mb-6">
             <p className="text-xs text-white/25 font-sans text-center uppercase tracking-[0.25em] mb-4">
-              Roles reveles
+              Rôles révélés
             </p>
             {state.allRoles.map((r) => {
               const rc = ROLE_CONFIG[r.role];
@@ -1451,7 +1650,7 @@ export default function LoupGarouGame({
                       {r.roleLabel}
                     </span>
                     {!r.alive && (
-                      <span className="text-[10px] text-white/20">
+                      <span className="text-xs text-white/40">
                         {"\u{1F47B}"}
                       </span>
                     )}
@@ -1479,7 +1678,7 @@ export default function LoupGarouGame({
       {error && <p className="text-sm text-red-400 font-sans">{error}</p>}
       {!error && (
         <p className="text-white/40 animate-pulse font-sans text-lg">
-          Chargement...
+          Chargement…
         </p>
       )}
     </div>

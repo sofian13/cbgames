@@ -3,100 +3,126 @@ import { BaseGame } from "./base-game";
 import type { GameRanking } from "../shared/types";
 
 // ===========================================================
-//  UNDERCOVER — Server logic
-//  Civils vs Undercover (vs Mr. White optionnel)
+//  L'INTRUS (id technique : undercover) — Server logic
+//  Civils vs l'Intrus (vs le Fantôme optionnel)
+//  Règle : l'Intrus NE SAIT PAS qu'il est l'Intrus (il reçoit juste son
+//  mot). Seul le Fantôme sait qu'il n'a pas de mot.
 //  Hébergé sur PartyKit, hérite de BaseGame.
 // ===========================================================
 
 // -- Config ------------------------------------------------
-const WORD_REVEAL_TIME  = 6_000;   // ms — temps de mémorisation auto
+const WORD_REVEAL_TIME  = 6_000;   // ms — temps de mémorisation max (on avance dès que tous sont prêts)
 const CLUE_TIME         = 25;      // sec par joueur pendant la phase d'indices
 const VOTE_TIME         = 30;      // sec total de vote
 const VOTE_RESULT_TIME  = 4_500;   // ms pour le tampon "éliminé"
-const GUESS_TIME        = 20;      // sec pour Mr. White (deviner le mot civil)
+const GUESS_TIME        = 20;      // sec pour le Fantôme (deviner le mot civil)
 const NEXT_ROUND_TIME   = 3_000;   // ms entre les manches
 
-// -- Word bank (paires civil / undercover) ------------------
+// -- Word bank (paires de mots voisins) -------------------
+// Copie (sans la catégorie +18) de WORD_CATEGORIES dans
+// src/components/games/undercover/undercover-local.tsx — le serveur
+// ne peut pas importer depuis src/. Reporter toute modif là-bas.
 const WORD_PAIRS: [string, string][] = [
-  // Bouffe
-  ["Pizza", "Pâtes"], ["Hamburger", "Sandwich"], ["Sushi", "Maki"],
-  ["Croissant", "Brioche"], ["Crêpe", "Galette"], ["Kebab", "Tacos"],
-  ["Raclette", "Fondue"], ["Tiramisu", "Mousse au chocolat"], ["Café", "Thé"],
-  ["Bière", "Vin"], ["Vodka", "Rhum"], ["Coca", "Pepsi"],
-  // Lieux
-  ["Plage", "Piscine"], ["Montagne", "Colline"], ["Forêt", "Jungle"],
-  ["Hôpital", "Pharmacie"], ["Cinéma", "Théâtre"], ["Bibliothèque", "Librairie"],
-  ["Aéroport", "Gare"], ["Restaurant", "Cafétéria"], ["Hôtel", "Auberge"],
-  // Sports
-  ["Football", "Rugby"], ["Tennis", "Badminton"], ["Ski", "Snowboard"],
-  ["Boxe", "Karaté"], ["Natation", "Plongée"], ["Cyclisme", "Course à pied"],
-  // Animaux
-  ["Chien", "Chat"], ["Lion", "Tigre"], ["Aigle", "Faucon"],
-  ["Dauphin", "Requin"], ["Vache", "Chèvre"], ["Cheval", "Âne"],
-  ["Lapin", "Hamster"],
-  // Films / pop culture
-  ["Batman", "Superman"], ["Star Wars", "Star Trek"], ["Naruto", "One Piece"],
-  ["Harry Potter", "Le Seigneur des Anneaux"], ["Titanic", "Avatar"],
-  ["Mario", "Sonic"], ["Pokemon", "Digimon"],
-  // Objets
-  ["Voiture", "Moto"], ["Train", "Bus"], ["Avion", "Hélicoptère"],
-  ["Téléphone", "Tablette"], ["Ordinateur", "Console"], ["Livre", "Magazine"],
-  ["Stylo", "Crayon"], ["Lunettes", "Loupe"], ["Montre", "Bracelet"],
-  // Nature / temps
-  ["Soleil", "Lune"], ["Pluie", "Neige"], ["Été", "Hiver"],
-  ["Printemps", "Automne"], ["Mer", "Lac"], ["Volcan", "Geyser"],
-  // Evenements
-  ["Mariage", "Anniversaire"], ["Noël", "Pâques"], ["Halloween", "Carnaval"],
-  ["Festival", "Concert"], ["Enterrement", "Baptême"],
-  // Métiers
-  ["Médecin", "Infirmier"], ["Boulanger", "Pâtissier"], ["Avocat", "Juge"],
-  ["Pompier", "Policier"], ["Pilote", "Astronaute"], ["Coiffeur", "Barbier"],
-  ["Professeur", "Directeur"], ["Plombier", "Électricien"],
-  // -- Extension ----------------------------------------------
-  // Bouffe
-  ["Glace", "Sorbet"], ["Chocolat", "Bonbon"], ["Frites", "Chips"],
-  ["Soupe", "Velouté"], ["Ketchup", "Mayonnaise"], ["Baguette", "Pain de mie"],
-  ["Steak", "Escalope"], ["Saumon", "Thon"], ["Gaufre", "Pancake"],
-  ["Nuggets", "Cordon bleu"],
-  // Fruits / légumes
-  ["Pomme", "Poire"], ["Fraise", "Framboise"], ["Citron", "Orange"],
-  ["Carotte", "Navet"], ["Tomate", "Poivron"], ["Champignon", "Truffe"],
-  // Boissons
-  ["Jus d'orange", "Limonade"], ["Smoothie", "Milkshake"],
-  ["Champagne", "Cidre"], ["Whisky", "Cognac"],
-  // Lieux
-  ["Musée", "Galerie"], ["Parc", "Jardin"], ["Église", "Cathédrale"],
-  ["Château", "Palais"], ["Désert", "Savane"], ["Île", "Presqu'île"],
-  ["Métro", "Tramway"], ["Supermarché", "Épicerie"], ["Stade", "Arène"],
-  ["Prison", "Donjon"],
-  // Sports
-  ["Basket", "Handball"], ["Golf", "Mini-golf"], ["Escalade", "Randonnée"],
-  ["Surf", "Skate"], ["Judo", "Taekwondo"], ["Volley", "Beach-volley"],
-  ["Patinage", "Hockey"],
-  // Animaux
-  ["Loup", "Renard"], ["Éléphant", "Rhinocéros"], ["Grenouille", "Crapaud"],
-  ["Abeille", "Guêpe"], ["Papillon", "Libellule"], ["Pingouin", "Manchot"],
-  ["Tortue", "Escargot"], ["Singe", "Gorille"], ["Crocodile", "Alligator"],
-  ["Souris", "Rat"], ["Corbeau", "Pie"], ["Hibou", "Chouette"],
-  // Pop culture
-  ["Spider-Man", "Iron Man"], ["Pikachu", "Dracaufeu"], ["Goku", "Vegeta"],
-  ["Minecraft", "Roblox"], ["Fortnite", "PUBG"], ["Netflix", "Disney+"],
-  ["TikTok", "Instagram"], ["iPhone", "Samsung"], ["PlayStation", "Xbox"],
-  // Objets
-  ["Vélo", "Trottinette"], ["Bateau", "Voilier"], ["Casque", "Écouteurs"],
-  ["Réfrigérateur", "Congélateur"], ["Aspirateur", "Balai"],
-  ["Parapluie", "Parasol"], ["Valise", "Sac à dos"], ["Bague", "Collier"],
-  ["Marteau", "Tournevis"],
-  // Nature / temps
-  ["Étoile", "Planète"], ["Orage", "Tempête"], ["Rivière", "Fleuve"],
-  ["Caillou", "Rocher"], ["Nuage", "Brouillard"], ["Cascade", "Source"],
-  // Métiers
-  ["Acteur", "Chanteur"], ["Peintre", "Sculpteur"],
-  ["Journaliste", "Présentateur"], ["Serveur", "Cuisinier"],
-  ["Jardinier", "Fleuriste"], ["Vétérinaire", "Éleveur"],
-  ["Architecte", "Ingénieur"], ["Magicien", "Jongleur"],
-  // Événements
-  ["Noël", "Nouvel An"], ["Vacances", "Week-end"], ["Examen", "Concours"],
+  // food
+  ["Lasagnes", "Gratin dauphinois"], ["Croque-monsieur", "Panini"], ["Crêpe", "Gaufre"], ["Couscous", "Paella"],
+  ["Quiche", "Tarte salée"], ["Omelette", "Œuf au plat"], ["Ratatouille", "Tian de légumes"], ["Hot-dog", "Burger"],
+  ["Nems", "Samoussas"], ["Taboulé", "Salade de riz"], ["Purée", "Frites"], ["Pain au chocolat", "Croissant"],
+  ["Éclair", "Religieuse"], ["Macaron", "Meringue"], ["Muffin", "Cupcake"], ["Yaourt", "Fromage blanc"],
+  ["Camembert", "Brie"], ["Steak haché", "Boulette"], ["Saucisson", "Jambon"], ["Popcorn", "Chips"],
+  ["Barbe à papa", "Guimauve"], ["Pizza", "Calzone"],
+  // drinks
+  ["Soda au cola", "Soda à l'orange"], ["Jus de pomme", "Jus de raisin"], ["Limonade", "Eau pétillante"], ["Thé glacé", "Citronnade"],
+  ["Chocolat chaud", "Café au lait"], ["Expresso", "Cappuccino"], ["Tisane", "Bouillon"], ["Milkshake", "Smoothie"],
+  ["Sirop de menthe", "Sirop de grenadine"], ["Bière", "Cidre"], ["Vin rouge", "Vin rosé"], ["Champagne", "Crémant"],
+  ["Mojito", "Piña colada"], ["Sangria", "Punch"], ["Rhum", "Whisky"], ["Kombucha", "Ginger beer"],
+  ["Boisson énergisante", "Café serré"], ["Eau de coco", "Jus d'ananas"], ["Diabolo", "Panaché"],
+  // places
+  ["Bibliothèque", "Médiathèque"], ["Boulangerie", "Pâtisserie"], ["Camping", "Gîte"], ["Zoo", "Aquarium"],
+  ["Fête foraine", "Parc d'attractions"], ["Patinoire", "Piscine"], ["Mairie", "Préfecture"], ["Phare", "Château d'eau"],
+  ["Grotte", "Tunnel"], ["Port", "Marina"], ["Ferme", "Ranch"], ["Laverie", "Pressing"],
+  ["Cimetière", "Chapelle"], ["Escape game", "Salle d'arcade"], ["Salle de sport", "Dojo"], ["Plage", "Crique"],
+  ["Refuge", "Chalet"], ["Office du tourisme", "Agence de voyage"], ["Planétarium", "Observatoire"], ["Péage", "Station-service"],
+  // sport
+  ["Football", "Futsal"], ["Tennis", "Squash"], ["Ping-pong", "Badminton"], ["Ski de fond", "Biathlon"],
+  ["Escrime", "Kendo"], ["Aviron", "Canoë"], ["Water-polo", "Natation synchronisée"], ["Parapente", "Parachute"],
+  ["Marathon", "Triathlon"], ["Boxe", "Kick-boxing"], ["Bowling", "Pétanque"], ["Saut en hauteur", "Saut à la perche"],
+  ["Haltérophilie", "Musculation"], ["Tir à l'arc", "Fléchettes"], ["Roller", "Patin à glace"], ["Gymnastique", "Trampoline"],
+  ["Rugby", "Football américain"], ["Kitesurf", "Planche à voile"], ["Golf", "Croquet"], ["Yoga", "Pilates"],
+  ["Handball", "Volley"],
+  // animals
+  ["Hérisson", "Porc-épic"], ["Koala", "Paresseux"], ["Panda", "Raton laveur"], ["Pieuvre", "Calamar"],
+  ["Méduse", "Étoile de mer"], ["Chameau", "Dromadaire"], ["Zèbre", "Girafe"], ["Kangourou", "Wallaby"],
+  ["Flamant rose", "Cigogne"], ["Perroquet", "Toucan"], ["Mouton", "Lama"], ["Cochon", "Sanglier"],
+  ["Chauve-souris", "Hibou"], ["Fourmi", "Termite"], ["Coccinelle", "Luciole"], ["Phoque", "Otarie"],
+  ["Moustique", "Mouche"], ["Écureuil", "Marmotte"], ["Poisson rouge", "Tortue d'eau"], ["Lynx", "Guépard"],
+  // fiction
+  ["Vampire", "Loup-garou"], ["Sorcière", "Fée"], ["Zombie", "Momie"], ["Pirate", "Corsaire"],
+  ["Chevalier", "Samouraï"], ["Ninja", "Espion"], ["Dragon", "Licorne"], ["Robot", "Cyborg"],
+  ["Extraterrestre", "Astronaute"], ["Super-héros", "Super-vilain"], ["Princesse", "Reine"], ["Sirène", "Nymphe"],
+  ["Ogre", "Troll"], ["Magicien", "Alchimiste"], ["Cow-boy", "Shérif"], ["Détective", "Inspecteur"],
+  ["Dinosaure", "Mammouth"], ["Génie", "Elfe"], ["Gladiateur", "Viking"], ["Sitcom", "Téléréalité"],
+  ["Western", "Film de cape et d'épée"],
+  // transport
+  ["Voiture", "Camionnette"], ["TGV", "Train de nuit"], ["Trottinette", "Skateboard"], ["Hélicoptère", "Montgolfière"],
+  ["Kayak", "Pédalo"], ["Tracteur", "Moissonneuse"], ["Ambulance", "Camion de pompiers"], ["Taxi", "VTC"],
+  ["Bus scolaire", "Car de tourisme"], ["Téléphérique", "Télésiège"], ["Jet-ski", "Hors-bord"], ["Monocycle", "Tandem"],
+  ["Calèche", "Charrette"], ["Péniche", "Chalutier"], ["Scooter", "Mobylette"], ["Planeur", "ULM"],
+  ["Paquebot", "Ferry"], ["Tramway", "Funiculaire"], ["Dépanneuse", "Camion-benne"], ["Fusée", "Satellite"],
+  // objects
+  ["Agrafeuse", "Trombone"], ["Ciseaux", "Cutter"], ["Gomme", "Correcteur"], ["Bougie", "Lampe torche"],
+  ["Réveil", "Minuteur"], ["Peigne", "Brosse à cheveux"], ["Brosse à dents", "Fil dentaire"], ["Coussin", "Oreiller"],
+  ["Couette", "Plaid"], ["Tire-bouchon", "Décapsuleur"], ["Parapluie", "Imperméable"], ["Portefeuille", "Sac banane"],
+  ["Jumelles", "Télescope"], ["Boussole", "Carte"], ["Cadenas", "Coffre-fort"], ["Sifflet", "Klaxon"],
+  ["Ballon", "Frisbee"], ["Puzzle", "Casse-tête"], ["Dé", "Carte à jouer"], ["Marteau", "Maillet"],
+  ["Tournevis", "Clé à molette"],
+  // nature
+  ["Arc-en-ciel", "Aurore boréale"], ["Grêle", "Verglas"], ["Tsunami", "Tremblement de terre"], ["Avalanche", "Glissement de terrain"],
+  ["Dune", "Falaise"], ["Marais", "Étang"], ["Récif", "Lagon"], ["Cactus", "Palmier"],
+  ["Sapin", "Chêne"], ["Rose", "Tulipe"], ["Tournesol", "Marguerite"], ["Champignon", "Mousse"],
+  ["Coquillage", "Galet"], ["Comète", "Météorite"], ["Éclipse", "Pleine lune"], ["Brise", "Rafale"],
+  ["Glacier", "Iceberg"], ["Canyon", "Vallée"], ["Geyser", "Source chaude"], ["Cascade", "Rapides"],
+  // events
+  ["Mariage", "Fiançailles"], ["Anniversaire surprise", "Pendaison de crémaillère"], ["Enterrement de vie de jeune fille", "Baby shower"], ["Remise de diplômes", "Bal de promo"],
+  ["Brocante", "Vide-grenier"], ["Feu d'artifice", "Lâcher de lanternes"], ["Saint-Valentin", "Fête des mères"], ["Réveillon de Noël", "Jour de l'An"],
+  ["Chandeleur", "Mardi gras"], ["Carnaval", "Bal masqué"], ["Kermesse", "Fête de village"], ["Salon", "Foire"],
+  ["Pique-nique", "Barbecue"], ["Rentrée scolaire", "Vacances d'été"], ["Déménagement", "Rénovation"], ["Entretien d'embauche", "Premier jour de travail"],
+  ["Match", "Tournoi"], ["Défilé", "Parade"], ["Spectacle de fin d'année", "Remise des prix"], ["Halloween", "Soirée déguisée"],
+  // jobs
+  ["Facteur", "Livreur"], ["Boucher", "Poissonnier"], ["Chirurgien", "Anesthésiste"], ["Hôtesse de l'air", "Guide touristique"],
+  ["Kinésithérapeute", "Ostéopathe"], ["Maçon", "Charpentier"], ["Mécanicien", "Carrossier"], ["DJ", "Animateur radio"],
+  ["Photographe", "Cameraman"], ["Bibliothécaire", "Archiviste"], ["Sage-femme", "Pédiatre"], ["Notaire", "Comptable"],
+  ["Vigile", "Garde du corps"], ["Chauffeur de bus", "Conducteur de train"], ["Agriculteur", "Viticulteur"], ["Pharmacien", "Opticien"],
+  ["Maître-nageur", "Sauveteur en mer"], ["Styliste", "Couturier"], ["Prêtre", "Moine"], ["Clown", "Mime"],
+  // tech
+  ["Smartphone", "Tablette"], ["Ordinateur portable", "Ordinateur fixe"], ["Console de salon", "Console portable"], ["Réseau social", "Messagerie"],
+  ["Série", "Film"], ["Podcast", "Livre audio"], ["Selfie", "Photo de groupe"], ["Emoji", "GIF"],
+  ["Clé USB", "Disque dur"], ["Wi-Fi", "Bluetooth"], ["Télécommande", "Manette"], ["Écouteurs sans fil", "Casque audio"],
+  ["Montre connectée", "Podomètre"], ["Imprimante", "Scanner"], ["Mot de passe", "Code PIN"], ["Appel vidéo", "Message vocal"],
+  ["Streaming", "Replay"], ["Jeu de tir", "Jeu de course"], ["Moteur de recherche", "Encyclopédie"], ["Drone", "Voiture télécommandée"],
+  ["Plateforme vidéo", "Chaîne de télé"],
+  // music
+  ["Guitare", "Ukulélé"], ["Piano", "Orgue"], ["Violon", "Contrebasse"], ["Flûte", "Clarinette"],
+  ["Trompette", "Cor de chasse"], ["Batterie", "Tambourin"], ["Accordéon", "Harmonica"], ["Harpe", "Lyre"],
+  ["Rap", "Slam"], ["Rock", "Métal"], ["Reggae", "Ska"], ["Jazz", "Blues"],
+  ["Chorale", "Fanfare"], ["Karaoké", "Blind test"], ["Opéra", "Comédie musicale"], ["Disque vinyle", "Cassette"],
+  ["Chef d'orchestre", "Soliste"], ["Berceuse", "Comptine"], ["Tube de l'été", "Hymne national"], ["Platine", "Table de mixage"],
+  // home
+  ["Canapé", "Fauteuil"], ["Lit superposé", "Hamac"], ["Baignoire", "Jacuzzi"], ["Douche", "Sauna"],
+  ["Cave", "Grenier"], ["Balcon", "Terrasse"], ["Volet", "Rideau"], ["Lave-vaisselle", "Lave-linge"],
+  ["Micro-ondes", "Four"], ["Grille-pain", "Gaufrier"], ["Bouilloire", "Cafetière"], ["Poêle", "Casserole"],
+  ["Tapis", "Paillasson"], ["Étagère", "Commode"], ["Lustre", "Lampadaire"], ["Serrure", "Interphone"],
+  ["Cheminée", "Radiateur"], ["Aspirateur", "Serpillière"], ["Escalier", "Ascenseur"], ["Garage", "Abri de jardin"],
+  // fashion
+  ["Jean", "Jogging"], ["Pull", "Sweat à capuche"], ["Basket", "Mocassin"], ["Bottes de pluie", "Après-ski"],
+  ["Écharpe", "Foulard"], ["Bonnet", "Casquette"], ["Robe", "Jupe"], ["Chemise", "Polo"],
+  ["Pyjama", "Peignoir"], ["Short", "Maillot de bain"], ["Cravate", "Nœud papillon"], ["Gants", "Moufles"],
+  ["Manteau", "Doudoune"], ["Lunettes de soleil", "Masque de ski"], ["Collier", "Boucles d'oreilles"], ["Ceinture", "Bretelles"],
+  ["Tongs", "Chaussons"], ["Costume", "Smoking"], ["Tablier", "Blouse"], ["Sac à main", "Cartable"],
+  // anime
+  ["Naruto", "Sasuke"], ["Goku", "Vegeta"], ["Luffy", "Zoro"], ["Itachi", "Madara"],
+  ["Gojo", "Sukuna"], ["Tanjiro", "Zenitsu"], ["Levi", "Eren"], ["Mikasa", "Historia"],
+  ["Nami", "Robin"], ["One Piece", "Bleach"], ["Konoha", "Akatsuki"], ["Sharingan", "Byakugan"],
+  ["Bankai", "Zanpakuto"], ["Manga", "Comics"], ["Shinigami", "Hollow"], ["Titan", "Géant"],
 ];
 
 // -- Roles -------------------------------------------------
@@ -107,7 +133,7 @@ interface UndercoverPlayer {
   name: string;
   score: number;
   role: Role;
-  word: string | null;            // null pour Mr. White
+  word: string | null;            // null pour le Fantôme
   isEliminated: boolean;
   hasClue: boolean;               // a parlé pour la manche en cours
   clue: string | null;            // texte d'indice (multi)
@@ -139,7 +165,7 @@ export class UndercoverGame extends BaseGame {
   // -- Game-wide config (réglable par l'hôte avant `start`) --
   config = {
     undercoverCount: 1,            // recalculé au start si non touché
-    includeMrWhite: false,
+    includeMrWhite: false,         // le Fantôme
     autoBalance: true,             // recalcul auto selon le nb de joueurs
   };
 
@@ -162,6 +188,24 @@ export class UndercoverGame extends BaseGame {
 
   clueHistory: ClueEntry[] = [];
 
+  /** Joueurs ayant confirmé « J'ai mémorisé » pendant word-reveal. */
+  readyIds = new Set<string>();
+  /** Égalité : candidats du revote (null = vote normal). */
+  revoteCandidates: string[] | null = null;
+  /** Égalité au premier vote : ex-aequo affichés pendant vote-result. */
+  tieCandidates: string[] | null = null;
+
+  /** Tous les setTimeout de la partie (nettoyés dans cleanup / restart). */
+  timeouts = new Set<ReturnType<typeof setTimeout>>();
+  later(fn: () => void, ms: number) {
+    const t = setTimeout(() => { this.timeouts.delete(t); fn(); }, ms);
+    this.timeouts.add(t);
+  }
+  clearTimeouts() {
+    for (const t of this.timeouts) clearTimeout(t);
+    this.timeouts.clear();
+  }
+
   lastGuess: string | null = null;
   lastGuessCorrect: boolean | null = null;
   endReason: EndReason = null;
@@ -170,6 +214,8 @@ export class UndercoverGame extends BaseGame {
   //  Lifecycle
   // ---------------------------------------------------------
   start() {
+    this.clearTimeouts();
+    this.stopTimer();
     this.started = true;
     this.round = 0;
     this.clueHistory = [];
@@ -185,11 +231,11 @@ export class UndercoverGame extends BaseGame {
       else             { this.config.undercoverCount = 2; this.config.includeMrWhite = true; }
     }
 
-    // Garde-fou : les civils doivent rester majoritaires (UC + Mr.White < civils).
+    // Garde-fou : les civils doivent rester majoritaires (Intrus + Fantôme < civils).
     {
       const n = this.players.size;
       const cap = Math.floor((n - 1) / 2); // nb max d'imposteurs au total
-      if (n < 5) this.config.includeMrWhite = false; // Mr.White seulement à partir de 5
+      if (n < 5) this.config.includeMrWhite = false; // Fantôme seulement à partir de 5
       const mw = this.config.includeMrWhite ? 1 : 0;
       this.config.undercoverCount = Math.max(1, Math.min(this.config.undercoverCount, 3, cap - mw));
       if (this.config.undercoverCount + mw > cap) this.config.includeMrWhite = false;
@@ -247,6 +293,9 @@ export class UndercoverGame extends BaseGame {
     this.lastGuess = null;
     this.lastGuessCorrect = null;
     this.votes.clear();
+    this.readyIds.clear();
+    this.revoteCandidates = null;
+    this.tieCandidates = null;
 
     for (const p of this.gamePlayers.values()) {
       if (!p.isEliminated) {
@@ -257,9 +306,17 @@ export class UndercoverGame extends BaseGame {
     }
 
     this.broadcastPersonalizedState();
-    setTimeout(() => {
-      if (this.phase === "word-reveal") this.startCluePhase();
+    const round = this.round;
+    this.later(() => {
+      if (this.phase === "word-reveal" && this.round === round) this.startCluePhase();
     }, WORD_REVEAL_TIME);
+  }
+
+  /** Tous les joueurs vivants (humains connectés) ont mémorisé → on avance. */
+  allReady(): boolean {
+    return this.getAlive().every((p) =>
+      this.readyIds.has(p.id) || this.isBot(p.id) || !this.players.has(p.id)
+    );
   }
 
   // ---------------------------------------------------------
@@ -296,8 +353,10 @@ export class UndercoverGame extends BaseGame {
   // ---------------------------------------------------------
   //  Phase 3 : Vote
   // ---------------------------------------------------------
-  startVote() {
+  startVote(candidates: string[] | null = null) {
     this.stopTimer();
+    this.revoteCandidates = candidates;
+    this.tieCandidates = null;
     this.phase = "vote";
     this.timeLeft = VOTE_TIME;
     this.votes.clear();
@@ -322,17 +381,32 @@ export class UndercoverGame extends BaseGame {
       else if (n === max) top.push(pid);
     }
 
-    // Pas de vote ou égalité parfaite → tirage au sort
-    if (top.length === 0) {
+    const wasRevote = this.revoteCandidates !== null;
+
+    // Égalité au premier vote → revote entre les ex-aequo (une seule fois).
+    if (top.length > 1 && !wasRevote) {
       this.eliminatedThisRound = null;
       this.eliminatedRole = null;
+      this.tieCandidates = [...top];
       this.phase = "vote-result";
       this.broadcastPersonalizedState();
-      setTimeout(() => this.afterEliminate(null), VOTE_RESULT_TIME);
+      const candidates = [...top];
+      this.later(() => this.startVote(candidates), VOTE_RESULT_TIME);
       return;
     }
 
-    const eliminatedId = top[Math.floor(Math.random() * top.length)];
+    // Aucun vote, ou nouvelle égalité au revote → personne ne sort ce tour.
+    if (top.length !== 1) {
+      this.eliminatedThisRound = null;
+      this.eliminatedRole = null;
+      this.tieCandidates = null;
+      this.phase = "vote-result";
+      this.broadcastPersonalizedState();
+      this.later(() => this.afterEliminate(null), VOTE_RESULT_TIME);
+      return;
+    }
+
+    const eliminatedId = top[0];
     const target = this.gamePlayers.get(eliminatedId);
     if (!target) return;
 
@@ -341,7 +415,7 @@ export class UndercoverGame extends BaseGame {
     this.eliminatedThisRound = eliminatedId;
     this.eliminatedRole = target.role;
 
-    // Récompenses pour avoir voté contre un undercover/mrwhite
+    // Récompenses pour avoir voté contre l'Intrus / le Fantôme
     if (target.role !== "civil") {
       for (const [voterId, tId] of this.votes) {
         if (tId === eliminatedId) {
@@ -354,17 +428,17 @@ export class UndercoverGame extends BaseGame {
     this.phase = "vote-result";
     this.broadcastPersonalizedState();
 
-    // Mr. White éliminé → il a une chance de deviner le mot civil
+    // Fantôme éliminé → il a une chance de deviner le mot civil
     if (target.role === "mrwhite") {
-      setTimeout(() => this.startMrWhiteGuess(eliminatedId), VOTE_RESULT_TIME);
+      this.later(() => this.startMrWhiteGuess(eliminatedId), VOTE_RESULT_TIME);
       return;
     }
 
-    setTimeout(() => this.afterEliminate(eliminatedId), VOTE_RESULT_TIME);
+    this.later(() => this.afterEliminate(eliminatedId), VOTE_RESULT_TIME);
   }
 
   // ---------------------------------------------------------
-  //  Phase 4 : Mr. White devine
+  //  Phase 4 : le Fantôme devine
   // ---------------------------------------------------------
   startMrWhiteGuess(mrWhiteId: string) {
     this.phase = "mrwhite-guess";
@@ -383,7 +457,7 @@ export class UndercoverGame extends BaseGame {
     this.lastGuessCorrect = !!guess && norm(guess) === norm(this.civilWord);
 
     if (this.lastGuessCorrect) {
-      // Mr. White gagne seul
+      // Le Fantôme gagne seul
       const mw = this.eliminatedThisRound ? this.gamePlayers.get(this.eliminatedThisRound) : null;
       if (mw) mw.score += 5;
       this.endGameUC("mrwhite-wins");
@@ -409,7 +483,7 @@ export class UndercoverGame extends BaseGame {
       return;
     }
 
-    // Les imposteurs ≥ civils → undercover gagne
+    // Imposteurs aussi nombreux que les civils → les imposteurs gagnent
     if (aliveUC.length + aliveMW.length >= aliveCv.length) {
       for (const u of [...aliveUC, ...aliveMW]) u.score += 5;
       this.endGameUC("undercover-wins");
@@ -419,7 +493,7 @@ export class UndercoverGame extends BaseGame {
     // Sinon : nouveau tour
     // Petit bonus de survie aux civils
     for (const c of aliveCv) c.score += 1;
-    setTimeout(() => this.startWordReveal(), NEXT_ROUND_TIME);
+    this.later(() => this.startWordReveal(), NEXT_ROUND_TIME);
   }
 
   // ---------------------------------------------------------
@@ -437,7 +511,7 @@ export class UndercoverGame extends BaseGame {
     }));
 
     this.broadcastPersonalizedState();
-    setTimeout(() => this.endGame(rankings), 800);
+    this.later(() => this.endGame(rankings), 800);
   }
 
   // ---------------------------------------------------------
@@ -505,9 +579,13 @@ export class UndercoverGame extends BaseGame {
       return;
     }
 
-    // -- Confirmation "j'ai vu mon mot" (sert juste à logguer côté UI)
+    // -- Confirmation « J'ai mémorisé » : quand tous les vivants sont prêts,
+    //    on passe aux indices sans attendre la fin du timer (6 s max).
     if (action === "ack-word" && this.phase === "word-reveal") {
-      // no-op serveur, l'auto-timer enchaîne
+      if (!gp || gp.isEliminated) return;
+      this.readyIds.add(sp.id);
+      if (this.allReady()) this.startCluePhase();
+      else this.broadcastPersonalizedState();
       return;
     }
 
@@ -565,6 +643,7 @@ export class UndercoverGame extends BaseGame {
     if (action === "vote" && this.phase === "vote") {
       const target = payload.targetId as string;
       if (!target || target === sp.id) return;
+      if (this.revoteCandidates && !this.revoteCandidates.includes(target)) return;
       const t = this.gamePlayers.get(target);
       if (!t || t.isEliminated) return;
       gp.votedFor = target;
@@ -578,7 +657,7 @@ export class UndercoverGame extends BaseGame {
       return;
     }
 
-    // -- Mr. White devine
+    // -- Le Fantôme devine
     if (action === "mrwhite-guess" && this.phase === "mrwhite-guess") {
       if (sp.id !== this.eliminatedThisRound) return;
       const guess = ((payload.guess as string) ?? "").trim();
@@ -593,6 +672,8 @@ export class UndercoverGame extends BaseGame {
   // ---------------------------------------------------------
   restartIfFinished(): boolean {
     if (this.phase !== "game-over") return false;
+    // On ne relance que si la table est jouable ; sinon on reste sur l'écran de fin.
+    if (this.players.size < 3) return false;
     this.start();
     return true;
   }
@@ -627,7 +708,10 @@ export class UndercoverGame extends BaseGame {
     const base = this.buildPublicState();
     const me = this.gamePlayers.get(pid);
     if (me) {
-      base.myRole = me.role;
+      // L'Intrus ne sait pas qu'il est l'Intrus : avant la fin (ou son
+      // élimination, où son rôle est révélé à tous), il est vu comme civil.
+      const roleKnown = this.phase === "game-over" || me.isEliminated;
+      base.myRole = me.role === "undercover" && !roleKnown ? "civil" : me.role;
       base.myWord = me.word;
       base.myId = me.id;
     }
@@ -661,6 +745,7 @@ export class UndercoverGame extends BaseGame {
           isEliminated: false,
           hasClue: false,
           hasVoted: false,
+          ready: false,
           clue: null,
           eliminatedRound: null,
           role: null,
@@ -673,6 +758,7 @@ export class UndercoverGame extends BaseGame {
           isEliminated: p.isEliminated,
           hasClue: p.hasClue,
           hasVoted: p.votedFor !== null,
+          ready: this.readyIds.has(p.id),
           clue: p.clue,
           eliminatedRound: p.eliminatedRound,
           role: revealAll
@@ -697,6 +783,8 @@ export class UndercoverGame extends BaseGame {
       currentClueIdx: this.currentClueIdx,
       eliminatedThisRound: this.eliminatedThisRound,
       eliminatedRole: this.eliminatedRole,
+      revoteCandidates: this.revoteCandidates,
+      tieCandidates: this.tieCandidates,
       voteTally,
       clueHistory: this.clueHistory,
       civilWord: revealAll ? this.civilWord : null,
@@ -714,6 +802,7 @@ export class UndercoverGame extends BaseGame {
   }
 
   cleanup() {
+    this.clearTimeouts();
     this.stopTimer();
     this.clearBotTimeouts();
   }

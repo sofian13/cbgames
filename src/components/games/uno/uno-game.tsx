@@ -8,6 +8,8 @@ import { cn } from "@/lib/utils";
 import { useKeyedState } from "@/lib/use-keyed-state";
 
 // ── Types ───────────────────────────────────────────────
+// Les identifiants techniques restent rouge/bleu/vert/jaune ; l'affichage
+// utilise les teintes de la DA (corail, ciel, menthe, soleil).
 type CardColor = "rouge" | "bleu" | "vert" | "jaune";
 
 interface CardData {
@@ -27,6 +29,9 @@ interface OtherPlayer {
   isCurrentTurn: boolean;
   calledUno: boolean;
   mustCallUno: boolean;
+  catchable?: boolean;
+  isBot?: boolean;
+  connected?: boolean;
 }
 
 interface UnoEvent {
@@ -54,71 +59,26 @@ interface UnoState {
   unoEvent?: UnoEvent;
 }
 
-// ── Color config ─────────────────────────────────────────
-const COLOR_MAP: Record<CardColor, { bg: string; ring: string; text: string; glow: string }> = {
-  rouge: {
-    bg: "bg-red-500",
-    ring: "ring-red-500/50",
-    text: "text-white",
-    glow: "shadow-[0_0_20px_rgba(239,68,68,0.5)]",
-  },
-  bleu: {
-    bg: "bg-blue-500",
-    ring: "ring-blue-500/50",
-    text: "text-white",
-    glow: "shadow-[0_0_20px_rgba(59,130,246,0.5)]",
-  },
-  vert: {
-    bg: "bg-emerald-500",
-    ring: "ring-emerald-500/50",
-    text: "text-white",
-    glow: "shadow-[0_0_20px_rgba(16,185,129,0.5)]",
-  },
-  jaune: {
-    bg: "bg-yellow-400",
-    ring: "ring-yellow-400/50",
-    text: "text-black",
-    glow: "shadow-[0_0_20px_rgba(250,204,21,0.5)]",
-  },
+// ── Couleurs (DA) ────────────────────────────────────────
+const COLORS: Record<CardColor, { name: string; hex: string; dark: string; ink: string; glow: string }> = {
+  rouge: { name: "Corail", hex: "#FF6B5B", dark: "#D9483A", ink: "#fff", glow: "rgba(255,107,91,0.5)" },
+  bleu: { name: "Ciel", hex: "#4ECDC4", dark: "#2A9D96", ink: "#0B2A28", glow: "rgba(78,205,196,0.5)" },
+  vert: { name: "Menthe", hex: "#3DDC97", dark: "#22A86E", ink: "#0B2A1C", glow: "rgba(61,220,151,0.5)" },
+  jaune: { name: "Soleil", hex: "#FFD23F", dark: "#E0AA00", ink: "#3B2900", glow: "rgba(255,210,63,0.5)" },
 };
+const COLOR_ORDER: CardColor[] = ["rouge", "bleu", "vert", "jaune"];
+const JOKER_GRADIENT = "linear-gradient(145deg, #7A4EE8 0%, #5B36D6 45%, #FF3EA5 100%)";
 
 const ACTION_LABELS: Record<string, string> = {
   plus2: "+2",
-  passe: "\u29B8",
-  inverse: "\u21C4",
+  passe: "⦸",
+  inverse: "⇄",
 };
 
 const ACTION_NAMES: Record<string, string> = {
   plus2: "Pioche 2",
   passe: "Passe",
-  inverse: "Inverse",
-};
-
-// ── Radial gradient backgrounds per color ────────────────
-const COLOR_RADIALS: Record<CardColor, string> = {
-  rouge: "radial-gradient(circle at 50% 25%, rgba(239,68,68,0.25), transparent 40%)",
-  bleu: "radial-gradient(circle at 50% 25%, rgba(59,130,246,0.25), transparent 40%)",
-  vert: "radial-gradient(circle at 50% 25%, rgba(16,185,129,0.25), transparent 40%)",
-  jaune: "radial-gradient(circle at 50% 25%, rgba(250,204,21,0.2), transparent 40%)",
-};
-
-const COLOR_PICKER_STYLES: Record<CardColor, { gradient: string; shadow: string }> = {
-  rouge: {
-    gradient: "bg-gradient-to-br from-red-400 to-red-600",
-    shadow: "shadow-[0_0_20px_rgba(239,68,68,0.4)]",
-  },
-  bleu: {
-    gradient: "bg-gradient-to-br from-blue-400 to-blue-600",
-    shadow: "shadow-[0_0_20px_rgba(59,130,246,0.4)]",
-  },
-  vert: {
-    gradient: "bg-gradient-to-br from-emerald-400 to-emerald-600",
-    shadow: "shadow-[0_0_20px_rgba(16,185,129,0.4)]",
-  },
-  jaune: {
-    gradient: "bg-gradient-to-br from-yellow-300 to-yellow-500",
-    shadow: "shadow-[0_0_20px_rgba(250,204,21,0.4)]",
-  },
+  inverse: "Inversion",
 };
 
 // ── Card display helpers ─────────────────────────────────
@@ -126,7 +86,7 @@ function getCardLabel(card: CardData): string {
   if (card.type === "number") return String(card.value ?? 0);
   if (card.type === "action") return ACTION_LABELS[card.action ?? ""] ?? "?";
   if (card.wild === "plus4") return "+4";
-  return "\u2605";
+  return "★";
 }
 
 function getCardName(card: CardData): string {
@@ -136,23 +96,41 @@ function getCardName(card: CardData): string {
   return "joker";
 }
 
-// ── Determine ambient background based on top card ───────
 function getAmbientBackground(topCard?: CardData): string {
-  if (!topCard) return "#0a0a0f";
+  const base = "#0a0a0f";
+  if (!topCard) return base;
   const color = topCard.type === "wild" ? topCard.chosenColor : topCard.color;
-  if (!color) return "#0a0a0f";
-  const radial = COLOR_RADIALS[color as CardColor];
-  return radial ? `${radial}, #0a0a0f` : "#0a0a0f";
+  if (!color) return base;
+  return `radial-gradient(circle at 50% 30%, ${COLORS[color].glow.replace("0.5", "0.22")}, transparent 45%), ${base}`;
 }
+
+/** Largeur mesurée d'un élément (pour serrer la main sans déborder). */
+function useWidth<T extends HTMLElement>() {
+  const ref = useRef<T>(null);
+  const [w, setW] = useState(0);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const measure = () => setW(el.clientWidth);
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  return [ref, w] as const;
+}
+
+const HAND_W = 56;
+const HAND_H = 82;
 
 // ══════════════════════════════════════════════════════════
 export default function UnoGame({ roomCode, playerId, playerName }: GameProps) {
-  const { sendAction } = useGame(roomCode, "uno", playerId, playerName);
+  const { sendAction, sendRaw } = useGame(roomCode, "uno", playerId, playerName);
   const { gameState, error } = useGameStore();
   const state = gameState as unknown as UnoState;
   const [colorPickerCard, setColorPickerCard] = useState<number | null>(null);
-  const [playedCardAnim, setPlayedCardAnim] = useState<number | null>(null);
   const drawLockRef = useRef(false);
+  const [handRef, handW] = useWidth<HTMLDivElement>();
 
   const handKey =
     state?.myHand
@@ -169,7 +147,6 @@ export default function UnoGame({ roomCode, playerId, playerName }: GameProps) {
     () => state?.unoEvent ?? null
   );
 
-  // ── UNO event toast ────────────────────────────────────
   useEffect(() => {
     if (!unoToast) return;
     const timeout = setTimeout(() => setUnoToast(null), 3000);
@@ -177,38 +154,42 @@ export default function UnoGame({ roomCode, playerId, playerName }: GameProps) {
   }, [setUnoToast, unoToast]);
 
   // ── Actions ────────────────────────────────────────────
-  const handlePlayCard = useCallback(
+  const playCard = useCallback(
     (cardIndex: number, card: CardData) => {
       if (!card.playable) return;
-
       if (card.type === "wild") {
         setColorPickerCard(cardIndex);
         return;
       }
-
-      setPlayedCardAnim(cardIndex);
-      setTimeout(() => setPlayedCardAnim(null), 400);
       sendAction({ action: "play-card", cardIndex });
+      setSelectedCardIndex(null);
     },
-    [sendAction]
+    [sendAction, setSelectedCardIndex]
+  );
+
+  /** 1er tap = sélectionner (la carte se lève), 2e tap = jouer. */
+  const tapCard = useCallback(
+    (index: number, card: CardData) => {
+      if (selectedCardIndex === index) playCard(index, card);
+      else setSelectedCardIndex(index);
+    },
+    [playCard, selectedCardIndex, setSelectedCardIndex]
   );
 
   const handleChooseColor = useCallback(
     (color: CardColor) => {
       if (colorPickerCard === null) return;
-      setPlayedCardAnim(colorPickerCard);
-      setTimeout(() => setPlayedCardAnim(null), 400);
       sendAction({ action: "play-card", cardIndex: colorPickerCard, chosenColor: color });
       setColorPickerCard(null);
+      setSelectedCardIndex(null);
     },
-    [colorPickerCard, sendAction]
+    [colorPickerCard, sendAction, setSelectedCardIndex]
   );
 
   const handleDraw = useCallback(() => {
     if (drawLockRef.current) return;
     drawLockRef.current = true;
     sendAction({ action: "draw" });
-    // Unlock after server has time to respond
     setTimeout(() => { drawLockRef.current = false; }, 1000);
   }, [sendAction]);
 
@@ -228,22 +209,33 @@ export default function UnoGame({ roomCode, playerId, playerName }: GameProps) {
   );
 
   // ── Waiting state ──────────────────────────────────────
-  if (!state || state.status === "waiting") {
+  if (!state || !state.status || state.status === "waiting") {
     return (
       <div
-        className="flex flex-1 items-center justify-center"
+        className="flex flex-1 items-center justify-center overflow-y-auto px-4 pb-[max(env(safe-area-inset-bottom),12px)] pt-[max(env(safe-area-inset-top),12px)]"
         style={{
           background:
-            "radial-gradient(circle at 50% 25%, rgba(239,68,68,0.12), transparent 40%), radial-gradient(circle at 20% 70%, rgba(59,130,246,0.10), transparent 40%), radial-gradient(circle at 80% 70%, rgba(16,185,129,0.10), transparent 40%), #0a0a0f",
+            "radial-gradient(circle at 50% 25%, rgba(255,107,91,0.12), transparent 40%), radial-gradient(circle at 20% 70%, rgba(78,205,196,0.10), transparent 40%), radial-gradient(circle at 80% 70%, rgba(61,220,151,0.10), transparent 40%), #0a0a0f",
         }}
       >
-        <div className="rounded-3xl border border-white/25 bg-black/30 backdrop-blur-sm px-10 py-8 flex flex-col items-center gap-4 shadow-[0_0_40px_rgba(0,0,0,0.5)]">
-          <span className="text-4xl font-serif font-semibold text-white/90 tracking-tight">
-            UNO
+        <div className="flex max-w-md flex-col items-center gap-3 rounded-3xl border border-white/25 bg-black/30 px-6 py-6 text-center shadow-[0_0_40px_rgba(0,0,0,0.5)] backdrop-blur-sm">
+          <span className="text-4xl font-black tracking-tight text-white/90" style={{ fontFamily: "var(--font-display)" }}>
+            Pioche !
           </span>
-          <p className="text-white/40 animate-pulse font-sans text-sm">
-            En attente des joueurs...
-          </p>
+          <ul className="space-y-1 text-left text-[13px] leading-snug text-white/65">
+            <li>• Pose une carte de même couleur ou de même valeur. Le Joker change la couleur.</li>
+            <li>• +2 / +4 : le suivant pioche et passe son tour (pas de cumul des +2/+4).</li>
+            <li>• Plus qu&apos;une carte ? Appuie sur « Dernière carte ! » dans les 3 s, sinon on peut t&apos;attraper (+2).</li>
+            <li>• Touche une carte pour la lever, retouche-la (ou « Jouer ») pour la poser.</li>
+          </ul>
+          <p className="animate-pulse text-sm text-white/40">En attente des joueurs…</p>
+          <button
+            onClick={() => sendRaw({ type: "start-with-bots" })}
+            className="min-h-[44px] rounded-xl px-5 py-3 text-sm font-black text-white active:scale-95"
+            style={{ background: "var(--cb-brand)", fontFamily: "var(--font-display)", letterSpacing: "0.04em" }}
+          >
+            Jouer avec des bots
+          </button>
         </div>
       </div>
     );
@@ -256,65 +248,68 @@ export default function UnoGame({ roomCode, playerId, playerName }: GameProps) {
     const topCard = state.topCard;
     const isMyTurn = state.isMyTurn;
     const mePlayer = otherPlayers.find((p) => p.id === playerId);
-    const showUnoButton = myHand.length === 1 && mePlayer?.mustCallUno;
-    const catchablePlayers = otherPlayers.filter(
-      (p) => p.id !== playerId && p.mustCallUno && !p.calledUno
-    );
+    const showUnoButton = myHand.length === 1 && !!mePlayer?.mustCallUno;
+    const catchablePlayers = otherPlayers.filter((p) => p.id !== playerId && p.catchable);
+    const selected = selectedCardIndex !== null ? myHand[selectedCardIndex] : undefined;
+
+    // Main serrée pour tenir dans la largeur disponible
+    const n = myHand.length;
+    const avail = Math.max(HAND_W, (handW || 600) - 8);
+    const step = n > 1 ? Math.min(HAND_W + 4, (avail - HAND_W) / (n - 1)) : 0;
 
     return (
       <div
-        className="flex flex-1 flex-col relative overflow-hidden select-none transition-all duration-700"
-        style={{ background: getAmbientBackground(topCard) }}
+        className="relative flex flex-1 select-none flex-col overflow-hidden transition-all duration-700"
+        style={{
+          background: getAmbientBackground(topCard),
+          paddingTop: "max(env(safe-area-inset-top), 8px)",
+          paddingLeft: "env(safe-area-inset-left)",
+          paddingRight: "env(safe-area-inset-right)",
+        }}
       >
-        {/* ── UNO Toast ──────────────────────────────── */}
+        {/* ── Toast ──────────────────────────────── */}
         {unoToast && (
-          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50">
+          <div className="absolute left-1/2 top-[max(env(safe-area-inset-top),12px)] z-50 -translate-x-1/2">
             <div
               className={cn(
-                "px-6 py-3 rounded-2xl border font-sans text-sm font-semibold animate-pulse backdrop-blur-md",
+                "whitespace-nowrap rounded-2xl border px-5 py-2.5 text-sm font-semibold backdrop-blur-md",
                 unoToast.type === "called"
-                  ? "bg-cyan-400/15 border-cyan-300/30 text-cyan-200 shadow-[0_0_20px_rgba(80,216,255,0.25)]"
-                  : "bg-red-500/15 border-red-500/30 text-red-300 shadow-[0_0_20px_rgba(239,68,68,0.25)]"
+                  ? "border-[#4ECDC4]/40 bg-[#4ECDC4]/15 text-[#BFF3EF]"
+                  : "border-[#FF6B5B]/40 bg-[#FF6B5B]/15 text-[#FFC9C2]"
               )}
             >
               {unoToast.type === "called"
-                ? `${unoToast.playerName} a crie UNO !`
-                : `${unoToast.catcherName} a attrape ${unoToast.playerName} ! +2 cartes`}
+                ? `${unoToast.playerName} a dit « Dernière carte ! »`
+                : `${unoToast.catcherName} a attrapé ${unoToast.playerName} : +2 cartes !`}
             </div>
           </div>
         )}
 
-        {/* ── Color Picker Modal ─────────────────────── */}
+        {/* ── Choix de couleur ─────────────────────── */}
         {colorPickerCard !== null && (
           <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/70 backdrop-blur-md">
-            <div className="rounded-3xl border border-white/25 bg-black/30 backdrop-blur-sm p-8 flex flex-col items-center gap-6 shadow-[0_0_40px_rgba(0,0,0,0.5)]">
-              <p className="text-white/90 font-serif text-xl font-semibold">Choisis une couleur</p>
-              <div className="grid grid-cols-2 gap-4">
-                {(["rouge", "bleu", "vert", "jaune"] as CardColor[]).map((color) => (
+            <div className="flex flex-col items-center gap-4 rounded-3xl border border-white/25 bg-black/30 p-6 shadow-[0_0_40px_rgba(0,0,0,0.5)] backdrop-blur-sm">
+              <p className="text-lg font-semibold text-white/90" style={{ fontFamily: "var(--font-display)" }}>Choisis une couleur</p>
+              <div className="grid grid-cols-4 gap-3">
+                {COLOR_ORDER.map((color) => (
                   <button
                     key={color}
                     onClick={() => handleChooseColor(color)}
-                    className={cn(
-                      "w-24 h-24 rounded-2xl transition-all hover:scale-110 active:scale-95 border border-white/20",
-                      COLOR_PICKER_STYLES[color].gradient,
-                      COLOR_PICKER_STYLES[color].shadow,
-                      "hover:shadow-[0_0_30px_rgba(255,255,255,0.2)]"
-                    )}
+                    className="flex h-20 w-20 items-end justify-center rounded-2xl border border-white/20 pb-2 transition-transform active:scale-95"
+                    style={{
+                      background: `linear-gradient(145deg, ${COLORS[color].hex}, ${COLORS[color].dark})`,
+                      boxShadow: `0 0 20px ${COLORS[color].glow}`,
+                    }}
                   >
-                    <span
-                      className={cn(
-                        "text-sm font-sans font-semibold",
-                        color === "jaune" ? "text-black/80" : "text-white/90"
-                      )}
-                    >
-                      {color.charAt(0).toUpperCase() + color.slice(1)}
+                    <span className="text-[13px] font-bold" style={{ color: COLORS[color].ink }}>
+                      {COLORS[color].name}
                     </span>
                   </button>
                 ))}
               </div>
               <button
                 onClick={() => setColorPickerCard(null)}
-                className="text-xs text-white/25 hover:text-white/50 font-sans transition-colors mt-1"
+                className="min-h-[44px] px-4 text-sm text-white/50 active:text-white/80"
               >
                 Annuler
               </button>
@@ -322,274 +317,148 @@ export default function UnoGame({ roomCode, playerId, playerName }: GameProps) {
           </div>
         )}
 
-        {/* ── Top: Other players ─────────────────────── */}
-        <div className="flex items-start justify-center gap-3 px-4 pt-4 pb-2 flex-wrap">
+        {/* ── Haut : adversaires (coin haut-droit réservé à l'engrenage) ── */}
+        <div className="flex items-start gap-2 overflow-x-auto pl-3 pr-16 pb-1">
           {otherPlayers
             .filter((p) => p.id !== playerId)
             .map((p) => (
               <div
                 key={p.id}
                 className={cn(
-                  "flex flex-col items-center gap-1.5 rounded-2xl border px-4 py-2.5 min-w-[85px] transition-all",
+                  "flex shrink-0 flex-col items-center gap-0.5 rounded-2xl border px-3 py-1.5 transition-all",
                   p.isCurrentTurn
-                    ? "border-cyan-400/30 bg-cyan-400/8 shadow-[0_0_20px_rgba(80,216,255,0.15)] backdrop-blur-sm"
-                    : "border-white/[0.08] bg-white/[0.03] backdrop-blur-sm"
+                    ? "border-[#4ECDC4]/50 bg-[#4ECDC4]/10 shadow-[0_0_16px_rgba(78,205,196,0.2)]"
+                    : "border-white/[0.08] bg-white/[0.03]",
+                  p.connected === false && "opacity-40"
                 )}
               >
                 <span
                   className={cn(
-                    "text-xs font-semibold font-sans truncate max-w-[70px]",
-                    p.isCurrentTurn ? "text-cyan-300" : "text-white/50"
+                    "max-w-[90px] truncate text-[12px] font-semibold",
+                    p.isCurrentTurn ? "text-[#BFF3EF]" : "text-white/60"
                   )}
                 >
                   {p.name}
+                  {p.isBot ? " · bot" : ""}
                 </span>
-                <div className="flex items-center gap-0.5">
-                  {Array.from({ length: Math.min(p.cardCount, 7) }).map((_, i) => (
-                    <div
-                      key={i}
-                      className={cn(
-                        "w-3 h-4 rounded-[3px] border",
-                        p.isCurrentTurn
-                          ? "bg-cyan-400/15 border-cyan-400/20"
-                          : "bg-white/8 border-white/[0.08]"
-                      )}
-                      style={{
-                        transform: `rotate(${(i - Math.min(p.cardCount, 7) / 2) * 4}deg)`,
-                      }}
-                    />
-                  ))}
-                  {p.cardCount > 7 && (
-                    <span className="text-[9px] text-white/25 font-mono ml-0.5">
-                      +{p.cardCount - 7}
-                    </span>
-                  )}
-                </div>
-                <span className="text-[10px] text-white/25 font-mono">
-                  {p.cardCount} carte{p.cardCount !== 1 ? "s" : ""}
+                <span className="text-[12px] font-bold text-white/45">
+                  🂠 {p.cardCount}
+                  {p.connected === false ? " · parti" : ""}
                 </span>
                 {p.calledUno && p.cardCount === 1 && (
-                  <span className="text-[9px] font-sans font-bold text-cyan-300 drop-shadow-[0_0_6px_rgba(80,216,255,0.5)]">
-                    UNO
-                  </span>
-                )}
-                {p.mustCallUno && !p.calledUno && p.id !== playerId && (
-                  <button
-                    onClick={() => handleCatchUno(p.id)}
-                    className="mt-0.5 px-2.5 py-1 rounded-lg text-[9px] font-sans font-bold bg-red-500/15 border border-red-500/30 text-red-300 hover:bg-red-500/25 hover:shadow-[0_0_12px_rgba(239,68,68,0.2)] transition-all active:scale-95"
-                  >
-                    Attraper !
-                  </button>
+                  <span className="text-[11px] font-bold text-[#4ECDC4]">Dernière carte !</span>
                 )}
               </div>
             ))}
         </div>
 
-        {/* ── Center: Discard pile + Draw pile + Direction ── */}
-        <div className="flex-1 flex items-center justify-center gap-6 relative">
-          {/* Direction indicator */}
-          <div className="absolute top-2 left-1/2 -translate-x-1/2 flex items-center gap-2">
-            <span className="text-[10px] text-white/20 font-sans uppercase tracking-widest">
-              {state.direction === 1 ? "Sens horaire" : "Sens anti-horaire"}
-            </span>
-            <span className="text-white/25 text-sm">
-              {state.direction === 1 ? "\u21BB" : "\u21BA"}
-            </span>
-          </div>
-
-          {/* Timer */}
-          {isMyTurn && (
-            <div className="absolute top-2 right-4">
-              <span
-                className={cn(
-                  "text-sm font-mono font-bold",
-                  (state.timeLeft ?? 0) <= 5
-                    ? "text-red-400 drop-shadow-[0_0_8px_rgba(239,68,68,0.4)]"
-                    : "text-white/40"
-                )}
-              >
-                {state.timeLeft ?? 0}s
-              </span>
-            </div>
-          )}
-
-          {/* Turn indicator */}
-          <div className="absolute top-2 left-4">
+        {/* ── Centre : pioche + défausse ── */}
+        <div className="relative flex min-h-0 flex-1 items-center justify-center gap-5">
+          <div className="absolute left-3 top-1 flex items-center gap-2">
             {isMyTurn ? (
-              <span className="text-xs font-sans text-cyan-300 font-semibold animate-pulse drop-shadow-[0_0_8px_rgba(80,216,255,0.4)]">
-                Ton tour !
+              <span className="text-[13px] font-semibold text-[#4ECDC4] animate-pulse">
+                Ton tour ! · {state.timeLeft ?? 0}s
               </span>
             ) : (
-              <span className="text-xs font-sans text-white/25">
-                Tour de {otherPlayers.find((p) => p.id === state.currentPlayerId)?.name ?? "..."}
+              <span className="text-[13px] text-white/40">
+                Tour de {otherPlayers.find((p) => p.id === state.currentPlayerId)?.name ?? "…"}
               </span>
             )}
+            <span className="text-[12px] text-white/30">{state.direction === 1 ? "↻" : "↺"}</span>
           </div>
 
-          {/* Draw pile */}
+          {/* Pioche */}
           <button
             onClick={handleDraw}
             disabled={!state.canDraw}
             className={cn(
-              "relative w-[76px] h-[110px] rounded-2xl border-2 transition-all",
+              "relative flex h-[104px] w-[72px] flex-col items-center justify-center rounded-2xl border-2 transition-all",
               state.canDraw
-                ? "border-white/15 bg-gradient-to-br from-white/[0.06] to-white/[0.02] hover:border-white/25 hover:shadow-[0_0_20px_rgba(255,255,255,0.08)] cursor-pointer active:scale-95 backdrop-blur-sm"
-                : "border-white/[0.06] bg-white/[0.02] cursor-default opacity-30"
+                ? "border-white/20 bg-white/[0.06] active:scale-95"
+                : "border-white/[0.06] bg-white/[0.02] opacity-30"
             )}
           >
-            <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <span className="text-3xl text-white/15">&#x1F0A0;</span>
-              <span className="text-[9px] text-white/20 font-mono mt-1">{state.deckCount}</span>
-            </div>
-            {state.canDraw && (
-              <span className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[10px] text-white/25 font-sans whitespace-nowrap font-medium">
-                Piocher
-              </span>
-            )}
+            <span className="text-[13px] font-bold text-white/70">Piocher</span>
+            <span className="mt-1 text-[12px] text-white/35">{state.deckCount}</span>
           </button>
 
-          {/* Discard pile (top card) */}
           {topCard && <CardView card={topCard} size="large" />}
 
-          {/* Pass after draw */}
           {state.canPassAfterDraw && (
             <button
               onClick={handlePassAfterDraw}
-              className="absolute -bottom-2 left-1/2 -translate-x-1/2 px-5 py-2 rounded-xl border border-white/[0.12] bg-white/[0.05] backdrop-blur-sm text-white/60 font-sans text-xs font-medium hover:bg-white/[0.08] hover:border-white/[0.2] transition-all active:scale-95"
+              className="min-h-[44px] rounded-xl border border-white/[0.15] bg-white/[0.06] px-5 text-sm font-semibold text-white/75 active:scale-95"
             >
               Passer
             </button>
           )}
         </div>
 
-        {/* ── UNO Button ─────────────────────────────── */}
-        {showUnoButton && (
-          <div className="flex justify-center py-3">
+        {/* ── Barre d'actions ─────────────────────────── */}
+        <div className="flex min-h-[48px] flex-wrap items-center justify-center gap-2 px-3">
+          {showUnoButton && (
             <button
               onClick={handleUnoCall}
-              className="px-10 py-3.5 rounded-2xl bg-gradient-to-r from-[#65dfb2] to-[#4ecf8a] hover:from-[#75efbf] hover:to-[#5edf9a] text-slate-950 font-sans font-bold text-xl tracking-wide shadow-[0_0_30px_rgba(78,207,138,0.45)] hover:shadow-[0_0_40px_rgba(78,207,138,0.65)] transition-all active:scale-95 animate-pulse"
+              className="min-h-[44px] animate-pulse rounded-2xl px-6 text-base font-black tracking-wide text-[#0B2A1C] shadow-[0_0_24px_rgba(61,220,151,0.45)] active:scale-95"
+              style={{ background: "linear-gradient(90deg,#3DDC97,#4ECDC4)", fontFamily: "var(--font-display)" }}
             >
-              UNO !
+              Dernière carte !
             </button>
-          </div>
-        )}
+          )}
+          {catchablePlayers.map((p) => (
+            <button
+              key={p.id}
+              onClick={() => handleCatchUno(p.id)}
+              className="min-h-[44px] rounded-xl border border-[#FF6B5B]/40 bg-[#FF6B5B]/15 px-4 text-[13px] font-bold text-[#FFC9C2] active:scale-95"
+            >
+              {p.name} n&apos;a pas dit « Dernière carte ! » — Attrape-le (+2)
+            </button>
+          ))}
+          {selected && isMyTurn && (
+            <button
+              onClick={() => selectedCardIndex !== null && playCard(selectedCardIndex, selected)}
+              disabled={!selected.playable}
+              className="min-h-[44px] rounded-xl px-6 text-sm font-black text-[#0B2A28] active:scale-95 disabled:opacity-40"
+              style={{ background: "#4ECDC4", fontFamily: "var(--font-display)" }}
+            >
+              {selected.playable ? "Jouer" : "Pas jouable"}
+            </button>
+          )}
+          {!selected && state.drewCard && (
+            <span className="text-[13px] font-medium text-[#BFF3EF]/80">Carte piochée ! Joue-la ou passe.</span>
+          )}
+          {!selected && isMyTurn && !state.drewCard && !showUnoButton && catchablePlayers.length === 0 && (
+            <span className="text-[12px] text-white/40">Touche une carte pour la lever, retouche pour la jouer</span>
+          )}
+        </div>
 
-        {/* ── Catch UNO buttons ──────────────────────── */}
-        {catchablePlayers.length > 0 && !showUnoButton && (
-          <div className="flex justify-center gap-2 py-3">
-            {catchablePlayers.map((p) => (
+        {/* ── Ma main ───────────── */}
+        <div
+          ref={handRef}
+          className="relative mx-3"
+          style={{ height: HAND_H + 22, marginBottom: "max(env(safe-area-inset-bottom), 8px)" }}
+        >
+          {myHand.map((card, index) => {
+            const isSelected = selectedCardIndex === index;
+            const x = (index - (n - 1) / 2) * step;
+            return (
               <button
-                key={p.id}
-                onClick={() => handleCatchUno(p.id)}
-                className="px-5 py-2.5 rounded-xl bg-red-500/15 border border-red-500/30 text-red-300 font-sans text-xs font-bold hover:bg-red-500/25 hover:shadow-[0_0_15px_rgba(239,68,68,0.2)] transition-all active:scale-95 backdrop-blur-sm"
+                key={`${index}-${getCardName(card)}`}
+                onClick={() => tapCard(index, card)}
+                aria-label={`Carte ${getCardLabel(card)}`}
+                className={cn(
+                  "absolute bottom-0 left-1/2 block transition-transform duration-150",
+                  !card.playable && "opacity-45"
+                )}
+                style={{
+                  transform: `translateX(${x - HAND_W / 2}px) translateY(${isSelected ? -20 : 0}px)`,
+                  zIndex: isSelected ? 100 : index,
+                }}
               >
-                Attraper {p.name} !
+                <CardView card={card} size="hand" playable={!!card.playable} selected={isSelected} />
               </button>
-            ))}
-          </div>
-        )}
-
-        {/* ── Bottom: My hand (fan spread) ───────────── */}
-        <div className="relative pb-4 pt-2 px-2">
-          {/* Hand backdrop glow */}
-          {isMyTurn && (
-            <div
-              className="absolute inset-x-0 bottom-0 h-32 pointer-events-none"
-              style={{
-                background:
-                  "radial-gradient(ellipse at 50% 100%, rgba(80,216,255,0.06), transparent 70%)",
-              }}
-            />
-          )}
-          {state.drewCard && (
-            <p className="text-center text-[10px] text-cyan-300/60 font-sans mb-1 font-medium">
-              Carte piochee ! Joue-la ou passe.
-            </p>
-          )}
-
-          {/* Selected card preview (mobile) */}
-          {selectedCardIndex !== null && myHand[selectedCardIndex] && (
-            <div className="sm:hidden flex justify-center mb-2">
-              <div className="flex flex-col items-center gap-2">
-                <CardView card={myHand[selectedCardIndex]} size="large" playable={myHand[selectedCardIndex].playable} />
-                <div className="flex gap-2">
-                  {myHand[selectedCardIndex].playable && (
-                    <button
-                      onClick={() => {
-                        handlePlayCard(selectedCardIndex, myHand[selectedCardIndex]);
-                        setSelectedCardIndex(null);
-                      }}
-                      className="px-4 py-1.5 rounded-xl bg-cyan-500/20 border border-cyan-400/30 text-cyan-200 font-sans text-xs font-semibold active:scale-95 transition-all"
-                    >
-                      Jouer
-                    </button>
-                  )}
-                  <button
-                    onClick={() => setSelectedCardIndex(null)}
-                    className="px-4 py-1.5 rounded-xl bg-white/5 border border-white/10 text-white/40 font-sans text-xs active:scale-95 transition-all"
-                  >
-                    Fermer
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          <div className="flex justify-center items-end relative" style={{ minHeight: "100px" }}>
-            {myHand.map((card, index) => {
-              const totalCards = myHand.length;
-              const maxSpread = Math.min(totalCards * 40, 500);
-              const cardWidth = Math.min(maxSpread / totalCards, 52);
-              const centerOffset = index - (totalCards - 1) / 2;
-              const rotationDeg = totalCards > 1 ? centerOffset * Math.min(3, 30 / totalCards) : 0;
-              const translateY = totalCards > 1 ? Math.abs(centerOffset) * Math.min(3, 30 / totalCards) : 0;
-              const isAnimating = playedCardAnim === index;
-              const isSelected = selectedCardIndex === index;
-
-              return (
-                <div
-                  key={`${index}-${getCardName(card)}`}
-                  className={cn(
-                    "transition-all duration-200",
-                    isAnimating && "opacity-0 -translate-y-20 scale-75"
-                  )}
-                  style={{
-                    width: `${cardWidth}px`,
-                    transform: `rotate(${rotationDeg}deg) translateY(${isSelected ? translateY - 12 : translateY}px)`,
-                    zIndex: isSelected ? 100 : index,
-                    marginLeft: index === 0 ? "0" : `-${Math.max(0, 52 - cardWidth)}px`,
-                  }}
-                >
-                  <button
-                    onClick={() => {
-                      // On mobile: tap to select, second tap to play
-                      const isMobile = window.innerWidth < 640;
-                      if (isMobile) {
-                        if (selectedCardIndex === index) {
-                          handlePlayCard(index, card);
-                          setSelectedCardIndex(null);
-                        } else {
-                          setSelectedCardIndex(index);
-                        }
-                      } else {
-                        handlePlayCard(index, card);
-                      }
-                    }}
-                    disabled={false}
-                    className={cn(
-                      "block transition-all duration-150 origin-bottom",
-                      card.playable
-                        ? "sm:hover:-translate-y-8 sm:hover:scale-[1.35] cursor-pointer active:scale-95"
-                        : "opacity-40 cursor-default",
-                      isSelected && "ring-2 ring-cyan-400/60 rounded-xl"
-                    )}
-                  >
-                    <CardView card={card} size="hand" playable={card.playable} />
-                  </button>
-                </div>
-              );
-            })}
-          </div>
+            );
+          })}
         </div>
       </div>
     );
@@ -597,151 +466,85 @@ export default function UnoGame({ roomCode, playerId, playerName }: GameProps) {
 
   // ── Fallback ───────────────────────────────────────────
   return (
-    <div
-      className="flex flex-1 items-center justify-center"
-      style={{
-        background:
-          "radial-gradient(circle at 50% 50%, rgba(239,68,68,0.08), transparent 40%), #0a0a0f",
-      }}
-    >
-      {error && (
-        <p className="text-sm text-red-400 font-sans drop-shadow-[0_0_8px_rgba(239,68,68,0.3)]">
-          {error}
-        </p>
-      )}
+    <div className="flex flex-1 items-center justify-center" style={{ background: "#0a0a0f" }}>
+      {error && <p className="text-sm text-[#FF6B5B]">{error}</p>}
     </div>
   );
 }
 
 // ══════════════════════════════════════════════════════════
-// Card Component
+// Carte plate : gros chiffre centré + petits chiffres en coins
 // ══════════════════════════════════════════════════════════
 function CardView({
   card,
   size = "hand",
   playable = false,
+  selected = false,
 }: {
   card: CardData;
   size?: "hand" | "large";
   playable?: boolean;
+  selected?: boolean;
 }) {
   const isWild = card.type === "wild";
   const color = isWild ? card.chosenColor : card.color;
-  const colorStyle = color ? COLOR_MAP[color as CardColor] : null;
+  const c = color ? COLORS[color] : null;
   const label = getCardLabel(card);
+  const ink = isWild && !color ? "#fff" : c?.ink ?? "#fff";
+  const large = size === "large";
 
-  const sizeClasses = size === "large" ? "w-[92px] h-[134px]" : "w-[52px] h-[76px] sm:w-[72px] sm:h-[104px]";
-  const labelSize = size === "large" ? "text-4xl" : "text-xl sm:text-2xl";
-  const cornerSize = size === "large" ? "text-xs" : "text-[8px] sm:text-[10px]";
-
-  // Build inline gradient for card background instead of flat color
-  const cardGradient = (() => {
-    if (isWild && !color) {
-      return "linear-gradient(135deg, #ef4444 0%, #3b82f6 33%, #10b981 66%, #facc15 100%)";
-    }
-    if (color === "rouge") return "linear-gradient(145deg, #f87171 0%, #dc2626 50%, #b91c1c 100%)";
-    if (color === "bleu") return "linear-gradient(145deg, #60a5fa 0%, #2563eb 50%, #1d4ed8 100%)";
-    if (color === "vert") return "linear-gradient(145deg, #34d399 0%, #059669 50%, #047857 100%)";
-    if (color === "jaune") return "linear-gradient(145deg, #fde047 0%, #eab308 50%, #ca8a04 100%)";
-    return undefined;
-  })();
+  const background = isWild ? JOKER_GRADIENT : c ? c.hex : "#374151";
+  const subtext =
+    card.type === "action" ? ACTION_NAMES[card.action ?? ""] ?? "" : isWild ? (card.wild === "plus4" ? "Pioche 4" : "Joker") : "";
 
   return (
     <div
-      className={cn(
-        sizeClasses,
-        "rounded-xl border-2 relative overflow-hidden flex-shrink-0",
-        "flex items-center justify-center",
-        "transition-shadow duration-200",
-        // Use gradient backgrounds via style instead of solid Tailwind bg
-        !cardGradient && "bg-gray-700 border-white/10",
-        cardGradient && (isWild && !color ? "border-white/30" : "border-white/20"),
-        playable && colorStyle && colorStyle.glow,
-        playable && isWild && !color && "shadow-[0_0_20px_rgba(255,255,255,0.3)]",
-        size === "large" && colorStyle && colorStyle.glow
-      )}
-      style={cardGradient ? { background: cardGradient } : undefined}
+      className="relative flex shrink-0 items-center justify-center overflow-hidden rounded-xl"
+      style={{
+        width: large ? 76 : HAND_W,
+        height: large ? 110 : HAND_H,
+        background,
+        border: selected ? "3px solid #fff" : "2px solid rgba(255,255,255,0.35)",
+        boxShadow: selected
+          ? "0 0 0 2px rgba(78,205,196,0.7), 0 10px 20px rgba(0,0,0,0.45)"
+          : playable || large
+            ? `0 0 14px ${c?.glow ?? "rgba(122,78,232,0.5)"}`
+            : "0 4px 10px rgba(0,0,0,0.35)",
+      }}
     >
-      {/* Inner shine overlay */}
-      <div
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          background:
-            "linear-gradient(180deg, rgba(255,255,255,0.12) 0%, transparent 40%, rgba(0,0,0,0.15) 100%)",
-        }}
-      />
-
-      {/* Oval center shape */}
-      <div
-        className="absolute inset-2 rounded-[40%] border border-white/20 bg-white/10"
-        style={{ transform: "rotate(30deg)" }}
-      />
-
-      {/* Center label */}
       <span
-        className={cn(
-          labelSize,
-          "font-mono font-black relative z-10",
-          "drop-shadow-[0_2px_4px_rgba(0,0,0,0.4)]",
-          isWild && !color ? "text-white" : colorStyle?.text ?? "text-white"
-        )}
+        className="relative z-10 font-black leading-none"
+        style={{ color: ink, fontSize: large ? 40 : 28, fontFamily: "var(--font-display)" }}
+      >
+        {label}
+      </span>
+      <span
+        className="absolute left-1.5 top-1 z-10 font-bold leading-none"
+        style={{ color: ink, fontSize: large ? 14 : 12, fontFamily: "var(--font-display)" }}
+      >
+        {label}
+      </span>
+      <span
+        className="absolute bottom-1 right-1.5 z-10 rotate-180 font-bold leading-none"
+        style={{ color: ink, fontSize: large ? 14 : 12, fontFamily: "var(--font-display)" }}
       >
         {label}
       </span>
 
-      {/* Top-left corner */}
-      <span
-        className={cn(
-          cornerSize,
-          "absolute top-1.5 left-2 font-mono font-bold z-10",
-          "drop-shadow-[0_1px_2px_rgba(0,0,0,0.3)]",
-          isWild && !color ? "text-white" : colorStyle?.text ?? "text-white"
-        )}
-      >
-        {label}
-      </span>
-
-      {/* Bottom-right corner (rotated 180) */}
-      <span
-        className={cn(
-          cornerSize,
-          "absolute bottom-1.5 right-2 font-mono font-bold z-10 rotate-180",
-          "drop-shadow-[0_1px_2px_rgba(0,0,0,0.3)]",
-          isWild && !color ? "text-white" : colorStyle?.text ?? "text-white"
-        )}
-      >
-        {label}
-      </span>
-
-      {/* Wild chosen color indicator dot */}
+      {/* Couleur choisie sur un Joker */}
       {isWild && color && (
         <div
-          className={cn(
-            "absolute bottom-1.5 left-1/2 -translate-x-1/2 w-3.5 h-3.5 rounded-full z-10",
-            COLOR_MAP[color as CardColor].bg,
-            "border border-white/30",
-            "shadow-[0_0_6px_rgba(255,255,255,0.2)]"
-          )}
+          className="absolute bottom-2 left-1/2 z-10 h-4 w-4 -translate-x-1/2 rounded-full border-2 border-white"
+          style={{ background: COLORS[color].hex }}
         />
       )}
 
-      {/* Action card subtext */}
-      {card.type === "action" && (
+      {large && subtext && !(isWild && color) && (
         <span
-          className={cn(
-            "absolute bottom-2 left-1/2 -translate-x-1/2 text-[7px] font-sans font-semibold uppercase tracking-wider z-10 whitespace-nowrap",
-            colorStyle?.text ?? "text-white",
-            "opacity-70 drop-shadow-[0_1px_2px_rgba(0,0,0,0.3)]"
-          )}
+          className="absolute bottom-1.5 left-1/2 z-10 -translate-x-1/2 whitespace-nowrap text-[10px] font-semibold uppercase tracking-wider opacity-80"
+          style={{ color: ink }}
         >
-          {ACTION_NAMES[card.action ?? ""] ?? ""}
-        </span>
-      )}
-
-      {/* Wild card subtext */}
-      {isWild && (
-        <span className="absolute bottom-2 left-1/2 -translate-x-1/2 text-[7px] font-sans font-semibold uppercase tracking-wider z-10 text-white/70 whitespace-nowrap drop-shadow-[0_1px_2px_rgba(0,0,0,0.3)]">
-          {card.wild === "plus4" ? "Pioche 4" : "Joker"}
+          {subtext}
         </span>
       )}
     </div>

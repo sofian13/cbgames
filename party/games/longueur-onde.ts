@@ -24,36 +24,74 @@ interface Spectrum {
 }
 
 const SPECTRUMS: Spectrum[] = [
-  { left: "Inutile", right: "Indispensable" },
-  { left: "Ringard", right: "Stylé" },
-  { left: "Sous-coté", right: "Surcoté" },
-  { left: "Soft", right: "Hardcore" },
-  { left: "Mauvais film", right: "Chef-d'œuvre" },
-  { left: "Aliment dégueu", right: "Aliment délicieux" },
-  { left: "Talent inutile", right: "Super-pouvoir" },
-  { left: "Pas cher", right: "Hors de prix" },
-  { left: "Animal nul", right: "Animal parfait" },
-  { left: "Crime mineur", right: "Crime grave" },
-  { left: "Date raté", right: "Date parfait" },
-  { left: "Tenue gênante", right: "Tenue canon" },
-  { left: "Pas romantique", right: "Très romantique" },
-  { left: "Activité chiante", right: "Activité fun" },
-  { left: "Cadeau nul", right: "Cadeau de rêve" },
-  { left: "Pas attirant", right: "Irrésistible" },
-  { left: "Métier facile", right: "Métier difficile" },
-  { left: "Plaisir coupable", right: "Vraie fierté" },
-  { left: "Banal", right: "Légendaire" },
-  { left: "Calme", right: "Chaotique" },
-  { left: "Has-been", right: "Tendance" },
-  { left: "Effrayant", right: "Mignon" },
-  { left: "Surfait", right: "Culte" },
-  { left: "Léger", right: "Lourd à porter" },
-  { left: "Innocent", right: "Coquin" },
-  { left: "Mauvais goût", right: "Très classe" },
-  { left: "Ennuyeux au lit", right: "Bête de sexe" },
-  { left: "Petit mensonge", right: "Vraie trahison" },
-  { left: "Bonne excuse", right: "Excuse bidon" },
-  { left: "Trop tôt", right: "Trop tard" },
+  { left: "Ta mère approuverait", right: "Ta mère appellerait un prêtre" },
+  { left: "Dimanche soir déprime", right: "Vendredi soir 23h" },
+  { left: "Truc de boomer", right: "Truc de Gen Z" },
+  { left: "Red flag", right: "Green flag" },
+  { left: "Ça passe en story", right: "Ça reste en amis proches" },
+  { left: "Mon banquier est fier", right: "Mon banquier pleure" },
+  { left: "Message vu à 8h", right: "Message vu à 4h du mat" },
+  { left: "Ça sent le linge propre", right: "Ça sent le vestiaire" },
+  { left: "Réveil tout frais", right: "Réveil de zombie" },
+  { left: "Truc de daron", right: "Truc de gamin" },
+  { left: "Pote fiable", right: "Pote qui ghoste" },
+  { left: "Même pas de 2e date", right: "Présenté(e) aux parents" },
+  { left: "Faisable un lundi", right: "Seulement en vacances" },
+  { left: "Personne ne remarque", right: "Tout le bureau en parle" },
+  { left: "Phrase de drague gênante", right: "Phrase de drague qui marche" },
+  { left: "Gâteau de mamie", right: "Plat de chef étoilé" },
+  { left: "Ça se dit au repas de famille", right: "Surtout pas au repas de famille" },
+  { left: "Un 👍 suffit", right: "Ça mérite un vocal de 5 min" },
+  { left: "Normal à 30 ans", right: "Bizarre à 30 ans" },
+  { left: "Énergie de figurant", right: "Énergie de perso principal" },
+  { left: "Silence gênant", right: "Fou rire général" },
+  { left: "Lit défait toute la semaine", right: "Appart de catalogue" },
+  { left: "Moment de solitude", right: "Moment de gloire" },
+  { left: "Ça craque au premier lavage", right: "Indestructible" },
+  { left: "Ça se règle par SMS", right: "Ça se règle en face" },
+  { left: "Calme plat", right: "Drama de télé-réalité" },
+  { left: "Anecdote oubliée demain", right: "Histoire racontée à ton mariage" },
+  { left: "Talent de canapé", right: "Talent de scène" },
+  { left: "Fond de placard", right: "Repas de fête" },
+  { left: "Un peu fatigué(e)", right: "Je dors trois jours" },
+  { left: "Ça vaut un mot d'excuse", right: "Ça vaut une démission" },
+  { left: "Truc de collégien", right: "Truc d'adulte responsable" },
+  { left: "Pas besoin de tuto", right: "Faut un tuto de 2h" },
+  { left: "Spoiler pardonnable", right: "Spoiler impardonnable" },
+  { left: "Ça fait sourire", right: "Ça fait pleurer de rire" },
+  { left: "Vibe bibliothèque", right: "Vibe festival" },
+  { left: "Prénom de chien", right: "Prénom de bébé" },
+  { left: "Mérite un like", right: "Mérite d'être partagé partout" },
+  { left: "Tenue pour sortir les poubelles", right: "Tenue de mariage" },
+  { left: "Coloc de rêve", right: "Coloc de l'enfer" },
+  { left: "Hygiène de vie de moine", right: "Hygiène de vie de rockstar" },
+  { left: "Repas de régime", right: "Repas de lendemain de soirée" },
+  { left: "Discret comme un ninja", right: "Discret comme une fanfare" },
+  { left: "Je l'avoue au premier date", right: "Je l'emporte dans la tombe" },
+  { left: "Deux minutes de retard", right: "J'ai raté mon train" },
+  { left: "Sport de chill", right: "Sport de guerrier" },
+  { left: "Réaction de mamie", right: "Réaction d'ado" },
+  { left: "Zéro stress", right: "Stress d'entretien d'embauche" },
+  { left: "Musique d'ascenseur", right: "Son de fin de soirée" },
+  { left: "Plus vieux que tes parents", right: "Sorti la semaine dernière" },
+  { left: "Cringe", right: "Iconique" },
+  { left: "Idée de premier date", right: "Idée de dixième date" },
+  { left: "Ça se fait seul(e)", right: "Ça se fait à quinze" },
+  { left: "Snack de 16h", right: "Festin de Noël" },
+  { left: "Personnalité de chat", right: "Personnalité de chien" },
+  { left: "Mensonge pieux", right: "Mensonge d'État" },
+  { left: "Petit plaisir", right: "Bonheur absolu" },
+  { left: "Week-end sous la couette", right: "Week-end sans dormir" },
+  { left: "Effort minimum", right: "Effort olympique" },
+  { left: "Avis de tonton", right: "Avis d'expert" },
+  { left: "Swipe à gauche", right: "Swipe à droite" },
+  { left: "OK dès 8 ans", right: "Interdit aux moins de 18 ans" },
+  { left: "Énergie de lundi matin", right: "Énergie de samedi soir" },
+  { left: "Romantique comme un ticket de caisse", right: "Romantique comme un film de Noël" },
+  { left: "Truc qu'on assume", right: "Truc qu'on cache à ses potes" },
+  { left: "Sage comme une image", right: "Coquin(e) assumé(e)" },
+  { left: "Ça se pardonne", right: "On en reparlera dans 10 ans" },
+  { left: "Vibe camping", right: "Vibe palace" },
 ];
 
 // -- Types ------------------------------------------------
@@ -66,6 +104,16 @@ interface WavePlayer {
 }
 
 type GamePhase = "waiting" | "intro" | "clue" | "guessing" | "reveal" | "game-over";
+
+// Mélange uniforme (Fisher-Yates)
+function shuffle<T>(arr: T[]): T[] {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
 
 // ==========================================================
 export class LongueurOndeGame extends BaseGame {
@@ -83,6 +131,7 @@ export class LongueurOndeGame extends BaseGame {
   timeLeft = 0;
   timer: ReturnType<typeof setInterval> | null = null;
   phaseTimeout: ReturnType<typeof setTimeout> | null = null;
+  endTimer: ReturnType<typeof setTimeout> | null = null;
 
   start() {
     this.started = true;
@@ -96,8 +145,8 @@ export class LongueurOndeGame extends BaseGame {
       this.gamePlayers.set(id, { id, name: player.name, score: 0, isPsychic: false, guess: null });
     }
     const ids = Array.from(this.gamePlayers.keys());
-    this.psychicQueue = [...ids].sort(() => Math.random() - 0.5);
-    this.totalRounds = ids.length; // chacun est medium une fois
+    this.psychicQueue = shuffle(ids);
+    this.totalRounds = ids.length; // chacun est Médium une fois
     this.round = 0;
     this.usedSpectrums.clear();
     this.startRound();
@@ -108,7 +157,16 @@ export class LongueurOndeGame extends BaseGame {
     this.phase = "intro";
     this.clue = null;
     this.roundPoints = {};
-    this.psychicId = this.psychicQueue[(this.round - 1) % this.psychicQueue.length];
+    // Médium du tour : on saute les joueurs partis
+    const n = this.psychicQueue.length;
+    this.psychicId = this.psychicQueue[(this.round - 1) % n];
+    for (let k = 0; k < n; k++) {
+      const cand = this.psychicQueue[(this.round - 1 + k) % n];
+      if (this.players.has(cand)) {
+        this.psychicId = cand;
+        break;
+      }
+    }
 
     for (const p of this.gamePlayers.values()) {
       p.guess = null;
@@ -158,7 +216,7 @@ export class LongueurOndeGame extends BaseGame {
       sum += p;
       count++;
     }
-    // Le medium gagne la moyenne (arrondie) des points de l'equipe
+    // Le Médium gagne la moyenne (arrondie) des points de l'équipe
     if (this.psychicId) {
       pts[this.psychicId] = count > 0 ? Math.round(sum / count) : 0;
     }
@@ -180,14 +238,19 @@ export class LongueurOndeGame extends BaseGame {
     this.stopTimer();
     this.phase = "game-over";
     const players = Array.from(this.gamePlayers.values()).sort((a, b) => b.score - a.score);
-    const rankings: GameRanking[] = players.map((p, i) => ({
+    // Ex-aequo : même score = même rang
+    const rankings: GameRanking[] = players.map((p) => ({
       playerId: p.id,
       playerName: p.name,
-      rank: i + 1,
+      rank: players.findIndex((q) => q.score === p.score) + 1,
       score: p.score,
     }));
     this.broadcastPersonalizedState();
-    setTimeout(() => this.endGame(rankings), 500);
+    if (this.endTimer) clearTimeout(this.endTimer);
+    this.endTimer = setTimeout(() => {
+      this.endTimer = null;
+      this.endGame(rankings);
+    }, 500);
   }
 
   // -- Messages --------------------------------------------
@@ -200,8 +263,16 @@ export class LongueurOndeGame extends BaseGame {
 
     if (action === "submit-clue" && this.phase === "clue") {
       if (gp.id !== this.psychicId) return;
-      const clue = ((payload.clue as string) ?? "").trim();
+      const clue = String(payload.clue ?? "").trim();
       if (!clue) return;
+      // Un indice composé uniquement de chiffres donnerait directement la cible
+      if (!/\p{L}/u.test(clue)) {
+        this.sendTo(sender.id, {
+          type: "game-update",
+          payload: { clueError: "Indice refusé : pas de chiffres seuls, donne un mot ou un exemple !" },
+        });
+        return;
+      }
       this.clue = clue.slice(0, 60);
       this.startGuessing();
       return;
@@ -213,11 +284,44 @@ export class LongueurOndeGame extends BaseGame {
       if (Number.isNaN(g)) return;
       g = Math.max(0, Math.min(100, Math.round(g)));
       gp.guess = g;
-      this.broadcastPersonalizedState();
-      const guessers = Array.from(this.gamePlayers.values()).filter((p) => !p.isPsychic);
-      if (guessers.every((p) => p.guess != null)) this.resolve();
+      if (!this.checkAllGuessed()) this.broadcastPersonalizedState();
       return;
     }
+  }
+
+  /** Devineurs encore connectés (les absents ne bloquent pas la manche). */
+  activeGuessers(): WavePlayer[] {
+    return Array.from(this.gamePlayers.values()).filter(
+      (p) => !p.isPsychic && this.players.has(p.id) && !this.isBot(p.id)
+    );
+  }
+
+  /** Résout si tous les devineurs présents ont validé. */
+  checkAllGuessed(): boolean {
+    if (this.phase !== "guessing") return false;
+    const active = this.activeGuessers();
+    if (active.length === 0 || active.every((p) => p.guess != null)) {
+      this.resolve();
+      return true;
+    }
+    return false;
+  }
+
+  // Départ d'un joueur : on n'attend plus personne.
+  removePlayer(connectionId: string) {
+    const removed = super.removePlayer(connectionId);
+    if (!removed || !this.started || this.gamePlayers.size === 0) return removed;
+    if (removed.id === this.psychicId && (this.phase === "intro" || this.phase === "clue")) {
+      // Le Médium est parti avant de donner son indice : on passe à la manche suivante
+      this.stopTimer();
+      if (this.phaseTimeout) clearTimeout(this.phaseTimeout);
+      if (this.round >= this.totalRounds) this.endWave();
+      else this.startRound();
+      return removed;
+    }
+    if (this.phase === "guessing" && this.checkAllGuessed()) return removed;
+    this.broadcastPersonalizedState();
+    return removed;
   }
 
   startTimer() {
@@ -263,6 +367,9 @@ export class LongueurOndeGame extends BaseGame {
     const amPsychic = pid === this.psychicId;
     state.amPsychic = amPsychic;
     state.myGuess = me?.guess ?? null;
+    // Arrivé après le lancement : spectateur (ses choix sont ignorés)
+    state.isSpectator = this.gamePlayers.size > 0 && !me;
+    state.clueError = null;
     // Le medium voit la cible pendant clue/guessing ; les autres jamais avant le reveal
     const isReveal = this.phase === "reveal" || this.phase === "game-over";
     state.myTarget = amPsychic && (this.phase === "clue" || this.phase === "guessing") ? this.target : isReveal ? this.target : null;
@@ -297,6 +404,7 @@ export class LongueurOndeGame extends BaseGame {
         score: p.score,
         isPsychic: p.isPsychic,
         hasGuessed: p.guess != null,
+        present: this.players.has(p.id),
       })),
     };
   }
@@ -308,5 +416,6 @@ export class LongueurOndeGame extends BaseGame {
   cleanup() {
     this.stopTimer();
     if (this.phaseTimeout) clearTimeout(this.phaseTimeout);
+    if (this.endTimer) clearTimeout(this.endTimer);
   }
 }

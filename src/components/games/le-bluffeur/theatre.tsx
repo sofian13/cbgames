@@ -18,7 +18,7 @@ export function TheatreScreen({
   return (
     <div
       className="relative flex min-h-[100svh] flex-col overflow-hidden text-white"
-      style={{ background: "radial-gradient(ellipse 90% 60% at 50% 18%, rgba(255,220,170,0.20) 0%, transparent 55%), linear-gradient(180deg, #1A0808 0%, #0A0204 50%, #0E0828 100%)" }}
+      style={{ paddingTop: "env(safe-area-inset-top)", paddingBottom: "env(safe-area-inset-bottom)", background: "radial-gradient(ellipse 90% 60% at 50% 18%, rgba(255,220,170,0.20) 0%, transparent 55%), linear-gradient(180deg, #1A0808 0%, #0A0204 50%, #0E0828 100%)" }}
     >
       {/* Rideau de scène */}
       <div className="absolute inset-x-0 top-0 z-[2]" style={{

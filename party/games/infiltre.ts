@@ -4,105 +4,119 @@ import type { GameRanking } from "../shared/types";
 
 // -- Config -----------------------------------------------
 const WORD_REVEAL_TIME = 5000;
+const FIRST_WORD_REVEAL_TIME = 8000; // 1re manche : le temps de lire les règles
 const DESCRIBE_TIME = 20;
 const VOTE_TIME = 30;
 const VOTE_RESULT_TIME = 4000;
 const GUESS_TIME = 15;
-const MIN_PLAYERS_END = 3;
 
-// -- Word bank (120+ French words) ------------------------
-const WORD_BANK: string[] = [
+// -- Banque de mots (génériques, sans marques) -------------
+const WORD_BANK: string[] = Array.from(new Set([
   // Lieux
-  "Piscine", "Bibliotheque", "Aeroport", "Hopital", "Restaurant",
-  "Boulangerie", "Cinema", "Pharmacie", "Supermarche", "Gare",
-  "Stade", "Musee", "Zoo", "Aquarium", "Discotheque",
+  "Piscine", "Bibliothèque", "Aéroport", "Hôpital", "Restaurant",
+  "Boulangerie", "Cinéma", "Pharmacie", "Supermarché", "Gare",
+  "Stade", "Musée", "Zoo", "Aquarium", "Discothèque",
   "Laverie", "Commissariat", "Casino", "Spa", "Karting",
-  "Bowling", "Patinoire", "Creche", "Lycee", "Cimetiere",
-  // Evenements
-  "Mariage", "Noel", "Halloween", "Anniversaire", "Festival",
-  "Camping", "Carnaval", "Enterrement", "Bapteme", "Nouvel An",
-  "Rentree scolaire", "Fete foraine", "Concert", "Ramadan",
-  // Metiers
+  "Bowling", "Patinoire", "Crèche", "Lycée", "Cimetière",
+  "Phare", "Château", "Prison", "Tribunal", "Banque",
+  "Mairie", "Théâtre", "Opéra", "Planétarium", "Vignoble",
+  "Ferme", "Chantier", "Mine", "Garage", "Station-service",
+  "Salle de sport", "Auto-école", "Refuge", "Bureau de poste", "Parc d'attractions",
+  // Événements
+  "Mariage", "Noël", "Halloween", "Anniversaire", "Festival",
+  "Camping", "Carnaval", "Enterrement", "Baptême", "Nouvel An",
+  "Rentrée scolaire", "Fête foraine", "Concert", "Ramadan", "Pique-nique",
+  "Barbecue", "Déménagement", "Saint-Valentin", "Pâques", "Remise de diplôme",
+  // Métiers
   "Dentiste", "Pompier", "Boulanger", "Professeur", "Pilote",
   "Astronaute", "Plombier", "Coiffeur", "Boucher", "Chirurgien",
-  "Avocat", "Detective", "Facteur", "Magicien", "Veterinaire",
+  "Avocat", "Détective", "Facteur", "Magicien", "Vétérinaire",
+  "Juge", "Espion", "Youtubeur", "Influenceur", "Cuisinier",
+  "Serveur", "Mécanicien", "Jardinier", "Architecte", "Journaliste",
+  "Photographe", "Steward", "Marin", "Berger", "Apiculteur",
+  "Tatoueur", "Notaire", "Clown", "Chauffeur de taxi",
   // Nourriture
   "Sushi", "Croissant", "Kebab", "Fondue", "Raclette",
-  "Couscous", "Pizza", "Hamburger", "Crepe", "Tacos",
+  "Couscous", "Pizza", "Hamburger", "Crêpe", "Tacos",
   "Tiramisu", "Paella", "Ramen", "Macaron", "Brioche",
-  // Jeux video
-  "Fortnite", "Minecraft", "FIFA", "Mario", "Pokemon",
-  "GTA", "Zelda", "Tetris", "Among Us", "Roblox",
-  // Sports
-  "Basketball", "Surf", "Boxe", "Escalade", "Ski",
-  "Tennis", "Football", "Rugby", "Judo", "Natation",
-  "Ping-pong", "Petanque", "Handball", "Escrime",
-  // Films / Series
-  "Titanic", "Star Wars", "Harry Potter", "Jurassic Park", "Avatar",
-  "Spider-Man", "Batman", "Le Roi Lion", "Inception", "Matrix",
-  "Squid Game", "Stranger Things", "One Piece", "Naruto",
-  // Villes
-  "Paris", "Tokyo", "New York", "Dubai", "Marrakech",
-  "Rome", "Londres", "Barcelone", "Moscou", "Sydney",
-  "Rio de Janeiro", "Le Caire", "Amsterdam",
-  // Instruments
-  "Guitare", "Batterie", "Violon", "Saxophone", "DJ",
-  "Piano", "Trompette", "Flute", "Harpe", "Accordeon",
-  // Nature
-  "Plage", "Montagne", "Desert", "Jungle", "Grotte",
-  "Ile", "Volcan", "Cascade", "Foret", "Glacier",
-  "Recif corallien", "Savane", "Marais",
-  // Objets / Concepts
-  "TikTok", "Netflix", "Uber", "Ikea", "McDonald's",
-  "Tinder", "Snapchat", "Photomaton", "Karaoke", "Escape Game",
-  "Trampoline", "Jacuzzi", "Sauna", "Limousine",
-  // Lieux (suite)
-  "Refuge", "Phare", "Chateau", "Prison", "Tribunal",
-  "Banque", "Poste", "Mairie", "Theatre", "Opera", "Planetarium",
-  "Vignoble", "Ferme", "Ranch", "Chantier", "Mine", "Garage", "Station-service",
-  "Salle de sport", "Tatoueur", "Notaire", "Auto-ecole",
-  // Animaux
-  "Lion", "Elephant", "Pingouin", "Dauphin", "Requin", "Crocodile",
-  "Kangourou", "Panda", "Girafe", "Hamster", "Perroquet", "Hibou",
-  "Pieuvre", "Abeille", "Coccinelle", "Licorne", "Dinosaure", "Loup",
-  // Metiers (suite)
-  "Juge", "President", "Espion", "Youtubeur", "Influenceur",
-  "Cuisinier", "Serveur", "Mecanicien", "Jardinier", "Architecte",
-  "Journaliste", "Photographe", "Steward", "Marin", "Berger", "Apiculteur",
-  // Nourriture (suite)
-  "Frites", "Nuggets", "Gaufre", "Donut", "Cookie", "Churros", "Barbe a papa",
-  "Fondant", "Quiche", "Lasagne", "Risotto", "Burrito", "Nems", "Dim sum",
-  "Falafel", "Houmous", "Cordon bleu", "Hot-dog", "Pop-corn",
+  "Frites", "Nuggets", "Gaufre", "Donut", "Cookie",
+  "Churros", "Barbe à papa", "Quiche", "Lasagnes", "Risotto",
+  "Burrito", "Nems", "Falafel", "Houmous", "Cordon-bleu",
+  "Hot-dog", "Pop-corn", "Glace", "Soupe", "Omelette",
   // Boissons
-  "Coca", "Cafe", "The", "Smoothie", "Mojito", "Champagne", "Limonade",
-  "Chocolat chaud", "Milkshake", "Jus d'orange", "Red Bull", "Biere",
-  // Jeux video (suite)
-  "Call of Duty", "League of Legends", "Valorant", "Animal Crossing",
-  "Mario Kart", "Sonic", "Pac-Man", "Candy Crush", "Clash Royale", "Brawl Stars",
-  // Sports (suite)
-  "Golf", "Baseball", "Hockey", "Volley", "Badminton", "Athletisme",
-  "Gymnastique", "Equitation", "Plongee", "Parkour", "Bmx", "Karate",
-  // Films / Series (suite)
-  "Le Parrain", "Fast and Furious", "Game of Thrones", "Breaking Bad",
-  "La Casa de Papel", "Friends", "The Office", "Dragon Ball", "Demon Slayer",
-  "Le Seigneur des anneaux", "Pirates des Caraibes", "Toy Story", "Shrek",
-  // Villes / Pays (suite)
-  "Berlin", "Madrid", "Lisbonne", "Athenes", "Istanbul", "Bangkok",
-  "Los Angeles", "Las Vegas", "Hong Kong", "Casablanca", "Dakar", "Montreal",
-  "Le Japon", "Le Bresil", "L'Italie", "Le Canada", "L'Australie",
-  // Marques
-  "Apple", "Nike", "Adidas", "Coca-Cola", "Samsung", "Google", "Amazon",
-  "Tesla", "Lego", "Ferrari", "Gucci", "Sephora", "Zara", "Lacoste",
-  // Personnages celebres / fiction
-  "Mickey", "Pikachu", "Goku", "Dark Vador", "Iron Man",
-  "Superman", "Sherlock", "James Bond", "Tintin", "Asterix", "Le Joker",
-  // Objets / Concepts (suite)
-  "Drone", "Trottinette", "Hoverboard", "Casque VR", "Selfie", "QR Code",
-  "Distributeur", "Borne d'arcade", "Flipper", "Baby-foot", "Roue de la fortune",
-  "Photobooth", "Manege", "Grande roue", "Montagnes russes", "Tyrolienne",
-  // Nature (suite)
-  "Banquise", "Canyon", "Lagon", "Geyser", "Marecage", "Oasis", "Toundra",
-];
+  "Café", "Thé", "Smoothie", "Limonade", "Chocolat chaud",
+  "Milkshake", "Jus d'orange", "Soda", "Eau gazeuse", "Sirop",
+  // Jeux & loisirs
+  "Jeu vidéo", "Console", "Jeu de société", "Échecs", "Puzzle",
+  "Jeu de cartes", "Dominos", "Mots croisés", "Karaoké", "Escape game",
+  "Photomaton", "Trampoline", "Jacuzzi", "Sauna", "Limousine",
+  // Sports
+  "Basket", "Surf", "Boxe", "Escalade", "Ski",
+  "Tennis", "Football", "Rugby", "Judo", "Natation",
+  "Ping-pong", "Pétanque", "Handball", "Escrime", "Golf",
+  "Baseball", "Hockey", "Volley", "Badminton", "Athlétisme",
+  "Gymnastique", "Équitation", "Plongée", "Parkour", "BMX",
+  "Karaté", "Yoga", "Marathon",
+  // Imaginaire
+  "Vampire", "Zombie", "Pirate", "Sorcier", "Super-héros",
+  "Dragon", "Fantôme", "Robot", "Extraterrestre", "Chevalier",
+  "Princesse", "Ninja", "Momie", "Sirène", "Licorne",
+  "Dinosaure", "Loup-garou", "Cow-boy",
+  // Villes & pays
+  "Paris", "Tokyo", "New York", "Dubaï", "Marrakech",
+  "Rome", "Londres", "Barcelone", "Sydney", "Rio de Janeiro",
+  "Le Caire", "Amsterdam", "Berlin", "Lisbonne", "Athènes",
+  "Istanbul", "Bangkok", "Las Vegas", "Venise", "Montréal",
+  "Japon", "Brésil", "Italie", "Canada", "Australie",
+  "Égypte", "Mexique",
+  // Instruments
+  "Guitare", "Batterie", "Violon", "Saxophone", "Platine de DJ",
+  "Piano", "Trompette", "Flûte", "Harpe", "Accordéon",
+  // Nature
+  "Plage", "Montagne", "Désert", "Jungle", "Grotte",
+  "Île", "Volcan", "Cascade", "Forêt", "Glacier",
+  "Récif de corail", "Savane", "Marais", "Banquise", "Canyon",
+  "Lagon", "Geyser", "Oasis", "Arc-en-ciel", "Orage",
+  // Animaux
+  "Lion", "Éléphant", "Pingouin", "Dauphin", "Requin",
+  "Crocodile", "Kangourou", "Panda", "Girafe", "Hamster",
+  "Perroquet", "Hibou", "Pieuvre", "Abeille", "Coccinelle",
+  "Loup", "Serpent", "Tortue", "Chameau", "Paresseux",
+  // Objets
+  "Drone", "Trottinette", "Hoverboard", "Casque de réalité virtuelle", "Selfie",
+  "QR code", "Distributeur de billets", "Borne d'arcade", "Flipper", "Baby-foot",
+  "Grande roue", "Montagnes russes", "Tyrolienne", "Manège", "Parapluie",
+  "Valise", "Brosse à dents", "Réveil", "Aspirateur", "Micro-ondes",
+  "Télécommande", "Lunettes de soleil", "Tente", "Montgolfière", "Sous-marin",
+  "Fusée", "Téléphérique",
+]));
+
+// -- Anti-triche : un indice ne doit pas contenir le mot secret --
+const STOP_WORDS = new Set(["les", "des", "une", "aux", "pour", "avec", "sur", "dans"]);
+function normText(s: string): string {
+  return s
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+function stem(t: string): string {
+  return t.length > 3 && /[sx]$/.test(t) ? t.slice(0, -1) : t;
+}
+export function clueRevealsWord(clue: string, word: string): boolean {
+  const c = normText(clue);
+  const w = normText(word);
+  if (!c || !w) return false;
+  const wJoined = w.replace(/ /g, "");
+  if (wJoined.length >= 5 && c.replace(/ /g, "").includes(wJoined)) return true;
+  const clueTokens = c.split(" ").map(stem);
+  let wordTokens = w.split(" ").filter((t) => t.length >= 3 && !STOP_WORDS.has(t));
+  if (wordTokens.length === 0) wordTokens = w.split(" ");
+  return wordTokens.map(stem).some((wt) =>
+    clueTokens.some((ct) => ct === wt || (wt.length >= 5 && ct.includes(wt)))
+  );
+}
 
 // -- Player state -----------------------------------------
 interface InfiltrePlayer {
@@ -141,6 +155,18 @@ export class InfiltreGame extends BaseGame {
   votes: Map<string, string> = new Map();
   lastGuess: string | null = null;
   lastGuessCorrect: boolean | null = null;
+  /** true si l'éliminé de ce tour est le dernier Infiltré (il va tenter de deviner) */
+  guessNext = false;
+  timeouts: Set<ReturnType<typeof setTimeout>> = new Set();
+
+  /** setTimeout suivi, nettoyé dans cleanup() */
+  later(fn: () => void, ms: number) {
+    const t = setTimeout(() => {
+      this.timeouts.delete(t);
+      fn();
+    }, ms);
+    this.timeouts.add(t);
+  }
 
   start() {
     this.started = true;
@@ -184,6 +210,7 @@ export class InfiltreGame extends BaseGame {
     this.eliminatedThisRound = null;
     this.lastGuess = null;
     this.lastGuessCorrect = null;
+    this.guessNext = false;
 
     for (const p of this.gamePlayers.values()) {
       if (!p.isEliminated) {
@@ -200,11 +227,11 @@ export class InfiltreGame extends BaseGame {
 
     this.broadcastPersonalizedState();
 
-    setTimeout(() => {
+    this.later(() => {
       if (this.phase === "word-reveal") {
         this.startDescribePhase();
       }
-    }, WORD_REVEAL_TIME);
+    }, this.round === 1 ? FIRST_WORD_REVEAL_TIME : WORD_REVEAL_TIME);
   }
 
   // -- Phase: Describe -------------------------------------
@@ -258,8 +285,9 @@ export class InfiltreGame extends BaseGame {
     if (candidates.length === 0) {
       this.phase = "vote-result";
       this.eliminatedThisRound = null;
+      this.guessNext = false;
       this.broadcastPersonalizedState();
-      setTimeout(() => this.afterVoteResult(), VOTE_RESULT_TIME);
+      this.later(() => this.afterVoteResult(), VOTE_RESULT_TIME);
       return;
     }
 
@@ -282,18 +310,20 @@ export class InfiltreGame extends BaseGame {
       }
     }
 
+    // Seul le DERNIER Infiltré démasqué tente de deviner le mot
+    this.guessNext =
+      !!eliminatedPlayer?.isInfiltre &&
+      this.getAlivePlayers().every((p) => !p.isInfiltre);
+
     this.phase = "vote-result";
     this.broadcastPersonalizedState();
 
-    if (eliminatedPlayer?.isInfiltre) {
-      const remainingInfiltres = this.getAlivePlayers().filter((p) => p.isInfiltre);
-      if (remainingInfiltres.length === 0) {
-        setTimeout(() => this.startGuessPhase(eliminatedId), VOTE_RESULT_TIME);
-        return;
-      }
+    if (this.guessNext) {
+      this.later(() => this.startGuessPhase(eliminatedId), VOTE_RESULT_TIME);
+      return;
     }
 
-    setTimeout(() => this.afterVoteResult(), VOTE_RESULT_TIME);
+    this.later(() => this.afterVoteResult(), VOTE_RESULT_TIME);
   }
 
   afterVoteResult() {
@@ -301,19 +331,15 @@ export class InfiltreGame extends BaseGame {
     const aliveInfiltres = alive.filter((p) => p.isInfiltre);
     const aliveCivilians = alive.filter((p) => !p.isInfiltre);
 
-    if (aliveInfiltres.length > 0 && alive.length <= MIN_PLAYERS_END) {
-      for (const inf of aliveInfiltres) inf.score += 3;
-      this.endInfiltreGame("infiltre-survives");
-      return;
-    }
-
     if (aliveInfiltres.length === 0) {
       for (const c of aliveCivilians) c.score += 2;
       this.endInfiltreGame("civilians-win");
       return;
     }
 
-    if (aliveCivilians.length < 2) {
+    // Les Infiltrés gagnent dès qu'ils sont aussi nombreux que les civils
+    // (à 4 joueurs : 2 votes possibles avant la fin)
+    if (aliveInfiltres.length >= aliveCivilians.length) {
       for (const inf of aliveInfiltres) inf.score += 3;
       this.endInfiltreGame("infiltre-survives");
       return;
@@ -351,14 +377,14 @@ export class InfiltreGame extends BaseGame {
       if (infiltrePlayer) infiltrePlayer.score += 3;
       this.phase = "round-end";
       this.broadcastPersonalizedState();
-      setTimeout(() => this.endInfiltreGame("infiltre-guesses"), 3000);
+      this.later(() => this.endInfiltreGame("infiltre-guesses"), 3000);
     } else {
       for (const p of this.gamePlayers.values()) {
         if (!p.isInfiltre) p.score += 2;
       }
       this.phase = "round-end";
       this.broadcastPersonalizedState();
-      setTimeout(() => this.endInfiltreGame("civilians-win"), 3000);
+      this.later(() => this.endInfiltreGame("civilians-win"), 3000);
     }
   }
 
@@ -378,7 +404,7 @@ export class InfiltreGame extends BaseGame {
     }));
 
     this.broadcastFinalReveal();
-    setTimeout(() => this.endGame(rankings), 500);
+    this.later(() => this.endGame(rankings), 500);
   }
 
   broadcastFinalReveal() {
@@ -415,11 +441,11 @@ export class InfiltreGame extends BaseGame {
       const describerId = this.describeOrder[this.currentDescriberIndex];
       const describer = this.gamePlayers.get(describerId);
       if (describer && !describer.clue) {
-        describer.clue = "(temps ecoule)";
+        describer.clue = "(temps écoulé)";
         this.clueHistory.push({
           playerId: describer.id,
           playerName: describer.name,
-          clue: "(temps ecoule)",
+          clue: "(temps écoulé)",
           round: this.round,
         });
       }
@@ -434,7 +460,7 @@ export class InfiltreGame extends BaseGame {
       }
       this.phase = "round-end";
       this.broadcastPersonalizedState();
-      setTimeout(() => this.endInfiltreGame("civilians-win"), 3000);
+      this.later(() => this.endInfiltreGame("civilians-win"), 3000);
     }
   }
 
@@ -471,8 +497,19 @@ export class InfiltreGame extends BaseGame {
       const currentDescriberId = this.describeOrder[this.currentDescriberIndex];
       if (senderPlayer.id !== currentDescriberId) return;
 
-      const clue = ((payload.clue as string) ?? "").trim();
+      const clue = ((payload.clue as string) ?? "").trim().slice(0, 50);
       if (!clue) return;
+
+      // Anti-triche : l'indice d'un civil ne doit pas contenir le mot secret
+      // (insensible aux accents, à la casse et au pluriel). Pas de contrôle
+      // pour l'Infiltré : un refus lui servirait d'oracle pour trouver le mot.
+      if (!gamePlayer.isInfiltre && clueRevealsWord(clue, this.secretWord)) {
+        this.sendTo(sender.id, {
+          type: "game-error",
+          payload: { message: "Ton indice contient le mot secret, trouve autre chose !" },
+        });
+        return;
+      }
 
       gamePlayer.clue = clue;
       this.clueHistory.push({
@@ -546,7 +583,8 @@ export class InfiltreGame extends BaseGame {
 
     if (gamePlayer) {
       state.myRole = gamePlayer.isInfiltre ? "infiltre" : "civilian";
-      state.secretWord = gamePlayer.isInfiltre ? null : this.secretWord;
+      const revealAll = this.phase === "round-end" || this.phase === "game-over";
+      state.secretWord = gamePlayer.isInfiltre && !revealAll ? null : this.secretWord;
     }
 
     return state;
@@ -589,6 +627,7 @@ export class InfiltreGame extends BaseGame {
         ? this.gamePlayers.get(this.eliminatedThisRound)?.isInfiltre ?? false
         : null,
       infiltreCount: this.infiltreIds.size,
+      guessNext: this.phase === "vote-result" ? this.guessNext : false,
       voteTally,
       voteDetails,
       lastGuess:
@@ -635,5 +674,7 @@ export class InfiltreGame extends BaseGame {
 
   cleanup() {
     this.stopTimer();
+    for (const t of this.timeouts) clearTimeout(t);
+    this.timeouts.clear();
   }
 }

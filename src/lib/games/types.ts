@@ -11,6 +11,10 @@ export interface GameMeta {
   implemented: boolean;
   local?: boolean;
   rules: string[];
+  /** Le concept en une phrase, pour reconnaître le jeu au premier coup d'œil */
+  pitch?: string;
+  /** Un tour concret, raconté comme à un pote */
+  example?: string;
   component: () => Promise<{ default: ComponentType<GameProps> }>;
 }
 

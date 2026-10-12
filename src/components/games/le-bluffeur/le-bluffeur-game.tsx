@@ -10,6 +10,7 @@ import { Mascot, MascotAvatar, MASCOT_PALETTE, type MascotColor } from "@/compon
 import { ConfettiBurst, Sparkles } from "@/components/ConfettiBurst";
 import { ModeSelect, PlayersSetup, PassScreen, colorForIndex, type GameMode } from "@/components/games/local-kit";
 import { TheatreScreen, QuestionBillboard, RecWave } from "@/components/games/le-bluffeur/theatre";
+import { BLUFF_QUESTIONS } from "@/components/games/le-bluffeur/questions";
 
 interface BluffPlayerState {
   id: string;
@@ -18,6 +19,7 @@ interface BluffPlayerState {
   hasFake: boolean;
   hasVoted: boolean;
   foundTruth: boolean | null;
+  connected?: boolean;
 }
 
 interface OptionState {
@@ -25,6 +27,7 @@ interface OptionState {
   text: string;
   isTruth: boolean | null;
   authors: string[] | null;
+  authorIds: string[] | null;
   voterNames: string[] | null;
   voteCount: number | null;
 }
@@ -34,6 +37,8 @@ interface BluffState {
   round: number;
   totalRounds: number;
   timeLeft: number;
+  connectedCount?: number;
+  minPlayers?: number;
   question: string | null;
   trueAnswer: string | null;
   options: OptionState[] | null;
@@ -42,6 +47,8 @@ interface BluffState {
   myFake: string | null;
   myVote: string | null;
   iFoundTruth: boolean;
+  myOptionId?: string | null;
+  spectator?: boolean;
 }
 
 // Stable color per player
@@ -51,28 +58,6 @@ function colorFor(id: string): MascotColor {
   for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) & 0xffff;
   return COLORS[h % COLORS.length];
 }
-
-// ── Questions (mode local) ───────────────────────────────
-const LOCAL_QUESTIONS: { question: string; answer: string }[] = [
-  { question: "Un escargot peut dormir jusqu'à ___ d'affilée.", answer: "3 ans" },
-  { question: "Le cœur d'une crevette se situe dans ___.", answer: "sa tête" },
-  { question: "Les flamants roses naissent de couleur ___.", answer: "grise" },
-  { question: "La Tour Eiffel peut grandir d'environ ___ en été.", answer: "15 cm" },
-  { question: "Les koalas dorment environ ___ par jour.", answer: "22 heures" },
-  { question: "Le sang des pieuvres est de couleur ___.", answer: "bleue" },
-  { question: "Une pieuvre possède ___ cœurs.", answer: "3" },
-  { question: "Les loutres dorment en ___ pour ne pas se perdre.", answer: "se tenant la main" },
-  { question: "Les requins existaient déjà avant ___.", answer: "les arbres" },
-  { question: "Le ketchup était vendu au 19e siècle comme ___.", answer: "médicament" },
-  { question: "Le premier objet scanné avec un code-barres était ___.", answer: "un paquet de chewing-gum" },
-  { question: "Un nuage moyen pèse environ ___.", answer: "500 tonnes" },
-  { question: "Le record du plus long hoquet a duré ___.", answer: "68 ans" },
-  { question: "Un groupe de flamants roses s'appelle ___.", answer: "une flamboyance" },
-  { question: "Le record du monde du plus long baiser est d'environ ___.", answer: "58 heures" },
-  { question: "En moyenne, on passe ___ de sa vie à attendre aux feux rouges.", answer: "6 mois" },
-  { question: "Le miel ne ___ jamais.", answer: "périme" },
-  { question: "Il est quasi impossible d'___ les yeux ouverts.", answer: "éternuer" },
-];
 
 const normFake = (s: string) =>
   s.toLowerCase().trim().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[.!?]+$/, "").replace(/\s+/g, " ");
@@ -90,7 +75,7 @@ export default function LeBluffeurGame(props: GameProps) {
     );
   }
   if (mode === "local") return <LeBluffeurLocal onReturnToLobby={props.onReturnToLobby} />;
-  return <LeBluffeurOnline {...props} />;
+  return <LeBluffeurOnline {...props} onSwitchLocal={() => setMode("local")} />;
 }
 
 // ══════════════════════════════════════════════════════════
@@ -104,7 +89,7 @@ function LeBluffeurLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) 
   const [players, setPlayers] = useState<string[]>([]);
   const [scores, setScores] = useState<number[]>([]);
   const [round, setRound] = useState(0);
-  const [questions] = useState(() => [...LOCAL_QUESTIONS].sort(() => Math.random() - 0.5));
+  const [questions, setQuestions] = useState(() => [...BLUFF_QUESTIONS].sort(() => Math.random() - 0.5));
   const [fakes, setFakes] = useState<string[]>([]);
   const [wroteTruth, setWroteTruth] = useState<boolean[]>([]);
   const [turnIdx, setTurnIdx] = useState(0);
@@ -118,6 +103,8 @@ function LeBluffeurLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) 
 
   const begin = (names: string[]) => {
     setPlayers(names); setScores(names.map(() => 0));
+    // Nouvelle pioche à chaque partie (sinon « Nouvelle partie » rejouerait les mêmes questions)
+    setQuestions([...BLUFF_QUESTIONS].sort(() => Math.random() - 0.5));
     startRound(1, names);
   };
   const startRound = (r: number, names = players) => {
@@ -146,20 +133,29 @@ function LeBluffeurLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) 
     let id = 0;
     for (const { text, authors } of map.values()) opts.push({ id: id++, text, authors, isTruth: false });
     opts.push({ id: id++, text: truth, authors: [], isTruth: true });
+    const shuffled = opts.sort(() => Math.random() - 0.5);
     setWroteTruth(wt);
-    setOptions(opts.sort(() => Math.random() - 0.5));
+    setOptions(shuffled);
+    return { opts: shuffled, wt };
   };
 
-  const resolve = (finalVotes: number[]) => {
+  // Prochain votant : on saute ceux qui ont écrit la vraie réponse (ils la connaissent)
+  const nextVoter = (from: number, wt: boolean[]) => {
+    for (let i = from + 1; i < total; i++) if (!wt[i]) return i;
+    return -1;
+  };
+
+  const resolve = (finalVotes: number[], opts: LocalOption[] = options, wt: boolean[] = wroteTruth) => {
     const pts = players.map(() => 0);
     finalVotes.forEach((optId, voter) => {
       if (optId < 0) return;
-      const opt = options.find((o) => o.id === optId);
+      if (wt[voter]) return;
+      const opt = opts.find((o) => o.id === optId);
       if (!opt) return;
       if (opt.isTruth) pts[voter] += 30;
       else opt.authors.forEach((a) => { pts[a] += 20; });
     });
-    wroteTruth.forEach((w, i) => { if (w) pts[i] += 15; });
+    wt.forEach((w, i) => { if (w) pts[i] += 15; });
     setScores((s) => s.map((v, i) => v + pts[i]));
     setPhase("reveal");
   };
@@ -202,7 +198,12 @@ function LeBluffeurLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) 
           <button disabled={!draft.trim()} onClick={() => {
             const nf = [...fakes]; nf[turnIdx] = draft.trim(); setFakes(nf);
             if (turnIdx < total - 1) { setTurnIdx(turnIdx + 1); setDraft(""); setPhase("pass-write"); }
-            else { buildOptions(nf, q?.answer ?? ""); setTurnIdx(0); setPhase("pass-vote"); }
+            else {
+              const built = buildOptions(nf, q?.answer ?? "");
+              const first = nextVoter(-1, built.wt);
+              if (first < 0) resolve(players.map(() => -1), built.opts, built.wt);
+              else { setTurnIdx(first); setPhase("pass-vote"); }
+            }
           }} className="af-btn mt-3 w-full disabled:opacity-40"
             style={{ background: "linear-gradient(135deg, #FFD23F, #C48800)", color: "#1A0E2E" }}>
             Valider mon bluff →
@@ -219,7 +220,7 @@ function LeBluffeurLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) 
     const voter = turnIdx;
     return (
       <div className="flex min-h-[100svh] flex-col items-center p-5 text-white"
-        style={{ background: "radial-gradient(circle at 50% 15%, rgba(124,92,255,0.26), transparent 45%), #0E0828" }}>
+        style={{ paddingTop: "max(env(safe-area-inset-top), 20px)", paddingBottom: "max(env(safe-area-inset-bottom), 20px)", background: "radial-gradient(circle at 50% 15%, rgba(124,92,255,0.26), transparent 45%), #0E0828" }}>
         <p className="af-eyebrow mt-3">{players[voter]} · vote</p>
         <p className="mt-1 mb-3 max-w-md text-center text-sm" style={{ color: "var(--text-dim)" }}>{q?.question}</p>
         <div className="w-full max-w-md space-y-2">
@@ -229,12 +230,13 @@ function LeBluffeurLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) 
               <button key={o.id} disabled={own}
                 onClick={() => {
                   const nv = [...votes]; nv[voter] = o.id; setVotes(nv);
-                  if (voter < total - 1) { setTurnIdx(voter + 1); setPhase("pass-vote"); }
+                  const next = nextVoter(voter, wroteTruth);
+                  if (next >= 0) { setTurnIdx(next); setPhase("pass-vote"); }
                   else { resolve(nv); }
                 }}
-                className={cn("w-full rounded-2xl border px-4 py-3.5 text-left text-sm transition", own ? "opacity-40" : "hover:scale-[1.01]")}
+                className={cn("min-h-[48px] w-full break-words rounded-2xl border px-4 py-3.5 text-left text-sm transition", own ? "opacity-40" : "active:scale-[0.99]")}
                 style={{ background: "rgba(255,255,255,0.05)", borderColor: "rgba(255,255,255,0.1)" }}>
-                {o.text}{own && <span className="ml-2 text-[10px] text-white/30">(ton bluff)</span>}
+                {o.text}{own && <span className="ml-2 text-xs text-white/40">(ton bluff)</span>}
               </button>
             );
           })}
@@ -247,16 +249,19 @@ function LeBluffeurLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) 
     const bluffs = options.filter((o) => !o.isTruth);
     return (
       <div className="relative flex min-h-[100svh] flex-col items-center overflow-y-auto p-5 text-white"
-        style={{ background: "radial-gradient(circle at 50% 25%, #FF3EA5 0%, #5B36D6 40%, #0E0828 100%)" }}>
+        style={{ paddingTop: "max(env(safe-area-inset-top), 20px)", paddingBottom: "max(env(safe-area-inset-bottom), 20px)", background: "radial-gradient(circle at 50% 25%, #FF3EA5 0%, #5B36D6 40%, #0E0828 100%)" }}>
         <ConfettiBurst count={40} />
         <p className="af-eyebrow mt-2" style={{ color: "var(--af-yellow)" }}>✦ La vraie réponse</p>
         <div className="mt-3 w-full max-w-md rounded-3xl p-5" style={{ background: "linear-gradient(160deg, var(--af-yellow), #FFA800)", color: "#1A0E2E" }}>
           <p className="text-xs font-semibold opacity-60">{q?.question}</p>
-          <p className="mt-1 text-2xl font-extrabold" style={{ fontFamily: "var(--font-display)" }}>{q?.answer}</p>
-          {truth && truth.authors.length === 0 && (() => {
+          <p className="mt-1 break-words text-2xl font-extrabold" style={{ fontFamily: "var(--font-display)" }}>{q?.answer}</p>
+          {truth && (() => {
             const finders = votes.map((v, i) => (v === truth.id ? players[i] : null)).filter(Boolean);
-            return finders.length > 0 ? <p className="mt-2 text-xs font-bold">✓ Trouvée par {finders.join(", ")}</p> : null;
+            return finders.length > 0 ? <p className="mt-2 text-xs font-bold">✓ Trouvée par {finders.join(", ")} (+30)</p> : null;
           })()}
+          {wroteTruth.some(Boolean) && (
+            <p className="mt-1 text-xs font-bold">🎯 Écrite pile par {players.filter((_, i) => wroteTruth[i]).join(", ")} (+15)</p>
+          )}
         </div>
         <p className="af-eyebrow mt-5 mb-2" style={{ color: "var(--text-muted)" }}>✘ Les bluffs</p>
         <div className="w-full max-w-md space-y-2">
@@ -265,10 +270,10 @@ function LeBluffeurLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) 
             return (
               <div key={o.id} className="rounded-2xl border p-3" style={{ background: "rgba(0,0,0,0.4)", borderColor: "rgba(255,255,255,0.08)" }}>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm">“{o.text}”</span>
-                  <span className="cb-mono text-xs" style={{ color: voters.length ? "var(--af-mint)" : "var(--text-muted)" }}>{voters.length ? `+${voters.length * 20}` : "0"}</span>
+                  <span className="min-w-0 break-words text-sm">“{o.text}”</span>
+                  <span className="cb-mono text-xs" style={{ color: voters.length ? "var(--af-mint)" : "var(--text-muted)" }}>{voters.length ? `+${voters.length * 20}${o.authors.length > 1 ? " chacun" : ""}` : "0"}</span>
                 </div>
-                <p className="text-[11px]" style={{ color: "var(--text-muted)" }}>de {o.authors.map((a) => players[a]).join(", ")}{voters.length ? ` · piégé : ${voters.join(", ")}` : ""}</p>
+                <p className="text-xs" style={{ color: "var(--text-muted)" }}>de {o.authors.map((a) => players[a]).join(", ")}{voters.length ? ` · piégé : ${voters.join(", ")}` : ""}</p>
               </div>
             );
           })}
@@ -282,7 +287,7 @@ function LeBluffeurLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) 
   const ranking = players.map((name, i) => ({ name, score: scores[i], i })).sort((a, b) => b.score - a.score);
   return (
     <div className="relative flex min-h-[100svh] flex-col items-center justify-center p-6 text-white"
-      style={{ background: "radial-gradient(circle at 50% 25%, rgba(124,92,255,0.3), transparent 45%), #0E0828" }}>
+      style={{ paddingTop: "max(env(safe-area-inset-top), 20px)", paddingBottom: "max(env(safe-area-inset-bottom), 20px)", background: "radial-gradient(circle at 50% 25%, rgba(124,92,255,0.3), transparent 45%), #0E0828" }}>
       <ConfettiBurst count={50} />
       <p className="af-eyebrow" style={{ color: "var(--af-yellow)" }}>Partie terminée</p>
       <h2 className="cb-display-lg mt-1 mb-5">🎭 Résultats</h2>
@@ -310,7 +315,7 @@ function LeBluffeurLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) 
 // ══════════════════════════════════════════════════════════
 // MODE ONLINE (multi-appareils) — inchangé
 // ══════════════════════════════════════════════════════════
-function LeBluffeurOnline({ roomCode, playerId, playerName }: GameProps) {
+function LeBluffeurOnline({ roomCode, playerId, playerName, onSwitchLocal }: GameProps & { onSwitchLocal: () => void }) {
   const { sendAction } = useGame(roomCode, "le-bluffeur", playerId, playerName);
   const { gameState, error } = useGameStore();
   const state = gameState as unknown as BluffState;
@@ -332,7 +337,47 @@ function LeBluffeurOnline({ roomCode, playerId, playerName }: GameProps) {
 
   // ── WAITING ─────────────────────────────────────────────
   if (!state || state.phase === "waiting") {
-    return <Centered emoji="🎭" text="Préparation des questions..." />;
+    const min = state?.minPlayers ?? 3;
+    const count = state?.connectedCount ?? 0;
+    if (state && count < min) {
+      return (
+        <div className="flex flex-1 flex-col items-center justify-center p-6 text-center"
+             style={{ paddingTop: "max(env(safe-area-inset-top), 24px)", paddingBottom: "max(env(safe-area-inset-bottom), 24px)" }}>
+          <div className="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-full border"
+               style={{ background: "rgba(255,255,255,0.04)", borderColor: "rgba(255,255,255,0.10)", boxShadow: "0 0 40px rgba(91,54,214,0.3)" }}>
+            <span className="text-4xl">🎭</span>
+          </div>
+          <p className="cb-display-sm">En attente de joueurs ({count}/{min})</p>
+          <p className="mt-2 max-w-xs text-sm" style={{ color: "var(--text-dim)" }}>
+            Il faut au moins {min} joueurs en ligne pour que les bluffs piègent quelqu&apos;un — ou jouez sur un seul téléphone en vous le passant.
+          </p>
+          <button onClick={onSwitchLocal} className="af-btn af-btn-primary mt-6 w-full max-w-xs">
+            📱 Jouer sur ce téléphone
+          </button>
+        </div>
+      );
+    }
+    return <Centered emoji="🎭" text="Préparation des questions…" />;
+  }
+
+  // ── SPECTATEUR (arrivé en cours de manche) ─────────────
+  if (state.spectator && state.phase !== "game-over") {
+    return (
+      <div className="flex flex-1 flex-col items-center justify-center p-6 text-center"
+           style={{ paddingTop: "max(env(safe-area-inset-top), 24px)", paddingBottom: "max(env(safe-area-inset-bottom), 24px)" }}>
+        <span className="text-5xl">🍿</span>
+        <p className="cb-display-sm mt-4">Partie en cours</p>
+        <p className="mt-2 max-w-xs text-sm" style={{ color: "var(--text-dim)" }}>
+          Tu es arrivé pendant la manche {state.round}/{state.totalRounds}. Tu entres en jeu dès la prochaine manche !
+        </p>
+        {state.question && (
+          <p className="mt-5 max-w-sm rounded-2xl border px-4 py-3 text-sm" style={{ background: "rgba(255,255,255,0.05)", borderColor: "rgba(255,255,255,0.10)", color: "var(--text-dim)" }}>
+            {state.question}
+          </p>
+        )}
+        <PlayerProgress players={state.players} done={(p) => (state.phase === "writing" ? p.hasFake : p.hasVoted)} selfId={playerId} />
+      </div>
+    );
   }
 
   // ── WRITING (DA théâtre) ────────────────────────────────
@@ -359,19 +404,20 @@ function LeBluffeurOnline({ roomCode, playerId, playerName }: GameProps) {
                     style={{ color: "#fff", fontFamily: "var(--font-display)" }}
                   />
                   <button onClick={submitFake} disabled={!fakeInput.trim()}
-                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full disabled:opacity-30"
+                    aria-label="Envoyer mon bluff"
+                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-lg active:scale-95 disabled:opacity-30"
                     style={{ background: "linear-gradient(135deg, #FFD23F, #C48800)", border: "1.5px solid #FFE891", color: "#1A0E2E", fontWeight: 800 }}>
                     →
                   </button>
                 </div>
               </div>
-              <p className="mt-2 text-center text-[11px]" style={{ color: "rgba(255,255,255,0.4)" }}>
+              <p className="mt-2 text-center text-xs" style={{ color: "rgba(255,255,255,0.5)" }}>
                 💡 Fais croire que c&apos;est la vraie réponse 😏
               </p>
             </>
           ) : (
             <div className="rounded-2xl border px-5 py-4 text-center" style={{ background: "rgba(255,210,63,0.1)", borderColor: "rgba(255,210,63,0.3)" }}>
-              <p className="text-sm" style={{ color: "#FFE7D2" }}>Bluff envoyé ! {state.players.filter((p) => p.hasFake).length}/{state.players.length} prêts</p>
+              <p className="text-sm" style={{ color: "#FFE7D2" }}>Bluff envoyé ! {state.players.filter((p) => p.hasFake).length}/{state.players.filter((p) => p.connected !== false).length} prêts</p>
             </div>
           )}
           <div className="mt-4"><PlayerProgress players={state.players} done={(p) => p.hasFake} selfId={playerId} /></div>
@@ -397,17 +443,17 @@ function LeBluffeurOnline({ roomCode, playerId, playerName }: GameProps) {
         ) : !voted ? (
           <div className="w-full max-w-md mt-4 space-y-2">
             {state.options?.map((o, i) => {
-              const isMine = state.myFake && o.text.toLowerCase().trim() === state.myFake.toLowerCase().trim();
+              const isMine = !!state.myOptionId && o.id === state.myOptionId;
               return (
                 <button
                   key={o.id}
                   onClick={() => !isMine && vote(o.id)}
-                  disabled={!!isMine}
+                  disabled={isMine}
                   className={cn(
                     "w-full text-left rounded-2xl border px-4 py-3.5 transition-all flex items-center gap-3",
                     isMine
                       ? "cursor-not-allowed opacity-40"
-                      : "hover:scale-[1.01] active:scale-[0.99]",
+                      : "active:scale-[0.99]",
                   )}
                   style={{
                     background: isMine ? "rgba(255,255,255,0.02)" : "rgba(255,255,255,0.05)",
@@ -422,9 +468,9 @@ function LeBluffeurOnline({ roomCode, playerId, playerName }: GameProps) {
                        }}>
                     {"ABCDEFGH"[i]}
                   </div>
-                  <span className="text-sm text-white/85">
+                  <span className="min-w-0 break-words text-sm text-white/85">
                     {o.text}
-                    {isMine && <span className="ml-2 text-[10px] text-white/30">(ton bluff)</span>}
+                    {isMine && <span className="ml-2 text-xs text-white/40">(ton bluff)</span>}
                   </span>
                 </button>
               );
@@ -448,6 +494,7 @@ function LeBluffeurOnline({ roomCode, playerId, playerName }: GameProps) {
     return (
       <div className="relative flex flex-1 flex-col items-center overflow-y-auto p-5"
            style={{
+             paddingTop: "max(env(safe-area-inset-top), 20px)", paddingBottom: "max(env(safe-area-inset-bottom), 20px)", 
              background: "radial-gradient(circle at 50% 25%, #FF3EA5 0%, #5B36D6 40%, #0E0828 100%)",
            }}>
         <ConfettiBurst count={60} />
@@ -478,9 +525,14 @@ function LeBluffeurOnline({ roomCode, playerId, playerName }: GameProps) {
                 {state.trueAnswer ?? truthOption.text}
               </p>
               {(truthOption.voterNames?.length ?? 0) > 0 && (
-                <p className="mt-3 inline-flex items-center gap-1 rounded-full px-3 py-1 text-[11px] font-bold"
+                <p className="mt-3 inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-bold"
                    style={{ background: "rgba(0,0,0,0.12)", color: "#3A1B00" }}>
                   ✓ Trouvée par {truthOption.voterNames?.join(", ")}
+                </p>
+              )}
+              {state.players.some((p) => p.foundTruth) && (
+                <p className="mt-2 text-xs font-bold" style={{ color: "#3A1B00" }}>
+                  🎯 Écrite pile par {state.players.filter((p) => p.foundTruth).map((p) => p.name).join(", ")} (+15)
                 </p>
               )}
             </div>
@@ -490,7 +542,8 @@ function LeBluffeurOnline({ roomCode, playerId, playerName }: GameProps) {
           <p className="af-eyebrow mb-2 text-center" style={{ color: "var(--text-muted)" }}>✘ Les bluffs démasqués</p>
           <div className="space-y-2">
             {bluffs.map((o) => {
-              const authorId = state.players.find(p => p.name === o.authors?.[0])?.id;
+              const authorId = o.authorIds?.[0];
+              const authorNames = o.authors ?? [];
               const color: MascotColor = authorId ? colorFor(authorId) : "coral";
               const voterCount = o.voteCount ?? 0;
               return (
@@ -504,19 +557,22 @@ function LeBluffeurOnline({ roomCode, playerId, playerName }: GameProps) {
                   <MascotAvatar color={color} size={32} mood={voterCount > 0 ? "wink" : "neutral"} border={false} />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <span className="text-xs font-bold">{o.authors?.[0] ?? "?"}</span>
-                      <span className="text-[11px]" style={{ color: "var(--text-muted)" }}>a écrit :</span>
+                      <span className="min-w-0 truncate text-xs font-bold">{authorNames.length ? authorNames.join(" & ") : "?"}</span>
+                      <span className="shrink-0 text-xs" style={{ color: "var(--text-muted)" }}>{authorNames.length > 1 ? "ont écrit :" : "a écrit :"}</span>
                     </div>
-                    <p className="truncate text-xs italic" style={{ color: "var(--text-dim)" }}>
+                    <p className="break-words text-xs italic" style={{ color: "var(--text-dim)" }}>
                       &ldquo;{o.text}&rdquo;
                     </p>
+                    {voterCount > 0 && (
+                      <p className="text-xs" style={{ color: "var(--text-muted)" }}>Piégé : {o.voterNames?.join(", ")}</p>
+                    )}
                   </div>
                   {voterCount > 0 ? (
                     <span className="cb-mono text-xs font-bold" style={{ color: "var(--af-mint)" }}>
-                      +{voterCount * 20}
+                      +{voterCount * 20}{authorNames.length > 1 ? " chacun" : ""}
                     </span>
                   ) : (
-                    <span className="text-[11px]" style={{ color: "var(--text-muted)" }}>0 piégé</span>
+                    <span className="shrink-0 text-xs" style={{ color: "var(--text-muted)" }}>0 piégé</span>
                   )}
                 </div>
               );
@@ -532,7 +588,7 @@ function LeBluffeurOnline({ roomCode, playerId, playerName }: GameProps) {
             <span className="text-sm">Tu marques</span>
             <span className="cb-display-md" style={{ color: "var(--af-yellow)", fontSize: 24 }}>+{myPts} pts</span>
           </div>
-          <p className="mt-3 animate-pulse text-center text-[11px]" style={{ color: "var(--text-muted)" }}>
+          <p className="mt-3 animate-pulse text-center text-xs" style={{ color: "var(--text-muted)" }}>
             Manche suivante…
           </p>
         </div>
@@ -551,7 +607,8 @@ function LeBluffeurOnline({ roomCode, playerId, playerName }: GameProps) {
 // ── Sub-components ────────────────────────────────────────
 function Centered({ emoji, text }: { emoji: string; text: string }) {
   return (
-    <div className="flex flex-1 flex-col items-center justify-center p-6">
+    <div className="flex flex-1 flex-col items-center justify-center p-6"
+         style={{ paddingTop: "max(env(safe-area-inset-top), 24px)" }}>
       <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full border"
            style={{ background: "rgba(255,255,255,0.04)", borderColor: "rgba(255,255,255,0.10)", boxShadow: "0 0 40px rgba(91,54,214,0.3)" }}>
         <span className="text-4xl">{emoji}</span>
@@ -567,8 +624,10 @@ function Shell({
   round: number; total: number; timeLeft: number; max: number; label: string; children: React.ReactNode;
 }) {
   return (
-    <div className="relative flex flex-1 flex-col items-center p-5 md:p-6">
-      <div className="flex w-full max-w-md items-center justify-between">
+    <div className="relative flex flex-1 flex-col items-center p-5 md:p-6"
+         style={{ paddingTop: "max(env(safe-area-inset-top), 12px)", paddingBottom: "max(env(safe-area-inset-bottom), 20px)" }}>
+      {/* Coin haut-droit réservé au bouton réglages du shell */}
+      <div className="flex min-h-[44px] w-full max-w-md items-center gap-3 pr-14">
         <span className="af-chip">Manche {round}/{total}</span>
         <span className={cn("cb-mono text-lg font-bold", timeLeft <= 5 ? "animate-pulse" : "")}
               style={{ color: timeLeft <= 5 ? "var(--af-coral)" : "var(--text-muted)" }}>
@@ -649,7 +708,8 @@ function PlayerProgress({ players, done, selfId }: {
 function BluffScoreboard({ players, playerId }: { players: BluffPlayerState[]; playerId: string }) {
   const sorted = [...(players ?? [])].sort((a, b) => b.score - a.score);
   return (
-    <div className="relative flex flex-1 flex-col items-center justify-center p-6">
+    <div className="relative flex flex-1 flex-col items-center justify-center p-6"
+         style={{ paddingTop: "max(env(safe-area-inset-top), 24px)", paddingBottom: "max(env(safe-area-inset-bottom), 24px)" }}>
       <ConfettiBurst count={50} />
       <div className="relative z-10 w-full max-w-sm">
         <p className="af-eyebrow text-center" style={{ color: "var(--af-yellow)" }}>Partie terminée</p>

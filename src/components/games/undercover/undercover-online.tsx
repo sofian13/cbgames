@@ -7,7 +7,9 @@ import { Mascot, MASCOT_COLORS, type MascotColor, type MascotMood } from "@/comp
 import type { GameProps } from "@/lib/games/types";
 
 /* ─────────────────────────────────────────────────────────────
-   UNDERCOVER ONLINE — multi-appareils (PartyKit)
+   L'INTRUS ONLINE — multi-appareils (PartyKit)
+   Règle : l'Intrus ne sait pas qu'il est l'Intrus (le serveur
+   l'envoie comme « civil » jusqu'à son élimination / la fin).
    ───────────────────────────────────────────────────────────── */
 
 type Role = "civil" | "undercover" | "mrwhite";
@@ -18,7 +20,7 @@ type EndReason = "civils-win" | "undercover-wins" | "mrwhite-wins" | null;
 
 interface UCPlayer {
   id: string; name: string; score: number;
-  isEliminated: boolean; hasClue: boolean; hasVoted: boolean;
+  isEliminated: boolean; hasClue: boolean; hasVoted: boolean; ready?: boolean;
   clue: string | null; eliminatedRound: number | null;
   role: Role | null; word: string | null;
 }
@@ -29,6 +31,7 @@ interface UCState {
   currentSpeakerId: string | null;
   clueOrder: string[]; currentClueIdx: number;
   eliminatedThisRound: string | null; eliminatedRole: Role | null;
+  revoteCandidates?: string[] | null; tieCandidates?: string[] | null;
   voteTally: Record<string, number> | null;
   clueHistory: { round: number; playerId: string; playerName: string; clue: string }[];
   civilWord: string | null; undercoverWord: string | null;
@@ -39,7 +42,14 @@ interface UCState {
 }
 
 const ROLE_COLOR: Record<Role, string> = { civil: "#3DDC97", undercover: "#FF3EA5", mrwhite: "#FFD23F" };
-const ROLE_LABEL: Record<Role, string> = { civil: "Civil", undercover: "Undercover", mrwhite: "Mr. White" };
+const ROLE_LABEL: Record<Role, string> = { civil: "Civil", undercover: "Intrus", mrwhite: "Fantôme" };
+
+/** Taille du mot secret adaptée à sa longueur (le mot le plus long décide). */
+const wordFontSize = (word: string | null, max = 56) => {
+  const longest = Math.max(1, ...(word ?? "?????").split(/\s+/).map((w) => w.length));
+  return `clamp(24px, ${Math.min(15, 125 / longest).toFixed(1)}vw, ${max}px)`;
+};
+const WORD_WRAP: CSSProperties = { overflowWrap: "break-word", wordBreak: "break-word", hyphens: "auto" };
 
 const colorOf = (id: string): MascotColor => {
   let h = 0;
@@ -143,7 +153,8 @@ function Tag({ children, color = "#FFD23F", style }: { children: ReactNode; colo
 
 function NavBar({ sub, title, right }: { sub?: string; title?: string; right?: ReactNode }) {
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 18 }}>
+    // paddingRight : réserve le coin haut-droit à l'engrenage du shell.
+    <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 18, paddingRight: 52 }}>
       <div style={{ flex: 1, minWidth: 0 }}>
         {sub && (
           <div style={{ fontFamily: "var(--font-mono, monospace)", fontSize: 10, color: "#FFD23F", fontWeight: 800, letterSpacing: 2, textTransform: "uppercase" }}>
@@ -334,7 +345,7 @@ function Stat({ n, label, color, sub }: { n: number; label: string; color: strin
     }}>
       <div style={{ fontFamily: "var(--font-display, system-ui)", fontSize: 26, color, lineHeight: 1, fontWeight: 900 }}>{n}</div>
       <div style={{ fontSize: 11, color: "white", fontWeight: 700, marginTop: 4 }}>{label}</div>
-      {sub && <div style={{ fontSize: 9, color: "rgba(255,255,255,0.45)", marginTop: 1 }}>{sub}</div>}
+      {sub && <div style={{ fontSize: 11, color: "rgba(255,255,255,0.5)", marginTop: 2 }}>{sub}</div>}
     </div>
   );
 }
@@ -347,7 +358,7 @@ function Row({ label, hint, children }: { label: string; hint?: string; children
     }}>
       <div>
         <div style={{ fontSize: 13, color: "white", fontWeight: 700 }}>{label}</div>
-        {hint && <div style={{ fontSize: 10, color: "rgba(255,255,255,0.5)", marginTop: 2 }}>{hint}</div>}
+        {hint && <div style={{ fontSize: 12, color: "rgba(255,255,255,0.55)", marginTop: 2 }}>{hint}</div>}
       </div>
       {children}
     </div>
@@ -356,9 +367,9 @@ function Row({ label, hint, children }: { label: string; hint?: string; children
 
 function Stepper({ value, min, max, onChange, disabled }: { value: number; min: number; max: number; onChange: (v: number) => void; disabled?: boolean }) {
   const btn: CSSProperties = {
-    width: 30, height: 30, borderRadius: 9, border: "none",
+    width: 44, height: 44, borderRadius: 12, border: "none",
     background: "rgba(255,255,255,0.06)", color: "white",
-    fontWeight: 900, fontSize: 16,
+    fontWeight: 900, fontSize: 20,
     cursor: disabled ? "not-allowed" : "pointer", opacity: disabled ? 0.4 : 1,
   };
   return (
@@ -372,17 +383,23 @@ function Stepper({ value, min, max, onChange, disabled }: { value: number; min: 
 
 function Toggle({ value, onChange, disabled }: { value: boolean; onChange: (v: boolean) => void; disabled?: boolean }) {
   return (
-    <button disabled={disabled} onClick={() => onChange(!value)} style={{
-      width: 46, height: 26, borderRadius: 99, border: "none",
-      background: value ? "#3DDC97" : "rgba(255,255,255,0.14)",
-      position: "relative", cursor: disabled ? "not-allowed" : "pointer",
-      opacity: disabled ? 0.5 : 1, transition: "background .15s",
+    <button disabled={disabled} onClick={() => onChange(!value)} aria-pressed={value} style={{
+      // Zone tactile 44 px autour de l'interrupteur visuel
+      minWidth: 56, height: 44, padding: 0, border: "none", background: "transparent",
+      display: "inline-flex", alignItems: "center", justifyContent: "flex-end",
+      cursor: disabled ? "not-allowed" : "pointer", opacity: disabled ? 0.5 : 1,
     }}>
       <span style={{
-        position: "absolute", top: 2, left: value ? 22 : 2,
-        width: 22, height: 22, borderRadius: "50%", background: "white",
-        transition: "left .15s", boxShadow: "0 2px 6px rgba(0,0,0,0.3)",
-      }} />
+        width: 46, height: 26, borderRadius: 99,
+        background: value ? "#3DDC97" : "rgba(255,255,255,0.14)",
+        position: "relative", transition: "background .15s", display: "block",
+      }}>
+        <span style={{
+          position: "absolute", top: 2, left: value ? 22 : 2,
+          width: 22, height: 22, borderRadius: "50%", background: "white",
+          transition: "left .15s", boxShadow: "0 2px 6px rgba(0,0,0,0.3)",
+        }} />
+      </span>
     </button>
   );
 }
@@ -421,13 +438,13 @@ function WaitingPhase({ state, sendAction, myId }: { state: UCState; sendAction:
           color: "white", letterSpacing: -2.4, fontWeight: 900,
           textShadow: "0 0 36px rgba(255,62,165,0.35)",
         }}>
-          Under<span style={{
+          L&apos;<span style={{
             background: "linear-gradient(120deg, #FFD23F, #FF3EA5)",
             WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
-          }}>cover</span>
+          }}>Intrus</span>
         </h1>
         <p style={{ fontSize: 13, color: "rgba(255,255,255,0.7)", margin: "12px 12px 0", lineHeight: 1.5 }}>
-          Chaque joueur reçoit un mot. Quelqu'un a un mot <em style={{ color: "#FFD23F", fontStyle: "normal", fontWeight: 800 }}>légèrement différent</em>. Démasque-le.
+          Chaque joueur reçoit un mot. Quelqu&apos;un a un mot <em style={{ color: "#FFD23F", fontStyle: "normal", fontWeight: 800 }}>légèrement différent</em>… sans le savoir. Démasque-le.
         </p>
       </div>
 
@@ -439,15 +456,15 @@ function WaitingPhase({ state, sendAction, myId }: { state: UCState; sendAction:
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 6, marginBottom: 14 }}>
           <Stat n={civils} label="Civils" color="#3DDC97" sub="même mot" />
-          <Stat n={cfg.undercoverCount} label="Undercover" color="#FF3EA5" sub="mot voisin" />
-          <Stat n={cfg.includeMrWhite ? 1 : 0} label="Mr. White" color="#FFD23F" sub="aucun mot" />
+          <Stat n={cfg.undercoverCount} label="Intrus" color="#FF3EA5" sub="mot voisin" />
+          <Stat n={cfg.includeMrWhite ? 1 : 0} label="Fantôme" color="#FFD23F" sub="aucun mot" />
         </div>
 
-        <Row label="Undercover" hint="1 à 3">
+        <Row label="Intrus" hint="1 à 3">
           <Stepper value={cfg.undercoverCount} min={1} max={3} disabled={!isHost}
             onChange={(v) => sendAction({ action: "configure", config: { undercoverCount: v, autoBalance: false } })} />
         </Row>
-        <Row label="Mr. White" hint="bonus chaos">
+        <Row label="Fantôme" hint="aucun mot · 5 joueurs min">
           <Toggle value={cfg.includeMrWhite} disabled={!isHost}
             onChange={(v) => sendAction({ action: "configure", config: { includeMrWhite: v, autoBalance: false } })} />
         </Row>
@@ -456,6 +473,8 @@ function WaitingPhase({ state, sendAction, myId }: { state: UCState; sendAction:
             onChange={(v) => sendAction({ action: "configure", config: { autoBalance: v } })} />
         </Row>
       </FileCard>
+
+      <RulesCard />
 
       <div style={{ marginBottom: 14 }}>
         <Mono style={{ marginBottom: 10 }}>Salon · {total}/7</Mono>
@@ -469,12 +488,12 @@ function WaitingPhase({ state, sendAction, myId }: { state: UCState; sendAction:
             }}>
               <Mascot color={colorOf(p.id)} size={26} mood="happy" bob={false} blink={false} shadow={false} />
               <span style={{ fontSize: 12, fontWeight: 700 }}>{p.name}</span>
-              {p.id === myId && <span style={{ fontSize: 9, padding: "1px 6px", borderRadius: 99, background: "#FFD23F", color: "#1A0E2E", fontWeight: 900, letterSpacing: 0.5 }}>TOI</span>}
-              {p.id === state.players[0]?.id && p.id !== myId && <span style={{ fontSize: 9, padding: "1px 6px", borderRadius: 99, background: "rgba(255,255,255,0.10)", color: "white", fontWeight: 800, letterSpacing: 0.5 }}>HÔTE</span>}
+              {p.id === myId && <span style={{ fontSize: 11, padding: "1px 6px", borderRadius: 99, background: "#FFD23F", color: "#1A0E2E", fontWeight: 900, letterSpacing: 0.5 }}>TOI</span>}
+              {p.id === state.players[0]?.id && p.id !== myId && <span style={{ fontSize: 11, padding: "1px 6px", borderRadius: 99, background: "rgba(255,255,255,0.10)", color: "white", fontWeight: 800, letterSpacing: 0.5 }}>HÔTE</span>}
             </div>
           ))}
           {Array.from({ length: Math.max(0, 3 - total) }).map((_, i) => (
-            <div key={i} style={{ padding: "5px 12px", borderRadius: 99, border: "1px dashed rgba(255,255,255,0.15)", fontSize: 11, color: "rgba(255,255,255,0.4)" }}>+ place libre</div>
+            <div key={i} style={{ padding: "5px 12px", borderRadius: 99, border: "1px dashed rgba(255,255,255,0.15)", fontSize: 12, color: "rgba(255,255,255,0.4)" }}>+ place libre</div>
           ))}
         </div>
       </div>
@@ -486,7 +505,7 @@ function WaitingPhase({ state, sendAction, myId }: { state: UCState; sendAction:
           </Btn>
         ) : (
           <div style={{ padding: "14px 16px", borderRadius: 16, background: "rgba(255,255,255,0.04)", border: "1px dashed rgba(255,255,255,0.15)", fontSize: 13, color: "rgba(255,255,255,0.65)", textAlign: "center" }}>
-            ⌛ En attente du lancement par l'hôte…
+            ⌛ En attente du lancement par l&apos;hôte…
           </div>
         )}
       </div>
@@ -495,27 +514,32 @@ function WaitingPhase({ state, sendAction, myId }: { state: UCState; sendAction:
 }
 
 function RevealPhase({ state, sendAction, myId }: { state: UCState; sendAction: (a: Record<string, unknown>) => void; myId: string }) {
+  // L'Intrus reçoit « civil » du serveur : il ne sait pas qu'il est l'Intrus.
   const role = state.myRole ?? "civil";
   const word = state.myWord;
-  const meName = state.players.find((p) => p.id === myId)?.name ?? "Joueur";
-  const color = ROLE_COLOR[role];
-  const label = ROLE_LABEL[role];
-  const hint = role === "civil"
-    ? "Trouve les civils. Donne un indice clair sans aider l'undercover."
-    : role === "undercover"
-    ? "Mot voisin. Reste vague. Devine leur mot avant qu'ils ne te grillent."
-    : "Aucun mot. Bluff. Si démasqué, devine le mot des civils pour gagner seul.";
+  const me = state.players.find((p) => p.id === myId);
+  const meName = me?.name ?? "Joueur";
+  const isGhost = role === "mrwhite";
+  const color = isGhost ? ROLE_COLOR.mrwhite : "#FFD23F";
+  const hint = isGhost
+    ? "Tu es le Fantôme : tu n'as pas de mot. Écoute, bluffe… Si tu es éliminé, devine le mot des civils pour gagner seul."
+    : "Mémorise ton mot. Attention : tu ne sais pas si tu es civil… ou l'Intrus ! Donne un indice ni trop vague, ni trop évident.";
 
-  const blobColor: MascotColor = role === "civil" ? "mint" : role === "undercover" ? "pink" : "white";
-  const blobMood: MascotMood = role === "civil" ? "happy" : role === "undercover" ? "shifty" : "thinking";
+  const blobColor: MascotColor = isGhost ? "white" : "mint";
+  const blobMood: MascotMood = isGhost ? "thinking" : "happy";
+
+  const alive = state.players.filter((p) => !p.isEliminated);
+  const readyCount = alive.filter((p) => p.ready).length;
+  const iAmReady = me?.ready ?? false;
+  const dead = me?.isEliminated ?? false;
 
   return (
     <>
-      <NavBar sub={`JOUEUR · ${meName.toUpperCase()}`} title="Mot secret" right={<Tag color={color}>{label.toUpperCase()}</Tag>} />
+      <NavBar sub={`JOUEUR · ${meName.toUpperCase()}`} title="Mot secret" right={<Tag color={color}>{isGhost ? "FANTÔME" : "TOP SECRET"}</Tag>} />
       <div style={{ display: "flex", justifyContent: "center", marginBottom: -10 }}>
         <Mascot color={blobColor} size={88} mood={blobMood} arms />
       </div>
-      <DossierCard word={word} role={role} hint={hint} round={state.round} />
+      <DossierCard word={word} role={isGhost ? "mrwhite" : "civil"} hint={hint} round={state.round} />
       <div style={{
         padding: "10px 14px", borderRadius: 12,
         background: "rgba(0,0,0,0.4)",
@@ -523,18 +547,23 @@ function RevealPhase({ state, sendAction, myId }: { state: UCState; sendAction: 
         display: "flex", gap: 10, alignItems: "center", marginBottom: 14,
       }}>
         <span style={{ fontSize: 16 }}>🔒</span>
-        <div style={{ fontSize: 12, color: "white", fontWeight: 600 }}>Personne d'autre ne doit voir l'écran.</div>
+        <div style={{ fontSize: 12, color: "white", fontWeight: 600 }}>Personne d&apos;autre ne doit voir l&apos;écran.</div>
       </div>
       <div style={{ marginTop: "auto" }}>
-        <Btn tone="gold" onClick={() => sendAction({ action: "ack-word" })}>J'ai mémorisé · passer</Btn>
+        {dead ? null : iAmReady ? (
+          <Btn tone="ghost" disabled sub={`${readyCount} / ${alive.length} prêts`}>✓ Prêt · on attend les autres</Btn>
+        ) : (
+          <Btn tone="gold" onClick={() => sendAction({ action: "ack-word" })} sub={`${readyCount} / ${alive.length} prêts`}>J&apos;ai mémorisé · passer</Btn>
+        )}
       </div>
     </>
   );
 }
 
 function DossierCard({ word, role, hint, round }: { word: string | null; role: Role; hint: string; round: number }) {
-  const color = ROLE_COLOR[role];
-  const label = ROLE_LABEL[role];
+  // Le tampon ne dit jamais « Civil » : l'Intrus ne doit pas savoir qui il est.
+  const color = role === "mrwhite" ? ROLE_COLOR.mrwhite : "#FF3EA5";
+  const label = role === "mrwhite" ? ROLE_LABEL.mrwhite : "Secret";
   return (
     <div style={{
       position: "relative", padding: "22px 20px 24px",
@@ -562,12 +591,13 @@ function DossierCard({ word, role, hint, round }: { word: string | null; role: R
       <div style={{ fontFamily: "var(--font-mono, monospace)", fontSize: 11, color: "#7A3008", textTransform: "uppercase", letterSpacing: 1.5, fontWeight: 700 }}>
         {role === "mrwhite" ? "Pas de mot" : "Ton mot secret"}
       </div>
-      <div style={{
+      <div lang="fr" style={{
         fontFamily: "var(--font-display, system-ui)",
-        fontSize: word ? 56 : 44, lineHeight: 1, margin: "10px 0 6px",
-        letterSpacing: -2.5, color: "#1A0E2E", fontWeight: 900,
+        fontSize: word ? wordFontSize(word) : 44, lineHeight: 1.02, margin: "10px 0 6px",
+        letterSpacing: -1.5, color: "#1A0E2E", fontWeight: 900,
         textAlign: role === "mrwhite" ? "center" : "left",
         opacity: role === "mrwhite" ? 0.4 : 1,
+        ...WORD_WRAP,
       }}>{word ?? "?????"}</div>
       <div style={{ position: "absolute", top: 22, right: 16, transform: "rotate(8deg)" }}>
         <Stamp text={label} color={color} rotate={0} size={11} />
@@ -660,11 +690,11 @@ function CluePhase({ state, sendAction, myId }: { state: UCState; sendAction: (a
                     textDecoration: isDead ? "line-through" : "none",
                     lineHeight: 1, letterSpacing: -0.3,
                   }}>{p.name}</span>
-                  {isMe && <span style={{ fontSize: 9, padding: "1px 6px", borderRadius: 99, background: "#FFD23F", color: "#1A0E2E", fontWeight: 900 }}>TOI</span>}
+                  {isMe && <span style={{ fontSize: 11, padding: "1px 6px", borderRadius: 99, background: "#FFD23F", color: "#1A0E2E", fontWeight: 900 }}>TOI</span>}
                 </div>
                 <div style={{
-                  fontSize: 11, marginTop: 4,
-                  color: isCurrent ? "#FFD23F" : isDead ? "#FF3EA5" : "rgba(255,255,255,0.5)",
+                  fontSize: 12, marginTop: 4, overflowWrap: "anywhere",
+                  color: isCurrent ? "#FFD23F" : isDead ? "#FF3EA5" : "rgba(255,255,255,0.55)",
                   fontWeight: isCurrent ? 700 : 500,
                 }}>
                   {isCurrent && (isMe ? "🎤 à toi · donne un indice" : "🎤 en train de parler")}
@@ -693,6 +723,7 @@ function CluePhase({ state, sendAction, myId }: { state: UCState; sendAction: (a
             onChange={(e) => setText(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && submitClue()}
             placeholder="Ton indice…" maxLength={28}
+            autoCorrect="off" autoCapitalize="off" spellCheck={false}
             style={{
               flex: 1, background: "transparent", border: "none", color: "white",
               fontSize: 16, padding: 10, outline: "none", fontWeight: 600, fontFamily: "inherit",
@@ -723,8 +754,8 @@ function CluePhase({ state, sendAction, myId }: { state: UCState; sendAction: (a
 }
 
 function WordModal({ role, word, onClose }: { role: Role; word: string | null; onClose: () => void }) {
-  const color = ROLE_COLOR[role];
-  const label = ROLE_LABEL[role];
+  const color = role === "mrwhite" ? ROLE_COLOR.mrwhite : "#FF3EA5";
+  const label = role === "mrwhite" ? ROLE_LABEL.mrwhite : "Secret";
   useEffect(() => {
     const t = setTimeout(onClose, 6000);
     return () => clearTimeout(t);
@@ -752,17 +783,18 @@ function WordModal({ role, word, onClose }: { role: Role; word: string | null; o
         <div style={{ marginTop: 12, fontFamily: "var(--font-mono, monospace)", fontSize: 11, color: "#7A3008", textTransform: "uppercase", letterSpacing: 1.5, fontWeight: 700 }}>
           {role === "mrwhite" ? "Pas de mot" : "Ton mot"}
         </div>
-        <div style={{
+        <div lang="fr" style={{
           fontFamily: "var(--font-display, system-ui)",
-          fontSize: 56, lineHeight: 1, margin: "8px 0", letterSpacing: -2.5, fontWeight: 900,
+          fontSize: wordFontSize(word), lineHeight: 1.02, margin: "8px 0", letterSpacing: -1.5, fontWeight: 900,
           opacity: role === "mrwhite" ? 0.4 : 1,
           textAlign: role === "mrwhite" ? "center" : "left",
+          ...WORD_WRAP,
         }}>{word ?? "?????"}</div>
         <div style={{ position: "absolute", top: 22, right: 16, transform: "rotate(8deg)" }}>
           <Stamp text={label} color={color} rotate={0} size={11} />
         </div>
         <button onClick={onClose} style={{
-          marginTop: 14, width: "100%", padding: 10,
+          marginTop: 14, width: "100%", padding: 10, minHeight: 44,
           background: "#1A0E2E", color: "white", border: "none",
           borderRadius: 10, fontWeight: 700, fontSize: 13, cursor: "pointer",
         }}>Cacher maintenant</button>
@@ -777,18 +809,22 @@ function VotePhase({ state, sendAction, myId }: { state: UCState; sendAction: (a
   const dead = me?.isEliminated ?? false;
   const alive = state.players.filter((p) => !p.isEliminated);
   const voted = alive.filter((p) => p.hasVoted).length;
+  const revote = state.revoteCandidates ?? null;
+  const targets = revote ? alive.filter((p) => revote.includes(p.id)) : alive;
   const cast = () => { if (picked && !me?.hasVoted) sendAction({ action: "vote", targetId: picked }); };
 
   return (
     <>
-      <NavBar sub={`Manche ${state.round} · vote`} title="Qui démasquer ?" right={<Timer time={state.timeLeft} color="#FFD23F" />} />
+      <NavBar sub={`Manche ${state.round} · ${revote ? "revote" : "vote"}`} title={revote ? "Départagez-les !" : "Qui démasquer ?"} right={<Timer time={state.timeLeft} color="#FFD23F" />} />
 
-      <div style={{ padding: "8px 12px", borderRadius: 12, background: "rgba(0,0,0,0.35)", border: "1px dashed rgba(255,255,255,0.12)", fontSize: 12, color: "rgba(255,255,255,0.7)", marginBottom: 14 }}>
-        Choisis qui doit sortir. Tu ne peux pas voter pour toi-même.
+      <div style={{ padding: "8px 12px", borderRadius: 12, background: "rgba(0,0,0,0.35)", border: "1px dashed rgba(255,255,255,0.12)", fontSize: 13, color: "rgba(255,255,255,0.75)", marginBottom: 14, lineHeight: 1.4 }}>
+        {revote
+          ? "Égalité ! On revote uniquement entre les ex-aequo. Nouvelle égalité = personne ne sort ce tour."
+          : "Choisis qui doit sortir. Tu ne peux pas voter pour toi-même."}
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14 }}>
-        {alive.map((p) => {
+        {targets.map((p) => {
           const isMe = p.id === myId;
           const isPicked = picked === p.id;
           const tally = state.voteTally?.[p.id] ?? 0;
@@ -805,20 +841,20 @@ function VotePhase({ state, sendAction, myId }: { state: UCState; sendAction: (a
                 cursor: isMe || dead || me?.hasVoted ? "not-allowed" : "pointer",
                 color: "white", textAlign: "center", fontFamily: "inherit",
               }}>
-              {isMe && <span style={{ position: "absolute", top: 8, left: 8, padding: "2px 7px", borderRadius: 99, background: "#FFD23F", color: "#1A0E2E", fontSize: 8, fontWeight: 900 }}>TOI</span>}
-              {tally > 0 && <span style={{ position: "absolute", top: 8, right: 8, padding: "2px 8px", borderRadius: 99, background: "#FF3EA5", color: "white", fontSize: 9, fontWeight: 800 }}>{tally} vote{tally > 1 ? "s" : ""}</span>}
+              {isMe && <span style={{ position: "absolute", top: 8, left: 8, padding: "2px 7px", borderRadius: 99, background: "#FFD23F", color: "#1A0E2E", fontSize: 11, fontWeight: 900 }}>TOI</span>}
+              {tally > 0 && <span style={{ position: "absolute", top: 8, right: 8, padding: "2px 8px", borderRadius: 99, background: "#FF3EA5", color: "white", fontSize: 11, fontWeight: 800 }}>{tally} vote{tally > 1 ? "s" : ""}</span>}
               <div style={{ display: "flex", justifyContent: "center", marginTop: 4 }}>
                 <Mascot color={colorOf(p.id)} size={64} mood={isPicked ? "shocked" : isMe ? "neutral" : "shifty"} arms bob={false} />
               </div>
-              <div style={{ fontFamily: "var(--font-display, system-ui)", fontSize: 18, marginTop: 10, lineHeight: 1, fontWeight: 800 }}>
+              <div style={{ fontFamily: "var(--font-display, system-ui)", fontSize: 18, marginTop: 10, lineHeight: 1.05, fontWeight: 800, overflowWrap: "anywhere" }}>
                 {p.name}
               </div>
               {isPicked ? (
-                <div style={{ marginTop: 8, padding: "6px 0", borderRadius: 10, background: "#FF3EA5", color: "white", fontSize: 11, fontWeight: 800 }}>✕ Ton vote</div>
+                <div style={{ marginTop: 8, padding: "6px 0", borderRadius: 10, background: "#FF3EA5", color: "white", fontSize: 12, fontWeight: 800 }}>✕ Ton vote</div>
               ) : isMe ? (
-                <div style={{ marginTop: 8, padding: "6px 0", borderRadius: 10, border: "1px dashed rgba(255,255,255,0.18)", color: "rgba(255,255,255,0.5)", fontSize: 10, fontWeight: 700 }}>pas toi-même</div>
+                <div style={{ marginTop: 8, padding: "6px 0", borderRadius: 10, border: "1px dashed rgba(255,255,255,0.18)", color: "rgba(255,255,255,0.5)", fontSize: 12, fontWeight: 700 }}>pas toi-même</div>
               ) : (
-                <div style={{ marginTop: 8, padding: "6px 0", borderRadius: 10, background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.5)", fontSize: 11, fontWeight: 700 }}>tap pour voter</div>
+                <div style={{ marginTop: 8, padding: "6px 0", borderRadius: 10, background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.5)", fontSize: 12, fontWeight: 700 }}>touche pour voter</div>
               )}
             </button>
           );
@@ -850,6 +886,11 @@ function EliminatePhase({ state }: { state: UCState }) {
   // On révèle le RÔLE à l'élimination, mais jamais le mot.
   const role = elim?.role ?? state.eliminatedRole;
   const color = role ? ROLE_COLOR[role] : "#FFD23F";
+  const isImpostor = role === "undercover" || role === "mrwhite";
+  const tie = (state.tieCandidates ?? [])
+    .map((id) => state.players.find((p) => p.id === id)?.name)
+    .filter(Boolean) as string[];
+  const title = elim ? (isImpostor ? "Démasqué !" : "Innocent…") : tie.length > 1 ? "Égalité !" : "Personne ne sort";
 
   return (
     <>
@@ -862,7 +903,7 @@ function EliminatePhase({ state }: { state: UCState }) {
         maskImage: "radial-gradient(circle, transparent 25%, black 50%, transparent 85%)",
       }} />
 
-      <NavBar sub={`Verdict · manche ${state.round}`} title={elim ? "Démasqué !" : "Égalité"} right={<Tag color={color}>{role ? ROLE_LABEL[role].toUpperCase() : "VOTE"}</Tag>} />
+      <NavBar sub={`Verdict · manche ${state.round}`} title={title} right={<Tag color={color}>{role ? ROLE_LABEL[role].toUpperCase() : "VOTE"}</Tag>} />
 
       {elim ? (
         <>
@@ -874,7 +915,7 @@ function EliminatePhase({ state }: { state: UCState }) {
                 <Stamp text="Éliminé" color={color} rotate={-12} size={20} />
               </div>
             </div>
-            <div style={{ fontFamily: "var(--font-display, system-ui)", fontSize: 44, marginTop: 14, letterSpacing: -1.5, fontWeight: 900 }}>{elim.name}</div>
+            <div style={{ fontFamily: "var(--font-display, system-ui)", fontSize: "clamp(28px, 11vw, 44px)", marginTop: 14, letterSpacing: -1.5, fontWeight: 900, textAlign: "center", overflowWrap: "anywhere" }}>{elim.name}</div>
           </div>
 
           <div style={{
@@ -883,20 +924,22 @@ function EliminatePhase({ state }: { state: UCState }) {
             border: `1px solid ${color}55`,
             textAlign: "center", marginBottom: 16,
           }}>
-            <Mono>C&apos;était un…</Mono>
+            <Mono>{isImpostor ? "C'était bien…" : "C'était un…"}</Mono>
             <div style={{ fontFamily: "var(--font-display, system-ui)", fontSize: 30, color, fontWeight: 900, marginTop: 4 }}>
-              {role ? ROLE_LABEL[role] : "—"}
+              {role === "undercover" ? "l'Intrus" : role === "mrwhite" ? "le Fantôme" : role ? ROLE_LABEL[role] : "—"}
             </div>
-            <div style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", marginTop: 4 }}>son mot reste secret</div>
+            <div style={{ fontSize: 12, color: "rgba(255,255,255,0.55)", marginTop: 4 }}>son mot reste secret</div>
           </div>
         </>
       ) : (
-        <div style={{ textAlign: "center", padding: 60, color: "rgba(255,255,255,0.6)" }}>
-          Pas de majorité — personne ne sort cette manche.
+        <div style={{ textAlign: "center", padding: "48px 12px", color: "rgba(255,255,255,0.7)", fontSize: 15, lineHeight: 1.5 }}>
+          {tie.length > 1
+            ? <>Égalité entre <strong style={{ color: "#FFD23F" }}>{tie.join(", ")}</strong>. On revote entre eux !</>
+            : "Pas de majorité : personne ne sort cette manche."}
         </div>
       )}
 
-      <div style={{ marginTop: "auto", fontSize: 11, color: "rgba(255,255,255,0.5)", textAlign: "center" }}>
+      <div style={{ marginTop: "auto", fontSize: 12, color: "rgba(255,255,255,0.55)", textAlign: "center" }}>
         Préparation de la suite…
       </div>
     </>
@@ -910,7 +953,7 @@ function MrWhitePhase({ state, sendAction, myId }: { state: UCState; sendAction:
 
   return (
     <>
-      <NavBar sub="Coup du destin" title="Mr. White devine" right={<Timer time={state.timeLeft} color="#FFD23F" />} />
+      <NavBar sub="Coup du destin" title="Le Fantôme devine" right={<Timer time={state.timeLeft} color="#FFD23F" />} />
       <div style={{
         padding: 18, borderRadius: 22,
         background: "linear-gradient(160deg, rgba(255,210,63,0.20) 0%, rgba(0,0,0,0.45) 100%)",
@@ -920,14 +963,14 @@ function MrWhitePhase({ state, sendAction, myId }: { state: UCState; sendAction:
         <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
           {target && <Mascot color={colorOf(target.id)} size={68} mood="thinking" arms />}
           <div>
-            <Mono>Mr. White éliminé</Mono>
+            <Mono>Fantôme éliminé</Mono>
             <div style={{ fontFamily: "var(--font-display, system-ui)", fontSize: 26, fontWeight: 900, marginTop: 4 }}>{target?.name}</div>
           </div>
         </div>
         <div style={{ marginTop: 16, fontSize: 13, color: "rgba(255,255,255,0.85)", lineHeight: 1.5 }}>
           {isMe
             ? "🎯 Une dernière chance. Tape le mot des civils pour gagner seul."
-            : "Mr. White a une seule chance. S'il tape le mot exact, il vole la victoire."}
+            : "Le Fantôme a une seule chance. S'il tape le mot exact des civils, il vole la victoire."}
         </div>
       </div>
 
@@ -942,6 +985,7 @@ function MrWhitePhase({ state, sendAction, myId }: { state: UCState; sendAction:
             onChange={(e) => setText(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && text.trim() && sendAction({ action: "mrwhite-guess", guess: text.trim() })}
             placeholder="Ton pari…"
+            autoCorrect="off" autoCapitalize="off" spellCheck={false}
             style={{
               flex: 1, background: "transparent", border: "none", color: "white",
               fontSize: 18, padding: 10, outline: "none", fontWeight: 700, letterSpacing: 0.5,
@@ -956,10 +1000,10 @@ function MrWhitePhase({ state, sendAction, myId }: { state: UCState; sendAction:
 
 function GameOverPhase({ state, onReturnToLobby }: { state: UCState; onReturnToLobby?: () => void }) {
   const reason = state.endReason;
-  const title =
-    reason === "civils-win" ? "Civils victorieux" :
-    reason === "undercover-wins" ? "Undercover gagne" :
-    reason === "mrwhite-wins" ? "Mr. White triomphe" : "Fin de partie";
+  const [titleTop, titleBottom] =
+    reason === "civils-win" ? ["Civils", "victorieux"] :
+    reason === "undercover-wins" ? ["Imposteurs", "victorieux"] :
+    reason === "mrwhite-wins" ? ["Le Fantôme", "triomphe"] : ["Fin de", "partie"];
   const accent =
     reason === "civils-win" ? "#3DDC97" :
     reason === "undercover-wins" ? "#FF3EA5" :
@@ -975,14 +1019,14 @@ function GameOverPhase({ state, onReturnToLobby }: { state: UCState; onReturnToL
       <div style={{ textAlign: "center", marginBottom: 8 }}>
         <h1 style={{
           fontFamily: "var(--font-display, system-ui)",
-          fontSize: 48, margin: 0, color: "white", letterSpacing: -2, lineHeight: 0.9, fontWeight: 900,
+          fontSize: "clamp(34px, 12vw, 48px)", margin: 0, color: "white", letterSpacing: -2, lineHeight: 0.95, fontWeight: 900,
           textShadow: `0 0 36px ${accent}88`,
         }}>
           <span style={{
             background: `linear-gradient(120deg, ${accent}, #FFD23F)`,
             WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
-          }}>{title.split(" ")[0]}</span>
-          <br/>{title.split(" ").slice(1).join(" ")}
+          }}>{titleTop}</span>
+          <br/>{titleBottom}
         </h1>
       </div>
 
@@ -1006,7 +1050,7 @@ function GameOverPhase({ state, onReturnToLobby }: { state: UCState; onReturnToL
           </div>
           <div style={{ color: "rgba(255,255,255,0.4)", fontWeight: 800 }}>vs</div>
           <div style={{ textAlign: "right" }}>
-            <Mono>Undercover</Mono>
+            <Mono>Intrus</Mono>
             <div style={{ fontFamily: "var(--font-display, system-ui)", fontSize: 20, color: "#FF3EA5", fontWeight: 900 }}>{state.undercoverWord}</div>
           </div>
         </div>
@@ -1027,11 +1071,11 @@ function GameOverPhase({ state, onReturnToLobby }: { state: UCState; onReturnToL
               background: i === 0 ? "rgba(255,210,63,0.10)" : win ? "rgba(61,220,151,0.06)" : "rgba(255,62,165,0.06)",
               border: `1px solid ${i === 0 ? "rgba(255,210,63,0.30)" : win ? "rgba(61,220,151,0.20)" : "rgba(255,62,165,0.18)"}`,
             }}>
-              <span style={{ width: 16, fontFamily: "var(--font-mono, monospace)", fontWeight: 800, fontSize: 11, color: i === 0 ? "#FFD23F" : "rgba(255,255,255,0.5)" }}>#{i + 1}</span>
+              <span style={{ width: 22, fontFamily: "var(--font-mono, monospace)", fontWeight: 800, fontSize: 12, color: i === 0 ? "#FFD23F" : "rgba(255,255,255,0.5)" }}>#{i + 1}</span>
               <Mascot color={colorOf(p.id)} size={28} mood={win ? "wink" : "dead"} bob={false} shadow={false} />
-              <span style={{ flex: 1, fontWeight: 700, fontSize: 13 }}>{p.name}</span>
+              <span style={{ flex: 1, minWidth: 0, fontWeight: 700, fontSize: 14, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</span>
               <span style={{
-                fontSize: 9, padding: "2px 7px", borderRadius: 99,
+                fontSize: 11, padding: "2px 7px", borderRadius: 99,
                 background: r === "mrwhite" ? "rgba(255,210,63,0.18)" : `${rc}26`,
                 color: rc, fontWeight: 800, textTransform: "uppercase", letterSpacing: 0.4,
               }}>{ROLE_LABEL[r]}</span>
@@ -1045,5 +1089,37 @@ function GameOverPhase({ state, onReturnToLobby }: { state: UCState; onReturnToL
         {onReturnToLobby && <Btn tone="ghost" full={false} style={{ flex: 1 }} onClick={onReturnToLobby}>Lobby</Btn>}
       </div>
     </>
+  );
+}
+
+// Règles visibles avant de jouer (repliables).
+function RulesCard() {
+  const [open, setOpen] = useState(false);
+  return (
+    <FileCard accent="#4ECDC4" style={{ marginBottom: 14 }}>
+      <button onClick={() => setOpen(!open)} style={{
+        width: "100%", minHeight: 44, display: "flex", justifyContent: "space-between", alignItems: "center",
+        background: "transparent", border: "none", color: "white", padding: 0, cursor: "pointer", fontFamily: "inherit",
+      }}>
+        <span style={{ fontSize: 15, fontWeight: 800 }}>📖 Les règles</span>
+        <span style={{ fontSize: 13, color: "rgba(255,255,255,0.6)" }}>{open ? "Masquer ▲" : "Afficher ▼"}</span>
+      </button>
+      {open && <RulesList />}
+    </FileCard>
+  );
+}
+
+function RulesList() {
+  const items = [
+    "Chacun reçoit un mot secret. Les civils ont tous le même ; l'Intrus a un mot voisin… et ne sait pas qu'il est l'Intrus !",
+    "Le Fantôme (optionnel) n'a pas de mot, lui le sait : il écoute et bluffe. S'il est éliminé, il peut gagner seul en devinant le mot des civils.",
+    "À tour de rôle, chacun écrit un indice sur son mot, puis tout le monde vote pour éliminer un suspect.",
+    "Égalité au vote : on revote entre les ex-aequo. Nouvelle égalité : personne ne sort ce tour.",
+    "Les civils gagnent quand tous les imposteurs sont éliminés. Les imposteurs gagnent dès qu'ils sont aussi nombreux que les civils.",
+  ];
+  return (
+    <ul style={{ margin: "10px 0 0", paddingLeft: 18, display: "flex", flexDirection: "column", gap: 8, fontSize: 13, lineHeight: 1.45, color: "rgba(255,255,255,0.85)" }}>
+      {items.map((t) => <li key={t}>{t}</li>)}
+    </ul>
   );
 }

@@ -34,7 +34,7 @@ function UCModeSelect({ onPick, onBack }: { onPick: (m: GameMode) => void; onBac
         {/* header */}
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 22 }}>
           {onBack && (
-            <button onClick={onBack} style={{ width: 36, height: 36, borderRadius: 12, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "#fff", cursor: "pointer", fontSize: 18, lineHeight: 1 }}>‹</button>
+            <button onClick={onBack} aria-label="Retour" style={{ width: 44, height: 44, borderRadius: 12, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "#fff", cursor: "pointer", fontSize: 18, lineHeight: 1 }}>‹</button>
           )}
           <div>
             <div style={{ ...mono, color: "#FFD23F" }}>Étape 1/3</div>

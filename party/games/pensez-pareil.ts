@@ -1,100 +1,32 @@
 import type { Connection } from "partykit/server";
 import { BaseGame } from "./base-game";
 import type { GameRanking } from "../shared/types";
+import { PROMPTS, isMatch, shuffle, ANSWER_TIME, type Prompt } from "../../src/components/games/pensez-pareil/pp-content";
 
 // -- Config -----------------------------------------------
 const START_DELAY = 1200;
 const INTRO_TIME = 2800;
-const ANSWER_TIME = 35;
 const REVEAL_TIME = 6500;
 const TOTAL_ROUNDS = 8;
 
 const SYNC_BASE = 100; // points pour un sync
 const COMBO_STEP = 25; // bonus par cran de série
 
-// -- Prompts (escalade soft -> couple -> coquin) ----------
-interface Prompt {
-  text: string;
-  tier: "soft" | "couple" | "spicy";
-}
+// -- Prompts + matching : module partagé avec le client (pp-content.ts) ---
+export { isMatch };
 
-const PROMPTS: Prompt[] = [
-  // soft — "pensez au même truc"
-  { text: "Un fruit", tier: "soft" },
-  { text: "Une couleur", tier: "soft" },
-  { text: "Un animal de compagnie", tier: "soft" },
-  { text: "Un pays à visiter", tier: "soft" },
-  { text: "Un chiffre entre 1 et 10", tier: "soft" },
-  { text: "Une saison", tier: "soft" },
-  { text: "Un dessert", tier: "soft" },
-  { text: "Un super-héros", tier: "soft" },
-  { text: "Une boisson chaude", tier: "soft" },
-  { text: "Un film d'animation", tier: "soft" },
-  { text: "Un emoji", tier: "soft" },
-  { text: "Une pizza (la garniture)", tier: "soft" },
-  // couple — "êtes-vous d'accord sur nous ?"
-  { text: "Notre série du moment", tier: "couple" },
-  { text: "Notre prochaine destination", tier: "couple" },
-  { text: "Un plat qu'on commande toujours", tier: "couple" },
-  { text: "Notre activité du dimanche", tier: "couple" },
-  { text: "Notre chanson", tier: "couple" },
-  { text: "Le prénom de notre futur animal", tier: "couple" },
-  { text: "Notre resto préféré", tier: "couple" },
-  { text: "Un truc qui nous fait toujours rire", tier: "couple" },
-  // spicy — coquin (suggestif, dans le ton de l'app)
-  { text: "Un endroit insolite pour s'embrasser", tier: "spicy" },
-  { text: "Une partie du corps de l'autre", tier: "spicy" },
-  { text: "Un mot pour décrire notre dernière nuit", tier: "spicy" },
-  { text: "Une tenue qui rend l'autre fou", tier: "spicy" },
-];
+type Ambiance = "classic" | "spicy";
 
-// -- Matching ---------------------------------------------
-function normalize(s: string): string {
-  return s
-    .toLowerCase()
-    .trim()
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .replace(/^(l'|le |la |les |un |une |des |du |de |d')/, "")
-    .replace(/[^a-z0-9 ]/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-function lev(a: string, b: string): number {
-  const m = a.length;
-  const n = b.length;
-  if (m === 0) return n;
-  if (n === 0) return m;
-  const dp = Array.from({ length: m + 1 }, (_, i) => [i, ...Array(n).fill(0)]);
-  for (let j = 0; j <= n; j++) dp[0][j] = j;
-  for (let i = 1; i <= m; i++) {
-    for (let j = 1; j <= n; j++) {
-      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
-      dp[i][j] = Math.min(dp[i - 1][j] + 1, dp[i][j - 1] + 1, dp[i - 1][j - 1] + cost);
-    }
-  }
-  return dp[m][n];
-}
-
-export function isMatch(a: string | null, b: string | null): boolean {
-  if (!a || !b) return false;
-  const x = normalize(a);
-  const y = normalize(b);
-  if (!x || !y) return false;
-  if (x === y) return true;
-  if (x.length >= 4 && y.length >= 4 && (x.includes(y) || y.includes(x))) return true;
-  return lev(x, y) <= 1 && Math.max(x.length, y.length) >= 4;
-}
-
-function pickRoundPrompts(): Prompt[] {
-  const byTier = (t: Prompt["tier"]) =>
-    PROMPTS.filter((p) => p.tier === t).sort(() => Math.random() - 0.5);
+function pickRoundPrompts(ambiance: Ambiance): Prompt[] {
+  const byTier = (t: Prompt["tier"]) => shuffle(PROMPTS.filter((p) => p.tier === t));
   const soft = byTier("soft");
   const couple = byTier("couple");
-  const spicy = byTier("spicy");
-  // escalade : 3 soft, 3 couple, 2 spicy
-  return [...soft.slice(0, 3), ...couple.slice(0, 3), ...spicy.slice(0, 2)];
+  if (ambiance === "spicy") {
+    // escalade : 3 soft, 2 couple, 3 coquins
+    return [...soft.slice(0, 3), ...couple.slice(0, 2), ...byTier("spicy").slice(0, 3)];
+  }
+  // Classique : 4 soft, 4 couple
+  return [...soft.slice(0, 4), ...couple.slice(0, 4)];
 }
 
 // -- Types ------------------------------------------------
@@ -104,7 +36,7 @@ interface PPlayer {
   answer: string | null;
 }
 
-type Phase = "waiting" | "intro" | "answer" | "reveal" | "game-over";
+type Phase = "waiting" | "config" | "intro" | "answer" | "reveal" | "game-over";
 
 // ==========================================================
 export class PensezPareilGame extends BaseGame {
@@ -124,19 +56,38 @@ export class PensezPareilGame extends BaseGame {
   timeLeft = 0;
   timer: ReturnType<typeof setInterval> | null = null;
   phaseTimeout: ReturnType<typeof setTimeout> | null = null;
+  endTimer: ReturnType<typeof setTimeout> | null = null;
+
+  ambiance: Ambiance = "classic"; // Classique par défaut, Coquin 18+ sur choix explicite
+  paused = false; // un des deux joueurs est parti : on attend son retour
 
   start() {
     this.started = true;
     if (this.phaseTimeout) clearTimeout(this.phaseTimeout);
-    this.phaseTimeout = setTimeout(() => this.beginGame(), START_DELAY);
+    // Choix de l'ambiance avant de lancer (comme le mode local)
+    this.phaseTimeout = setTimeout(() => {
+      this.phase = "config";
+      this.broadcastPersonalizedState();
+    }, START_DELAY);
+  }
+
+  /** Les deux joueurs de la partie sont-ils connectés ? */
+  bothPresent(): boolean {
+    const ids = Array.from(this.gamePlayers.keys());
+    return ids.length >= 2 && ids.every((id) => this.players.has(id));
   }
 
   beginGame() {
+    this.clearEndTimer();
+    // On garde le duo en place s'il est toujours là ; sinon les 2 premiers présents.
+    const keep = this.bothPresent() ? Array.from(this.gamePlayers.keys()) : Array.from(this.players.keys()).slice(0, 2);
     this.gamePlayers.clear();
-    for (const [id, player] of this.players) {
-      this.gamePlayers.set(id, { id, name: player.name, answer: null });
+    for (const id of keep) {
+      const player = this.players.get(id);
+      if (player) this.gamePlayers.set(id, { id, name: player.name, answer: null });
     }
-    this.prompts = pickRoundPrompts();
+    this.paused = false;
+    this.prompts = pickRoundPrompts(this.ambiance);
     this.round = 0;
     this.syncs = 0;
     this.streak = 0;
@@ -146,6 +97,10 @@ export class PensezPareilGame extends BaseGame {
   }
 
   startRound() {
+    if (!this.bothPresent()) {
+      this.pause();
+      return;
+    }
     this.round++;
     this.phase = "intro";
     this.prompt = this.prompts[(this.round - 1) % this.prompts.length];
@@ -218,15 +173,69 @@ export class PensezPareilGame extends BaseGame {
       score: this.teamScore,
     }));
     this.broadcastPersonalizedState();
-    setTimeout(() => this.endGame(rankings), 500);
+    this.clearEndTimer();
+    this.endTimer = setTimeout(() => {
+      this.endTimer = null;
+      this.endGame(rankings);
+    }, 500);
+  }
+
+  clearEndTimer() {
+    if (this.endTimer) clearTimeout(this.endTimer);
+    this.endTimer = null;
   }
 
   afterAnswer() {
     const players = Array.from(this.gamePlayers.values());
-    const needed = Math.min(2, players.length);
-    const answered = players.filter((p) => p.answer != null).length;
+    // La manche ne se résout que quand les DEUX joueurs de la partie ont répondu.
+    if (players.length >= 2 && players.every((p) => p.answer != null)) {
+      this.resolve();
+    } else {
+      this.broadcastPersonalizedState();
+    }
+  }
+
+  /** Partenaire parti : on fige la manche en cours. */
+  pause() {
+    if (this.paused) return;
+    this.paused = true;
+    this.stopTimer();
+    if (this.phaseTimeout) clearTimeout(this.phaseTimeout);
+    this.phaseTimeout = null;
+    this.clearBotTimeouts();
     this.broadcastPersonalizedState();
-    if (answered >= needed && needed >= 1) this.resolve();
+  }
+
+  /** Les deux sont de retour : on rejoue la manche interrompue. */
+  resume() {
+    if (!this.paused || !this.bothPresent()) return;
+    this.paused = false;
+    // Met à jour les noms/connexions et repart sur la même manche (réponses effacées)
+    if (this.phase === "reveal") {
+      // la manche était déjà jouée : on passe à la suivante
+      if (this.round >= TOTAL_ROUNDS) this.endMatch();
+      else this.startRound();
+      return;
+    }
+    this.round = Math.max(0, this.round - 1);
+    this.startRound();
+  }
+
+  addPlayer(id: string, name: string, conn: Connection) {
+    super.addPlayer(id, name, conn);
+    if (this.paused && this.gamePlayers.has(id)) this.resume();
+  }
+
+  removePlayer(connectionId: string) {
+    const removed = super.removePlayer(connectionId);
+    if (
+      removed &&
+      this.gamePlayers.has(removed.id) &&
+      (this.phase === "intro" || this.phase === "answer" || this.phase === "reveal")
+    ) {
+      this.pause();
+    }
+    return removed;
   }
 
   // -- Messages --------------------------------------------
@@ -234,10 +243,27 @@ export class PensezPareilGame extends BaseGame {
     const action = payload.action as string;
     const sp = this.findPlayerByConnection(sender.id);
     if (!sp) return;
-    const gp = this.gamePlayers.get(sp.id);
-    if (!gp) return;
 
-    if (action === "submit-answer" && this.phase === "answer") {
+    // Choix de l'ambiance + lancement (réservé aux 2 premiers joueurs)
+    if (this.phase === "config") {
+      const duo = Array.from(this.players.keys()).slice(0, 2);
+      if (!duo.includes(sp.id)) return;
+      if (action === "set-ambiance" && (payload.ambiance === "classic" || payload.ambiance === "spicy")) {
+        this.ambiance = payload.ambiance;
+        this.broadcastPersonalizedState();
+        return;
+      }
+      if (action === "begin-game" && this.players.size >= 2) {
+        this.beginGame();
+        return;
+      }
+      return;
+    }
+
+    const gp = this.gamePlayers.get(sp.id);
+    if (!gp) return; // spectateur : ignoré
+
+    if (action === "submit-answer" && this.phase === "answer" && !this.paused) {
       if (gp.answer != null) return;
       const ans = ((payload.answer as string) ?? "").trim().slice(0, 40);
       if (!ans) return;
@@ -284,6 +310,11 @@ export class PensezPareilGame extends BaseGame {
     const state = this.buildPublicState();
     const me = this.gamePlayers.get(pid);
     state.myAnswer = me?.answer ?? null;
+    // Au-delà des 2 joueurs de la partie : spectateur
+    state.isSpectator =
+      this.phase === "config"
+        ? !Array.from(this.players.keys()).slice(0, 2).includes(pid)
+        : this.gamePlayers.size > 0 && !me;
     return state;
   }
 
@@ -292,6 +323,9 @@ export class PensezPareilGame extends BaseGame {
     const players = Array.from(this.gamePlayers.values());
     return {
       phase: this.phase,
+      paused: this.paused,
+      ambiance: this.ambiance,
+      connectedCount: this.players.size,
       round: this.round,
       totalRounds: TOTAL_ROUNDS,
       timeLeft: this.timeLeft,
@@ -309,6 +343,7 @@ export class PensezPareilGame extends BaseGame {
         id: p.id,
         name: p.name,
         hasAnswered: p.answer != null,
+        present: this.players.has(p.id),
       })),
     };
   }
@@ -318,7 +353,8 @@ export class PensezPareilGame extends BaseGame {
   }
 
   restartIfFinished(): boolean {
-    if (this.phase === "game-over") {
+    // Ne relance que si le duo est au complet (sinon on attend le/la partenaire)
+    if (this.phase === "game-over" && this.players.size >= 2) {
       this.beginGame();
       return true;
     }
@@ -329,5 +365,6 @@ export class PensezPareilGame extends BaseGame {
     this.stopTimer();
     if (this.phaseTimeout) clearTimeout(this.phaseTimeout);
     this.clearBotTimeouts();
+    this.clearEndTimer();
   }
 }

@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Synthwave DA for Longueur d'onde — retro sun, perspective grid, neon FM radio.
+ * Synthwave DA for Le Curseur — retro sun, perspective grid, neon FM radio.
  * Faithful port of the prototype "SYNTHWAVE / RADIO FM" Pose screen.
  */
 
@@ -49,7 +49,7 @@ export function SynthwaveScreen({
       </div>
 
       {/* FM pill */}
-      <div className="relative z-[3] flex items-center justify-center px-5 pt-14">
+      <div className="relative z-[3] flex items-center justify-center px-5 pt-[calc(max(env(safe-area-inset-top),12px)+44px)]">
         <div className="inline-flex items-center gap-2" style={{
           padding: "6px 12px", background: "rgba(10,4,32,0.7)", border: "1px solid rgba(255,62,165,0.5)", borderRadius: 6,
           fontFamily: "var(--font-mono-face)", fontSize: 10, color: "#FF8FC8", fontWeight: 800, letterSpacing: 2, textTransform: "uppercase",
@@ -81,12 +81,12 @@ export function SynthwaveScreen({
             border: "1px solid rgba(255,255,255,0.1)", boxShadow: "0 0 24px rgba(255,62,165,0.2)",
           }}>
             <div className="text-left">
-              <div style={{ fontFamily: "var(--font-mono-face)", fontSize: 9, color: "rgba(255,210,63,0.85)", fontWeight: 800, letterSpacing: 1.5 }}>← 1</div>
+              <div style={{ fontFamily: "var(--font-mono-face)", fontSize: 12, color: "rgba(255,210,63,0.85)", fontWeight: 800, letterSpacing: 1.5 }}>← 0</div>
               <div style={{ fontFamily: "var(--font-display)", fontSize: 17, color: "var(--af-yellow)", fontWeight: 800, lineHeight: 1, marginTop: 2, textShadow: "0 0 10px rgba(255,210,63,0.55)", textTransform: "uppercase" }}>{spectrum.left}</div>
             </div>
             <div style={{ flex: 1, height: 2, background: "linear-gradient(90deg, var(--af-yellow), white 50%, var(--af-pink))", borderRadius: 99, boxShadow: "0 0 8px white" }} />
             <div className="text-right">
-              <div style={{ fontFamily: "var(--font-mono-face)", fontSize: 9, color: "rgba(255,62,165,0.85)", fontWeight: 800, letterSpacing: 1.5 }}>10 →</div>
+              <div style={{ fontFamily: "var(--font-mono-face)", fontSize: 12, color: "rgba(255,62,165,0.85)", fontWeight: 800, letterSpacing: 1.5 }}>100 →</div>
               <div style={{ fontFamily: "var(--font-display)", fontSize: 17, color: "var(--af-pink)", fontWeight: 800, lineHeight: 1, marginTop: 2, textShadow: "0 0 10px rgba(255,62,165,0.55)", textTransform: "uppercase" }}>{spectrum.right}</div>
             </div>
           </div>
@@ -122,8 +122,8 @@ export function NeonConsole({ readout, children }: { readout?: string; children:
 }
 
 /** Cassette-tape styled clue input. */
-export function CassetteInput({ value, onChange, onSubmit, placeholder }: {
-  value: string; onChange: (v: string) => void; onSubmit: () => void; placeholder: string;
+export function CassetteInput({ value, onChange, onSubmit, placeholder, error }: {
+  value: string; onChange: (v: string) => void; onSubmit: () => void; placeholder: string; error?: string | null;
 }) {
   return (
     <div className="relative z-[3] px-5 pb-2 pt-3">
@@ -142,12 +142,17 @@ export function CassetteInput({ value, onChange, onSubmit, placeholder }: {
         </div>
         <input
           value={value} onChange={(e) => onChange(e.target.value)} onKeyDown={(e) => e.key === "Enter" && onSubmit()}
-          placeholder={placeholder} maxLength={60} autoComplete="off"
+          placeholder={placeholder} maxLength={60} autoComplete="off" autoCorrect="off" autoCapitalize="off" spellCheck={false}
           className="w-full bg-transparent outline-none"
           style={{ fontFamily: "var(--font-display)", fontSize: 22, fontWeight: 700, color: "white", textShadow: "0 0 8px rgba(122,78,232,0.4)" }}
         />
       </div>
-      <button onClick={onSubmit} disabled={!value.trim()} className="af-btn mt-3 w-full disabled:opacity-40" style={{
+      {error && (
+        <p role="alert" className="mt-2 text-center text-sm font-semibold" style={{ color: "#FFD23F", textShadow: "0 1px 4px rgba(0,0,0,0.6)" }}>
+          {error}
+        </p>
+      )}
+      <button onClick={onSubmit} disabled={!value.trim() || !!error} className="af-btn mt-3 w-full disabled:opacity-40" style={{
         background: "linear-gradient(135deg, #FF3EA5 0%, #FF6B5B 100%)", textTransform: "uppercase", letterSpacing: 1,
         boxShadow: "0 8px 28px rgba(255,62,165,0.5), inset 0 1px 0 rgba(255,255,255,0.2)",
       }}>

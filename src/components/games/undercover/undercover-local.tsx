@@ -5,7 +5,7 @@ import { Mascot, MASCOT_COLORS, type MascotColor, type MascotMood } from "@/comp
 import { registerSoftReplay } from "@/lib/game-replay";
 
 /* ─────────────────────────────────────────────────────────────
-   UNDERCOVER LOCAL — Pass-and-play (un seul téléphone)
+   L'INTRUS LOCAL — Pass-and-play (un seul téléphone)
    Toute la logique de jeu tourne dans le composant.
    Aucune dépendance serveur / PartyKit.
    ───────────────────────────────────────────────────────────── */
@@ -48,70 +48,119 @@ type EndReason = "civils-win" | "undercover-wins" | "mrwhite-wins" | "jester-win
 // ═════════════════════════════════════════════════════════════
 //  Banque de mots (même contenu que le serveur)
 // ═════════════════════════════════════════════════════════════
-// Grosse liste de mots, classée par catégorie. Chaque paire = (mot civil, mot voisin).
-const WORD_CATEGORIES: { id: string; label: string; emoji: string; pairs: [string, string][] }[] = [
+// Grosse liste de mots, classée par catégorie. Chaque paire = (mot A, mot voisin B) ;
+// au tirage, on choisit au hasard lequel va aux civils et lequel va à l'Intrus.
+// Paires originales, sans marques. La catégorie « +18 » n'est jamais cochée par défaut.
+const WORD_CATEGORIES: { id: string; label: string; emoji: string; adult?: boolean; pairs: [string, string][] }[] = [
   { id: "food", label: "Nourriture", emoji: "🍔", pairs: [
-    ["Pizza", "Pâtes"], ["Hamburger", "Sandwich"], ["Sushi", "Maki"], ["Croissant", "Brioche"],
-    ["Crêpe", "Galette"], ["Kebab", "Tacos"], ["Raclette", "Fondue"], ["Tiramisu", "Mousse au chocolat"],
-    ["Café", "Thé"], ["Coca", "Pepsi"], ["Frites", "Chips"], ["Glace", "Sorbet"],
-    ["Chocolat", "Caramel"], ["Pain", "Baguette"], ["Fromage", "Beurre"], ["Soupe", "Velouté"],
-    ["Steak", "Escalope"], ["Pomme", "Poire"], ["Fraise", "Framboise"], ["Banane", "Mangue"],
+    ["Lasagnes", "Gratin dauphinois"], ["Croque-monsieur", "Panini"], ["Crêpe", "Gaufre"], ["Couscous", "Paella"],
+    ["Quiche", "Tarte salée"], ["Omelette", "Œuf au plat"], ["Ratatouille", "Tian de légumes"], ["Hot-dog", "Burger"],
+    ["Nems", "Samoussas"], ["Taboulé", "Salade de riz"], ["Purée", "Frites"], ["Pain au chocolat", "Croissant"],
+    ["Éclair", "Religieuse"], ["Macaron", "Meringue"], ["Muffin", "Cupcake"], ["Yaourt", "Fromage blanc"],
+    ["Camembert", "Brie"], ["Steak haché", "Boulette"], ["Saucisson", "Jambon"], ["Popcorn", "Chips"],
+    ["Barbe à papa", "Guimauve"], ["Pizza", "Calzone"],
   ] },
   { id: "drinks", label: "Boissons", emoji: "🥤", pairs: [
-    ["Bière", "Vin"], ["Vodka", "Rhum"], ["Whisky", "Cognac"], ["Jus d'orange", "Limonade"],
-    ["Champagne", "Mojito"], ["Smoothie", "Milkshake"], ["Eau", "Soda"], ["Sirop", "Grenadine"],
+    ["Soda au cola", "Soda à l'orange"], ["Jus de pomme", "Jus de raisin"], ["Limonade", "Eau pétillante"], ["Thé glacé", "Citronnade"],
+    ["Chocolat chaud", "Café au lait"], ["Expresso", "Cappuccino"], ["Tisane", "Bouillon"], ["Milkshake", "Smoothie"],
+    ["Sirop de menthe", "Sirop de grenadine"], ["Bière", "Cidre"], ["Vin rouge", "Vin rosé"], ["Champagne", "Crémant"],
+    ["Mojito", "Piña colada"], ["Sangria", "Punch"], ["Rhum", "Whisky"], ["Kombucha", "Ginger beer"],
+    ["Boisson énergisante", "Café serré"], ["Eau de coco", "Jus d'ananas"], ["Diabolo", "Panaché"],
   ] },
   { id: "places", label: "Lieux", emoji: "🌍", pairs: [
-    ["Plage", "Piscine"], ["Montagne", "Colline"], ["Forêt", "Jungle"], ["Hôpital", "Pharmacie"],
-    ["Cinéma", "Théâtre"], ["Bibliothèque", "Librairie"], ["Aéroport", "Gare"], ["Restaurant", "Cafétéria"],
-    ["Hôtel", "Auberge"], ["Musée", "Galerie"], ["École", "Université"], ["Parc", "Jardin"],
-    ["Marché", "Supermarché"], ["Château", "Palais"], ["Église", "Cathédrale"], ["Désert", "Savane"],
-    ["Île", "Presqu'île"], ["Stade", "Arène"],
+    ["Bibliothèque", "Médiathèque"], ["Boulangerie", "Pâtisserie"], ["Camping", "Gîte"], ["Zoo", "Aquarium"],
+    ["Fête foraine", "Parc d'attractions"], ["Patinoire", "Piscine"], ["Mairie", "Préfecture"], ["Phare", "Château d'eau"],
+    ["Grotte", "Tunnel"], ["Port", "Marina"], ["Ferme", "Ranch"], ["Laverie", "Pressing"],
+    ["Cimetière", "Chapelle"], ["Escape game", "Salle d'arcade"], ["Salle de sport", "Dojo"], ["Plage", "Crique"],
+    ["Refuge", "Chalet"], ["Office du tourisme", "Agence de voyage"], ["Planétarium", "Observatoire"], ["Péage", "Station-service"],
   ] },
   { id: "sport", label: "Sport", emoji: "⚽", pairs: [
-    ["Football", "Rugby"], ["Tennis", "Badminton"], ["Ski", "Snowboard"], ["Boxe", "Karaté"],
-    ["Natation", "Plongée"], ["Cyclisme", "Course à pied"], ["Basket", "Handball"], ["Golf", "Pétanque"],
-    ["Escalade", "Randonnée"], ["Surf", "Voile"], ["Judo", "Lutte"], ["Volley", "Beach-volley"],
-    ["Hockey", "Curling"], ["Équitation", "Polo"],
+    ["Football", "Futsal"], ["Tennis", "Squash"], ["Ping-pong", "Badminton"], ["Ski de fond", "Biathlon"],
+    ["Escrime", "Kendo"], ["Aviron", "Canoë"], ["Water-polo", "Natation synchronisée"], ["Parapente", "Parachute"],
+    ["Marathon", "Triathlon"], ["Boxe", "Kick-boxing"], ["Bowling", "Pétanque"], ["Saut en hauteur", "Saut à la perche"],
+    ["Haltérophilie", "Musculation"], ["Tir à l'arc", "Fléchettes"], ["Roller", "Patin à glace"], ["Gymnastique", "Trampoline"],
+    ["Rugby", "Football américain"], ["Kitesurf", "Planche à voile"], ["Golf", "Croquet"], ["Yoga", "Pilates"],
+    ["Handball", "Volley"],
   ] },
   { id: "animals", label: "Animaux", emoji: "🐾", pairs: [
-    ["Chien", "Chat"], ["Lion", "Tigre"], ["Aigle", "Faucon"], ["Dauphin", "Requin"],
-    ["Vache", "Chèvre"], ["Cheval", "Âne"], ["Lapin", "Hamster"], ["Loup", "Renard"],
-    ["Éléphant", "Rhinocéros"], ["Singe", "Gorille"], ["Serpent", "Lézard"], ["Grenouille", "Crapaud"],
-    ["Abeille", "Guêpe"], ["Pingouin", "Manchot"], ["Tortue", "Escargot"], ["Crocodile", "Alligator"],
+    ["Hérisson", "Porc-épic"], ["Koala", "Paresseux"], ["Panda", "Raton laveur"], ["Pieuvre", "Calamar"],
+    ["Méduse", "Étoile de mer"], ["Chameau", "Dromadaire"], ["Zèbre", "Girafe"], ["Kangourou", "Wallaby"],
+    ["Flamant rose", "Cigogne"], ["Perroquet", "Toucan"], ["Mouton", "Lama"], ["Cochon", "Sanglier"],
+    ["Chauve-souris", "Hibou"], ["Fourmi", "Termite"], ["Coccinelle", "Luciole"], ["Phoque", "Otarie"],
+    ["Moustique", "Mouche"], ["Écureuil", "Marmotte"], ["Poisson rouge", "Tortue d'eau"], ["Lynx", "Guépard"],
   ] },
-  { id: "pop", label: "Pop culture", emoji: "🎬", pairs: [
-    ["Batman", "Superman"], ["Star Wars", "Star Trek"], ["Naruto", "One Piece"],
-    ["Harry Potter", "Le Seigneur des Anneaux"], ["Titanic", "Avatar"], ["Mario", "Sonic"],
-    ["Pokémon", "Digimon"], ["Spider-Man", "Iron Man"], ["Dragon Ball", "Bleach"],
-    ["Squid Game", "Money Heist"], ["Minecraft", "Roblox"], ["Fortnite", "Call of Duty"],
-    ["Disney", "Pixar"], ["Marvel", "DC"], ["Game of Thrones", "The Witcher"],
+  { id: "fiction", label: "Fiction", emoji: "🎬", pairs: [
+    ["Vampire", "Loup-garou"], ["Sorcière", "Fée"], ["Zombie", "Momie"], ["Pirate", "Corsaire"],
+    ["Chevalier", "Samouraï"], ["Ninja", "Espion"], ["Dragon", "Licorne"], ["Robot", "Cyborg"],
+    ["Extraterrestre", "Astronaute"], ["Super-héros", "Super-vilain"], ["Princesse", "Reine"], ["Sirène", "Nymphe"],
+    ["Ogre", "Troll"], ["Magicien", "Alchimiste"], ["Cow-boy", "Shérif"], ["Détective", "Inspecteur"],
+    ["Dinosaure", "Mammouth"], ["Génie", "Elfe"], ["Gladiateur", "Viking"], ["Sitcom", "Téléréalité"],
+    ["Western", "Film de cape et d'épée"],
   ] },
   { id: "transport", label: "Transport", emoji: "🚗", pairs: [
-    ["Voiture", "Moto"], ["Train", "Bus"], ["Avion", "Hélicoptère"], ["Bateau", "Sous-marin"],
-    ["Vélo", "Trottinette"], ["Métro", "Tramway"], ["Camion", "Fourgon"], ["Taxi", "Uber"],
-    ["Fusée", "Navette"], ["Ferry", "Paquebot"],
+    ["Voiture", "Camionnette"], ["TGV", "Train de nuit"], ["Trottinette", "Skateboard"], ["Hélicoptère", "Montgolfière"],
+    ["Kayak", "Pédalo"], ["Tracteur", "Moissonneuse"], ["Ambulance", "Camion de pompiers"], ["Taxi", "VTC"],
+    ["Bus scolaire", "Car de tourisme"], ["Téléphérique", "Télésiège"], ["Jet-ski", "Hors-bord"], ["Monocycle", "Tandem"],
+    ["Calèche", "Charrette"], ["Péniche", "Chalutier"], ["Scooter", "Mobylette"], ["Planeur", "ULM"],
+    ["Paquebot", "Ferry"], ["Tramway", "Funiculaire"], ["Dépanneuse", "Camion-benne"], ["Fusée", "Satellite"],
   ] },
-  { id: "objects", label: "Objets", emoji: "📱", pairs: [
-    ["Téléphone", "Tablette"], ["Ordinateur", "Console"], ["Livre", "Magazine"], ["Stylo", "Crayon"],
-    ["Lunettes", "Loupe"], ["Montre", "Bracelet"], ["Clé", "Cadenas"], ["Parapluie", "Parasol"],
-    ["Casque", "Écouteurs"], ["Appareil photo", "Caméra"], ["Lampe", "Bougie"], ["Couteau", "Ciseaux"],
-    ["Sac", "Valise"], ["Miroir", "Vitre"],
+  { id: "objects", label: "Objets", emoji: "📦", pairs: [
+    ["Agrafeuse", "Trombone"], ["Ciseaux", "Cutter"], ["Gomme", "Correcteur"], ["Bougie", "Lampe torche"],
+    ["Réveil", "Minuteur"], ["Peigne", "Brosse à cheveux"], ["Brosse à dents", "Fil dentaire"], ["Coussin", "Oreiller"],
+    ["Couette", "Plaid"], ["Tire-bouchon", "Décapsuleur"], ["Parapluie", "Imperméable"], ["Portefeuille", "Sac banane"],
+    ["Jumelles", "Télescope"], ["Boussole", "Carte"], ["Cadenas", "Coffre-fort"], ["Sifflet", "Klaxon"],
+    ["Ballon", "Frisbee"], ["Puzzle", "Casse-tête"], ["Dé", "Carte à jouer"], ["Marteau", "Maillet"],
+    ["Tournevis", "Clé à molette"],
   ] },
   { id: "nature", label: "Nature", emoji: "🌦️", pairs: [
-    ["Soleil", "Lune"], ["Pluie", "Neige"], ["Été", "Hiver"], ["Printemps", "Automne"],
-    ["Mer", "Lac"], ["Volcan", "Geyser"], ["Rivière", "Fleuve"], ["Orage", "Tempête"],
-    ["Arbre", "Buisson"], ["Fleur", "Plante"], ["Étoile", "Planète"], ["Nuage", "Brouillard"],
+    ["Arc-en-ciel", "Aurore boréale"], ["Grêle", "Verglas"], ["Tsunami", "Tremblement de terre"], ["Avalanche", "Glissement de terrain"],
+    ["Dune", "Falaise"], ["Marais", "Étang"], ["Récif", "Lagon"], ["Cactus", "Palmier"],
+    ["Sapin", "Chêne"], ["Rose", "Tulipe"], ["Tournesol", "Marguerite"], ["Champignon", "Mousse"],
+    ["Coquillage", "Galet"], ["Comète", "Météorite"], ["Éclipse", "Pleine lune"], ["Brise", "Rafale"],
+    ["Glacier", "Iceberg"], ["Canyon", "Vallée"], ["Geyser", "Source chaude"], ["Cascade", "Rapides"],
   ] },
   { id: "events", label: "Événements", emoji: "🎉", pairs: [
-    ["Mariage", "Anniversaire"], ["Noël", "Pâques"], ["Halloween", "Carnaval"], ["Festival", "Concert"],
-    ["Nouvel An", "Saint-Sylvestre"], ["Baptême", "Communion"], ["Soirée", "Apéro"], ["Vacances", "Week-end"],
+    ["Mariage", "Fiançailles"], ["Anniversaire surprise", "Pendaison de crémaillère"], ["Enterrement de vie de jeune fille", "Baby shower"], ["Remise de diplômes", "Bal de promo"],
+    ["Brocante", "Vide-grenier"], ["Feu d'artifice", "Lâcher de lanternes"], ["Saint-Valentin", "Fête des mères"], ["Réveillon de Noël", "Jour de l'An"],
+    ["Chandeleur", "Mardi gras"], ["Carnaval", "Bal masqué"], ["Kermesse", "Fête de village"], ["Salon", "Foire"],
+    ["Pique-nique", "Barbecue"], ["Rentrée scolaire", "Vacances d'été"], ["Déménagement", "Rénovation"], ["Entretien d'embauche", "Premier jour de travail"],
+    ["Match", "Tournoi"], ["Défilé", "Parade"], ["Spectacle de fin d'année", "Remise des prix"], ["Halloween", "Soirée déguisée"],
   ] },
   { id: "jobs", label: "Métiers", emoji: "💼", pairs: [
-    ["Médecin", "Infirmier"], ["Boulanger", "Pâtissier"], ["Avocat", "Juge"], ["Pompier", "Policier"],
-    ["Pilote", "Astronaute"], ["Coiffeur", "Barbier"], ["Professeur", "Directeur"], ["Plombier", "Électricien"],
-    ["Cuisinier", "Serveur"], ["Acteur", "Chanteur"], ["Peintre", "Sculpteur"], ["Journaliste", "Écrivain"],
-    ["Vétérinaire", "Dentiste"], ["Architecte", "Ingénieur"],
+    ["Facteur", "Livreur"], ["Boucher", "Poissonnier"], ["Chirurgien", "Anesthésiste"], ["Hôtesse de l'air", "Guide touristique"],
+    ["Kinésithérapeute", "Ostéopathe"], ["Maçon", "Charpentier"], ["Mécanicien", "Carrossier"], ["DJ", "Animateur radio"],
+    ["Photographe", "Cameraman"], ["Bibliothécaire", "Archiviste"], ["Sage-femme", "Pédiatre"], ["Notaire", "Comptable"],
+    ["Vigile", "Garde du corps"], ["Chauffeur de bus", "Conducteur de train"], ["Agriculteur", "Viticulteur"], ["Pharmacien", "Opticien"],
+    ["Maître-nageur", "Sauveteur en mer"], ["Styliste", "Couturier"], ["Prêtre", "Moine"], ["Clown", "Mime"],
+  ] },
+  { id: "tech", label: "Écrans & tech", emoji: "📱", pairs: [
+    ["Smartphone", "Tablette"], ["Ordinateur portable", "Ordinateur fixe"], ["Console de salon", "Console portable"], ["Réseau social", "Messagerie"],
+    ["Série", "Film"], ["Podcast", "Livre audio"], ["Selfie", "Photo de groupe"], ["Emoji", "GIF"],
+    ["Clé USB", "Disque dur"], ["Wi-Fi", "Bluetooth"], ["Télécommande", "Manette"], ["Écouteurs sans fil", "Casque audio"],
+    ["Montre connectée", "Podomètre"], ["Imprimante", "Scanner"], ["Mot de passe", "Code PIN"], ["Appel vidéo", "Message vocal"],
+    ["Streaming", "Replay"], ["Jeu de tir", "Jeu de course"], ["Moteur de recherche", "Encyclopédie"], ["Drone", "Voiture télécommandée"],
+    ["Plateforme vidéo", "Chaîne de télé"],
+  ] },
+  { id: "music", label: "Musique", emoji: "🎵", pairs: [
+    ["Guitare", "Ukulélé"], ["Piano", "Orgue"], ["Violon", "Contrebasse"], ["Flûte", "Clarinette"],
+    ["Trompette", "Cor de chasse"], ["Batterie", "Tambourin"], ["Accordéon", "Harmonica"], ["Harpe", "Lyre"],
+    ["Rap", "Slam"], ["Rock", "Métal"], ["Reggae", "Ska"], ["Jazz", "Blues"],
+    ["Chorale", "Fanfare"], ["Karaoké", "Blind test"], ["Opéra", "Comédie musicale"], ["Disque vinyle", "Cassette"],
+    ["Chef d'orchestre", "Soliste"], ["Berceuse", "Comptine"], ["Tube de l'été", "Hymne national"], ["Platine", "Table de mixage"],
+  ] },
+  { id: "home", label: "Maison", emoji: "🏠", pairs: [
+    ["Canapé", "Fauteuil"], ["Lit superposé", "Hamac"], ["Baignoire", "Jacuzzi"], ["Douche", "Sauna"],
+    ["Cave", "Grenier"], ["Balcon", "Terrasse"], ["Volet", "Rideau"], ["Lave-vaisselle", "Lave-linge"],
+    ["Micro-ondes", "Four"], ["Grille-pain", "Gaufrier"], ["Bouilloire", "Cafetière"], ["Poêle", "Casserole"],
+    ["Tapis", "Paillasson"], ["Étagère", "Commode"], ["Lustre", "Lampadaire"], ["Serrure", "Interphone"],
+    ["Cheminée", "Radiateur"], ["Aspirateur", "Serpillière"], ["Escalier", "Ascenseur"], ["Garage", "Abri de jardin"],
+  ] },
+  { id: "fashion", label: "Mode", emoji: "👕", pairs: [
+    ["Jean", "Jogging"], ["Pull", "Sweat à capuche"], ["Basket", "Mocassin"], ["Bottes de pluie", "Après-ski"],
+    ["Écharpe", "Foulard"], ["Bonnet", "Casquette"], ["Robe", "Jupe"], ["Chemise", "Polo"],
+    ["Pyjama", "Peignoir"], ["Short", "Maillot de bain"], ["Cravate", "Nœud papillon"], ["Gants", "Moufles"],
+    ["Manteau", "Doudoune"], ["Lunettes de soleil", "Masque de ski"], ["Collier", "Boucles d'oreilles"], ["Ceinture", "Bretelles"],
+    ["Tongs", "Chaussons"], ["Costume", "Smoking"], ["Tablier", "Blouse"], ["Sac à main", "Cartable"],
   ] },
   { id: "anime", label: "Anime", emoji: "🎌", pairs: [
     ["Naruto", "Sasuke"], ["Goku", "Vegeta"], ["Luffy", "Zoro"], ["Itachi", "Madara"],
@@ -119,45 +168,32 @@ const WORD_CATEGORIES: { id: string; label: string; emoji: string; pairs: [strin
     ["Nami", "Robin"], ["One Piece", "Bleach"], ["Konoha", "Akatsuki"], ["Sharingan", "Byakugan"],
     ["Bankai", "Zanpakuto"], ["Manga", "Comics"], ["Shinigami", "Hollow"], ["Titan", "Géant"],
   ] },
-  { id: "brands", label: "Marques & tech", emoji: "📱", pairs: [
-    ["Netflix", "YouTube"], ["iPhone", "Samsung"], ["Instagram", "TikTok"], ["Google", "Bing"],
-    ["McDonald's", "Burger King"], ["Spotify", "Deezer"], ["WhatsApp", "Telegram"], ["Coca-Cola", "Pepsi"],
-    ["Mars", "Snickers"], ["Email", "SMS"], ["Radio", "Podcast"], ["PlayStation", "Xbox"],
-  ] },
-  { id: "music", label: "Musique", emoji: "🎵", pairs: [
-    ["Guitare", "Piano"], ["Violon", "Violoncelle"], ["Trompette", "Saxophone"], ["Opéra", "Ballet"],
-    ["Rap", "RnB"], ["Batterie", "Percussions"],
-  ] },
-  { id: "adult", label: "+18", emoji: "🔞", pairs: [
-    // Soirée / dating
-    ["Tinder", "Bumble"], ["Préservatif", "Pilule"], ["Gueule de bois", "Black-out"],
-    ["Tequila", "Vodka"], ["Strip-tease", "Pole dance"], ["Suçon", "Bisou"],
-    ["Nude", "Sextape"], ["Boîte de nuit", "Bar"], ["Célibataire", "Friendzone"],
-    ["Bière", "Shot"], ["Cigarette", "Chicha"], ["String", "Boxer"],
-    ["Lingerie", "Nuisette"], ["Coup d'un soir", "Plan cul"], ["Pécho", "Date"],
-    ["Mojito", "Margarita"], ["Champagne", "Prosecco"], ["Joint", "Pétard"],
-    ["Décolleté", "Mini-jupe"], ["Talons aiguilles", "Bas résille"], ["Motel", "Love hotel"],
-    ["Tatouage", "Piercing"], ["Cabaret", "Effeuillage"], ["Apéro", "Before"],
-    ["Crush", "Ex"], ["Corset", "Porte-jarretelles"], ["Fantasme", "Roleplay"],
-    ["Latex", "Cuir"], ["OnlyFans", "MYM"], ["French kiss", "Bisou"],
-    ["Infidèle", "Fidèle"], ["Désir", "Tentation"], ["Menottes", "Chaînes"],
-    // Explicite
-    ["Soumis", "Dominant"], ["Missionnaire", "Levrette"], ["Cunnilingus", "Fellation"],
-    ["Échangisme", "Partouze"], ["Sodomie", "Pénétration"], ["Fétichisme", "Voyeurisme"],
-    ["Plug anal", "Gode ceinture"], ["Domination", "Soumission"], ["Nymphomane", "Puceau"],
-    ["69", "Ciseaux"], ["BDSM", "Soft"], ["Footjob", "Handjob"],
-    ["Pornhub", "Xvideos"], ["Brazzers", "YouPorn"], ["Jacquie et Michel", "Dorcel"],
-    ["Mia Khalifa", "Lana Rhoades"], ["Riley Reid", "Adriana Chechik"], ["Johnny Sins", "Manuel Ferrara"],
-    ["Clara Morgane", "Angela White"], ["Lubrifiant", "Salive"], ["Préliminaires", "Baiser"],
+  { id: "adult", label: "+18", emoji: "🔞", adult: true, pairs: [
+    ["Premier rendez-vous", "Coup de foudre"], ["Bisou", "Câlin"], ["Suçon", "Bisou dans le cou"], ["Lingerie", "Nuisette"],
+    ["String", "Culotte"], ["Porte-jarretelles", "Bas résille"], ["Strip-tease", "Danse lascive"], ["Massage", "Bain moussant"],
+    ["Menottes", "Bandeau sur les yeux"], ["Plume", "Glaçon"], ["Jeu de rôle", "Déguisement coquin"], ["Coup d'un soir", "Ex qui revient"],
+    ["Appli de rencontre", "Speed dating"], ["Crush", "Ex"], ["Friendzone", "Ghosting"], ["Préservatif", "Lubrifiant"],
+    ["Love hotel", "Suite nuptiale"], ["Sexto", "Photo osée"], ["Préliminaires", "Câlin crapuleux"], ["Fantasme", "Tentation"],
+    ["Infidélité", "Jalousie"], ["Walk of shame", "Lendemain de soirée"], ["Jacuzzi à deux", "Douche à deux"], ["Lit à baldaquin", "Lit rond"],
+    ["Talons aiguilles", "Cuissardes"], ["Effeuillage", "Cabaret"],
   ] },
 ];
-const ALL_WORD_PAIRS: [string, string][] = WORD_CATEGORIES.flatMap((c) => c.pairs);
+// Sans sélection : tout sauf le +18.
+const ALL_WORD_PAIRS: [string, string][] = WORD_CATEGORIES.filter((c) => !c.adult).flatMap((c) => c.pairs);
 
 // ═════════════════════════════════════════════════════════════
 //  Tokens (mirror online)
 // ═════════════════════════════════════════════════════════════
 const ROLE_COLOR: Record<Role, string> = { civil: "#3DDC97", undercover: "#FF3EA5", mrwhite: "#FFD23F", jester: "#C58CFF" };
-const ROLE_LABEL: Record<Role, string> = { civil: "Civil", undercover: "Undercover", mrwhite: "Mr. White", jester: "Bouffon" };
+const ROLE_LABEL: Record<Role, string> = { civil: "Civil", undercover: "Intrus", mrwhite: "Fantôme", jester: "Bouffon" };
+const ROLE_ARTICLE: Record<Role, string> = { civil: "un Civil", undercover: "l'Intrus", mrwhite: "le Fantôme", jester: "le Bouffon" };
+
+/** Taille du mot secret adaptée à sa longueur (le mot le plus long décide). */
+const wordFontSize = (word: string | null, max = 56) => {
+  const longest = Math.max(1, ...(word ?? "?????").split(/\s+/).map((w) => w.length));
+  return `clamp(24px, ${Math.min(15, 125 / longest).toFixed(1)}vw, ${max}px)`;
+};
+const WORD_WRAP: CSSProperties = { overflowWrap: "break-word", wordBreak: "break-word", hyphens: "auto" };
 
 const colorByIdx = (idx: number): MascotColor => MASCOT_COLORS[idx % MASCOT_COLORS.length];
 
@@ -170,8 +206,8 @@ export default function UndercoverLocal({ onReturnToLobby }: { onReturnToLobby?:
   const [players, setPlayers]       = useState<LocalPlayer[]>([]);
   const [round, setRound]           = useState(1);
   const [endReason, setEndReason]   = useState<EndReason | null>(null);
-  // Catégories de mots sélectionnées (toutes par défaut).
-  const [selectedCats, setSelectedCats] = useState<Set<string>>(() => new Set(WORD_CATEGORIES.map((c) => c.id)));
+  // Catégories de mots sélectionnées (toutes par défaut, sauf le +18).
+  const [selectedCats, setSelectedCats] = useState<Set<string>>(() => new Set(WORD_CATEGORIES.filter((c) => !c.adult).map((c) => c.id)));
 
   // Pair de mots tirée pour la partie
   const [civilWord, setCivilWord]   = useState("");
@@ -180,7 +216,7 @@ export default function UndercoverLocal({ onReturnToLobby }: { onReturnToLobby?:
   // Config de rôles (configurée en setup-roles)
   const [ucCount, setUcCount]       = useState(1);
   const [mrWhite, setMrWhite]       = useState(false);
-  const [jester, setJester]         = useState(false);  // Bouffon : gagne s'il se fait éliminer
+  const [jester, setJester]         = useState(false);  // Bouffon : gagne seul s'il se fait éliminer par le vote
 
   // Distribution / phase pass-reveal
   const [revealIdx, setRevealIdx]   = useState(0);   // joueur courant qui voit son mot
@@ -201,7 +237,7 @@ export default function UndercoverLocal({ onReturnToLobby }: { onReturnToLobby?:
   const [reviewIdx, setReviewIdx]   = useState<number | null>(null);
   const [reviewBack, setReviewBack] = useState<LocalPhase>("table");
 
-  // Mr. White guess
+  // Le Fantôme devine
   const [mrWhiteGuess, setMrWhiteGuess] = useState<string | null>(null);
   const [mrWhiteRight, setMrWhiteRight] = useState<boolean | null>(null);
 
@@ -347,14 +383,14 @@ export default function UndercoverLocal({ onReturnToLobby }: { onReturnToLobby?:
     else setPhase("eliminate");
   };
 
-  // ── Phase mr-white guess ────────────────────────────────
+  // ── Le Fantôme devine ───────────────────────────────────
   const submitMrWhiteGuess = (guess: string) => {
     setMrWhiteGuess(guess);
     const norm = (s: string) => s.toLowerCase().trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
     const right = norm(guess) === norm(civilWord);
     setMrWhiteRight(right);
     if (right) {
-      // MW gagne seul
+      // Le Fantôme gagne seul
       if (eliminatedIdx !== null) {
         setPlayers((ps) => ps.map((p) => p.idx === eliminatedIdx ? { ...p, score: p.score + 5 } : p));
       }
@@ -379,10 +415,11 @@ export default function UndercoverLocal({ onReturnToLobby }: { onReturnToLobby?:
       setPhase("over");
       return;
     }
-    // Imposteurs gagnent
+    // Imposteurs gagnent (aussi nombreux que les autres joueurs vivants).
+    // Le Bouffon n'est PAS un imposteur : il ne gagne que s'il est éliminé par le vote.
     if (remUC + remMW >= remCv) {
       setPlayers((ps) => ps.map((p) =>
-        (p.role !== "civil" && !p.isEliminated) ? { ...p, score: p.score + 5 } : p
+        ((p.role === "undercover" || p.role === "mrwhite") && !p.isEliminated) ? { ...p, score: p.score + 5 } : p
       ));
       setEndReason("undercover-wins");
       setPhase("over");
@@ -541,7 +578,7 @@ export default function UndercoverLocal({ onReturnToLobby }: { onReturnToLobby?:
     );
   }
 
-  // 9. Mr. White pass + guess
+  // 9. Le Fantôme : passe + devine
   if (phase === "mrwhite-pass") {
     const p = eliminatedIdx !== null ? players[eliminatedIdx] : null;
     if (!p) return null;
@@ -549,7 +586,7 @@ export default function UndercoverLocal({ onReturnToLobby }: { onReturnToLobby?:
       <PassScreenUC
         toName={p.name}
         colorIdx={p.idx}
-        label="Mr. White · dernière chance"
+        label="Fantôme · dernière chance"
         tag="Bonus"
         buttonLabel="🎯 Tenter ma chance"
         onReady={() => setPhase("mrwhite-guess")}
@@ -610,23 +647,29 @@ function SetupRoles({
   selectedCats: Set<string>; setSelectedCats: (v: Set<string>) => void;
   onStart: () => void; onBack: () => void;
 }) {
-  const allSelected = selectedCats.size === WORD_CATEGORIES.length;
   const toggleCat = (id: string) => {
     const next = new Set(selectedCats);
     if (next.has(id)) next.delete(id); else next.add(id);
     if (next.size === 0) return; // garder au moins une catégorie
     setSelectedCats(next);
   };
-  const toggleAll = () => setSelectedCats(allSelected ? new Set([WORD_CATEGORIES[0].id]) : new Set(WORD_CATEGORIES.map((c) => c.id)));
+  // « Tout » = toutes les catégories tout public ; le +18 se coche à part.
+  const safeIds = WORD_CATEGORIES.filter((c) => !c.adult).map((c) => c.id);
+  const allSafe = safeIds.every((id) => selectedCats.has(id));
+  const toggleAll = () => {
+    const next = new Set(allSafe ? [safeIds[0]] : safeIds);
+    for (const c of WORD_CATEGORIES) if (c.adult && selectedCats.has(c.id)) next.add(c.id);
+    setSelectedCats(next);
+  };
   const total = players.length;
-  // Les civils doivent rester majoritaires : (Undercover + Mr.White) < civils.
+  // Les civils doivent rester majoritaires : (Intrus + Fantôme) < civils.
   const impostorCap = Math.floor((total - 1) / 2); // nb max d'imposteurs au total
-  const canMrWhite = impostorCap >= 2;             // Mr.White à partir de 5 joueurs
+  const canMrWhite = impostorCap >= 2;             // Fantôme à partir de 5 joueurs
   const mwSlots = mrWhite && canMrWhite ? 1 : 0;
   const maxUC = Math.max(1, Math.min(3, impostorCap - mwSlots));
   const ucEff = Math.min(Math.max(1, ucCount), maxUC);
   // Le Bouffon est neutre : il prend une place côté civils. Il faut qu'il
-  // reste au moins 1 vrai civil après UC + Mr.White + Bouffon.
+  // reste au moins 1 vrai civil après Intrus + Fantôme + Bouffon.
   const canJester = total - ucEff - mwSlots >= 3;
   const jSlots = jester && canJester ? 1 : 0;
   const civils = total - ucEff - mwSlots - jSlots;
@@ -667,18 +710,18 @@ function SetupRoles({
 
         <div style={{ display: "grid", gridTemplateColumns: jSlots > 0 ? "repeat(4,1fr)" : "repeat(3,1fr)", gap: 6, marginBottom: 14 }}>
           <Stat n={civils} label="Civils" color="#3DDC97" sub="même mot" />
-          <Stat n={ucEff} label="Undercover" color="#FF3EA5" sub="mot voisin" />
-          <Stat n={mwSlots} label="Mr. White" color="#FFD23F" sub="aucun mot" />
+          <Stat n={ucEff} label="Intrus" color="#FF3EA5" sub="mot voisin" />
+          <Stat n={mwSlots} label="Fantôme" color="#FFD23F" sub="aucun mot" />
           {jSlots > 0 && <Stat n={jSlots} label="Bouffon" color="#C58CFF" sub="à éliminer" />}
         </div>
 
-        <Row label="Undercover" hint={`1 à ${maxUC}`}>
+        <Row label="Intrus" hint={`1 à ${maxUC}`}>
           <Stepper value={ucEff} min={1} max={maxUC} onChange={setUcCount} />
         </Row>
-        <Row label="Mr. White" hint={canMrWhite ? "aucun mot · devine s'il sort" : "5 joueurs min"}>
+        <Row label="Fantôme" hint={canMrWhite ? "aucun mot · devine s'il sort" : "5 joueurs min"}>
           <Toggle value={mwSlots > 0} onChange={toggleMrWhite} />
         </Row>
-        <Row label="Bouffon" hint={canJester ? "gagne s'il se fait éliminer" : "pas assez de civils"}>
+        <Row label="Bouffon" hint={canJester ? "gagne seul s'il se fait éliminer par le vote" : "pas assez de civils"}>
           <Toggle value={jSlots > 0} onChange={toggleJester} />
         </Row>
       </FileCard>
@@ -688,18 +731,18 @@ function SetupRoles({
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
           <Mono>Thèmes des mots</Mono>
           <button onClick={toggleAll} style={{
-            fontFamily: "var(--font-mono, monospace)", fontSize: 10, fontWeight: 800, letterSpacing: 1,
-            textTransform: "uppercase", color: "#FFD23F", padding: "4px 10px", borderRadius: 999,
-            background: allSelected ? "rgba(255,210,63,0.18)" : "rgba(255,255,255,0.06)",
+            fontFamily: "var(--font-mono, monospace)", fontSize: 12, fontWeight: 800, letterSpacing: 1,
+            textTransform: "uppercase", color: "#FFD23F", padding: "0 14px", minHeight: 44, borderRadius: 999,
+            background: allSafe ? "rgba(255,210,63,0.18)" : "rgba(255,255,255,0.06)",
             border: "1px solid rgba(255,210,63,0.4)", cursor: "pointer",
-          }}>{allSelected ? "Tout ✓" : "Tout sélectionner"}</button>
+          }}>{allSafe ? "Tout ✓" : "Tout sélectionner"}</button>
         </div>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
           {WORD_CATEGORIES.map((c) => {
             const on = selectedCats.has(c.id);
             return (
               <button key={c.id} onClick={() => toggleCat(c.id)} style={{
-                display: "flex", alignItems: "center", gap: 6, padding: "8px 12px", borderRadius: 12,
+                display: "flex", alignItems: "center", gap: 6, padding: "8px 12px", minHeight: 44, borderRadius: 12,
                 fontSize: 13, fontWeight: 700, color: on ? "#fff" : "rgba(255,255,255,0.5)",
                 background: on ? "linear-gradient(160deg, rgba(255,210,63,0.22), rgba(0,0,0,0.2))" : "rgba(255,255,255,0.04)",
                 border: on ? "1.5px solid rgba(255,210,63,0.7)" : "1px solid rgba(255,255,255,0.12)",
@@ -724,6 +767,8 @@ function SetupRoles({
         <div>Les rôles vont être attribués au hasard. Chacun verra son mot sur ce téléphone, à son tour.</div>
       </div>
 
+      <RulesCard jester={jSlots > 0} />
+
       <div style={{ marginTop: "auto" }}>
         <Btn tone="gold" disabled={!valid} onClick={onStart} icon={<span style={{ fontSize: 18 }}>🎲</span>}>
           Distribuer les rôles
@@ -744,20 +789,19 @@ function RevealScreen({
   review?: boolean;
   onAck: () => void;
 }) {
-  // L'undercover NE SAIT PAS qu'il l'est : civil + undercover voient "Civil".
-  // Seul Mr. White sait qu'il n'a pas de mot.
+  // L'Intrus NE SAIT PAS qu'il l'est : civils et Intrus voient juste leur mot
+  // (aucune mention « Civil »). Le Fantôme et le Bouffon connaissent leur rôle
+  // (ils ont un objectif spécial).
   const isMrWhite = player.role === "mrwhite";
   const isJester = player.role === "jester";
-  // L'undercover NE SAIT PAS qu'il l'est (il se croit civil). Mr.White et
-  // Bouffon connaissent leur rôle (ils ont un objectif spécial).
   const displayRole: Role = isMrWhite ? "mrwhite" : isJester ? "jester" : "civil";
-  const color = ROLE_COLOR[displayRole];
-  const label = ROLE_LABEL[displayRole];
+  const color = isMrWhite || isJester ? ROLE_COLOR[displayRole] : "#FFD23F";
+  const label = isMrWhite || isJester ? ROLE_LABEL[displayRole] : "Top secret";
   const hint = isMrWhite
-    ? "Aucun mot. Bluff. Si tu es éliminé, devine le mot des civils pour gagner seul."
+    ? "Tu es le Fantôme : tu n'as pas de mot. Écoute, bluffe… Si tu es éliminé, devine le mot des civils pour gagner seul."
     : isJester
-    ? "Tu es le Bouffon. Ton but : te faire éliminer ! Sois louche… mais pas trop vite."
-    : "Mémorise ton mot. Donne un indice clair, mais pas trop évident.";
+    ? "Tu es le Bouffon. Tu as le mot des civils, mais ton but est de te faire éliminer par le vote ! Sois louche… mais pas trop vite."
+    : "Mémorise ton mot. Attention : tu ne sais pas si tu es civil… ou l'Intrus ! Donne un indice ni trop vague, ni trop évident.";
 
   const blobColor: MascotColor = isMrWhite ? "white" : isJester ? "lavender" : "mint";
   const blobMood: MascotMood = isMrWhite ? "thinking" : isJester ? "laughing" : "happy";
@@ -785,14 +829,14 @@ function RevealScreen({
         }}>
           <span style={{ fontSize: 16 }}>🔒</span>
           <div style={{ fontSize: 12, color: "white", fontWeight: 600 }}>
-            Personne d'autre ne doit voir l'écran. ({position}/{total})
+            Personne d&apos;autre ne doit voir l&apos;écran. ({position}/{total})
           </div>
         </div>
       )}
 
       <div style={{ marginTop: "auto" }}>
         <Btn tone="gold" onClick={onAck}>
-          {review ? "Cacher · revenir" : "J'ai mémorisé · suivant →"}
+          {review ? "Cacher · revenir" : "J’ai mémorisé · suivant →"}
         </Btn>
       </div>
     </LocalShell>
@@ -939,7 +983,7 @@ function ReviewPick({
         display: "flex", gap: 10, alignItems: "flex-start",
       }}>
         <span style={{ fontSize: 18 }}>⚠️</span>
-        <div>Choisis ton blob, puis <strong>personne d'autre ne doit voir l'écran.</strong></div>
+        <div>Choisis ton blob, puis <strong>personne d&apos;autre ne doit voir l&apos;écran.</strong></div>
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14 }}>
@@ -956,8 +1000,8 @@ function ReviewPick({
             <div style={{
               padding: "3px 10px", borderRadius: 99,
               background: "rgba(255,255,255,0.06)",
-              fontSize: 10, color: "rgba(255,255,255,0.7)", fontWeight: 600,
-            }}>tap pour revoir</div>
+              fontSize: 12, color: "rgba(255,255,255,0.7)", fontWeight: 600,
+            }}>touche pour revoir</div>
           </button>
         ))}
       </div>
@@ -1008,9 +1052,9 @@ function GroupVoteScreen({
               <div style={{ display: "flex", justifyContent: "center", marginTop: 4 }}>
                 <Mascot color={colorByIdx(p.idx)} size={64} mood={isPicked ? "shocked" : "shifty"} arms bob={false} />
               </div>
-              <div style={{ fontFamily: "var(--font-display, system-ui)", fontSize: 18, marginTop: 10, lineHeight: 1, fontWeight: 800 }}>{p.name}</div>
-              <div style={{ marginTop: 8, padding: "6px 0", borderRadius: 10, background: isPicked ? "#FF3EA5" : "rgba(255,255,255,0.05)", color: isPicked ? "#fff" : "rgba(255,255,255,0.5)", fontSize: 11, fontWeight: 800 }}>
-                {isPicked ? "✕ Éliminer" : "tap pour choisir"}
+              <div style={{ fontFamily: "var(--font-display, system-ui)", fontSize: 18, marginTop: 10, lineHeight: 1.05, fontWeight: 800, overflowWrap: "anywhere" }}>{p.name}</div>
+              <div style={{ marginTop: 8, padding: "6px 0", borderRadius: 10, background: isPicked ? "#FF3EA5" : "rgba(255,255,255,0.05)", color: isPicked ? "#fff" : "rgba(255,255,255,0.55)", fontSize: 12, fontWeight: 800 }}>
+                {isPicked ? "✕ Éliminer" : "touche pour choisir"}
               </div>
             </button>
           );
@@ -1040,6 +1084,7 @@ function EliminateScreen({
     void civilWord;
     const role = eliminated?.role ?? null;
     const color = role ? ROLE_COLOR[role] : "#FFD23F";
+    const isImpostor = role === "undercover" || role === "mrwhite";
 
   return (
     <LocalShell tone="danger">
@@ -1054,7 +1099,7 @@ function EliminateScreen({
 
       <NavBar
         sub={`Verdict · manche ${round}`}
-        title={eliminated ? "Démasqué !" : "Égalité"}
+        title={eliminated ? (isImpostor ? "Démasqué !" : "Innocent…") : "Personne ne sort"}
         right={<Tag color={color}>{role ? ROLE_LABEL[role].toUpperCase() : "VOTE"}</Tag>}
       />
 
@@ -1068,7 +1113,7 @@ function EliminateScreen({
                 <Stamp text="Éliminé" color={color} rotate={-12} size={20} />
               </div>
             </div>
-            <div style={{ fontFamily: "var(--font-display, system-ui)", fontSize: 44, marginTop: 14, letterSpacing: -1.5, fontWeight: 900 }}>{eliminated.name}</div>
+            <div style={{ fontFamily: "var(--font-display, system-ui)", fontSize: "clamp(28px, 11vw, 44px)", marginTop: 14, letterSpacing: -1.5, fontWeight: 900, textAlign: "center", overflowWrap: "anywhere" }}>{eliminated.name}</div>
           </div>
 
           <div style={{
@@ -1077,11 +1122,11 @@ function EliminateScreen({
             border: `1px solid ${color}55`,
             textAlign: "center", marginBottom: 16,
           }}>
-            <Mono>C&apos;était un…</Mono>
+            <Mono>C&apos;était…</Mono>
             <div style={{ fontFamily: "var(--font-display, system-ui)", fontSize: 30, color, fontWeight: 900, marginTop: 4 }}>
-              {role ? ROLE_LABEL[role] : "—"}
+              {role ? ROLE_ARTICLE[role] : "—"}
             </div>
-            <div style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", marginTop: 4 }}>son mot reste secret</div>
+            <div style={{ fontSize: 12, color: "rgba(255,255,255,0.55)", marginTop: 4 }}>son mot reste secret</div>
           </div>
         </>
       ) : (
@@ -1102,7 +1147,7 @@ function MrWhiteGuess({ player, onSubmit }: { player: LocalPlayer; onSubmit: (g:
   const [text, setText] = useState("");
   return (
     <LocalShell tone="gold">
-      <NavBar sub="Coup du destin" title="Mr. White devine" right={<Tag color="#FFD23F">DERNIÈRE CHANCE</Tag>} />
+      <NavBar sub="Coup du destin" title="Le Fantôme devine" right={<Tag color="#FFD23F">DERNIÈRE CHANCE</Tag>} />
 
       <div style={{
         padding: 18, borderRadius: 22,
@@ -1113,7 +1158,7 @@ function MrWhiteGuess({ player, onSubmit }: { player: LocalPlayer; onSubmit: (g:
         <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
           <Mascot color={colorByIdx(player.idx)} size={68} mood="thinking" arms />
           <div>
-            <Mono>Mr. White éliminé</Mono>
+            <Mono>Fantôme éliminé</Mono>
             <div style={{ fontFamily: "var(--font-display, system-ui)", fontSize: 26, fontWeight: 900, marginTop: 4 }}>{player.name}</div>
           </div>
         </div>
@@ -1132,6 +1177,7 @@ function MrWhiteGuess({ player, onSubmit }: { player: LocalPlayer; onSubmit: (g:
           onChange={(e) => setText(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && text.trim() && onSubmit(text.trim())}
           placeholder="Ton pari…"
+          autoCorrect="off" autoCapitalize="off" spellCheck={false}
           style={{
             flex: 1, background: "transparent", border: "none", color: "white",
             fontSize: 18, padding: 10, outline: "none", fontWeight: 700, letterSpacing: 0.5,
@@ -1161,11 +1207,11 @@ function GameOverScreen({
   onReplay: () => void;
   onLobby?: () => void;
 }) {
-  const title =
-    endReason === "civils-win" ? "Civils victorieux" :
-    endReason === "undercover-wins" ? "Undercover gagne" :
-    endReason === "jester-wins" ? "Le Bouffon gagne" :
-    "Mr. White triomphe";
+  const [titleTop, titleBottom] =
+    endReason === "civils-win" ? ["Civils", "victorieux"] :
+    endReason === "undercover-wins" ? ["Imposteurs", "victorieux"] :
+    endReason === "jester-wins" ? ["Le Bouffon", "gagne"] :
+    ["Le Fantôme", "triomphe"];
   const accent =
     endReason === "civils-win" ? "#3DDC97" :
     endReason === "undercover-wins" ? "#FF3EA5" :
@@ -1188,14 +1234,14 @@ function GameOverScreen({
       <div style={{ textAlign: "center", marginBottom: 8 }}>
         <h1 style={{
           fontFamily: "var(--font-display, system-ui)",
-          fontSize: 48, margin: 0, letterSpacing: -2, lineHeight: 0.9, fontWeight: 900,
+          fontSize: "clamp(34px, 12vw, 48px)", margin: 0, letterSpacing: -2, lineHeight: 0.95, fontWeight: 900,
           textShadow: `0 0 36px ${accent}88`,
         }}>
           <span style={{
             background: `linear-gradient(120deg, ${accent}, #FFD23F)`,
             WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
-          }}>{title.split(" ")[0]}</span>
-          <br/>{title.split(" ").slice(1).join(" ")}
+          }}>{titleTop}</span>
+          <br/>{titleBottom}
         </h1>
       </div>
 
@@ -1218,7 +1264,7 @@ function GameOverScreen({
         </div>
         <div style={{ color: "rgba(255,255,255,0.4)", fontWeight: 800 }}>vs</div>
         <div style={{ textAlign: "right" }}>
-          <Mono>Undercover</Mono>
+          <Mono>Intrus</Mono>
           <div style={{ fontFamily: "var(--font-display, system-ui)", fontSize: 20, color: "#FF3EA5", fontWeight: 900 }}>{ucWord}</div>
         </div>
       </div>
@@ -1230,7 +1276,7 @@ function GameOverScreen({
           border: `1px dashed ${mrWhiteRight ? "rgba(61,220,151,0.30)" : "rgba(255,62,165,0.30)"}`,
           fontSize: 12, color: "rgba(255,255,255,0.85)", marginBottom: 12, lineHeight: 1.4,
         }}>
-          Mr. White a tenté : <strong>{mrWhiteGuess}</strong> {mrWhiteRight ? "✓ pari réussi" : "✕ raté"}
+          Le Fantôme a tenté : <strong>{mrWhiteGuess}</strong> {mrWhiteRight ? "✓ pari réussi" : "✕ raté"}
         </div>
       )}
 
@@ -1246,11 +1292,11 @@ function GameOverScreen({
               background: i === 0 ? "rgba(255,210,63,0.10)" : win ? "rgba(61,220,151,0.06)" : "rgba(255,62,165,0.06)",
               border: `1px solid ${i === 0 ? "rgba(255,210,63,0.30)" : win ? "rgba(61,220,151,0.20)" : "rgba(255,62,165,0.18)"}`,
             }}>
-              <span style={{ width: 16, fontFamily: "var(--font-mono, monospace)", fontWeight: 800, fontSize: 11, color: i === 0 ? "#FFD23F" : "rgba(255,255,255,0.5)" }}>#{i + 1}</span>
+              <span style={{ width: 22, fontFamily: "var(--font-mono, monospace)", fontWeight: 800, fontSize: 12, color: i === 0 ? "#FFD23F" : "rgba(255,255,255,0.5)" }}>#{i + 1}</span>
               <Mascot color={colorByIdx(p.idx)} size={28} mood={win ? "wink" : "dead"} bob={false} shadow={false} />
-              <span style={{ flex: 1, fontWeight: 700, fontSize: 13 }}>{p.name}</span>
+              <span style={{ flex: 1, minWidth: 0, fontWeight: 700, fontSize: 14, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</span>
               <span style={{
-                fontSize: 9, padding: "2px 7px", borderRadius: 99,
+                fontSize: 11, padding: "2px 7px", borderRadius: 99,
                 background: p.role === "mrwhite" ? "rgba(255,210,63,0.18)" : `${rc}26`,
                 color: rc, fontWeight: 800, textTransform: "uppercase", letterSpacing: 0.4,
               }}>{ROLE_LABEL[p.role]}</span>
@@ -1328,10 +1374,11 @@ function Tag({ children, color = "#FFD23F", style }: { children: ReactNode; colo
 
 function NavBar({ sub, title, right, onBack }: { sub?: string; title?: string; right?: ReactNode; onBack?: () => void }) {
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 18 }}>
+    // paddingRight : réserve le coin haut-droit à l'engrenage du shell.
+    <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 18, paddingRight: 52 }}>
       {onBack && (
-        <button onClick={onBack} style={{
-          width: 36, height: 36, borderRadius: 12,
+        <button onClick={onBack} aria-label="Retour" style={{
+          width: 44, height: 44, borderRadius: 12,
           background: "rgba(255,255,255,0.06)",
           border: "1px solid rgba(255,255,255,0.10)",
           display: "flex", alignItems: "center", justifyContent: "center",
@@ -1478,7 +1525,7 @@ function Stat({ n, label, color, sub }: { n: number; label: string; color: strin
     }}>
       <div style={{ fontFamily: "var(--font-display, system-ui)", fontSize: 26, color, lineHeight: 1, fontWeight: 900 }}>{n}</div>
       <div style={{ fontSize: 11, color: "white", fontWeight: 700, marginTop: 4 }}>{label}</div>
-      {sub && <div style={{ fontSize: 9, color: "rgba(255,255,255,0.45)", marginTop: 1 }}>{sub}</div>}
+      {sub && <div style={{ fontSize: 11, color: "rgba(255,255,255,0.5)", marginTop: 2 }}>{sub}</div>}
     </div>
   );
 }
@@ -1491,7 +1538,7 @@ function Row({ label, hint, children }: { label: string; hint?: string; children
     }}>
       <div>
         <div style={{ fontSize: 13, color: "white", fontWeight: 700 }}>{label}</div>
-        {hint && <div style={{ fontSize: 10, color: "rgba(255,255,255,0.5)", marginTop: 2 }}>{hint}</div>}
+        {hint && <div style={{ fontSize: 12, color: "rgba(255,255,255,0.55)", marginTop: 2 }}>{hint}</div>}
       </div>
       {children}
     </div>
@@ -1500,9 +1547,9 @@ function Row({ label, hint, children }: { label: string; hint?: string; children
 
 function Stepper({ value, min, max, onChange, disabled }: { value: number; min: number; max: number; onChange: (v: number) => void; disabled?: boolean }) {
   const btn: CSSProperties = {
-    width: 30, height: 30, borderRadius: 9, border: "none",
+    width: 44, height: 44, borderRadius: 12, border: "none",
     background: "rgba(255,255,255,0.06)", color: "white",
-    fontWeight: 900, fontSize: 16,
+    fontWeight: 900, fontSize: 20,
     cursor: disabled ? "not-allowed" : "pointer", opacity: disabled ? 0.4 : 1,
     fontFamily: "inherit",
   };
@@ -1517,24 +1564,32 @@ function Stepper({ value, min, max, onChange, disabled }: { value: number; min: 
 
 function Toggle({ value, onChange, disabled }: { value: boolean; onChange: (v: boolean) => void; disabled?: boolean }) {
   return (
-    <button disabled={disabled} onClick={() => onChange(!value)} style={{
-      width: 46, height: 26, borderRadius: 99, border: "none",
-      background: value ? "#3DDC97" : "rgba(255,255,255,0.14)",
-      position: "relative", cursor: disabled ? "not-allowed" : "pointer",
-      opacity: disabled ? 0.5 : 1, transition: "background .15s",
+    <button disabled={disabled} onClick={() => onChange(!value)} aria-pressed={value} style={{
+      // Zone tactile 44 px autour de l'interrupteur visuel
+      minWidth: 56, height: 44, padding: 0, border: "none", background: "transparent",
+      display: "inline-flex", alignItems: "center", justifyContent: "flex-end",
+      cursor: disabled ? "not-allowed" : "pointer", opacity: disabled ? 0.5 : 1,
     }}>
       <span style={{
-        position: "absolute", top: 2, left: value ? 22 : 2,
-        width: 22, height: 22, borderRadius: "50%", background: "white",
-        transition: "left .15s", boxShadow: "0 2px 6px rgba(0,0,0,0.3)",
-      }} />
+        width: 46, height: 26, borderRadius: 99,
+        background: value ? "#3DDC97" : "rgba(255,255,255,0.14)",
+        position: "relative", transition: "background .15s", display: "block",
+      }}>
+        <span style={{
+          position: "absolute", top: 2, left: value ? 22 : 2,
+          width: 22, height: 22, borderRadius: "50%", background: "white",
+          transition: "left .15s", boxShadow: "0 2px 6px rgba(0,0,0,0.3)",
+        }} />
+      </span>
     </button>
   );
 }
 
 function DossierCard({ word, role, hint, round }: { word: string | null; role: Role; hint: string; round: number }) {
-  const color = ROLE_COLOR[role];
-  const label = ROLE_LABEL[role];
+  // Le tampon ne dit jamais « Civil » : l'Intrus ne doit pas savoir qui il est.
+  const special = role === "mrwhite" || role === "jester";
+  const color = special ? ROLE_COLOR[role] : "#FF3EA5";
+  const label = special ? ROLE_LABEL[role] : "Secret";
   return (
     <div style={{
       position: "relative", padding: "22px 20px 24px",
@@ -1562,12 +1617,13 @@ function DossierCard({ word, role, hint, round }: { word: string | null; role: R
       <div style={{ fontFamily: "var(--font-mono, monospace)", fontSize: 11, color: "#7A3008", textTransform: "uppercase", letterSpacing: 1.5, fontWeight: 700 }}>
         {role === "mrwhite" ? "Pas de mot" : "Ton mot secret"}
       </div>
-      <div style={{
+      <div lang="fr" style={{
         fontFamily: "var(--font-display, system-ui)",
-        fontSize: word ? 56 : 44, lineHeight: 1, margin: "10px 0 6px",
-        letterSpacing: -2.5, color: "#1A0E2E", fontWeight: 900,
+        fontSize: word ? wordFontSize(word) : 44, lineHeight: 1.02, margin: "10px 0 6px",
+        letterSpacing: -1.5, color: "#1A0E2E", fontWeight: 900,
         textAlign: role === "mrwhite" ? "center" : "left",
         opacity: role === "mrwhite" ? 0.4 : 1,
+        ...WORD_WRAP,
       }}>{word ?? "?????"}</div>
       <div style={{ position: "absolute", top: 22, right: 16, transform: "rotate(8deg)" }}>
         <Stamp text={label} color={color} rotate={0} size={11} />
@@ -1627,7 +1683,7 @@ function PlayersSetupUC({ onStart, onBack }: { onStart: (names: string[]) => voi
           <span style={{ fontFamily: "var(--font-display)", fontSize: 48, fontWeight: 800, color: "#FFD23F", lineHeight: 1 }}>{count}</span>
           <Stepper value={count} min={3} max={7} onChange={setCount} />
         </div>
-        <div style={{ display: "flex", justifyContent: "space-between" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           {[3, 4, 5, 6, 7].map((n) => {
             const sel = n === count, on = n <= count;
             return (
@@ -1652,9 +1708,10 @@ function PlayersSetupUC({ onStart, onBack }: { onStart: (names: string[]) => voi
               value={nm}
               onChange={(e) => setNames((prev) => prev.map((x, idx) => (idx === i ? e.target.value.slice(0, 14) : x)))}
               placeholder={`Joueur ${i + 1}`}
-              style={{ width: "100%", textAlign: "center", background: "transparent", border: "none", outline: "none", color: "#fff", fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 15 }}
+              autoCorrect="off" autoCapitalize="words" spellCheck={false}
+              style={{ width: "100%", minHeight: 36, textAlign: "center", background: "transparent", border: "none", outline: "none", color: "#fff", fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 16 }}
             />
-            <Mono style={{ fontSize: 8 }}>Suspect N°{String(i + 1).padStart(2, "0")}</Mono>
+            <Mono style={{ fontSize: 10 }}>Suspect N°{String(i + 1).padStart(2, "0")}</Mono>
           </div>
         ))}
       </div>
@@ -1683,21 +1740,21 @@ function PassScreenUC({ toName, colorIdx, label, players, currentIdx, buttonLabe
           <Mascot size={150} color={MASCOT_COLORS[colorIdx % MASCOT_COLORS.length]} mood="neutral" bob={false} shadow={false} />
         </div>
         <Mono style={{ color: "#FFD23F", marginTop: 12 }}>Passe le téléphone à</Mono>
-        <div style={{ fontFamily: "var(--font-display)", fontSize: 52, fontWeight: 800, color: "#fff", lineHeight: 1, textShadow: "0 0 32px rgba(122,78,232,0.5)" }}>{toName}</div>
+        <div style={{ fontFamily: "var(--font-display)", fontSize: `clamp(30px, ${Math.min(14, 110 / Math.max(1, toName.length)).toFixed(1)}vw, 52px)`, fontWeight: 800, color: "#fff", lineHeight: 1.05, textAlign: "center", overflowWrap: "anywhere", maxWidth: "100%", textShadow: "0 0 32px rgba(122,78,232,0.5)" }}>{toName}</div>
       </div>
 
       {players && (
         <div style={{ marginTop: 28 }}>
           <Mono style={{ marginBottom: 8, display: "block", textAlign: "center" }}>Tour de distribution</Mono>
-          <div style={{ display: "flex", justifyContent: "center", gap: 10 }}>
+          <div style={{ display: "flex", justifyContent: "center", gap: 8, flexWrap: "wrap" }}>
             {players.map((p) => {
               const active = p.idx === currentIdx;
               return (
-                <div key={p.idx} style={{ textAlign: "center", opacity: active ? 1 : 0.4 }}>
+                <div key={p.idx} style={{ textAlign: "center", opacity: active ? 1 : 0.45, width: 52 }}>
                   <div style={{ borderRadius: "50%", border: active ? "2px solid #FFD23F" : "1px solid rgba(255,255,255,0.1)", padding: 1 }}>
                     <Mascot size={34} color={MASCOT_COLORS[p.idx % MASCOT_COLORS.length]} mood="happy" bob={false} shadow={false} />
                   </div>
-                  <div style={{ fontSize: 8, marginTop: 3, color: active ? "#FFD23F" : "rgba(255,255,255,0.4)", fontWeight: 700, textTransform: "uppercase" }}>{p.name}</div>
+                  <div style={{ fontSize: 12, marginTop: 3, color: active ? "#FFD23F" : "rgba(255,255,255,0.6)", fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</div>
                 </div>
               );
             })}
@@ -1709,5 +1766,33 @@ function PassScreenUC({ toName, colorIdx, label, players, currentIdx, buttonLabe
         <Btn tone="gold" sub={buttonSub} onClick={onReady}>{buttonLabel}</Btn>
       </div>
     </LocalShell>
+  );
+}
+
+// Règles visibles avant la distribution (repliables).
+function RulesCard({ jester }: { jester: boolean }) {
+  const [open, setOpen] = useState(false);
+  const items = [
+    "Chacun reçoit un mot secret. Les civils ont tous le même ; l'Intrus a un mot voisin… et ne sait pas qu'il est l'Intrus !",
+    "Le Fantôme (optionnel) n'a pas de mot, lui le sait : il écoute et bluffe. S'il est éliminé, il peut gagner seul en devinant le mot des civils.",
+    "À tour de rôle, chacun donne un indice à voix haute sur son mot, puis la table désigne ensemble un suspect à éliminer.",
+    "Les civils gagnent quand tous les imposteurs sont éliminés. Les imposteurs gagnent dès qu'ils sont aussi nombreux que les autres joueurs.",
+    ...(jester ? ["Le Bouffon a le mot des civils mais joue pour lui : il gagne seul s'il se fait éliminer par le vote."] : []),
+  ];
+  return (
+    <FileCard accent="#4ECDC4" style={{ marginBottom: 14 }}>
+      <button onClick={() => setOpen(!open)} style={{
+        width: "100%", minHeight: 44, display: "flex", justifyContent: "space-between", alignItems: "center",
+        background: "transparent", border: "none", color: "white", padding: 0, cursor: "pointer", fontFamily: "inherit",
+      }}>
+        <span style={{ fontSize: 15, fontWeight: 800 }}>📖 Les règles</span>
+        <span style={{ fontSize: 13, color: "rgba(255,255,255,0.6)" }}>{open ? "Masquer ▲" : "Afficher ▼"}</span>
+      </button>
+      {open && (
+        <ul style={{ margin: "10px 0 0", paddingLeft: 18, display: "flex", flexDirection: "column", gap: 8, fontSize: 13, lineHeight: 1.45, color: "rgba(255,255,255,0.85)" }}>
+          {items.map((t) => <li key={t}>{t}</li>)}
+        </ul>
+      )}
+    </FileCard>
   );
 }

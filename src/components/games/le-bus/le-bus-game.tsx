@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useGame } from "@/lib/party/use-game";
 import { useGameStore } from "@/lib/stores/game-store";
 import type { GameProps } from "@/lib/games/types";
@@ -27,6 +27,8 @@ interface PlayerT {
   cards: CardT[];
   sipsTaken: number;
   sipsGiven: number;
+  penalty?: number;
+  connected?: boolean;
   hasAnswered: boolean;
   lastResult: { card: CardT; correct: boolean; sips: number } | null;
   pendingGive: number;
@@ -59,6 +61,7 @@ interface BusState {
   busSteps: number;
   busAttempts: number;
   busMaxAttempts: number;
+  sipCap?: number;
   busLast: { card: CardT; correct: boolean } | null;
   busDone: boolean;
   feed: { id: number; text: string }[];
@@ -72,6 +75,11 @@ const rankLabel = (rank: number): string => {
   if (rank === 13) return "R";
   return String(rank);
 };
+
+// Gorgées par rangée de la pyramide (bas → sommet), miroir du serveur
+const ROW_SIPS = [1, 1, 2, 3];
+const DEFAULT_CAP = 10;
+const plural = (n: number, w: string) => `${n} ${w}${n > 1 ? "s" : ""}`;
 
 const QUESTION_META: Record<
   number,
@@ -87,7 +95,7 @@ const QUESTION_META: Record<
   },
   2: {
     title: "Plus ou Moins que ta 1ʳᵉ carte ?",
-    hint: "2 gorgées · égalité = perdu",
+    hint: "1 gorgée en jeu · égalité = perdu",
     options: [
       { value: "plus", label: "⬆️ Plus" },
       { value: "moins", label: "⬇️ Moins" },
@@ -95,15 +103,15 @@ const QUESTION_META: Record<
   },
   3: {
     title: "Intérieur ou Extérieur de tes 2 cartes ?",
-    hint: "3 gorgées · sur la borne = perdu",
+    hint: "2 gorgées en jeu · sur la borne = perdu",
     options: [
       { value: "interieur", label: "↔️ Intérieur" },
       { value: "exterieur", label: "🔀 Extérieur" },
     ],
   },
   4: {
-    title: "Quelle couleur ?",
-    hint: "4 gorgées en jeu",
+    title: "Quelle enseigne ? (♠♥♦♣)",
+    hint: "2 gorgées en jeu",
     options: [
       { value: "♠", label: "♠" },
       { value: "♥", label: "♥" },
@@ -135,7 +143,7 @@ function seatColor(players: PlayerT[], id: string): string {
 
 // ══════════════════════════════════════════════════════════
 export default function LeBusGame({ roomCode, playerId, playerName }: GameProps) {
-  const { sendAction } = useGame(roomCode, "le-bus", playerId, playerName);
+  const { sendAction, sendRaw } = useGame(roomCode, "le-bus", playerId, playerName);
   const { gameState, error } = useGameStore();
   const state = gameState as unknown as BusState;
   const cardStyle = useCardStyle();
@@ -147,7 +155,20 @@ export default function LeBusGame({ roomCode, playerId, playerName }: GameProps)
     return <Centered emoji="⚠️" text={error} />;
   }
   if (!state || !state.phase || state.phase === "waiting" || !state.players) {
-    return <Centered emoji="🚌" text="Le bus démarre… montez à bord !" />;
+    return (
+      <Centered emoji="🚌" text="Le bus démarre… montez à bord !">
+        <p className="max-w-xs text-[13px] text-white/55">
+          Max {DEFAULT_CAP} gorgées par joueur : au-delà, c&apos;est une pénalité en points. Eau ou soft, ça compte aussi 💧
+        </p>
+        <button
+          onClick={() => sendRaw({ type: "start-with-bots" })}
+          className="mt-2 min-h-[44px] rounded-xl px-5 py-3 text-sm font-black text-white active:scale-95"
+          style={{ background: "var(--cb-brand)", fontFamily: "var(--font-display)", letterSpacing: "0.04em" }}
+        >
+          Jouer avec des bots
+        </button>
+      </Centered>
+    );
   }
 
   const me = state.players.find((p) => p.id === playerId) ?? null;
@@ -327,7 +348,7 @@ function QuestionsPhase({
 
   // Reveal
   const res = me.lastResult;
-  const others = state.players.filter((p) => p.id !== playerId);
+  const others = state.players.filter((p) => p.id !== playerId && p.connected !== false);
   return (
     <div className="flex flex-1 flex-col justify-center">
       {res && (
@@ -338,9 +359,12 @@ function QuestionsPhase({
             style={{ fontFamily: "var(--font-display)", color: res.correct ? "#22C55E" : "#FF6A3D" }}
           >
             {res.correct
-              ? `Bien vu ! Distribue ${res.sips} gorgée${res.sips > 1 ? "s" : ""} 🍻`
-              : `Raté… tu bois ${res.sips} gorgée${res.sips > 1 ? "s" : ""} 🥴`}
+              ? `Bien vu ! Distribue ${plural(res.sips, "gorgée")} 🍻`
+              : `Raté… tu bois ${plural(res.sips, "gorgée")} 🥴`}
           </p>
+          {!res.correct && me.sipsTaken >= (state.sipCap ?? DEFAULT_CAP) && (
+            <p className="mt-1 text-center text-[13px] font-bold text-amber-300">Tu as assez bu : pénalité en points 🛑</p>
+          )}
         </div>
       )}
       {me.pendingGive > 0 ? (
@@ -351,7 +375,7 @@ function QuestionsPhase({
               <button
                 key={p.id}
                 onClick={() => sendAction({ action: "give-sips", targetId: p.id })}
-                className="rounded-xl px-3 py-3 text-sm font-bold text-white transition-transform active:scale-95"
+                className="min-h-[44px] rounded-xl px-3 py-3 text-sm font-bold text-white transition-transform active:scale-95"
                 style={{
                   background: `linear-gradient(160deg, ${seatColor(state.players, p.id)}55, rgba(255,255,255,0.05))`,
                   border: "1.5px solid rgba(255,255,255,0.2)",
@@ -396,7 +420,7 @@ function AnswerDots({ state, playerId }: { state: BusState; playerId: string }) 
       {state.players.map((p) => (
         <span
           key={p.id}
-          className="flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold"
+          className="flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] font-bold"
           style={{
             color: p.hasAnswered ? "#fff" : "rgba(255,255,255,0.4)",
             background: p.hasAnswered ? `${seatColor(state.players, p.id)}44` : "rgba(255,255,255,0.05)",
@@ -433,7 +457,8 @@ function PyramidPhase({
   const intro = state.phase === "pyramid-intro";
   const current = state.pyramid.find((c) => c.current) ?? null;
   const rows: PyramidCardT[][] = [4, 3, 2, 1].map((r) => state.pyramid.filter((c) => c.row === r));
-  const others = state.players.filter((p) => p.id !== playerId);
+  const others = state.players.filter((p) => p.id !== playerId && p.connected !== false);
+  const currentSips = current ? ROW_SIPS[current.row - 1] ?? 1 : 1;
 
   const canPlay = (c: CardT) => !!current && current.rank === c.rank;
 
@@ -442,7 +467,7 @@ function PyramidPhase({
       {intro && (
         <p className="mb-3 text-center text-sm text-white/70">
           Une carte se retourne toutes les 8 s. Tu as la même en main ? Pose-la pour faire boire
-          (rangée du bas = 1 gorgée… sommet = 4) ! Le joueur qui garde le plus de cartes monte dans le bus 🚌
+          (rangée du bas = 1 gorgée… sommet = 3) ! Le joueur qui garde le plus de cartes monte dans le bus 🚌
         </p>
       )}
 
@@ -471,7 +496,7 @@ function PyramidPhase({
             ))}
           </div>
         ))}
-        <p className="mt-1 text-[11px] text-white/45">↑ 4 gorgées · 3 · 2 · 1 gorgée ↓</p>
+        <p className="mt-1 text-[12px] text-white/45">↑ 3 gorgées · 2 · 1 · 1 gorgée ↓</p>
       </div>
 
       {current && current.rank && (
@@ -486,7 +511,7 @@ function PyramidPhase({
       )}
 
       {/* Ma main */}
-      <p className="mb-1.5 text-center text-[11px] uppercase tracking-widest text-white/50">
+      <p className="mb-1.5 text-center text-[12px] uppercase tracking-widest text-white/50">
         Ta main ({me.cards.length})
       </p>
       <div className="flex justify-center gap-2">
@@ -526,7 +551,7 @@ function PyramidPhase({
             onClick={(e) => e.stopPropagation()}
           >
             <p className="mb-3 text-center text-base font-black text-white" style={{ fontFamily: "var(--font-display)" }}>
-              Qui boit {current?.row} gorgée{(current?.row ?? 0) > 1 ? "s" : ""} ? 🍺
+              Qui boit {plural(currentSips, "gorgée")} ? 🍺
             </p>
             <div className="grid grid-cols-2 gap-2">
               {others.map((p) => (
@@ -536,7 +561,7 @@ function PyramidPhase({
                     sendAction({ action: "play-pyramid-card", cardIndex: giveCardIndex, targetId: p.id });
                     setGiveCardIndex(null);
                   }}
-                  className="rounded-xl px-3 py-3.5 text-sm font-bold text-white active:scale-95"
+                  className="min-h-[44px] rounded-xl px-3 py-3.5 text-sm font-bold text-white active:scale-95"
                   style={{
                     background: `linear-gradient(160deg, ${seatColor(state.players, p.id)}55, rgba(255,255,255,0.05))`,
                     border: "1.5px solid rgba(255,255,255,0.2)",
@@ -546,7 +571,7 @@ function PyramidPhase({
                 </button>
               ))}
             </div>
-            <button onClick={() => setGiveCardIndex(null)} className="mt-3 w-full text-center text-sm text-white/50">
+            <button onClick={() => setGiveCardIndex(null)} className="mt-3 min-h-[44px] w-full text-center text-sm text-white/50">
               Annuler
             </button>
           </div>
@@ -580,7 +605,8 @@ function BusPhase({
           {isMe ? "TU montes dans le bus !" : `${rider?.name} monte dans le bus !`}
         </p>
         <p className="mt-2 max-w-xs text-sm text-white/60">
-          {state.busSteps} bonnes réponses Plus/Moins d&apos;affilée pour descendre. Chaque erreur se boit… et on repart de zéro !
+          {state.busSteps} bonnes réponses Plus/Moins d&apos;affilée pour descendre. Chaque erreur = 1 gorgée et on repart de zéro.
+          Au bout de {state.busMaxAttempts} erreurs, le chauffeur a pitié : tu descends quand même.
         </p>
       </div>
     );
@@ -621,13 +647,13 @@ function BusPhase({
           className="mt-3 text-sm font-black"
           style={{ fontFamily: "var(--font-display)", color: state.busLast.correct ? "#22C55E" : "#FF6A3D" }}
         >
-          {state.busLast.correct ? "Bonne pioche ✅" : "Déraillé ❌ on repart du début"}
+          {state.busLast.correct ? "Bonne pioche ✅" : "Déraillé ❌ 1 gorgée, on repart du début"}
         </p>
       )}
 
       {state.busDone ? (
         <p className="mt-4 text-lg font-black text-white" style={{ fontFamily: "var(--font-display)" }}>
-          {state.busProgress >= state.busSteps ? "Descente triomphale ! 🎉" : "Le bus est parti… 🚌💨"}
+          {state.busProgress >= state.busSteps ? "Descente triomphale ! 🎉" : "Le chauffeur a eu pitié : descente ! 🚌"}
         </p>
       ) : isMe ? (
         <div className="mt-6 grid w-full max-w-xs grid-cols-2 gap-3">
@@ -656,7 +682,7 @@ function BusPhase({
         </div>
       ) : (
         <p className="mt-5 text-[12px] text-white/45">
-          Tentative {state.busAttempts + 1}/{state.busMaxAttempts} · encourage (ou chambre) le rideur 📣
+          Erreurs {state.busAttempts}/{state.busMaxAttempts} · encourage (ou chambre) le passager 📣
         </p>
       )}
     </div>
@@ -665,8 +691,9 @@ function BusPhase({
 
 // ── Fin de partie ─────────────────────────────────────────
 function GameOverPhase({ state, playerId }: { state: BusState; playerId: string }) {
+  const load = (p: PlayerT) => p.sipsTaken + (p.penalty ?? 0);
   const sorted = [...state.players].sort(
-    (a, b) => a.sipsTaken - b.sipsTaken || b.sipsGiven - a.sipsGiven
+    (a, b) => load(a) - load(b) || b.sipsGiven - a.sipsGiven
   );
   return (
     <div className="flex flex-1 flex-col justify-center">
@@ -688,11 +715,12 @@ function GameOverPhase({ state, playerId }: { state: BusState; playerId: string 
             </span>
             <span className="text-sm text-white/75">
               🍺 {p.sipsTaken} bue{p.sipsTaken > 1 ? "s" : ""} · 🍻 {p.sipsGiven} donnée{p.sipsGiven > 1 ? "s" : ""}
+              {(p.penalty ?? 0) > 0 && ` · 🛑 ${p.penalty} pt${(p.penalty ?? 0) > 1 ? "s" : ""}`}
             </span>
           </div>
         ))}
       </div>
-      <p className="mt-3 text-center text-[12px] text-white/45">Le plus sobre a gagné. Buvez de l&apos;eau ! 💧</p>
+      <p className="mt-3 text-center text-[12px] text-white/45">Le plus sobre a gagné. Buvez de l&apos;eau, et personne ne prend le volant ! 💧</p>
     </div>
   );
 }
@@ -705,24 +733,30 @@ function ScoreStrip({ state, playerId }: { state: BusState; playerId: string }) 
       {state.players.map((p) => (
         <span
           key={p.id}
-          className="rounded-full px-2.5 py-1 text-[11px] font-bold text-white/80"
+          className="rounded-full px-2.5 py-1 text-[12px] font-bold text-white/80"
           style={{
             background: p.id === playerId ? `${seatColor(state.players, p.id)}33` : "rgba(255,255,255,0.05)",
             border: `1px solid ${p.id === playerId ? seatColor(state.players, p.id) : "rgba(255,255,255,0.1)"}`,
           }}
         >
           {p.name} 🍺{p.sipsTaken}
+          {(p.penalty ?? 0) > 0 && ` 🛑${p.penalty}`}
+          {p.connected === false && " · absent"}
         </span>
       ))}
+      <p className="w-full text-center text-[12px] text-white/40">
+        Max {state.sipCap ?? DEFAULT_CAP} gorgées chacun · au-delà : pénalité en points 🛑
+      </p>
     </div>
   );
 }
 
-function Centered({ emoji, text }: { emoji: string; text: string }) {
+function Centered({ emoji, text, children }: { emoji: string; text: string; children?: ReactNode }) {
   return (
-    <div className="flex min-h-dvh flex-col items-center justify-center gap-3 px-6 text-center">
+    <div className="flex min-h-dvh flex-col items-center justify-center gap-3 px-6 pt-[max(env(safe-area-inset-top),12px)] text-center">
       <span className="text-5xl">{emoji}</span>
       <p className="text-base font-bold text-white/80">{text}</p>
+      {children}
     </div>
   );
 }

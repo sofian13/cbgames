@@ -42,12 +42,13 @@ export interface LobbyState {
 
 // ===== Game Messages (Client → Server) =====
 export type GameClientMessage =
-  | { type: "game-join"; payload: { playerId: string; name: string } }
+  | { type: "game-join"; payload: { playerId: string; name: string; expected?: number } }
   | { type: "game-action"; payload: Record<string, unknown> };
 
 // ===== Game Messages (Server → Client) =====
 export type GameServerMessage =
   | { type: "game-state"; payload: Record<string, unknown> }
+  | { type: "game-reset" }
   | { type: "game-update"; payload: Record<string, unknown> }
   | { type: "game-over"; payload: { rankings: GameRanking[] } }
   | { type: "game-error"; payload: { message: string } }

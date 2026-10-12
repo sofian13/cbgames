@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useGame } from "@/lib/party/use-game";
 import { useGameStore } from "@/lib/stores/game-store";
 import type { GameProps } from "@/lib/games/types";
@@ -45,68 +45,100 @@ interface TopTenState {
   myNumber: number | null;
   iSubmitted: boolean;
   myGuess: string[] | null;
+  isSpectator?: boolean;
+  activeCount?: number;
+  orderRemainingMs?: number | null;
 }
 
 const ACCENT = "#ff5a8a";
+
+// Mélange uniforme (Fisher-Yates)
+function shuffle<T>(arr: T[]): T[] {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
 
 // ── Thèmes 18+ (mode local) ───────────────────────────────
 const LOCAL_THEMES: ThemeState[] = [
   { theme: "Un endroit où tu ferais l'amour", low: "Dans ton lit, tranquille", high: "En public, avec le risque de se faire prendre" },
   { theme: "Un message coquin à envoyer à ton crush", low: "« Tu me manques... »", high: "Un truc carrément explicite" },
   { theme: "Une tenue pour une soirée", low: "Jean - t-shirt classique", high: "Quasi rien, tout est suggéré" },
-  { theme: "Un fantasme à avouer à voix haute", low: "Un câlin sous la couette", high: "Le truc que t'oserais jamais dire" },
-  { theme: "Niveau d'alcool un samedi soir", low: "Un verre de vin", high: "Black-out total" },
+  { theme: "Un fantasme à avouer à voix haute", low: "Un câlin sous la couette", high: "Le truc que t'oserais jamais dire normalement" },
+  { theme: "Ton niveau de dignité un samedi à 4h du mat", low: "Impeccable, je rentre en taxi", high: "Je fais des câlins aux videurs" },
   { theme: "Un truc qui t'excite", low: "Un regard appuyé", high: "Quelque chose de carrément chaud" },
-  { theme: "Une chose à faire pour un date parfait", low: "Dîner aux chandelles", high: "On saute l'étape dîner" },
+  { theme: "Une chose à faire pour un date parfait", low: "Dîner aux chandelles", high: "On saute l'étape dîner direct" },
   { theme: "Un endroit pour un premier baiser", low: "Devant sa porte, timidement", high: "Sur la piste, devant tout le monde" },
   { theme: "Le degré d'audace d'un sexto", low: "Un emoji cœur", high: "Photo et description détaillée" },
   { theme: "Une chose qu'on pourrait te demander dans une chambre", low: "Un massage du dos", high: "Un truc franchement osé" },
-  { theme: "Ce que tu fais quand t'es bourré", low: "Je deviens très câlin", high: "Un truc dont j'aurai honte demain" },
-  { theme: "Le niveau d'un strip-tease", low: "J'enlève ma veste", high: "Je garde plus rien" },
+  { theme: "Ce que tu fais quand tu perds tout contrôle en soirée", low: "Je deviens très câlin", high: "Je fais un truc dont j'aurai honte demain" },
+  { theme: "Le niveau d'un strip-tease", low: "J'enlève ma veste", high: "Je garde plus rien du tout" },
+  { theme: "Un gage pour le perdant de la soirée", low: "Faire la vaisselle de tout le monde", high: "Un gage interdit aux mineurs" },
   { theme: "Une partie du corps à embrasser", low: "La joue", high: "Un endroit très intime" },
-  { theme: "Ce que tu cherches sur une appli de rencontre", low: "Une vraie histoire", high: "Un plan d'un soir, ce soir" },
+  { theme: "Un secret de chambre à coucher", low: "Je dors avec une peluche", high: "Le kink que personne ne connaît" },
+  { theme: "Ce que tu cherches sur une appli de rencontre", low: "Une vraie histoire d'amour", high: "Un plan d'un soir, ce soir" },
   { theme: "Le niveau d'un gage de soirée", low: "Imiter un animal", high: "Embrasser la personne à ta gauche" },
-  { theme: "Un lieu insolite pour le faire", low: "Le canapé du salon", high: "Les toilettes d'une boîte" },
+  { theme: "Une position", low: "Classique, face à face", high: "Acrobatique, faut être souple" },
+  { theme: "Un lieu insolite pour le faire", low: "Le canapé du salon", high: "Les toilettes d'une boîte de nuit" },
   { theme: "Ce que tu postes sur les réseaux", low: "Un coucher de soleil", high: "Une photo qui fait monter la température" },
-  { theme: "Une chose à tester en couple", low: "Un resto romantique", high: "Un sextoy ou un accessoire" },
-  { theme: "Ce que tu réponds à « on monte chez moi ? »", low: "« Une autre fois »", high: "« J'attendais que ça »" },
-  { theme: "Une activité de couple un dimanche", low: "Brunch et série", high: "On sort pas du lit" },
-  { theme: "Une phrase à murmurer à l'oreille", low: "« T'es mignon(ne) »", high: "Un truc qui ferait rougir n'importe qui" },
+  { theme: "Un compliment à faire à un inconnu", low: "« T'as un joli sourire »", high: "Une phrase très directe et osée" },
+  { theme: "Le niveau de jalousie en couple", low: "Je m'en fiche un peu", high: "Je fouille son téléphone en cachette" },
+  { theme: "Une chose à faire les yeux bandés", low: "Deviner un aliment au goût", high: "Quelque chose de bien plus coquin" },
+  { theme: "Un truc à tester en couple", low: "Un resto romantique", high: "Une nuit sans aucune limite" },
+  { theme: "Ce que tu réponds à « on monte chez moi ? »", low: "« Il se fait tard, une autre fois »", high: "« J'attendais que ça depuis le début »" },
+  { theme: "Le niveau d'un suçon", low: "À peine visible", high: "Impossible à cacher au boulot" },
+  { theme: "Une activité de couple un dimanche", low: "Brunch et série", high: "On sort pas du lit de la journée" },
+  { theme: "Un endroit pour une photo sexy", low: "Devant le miroir, habillé", high: "Sous la douche, sans filtre" },
+  { theme: "Ce qui te fait craquer chez quelqu'un", low: "Son humour", high: "Un détail très physique et précis" },
+  { theme: "Le niveau d'un date sur une appli de rencontre qui dérape", low: "On s'est juste fait la bise", high: "On a fini la nuit ensemble" },
+  { theme: "Une phrase à murmurer à l'oreille", low: "« T'es vraiment mignon(ne) »", high: "Un truc qui ferait rougir n'importe qui" },
   { theme: "Le degré d'une danse en boîte", low: "Je bouge gentiment", high: "Collé-serré très rapproché" },
-  { theme: "Une audace en vacances", low: "Bronzer sur la plage", high: "Se baigner sans maillot la nuit" },
+  { theme: "Un objet du quotidien détourné au lit", low: "Une cravate", high: "Un truc auquel personne ne pense" },
+  { theme: "Ce que tu fais le matin après une nuit chaude", low: "Petit déj en amoureux", high: "Je file avant qu'il/elle se réveille" },
+  { theme: "Le niveau d'un jeu de rôles", low: "On se fait des surnoms", high: "Costumes et scénario complet" },
+  { theme: "Une chose à faire dans le noir", low: "Se tenir la main", high: "Tout sauf dormir" },
+  { theme: "Un endroit pour flirter", low: "Au bar, en discutant", high: "Dans l'ascenseur, entre deux étages" },
   { theme: "Le niveau d'un texto à 3h du matin", low: "« Tu dors ? »", high: "« Viens, je suis seul(e) »" },
+  { theme: "Ce que tu révèles lors d'un strip-poker", low: "Une chaussette", high: "Tout, j'ai trop perdu" },
+  { theme: "Une audace en vacances", low: "Bronzer sur la plage", high: "Se baigner sans maillot la nuit" },
   // Malaise / vie quotidienne (drôle)
-  { theme: "Tu ouvres un tiroir dans la chambre de tes parents, ya quoi ?", low: "De vieilles photos de vacances", high: "Un truc que t'aurais préféré ne jamais voir" },
+  { theme: "Tu ouvres un tiroir dans la chambre de tes parents, y a quoi ?", low: "De vieilles photos de vacances", high: "Un truc que t'aurais préféré ne jamais voir" },
   { theme: "Tu envoies un message dans le groupe famille, c'est quoi ?", low: "« Bon dimanche à tous »", high: "Un message très privé destiné à quelqu'un d'autre" },
   { theme: "Le dernier truc dans ton historique de recherche", low: "La météo de demain", high: "Quelque chose à effacer d'urgence" },
   { theme: "Ce que ta mère trouverait en fouillant ton téléphone", low: "Des memes débiles", high: "Une conversation qu'elle doit jamais lire" },
   { theme: "La dernière photo de ta galerie", low: "Un plat au resto", high: "Une photo carrément intime" },
   { theme: "Ce que tu caches quand quelqu'un entre dans ta chambre", low: "Le bazar par terre", high: "Un objet super gênant" },
-  { theme: "Le niveau de honte de ta photo de profil de 2014", low: "Une coupe discutable", high: "À supprimer immédiatement" },
-  { theme: "Le dernier mensonge que t'as raconté", low: "« J'arrive dans 5 min »", high: "Un gros mensonge bien assumé" },
+  { theme: "Le niveau de honte de ta photo de profil de 2014", low: "Une coupe de cheveux discutable", high: "À supprimer immédiatement" },
+  { theme: "Le dernier mensonge que t'as raconté", low: "« J'arrive dans 5 minutes »", high: "Un gros mensonge bien assumé" },
   { theme: "Ce que tu fais quand t'es seul(e) à la maison", low: "Je chante sous la douche", high: "Un truc que j'avouerai jamais" },
-  { theme: "Ce que ton ex pourrait balancer sur toi", low: "« Il/elle ronflait »", high: "Un secret bien embarrassant" },
+  { theme: "Ce que ton ex pourrait balancer sur toi", low: "« Il/elle ronflait un peu »", high: "Un secret bien embarrassant" },
   { theme: "Le contenu de tes notes de téléphone", low: "Une liste de courses", high: "Des trucs que personne doit lire" },
-  { theme: "Ce que tu dirais à ton boss sans conséquence", low: "« Faut parler salaire »", high: "Tout ce que je pense vraiment de lui" },
-  { theme: "Le truc le plus louche commandé à 2h du mat", low: "Une pizza", high: "Un truc franchement honteux" },
-  { theme: "Ce que tu mettrais jamais sur ton CV", low: "Mon vrai niveau d'anglais", high: "La vraie raison de mon départ" },
+  { theme: "Ce que tu dirais à ton boss s'il y avait zéro conséquence", low: "« Faut qu'on parle salaire »", high: "Tout ce que je pense vraiment de lui" },
+  { theme: "Le truc le plus louche que t'as commandé à 2h du mat", low: "Une pizza", high: "Un truc franchement honteux" },
+  { theme: "Ce que tu mettrais jamais sur ton CV", low: "Mon vrai niveau d'anglais", high: "La vraie raison de mon dernier départ" },
+  { theme: "Le truc le plus gênant dans ton panier de linge sale", low: "Des chaussettes trouées", high: "Quelque chose d'inavouable" },
+  { theme: "Ce que tu googles en pleine nuit, paniqué(e)", low: "« Pourquoi mon chat me fixe »", high: "Un symptôme flippant que t'as inventé" },
+  { theme: "Le dernier truc pour lequel t'as pleuré", low: "Une pub trop mignonne", high: "Un truc complètement ridicule" },
   { theme: "Ce que t'as déjà fait croire à un date", low: "« J'adore la rando »", high: "Un mensonge énorme sur ma vie" },
-  // Hardcore +18 (gros niveau)
+  // Très osé +18 (gros niveau)
   { theme: "Le nombre de partenaires que t'as eu", low: "Très peu, je compte sur une main", high: "J'ai arrêté de compter" },
-  { theme: "La plus grosse différence d'âge avec qui t'as couché", low: "1 ou 2 ans", high: "Plus de 15 ans" },
-  { theme: "Le truc le plus chelou inséré quelque part", low: "Rien que de classique", high: "Un objet pas du tout fait pour ça" },
+  { theme: "Le crush le plus inattendu que t'as eu", low: "Un(e) collègue un peu mignon(ne)", high: "Quelqu'un que je devrais vraiment pas regarder" },
+  { theme: "L'endroit le plus risqué où t'as eu un moment intime", low: "Chez mes parents, porte fermée", high: "Un endroit où on aurait pu finir au poste" },
   { theme: "Le compliment le plus sale à dire pendant l'acte", low: "« T'es beau/belle »", high: "Une phrase carrément crue" },
   { theme: "Ton tabou sexuel le plus profond", low: "Un truc bizarre mais avouable", high: "Le secret que personne saura jamais" },
-  { theme: "Le plan le plus louche sur une appli", low: "Un date qui parlait que de son chat", high: "Une rencontre vraiment chelou" },
-  { theme: "Ce que tu regardes en cachette", low: "Une série niaise", high: "Quelque chose d'embarrassant" },
-  { theme: "Une histoire dont t'as honte mais que tu referais", low: "Un texto envoyé bourré", high: "Une nuit que personne doit savoir" },
+  { theme: "Le plan le plus louche que t'as eu sur une appli", low: "Un date qui parlait que de son chat", high: "Une rencontre vraiment chelou" },
+  { theme: "Ce que tu regardes en cachette", low: "Une série niaise", high: "Quelque chose de bien embarrassant" },
+  { theme: "Une histoire dont t'as honte mais que tu referais", low: "Un texto regretté à 3h du mat", high: "Une nuit que personne doit savoir" },
   { theme: "Le pire endroit où t'as fini la nuit", low: "Sur le canapé d'un(e) inconnu(e)", high: "Un lieu carrément interdit" },
-  { theme: "Le sexto le plus chaud que t'as envoyé", low: "Un emoji bien placé", high: "Une description très détaillée et imagée" },
-  { theme: "Le partenaire le plus surprenant", low: "Un(e) ami(e) d'ami(e)", high: "Quelqu'un qu'on aurait jamais imaginé" },
-  { theme: "Une chose interdite que t'as déjà faite", low: "Voler un truc dans un magasin", high: "Quelque chose dont j'avouerai jamais" },
-  { theme: "Le délire d'un soir qui a vraiment dérapé", low: "On a fini en after", high: "Une nuit complètement folle" },
+  { theme: "Le sexto le plus chaud que t'as déjà envoyé", low: "Un emoji bien placé", high: "Une description très détaillée et imagée" },
+  { theme: "Le partenaire le plus surprenant que t'as eu", low: "Un(e) ami(e) d'ami(e)", high: "Quelqu'un qu'on aurait jamais imaginé" },
+  { theme: "Une chose interdite que t'as déjà faite en cachette", low: "Manger le dessert des autres", high: "Quelque chose que j'avouerai jamais" },
+  { theme: "Le délire d'un soir qui a vraiment dérapé", low: "On a fini en after", high: "Une nuit complètement folle, vrai chaos" },
   { theme: "Ce que t'as déjà fait dans des toilettes publiques", low: "Refaire mon maquillage", high: "Un truc carrément pas réglementaire" },
-  { theme: "Ce que t'as déjà fait sous l'effet d'un truc", low: "Rire trop fort en soirée", high: "Un truc que je pensais pas pouvoir faire" },
+  { theme: "La chose la plus folle que t'as faite par amour (ou par désir)", low: "Traverser la ville à pied", high: "Un truc que je pensais pas pouvoir faire" },
 ];
 
 // ── Pack Culture pop & Classements (1 = le plus faible/nul → 10 = le plus fort/ouf) ──
@@ -162,8 +194,8 @@ export default function TopTenGame(props: GameProps) {
   const [mode, setMode] = useState<GameMode | null>(null);
   if (mode === null) {
     return (
-      <ModeSelect emoji="🔥" name="Top Ten"
-        tagline="Un thème, un numéro secret de 1 à 10. Chacun joue l'intensité… puis tout le monde classe la table. Deux ambiances : Soirée 18+ ou Culture pop (classements animés, villes, foot…)."
+      <ModeSelect emoji="🔥" name="De 1 à 10"
+        tagline="Un thème, un numéro secret (de 1 à 10, 25 ou 50). Chacun répond à voix haute selon son numéro… puis chacun classe toute la table, lui compris. Deux ambiances : Soirée 18+ ou Culture pop (classements animés, villes, foot…)."
         onPick={setMode} />
     );
   }
@@ -182,7 +214,7 @@ function TopTenLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) {
   const [round, setRound] = useState(0);
   const [numberRange, setNumberRange] = useState<10 | 25 | 50>(10);
   const [pack, setPack] = useState<Pack>("adult");
-  const [themes, setThemes] = useState<ThemeState[]>(() => [...LOCAL_THEMES].sort(() => Math.random() - 0.5));
+  const [themes, setThemes] = useState<ThemeState[]>(() => shuffle(LOCAL_THEMES));
   const [themeCursor, setThemeCursor] = useState(0); // avance à chaque manche / changement
   const [numbers, setNumbers] = useState<Record<number, number>>({}); // playerIdx -> numéro
   const [passOrder, setPassOrder] = useState<number[]>([]); // ordre de passage (mélangé)
@@ -199,11 +231,11 @@ function TopTenLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) {
   const startRound = (r: number, names = players) => {
     const all = names.map((_, i) => i);
     const range = Math.max(numberRange, all.length); // sécurise si numberRange < #joueurs
-    const pool = Array.from({ length: range }, (_, i) => i + 1).sort(() => Math.random() - 0.5);
+    const pool = shuffle(Array.from({ length: range }, (_, i) => i + 1));
     const nums: Record<number, number> = {};
     all.forEach((idx, k) => { nums[idx] = pool[k]; });
     setNumbers(nums);
-    setPassOrder([...all].sort(() => Math.random() - 0.5));
+    setPassOrder(shuffle(all));
     setStepIdx(0);
     setGuesses({});
     setResults({});
@@ -217,7 +249,7 @@ function TopTenLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) {
     setPhase("target"); // on choisit le score cible avant la 1re manche
   };
   const launch = () => {
-    setThemes([...themesForPack(pack)].sort(() => Math.random() - 0.5));
+    setThemes(shuffle(themesForPack(pack)));
     setThemeCursor(0);
     startRound(1, players);
   };
@@ -239,14 +271,14 @@ function TopTenLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) {
   };
 
   if (phase === "setup") {
-    return <PlayersSetup emoji="🔥" name="Top Ten" min={3} max={10} accent="#ff5a8a" onStart={begin} onBack={onReturnToLobby} />;
+    return <PlayersSetup emoji="🔥" name="De 1 à 10" min={3} max={10} accent="#ff5a8a" onStart={begin} onBack={onReturnToLobby} />;
   }
   if (phase === "target") {
     return <RangePicker range={numberRange} onPick={setNumberRange} pack={pack} onPickPack={setPack} onStart={launch} onBack={() => setPhase("setup")} />;
   }
   if (phase === "theme") {
     return (
-      <div className="flex min-h-[100svh] flex-col items-center justify-center p-5 text-white"
+      <div className="flex min-h-[100svh] flex-col items-center justify-center p-5 pt-[max(env(safe-area-inset-top),20px)] pb-[max(env(safe-area-inset-bottom),20px)] text-white"
         style={{ background: `radial-gradient(circle at 50% 18%, ${ACCENT}26, transparent 45%), #0E0828` }}>
         <p className="af-eyebrow mb-4">Manche {round}/{totalRounds} · sur {numberRange}</p>
         <ThemeCard theme={theme} range={numberRange} pack={pack} />
@@ -260,12 +292,12 @@ function TopTenLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) {
   if (phase === "pass-number") {
     const idx = passOrder[stepIdx];
     return <PassScreen toName={players[idx]} colorIndex={idx} accent="#ff5a8a"
-      hint="Toi seul : tu vas voir ton numéro secret (1 = soft, 10 = hard)." onReady={() => setPhase("show-number")} />;
+      hint={`Toi seul : tu vas voir ton numéro secret (1 = ${SCALE[pack].low.toLowerCase()}, ${numberRange} = ${SCALE[pack].high.toLowerCase()}).`} onReady={() => setPhase("show-number")} />;
   }
   if (phase === "show-number") {
     const idx = passOrder[stepIdx];
     return (
-      <div className="flex min-h-[100svh] flex-col items-center justify-center p-6 text-white"
+      <div className="flex min-h-[100svh] flex-col items-center justify-center p-6 pt-[max(env(safe-area-inset-top),20px)] pb-[max(env(safe-area-inset-bottom),20px)] text-white"
         style={{ background: `radial-gradient(circle at 50% 25%, ${ACCENT}30, transparent 45%), #0E0828` }}>
         <p className="af-eyebrow mb-2">{players[idx]} · ton numéro</p>
         <NumberCard myNumber={numbers[idx]} range={numberRange} />
@@ -278,7 +310,7 @@ function TopTenLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) {
   }
   if (phase === "answer") {
     return (
-      <div className="flex min-h-[100svh] flex-col items-center p-5 text-white"
+      <div className="flex min-h-[100svh] flex-col items-center p-5 pt-[max(env(safe-area-inset-top),20px)] pb-[max(env(safe-area-inset-bottom),20px)] text-white"
         style={{ background: `radial-gradient(circle at 50% 15%, ${ACCENT}26, transparent 45%), #0E0828` }}>
         <p className="af-eyebrow mt-3">Manche {round}/{totalRounds} · sur {numberRange}</p>
         <div className="mt-4 w-full max-w-md rounded-3xl border p-6" style={{ borderColor: "rgba(255,255,255,0.1)", background: "rgba(0,0,0,0.4)" }}>
@@ -299,7 +331,7 @@ function TopTenLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) {
   if (phase === "pass-rank") {
     const idx = passOrder[stepIdx];
     return <PassScreen toName={players[idx]} colorIndex={idx} accent="#ff5a8a"
-      buttonLabel="C'est moi, je classe" hint="Personne ne regarde ! Classe la table du plus soft au plus hard, selon ce que t'as entendu." onReady={() => setPhase("rank")} />;
+      buttonLabel="C'est moi, je classe" hint={`Personne ne regarde ! Classe toute la table (toi compris) du ${SCALE[pack].lowFull} au ${SCALE[pack].highFull}, selon ce que t'as entendu.`} onReady={() => setPhase("rank")} />;
   }
   if (phase === "rank") {
     const ranker = passOrder[stepIdx];
@@ -326,7 +358,7 @@ function TopTenLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) {
       .map((name, i) => ({ name, i, ...results[i] }))
       .sort((a, b) => (b.points ?? 0) - (a.points ?? 0));
     return (
-      <div className="flex min-h-[100svh] flex-col items-center overflow-y-auto p-5 text-white"
+      <div className="flex min-h-[100svh] flex-col items-center overflow-y-auto p-5 pt-[max(env(safe-area-inset-top),20px)] pb-[max(env(safe-area-inset-bottom),20px)] text-white"
         style={{ background: `radial-gradient(circle at 50% 15%, ${ACCENT}26, transparent 45%), #0E0828` }}>
         <p className="af-eyebrow mt-3">Manche {round}/{totalRounds} — Résultat · sur {numberRange}</p>
         <p className="cb-display-sm mt-1 mb-3">Le vrai classement</p>
@@ -363,7 +395,7 @@ function TopTenLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) {
   // over
   const ranking = players.map((name, i) => ({ name, score: scores[i], i })).sort((a, b) => b.score - a.score);
   return (
-    <div className="flex min-h-[100svh] flex-col items-center justify-center p-6 text-white"
+    <div className="flex min-h-[100svh] flex-col items-center justify-center p-6 pt-[max(env(safe-area-inset-top),20px)] pb-[max(env(safe-area-inset-bottom),20px)] text-white"
       style={{ background: `radial-gradient(circle at 50% 25%, ${ACCENT}2e, transparent 45%), #0E0828` }}>
       <p className="af-eyebrow" style={{ color: ACCENT }}>Partie terminée</p>
       <h2 className="cb-display-lg mt-1 mb-5">🔥 Meilleur flair</h2>
@@ -423,7 +455,7 @@ function TopTenOnline({ roomCode, playerId, playerName }: GameProps) {
   // ── CONFIG (choix du score cible avant la 1re manche) ───
   if (state.phase === "config") {
     return (
-      <div className="flex flex-1 flex-col items-center justify-center p-6"
+      <div className="flex flex-1 flex-col items-center justify-center p-6 pt-[max(env(safe-area-inset-top),20px)] pb-[max(env(safe-area-inset-bottom),20px)]"
         style={{ background: `radial-gradient(circle at 50% 20%, ${ACCENT}1c, transparent 45%), #060606` }}>
         <RangePicker
           range={(state.numberRange as 10 | 25 | 50) ?? 10}
@@ -448,8 +480,8 @@ function TopTenOnline({ roomCode, playerId, playerName }: GameProps) {
         <p className="text-2xl font-serif font-semibold text-white/90 mb-3 text-center px-6" style={{ textShadow: `0 0 40px ${ACCENT}33` }}>
           Chacun reçoit un numéro secret
         </p>
-        <p className="text-xs text-white/30 font-sans max-w-xs text-center animate-pulse">
-          De 1 (soft) à {state.numberRange} (hard). Joue l&apos;intensité… puis tout le monde classera la table.
+        <p className="text-sm text-white/45 font-sans max-w-xs text-center">
+          De 1 ({SCALE[state.pack ?? "adult"].low.toLowerCase()}) à {state.numberRange} ({SCALE[state.pack ?? "adult"].high.toLowerCase()}). Réponds à voix haute selon ton numéro… puis chacun classe toute la table, <b className="text-white/75">toi compris</b>.
         </p>
       </Centered>
     );
@@ -459,7 +491,7 @@ function TopTenOnline({ roomCode, playerId, playerName }: GameProps) {
   if (state.phase === "theme") {
     return (
       <div
-        className="flex flex-1 flex-col items-center justify-center p-5 md:p-6"
+        className="flex flex-1 flex-col items-center justify-center p-5 md:p-6 pt-[max(env(safe-area-inset-top),20px)] pb-[max(env(safe-area-inset-bottom),20px)]"
         style={{ background: `radial-gradient(circle at 50% 20%, ${ACCENT}16, transparent 45%), #060606` }}
       >
         <Header round={state.round} total={state.totalRounds} range={state.numberRange} pack={state.pack ?? "adult"} />
@@ -478,7 +510,7 @@ function TopTenOnline({ roomCode, playerId, playerName }: GameProps) {
           >
             🔄 Changer de thème
           </button>
-          <p className="text-[11px] text-white/25 font-sans mt-3 text-center max-w-xs">
+          <p className="text-xs text-white/35 font-sans mt-3 text-center max-w-xs">
             N&apos;importe qui peut changer la phrase ou lancer la distribution.
           </p>
         </div>
@@ -490,7 +522,7 @@ function TopTenOnline({ roomCode, playerId, playerName }: GameProps) {
   if (state.phase === "answering") {
     return (
       <div
-        className="flex flex-1 flex-col items-center p-5 md:p-6"
+        className="flex flex-1 flex-col items-center p-5 md:p-6 pt-[max(env(safe-area-inset-top),20px)] pb-[max(env(safe-area-inset-bottom),20px)]"
         style={{ background: `radial-gradient(circle at 50% 20%, ${ACCENT}14, transparent 45%), #060606` }}
       >
         <Header round={state.round} total={state.totalRounds} range={state.numberRange} pack={state.pack ?? "adult"} />
@@ -501,7 +533,13 @@ function TopTenOnline({ roomCode, playerId, playerName }: GameProps) {
         </div>
 
         {/* My secret number */}
-        <NumberCard myNumber={state.myNumber} range={state.numberRange} />
+        {state.isSpectator ? (
+          <p className="mt-2 max-w-xs text-center text-sm text-white/50 font-sans">
+            👀 Tu es arrivé(e) en cours de partie : tu regardes cette manche, tu joueras à la prochaine partie.
+          </p>
+        ) : (
+          <NumberCard myNumber={state.myNumber} range={state.numberRange} />
+        )}
 
         <button
           onClick={() => sendAction({ action: "start-ordering" })}
@@ -510,7 +548,7 @@ function TopTenOnline({ roomCode, playerId, playerName }: GameProps) {
         >
           Tout le monde a parlé → Classer
         </button>
-        <p className="text-[11px] text-white/25 font-sans mt-3 text-center max-w-xs">
+        <p className="text-xs text-white/35 font-sans mt-3 text-center max-w-xs">
           Quand chacun a donné sa réponse à voix haute, lance le classement (n&apos;importe qui peut le faire).
         </p>
       </div>
@@ -519,19 +557,23 @@ function TopTenOnline({ roomCode, playerId, playerName }: GameProps) {
 
   // ── ORDERING (tout le monde classe) ─────────────────────
   if (state.phase === "ordering") {
-    if (state.iSubmitted) {
+    const expected = state.activeCount ?? state.players.length;
+    if (state.iSubmitted || state.isSpectator) {
       return (
         <Centered>
           <span className="text-xs text-white/25 font-sans uppercase tracking-[0.2em] mb-6">
             Manche {state.round}/{state.totalRounds} · sur {state.numberRange}
           </span>
-          <p className="text-3xl mb-4">✅</p>
+          <p className="text-3xl mb-4">{state.isSpectator ? "👀" : "✅"}</p>
           <p className="text-2xl font-serif font-semibold text-white/90 mb-3 text-center px-6">
-            Classement envoyé
+            {state.isSpectator ? "Les joueurs classent la table" : "Classement envoyé"}
           </p>
           <p className="text-sm text-white/40 font-sans animate-pulse">
-            {state.submittedCount}/{state.players.length} ont validé…
+            {state.submittedCount}/{expected} ont validé…
           </p>
+          {state.orderRemainingMs != null && (
+            <OrderCountdown key={state.round} remainingMs={state.orderRemainingMs} />
+          )}
         </Centered>
       );
     }
@@ -547,7 +589,8 @@ function TopTenOnline({ roomCode, playerId, playerName }: GameProps) {
         range={state.numberRange}
         pack={state.pack ?? "adult"}
         submittedCount={state.submittedCount}
-        playerCount={state.players.length}
+        playerCount={expected}
+        remainingMs={state.orderRemainingMs ?? null}
       />
     );
   }
@@ -561,7 +604,7 @@ function TopTenOnline({ roomCode, playerId, playerName }: GameProps) {
       .sort((a, b) => (b.res?.points ?? 0) - (a.res?.points ?? 0));
     return (
       <div
-        className="flex flex-1 flex-col items-center p-5 md:p-6 overflow-y-auto"
+        className="flex flex-1 flex-col items-center p-5 md:p-6 pt-[max(env(safe-area-inset-top),20px)] pb-[max(env(safe-area-inset-bottom),20px)] overflow-y-auto"
         style={{
           background: myResult?.perfect
             ? `radial-gradient(circle at 50% 20%, ${ACCENT}22, transparent 50%), #060606`
@@ -607,7 +650,7 @@ function TopTenOnline({ roomCode, playerId, playerName }: GameProps) {
         </div>
 
         {/* Précision de chacun */}
-        <p className="text-[10px] text-white/30 font-sans uppercase tracking-[0.25em] mb-2" style={{ color: `${ACCENT}cc` }}>
+        <p className="text-xs text-white/30 font-sans uppercase tracking-[0.25em] mb-2" style={{ color: `${ACCENT}cc` }}>
           Précision de chacun
         </p>
         <div className="w-full max-w-md space-y-2">
@@ -631,7 +674,7 @@ function TopTenOnline({ roomCode, playerId, playerName }: GameProps) {
           ))}
         </div>
 
-        <p className="text-[11px] text-white/25 font-sans mt-5 animate-pulse">Manche suivante...</p>
+        <p className="text-xs text-white/35 font-sans mt-5 animate-pulse">Manche suivante...</p>
       </div>
     );
   }
@@ -641,7 +684,7 @@ function TopTenOnline({ roomCode, playerId, playerName }: GameProps) {
     const sorted = [...(state.players ?? [])].sort((a, b) => b.score - a.score);
     return (
       <div
-        className="flex flex-1 flex-col items-center justify-center p-6"
+        className="flex flex-1 flex-col items-center justify-center p-6 pt-[max(env(safe-area-inset-top),20px)] pb-[max(env(safe-area-inset-bottom),20px)]"
         style={{ background: `radial-gradient(circle at 50% 25%, ${ACCENT}18, transparent 45%), #060606` }}
       >
         <span className="text-xs text-white/25 font-sans uppercase tracking-[0.2em] mb-2">Partie termin&eacute;e</span>
@@ -694,7 +737,7 @@ function TopTenOnline({ roomCode, playerId, playerName }: GameProps) {
 function Centered({ children }: { children: React.ReactNode }) {
   return (
     <div
-      className="flex flex-1 flex-col items-center justify-center p-6"
+      className="flex flex-1 flex-col items-center justify-center p-6 pt-[max(env(safe-area-inset-top),20px)] pb-[max(env(safe-area-inset-bottom),20px)]"
       style={{ background: `radial-gradient(circle at 50% 25%, ${ACCENT}10, transparent 45%), #060606` }}
     >
       {children}
@@ -709,7 +752,7 @@ function Header({ round, total, range, pack = "adult" }: { round: number; total:
         Manche {round}/{total} · sur {range}
       </span>
       <span
-        className="text-[10px] px-3 py-1 rounded-full border font-sans font-semibold uppercase tracking-wider"
+        className="mr-14 text-xs px-3 py-1 rounded-full border font-sans font-semibold uppercase tracking-wider"
         style={{ color: ACCENT, borderColor: `${ACCENT}40`, background: `${ACCENT}14` }}
       >
         {PACK_LABEL[pack]}
@@ -737,9 +780,9 @@ function RangePicker({
   shared?: boolean;
 }) {
   const OPTIONS: { v: 10 | 25 | 50; label: string; sub: string }[] = [
-    { v: 10, label: "Classique", sub: "Numéros entre 1 et 10" },
-    { v: 25, label: "Nuance", sub: "Numéros entre 1 et 25" },
-    { v: 50, label: "Sniper", sub: "Numéros entre 1 et 50" },
+    { v: 10, label: "Classique", sub: "De 1 à 10" },
+    { v: 25, label: "Nuance", sub: "De 1 à 25" },
+    { v: 50, label: "Sniper", sub: "De 1 à 50" },
   ];
   const PACKS: { v: Pack; emoji: string; label: string; sub: string }[] = [
     { v: "adult", emoji: "🔥", label: "Soirée 18+", sub: "Thèmes osés & malaise" },
@@ -749,7 +792,7 @@ function RangePicker({
     <div className="flex w-full max-w-md flex-col items-center text-white">
       {pack != null && onPickPack && (
         <>
-          <p className="text-[10px] uppercase tracking-[0.25em] mb-2" style={{ color: `${ACCENT}cc` }}>
+          <p className="text-xs uppercase tracking-[0.25em] mb-2" style={{ color: `${ACCENT}cc` }}>
             Type de thèmes
           </p>
           <div className="grid w-full grid-cols-2 gap-2.5 mb-6">
@@ -771,21 +814,21 @@ function RangePicker({
                 >
                   <p className="text-2xl">{o.emoji}</p>
                   <p className="text-xs font-semibold mt-1 text-white/90">{o.label}</p>
-                  <p className="text-[9px] text-white/40 mt-0.5 leading-tight">{o.sub}</p>
+                  <p className="text-xs text-white/45 mt-0.5 leading-tight">{o.sub}</p>
                 </button>
               );
             })}
           </div>
         </>
       )}
-      <p className="text-[10px] uppercase tracking-[0.25em] mb-2" style={{ color: `${ACCENT}cc` }}>
+      <p className="text-xs uppercase tracking-[0.25em] mb-2" style={{ color: `${ACCENT}cc` }}>
         Échelle des numéros
       </p>
       <h2 className="text-3xl font-serif font-semibold text-white/95 mb-1 text-center">
         Les numéros vont jusqu&apos;à…
       </h2>
       <p className="text-xs text-white/35 font-sans mb-6 text-center px-3">
-        Plus l&apos;échelle est haute, plus il faut être précis à l&apos;oral pour placer les autres.
+        Chacun reçoit un numéro secret et répond à voix haute selon son intensité. Ensuite, chacun classe toute la table (lui compris). Plus l&apos;échelle est haute, plus il faut être précis.
       </p>
       <div className="grid w-full grid-cols-3 gap-2.5">
         {OPTIONS.map((o) => {
@@ -808,7 +851,7 @@ function RangePicker({
                 {o.v}
               </p>
               <p className="text-xs font-semibold mt-0.5 text-white/85">{o.label}</p>
-              <p className="text-[9px] text-white/40 mt-0.5 leading-tight">{o.sub}</p>
+              <p className="text-xs text-white/45 mt-0.5 leading-tight">{o.sub}</p>
             </button>
           );
         })}
@@ -821,12 +864,12 @@ function RangePicker({
         Lancer la partie
       </button>
       {shared && (
-        <p className="text-[11px] text-white/25 font-sans mt-3 text-center">
+        <p className="text-xs text-white/35 font-sans mt-3 text-center">
           N&apos;importe qui peut changer l&apos;échelle ou lancer.
         </p>
       )}
       {onBack && (
-        <button onClick={onBack} className="mt-3 text-sm text-white/40">← Modifier les joueurs</button>
+        <button onClick={onBack} className="mt-2 min-h-11 px-4 text-sm text-white/40 active:text-white/70">← Modifier les joueurs</button>
       )}
     </div>
   );
@@ -838,7 +881,7 @@ function ThemeCard({ theme, range = 10, pack = "adult" }: { theme: ThemeState | 
       className="w-full max-w-md rounded-3xl border border-white/10 bg-black/40 backdrop-blur-sm p-6"
       style={{ boxShadow: `0 0 40px ${ACCENT}1a` }}
     >
-      <p className="text-[10px] text-white/30 font-sans uppercase tracking-[0.25em] mb-3 text-center">
+      <p className="text-xs text-white/35 font-sans uppercase tracking-[0.2em] mb-3 text-center">
         {PACK_LABEL[pack]} · échelle 1 → {range}
       </p>
       <p className="text-2xl font-serif font-semibold text-white/95 text-center leading-snug">
@@ -847,12 +890,12 @@ function ThemeCard({ theme, range = 10, pack = "adult" }: { theme: ThemeState | 
       <div className="mt-5 flex items-stretch gap-2 text-center">
         <div className="flex-1 rounded-2xl border border-emerald-500/20 bg-emerald-500/5 px-3 py-2.5">
           <p className="text-emerald-400 font-mono font-bold text-lg">1</p>
-          <p className="text-[11px] text-white/45 font-sans leading-tight mt-1">{theme?.low}</p>
+          <p className="text-xs text-white/55 font-sans leading-tight mt-1">{theme?.low}</p>
         </div>
-        <div className="flex items-center text-white/20 text-xs font-sans">vers</div>
+        <div className="flex items-center text-white/30 text-xs font-sans">vers</div>
         <div className="flex-1 rounded-2xl border border-rose-500/25 bg-rose-500/10 px-3 py-2.5">
           <p className="font-mono font-bold text-lg" style={{ color: ACCENT }}>{range}</p>
-          <p className="text-[11px] text-white/45 font-sans leading-tight mt-1">{theme?.high}</p>
+          <p className="text-xs text-white/55 font-sans leading-tight mt-1">{theme?.high}</p>
         </div>
       </div>
     </div>
@@ -896,6 +939,7 @@ function OrderingBoard({
   rankerName,
   submittedCount,
   playerCount,
+  remainingMs,
 }: {
   ids: string[];
   nameOf: (id: string) => string;
@@ -908,6 +952,7 @@ function OrderingBoard({
   rankerName?: string;
   submittedCount?: number;
   playerCount?: number;
+  remainingMs?: number | null;
 }) {
   const [order, setOrder] = useState<string[]>(ids);
   const [dragId, setDragId] = useState<string | null>(null);
@@ -916,7 +961,7 @@ function OrderingBoard({
 
   const handlePointerDown = (id: string) => (e: React.PointerEvent) => {
     if (submitted) return;
-    (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
+    e.currentTarget.setPointerCapture?.(e.pointerId);
     setDragId(id);
   };
 
@@ -969,15 +1014,16 @@ function OrderingBoard({
 
   return (
     <div
-      className="flex flex-1 flex-col p-5 md:p-6"
+      className="flex flex-1 flex-col p-5 md:p-6 pt-[max(env(safe-area-inset-top),20px)] pb-[max(env(safe-area-inset-bottom),20px)]"
       style={{ background: `radial-gradient(circle at 50% 15%, ${ACCENT}14, transparent 45%), #060606` }}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
+      onPointerCancel={handlePointerUp}
     >
-      <div className="flex items-center justify-between mb-1">
-        <span className="text-xs text-white/25 font-sans tracking-wide">Manche {round}/{total} · sur {range}</span>
+      <div className="flex items-center justify-between mb-1 mr-14">
+        <span className="text-xs text-white/35 font-sans tracking-wide">Manche {round}/{total} · sur {range}</span>
         <span
-          className="text-[10px] px-3 py-1 rounded-full border font-sans font-semibold uppercase tracking-wider"
+          className="text-xs px-3 py-1 rounded-full border font-sans font-semibold uppercase tracking-wider"
           style={{ color: ACCENT, borderColor: `${ACCENT}40`, background: `${ACCENT}14` }}
         >
           {rankerName ? rankerName : "Ton classement"}
@@ -986,12 +1032,16 @@ function OrderingBoard({
       <p className="text-center text-lg font-serif font-semibold text-white/90 mt-2 mb-1">
         Classe-les du {SCALE[pack].lowFull} au {SCALE[pack].highFull}
       </p>
+      <p className="text-center text-xs text-white/40 font-sans mb-2">
+        Toi compris ! Glisse avec la poignée ⠿ ou utilise les flèches.
+      </p>
+      {remainingMs != null && <OrderCountdown key={round} remainingMs={remainingMs} />}
       <div className="flex items-center justify-between max-w-md w-full mx-auto px-1 mb-3">
-        <span className="text-[10px] text-emerald-400 font-sans uppercase tracking-wider">↑ 1 · {SCALE[pack].low}</span>
-        <span className="text-[10px] font-sans uppercase tracking-wider" style={{ color: ACCENT }}>{range} · {SCALE[pack].high} ↓</span>
+        <span className="text-xs text-emerald-400 font-sans uppercase tracking-wider">↑ 1 · {SCALE[pack].low}</span>
+        <span className="text-xs font-sans uppercase tracking-wider" style={{ color: ACCENT }}>{range} · {SCALE[pack].high} ↓</span>
       </div>
 
-      <div className="flex-1 w-full max-w-md mx-auto space-y-2 select-none" style={{ touchAction: "none" }}>
+      <div className="flex-1 w-full max-w-md mx-auto space-y-2 select-none">
         {order.map((id, i) => {
           const isDragging = id === dragId;
           const isMe = myId != null && id === myId;
@@ -1003,7 +1053,7 @@ function OrderingBoard({
                 else itemRefs.current.delete(id);
               }}
               className={cn(
-                "flex items-center gap-3 rounded-2xl border px-3 py-3.5 backdrop-blur-sm transition-shadow",
+                "flex items-center gap-2 rounded-2xl border px-2 py-1.5 backdrop-blur-sm transition-shadow",
                 isDragging
                   ? "border-white/40 bg-black/60 shadow-2xl scale-[1.02]"
                   : isMe
@@ -1015,7 +1065,9 @@ function OrderingBoard({
               <span className="text-sm font-mono font-bold w-6 text-center text-white/30">{i + 1}</span>
               <div
                 onPointerDown={handlePointerDown(id)}
-                className="flex items-center gap-1 text-white/30 cursor-grab active:cursor-grabbing touch-none"
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/[0.04] text-white/45 cursor-grab active:cursor-grabbing active:bg-white/10 touch-none"
+                style={{ touchAction: "none" }}
+                role="button"
                 aria-label="Glisser pour réordonner"
               >
                 <DotsIcon />
@@ -1024,18 +1076,20 @@ function OrderingBoard({
                 {nameOf(id)}
                 {isMe && <span className="text-white/35"> (toi)</span>}
               </span>
-              <div className="flex flex-col gap-1">
+              <div className="flex gap-1">
                 <button
                   onClick={() => move(id, -1)}
                   disabled={i === 0 || submitted}
-                  className="h-6 w-6 flex items-center justify-center rounded-md bg-white/5 text-white/40 disabled:opacity-20 hover:bg-white/10 active:scale-90"
+                  aria-label="Monter"
+                  className="h-11 w-11 flex items-center justify-center rounded-xl bg-white/5 text-white/55 disabled:opacity-20 active:bg-white/15 active:scale-90"
                 >
                   ▲
                 </button>
                 <button
                   onClick={() => move(id, 1)}
                   disabled={i === order.length - 1 || submitted}
-                  className="h-6 w-6 flex items-center justify-center rounded-md bg-white/5 text-white/40 disabled:opacity-20 hover:bg-white/10 active:scale-90"
+                  aria-label="Descendre"
+                  className="h-11 w-11 flex items-center justify-center rounded-xl bg-white/5 text-white/55 disabled:opacity-20 active:bg-white/15 active:scale-90"
                 >
                   ▼
                 </button>
@@ -1058,6 +1112,26 @@ function OrderingBoard({
           : "Valider mon classement"}
       </button>
     </div>
+  );
+}
+
+// Compte à rebours de la phase de classement (calculé localement à partir du temps restant reçu)
+function OrderCountdown({ remainingMs }: { remainingMs: number }) {
+  const [deadline] = useState(() => Date.now() + remainingMs);
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 250);
+    return () => clearInterval(t);
+  }, []);
+  const left = Math.max(0, Math.ceil((deadline - now) / 1000));
+  const urgent = left <= 10;
+  return (
+    <p
+      className={cn("text-center text-sm font-mono font-bold mb-3", urgent && "animate-pulse")}
+      style={{ color: urgent ? ACCENT : "rgba(255,255,255,0.55)" }}
+    >
+      ⏱ {left} s
+    </p>
   );
 }
 

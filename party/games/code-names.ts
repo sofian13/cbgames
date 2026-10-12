@@ -2,111 +2,139 @@ import type { Connection } from "partykit/server";
 import { BaseGame } from "./base-game";
 import type { GameRanking } from "../shared/types";
 
-// -- French word bank (200+ common nouns, varied topics) --------------
-const WORD_BANK: string[] = [
-  "SOLEIL", "BANANE", "DRAGON", "ETOILE", "CHATEAU", "PLAGE", "MONTAGNE",
-  "ROBOT", "FORET", "MIROIR", "FANTOME", "DIAMANT", "PIRATE", "BALLON",
-  "MUSIQUE", "LUNE", "TIGRE", "FLAMME", "NUAGE", "ANCRE", "OISEAU",
-  "TEMPLE", "SIRENE", "MARTEAU", "CLOCHE", "PAPILLON", "VOLCAN", "PLUIE",
-  "SERPENT", "TRESOR", "HORLOGE", "CACTUS", "PHARE", "MASQUE", "EPEE",
-  "BOUGIE", "CORAIL", "FOUDRE", "SAVANE", "TORTUE", "COMETE", "TOILE",
-  "VIOLON", "REQUIN", "JUNGLE", "CERISE", "MOULIN", "RUBIS", "GLACIER",
-  "SABLE", "AIGLE", "FUSEE", "COURONNE", "MEDUSE", "BRIQUE", "ORAGE",
-  "HARPE", "LABYRINTHE", "PERLE", "ABRICOT", "RENARD", "NAVIRE", "PLUME",
-  "GIRAFE", "ENCRE", "BROUILLARD", "COLOMBE", "CHAUDRON", "ATLAS",
-  "EMERAUDE", "CAFE", "TROMPETTE", "SAPHIR", "CITRON", "MAGICIEN",
-  "CHEVALIER", "FLECHE", "CASCADE", "HAMAC", "LICORNE", "OPERA",
-  "CRISTAL", "TAMBOUR", "ARAIGNEE", "AURORE", "CANARI", "DRAPEAU",
-  "GRENADE", "LOTUS", "OMBRE", "PHENIX", "RADAR", "TONNERRE", "VAGUE",
-  "ZEPHYR", "BAMBOU", "CARNAVAL", "DUNE", "EMBLEME", "GALAXIE",
-  "ICEBERG", "JARDIN", "KAYAK", "LEGENDE", "METEORE", "NECTAR",
-  "ODYSSEE", "POTION", "QUARTZ", "RUCHE", "SPHINX", "TULIPE", "UNIVERS",
-  "VAMPIRE", "WAGON", "XYLOPHONE", "YACHT", "ZEBRE", "ARMURE", "BISON",
-  "CAPE", "DELTA", "FALAISE", "GROTTE", "HIBOU", "IVOIRE", "JADE",
-  "KARMA", "LIBELLULE", "MANDARINE", "NIMBUS", "OASIS", "PANDA",
-  "ROSEE", "SAFARI", "TITAN", "URANIUM", "VELOURS", "WOMBAT",
-  "ACROBATE", "BAGUETTE", "CAMELEON", "DOMINO", "ESCARGOT", "FONTAINE",
-  "GRENOUILLE", "HARMONICA", "IGLOO", "JONGLEUR", "KOALA", "LANTERNE",
-  "MOSAIQUE", "NENUPHAR", "ORCHIDEE", "PALMIER", "ROULETTE", "SCORPION",
-  "TRIDENT", "VIOLETTE", "BLIZZARD", "COCON", "DIESEL", "ECHO",
-  "FAUCON", "GORILLE", "HORIZON", "INDIGO", "JASMIN", "KIWI",
-  "MAMMOUTH", "NARVAL", "ORIGAMI", "PELICAN", "SAUMON", "TOTEM",
-  "ACACIA", "BOUSSOLE", "CRAYON", "DAUPHIN", "ERMITE", "FRESQUE",
-  "GAZELLE", "HYDRE", "IMPALA", "JACKAL", "LYNX", "MIRAGE", "OPALE",
-  "PRISME", "SABRE", "TANGO", "VIPERE",
-  // -- Extension : animaux ------------------------------------------
-  "LION", "OURS", "LOUP", "CHAT", "CHIEN", "CHEVAL", "VACHE", "COCHON",
-  "MOUTON", "CHEVRE", "POULE", "CANARD", "LAPIN", "SOURIS", "ELEPHANT",
-  "RHINOCEROS", "HIPPOPOTAME", "SINGE", "KANGOUROU", "CROCODILE", "ABEILLE",
-  "FOURMI", "MOUCHE", "GUEPE", "COCCINELLE", "CHENILLE", "BALEINE", "PHOQUE",
-  "PINGOUIN", "MANCHOT", "AUTRUCHE", "PERROQUET", "FLAMANT", "CYGNE",
-  "CORBEAU", "MOINEAU", "HIRONDELLE", "CHOUETTE", "VAUTOUR", "CASTOR",
-  "HERISSON", "ECUREUIL", "TAUPE", "BLAIREAU", "SANGLIER", "CERF", "BICHE",
-  "ELAN", "BUFFLE", "ANTILOPE", "GUEPARD", "JAGUAR", "LEOPARD", "PUMA",
-  "LAMA", "DROMADAIRE", "CHAMEAU", "ANE", "TAUREAU", "AGNEAU", "POUSSIN",
-  "OIE", "PIGEON", "MERLE", "ROSSIGNOL", "CIGOGNE", "HERON", "MOUETTE",
-  "HOMARD", "CRABE", "CREVETTE", "HUITRE", "POULPE", "CALAMAR", "ANGUILLE",
-  "TRUITE", "THON", "SARDINE", "RAIE",
-  // -- Extension : nourriture & fruits ------------------------------
-  "POMME", "POIRE", "RAISIN", "FRAISE", "FRAMBOISE", "MYRTILLE", "PECHE",
-  "PRUNE", "MELON", "PASTEQUE", "ANANAS", "MANGUE", "NOIX", "AMANDE",
-  "NOISETTE", "CHATAIGNE", "OLIVE", "TOMATE", "CAROTTE", "OIGNON",
-  "POIVRON", "COURGETTE", "AUBERGINE", "CONCOMBRE", "SALADE", "EPINARD",
-  "CHOU", "BROCOLI", "HARICOT", "LENTILLE", "MAIS", "PAIN", "FROMAGE",
-  "BEURRE", "YAOURT", "MIEL", "SUCRE", "SEL", "POIVRE", "CHOCOLAT",
-  "BONBON", "GATEAU", "TARTE", "GAUFRE", "BISCUIT", "SORBET", "CONFITURE",
-  "SOUPE", "OEUF", "LAIT",
-  // -- Extension : objets & maison ----------------------------------
-  "TABLE", "CHAISE", "LIT", "ARMOIRE", "ETAGERE", "CANAPE", "FAUTEUIL",
-  "TABOURET", "BUREAU", "LAMPE", "RIDEAU", "TAPIS", "COUSSIN", "OREILLER",
-  "CADRE", "VASE", "ASSIETTE", "BOL", "TASSE", "VERRE", "BOUTEILLE",
-  "FOURCHETTE", "COUTEAU", "CUILLERE", "CASSEROLE", "POELE", "MARMITE",
-  "BOUILLOIRE", "FOUR", "FRIGO", "BALAI", "SEAU", "EPONGE", "SAVON",
-  "BROSSE", "PEIGNE", "RASOIR", "SERVIETTE", "CISEAUX", "AIGUILLE", "FIL",
-  "BOUTON", "CLE", "CADENAS", "SERRURE", "TOURNEVIS", "SCIE", "PERCEUSE",
-  "CLOU", "ECHELLE", "BROUETTE", "PELLE", "RATEAU", "ARROSOIR",
-  // -- Extension : transport ----------------------------------------
-  "VOITURE", "CAMION", "BUS", "TRAIN", "METRO", "TRAMWAY", "VELO", "MOTO",
-  "SCOOTER", "TROTTINETTE", "AVION", "HELICOPTERE", "BATEAU", "VOILIER",
-  "RADEAU", "MONTGOLFIERE", "TRACTEUR", "AMBULANCE", "TAXI", "CARROSSE",
-  "TRAINEAU", "SKATE",
-  // -- Extension : corps humain -------------------------------------
-  "TETE", "OEIL", "NEZ", "BOUCHE", "OREILLE", "DENT", "LANGUE", "JOUE",
-  "MENTON", "FRONT", "COU", "EPAULE", "BRAS", "COUDE", "MAIN", "DOIGT",
-  "POUCE", "DOS", "VENTRE", "JAMBE", "GENOU", "PIED", "TALON", "COEUR",
-  "CERVEAU", "POUMON", "SQUELETTE", "CRANE", "MUSCLE",
-  // -- Extension : nature -------------------------------------------
-  "ARBRE", "FLEUR", "HERBE", "FEUILLE", "RACINE", "BRANCHE", "TRONC",
-  "CHAMPIGNON", "ROCHER", "CAILLOU", "RIVIERE", "FLEUVE", "LAC", "ETANG",
-  "MER", "OCEAN", "RUISSEAU", "SOURCE", "COLLINE", "VALLEE", "PLAINE",
-  "PRAIRIE", "CHAMP", "DESERT", "NEIGE", "GIVRE", "GRELE", "VENT",
-  "TEMPETE", "OURAGAN", "TORNADE", "ETINCELLE", "CENDRE", "FUMEE",
-  // -- Extension : vetements & accessoires --------------------------
-  "CHEMISE", "PANTALON", "JUPE", "ROBE", "MANTEAU", "VESTE", "PULL",
-  "SHORT", "CHAUSSURE", "BOTTE", "BASKET", "SANDALE", "CHAPEAU",
-  "CASQUETTE", "BONNET", "ECHARPE", "GANT", "CEINTURE", "CRAVATE",
-  "BAGUE", "COLLIER", "BRACELET", "MONTRE", "LUNETTE", "SAC", "VALISE",
-  "PARAPLUIE", "EVENTAIL",
-  // -- Extension : personnages & metiers ----------------------------
-  "ROI", "REINE", "PRINCE", "PRINCESSE", "SOLDAT", "GENERAL", "CAPITAINE",
-  "MARIN", "FERMIER", "BERGER", "PECHEUR", "CHASSEUR", "MEDECIN", "JUGE",
-  "POLICIER", "VOLEUR", "BANDIT", "ESPION", "CLOWN", "ACTEUR", "CHANTEUR",
-  "DANSEUR", "PEINTRE", "ECRIVAIN", "SAVANT", "GEANT", "NAIN", "SORCIER",
-  "FEE", "ANGE", "DEMON", "MOMIE", "ZOMBIE", "CYBORG",
-  // -- Extension : lieux & batiments --------------------------------
-  "MAISON", "IMMEUBLE", "TOUR", "PONT", "TUNNEL", "BARRAGE", "USINE",
-  "GRANGE", "ECOLE", "EGLISE", "CATHEDRALE", "PYRAMIDE", "FORTERESSE",
-  "DONJON", "CABANE", "TENTE", "HUTTE", "MARCHE", "PORT", "QUAI", "ARENE",
-  "THEATRE",
-  // -- Extension : musique & objets divers --------------------------
-  "GUITARE", "PIANO", "FLUTE", "SAXOPHONE", "ACCORDEON", "CLARINETTE",
-  "BANJO", "GONG", "CYMBALE", "LIVRE", "STYLO", "GOMME", "REGLE", "CAHIER",
-  "GLOBE", "CARTE", "JUMELLES", "LOUPE", "MICROSCOPE", "TELESCOPE",
-  "CAMERA", "RADIO", "ORDINATEUR", "CLAVIER", "ECRAN", "MANETTE", "CASQUE",
-  "MICRO", "AMPOULE", "AIMANT", "RESSORT", "ENGRENAGE", "ROUE", "CHAINE",
-  "CORDE", "FILET", "HAMECON", "CANNE", "CERF-VOLANT", "TOUPIE", "BILLE",
-  "PUZZLE", "PION",
+// -- Banque de mots « Mots Espions » ------------------------------------
+// Mots français courants (avec accents), en privilégiant les mots à double
+// sens (avocat, glace, carte, pêche…) qui font tout l'intérêt du jeu.
+const RAW_WORDS: string[] = [
+  "avocat", "glace", "carte", "pêche", "souris", "mousse", "botte",
+  "bouchon", "lettre", "mine", "palais", "pièce", "poste", "page", "pompe",
+  "ressort", "rayon", "rose", "sol", "temps", "tour", "vol", "verre",
+  "livre", "mémoire", "mode", "moule", "note", "orange", "panneau", "pile",
+  "plan", "plateau", "pont", "pomme", "pouce", "prise", "queue", "règle",
+  "robe", "but", "bureau", "cours", "échelle", "feu", "fil", "fraise",
+  "grue", "jumelle", "lame", "langue", "lentille", "lion", "lune", "marche",
+  "marque", "membre", "menu", "mineur", "nœud", "ordre", "palme",
+  "papillon", "parc", "patron", "perle", "phare", "pied", "piste", "place",
+  "planche", "plume", "poêle", "poisson", "police", "canon", "chou", "coq",
+  "cœur", "corne", "côte", "coupe", "couronne", "crochet", "croissant",
+  "cuisinière", "dé", "diamant", "docteur", "éclair", "écran", "étoile",
+  "flèche", "fort", "gorge", "grain", "grille", "guide", "hôtel", "banque",
+  "banc", "baleine", "balle", "base", "bâton", "bec", "bille", "blanc",
+  "bois", "boîte", "bonnet", "bouche", "boucle", "boule", "bouteille",
+  "branche", "bras", "bulle", "cadre", "caisse", "calcul", "canard",
+  "capitale", "cartouche", "cellule", "centre", "chaîne", "chaise", "champ",
+  "chance", "chapeau", "char", "charge", "chat", "château", "chef",
+  "chemin", "chêne", "cheval", "chèvre", "chiffre", "chute", "ciel",
+  "cinéma", "cirque", "ciseaux", "clé", "cloche", "club", "col", "colle",
+  "collier", "compte", "corde", "corps", "costume", "coton", "couche",
+  "coude", "coulisse", "courant", "course", "couteau", "crabe", "crayon",
+  "crème", "crête", "croix", "cube", "cuivre", "cygne", "danse", "dauphin",
+  "dent", "désert", "diable", "dinosaure", "disque", "doigt", "dragon",
+  "drapeau", "eau", "école", "écorce", "écureuil", "éléphant", "enveloppe",
+  "épée", "éponge", "espace", "essence", "étage", "fantôme", "fée",
+  "fenêtre", "fer", "ferme", "feuille", "figure", "filet", "flamme",
+  "fleur", "flûte", "foire", "fond", "fontaine", "forêt", "fourchette",
+  "fourmi", "frein", "front", "fusée", "galerie", "gant", "gâteau", "géant",
+  "genou", "glacier", "gomme", "goutte", "grenade", "griffe", "guitare",
+  "hache", "harpe", "herbe", "hérisson", "hibou", "histoire", "horloge",
+  "île", "jardin", "jeu", "jour", "journal", "jungle", "kiwi", "laine",
+  "lait", "lampe", "lapin", "laser", "lien", "ligne", "lit", "loup",
+  "lumière", "lunettes", "machine", "main", "maison", "manche", "manteau",
+  "marteau", "masque", "match", "médaille", "mer", "mercure", "miel",
+  "miroir", "momie", "monde", "montagne", "montre", "moteur", "moto",
+  "mouton", "mur", "musique", "nain", "navire", "neige", "nez", "nid",
+  "noix", "nuage", "nuit", "œil", "œuf", "oie", "oiseau", "ombre", "onde",
+  "opéra", "or", "oreille", "os", "ours", "paille", "pain", "panier",
+  "papier", "parachute", "parapluie", "passe", "pâte", "patte", "peau",
+  "peigne", "pelle", "pendule", "pétrole", "phoque", "piano", "pierre",
+  "pilote", "pin", "pingouin", "pinceau", "pirate", "pizza", "plage",
+  "planète", "plaque", "plat", "pluie", "pneu", "poche", "poids", "point",
+  "poivre", "pôle", "porte", "poule", "poupée", "prince", "princesse",
+  "prison", "puce", "pyramide", "quartier", "radar", "raie", "raisin",
+  "rampe", "rat", "recette", "reine", "renard", "requin", "réseau",
+  "rideau", "rivière", "robinet", "robot", "roche", "roi", "roue",
+  "rouleau", "ruban", "ruche", "sable", "sac", "salade", "salle", "sapin",
+  "satellite", "sauce", "saut", "savon", "scène", "scie", "seau", "sel",
+  "selle", "serpent", "serre", "serveur", "sirène", "ski", "soldat",
+  "soleil", "sorcière", "soupe", "sous-marin", "stade", "statue", "stylo",
+  "sucre", "table", "tableau", "tache", "taille", "talon", "tambour",
+  "tapis", "taupe", "taxi", "télé", "temple", "tennis", "tente", "terre",
+  "tête", "théâtre", "thé", "ticket", "tigre", "timbre", "tir", "toile",
+  "toit", "tomate", "tonneau", "tortue", "torche", "train", "trait",
+  "trésor", "triangle", "trompe", "trompette", "tronc", "trou", "tube",
+  "tuyau", "univers", "usine", "vache", "vague", "vaisseau", "valise",
+  "vampire", "vapeur", "vase", "veine", "vent", "ver", "veste", "village",
+  "violon", "virus", "vis", "voile", "voiture", "volant", "volcan", "zèbre",
+  "zéro", "baguette", "bouton", "cadran", "canne", "casque", "chausson",
+  "cliché", "compas", "lunette", "manège", "orgue", "palette", "patin",
+  "pavé", "pellicule", "pépin", "perche", "pince", "pion", "piquet",
+  "platine", "poing", "portable", "puits", "quille", "racine", "raquette",
+  "rame", "rasoir", "relief", "remorque", "rocher", "rondelle", "sabot",
+  "siège", "signe", "sirop", "souffle", "source", "spectre", "sphinx",
+  "tablette", "tampon", "tarte", "terrier", "tige", "tissu", "toast",
+  "tonnerre", "torchon", "toupie", "trappe", "trèfle", "tunnel", "vedette",
+  "verrou", "vipère", "visage", "vitre", "voie", "volume", "aile",
+  "aiguille", "ampoule", "ancre", "ange", "anneau", "araignée", "arbre",
+  "arc", "arche", "argent", "armure", "as", "ascenseur", "assiette",
+  "atlas", "aube", "autruche", "avion", "bague", "baie", "bain", "balai",
+  "balance", "ballon", "bambou", "bande", "barbe", "barrage", "bassin",
+  "bateau", "batterie", "bébé", "berger", "bijou", "biscuit", "blé",
+  "bocal", "bol", "bonbon", "bougie", "boussole", "brique", "brosse",
+  "bûche", "buffet", "cabane", "cactus", "café", "cage", "camion", "camp",
+  "canal", "canapé", "cape", "caramel", "carotte", "carrosse", "carton",
+  "cave", "ceinture", "cerf", "cerveau", "chameau", "champignon",
+  "chandelle", "chapitre", "charbon", "chasse", "chaussette", "chenille",
+  "chocolat", "cigogne", "cintre", "citron", "citrouille", "clou", "clown",
+  "cochon", "coffre", "colonne", "comète", "concert", "coquillage",
+  "coquille", "corbeau", "cordon", "couloir", "couverture", "crâne",
+  "crocodile", "cuillère", "cyclone", "détective", "domino", "donjon",
+  "douche", "dune", "écharpe", "écho", "élastique", "empire", "encre",
+  "épice", "épine", "escalier", "escargot", "éventail", "facteur",
+  "falaise", "farine", "fauteuil", "flocon", "foudre", "four", "fourrure",
+  "frigo", "fromage", "fumée", "gare", "gaufre", "girafe", "globe",
+  "gorille", "grenier", "grenouille", "grotte", "guêpe", "hamac", "hamster",
+  "hélicoptère", "héros", "hippopotame", "homard", "igloo", "jambe",
+  "kangourou", "koala", "labyrinthe", "lac", "lance", "lanterne", "lasso",
+  "légende", "lézard", "licorne", "lime", "loupe", "magicien", "mammouth",
+  "marais", "marionnette", "mât", "méduse", "mètre", "micro", "moulin",
+  "moustache", "muscle", "nappe", "narval", "ninja", "oasis", "olive",
+  "orchestre", "ordinateur", "oreiller", "orteil", "ouragan", "palmier",
+  "panda", "pantalon", "paon", "parfum", "pastèque", "pélican", "perroquet",
+  "pharaon", "pieuvre", "pigeon", "piment", "pique", "placard", "plongeur",
+  "poignée", "pompier", "poussière", "prairie", "puzzle", "radeau", "rail",
+  "rhinocéros", "rubis", "sabre", "saphir", "sardine", "saumon",
+  "sauterelle", "scorpion", "serrure", "squelette", "tasse", "télescope",
+  "tempête", "toboggan", "tornade", "totem", "tracteur", "traîneau",
+  "trampoline", "tricot", "trident", "tulipe", "uniforme", "vélo",
+  "ventilateur", "vitrail", "yaourt"
 ];
+
+const WORD_BANK: string[] = Array.from(
+  new Set(RAW_WORDS.map(w => w.toLocaleUpperCase("fr-FR")))
+);
+
+/** Normalise un mot pour comparer indice / mots de la grille (accents, casse, ligatures). */
+function normalizeWord(w: string): string {
+  return w
+    .toLowerCase()
+    .replace(/œ/g, "oe")
+    .replace(/æ/g, "ae")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z]/g, "");
+}
+
+/** Formes comparables d'un mot (singulier / pluriel simple). */
+function wordForms(w: string): string[] {
+  const n = normalizeWord(w);
+  const forms = new Set([n]);
+  if (n.length > 3 && /[sx]$/.test(n)) forms.add(n.slice(0, -1));
+  if (n.length > 4 && n.endsWith("aux")) forms.add(n.slice(0, -3) + "al");
+  if (n.length > 3 && n.endsWith("al")) forms.add(n.slice(0, -2) + "aux");
+  forms.add(n + "s");
+  forms.add(n + "x");
+  return Array.from(forms);
+}
 
 // -- Card types -------------------------------------------------------
 type CardColor = "red" | "blue" | "neutral" | "assassin";
@@ -165,12 +193,14 @@ export class CodeNamesGame extends BaseGame {
   // Host (first player)
   hostId: string | null = null;
 
+  endTimeout: ReturnType<typeof setTimeout> | null = null;
+
   // Winner info
   winner: Team | null = null;
   winReason: string | null = null;
 
   start() {
-    // Overridden: Code Names uses team-pick first, actual game starts on host action
+    // Mots Espions : choix des équipes d'abord, la partie démarre sur action de l'hôte, actual game starts on host action
     this.started = true;
 
     for (const [id, player] of this.players) {
@@ -230,13 +260,28 @@ export class CodeNamesGame extends BaseGame {
         this.hostId = remaining[0] ?? null;
       }
 
-      // If during gameplay and active spymaster disconnects, end their turn
-      if (this.phase === "spymaster-turn" || this.phase === "team-guess") {
-        const cnPlayer = this.cnPlayers.get(removed.id);
-        if (cnPlayer?.isSpymaster && cnPlayer.team === this.currentTeam) {
-          if (this.phase === "spymaster-turn") {
-            this.switchTurn();
-          }
+      // Un Chef espion se déconnecte en cours de partie : on désigne
+      // automatiquement un autre membre connecté de son équipe.
+      const cnPlayer = this.cnPlayers.get(removed.id);
+      if (
+        cnPlayer?.isSpymaster &&
+        cnPlayer.team &&
+        (this.phase === "spymaster-turn" || this.phase === "team-guess")
+      ) {
+        const team = cnPlayer.team;
+        const replacement = Array.from(this.cnPlayers.values()).find(
+          p => p.team === team && p.id !== removed.id && this.players.has(p.id)
+        );
+        cnPlayer.isSpymaster = false;
+        if (replacement) {
+          replacement.isSpymaster = true;
+        } else if (this.phase === "spymaster-turn" && team === this.currentTeam) {
+          // Plus personne dans l'équipe pour donner un indice : on passe la main.
+          cnPlayer.isSpymaster = true;
+          this.switchTurn();
+          return removed;
+        } else {
+          cnPlayer.isSpymaster = true;
         }
       }
 
@@ -279,26 +324,16 @@ export class CodeNamesGame extends BaseGame {
     this.blueRemaining = this.cards.filter(c => c.color === "blue").length;
   }
 
-  // -- Auto-assign spymasters (first player in each team) --------------
+  // -- Chefs espions : garde le choix fait au salon, sinon le premier ----
   assignSpymasters() {
-    // Reset all
-    for (const p of this.cnPlayers.values()) {
-      p.isSpymaster = false;
-    }
-
-    let redSpyAssigned = false;
-    let blueSpyAssigned = false;
-
-    for (const p of this.cnPlayers.values()) {
-      if (p.team === "red" && !redSpyAssigned) {
-        p.isSpymaster = true;
-        redSpyAssigned = true;
+    for (const team of ["red", "blue"] as Team[]) {
+      const members = Array.from(this.cnPlayers.values()).filter(
+        p => p.team === team && this.players.has(p.id)
+      );
+      const chosen = members.find(p => p.isSpymaster) ?? members[0];
+      for (const p of this.cnPlayers.values()) {
+        if (p.team === team) p.isSpymaster = p === chosen;
       }
-      if (p.team === "blue" && !blueSpyAssigned) {
-        p.isSpymaster = true;
-        blueSpyAssigned = true;
-      }
-      if (redSpyAssigned && blueSpyAssigned) break;
     }
   }
 
@@ -363,13 +398,13 @@ export class CodeNamesGame extends BaseGame {
   checkWinCondition(): boolean {
     if (this.redRemaining === 0) {
       this.winner = "red";
-      this.winReason = "Tous les mots rouges ont ete trouves !";
+      this.winReason = "Tous les mots rouges ont été trouvés !";
       this.endCodeNames();
       return true;
     }
     if (this.blueRemaining === 0) {
       this.winner = "blue";
-      this.winReason = "Tous les mots bleus ont ete trouves !";
+      this.winReason = "Tous les mots bleus ont été trouvés !";
       this.endCodeNames();
       return true;
     }
@@ -378,7 +413,7 @@ export class CodeNamesGame extends BaseGame {
 
   triggerAssassinLoss(guessingTeam: Team) {
     this.winner = guessingTeam === "red" ? "blue" : "red";
-    this.winReason = `L'equipe ${guessingTeam === "red" ? "rouge" : "bleue"} a touche l'assassin !`;
+    this.winReason = `L'équipe ${guessingTeam === "red" ? "rouge" : "bleue"} a fait exploser la Bombe !`;
     this.endCodeNames();
   }
 
@@ -392,40 +427,27 @@ export class CodeNamesGame extends BaseGame {
       card.revealed = true;
     }
 
-    // Build rankings: winning team first
+    // Classement par équipe : toute l'équipe gagnante 1re, l'autre 2e.
     const rankings: GameRanking[] = [];
-    let rank = 1;
     const winnerTeam = this.winner;
-
-    // Winners
     for (const p of this.cnPlayers.values()) {
-      if (p.team === winnerTeam) {
-        rankings.push({
-          playerId: p.id,
-          playerName: p.name,
-          rank,
-          score: 1,
-        });
-      }
+      if (p.team === null) continue;
+      const won = p.team === winnerTeam;
+      rankings.push({
+        playerId: p.id,
+        playerName: p.name,
+        rank: won ? 1 : 2,
+        score: won ? 1 : 0,
+      });
     }
-    rank = rankings.length + 1;
-
-    // Losers
-    for (const p of this.cnPlayers.values()) {
-      if (p.team !== winnerTeam && p.team !== null) {
-        rankings.push({
-          playerId: p.id,
-          playerName: p.name,
-          rank,
-          score: 0,
-        });
-      }
-    }
+    rankings.sort((x, y) => x.rank - y.rank);
 
     this.broadcastPersonalizedState();
 
-    // Delay endGame to let clients see the final state
-    setTimeout(() => {
+    // Laisse le temps de voir la grille révélée avant l'écran de fin.
+    if (this.endTimeout) clearTimeout(this.endTimeout);
+    this.endTimeout = setTimeout(() => {
+      this.endTimeout = null;
       this.endGame(rankings);
     }, 5000);
   }
@@ -442,6 +464,9 @@ export class CodeNamesGame extends BaseGame {
     switch (action) {
       case "join-team":
         this.handleJoinTeam(cnPlayer, payload.team as Team);
+        break;
+      case "want-spymaster":
+        this.handleWantSpymaster(cnPlayer);
         break;
       case "start-game":
         this.handleStartGame(senderId);
@@ -469,19 +494,29 @@ export class CodeNamesGame extends BaseGame {
     this.broadcastPersonalizedState();
   }
 
+  handleWantSpymaster(player: CodeNamesPlayer) {
+    if (this.phase !== "team-pick") return;
+    if (!player.team) return;
+    for (const p of this.cnPlayers.values()) {
+      if (p.team === player.team) p.isSpymaster = p.id === player.id;
+    }
+    this.broadcastPersonalizedState();
+  }
+
   handleStartGame(senderId: string) {
     if (this.phase !== "team-pick") return;
     if (senderId !== this.hostId) return;
 
-    // Chaque équipe a besoin d'au moins 2 joueurs : 1 Espion + 1 opérative (sinon
-    // l'équipe ne peut jamais deviner ni gagner).
-    const redTeam = Array.from(this.cnPlayers.values()).filter(p => p.team === "red");
-    const blueTeam = Array.from(this.cnPlayers.values()).filter(p => p.team === "blue");
+    // Chaque équipe a besoin d'au moins 2 joueurs connectés : 1 Chef espion +
+    // 1 devineur (sinon l'équipe ne peut jamais deviner ni gagner).
+    const connected = Array.from(this.cnPlayers.values()).filter(p => this.players.has(p.id));
+    const redTeam = connected.filter(p => p.team === "red");
+    const blueTeam = connected.filter(p => p.team === "blue");
 
     if (redTeam.length < 2 || blueTeam.length < 2) {
       this.sendToPlayer(senderId, {
         type: "game-error",
-        payload: { message: "Chaque equipe doit avoir au moins 2 joueurs (1 Espion + 1 devineur)." },
+        payload: { message: "Chaque équipe doit avoir au moins 2 joueurs (1 Chef espion + 1 devineur)." },
       });
       return;
     }
@@ -494,19 +529,39 @@ export class CodeNamesGame extends BaseGame {
     if (player.team !== this.currentTeam) return;
     if (!player.isSpymaster) return;
 
-    // Validate clue
-    const trimmedWord = (word ?? "").trim().toUpperCase();
-    if (!trimmedWord || trimmedWord.length === 0) return;
+    // Validation de l'indice : un seul mot, pas un mot de la grille.
+    const trimmedWord = String(word ?? "").trim().toLocaleUpperCase("fr-FR");
+    if (!trimmedWord) return;
+    if (/\s/.test(trimmedWord)) {
+      this.sendToPlayer(player.id, {
+        type: "game-error",
+        payload: { message: "L'indice doit être un seul mot (sans espace)." },
+      });
+      return;
+    }
+    if (trimmedWord.length > 30 || !normalizeWord(trimmedWord)) {
+      this.sendToPlayer(player.id, {
+        type: "game-error",
+        payload: { message: "Indice invalide." },
+      });
+      return;
+    }
 
-    // Count must be 0-9 (0 = "unlimited" hint, conventionally)
-    const clueCount = Math.max(0, Math.min(9, Math.floor(count ?? 1)));
+    // 0 = « ∞ » (nombre de mots illimité), sinon 1 à 9.
+    const rawCount = Number(count);
+    const clueCount = Number.isFinite(rawCount)
+      ? Math.max(0, Math.min(9, Math.floor(rawCount)))
+      : 1;
 
-    // Check clue word is not one of the grid words
-    const isGridWord = this.cards.some(c => c.word === trimmedWord && !c.revealed);
+    // Interdit : un mot visible de la grille (accents, casse et pluriel ignorés).
+    const clueForms = new Set(wordForms(trimmedWord));
+    const isGridWord = this.cards.some(
+      c => !c.revealed && wordForms(c.word).some(f => clueForms.has(f))
+    );
     if (isGridWord) {
       this.sendToPlayer(player.id, {
         type: "game-error",
-        payload: { message: "L'indice ne peut pas etre un mot de la grille." },
+        payload: { message: "L'indice ne peut pas être un mot de la grille." },
       });
       return;
     }
@@ -665,5 +720,9 @@ export class CodeNamesGame extends BaseGame {
 
   cleanup() {
     this.clearTimer();
+    if (this.endTimeout) {
+      clearTimeout(this.endTimeout);
+      this.endTimeout = null;
+    }
   }
 }

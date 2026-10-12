@@ -5,8 +5,8 @@ import type { GameRanking } from "../shared/types";
 // ── Config ───────────────────────────────────────────────
 const HAND_SIZE = 7;
 const TURN_TIME = 30; // seconds per turn
-const UNO_CALL_WINDOW = 3000; // ms to call UNO after playing
-const PENALTY_DRAW = 2; // cards for missing UNO call
+const UNO_CALL_WINDOW = 3000; // ms pour annoncer « Dernière carte ! »
+const PENALTY_DRAW = 2; // cartes de pénalité si on oublie l'annonce
 
 // ── Card types ───────────────────────────────────────────
 type CardColor = "rouge" | "bleu" | "vert" | "jaune";
@@ -39,9 +39,9 @@ interface UnoPlayer {
   name: string;
   hand: UnoCard[];
   calledUno: boolean;
-  // Track whether they need to call UNO (played down to 1 card)
+  // Doit annoncer « Dernière carte ! » (vient de passer à 1 carte)
   mustCallUno: boolean;
-  unoDeadline: number; // timestamp when UNO call window expires
+  unoDeadline: number; // fin de la fenêtre d'annonce (timestamp)
 }
 
 // ── Game status ──────────────────────────────────────────
@@ -63,6 +63,8 @@ export class UnoGame extends BaseGame {
   drawnCard: UnoCard | null = null;
   drawnPlayerId: string | null = null;
   lastDrawTime = 0; // timestamp to prevent rapid draws
+  turnSeq = 0; // incrémenté à chaque tour : invalide les actions de bot périmées
+  endTimer: ReturnType<typeof setTimeout> | null = null;
 
   // ── Deck creation ────────────────────────────────────────
   createDeck(): UnoCard[] {
@@ -133,11 +135,8 @@ export class UnoGame extends BaseGame {
     this.deck = this.createDeck();
     this.shuffle(this.deck);
 
-    // Set turn order
+    // Ordre de jeu aléatoire
     this.turnOrder = Array.from(this.players.keys());
-    this.shuffle(this.turnOrder as unknown as UnoCard[]); // reuse shuffle
-
-    // Actually shuffle the turn order properly
     for (let i = this.turnOrder.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [this.turnOrder[i], this.turnOrder[j]] = [this.turnOrder[j], this.turnOrder[i]];
@@ -208,15 +207,27 @@ export class UnoGame extends BaseGame {
     return this.turnOrder[this.currentTurnIndex];
   }
 
+  /** Joueur encore à la table (connecté ou bot). Les absents sont sautés. */
+  isPresent(id: string): boolean {
+    return this.players.has(id);
+  }
+
+  presentIds(): string[] {
+    return this.turnOrder.filter((id) => this.isPresent(id));
+  }
+
   advanceTurn() {
-    this.currentTurnIndex =
-      (this.currentTurnIndex + this.direction + this.turnOrder.length) %
-      this.turnOrder.length;
+    const n = this.turnOrder.length;
+    for (let k = 0; k < n; k++) {
+      this.currentTurnIndex = (this.currentTurnIndex + this.direction + n) % n;
+      if (this.isPresent(this.getCurrentPlayerId())) return;
+    }
   }
 
   startTurnTimer() {
     this.stopTurnTimer();
     this.timeLeft = TURN_TIME;
+    this.turnSeq++;
 
     this.timer = setInterval(() => {
       this.timeLeft--;
@@ -226,10 +237,11 @@ export class UnoGame extends BaseGame {
       });
 
       if (this.timeLeft <= 0) {
-        // Auto-draw on timeout
+        // Temps écoulé : pioche auto (une seule fois) puis passe
         this.handleAutoDraw();
       }
     }, 1000);
+    this.scheduleBotIfNeeded();
   }
 
   stopTurnTimer() {
@@ -243,17 +255,90 @@ export class UnoGame extends BaseGame {
     this.stopTurnTimer();
     const currentId = this.getCurrentPlayerId();
     const player = this.unoPlayers.get(currentId);
-    if (!player) return;
+    if (!player || this.status !== "playing") return;
 
-    // Draw one card and pass
-    const drawn = this.drawCards(1);
-    player.hand.push(...drawn);
+    // Déjà pioché ce tour-ci → on passe simplement, sans 2e carte
+    if (this.drawnPlayerId !== currentId) {
+      player.hand.push(...this.drawCards(1));
+    }
 
     this.drawnCard = null;
     this.drawnPlayerId = null;
     this.advanceTurn();
     this.startTurnTimer();
     this.broadcastPersonalizedState();
+  }
+
+  /** Un joueur quitte : on le saute tout de suite au lieu d'attendre 30 s à chaque tour. */
+  removePlayer(connectionId: string) {
+    const removed = super.removePlayer(connectionId);
+    if (!removed || !this.started || this.status === "game-over" || this.status === "waiting") return removed;
+    const present = this.presentIds();
+    if (present.length === 1) {
+      this.handleWin(present[0]);
+      return removed;
+    }
+    if (present.length === 0) return removed;
+    if (this.getCurrentPlayerId() === removed.id) {
+      if (this.drawnPlayerId === removed.id) {
+        this.drawnCard = null;
+        this.drawnPlayerId = null;
+      }
+      if (this.status === "choosing-color") this.status = "playing";
+      this.advanceTurn();
+      this.startTurnTimer();
+    }
+    this.broadcastPersonalizedState();
+    return removed;
+  }
+
+  // ── Bots ─────────────────────────────────────────────────
+  /** Couleur la plus présente dans une main (hors jokers). */
+  bestColor(hand: UnoCard[]): CardColor {
+    const count: Record<CardColor, number> = { rouge: 0, bleu: 0, vert: 0, jaune: 0 };
+    for (const c of hand) if (c.type !== "wild") count[c.color]++;
+    return (Object.keys(count) as CardColor[]).sort((a, b) => count[b] - count[a])[0];
+  }
+
+  /** Choix du bot : même couleur d'abord, jokers et +4 gardés pour la fin. */
+  botPickIndex(hand: UnoCard[], onlyIndex: number | null): number {
+    const top = this.getTopCard();
+    const topColor = this.getEffectiveColor(top);
+    const idxs = hand
+      .map((c, i) => i)
+      .filter((i) => (onlyIndex === null || i === onlyIndex) && this.canPlayCard(hand[i], top));
+    if (idxs.length === 0) return -1;
+    const score = (c: UnoCard) => {
+      if (c.type === "wild") return c.wild === "plus4" ? 0 : 1; // en dernier recours
+      let s = 10;
+      if (c.color === topColor) s += 10;
+      if (c.type === "action") s += 3; // se débarrasser des actions d'abord
+      return s;
+    };
+    return idxs.sort((a, b) => score(hand[b]) - score(hand[a]))[0];
+  }
+
+  scheduleBotIfNeeded() {
+    if (this.status !== "playing") return;
+    const id = this.getCurrentPlayerId();
+    if (!id || !this.isBot(id)) return;
+    const seq = this.turnSeq;
+    this.queueBotAction(() => {
+      if (this.status !== "playing" || this.turnSeq !== seq || this.getCurrentPlayerId() !== id) return;
+      const bot = this.unoPlayers.get(id);
+      if (!bot) return;
+      const drew = this.drawnPlayerId === id;
+      const idx = this.botPickIndex(bot.hand, drew ? bot.hand.length - 1 : null);
+      if (idx >= 0) {
+        const card = bot.hand[idx];
+        const rest = bot.hand.filter((_, i) => i !== idx);
+        const chosenColor = card.type === "wild" ? this.bestColor(rest.length ? rest : bot.hand) : undefined;
+        this.handlePlayCard(id, { cardIndex: idx, chosenColor });
+        return;
+      }
+      if (drew) this.handlePassAfterDraw(id);
+      else this.handleDraw(id, true);
+    }, 900, 1800);
   }
 
   // ── Card matching ────────────────────────────────────────
@@ -293,7 +378,7 @@ export class UnoGame extends BaseGame {
     return player.hand.some((card) => this.canPlayCard(card, top));
   }
 
-  // ── UNO call tracking ───────────────────────────────────
+  // ── Annonce « Dernière carte ! » ───────────────────────────────────
   startUnoWindow(playerId: string) {
     const player = this.unoPlayers.get(playerId);
     if (!player) return;
@@ -306,13 +391,30 @@ export class UnoGame extends BaseGame {
     const existing = this.unoTimers.get(playerId);
     if (existing) clearTimeout(existing);
 
+    // Fin de la fenêtre : s'il n'a pas annoncé « Dernière carte ! », il devient attrapable
     const timer = setTimeout(() => {
       this.unoTimers.delete(playerId);
-      // If they didn't call UNO and still have 1 card, they can be caught
-      // (We leave mustCallUno=true so others can catch them)
+      const p = this.unoPlayers.get(playerId);
+      if (!p || this.status === "game-over" || !p.mustCallUno || p.calledUno || p.hand.length !== 1) return;
+      this.broadcastPersonalizedState();
+      // Un bot attrape l'oubli après 1 à 2 s
+      const catcher = this.turnOrder.find((id) => id !== playerId && this.isBot(id) && this.isPresent(id));
+      if (catcher) {
+        this.queueBotAction(() => this.handleCatchUno(catcher, playerId), 1000, 2000);
+      }
     }, UNO_CALL_WINDOW);
 
     this.unoTimers.set(playerId, timer);
+
+    // Bot : annonce « Dernière carte ! » tout seul… sauf 15 % d'oublis
+    if (this.isBot(playerId) && Math.random() >= 0.15) {
+      this.queueBotAction(() => this.handleUnoCall(playerId), 300, 1400);
+    }
+  }
+
+  /** Attrapable = fenêtre de 3 s écoulée sans annonce. */
+  isCatchable(p: UnoPlayer): boolean {
+    return p.mustCallUno && !p.calledUno && p.hand.length === 1 && Date.now() >= p.unoDeadline && !this.unoTimers.has(p.id);
   }
 
   // ── Message handling ─────────────────────────────────────
@@ -350,7 +452,7 @@ export class UnoGame extends BaseGame {
     if (!player) return;
 
     const cardIndex = payload.cardIndex as number;
-    if (cardIndex < 0 || cardIndex >= player.hand.length) return;
+    if (typeof cardIndex !== "number" || !Number.isInteger(cardIndex) || cardIndex < 0 || cardIndex >= player.hand.length) return;
 
     const card = player.hand[cardIndex];
     const topCard = this.getTopCard();
@@ -378,7 +480,7 @@ export class UnoGame extends BaseGame {
     this.drawnCard = null;
     this.drawnPlayerId = null;
 
-    // Check for UNO situation (player now has 1 card)
+    // Plus qu'une carte → fenêtre d'annonce
     if (player.hand.length === 1) {
       this.startUnoWindow(playerId);
     } else {
@@ -421,10 +523,10 @@ export class UnoGame extends BaseGame {
           break;
         }
         case "inverse": {
-          // Reverse direction
           this.direction = this.direction === 1 ? -1 : 1;
-          // In 2-player, reverse acts like skip
-          if (this.turnOrder.length === 2) {
+          // À 2 joueurs, l'Inversion agit comme une Passe : on rejoue
+          if (this.presentIds().length === 2) {
+            this.advanceTurn();
             this.advanceTurn();
           } else {
             this.advanceTurn();
@@ -453,13 +555,13 @@ export class UnoGame extends BaseGame {
     }
   }
 
-  handleDraw(playerId: string) {
+  handleDraw(playerId: string, fromBot = false) {
     if (this.status !== "playing") return;
     if (this.getCurrentPlayerId() !== playerId) return;
     if (this.drawnPlayerId === playerId) return; // already drew this turn
     // Prevent rapid-fire draws (500ms cooldown)
     const now = Date.now();
-    if (now - this.lastDrawTime < 500) return;
+    if (!fromBot && now - this.lastDrawTime < 500) return;
     this.lastDrawTime = now;
 
     const player = this.unoPlayers.get(playerId);
@@ -478,6 +580,7 @@ export class UnoGame extends BaseGame {
 
     if (canPlayDrawn) {
       // Send personalized state — player can now play or pass
+      this.scheduleBotIfNeeded();
       this.broadcastPersonalizedState();
     } else {
       // Auto-pass: card can't be played
@@ -516,6 +619,7 @@ export class UnoGame extends BaseGame {
         this.unoTimers.delete(playerId);
       }
 
+      this.broadcastPersonalizedState();
       // Notify all players
       this.broadcast({
         type: "game-update",
@@ -531,8 +635,9 @@ export class UnoGame extends BaseGame {
     const target = this.unoPlayers.get(targetId);
     if (!target) return;
 
-    // Target must have 1 card, must have mustCallUno=true, and hasn't called it
-    if (target.hand.length !== 1 || !target.mustCallUno || target.calledUno) return;
+    if (this.status === "game-over" || catcherId === targetId) return;
+    // Cible : 1 carte, n'a pas annoncé, et sa fenêtre de 3 s est écoulée
+    if (!this.isCatchable(target)) return;
 
     // Penalty: draw 2 cards
     target.hand.push(...this.drawCards(PENALTY_DRAW));
@@ -563,7 +668,9 @@ export class UnoGame extends BaseGame {
 
   // ── Win condition ────────────────────────────────────────
   handleWin(winnerId: string) {
+    if (this.status === "game-over") return;
     this.stopTurnTimer();
+    this.clearBotTimeouts();
     this.clearUnoTimers();
     this.status = "game-over";
 
@@ -623,7 +730,9 @@ export class UnoGame extends BaseGame {
     this.broadcastPersonalizedState();
 
     // Small delay then end
-    setTimeout(() => {
+    if (this.endTimer) clearTimeout(this.endTimer);
+    this.endTimer = setTimeout(() => {
+      this.endTimer = null;
       this.endGame(rankings);
     }, 1500);
   }
@@ -631,6 +740,7 @@ export class UnoGame extends BaseGame {
   // ── State serialization (per-player) ─────────────────────
   broadcastPersonalizedState() {
     for (const [playerId, player] of this.players) {
+      if (this.isBot(playerId)) continue;
       this.sendTo(player.connectionId, {
         type: "game-state",
         payload: this.getStateForPlayer(playerId),
@@ -639,6 +749,7 @@ export class UnoGame extends BaseGame {
   }
 
   getStateForPlayer(playerId: string): Record<string, unknown> {
+    if (!this.started || this.discardPile.length === 0) return { status: "waiting" };
     const me = this.unoPlayers.get(playerId);
     const topCard = this.getTopCard();
     const currentPlayerId = this.getCurrentPlayerId();
@@ -666,7 +777,12 @@ export class UnoGame extends BaseGame {
         cardCount: p.hand.length,
         isCurrentTurn: id === currentPlayerId,
         calledUno: p.calledUno,
+        // Peut encore annoncer (fenêtre ouverte ou pas encore attrapé)
         mustCallUno: p.mustCallUno && !p.calledUno && p.hand.length === 1,
+        // Attrapable par les autres (fenêtre de 3 s écoulée)
+        catchable: this.isCatchable(p),
+        isBot: this.isBot(id),
+        connected: this.isPresent(id),
       };
     }).filter(Boolean);
 
@@ -702,13 +818,13 @@ export class UnoGame extends BaseGame {
     }
   }
 
-  // getState() is used for initial join — returns a generic waiting state
+  /** État public (sans aucune main) — chaque joueur reçoit en plus SA vue via getStateForPlayer. */
   getState(): Record<string, unknown> {
-    if (!this.started) {
+    if (!this.started || this.discardPile.length === 0) {
       return { status: "waiting" };
     }
-    // For initial join, return minimal info — personalized state is sent separately
-    return { status: this.status };
+    // Vue d'un spectateur : main vide, rien de privé
+    return this.getStateForPlayer("");
   }
 
   // ── Helpers ──────────────────────────────────────────────
@@ -729,5 +845,8 @@ export class UnoGame extends BaseGame {
   cleanup() {
     this.stopTurnTimer();
     this.clearUnoTimers();
+    this.clearBotTimeouts();
+    if (this.endTimer) clearTimeout(this.endTimer);
+    this.endTimer = null;
   }
 }

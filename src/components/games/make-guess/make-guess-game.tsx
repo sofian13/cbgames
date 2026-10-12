@@ -12,189 +12,130 @@ const TEAM_BLOB: MascotColor[] = ["yellow", "sky", "coral", "mint", "pink", "lav
 // ── Word lists ─────────────────────────────────────────────
 
 const WORDS_OBJECTS = [
-  "Parapluie", "Aspirateur", "Trampoline", "Skateboard", "Telescope",
+  "Parapluie", "Aspirateur", "Trampoline", "Skateboard", "Télescope",
   "Boussole", "Hamac", "Toboggan", "Marionnette", "Sablier",
-  "Cerf-volant", "Monocle", "Catapulte", "Periscope", "Sifflet",
-  "Echasses", "Kaleidoscope", "Metronome", "Pendule", "Entonnoir",
-  "Briquet", "Ciseau", "Ampoule", "Cravate", "Lunettes",
+  "Cerf-volant", "Monocle", "Catapulte", "Périscope", "Sifflet",
+  "Échasses", "Kaléidoscope", "Métronome", "Pendule", "Entonnoir",
+  "Briquet", "Ciseaux", "Ampoule", "Cravate", "Lunettes",
   "Réveil", "Cadenas", "Extincteur", "Bouée", "Dé",
-  "Jumelles", "Baguette", "Pansement", "Stéthoscope", "Antenne",
+  "Jumelles", "Baguette magique", "Pansement", "Stéthoscope", "Antenne",
   "Hameçon", "Échelle", "Loupe", "Boomerang", "Haltère",
+  "Lampe", "Valise", "Horloge", "Bouteille", "Verre",
+  "Assiette", "Fourchette", "Cuillère", "Couteau", "Casserole",
+  "Poêle", "Frigo", "Four", "Micro-ondes", "Canapé",
+  "Couverture", "Matelas", "Rideau", "Tapis", "Balai",
+  "Seau", "Éponge", "Savon", "Serviette", "Baignoire",
+  "Brosse à dents", "Peigne", "Parfum", "Shampoing", "Dentifrice",
+  "Rasoir", "Sac à dos", "Brouette", "Marteau", "Tournevis",
+  "Clou", "Perceuse", "Scie", "Pelle", "Râteau",
+  "Tondeuse", "Arrosoir", "Tiroir", "Panier", "Allumette",
+  "Lanterne", "Chargeur", "Prise électrique", "Calendrier", "Globe",
+  "Pinceau", "Crayon", "Gomme", "Règle", "Compas",
+  "Calculatrice", "Imprimante", "Clavier", "Écouteurs", "Vinyle",
+  "Cassette", "Clé USB", "Veste", "Manteau", "Pull",
+  "Chemise", "Pantalon", "Short", "Chaussettes", "Baskets",
+  "Sandales", "Chapeau", "Gants", "Ceinture", "Maillot de bain",
 ];
 
-const WORDS_EXTRA = [
-"table","chaise","ordinateur","telephone","stylo","cahier","lampe","porte","fenetre","cle",
-"sac","valise","montre","horloge","miroir","lunettes","bouteille","verre","assiette","fourchette",
-"cuillere","couteau","casserole","poele","frigo","four","micro onde","canape","lit","oreiller",
-"couverture","matelas","rideau","tapis","balai","aspirateur","seau","eponge","savon","serviette",
-"douche","baignoire","toilette","brosse","peigne","parfum","shampoing","dentifrice","rasoir","maillot",
-"veste","manteau","pull","tshirt","chemise","pantalon","jean","short","chaussettes","chaussures",
-"baskets","sandales","casquette","chapeau","echarpe","gants","ceinture","sac a dos","pomme","banane",
-"orange","fraise","cerise","ananas","mangue","kiwi","raisin","pasteque","melon","citron",
-"peche","poire","abricot","framboise","myrtille","grenade","noix","amande","noisette","cacahuete",
-"pistache","pain","beurre","fromage","lait","yaourt","creme","sucre","sel","poivre",
-"riz","pates","pizza","burger","sandwich","salade","soupe","steak","poulet","poisson",
-"sushi","omelette","frites","ketchup","mayonnaise","moutarde","chocolat","bonbon","biscuit","gateau",
-"glace","chien","chat","lion","tigre","elephant","girafe","zebre","cheval","vache",
-"mouton","chevre","cochon","lapin","hamster","souris","rat","ecureuil","renard","loup",
-"ours","panda","koala","kangourou","dauphin","requin","baleine","poulpe","crabe","meduse",
-"poisson","aigle","hibou","corbeau","pigeon","moineau","perroquet","paon","cygne","canard",
-"poule","coq","soleil","lune","etoile","planete","terre","mars","jupiter","saturne",
-"comete","asteroide","galaxie","univers","nuage","pluie","neige","orage","eclair","vent",
-"tempete","brouillard","arc en ciel","riviere","lac","mer","ocean","plage","ile","montagne",
-"volcan","foret","desert","jungle","maison","immeuble","ville","village","route","autoroute",
-"pont","tunnel","gare","aeroport","port","bus","train","metro","tramway","voiture",
-"taxi","camion","velo","moto","avion","helicoptere","bateau","fusee","docteur","infirmier",
-"professeur","eleve","boulanger","cuisinier","serveur","policier","pompier","avocat","juge",
-"ingenieur","programmeur","designer","artiste","musicien","acteur","realisateur","photographe","journaliste","astronaute",
-"scientifique","architecte","amour","haine","joie","tristesse","colere","peur","surprise","jalousie",
-"envie","fierte","honte","stress","calme","courage","espoir","doute","jeu","ballon",
-"football","basket","tennis","volley","ping pong","golf","rugby","ski","snowboard","surf",
-"natation","plongee","escalade","randonnee","course","marathon","film","cinema","serie","episode",
-"acteur","camera","scene","musique","guitare","piano","violon","batterie","micro","concert",
-"festival","livre","roman","poeme","histoire","chapitre","bibliotheque","page","lettre","mot",
-"phrase","alphabet","or","argent","diamant","bijou","couronne","tresor","piece","billet",
-"banque","coffre","magie","sort","sorcier","dragon","epee","bouclier","chevalier","roi",
-"reine","princesse","chateau","donjon","robot","intelligence","algorithme","code","internet","serveur",
-"reseau","donnees","cloud","application","logiciel","temps","seconde","minute","heure","jour",
-"semaine","mois","annee","passe","present","futur","naissance","enfance","adulte","vieillesse",
-"mort","souvenir","reve","imagination","lumiere","ombre","couleur","rouge","bleu","vert",
-"jaune","orange","violet","noir","blanc","energie","force","vitesse","gravite","electricite",
-"magnetisme","chaleur","froid","secret","mystere","enigme","indice","reponse","chance","hasard",
-"destin","choix","liberte","silence","bruit","echo","voix","cri","rire","debut",
-"fin","milieu","chemin","direction","objectif","monde","humanite","culture","langue","tradition",
-"histoire","verite","mensonge","question","reflexion","idee","cerveau","pensee","logique","memoire"
-]
-
 const WORDS_ANIMALS = [
-...WORDS_EXTRA,
-  "Hippopotame", "Cameleon", "Ornithorynque", "Flamant rose", "Herisson",
+  "Hippopotame", "Caméléon", "Ornithorynque", "Flamant rose", "Hérisson",
   "Paresseux", "Tatou", "Colibri", "Narval", "Capybara",
-  "Salamandre", "Poulpe", "Toucan", "Iguane", "Scarabee",
-  "Koala", "Okapi", "Axolotl", "Pangolin", "Suricate",
-  "Lion", "Dauphin", "Lapin", "Girafe", "Serpent",
-  "Pingouin", "Cheval", "Crocodile", "Panda", "Loup",
-  "Tigre", "Araignée", "Scorpion", "Souris", "Rat",
-  "Crevette", "Homard", "Hibou", "Chouette",
-  "Aigle", "Requin", "Baleine", "Tortue", "Perroquet",
-  "Renard", "Cerf", "Ours", "Phoque", "Méduse",
-  "Papillon", "Mouche", "Fourmi", "Escargot", "Grenouille",
-  "Sanglier", "Bison", "Autruche", "Pieuvre", "Corbeau",
+  "Salamandre", "Toucan", "Iguane", "Scarabée", "Koala",
+  "Okapi", "Axolotl", "Pangolin", "Suricate", "Lion",
+  "Dauphin", "Lapin", "Girafe", "Serpent", "Pingouin",
+  "Cheval", "Crocodile", "Panda", "Loup", "Tigre",
+  "Araignée", "Scorpion", "Souris", "Rat", "Crevette",
+  "Homard", "Hibou", "Chouette", "Aigle", "Requin",
+  "Baleine", "Tortue", "Perroquet", "Renard", "Cerf",
+  "Ours", "Phoque", "Méduse", "Papillon", "Mouche",
+  "Fourmi", "Escargot", "Grenouille", "Sanglier", "Bison",
+  "Autruche", "Pieuvre", "Corbeau", "Chien", "Chat",
+  "Éléphant", "Zèbre", "Vache", "Mouton", "Chèvre",
+  "Cochon", "Hamster", "Écureuil", "Kangourou", "Crabe",
+  "Pigeon", "Moineau", "Paon", "Cygne", "Canard",
+  "Poule", "Coq", "Abeille", "Bourdon", "Guêpe",
+  "Coccinelle", "Luciole", "Libellule", "Sauterelle", "Chenille",
+  "Tarentule", "Gecko", "Cobra", "Anaconda", "Hippocampe",
+  "Raie", "Anguille", "Saumon", "Requin marteau", "Orque",
+  "Cachalot", "Lamantin", "Morse", "Otarie", "Albatros",
+  "Mouette", "Gorille", "Chimpanzé", "Orang-outan", "Lémurien",
+  "Panda roux", "Raton laveur", "Blaireau", "Furet", "Hermine",
+  "Chinchilla", "Gazelle", "Antilope", "Buffle", "Chameau",
 ];
 
 const WORDS_FAMOUS = [
-  "Napoleon", "Cleopatre", "Einstein", "Mozart", "Picasso",
-  "Shakespeare", "Mandela", "Chaplin", "Gandhi", "Marie Curie",
-  "Jules Cesar", "Marco Polo", "Beethoven", "Van Gogh", "Darwin",
-  "Aristote", "Da Vinci", "Moliere", "Voltaire", "Pasteur",
+  "Napoléon", "Cléopâtre", "Einstein", "Mozart", "Picasso",
+  "Shakespeare", "Mandela", "Charlie Chaplin", "Gandhi", "Marie Curie",
+  "Jules César", "Marco Polo", "Beethoven", "Van Gogh", "Darwin",
+  "Aristote", "Léonard de Vinci", "Molière", "Voltaire", "Pasteur",
   "Zidane", "Ronaldo", "Messi", "Mbappé", "Beyoncé",
-  "Rihanna", "Drake", "Eminem", "Kanye", "Elon Musk",
+  "Rihanna", "Drake", "Eminem", "Kanye West", "Elon Musk",
   "Steve Jobs", "Neymar", "Maradona", "Pelé", "Federer",
 ];
 
 const WORDS_ACTIONS = [
-  "Jongler", "Eternuer", "Ronfler", "Plonger", "Escalader",
+  "Jongler", "Éternuer", "Ronfler", "Plonger", "Escalader",
   "Surfer", "Patiner", "Galoper", "Danser le tango", "Faire du mime",
-  "Siffler", "Applaudir", "Ramper", "Mediter", "Bailler",
-  "Tricoter", "Souder", "Pecher", "Demenager", "Negocier",
+  "Siffler", "Applaudir", "Ramper", "Méditer", "Bâiller",
+  "Tricoter", "Souder", "Pêcher", "Déménager", "Négocier",
   "Courir", "Dormir", "Chanter", "Sauter", "Cuisiner",
   "Nager", "Pleurer", "Danser", "Conduire",
   "Voler", "Trébucher", "Embrasser", "Draguer", "Tricher",
-  "Mentir", "Vomir", "Accoucher", "Hacker", "Cambrioler",
+  "Mentir", "Vomir", "Accoucher", "Pirater", "Cambrioler",
   "Kidnapper", "Hypnotiser", "Exorciser", "Ressusciter", "Twerker",
 ];
 
-const WORDS_EXTRA_BASE = [
-  "table","chaise","ordinateur","telephone","stylo","cahier","lampe","porte","fenetre","cle",
-  "sac","valise","montre","horloge","miroir","lunettes","bouteille","verre","assiette","fourchette",
-  "cuillere","couteau","casserole","poele","frigo","four","micro onde","canape","lit","oreiller",
-  "couverture","matelas","rideau","tapis","balai","aspirateur","seau","eponge","savon","serviette",
-  "douche","baignoire","toilette","brosse","peigne","parfum","shampoing","dentifrice","rasoir","maillot",
-  "veste","manteau","pull","tshirt","chemise","pantalon","jean","short","chaussettes","chaussures",
-  "baskets","sandales","casquette","chapeau","echarpe","gants","ceinture","sac a dos","pomme","banane",
-  "orange","fraise","cerise","ananas","mangue","kiwi","raisin","pasteque","melon","citron",
-  "peche","poire","abricot","framboise","myrtille","grenade","noix","amande","noisette","cacahuete",
-  "pistache","pain","beurre","fromage","lait","yaourt","creme","sucre","sel","poivre",
-  "riz","pates","pizza","burger","sandwich","salade","soupe","steak","poulet","poisson",
-  "sushi","omelette","frites","ketchup","mayonnaise","moutarde","chocolat","bonbon","biscuit","gateau",
-  "glace","chien","chat","lion","tigre","elephant","girafe","zebre","cheval","vache",
-  "mouton","chevre","cochon","lapin","hamster","souris","rat","ecureuil","renard","loup",
-  "ours","panda","koala","kangourou","dauphin","requin","baleine","poulpe","crabe","meduse",
-  "aigle","hibou","corbeau","pigeon","moineau","perroquet","paon","cygne","canard","poule",
-  "coq","soleil","lune","etoile","planete","terre","mars","jupiter","saturne","comete",
-  "asteroide","galaxie","univers","nuage","pluie","neige","orage","eclair","vent","tempete",
-  "brouillard","arc en ciel","riviere","lac","mer","ocean","plage","ile","montagne","volcan",
-  "foret","desert","jungle","maison","immeuble","ville","village","route","autoroute","pont",
-  "tunnel","gare","aeroport","port","bus","train","metro","tramway","voiture","taxi",
-  "camion","velo","moto","avion","helicoptere","bateau","fusee","docteur","infirmier","professeur",
-  "eleve","boulanger","cuisinier","serveur","policier","pompier","avocat","juge","ingenieur","programmeur",
-  "designer","artiste","musicien","acteur","realisateur","photographe","journaliste","astronaute","scientifique","architecte",
-  "amour","haine","joie","tristesse","colere","peur","surprise","jalousie","envie","fierte",
-  "honte","stress","calme","courage","espoir","doute","jeu","ballon","football","basket",
-  "tennis","volley","ping pong","golf","rugby","ski","snowboard","surf","natation","plongee",
-  "escalade","randonnee","course","marathon","film","cinema","serie","episode","camera","scene",
-  "musique","guitare","piano","violon","batterie","micro","concert","festival","livre","roman",
-  "poeme","histoire","chapitre","bibliotheque","page","lettre","mot","phrase","alphabet","or",
-  "argent","diamant","bijou","couronne","tresor","piece","billet","banque","coffre","magie",
-  "sort","sorcier","dragon","epee","bouclier","chevalier","roi","reine","princesse","chateau",
-  "donjon","robot","intelligence","algorithme","code","internet","serveur","reseau","donnees","cloud",
-  "application","logiciel","temps","seconde","minute","heure","jour","semaine","mois","annee",
-  "passe","present","futur","naissance","enfance","adulte","vieillesse","mort","souvenir","reve",
-  "imagination","lumiere","ombre","couleur","rouge","bleu","vert","jaune","orange","violet",
-  "noir","blanc","energie","force","vitesse","gravite","electricite","magnetisme","chaleur","froid",
-  "secret","mystere","enigme","indice","reponse","chance","hasard","destin","choix","liberte",
-  "silence","bruit","echo","voix","cri","rire","debut","fin","milieu","chemin",
-  "direction","objectif","monde","humanite","culture","langue","tradition","verite","mensonge","question",
-  "reflexion","idee","cerveau","pensee","logique","memoire","brouette","marteau","tournevis","vis",
-  "clou","perceuse","scie","rabot","niveau","pelle","pioche","rateau","beche","tondeuse",
-  "arrosoir","grenier","cave","placard","etagere","tiroir","coffret","boite","panier","corbeille",
-  "plateau","couvercle","allumette","torche","lanterne","projecteur","batterie externe","chargeur","cable","prise",
-  "adaptateur","agenda","calendrier","planning","plan","atlas","globe","maquette","statue","sculpture",
-  "tableau","cadre","toile","palette","pinceau","crayon","feutre","marqueur","gomme","regle",
-  "compas","calculatrice","imprimante","scanner","clavier","souris pc","webcam","ecouteurs","haut parleur","vinyle",
-  "cassette","cd","dvd","cle usb","disque dur","routeur","modem","proxy","navigateur","script",
-  "variable","fonction","classe","objet js","boucle","condition","bug","correctif","patch","version",
-  "build","deploy","docker","container","memoire vive","cache","pixel","texture","animation","sprite",
-  "checkpoint","spawn","score","bonus","malus","skin","avatar","inventaire","quete","boss",
-  "loot","drop","antiquite","renaissance","revolution","royaume","constitution","senat","parlement","election",
-  "vote","urne","bulletin","maire","ministre","president","ambassade","alliance","conflit","bataille",
-  "tranchee","caserne","arsenal","canon","munition","drone","orbite","nebuleuse","supernova","trou noir",
-  "constellation","equateur","tropique","hemisphere","latitude","longitude","meridien","altitude","maree","vague",
-  "geyser","glacier","banquise","fjord","delta","lagon","atoll","peninsule","archipel","falaise",
-  "grotte","caverne","cratere","meteorite","erosion","sediment","fossile","minerai","cristal","quartz",
-  "rubis","saphir","emeraude","opale","topaze","ambre","corail","perle","cuivre","fer",
-  "acier","aluminium","titane","zinc","nickel","graphene","carbone","hydrogene","oxygene","azote",
-  "helium","argon","neon","molecule","atome","electron","proton","neutron","enzyme","cellule",
-  "mutation","genome","chromosome","adn","arn","bacterie","virus","levure","algue","racine",
-  "tige","feuille","graine","pollen","nectar","ruche","abeille","bourdon","guepe","frelon",
-  "coccinelle","luciole","libellule","sauterelle","grillon","chenille","tarentule","mygale","gecko","varan",
-  "cobra","python","anaconda","boa","alligator","caiman","hippocampe","raie","anguille","saumon",
-  "thon","morue","sardine","anchois","hareng","maquereau","perche","brochet","carpe","silure",
-  "requin blanc","requin marteau","orque","cachalot","lamantin","dugong","morse","otarie","albatros","goeland",
-  "mouette","gorille","chimpanze","orang outan","gibbon","lemur","panda roux","raton laveur","blairau","furet",
-  "hermine","belette","vison","chinchilla","tapir","okapi","oryx","gazelle","antiloppe","buffle"
-];
-
 const WORDS_PLACES = [
-...WORDS_EXTRA_BASE,
-  "Pyramides", "Tour Eiffel", "Colisee", "Muraille de Chine", "Machu Picchu",
-  "Taj Mahal", "Statue de la Liberte", "Big Ben", "Acropole", "Niagara",
+  "Pyramides", "Tour Eiffel", "Colisée", "Muraille de Chine", "Machu Picchu",
+  "Taj Mahal", "Statue de la Liberté", "Big Ben", "Acropole", "Chutes du Niagara",
   "Mont Blanc", "Sahara", "Amazonie", "Antarctique", "Hollywood",
-  "Las Vegas", "Venise", "Tokyo", "Dubai", "Tombouctou",
+  "Las Vegas", "Venise", "Tokyo", "Dubaï", "Tombouctou",
   "École", "Plage", "Hôpital", "Cinéma", "Forêt",
   "Restaurant", "Aéroport", "Montagne", "Supermarché", "Musée",
   "Paris", "Londres", "Bretagne", "Normandie",
   "Marseille", "Berlin", "Ibiza", "Amsterdam", "Bangkok",
   "Bali", "Mexique", "Maroc", "Égypte", "Japon",
   "Prison", "Casino", "Discothèque", "Stade", "Cimetière",
+  "Gare", "Port", "Pont", "Tunnel", "Autoroute",
+  "Village", "Immeuble", "Bibliothèque", "Banque", "Château",
+  "Grenier", "Cave", "Volcan", "Désert", "Jungle",
+  "Île", "Lac", "Rivière", "Océan", "Grotte",
+  "Falaise", "Glacier", "Banquise", "Lagon", "Archipel",
+  "Caserne de pompiers", "Ambassade", "Mairie", "Boulangerie", "Pharmacie",
+];
+
+const WORDS_NATURE = [
+  "Soleil", "Lune", "Étoile", "Planète", "Comète",
+  "Astéroïde", "Galaxie", "Trou noir", "Constellation", "Météorite",
+  "Arc-en-ciel", "Orage", "Éclair", "Tempête", "Brouillard",
+  "Nuage", "Neige", "Marée", "Vague", "Geyser",
+  "Fossile", "Cristal", "Diamant", "Rubis", "Émeraude",
+  "Perle", "Corail", "Racine", "Feuille", "Graine",
+  "Pollen", "Équateur", "Gravité", "Électricité", "Aimant",
+  "ADN", "Bactérie", "Virus", "Atome", "Tornade",
+  "Séisme", "Avalanche", "Cascade", "Coucher de soleil", "Éclipse",
+];
+
+const WORDS_LEGENDS = [
+  "Dragon", "Sorcier", "Épée", "Bouclier", "Chevalier",
+  "Roi", "Reine", "Princesse", "Donjon", "Trésor",
+  "Couronne", "Magie", "Sortilège", "Licorne", "Sirène",
+  "Fée", "Ogre", "Troll", "Lutin", "Elfe",
+  "Potion", "Grimoire", "Balai volant", "Tapis volant", "Génie",
+  "Momie", "Zombie", "Cyclope", "Minotaure", "Phénix",
 ];
 
 const WORDS_EXPRESSIONS = [
   "Avoir le cafard", "Poser un lapin", "Tomber dans les pommes",
   "Avoir la chair de poule", "Couper les cheveux en quatre",
   "Mettre les pieds dans le plat", "Se noyer dans un verre d'eau",
-  "Prendre ses jambes a son cou", "Avoir un poil dans la main",
-  "Tirer les vers du nez",
+  "Prendre ses jambes à son cou", "Avoir un poil dans la main",
+  "Tirer les vers du nez", "Donner sa langue au chat",
+  "Être dans la lune", "Coûter les yeux de la tête",
+  "Avoir le cœur sur la main", "Raconter des salades",
+  "Mettre la main à la pâte", "Casser les pieds",
+  "Avoir la tête dans les nuages", "Poser une colle",
+  "Avoir un chat dans la gorge",
 ];
 
 const WORDS_MOVIES = [
@@ -206,17 +147,21 @@ const WORDS_MOVIES = [
 
 const WORDS_FOOD = [
   "Croissant", "Sushi", "Fondue", "Ratatouille", "Tiramisu",
-  "Guacamole", "Pretzel", "Churros", "Bruschetta", "Macaron",
-  "Creme brulee", "Tartare", "Raclette", "Pain au chocolat", "Eclair",
-  "Mille-feuille", "Profiterole", "Galette des rois", "Crepe Suzette", "Baba au rhum",
+  "Guacamole", "Bretzel", "Churros", "Bruschetta", "Macaron",
+  "Crème brûlée", "Tartare", "Raclette", "Pain au chocolat", "Éclair au chocolat",
+  "Mille-feuille", "Profiterole", "Galette des rois", "Crêpe", "Baba au rhum",
   "Pizza", "Banane", "Chocolat", "Burger", "Fromage",
-  "Pastèque", "Bonbon", "Gâteau", "Coca-Cola", "Pepsi",
+  "Pastèque", "Bonbon", "Gâteau", "Soda", "Barbe à papa",
   "Café", "Thé", "Bière", "Vin", "Caramel",
   "Pomme", "Poire", "Ananas", "Fraise", "Framboise",
-  "Beurre", "Tarte", "Mars", "Snickers",
-  "Kebab", "Tacos", "Nutella", "Popcorn", "Donut",
-  "Pancake", "Omelette", "Steak", "Jambon", "Mozzarella",
-  "Wasabi", "Tabasco", "Ketchup", "Mayonnaise", "Moutarde",
+  "Beurre", "Tarte", "Kebab", "Tacos", "Popcorn",
+  "Donut", "Pancake", "Omelette", "Steak", "Jambon",
+  "Mozzarella", "Wasabi", "Piment", "Ketchup", "Mayonnaise",
+  "Moutarde", "Cerise", "Mangue", "Kiwi", "Raisin",
+  "Melon", "Citron", "Pêche", "Abricot", "Myrtille",
+  "Grenade", "Noix de coco", "Cacahuète", "Pistache", "Pain",
+  "Yaourt", "Riz", "Pâtes", "Sandwich", "Soupe",
+  "Poulet rôti", "Frites", "Biscuit", "Glace", "Sucette",
 ];
 
 const WORDS_SIMPLE = [
@@ -235,6 +180,7 @@ const WORDS_SIMPLE = [
   "Piscine", "Douche", "Cendrier", "Tatouage", "Piercing",
   "Cicatrice", "Béquille", "Alarme", "Sonnette", "Micro",
   "Enceinte", "Télévision", "Manette", "Casquette", "Écharpe",
+  "Bus", "Métro", "Moto", "Camion", "Hélicoptère",
 ];
 
 const WORDS_JOBS = [
@@ -242,25 +188,38 @@ const WORDS_JOBS = [
   "Pilote", "Coiffeur", "Avocat", "Boulanger", "Journaliste",
   "Dentiste", "Plombier", "Facteur", "Astronaute", "Arbitre",
   "Barman", "DJ", "Tatoueur", "Boucher", "Pharmacien",
-  "Notaire", "Architecte", "Vétérinaire", "Éboueur", "Chauffeur",
+  "Notaire", "Architecte", "Vétérinaire", "Éboueur", "Chauffeur de taxi",
+  "Infirmier", "Serveur", "Juge", "Ingénieur", "Musicien",
+  "Acteur", "Réalisateur", "Photographe", "Scientifique", "Maire",
+  "Jardinier", "Électricien", "Mécanicien", "Sauveteur", "Clown",
 ];
 
 const WORDS_FUN = [
-  "GPS", "Photocopieuse", "Mariage", "Dragon", "Selfie",
-  "Vampire", "Trottinette", "Embouteillage", "Anniversaire", "Fantôme",
-  "Loup-garou", "Camping", "Glamping", "Moustache", "Barbe",
-  "Rire", "Dessiner", "Écrire",
+  "GPS", "Photocopieuse", "Mariage", "Selfie", "Vampire",
+  "Trottinette", "Embouteillage", "Anniversaire", "Fantôme", "Loup-garou",
+  "Camping", "Glamping", "Moustache", "Barbe", "Rire",
   "Divorce", "Héritage", "Procès", "Amende", "Contravention",
   "Grève", "Manifestation", "Panique", "Cauchemar", "Insomnie",
   "Gueule de bois", "Karma", "Complot", "Rumeur", "Scandale",
+  "Hoquet", "Fou rire", "Chatouilles", "Coup de soleil", "Déjà-vu",
 ];
 
+const WORDS_ABSTRACT = [
+  "Jalousie", "Fierté", "Honte", "Courage", "Espoir",
+  "Doute", "Liberté", "Silence", "Écho", "Mensonge",
+  "Vérité", "Hasard", "Destin", "Souvenir", "Rêve",
+  "Imagination", "Futur", "Passé", "Enfance", "Vieillesse",
+  "Mystère", "Énigme", "Secret", "Colère", "Tristesse",
+  "Joie", "Peur", "Surprise", "Stress", "Nostalgie",
+];
+
+// Thème descriptif (faire deviner un logo / une marque), non coché par défaut.
 const WORDS_BRANDS = [
   "Netflix", "YouTube", "iPhone", "Samsung", "Instagram",
   "TikTok", "McDonald's", "Burger King", "Spotify", "Deezer",
   "WhatsApp", "Telegram", "Google", "Bing", "Tinder", "Bumble",
-  "OnlyFans", "MYM", "Pornhub", "Xvideos", "Brazzers",
-  "Jacquie et Michel", "YouPorn", "XHamster", "RedTube",
+  "Coca-Cola", "Pepsi", "Nutella", "Snickers", "Tabasco",
+  "Lego", "Ikea", "Nike", "Adidas", "Amazon",
 ];
 
 const WORDS_CULTURE = [
@@ -268,39 +227,27 @@ const WORDS_CULTURE = [
   "Luffy", "Zoro", "One Piece", "Bleach", "Manga", "Comics",
   "Football", "Rugby", "Tennis", "Badminton", "Ski", "Snowboard",
   "Karaté", "Judo", "Opéra", "Ballet", "Guitare", "Piano",
-  "Violon", "Trompette", "Saxophone",
+  "Violon", "Trompette", "Saxophone", "Batterie",
   "Pokémon", "Zelda", "Mario", "Minecraft", "Fortnite",
   "GTA", "FIFA", "Tetris", "Pac-Man", "Sonic",
+  "Volley", "Golf", "Surf", "Natation", "Plongée",
+  "Escalade", "Marathon", "Ping-pong", "Boxe", "Concert",
 ];
 
 const WORDS_ADULT = [
-  "Sexe", "Pénis", "Vagin", "Seins", "Tétons",
-  "Fesses", "Cul", "Bite", "Chatte", "Queue",
-  "Érection", "Mouillé", "Lubrifiant", "Capote", "Orgasme",
-  "Jouir", "Gémissement", "Préliminaires", "Nudité", "Suçon",
-  "Baiser", "Caresse", "Lécher", "Sucer", "Avaler",
-  "Pénétration", "Levrette", "Missionnaire", "Cowgirl",
-  "Fantasme", "Fétiche", "Domination", "Soumission", "Menottes",
-  "Fouet", "Strip-tease", "Vibromasseur", "Gode",
-  "Lingerie", "String", "Caleçon",
-  "Interdit", "Tromperie", "Adultère", "Amante", "Amant",
-  "Jalousie", "Tentation", "Désir", "Chaleur", "Sueur",
-  "Soupir", "Morsure", "Griffure", "Secret", "Alibi",
-  "Nude", "Sexto", "Webcam", "Sauna", "Jacuzzi",
-  "Balcon", "Canapé", "Cuisine", "Ascenseur", "Vestiaire",
-  "Hôtel", "Patron", "Collègue", "Voisin", "Voisine",
-  "Infirmière", "Policier", "Prof", "Serveur",
-  "Position", "Rapidité", "Endurance", "Excitation",
-  "Pulsion", "Obsession", "Addiction", "Humiliation",
-  "Provocation", "Perversion", "Obscène", "Indécent",
-  "Brûlant", "Torride", "Salope", "Salaud", "Coquin",
-  "Cochonne", "Dévergondé", "Pervers", "Libertin",
-  "Échangiste", "Trio", "Quatuor", "Orgie",
-  "Fellation", "Cunnilingus", "Sodomie", "BDSM",
-  "Fétichisme", "Voyeurisme", "Cuckolding",
-  "Footjob", "Handjob", "Nymphomane", "Puceau",
-  "Roleplay", "Latex", "Cuir", "Corset", "Culotte",
-  "Masque", "69", "Ciseaux", "Snowballing",
+  // Coquin mais jamais explicite (review App Store 18+)
+  "Lingerie", "String", "Caleçon", "Porte-jarretelles", "Nuisette",
+  "Préliminaires", "Suçon", "Câlin", "Bisou dans le cou", "Massage",
+  "Fantasme", "Menottes", "Strip-tease", "Plan à trois", "Coup d'un soir",
+  "Walk of shame", "Ex toxique", "Plan cul", "Sexto", "Nude",
+  "Tromperie", "Adultère", "Amante", "Amant", "Jalousie",
+  "Tentation", "Désir", "Chaleur", "Soupir", "Morsure",
+  "Griffure", "Secret", "Alibi", "Webcam", "Sauna",
+  "Jacuzzi", "Hôtel", "Love room", "Chambre d'hôtel", "Nuit de noces",
+  "Lune de miel", "Speed dating", "Appli de rencontre", "Premier rendez-vous", "Râteau",
+  "Friendzone", "Crush", "Ghosting", "Drague", "Clin d'œil",
+  "Slow", "Danse collé-serré", "Saint-Valentin", "Pétales de rose", "Bougies parfumées",
+  "Huile de massage", "Talons aiguilles", "Bas résille", "Body", "Peignoir",
 ];
 
 const THEMES: { id: string; label: string; emoji: string; words: string[] }[] = [
@@ -310,21 +257,47 @@ const THEMES: { id: string; label: string; emoji: string; words: string[] }[] = 
   { id: "famous", label: "Célébrités", emoji: "⭐", words: WORDS_FAMOUS },
   { id: "actions", label: "Actions", emoji: "🏃", words: WORDS_ACTIONS },
   { id: "places", label: "Lieux", emoji: "📍", words: WORDS_PLACES },
+  { id: "nature", label: "Nature & espace", emoji: "🌍", words: WORDS_NATURE },
+  { id: "legends", label: "Contes & légendes", emoji: "🐉", words: WORDS_LEGENDS },
   { id: "expressions", label: "Expressions", emoji: "💬", words: WORDS_EXPRESSIONS },
   { id: "movies", label: "Films/Séries", emoji: "🎬", words: WORDS_MOVIES },
   { id: "food", label: "Nourriture", emoji: "🍕", words: WORDS_FOOD },
   { id: "jobs", label: "Métiers", emoji: "👷", words: WORDS_JOBS },
   { id: "fun", label: "Drôle", emoji: "😂", words: WORDS_FUN },
-  { id: "brands", label: "Marques", emoji: "🏷️", words: WORDS_BRANDS },
+  { id: "abstract", label: "Émotions & idées", emoji: "💭", words: WORDS_ABSTRACT },
   { id: "culture", label: "Culture Pop", emoji: "🎮", words: WORDS_CULTURE },
+  { id: "brands", label: "Marques & logos", emoji: "🏷️", words: WORDS_BRANDS },
   { id: "adult", label: "18+", emoji: "🔞", words: WORDS_ADULT },
 ];
 
-const ALL_THEME_IDS = THEMES.map((t) => t.id);
+// Thèmes non cochés par défaut (et exclus de « Tout mélanger ») : à activer volontairement.
+const OPT_IN_THEME_IDS = ["brands", "adult"];
+const DEFAULT_THEME_IDS = THEMES.map((t) => t.id).filter((id) => !OPT_IN_THEME_IDS.includes(id));
 
 function getWordsForThemes(selectedIds: string[]): string[] {
-  // Aucun thème coché = aucun mot (le bouton "Tout mélanger" sert à tout (re)cocher).
-  return THEMES.filter((t) => selectedIds.includes(t.id)).flatMap((t) => t.words);
+  // Aucun thème coché = aucun mot. Dédoublonnage insensible à la casse
+  // (un même mot peut apparaître dans plusieurs thèmes).
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const t of THEMES) {
+    if (!selectedIds.includes(t.id)) continue;
+    for (const w of t.words) {
+      const key = w.toLocaleLowerCase("fr");
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push(w);
+    }
+  }
+  return out;
+}
+
+// Taille de police adaptative pour le mot à faire deviner (375 px de large).
+function wordFontSize(word: string): number {
+  const longest = Math.max(...word.split(/\s+/).map((w) => w.length));
+  if (longest > 13) return 30;
+  if (longest > 10) return 36;
+  if (word.length > 18) return 36;
+  return 46;
 }
 
 // ── Types ──────────────────────────────────────────────────
@@ -375,17 +348,20 @@ export default function MakeGuessGame({
 }: GameProps) {
   // ── Setup state ──
   const [teams, setTeams] = useState<Team[]>([
-    { name: "Equipe 1", player1: "", player2: "" },
-    { name: "Equipe 2", player1: "", player2: "" },
+    { name: "Équipe 1", player1: "", player2: "" },
+    { name: "Équipe 2", player1: "", player2: "" },
   ]);
   const [timerDuration, setTimerDuration] = useState(60);
   const [totalRounds, setTotalRounds] = useState(1);
-  const [selectedThemes, setSelectedThemes] = useState<string[]>([...ALL_THEME_IDS]);
+  const [selectedThemes, setSelectedThemes] = useState<string[]>([...DEFAULT_THEME_IDS]);
 
   // ── Game state ──
   const [phase, setPhase] = useState<Phase>("setup");
   const [currentRound, setCurrentRound] = useState(1);
   const [currentTeamIndex, setCurrentTeamIndex] = useState(0);
+  // Dans une manche : passage 0 → le joueur 1 de chaque équipe fait deviner,
+  // passage 1 → le joueur 2. Une manche = chaque joueur fait deviner une fois.
+  const [subTurn, setSubTurn] = useState<0 | 1>(0);
   const [wordPool, setWordPool] = useState<string[]>([]);
   const [wordIndex, setWordIndex] = useState(0);
   const [timeLeft, setTimeLeft] = useState(0);
@@ -398,8 +374,7 @@ export default function MakeGuessGame({
 
   // ── Derived ──
   const currentTeam = teams[currentTeamIndex];
-  // Alternate describer each round: even rounds → player1 describes, odd → player2
-  const describerIsPlayer1 = (currentRound - 1) % 2 === 0;
+  const describerIsPlayer1 = subTurn === 0;
   const describer = currentTeam
     ? describerIsPlayer1
       ? currentTeam.player1
@@ -456,7 +431,7 @@ export default function MakeGuessGame({
     setTeams((prev) => [
       ...prev,
       {
-        name: `Equipe ${prev.length + 1}`,
+        name: `Équipe ${prev.length + 1}`,
         player1: "",
         player2: "",
       },
@@ -467,7 +442,7 @@ export default function MakeGuessGame({
     setTeams((prev) => prev.filter((_, i) => i !== index));
   }, []);
 
-  const allThemesSelected = selectedThemes.length >= ALL_THEME_IDS.length;
+  const allThemesSelected = DEFAULT_THEME_IDS.every((id) => selectedThemes.includes(id));
   const canStart =
     teams.length >= 2 &&
     teams.every((t) => t.name.trim() && t.player1.trim() && t.player2.trim()) &&
@@ -479,9 +454,13 @@ export default function MakeGuessGame({
     );
   }, []);
 
-  // Toggle global : tout cocher si pas tout coché, sinon tout décocher.
+  // Toggle global : tout cocher (hors thèmes opt-in « Marques » et « 18+ ») ou tout décocher.
   const selectAllThemes = useCallback(() => {
-    setSelectedThemes((prev) => (prev.length >= ALL_THEME_IDS.length ? [] : [...ALL_THEME_IDS]));
+    setSelectedThemes((prev) =>
+      DEFAULT_THEME_IDS.every((id) => prev.includes(id))
+        ? []
+        : [...DEFAULT_THEME_IDS, ...prev.filter((id) => OPT_IN_THEME_IDS.includes(id))]
+    );
   }, []);
 
   const startGame = useCallback(() => {
@@ -490,6 +469,7 @@ export default function MakeGuessGame({
     setWordIndex(0);
     setCurrentRound(1);
     setCurrentTeamIndex(0);
+    setSubTurn(0);
     setAllResults([]);
     setPhase("pre-turn");
   }, [selectedThemes]);
@@ -536,6 +516,15 @@ export default function MakeGuessGame({
     }, 200);
   }, [phase, timeLeft, wordPool, wordIndex, endTurn]);
 
+  // Annule le dernier tap (mauvais bouton) : le mot revient à l'écran.
+  const handleUndo = useCallback(() => {
+    if (phase !== "playing" || turnWords.length === 0) return;
+    setTurnWords((prev) => prev.slice(0, -1));
+    setWordIndex((i) => Math.max(0, i - 1));
+    setFlashColor(null);
+    setWordAnim(true);
+  }, [phase, turnWords.length]);
+
   const turnScore = turnWords.filter((w) => w.correct).length;
 
   // ── Post-turn navigation ──
@@ -551,8 +540,13 @@ export default function MakeGuessGame({
 
     const nextIdx = currentTeamIndex + 1;
     if (nextIdx < teams.length) {
-      // More teams this round
+      // More teams this pass
       setCurrentTeamIndex(nextIdx);
+      setPhase("pre-turn");
+    } else if (subTurn === 0) {
+      // Second passage : les joueurs 2 font deviner
+      setSubTurn(1);
+      setCurrentTeamIndex(0);
       setPhase("pre-turn");
     } else {
       // Round finished
@@ -563,11 +557,12 @@ export default function MakeGuessGame({
         setPhase("game-over");
       }
     }
-  }, [currentTeamIndex, currentRound, teams.length, totalRounds, turnWords]);
+  }, [currentTeamIndex, currentRound, teams.length, totalRounds, turnWords, subTurn]);
 
   const nextRound = useCallback(() => {
     setCurrentRound((r) => r + 1);
     setCurrentTeamIndex(0);
+    setSubTurn(0);
     setPhase("pre-turn");
   }, []);
 
@@ -576,6 +571,7 @@ export default function MakeGuessGame({
     setAllResults([]);
     setCurrentRound(1);
     setCurrentTeamIndex(0);
+    setSubTurn(0);
     setWordIndex(0);
   }, []);
 
@@ -614,7 +610,7 @@ export default function MakeGuessGame({
   return (
     <div
       className={cn(
-        "relative min-h-screen w-full overflow-hidden text-white",
+        "relative min-h-[100dvh] w-full overflow-hidden text-white",
         BG_GRADIENT
       )}
     >
@@ -630,7 +626,7 @@ export default function MakeGuessGame({
 
       {/* ── SETUP (DA af.games) ───────────────────────────── */}
       {phase === "setup" && (
-        <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-[560px] flex-col items-center px-4 pb-10"
+        <div className="relative z-10 mx-auto flex min-h-[100dvh] w-full max-w-[560px] flex-col items-center px-4 pb-10"
           style={{ paddingTop: "calc(env(safe-area-inset-top,0px) + 1.5rem)", fontFamily: "var(--font-sans)" }}>
           {/* Fond premium DA */}
           <div className="fixed inset-0 -z-10" style={{ background: "radial-gradient(120% 70% at 50% 0%, rgba(122,78,232,0.25) 0%, transparent 55%), linear-gradient(180deg,#0F0A1F 0%,#1A1230 100%)" }} />
@@ -649,27 +645,39 @@ export default function MakeGuessGame({
             <p className="mt-2 text-sm text-white/55">Décris, fais deviner, marque des points !</p>
           </div>
 
+          {/* Règles */}
+          <div className="mt-6 w-full rounded-2xl p-4 text-sm leading-snug text-white/75" style={{ background: "rgba(255,210,63,0.07)", border: "1px solid rgba(255,210,63,0.25)" }}>
+            <p className="mb-1.5 font-mono text-[11px] font-extrabold uppercase tracking-[2px]" style={{ color: "#FFD23F" }}>Comment jouer</p>
+            <ul className="space-y-1">
+              <li>• Minimum <b className="text-white">4 joueurs</b> : 2 équipes de 2, sur un seul téléphone.</li>
+              <li>• Celui qui fait deviner <b className="text-white">tient le téléphone</b> et décrit le mot sans le dire.</li>
+              <li>• Son coéquipier devine — il ne doit <b className="text-white">pas voir l&apos;écran</b>.</li>
+              <li>• ✓ si trouvé, ➜ pour passer, ↶ pour annuler une erreur.</li>
+              <li>• Une manche = chaque joueur fait deviner une fois.</li>
+            </ul>
+          </div>
+
           {/* Équipes */}
-          <div className="mt-7 w-full space-y-2.5">
+          <div className="mt-4 w-full space-y-2.5">
             {teams.map((team, i) => (
               <div key={i} className="rounded-2xl p-3.5" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)" }}>
                 <div className="mb-2.5 flex items-center gap-3">
                   <Mascot size={36} color={TEAM_BLOB[i % TEAM_BLOB.length]} mood="happy" bob={false} shadow={false} />
                   <input
                     type="text" value={team.name} onChange={(e) => updateTeam(i, "name", e.target.value)} placeholder="Nom de l'équipe"
-                    className="flex-1 rounded-xl px-3 py-2 text-[15px] font-bold text-white outline-none"
+                    className="min-w-0 flex-1 rounded-xl px-3 py-2.5 text-base font-bold text-white outline-none"
                     style={{ background: "rgba(0,0,0,0.25)", border: "1px solid rgba(255,255,255,0.1)", fontFamily: "var(--font-display)" }}
                   />
                   {teams.length > 2 && (
                     <button onClick={() => removeTeam(i)} aria-label="Supprimer"
-                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm" style={{ background: "rgba(255,107,91,0.12)", border: "1px solid rgba(255,107,91,0.3)", color: "#FF8B7A" }}>✕</button>
+                      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-sm" style={{ background: "rgba(255,107,91,0.12)", border: "1px solid rgba(255,107,91,0.3)", color: "#FF8B7A" }}>✕</button>
                   )}
                 </div>
                 <div className="grid grid-cols-2 gap-2.5">
                   <input type="text" value={team.player1} onChange={(e) => updateTeam(i, "player1", e.target.value)} placeholder="Joueur 1"
-                    className="rounded-xl px-3 py-2 text-sm text-white outline-none" style={{ background: "rgba(0,0,0,0.25)", border: "1px solid rgba(255,255,255,0.1)" }} />
+                    className="min-w-0 rounded-xl px-3 py-2.5 text-base text-white outline-none" style={{ background: "rgba(0,0,0,0.25)", border: "1px solid rgba(255,255,255,0.1)" }} />
                   <input type="text" value={team.player2} onChange={(e) => updateTeam(i, "player2", e.target.value)} placeholder="Joueur 2"
-                    className="rounded-xl px-3 py-2 text-sm text-white outline-none" style={{ background: "rgba(0,0,0,0.25)", border: "1px solid rgba(255,255,255,0.1)" }} />
+                    className="min-w-0 rounded-xl px-3 py-2.5 text-base text-white outline-none" style={{ background: "rgba(0,0,0,0.25)", border: "1px solid rgba(255,255,255,0.1)" }} />
                 </div>
               </div>
             ))}
@@ -684,7 +692,7 @@ export default function MakeGuessGame({
           <div className="mt-6 w-full rounded-2xl p-4" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)" }}>
             <div className="mb-3 flex items-center justify-between">
               <span className="font-mono text-[10px] font-extrabold uppercase tracking-[2px] text-white/45">Thèmes</span>
-              <button onClick={selectAllThemes} className="rounded-full px-3 py-1.5 text-[11px] font-extrabold uppercase tracking-wider"
+              <button onClick={selectAllThemes} className="min-h-[44px] rounded-full px-4 py-1.5 text-[12px] font-extrabold uppercase tracking-wider"
                 style={{ background: allThemesSelected ? "rgba(255,210,63,0.2)" : "rgba(255,255,255,0.06)", border: `1px solid ${allThemesSelected ? "rgba(255,210,63,0.5)" : "rgba(255,255,255,0.12)"}`, color: allThemesSelected ? "#FFD23F" : "rgba(255,255,255,0.6)" }}>
                 {allThemesSelected ? "Tout retirer" : "Tout mélanger"}
               </button>
@@ -694,19 +702,22 @@ export default function MakeGuessGame({
                 const isSelected = selectedThemes.includes(theme.id);
                 return (
                   <button key={theme.id} onClick={() => toggleTheme(theme.id)}
-                    className="flex items-center gap-1.5 rounded-xl px-3 py-2 text-[13px] font-bold transition-all"
+                    className="flex min-h-[44px] items-center gap-1.5 rounded-xl px-3 py-2 text-[13px] font-bold transition-all"
                     style={{
                       background: isSelected ? "linear-gradient(160deg, rgba(122,78,232,0.28), rgba(0,0,0,0.2))" : "rgba(255,255,255,0.03)",
                       border: isSelected ? "1.5px solid rgba(122,78,232,0.7)" : "1px solid rgba(255,255,255,0.1)",
                       color: isSelected ? "#fff" : "rgba(255,255,255,0.4)",
                     }}>
                     <span style={{ fontSize: 15 }}>{theme.emoji}</span>{theme.label}
-                    <span className="text-[10px]" style={{ color: isSelected ? "rgba(255,255,255,0.55)" : "rgba(255,255,255,0.3)" }}>{theme.words.length}</span>
+                    <span className="text-[11px]" style={{ color: isSelected ? "rgba(255,255,255,0.55)" : "rgba(255,255,255,0.3)" }}>{getWordsForThemes([theme.id]).length}</span>
                   </button>
                 );
               })}
             </div>
-            <p className="mt-2.5 text-[11px] text-white/35">
+            <p className="mt-2.5 text-xs text-white/40">
+              « Marques &amp; logos » et « 18+ » ne sont pas inclus par défaut.
+            </p>
+            <p className="mt-1 text-xs text-white/40">
               {getWordsForThemes(selectedThemes).length === 0
                 ? "Choisis au moins un thème"
                 : `${getWordsForThemes(selectedThemes).length} mots sélectionnés`}
@@ -747,40 +758,40 @@ export default function MakeGuessGame({
             🎬 Commencer la partie
           </button>
           {!canStart && (
-            <p className="mt-2 text-xs text-white/40">Remplis tous les champs (min. 2 équipes)</p>
+            <p className="mt-2 text-center text-xs text-white/50">Remplis tous les noms : au moins 2 équipes de 2 joueurs (4 joueurs).</p>
           )}
           {onReturnToLobby && (
-            <button onClick={onReturnToLobby} className="mt-3 text-sm text-white/40 transition hover:text-white/70">Retour au lobby</button>
+            <button onClick={onReturnToLobby} className="mt-3 min-h-[44px] px-4 text-sm text-white/50 transition active:text-white/80">Retour au lobby</button>
           )}
         </div>
       )}
 
       {/* ── PRE-TURN ──────────────────────────────────────── */}
       {phase === "pre-turn" && currentTeam && (
-        <div className="flex min-h-screen flex-col items-center justify-center px-4">
+        <div className="flex min-h-[100dvh] flex-col items-center justify-center px-4 pb-[max(env(safe-area-inset-bottom),16px)] pt-[max(env(safe-area-inset-top),12px)]">
           <div
-            className="rounded-3xl border border-cyan-300/20 bg-black/35 p-8 text-center backdrop-blur-xl"
+            className="w-full max-w-sm rounded-3xl border border-cyan-300/20 bg-black/35 p-6 text-center backdrop-blur-xl"
             style={{ animation: "scaleIn 0.4s ease-out" }}
           >
             <p className="mb-1 font-sans text-xs uppercase tracking-wider text-cyan-200/50">
-              Manche {currentRound} / {totalRounds}
+              Manche {currentRound} / {totalRounds} · Tour {subTurn + 1} / 2
             </p>
-            <h2 className="mb-6 font-serif text-3xl font-bold text-cyan-100">
+            <h2 className="mb-6 break-words font-serif text-3xl font-bold text-cyan-100">
               {currentTeam.name}
             </h2>
 
-            <div className="mb-8 space-y-3">
+            <div className="mb-4 space-y-3">
               <div className="rounded-xl border border-cyan-300/10 bg-cyan-500/5 px-6 py-3">
-                <p className="font-sans text-xs uppercase tracking-wider text-cyan-200/40">
-                  Fait deviner
+                <p className="font-sans text-xs uppercase tracking-wider text-cyan-200/60">
+                  Fait deviner · tient le téléphone
                 </p>
                 <p className="font-sans text-xl font-semibold text-cyan-100">
                   {describer}
                 </p>
               </div>
               <div className="rounded-xl border border-cyan-300/10 bg-indigo-500/5 px-6 py-3">
-                <p className="font-sans text-xs uppercase tracking-wider text-indigo-200/40">
-                  Devine
+                <p className="font-sans text-xs uppercase tracking-wider text-indigo-200/60">
+                  Devine · ne regarde pas l&apos;écran
                 </p>
                 <p className="font-sans text-xl font-semibold text-indigo-100">
                   {guesser}
@@ -788,9 +799,13 @@ export default function MakeGuessGame({
               </div>
             </div>
 
+            <p className="mb-5 text-sm text-cyan-100/60">
+              Passe le téléphone à {describer}. {guesser} ne doit pas voir l&apos;écran !
+            </p>
+
             <button
               onClick={startTurn}
-              className="press-effect rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 px-8 py-3 font-sans text-lg font-semibold text-white shadow-lg shadow-cyan-500/25 transition-all hover:shadow-cyan-500/40"
+              className="press-effect min-h-[48px] rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 px-8 py-3 font-sans text-lg font-semibold text-white shadow-lg shadow-cyan-500/25 transition-all active:shadow-cyan-500/40"
             >
               C&apos;est parti !
             </button>
@@ -800,9 +815,9 @@ export default function MakeGuessGame({
 
       {/* ── PLAYING ───────────────────────────────────────── */}
       {phase === "playing" && (
-        <div className="relative flex min-h-screen flex-col">
-          {/* Timer bar */}
-          <div className="relative flex items-center justify-center py-4">
+        <div className="relative flex h-[100dvh] flex-col pb-[env(safe-area-inset-bottom)] pt-[max(env(safe-area-inset-top),12px)]">
+          {/* Timer bar (coin haut-droit réservé à l'engrenage) */}
+          <div className="relative flex items-center justify-center py-3">
             <div
               className={cn(
                 "font-mono text-5xl font-bold tabular-nums",
@@ -811,7 +826,7 @@ export default function MakeGuessGame({
             >
               {timeLeft}
             </div>
-            <div className="absolute right-4 top-4 rounded-lg border border-cyan-300/10 bg-black/30 px-3 py-1 backdrop-blur-xl">
+            <div className="absolute left-4 top-1/2 -translate-y-1/2 rounded-lg border border-cyan-300/10 bg-black/30 px-3 py-1 backdrop-blur-xl">
               <span className="font-mono text-sm text-cyan-200/60">
                 {turnScore} pts
               </span>
@@ -819,13 +834,15 @@ export default function MakeGuessGame({
           </div>
 
           {/* Word display */}
-          <div className="flex flex-1 items-center justify-center px-4">
+          <div className="flex min-h-0 flex-1 flex-col items-center justify-center px-4">
             {wordPool[wordIndex] ? (
               <h2
+                lang="fr"
                 className={cn(
-                  "text-center font-serif text-5xl font-bold leading-tight text-white md:text-6xl",
+                  "w-full max-w-full overflow-hidden break-words text-center font-serif font-bold leading-tight text-white hyphens-auto",
                   wordAnim && "animate-[scaleIn_0.25s_ease-out]"
                 )}
+                style={{ fontSize: wordFontSize(wordPool[wordIndex]) }}
                 key={wordIndex}
               >
                 {wordPool[wordIndex]}
@@ -835,6 +852,13 @@ export default function MakeGuessGame({
                 Plus de mots !
               </p>
             )}
+            <button
+              onClick={handleUndo}
+              disabled={turnWords.length === 0}
+              className="mt-5 flex min-h-[44px] items-center gap-2 rounded-full border border-white/15 bg-white/5 px-5 text-sm font-semibold text-white/75 transition active:scale-95 active:bg-white/15 disabled:opacity-30"
+            >
+              ↶ Annuler le dernier
+            </button>
           </div>
 
           {/* Tap zones */}
@@ -866,7 +890,7 @@ export default function MakeGuessGame({
 
       {/* ── TURN RESULT ───────────────────────────────────── */}
       {phase === "turn-result" && currentTeam && (
-        <div className="flex min-h-screen flex-col items-center justify-center px-4 py-8">
+        <div className="flex min-h-[100dvh] flex-col items-center justify-center px-4 pb-[max(env(safe-area-inset-bottom),32px)] pt-[max(env(safe-area-inset-top),32px)]">
           <div
             className="w-full max-w-md rounded-3xl border border-cyan-300/20 bg-black/35 p-6 backdrop-blur-xl"
             style={{ animation: "scaleIn 0.4s ease-out" }}
@@ -898,13 +922,15 @@ export default function MakeGuessGame({
 
             <button
               onClick={nextTeam}
-              className="press-effect w-full rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 py-3 font-sans text-base font-semibold text-white shadow-lg shadow-cyan-500/25 transition-all hover:shadow-cyan-500/40"
+              className="press-effect min-h-[48px] w-full rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 py-3 font-sans text-base font-semibold text-white shadow-lg shadow-cyan-500/25 transition-all active:shadow-cyan-500/40"
             >
               {currentTeamIndex + 1 < teams.length
-                ? "Equipe suivante"
+                ? "Équipe suivante"
+                : subTurn === 0
+                ? "Tour suivant"
                 : currentRound < totalRounds
-                ? "Voir le recap"
-                : "Resultats finaux"}
+                ? "Voir le récap"
+                : "Résultats finaux"}
             </button>
           </div>
         </div>
@@ -912,7 +938,7 @@ export default function MakeGuessGame({
 
       {/* ── ROUND SUMMARY ─────────────────────────────────── */}
       {phase === "round-summary" && (
-        <div className="flex min-h-screen flex-col items-center justify-center px-4 py-8">
+        <div className="flex min-h-[100dvh] flex-col items-center justify-center px-4 pb-[max(env(safe-area-inset-bottom),32px)] pt-[max(env(safe-area-inset-top),32px)]">
           <div
             className="w-full max-w-md rounded-3xl border border-cyan-300/20 bg-black/35 p-6 backdrop-blur-xl"
             style={{ animation: "scaleIn 0.4s ease-out" }}
@@ -949,7 +975,7 @@ export default function MakeGuessGame({
 
             <button
               onClick={nextRound}
-              className="press-effect w-full rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 py-3 font-sans text-base font-semibold text-white shadow-lg shadow-cyan-500/25 transition-all hover:shadow-cyan-500/40"
+              className="press-effect min-h-[48px] w-full rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 py-3 font-sans text-base font-semibold text-white shadow-lg shadow-cyan-500/25 transition-all active:shadow-cyan-500/40"
             >
               Manche {currentRound + 1}
             </button>
@@ -968,7 +994,7 @@ export default function MakeGuessGame({
         };
         const heights: Record<number, number> = { 1: 118, 2: 92, 3: 74 };
         return (
-        <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-[560px] flex-col items-center px-4 pb-10"
+        <div className="relative z-10 mx-auto flex min-h-[100dvh] w-full max-w-[560px] flex-col items-center px-4 pb-10"
           style={{ paddingTop: "calc(env(safe-area-inset-top,0px) + 2rem)", fontFamily: "var(--font-sans)" }}>
           <div className="fixed inset-0 -z-10" style={{ background: "radial-gradient(120% 70% at 50% 0%, rgba(255,210,63,0.18) 0%, transparent 55%), linear-gradient(180deg,#1A1206 0%,#0F0A1F 100%)" }} />
 

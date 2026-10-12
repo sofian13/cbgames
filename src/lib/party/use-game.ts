@@ -4,6 +4,7 @@ import { useEffect, useRef, useCallback } from "react";
 import PartySocket from "partysocket";
 import { useGameStore } from "@/lib/stores/game-store";
 import { getPartyKitHost, getPartyKitWsProtocol } from "@/lib/party/host";
+import { useRoomStore } from "@/lib/stores/room-store";
 import type {
   GameClientMessage,
   GameServerMessage,
@@ -46,7 +47,12 @@ export function useGame(roomCode: string, gameId: string, playerId: string, play
       store.setError(null);
       const msg: GameClientMessage = {
         type: "game-join",
-        payload: { playerId, name: playerName },
+        payload: {
+          playerId,
+          name: playerName,
+          // Taille du salon : le serveur attend tout le monde avant de lancer
+          expected: useRoomStore.getState().players.length || undefined,
+        },
       };
       socket.send(JSON.stringify(msg));
     });
@@ -57,6 +63,10 @@ export function useGame(roomCode: string, gameId: string, playerId: string, play
       switch (msg.type) {
         case "game-state":
           store.setGameState(msg.payload);
+          break;
+        case "game-reset":
+          // Nouvelle partie relancée par un autre joueur : on quitte l'écran de fin
+          useGameStore.setState({ isGameOver: false, rankings: [], gameState: {}, error: null });
           break;
         case "game-update":
           store.updateGameState(msg.payload);

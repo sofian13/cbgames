@@ -15,6 +15,8 @@ export abstract class BaseGame {
   botIds: Set<string> = new Set();
   botTimeouts: Set<ReturnType<typeof setTimeout>> = new Set();
   started = false;
+  /** Passe à true dès qu'un "game-over" est diffusé (sert à relancer proprement). */
+  finished = false;
 
   addPlayer(id: string, name: string, conn: Connection) {
     this.players.set(id, { id, name, connectionId: conn.id });
@@ -61,6 +63,7 @@ export abstract class BaseGame {
   }
 
   broadcast(msg: Record<string, unknown>) {
+    if (msg.type === "game-over") this.finished = true;
     const data = JSON.stringify(msg);
     for (const conn of this.connections.values()) {
       conn.send(data);
@@ -69,6 +72,23 @@ export abstract class BaseGame {
 
   broadcastState() {
     this.broadcast({ type: "game-state", payload: this.getState() });
+  }
+
+  /** Vue d'un joueur précis (main, rôle, mot secret…). À implémenter par les jeux à info privée. */
+  getStateForPlayer?(playerId: string): Record<string, unknown>;
+
+  /**
+   * Renvoie à chaque joueur SON état. À utiliser à la place d'un broadcast de
+   * getState() (public) qui effacerait les infos privées chez tout le monde.
+   */
+  syncAll() {
+    for (const [playerId, player] of this.players) {
+      if (this.isBot(playerId)) continue;
+      this.sendTo(player.connectionId, {
+        type: "game-state",
+        payload: this.started && this.getStateForPlayer ? this.getStateForPlayer(playerId) : this.getState(),
+      });
+    }
   }
 
   sendTo(connectionId: string, msg: Record<string, unknown>) {

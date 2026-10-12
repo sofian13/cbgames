@@ -84,10 +84,19 @@ const GAME_REGISTRY: Record<string, () => BaseGame> = {
   "couple-quiz": () => new CoupleQuizGame(),
 };
 
+// Jeux lancés à la main depuis le client (setup local, choix de mode…) : pas d'auto-start.
+const MANUAL_START = new Set([
+  "undercover", "chess", "block-runner", "double-saut", "escape-duo", "guess-word",
+  "make-guess", "category-chrono", "tgv", "picolette", "tu-prefere", "pile-poil",
+]);
+
 export default class GameServer {
   party: Party;
   game: BaseGame | null = null;
   gameId: string | null = null;
+  /** Joueurs attendus (taille du salon au lancement) : on ne démarre pas sans eux. */
+  expectedPlayers = 0;
+  startFallback: ReturnType<typeof setTimeout> | null = null;
 
   constructor(party: Party) {
     this.party = party;
@@ -111,7 +120,7 @@ export default class GameServer {
     }
 
     if (msg.type === "game-join") {
-      const { playerId, name } = msg.payload as { playerId: string; name: string };
+      const { playerId, name, expected } = msg.payload as { playerId: string; name: string; expected?: number };
       if (!this.game) {
         sender.send(
           JSON.stringify({
@@ -122,45 +131,33 @@ export default class GameServer {
         return;
       }
 
+      // Nombre de joueurs présents dans le salon au lancement (envoyé par le client).
+      if (typeof expected === "number" && expected > 0) {
+        this.expectedPlayers = Math.max(this.expectedPlayers, Math.min(16, Math.floor(expected)));
+      }
+
+      // Partie terminée et le jeu ne sait pas se relancer tout seul → instance neuve,
+      // en gardant les joueurs encore connectés. Sinon "Rejouer" retombe sur l'écran de fin.
+      if (this.game.started && this.game.finished && !this.game.restartIfFinished) {
+        this.recreateGame();
+      }
+
       this.game.addPlayer(playerId, name, sender);
 
       // Rejoining a finished game (round/match over) → deal a fresh one so
       // players never get stuck on an empty, unplayable board.
       if (this.game.started && this.game.restartIfFinished?.()) {
-        this.game.broadcast({ type: "game-state", payload: this.game.getState() });
+        this.game.finished = false;
+        this.game.broadcast({ type: "game-reset" });
+        this.game.syncAll();
         return;
       }
 
-      // Broadcast current state so waiting screens stay in sync
-      this.game.broadcast({
-        type: "game-state",
-        payload: this.game.getState(),
-      });
+      // Chacun reçoit SON état (une reconnexion n'efface plus les rôles/mains des autres)
+      this.game.syncAll();
 
-      // Auto-start when enough players join and game hasn't started
-      // Motion tennis can start solo (vs bot)
-      if (this.gameId === "undercover" || this.gameId === "chess" || this.gameId === "block-runner" || this.gameId === "double-saut" || this.gameId === "escape-duo" || this.gameId === "guess-word" || this.gameId === "make-guess" || this.gameId === "category-chrono" || this.gameId === "tgv" || this.gameId === "picolette" || this.gameId === "tu-prefere" || this.gameId === "pile-poil") {
-        return;
-      }
-      const minToStart =
-        // Les quiz se jouent très bien en solo (auto-validés / QCM, aucun adversaire requis)
-        this.gameId === "speed-quiz" || this.gameId === "roast-quiz"
-          ? 1
-          // Jeux d'identification : sans assez de joueurs la partie est dégénérée/injouable
-          : this.gameId === "contree" ||
-              this.gameId === "loup-garou" ||
-              this.gameId === "la-taupe"
-            ? 4
-            : this.gameId === "president" ||
-                this.gameId === "top-ten" ||
-                this.gameId === "le-bluffeur" ||
-                this.gameId === "longueur-onde" ||
-                this.gameId === "infiltre"
-              ? 3
-              : 2;
-      if (this.game.players.size >= minToStart && !this.game.started) {
-        this.game.start();
-      }
+      if (MANUAL_START.has(this.gameId ?? "")) return;
+      this.maybeAutoStart();
       return;
     }
 
@@ -188,7 +185,7 @@ export default class GameServer {
         const factory = GAME_REGISTRY[this.gameId];
         if (factory) this.game = factory();
       } else {
-        this.game.broadcast({ type: "game-state", payload: this.game.getState() });
+        this.game.syncAll();
       }
       return;
     }
@@ -197,17 +194,83 @@ export default class GameServer {
       const minToStart = this.gameId === "contree" ? 4 : this.gameId === "president" ? 3 : 2;
       const missing = Math.max(0, minToStart - this.game.players.size);
       if (missing > 0) this.game.addBots(missing);
+      this.clearStartFallback();
       this.game.start();
       return;
     }
   }
 
+  minPlayersToStart(): number {
+    const id = this.gameId ?? "";
+    // Les quiz se jouent très bien en solo (auto-validés / QCM, aucun adversaire requis)
+    if (id === "speed-quiz" || id === "roast-quiz") return 1;
+    // Jeux d'identification : sans assez de joueurs la partie est dégénérée/injouable
+    if (id === "contree" || id === "loup-garou" || id === "la-taupe") return 4;
+    if (["president", "top-ten", "le-bluffeur", "longueur-onde", "infiltre"].includes(id)) return 3;
+    return 2;
+  }
+
+  /**
+   * Démarre quand tout le salon est connecté. Si quelqu'un n'arrive jamais
+   * (onglet fermé, réseau), on démarre quand même au bout de 8 s avec les présents.
+   */
+  maybeAutoStart() {
+    const game = this.game;
+    if (!game || game.started) return;
+    const min = this.minPlayersToStart();
+    const target = Math.max(min, this.expectedPlayers);
+    if (game.players.size >= target) {
+      this.clearStartFallback();
+      game.start();
+      return;
+    }
+    if (game.players.size >= min && !this.startFallback) {
+      this.startFallback = setTimeout(() => {
+        this.startFallback = null;
+        if (this.game && !this.game.started && this.game.players.size >= this.minPlayersToStart()) {
+          this.game.start();
+        }
+      }, 8000);
+    }
+  }
+
+  clearStartFallback() {
+    if (this.startFallback) clearTimeout(this.startFallback);
+    this.startFallback = null;
+  }
+
+  /** Remplace l'instance terminée par une neuve en y reportant les humains encore connectés. */
+  recreateGame() {
+    const old = this.game;
+    const factory = this.gameId ? GAME_REGISTRY[this.gameId] : undefined;
+    if (!old || !factory) return;
+    old.cleanup();
+    old.clearBotTimeouts();
+    const fresh = factory();
+    for (const [id, p] of old.players) {
+      if (old.isBot(id)) continue;
+      const conn = old.connections.get(p.connectionId);
+      if (conn) fresh.addPlayer(id, p.name, conn);
+    }
+    this.game = fresh;
+    this.clearStartFallback();
+    fresh.broadcast({ type: "game-reset" });
+  }
+
   onClose(conn: Connection) {
     if (this.game) {
       this.game.removePlayer(conn.id);
-      // If no players left, cleanup
-      if (this.game.players.size === 0) {
+      // Plus aucun humain (les bots ne comptent pas) → on nettoie et on repart à neuf
+      const humansLeft = [...this.game.players.keys()].some((id) => !this.game!.isBot(id));
+      if (!humansLeft) {
         this.game.cleanup();
+        this.game.clearBotTimeouts();
+        this.clearStartFallback();
+        this.expectedPlayers = 0;
+        const factory = this.gameId ? GAME_REGISTRY[this.gameId] : undefined;
+        if (factory) this.game = factory();
+      } else if (!this.game.started) {
+        this.game.syncAll();
       }
     }
   }

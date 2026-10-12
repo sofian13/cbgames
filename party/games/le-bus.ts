@@ -4,10 +4,13 @@ import type { GameRanking } from "../shared/types";
 
 // ── Le Bus (Ride the Bus) — jeu à boire ────────────────────
 // Phase 1 « Questions » : 4 manches simultanées (rouge/noir, plus/moins,
-// intérieur/extérieur, couleur). Raté = tu bois N gorgées, réussi = tu les
-// distribues. Phase 2 « Pyramide » : les cartes se retournent, pose tes
-// doublons pour faire boire. Phase 3 « Le Bus » : celui qui garde le plus de
-// cartes enchaîne les plus/moins pour descendre du bus.
+// intérieur/extérieur, enseigne). Raté = tu bois 1 ou 2 gorgées, réussi = tu
+// les distribues. Phase 2 « Pyramide » : les cartes se retournent, pose tes
+// doublons pour faire boire (1 à 3 gorgées). Phase 3 « Le Bus » : celui qui
+// garde le plus de cartes enchaîne les plus/moins pour descendre du bus
+// (1 gorgée par erreur, 3 erreurs max).
+// Plafond : au-delà de SIP_CAP gorgées reçues, on reçoit des points de pénalité
+// à la place (consommation modérée, règle App Store 1.4.3).
 
 const START_DELAY = 1300;
 const ANSWER_TIME = 14000;
@@ -17,7 +20,10 @@ const FLIP_TIME = 8000;
 const BUS_INTRO_TIME = 5000;
 const BUS_SAFETY_TIME = 25000; // rideur AFK → choix auto
 const BUS_STEPS = 5;
-const BUS_MAX_ATTEMPTS = 8; // règle de pitié : le bus finit par partir
+const BUS_MAX_ATTEMPTS = 3; // 3 erreurs max : le chauffeur a pitié
+const SIP_CAP = 10; // au-delà : pénalité en points au lieu de gorgées
+const QUESTION_SIPS = [1, 1, 2, 2]; // manches 1 → 4
+const ROW_SIPS = [1, 1, 2, 3]; // pyramide : bas → sommet
 
 const SUITS = ["♠", "♥", "♦", "♣"] as const;
 type Suit = (typeof SUITS)[number];
@@ -37,6 +43,7 @@ interface BusPlayer {
   cards: Card[]; // cartes face visible gagnées en phase questions
   sipsTaken: number;
   sipsGiven: number;
+  penalty: number; // points de pénalité (gorgées au-delà du plafond)
   answer: string | null; // choix de la manche en cours
   lastResult: { card: Card; correct: boolean; sips: number } | null;
   pendingGive: number; // gorgées à distribuer pendant le reveal
@@ -80,6 +87,40 @@ export class LeBusGame extends BaseGame {
   deadline = 0; // epoch ms — le client affiche le compte à rebours
   timer: ReturnType<typeof setTimeout> | null = null;
   safetyTimer: ReturnType<typeof setTimeout> | null = null;
+  endTimer: ReturnType<typeof setTimeout> | null = null;
+
+  /** Le joueur est-il encore connecté (ou bot) ? */
+  isPresent(id: string): boolean {
+    return this.players.has(id);
+  }
+
+  /**
+   * Ajoute des gorgées en respectant le plafond. Au-delà de SIP_CAP, le reste
+   * devient des points de pénalité. Renvoie un texte court pour le fil.
+   */
+  addSips(p: BusPlayer, n: number): string {
+    const allowed = Math.max(0, Math.min(n, SIP_CAP - p.sipsTaken));
+    const over = n - allowed;
+    p.sipsTaken += allowed;
+    p.penalty += over;
+    const parts: string[] = [];
+    if (allowed > 0) parts.push(`${allowed} gorgée${allowed > 1 ? "s" : ""}`);
+    if (over > 0) parts.push(`${over} pt${over > 1 ? "s" : ""} de pénalité (assez bu)`);
+    return parts.join(" + ");
+  }
+
+  /** Un joueur quitte : on évite de bloquer la partie sur lui. */
+  removePlayer(connectionId: string) {
+    const removed = super.removePlayer(connectionId);
+    if (!removed || !this.started) return removed;
+    const id = removed.id;
+    if (this.phase === "questions" && this.questionSub === "answer" && this.allAnswered()) {
+      this.resolveQuestionRound();
+    } else if (this.phase === "bus" && this.busRiderId === id && !this.busDone) {
+      this.armBusSafety(); // rideur parti → on joue pour lui tout de suite
+    }
+    return removed;
+  }
 
   // ── Deck ─────────────────────────────────────────────────
   buildDeck() {
@@ -114,6 +155,7 @@ export class LeBusGame extends BaseGame {
         cards: [],
         sipsTaken: 0,
         sipsGiven: 0,
+        penalty: 0,
         answer: null,
         lastResult: null,
         pendingGive: 0,
@@ -182,24 +224,31 @@ export class LeBusGame extends BaseGame {
   }
 
   allAnswered(): boolean {
-    return [...this.gamePlayers.values()].every((p) => p.answer !== null);
+    // Les joueurs déconnectés ne bloquent pas la manche
+    return [...this.gamePlayers.values()].every((p) => p.answer !== null || !this.isPresent(p.id));
   }
 
   resolveQuestionRound() {
     if (this.phase !== "questions" || this.questionSub !== "answer") return;
     this.clearTimer();
-    const sips = this.questionRound;
+    const sips = QUESTION_SIPS[this.questionRound - 1] ?? 1;
 
     for (const p of this.gamePlayers.values()) {
       const card = this.draw();
+      // Joueur parti sans répondre : il ne boit pas et ne distribue pas
+      if (!this.isPresent(p.id) && p.answer === null) {
+        p.cards.push(card);
+        p.lastResult = { card, correct: false, sips: 0 };
+        continue;
+      }
       const correct = this.evaluate(p, card);
+      p.cards.push(card);
       p.lastResult = { card, correct, sips };
       if (correct) {
         p.pendingGive = sips;
       } else {
-        p.sipsTaken += sips;
+        this.addSips(p, sips);
       }
-      p.cards.push(card);
     }
 
     this.questionSub = "reveal";
@@ -243,7 +292,7 @@ export class LeBusGame extends BaseGame {
   }
 
   randomOtherId(selfId: string): string {
-    const others = [...this.gamePlayers.keys()].filter((id) => id !== selfId);
+    const others = [...this.gamePlayers.keys()].filter((id) => id !== selfId && this.isPresent(id));
     if (others.length === 0) return selfId;
     return others[Math.floor(Math.random() * others.length)];
   }
@@ -252,9 +301,10 @@ export class LeBusGame extends BaseGame {
     const from = this.gamePlayers.get(fromId);
     const target = this.gamePlayers.get(targetId);
     if (!from || !target || from.pendingGive <= 0 || fromId === targetId) return;
-    target.sipsTaken += from.pendingGive;
+    if (!this.isPresent(targetId)) return; // on ne fait pas boire un absent
+    const what = this.addSips(target, from.pendingGive);
     from.sipsGiven += from.pendingGive;
-    this.pushFeed(`${from.name} donne ${from.pendingGive} gorgée${from.pendingGive > 1 ? "s" : ""} à ${target.name} 🍺`);
+    this.pushFeed(`${from.name} → ${target.name} : ${what} 🍺`);
     from.pendingGive = 0;
     this.broadcastState();
   }
@@ -265,6 +315,7 @@ export class LeBusGame extends BaseGame {
     // Gorgées non distribuées → cible aléatoire
     for (const p of this.gamePlayers.values()) {
       if (p.pendingGive > 0) this.giveSips(p.id, this.randomOtherId(p.id));
+      p.pendingGive = 0;
     }
     if (this.questionRound < 4) {
       this.startQuestionRound(this.questionRound + 1);
@@ -330,11 +381,12 @@ export class LeBusGame extends BaseGame {
     if (!p || !target || !current || playerId === targetId) return;
     const card = p.cards[cardIndex];
     if (!card || card.rank !== current.card.rank) return;
-    const sips = current.row; // rangée 1 = 1 gorgée … sommet = 4
+    if (!this.isPresent(targetId)) return;
+    const sips = ROW_SIPS[current.row - 1] ?? 1; // bas = 1 gorgée … sommet = 3
     p.cards.splice(cardIndex, 1);
     p.sipsGiven += sips;
-    target.sipsTaken += sips;
-    this.pushFeed(`${p.name} pose ${rankLabel(card.rank)}${card.suit} → ${target.name} boit ${sips} 🍻`);
+    const what = this.addSips(target, sips);
+    this.pushFeed(`${p.name} pose ${rankLabel(card.rank)}${card.suit} → ${target.name} : ${what} 🍻`);
     this.broadcastState();
   }
 
@@ -345,6 +397,7 @@ export class LeBusGame extends BaseGame {
     let max = -1;
     let candidates: string[] = [];
     for (const p of this.gamePlayers.values()) {
+      if (!this.isPresent(p.id)) continue; // un absent ne monte pas dans le bus
       if (p.cards.length > max) {
         max = p.cards.length;
         candidates = [p.id];
@@ -380,12 +433,15 @@ export class LeBusGame extends BaseGame {
 
   armBusSafety() {
     this.clearSafety();
+    // Rideur déconnecté → on joue pour lui presque tout de suite
+    const away = !!this.busRiderId && !this.isPresent(this.busRiderId);
     this.safetyTimer = setTimeout(() => {
       // Rideur AFK → on joue pour lui
       if (this.phase === "bus" && !this.busDone) {
-        this.busGuess(this.busRiderId!, Math.random() < 0.5 ? "plus" : "moins");
+        const v = this.busCurrent ? cardValue(this.busCurrent) : 8;
+        this.busGuess(this.busRiderId!, v <= 8 ? "plus" : "moins");
       }
-    }, BUS_SAFETY_TIME);
+    }, away ? 1200 : BUS_SAFETY_TIME);
   }
 
   maybeBotRide() {
@@ -427,15 +483,15 @@ export class LeBusGame extends BaseGame {
         return;
       }
     } else {
-      const sips = this.busProgress + 1;
-      rider.sipsTaken += sips;
+      // 1 gorgée fixe par erreur (plafonnée)
+      const what = this.addSips(rider, 1);
       this.busAttempts++;
       this.busProgress = 0;
       this.busCurrent = next; // la carte ratée devient la nouvelle base
-      this.pushFeed(`${rider.name} déraille → ${sips} gorgée${sips > 1 ? "s" : ""} 🥴`);
+      this.pushFeed(`${rider.name} déraille → ${what} 🥴`);
       if (this.busAttempts >= BUS_MAX_ATTEMPTS) {
         this.busDone = true;
-        this.pushFeed(`Le bus part sans ${rider.name}… fin du calvaire 🚌💨`);
+        this.pushFeed(`Le chauffeur a eu pitié : ${rider.name} descend du bus 🚌`);
         this.clearSafety();
         this.clearTimer();
         this.timer = setTimeout(() => this.finishGame(), 4000);
@@ -454,18 +510,29 @@ export class LeBusGame extends BaseGame {
     this.clearSafety();
     this.phase = "game-over";
 
+    const load = (p: BusPlayer) => p.sipsTaken + p.penalty;
     const sorted = [...this.gamePlayers.values()].sort(
-      (a, b) => a.sipsTaken - b.sipsTaken || b.sipsGiven - a.sipsGiven
+      (a, b) => load(a) - load(b) || b.sipsGiven - a.sipsGiven
     );
-    const rankings: GameRanking[] = sorted.map((p, i) => ({
-      playerId: p.id,
-      playerName: p.name,
-      rank: i + 1,
-      // Score = gorgées distribuées − gorgées bues (le plus sobre gagne)
-      score: p.sipsGiven - p.sipsTaken,
-    }));
+    // Ex-aequo : même charge et même nombre de gorgées données → même rang
+    const rankings: GameRanking[] = [];
+    sorted.forEach((p, i) => {
+      const prev = sorted[i - 1];
+      const tied = prev && load(prev) === load(p) && prev.sipsGiven === p.sipsGiven;
+      rankings.push({
+        playerId: p.id,
+        playerName: p.name,
+        rank: tied ? rankings[i - 1].rank : i + 1,
+        // Score = gorgées distribuées − gorgées bues − pénalités (le plus sobre gagne)
+        score: p.sipsGiven - p.sipsTaken - p.penalty,
+      });
+    });
     this.broadcastState();
-    setTimeout(() => this.endGame(rankings), 600);
+    if (this.endTimer) clearTimeout(this.endTimer);
+    this.endTimer = setTimeout(() => {
+      this.endTimer = null;
+      this.endGame(rankings);
+    }, 600);
   }
 
   // ── Messages ─────────────────────────────────────────────
@@ -535,6 +602,7 @@ export class LeBusGame extends BaseGame {
       busSteps: BUS_STEPS,
       busAttempts: this.busAttempts,
       busMaxAttempts: BUS_MAX_ATTEMPTS,
+      sipCap: SIP_CAP,
       busLast: this.busLast,
       busDone: this.busDone,
       feed: this.feed,
@@ -544,6 +612,8 @@ export class LeBusGame extends BaseGame {
         cards: p.cards,
         sipsTaken: p.sipsTaken,
         sipsGiven: p.sipsGiven,
+        penalty: p.penalty,
+        connected: this.isPresent(p.id),
         hasAnswered: p.answer !== null,
         lastResult: this.questionSub === "reveal" ? p.lastResult : null,
         pendingGive: p.pendingGive,
@@ -568,6 +638,8 @@ export class LeBusGame extends BaseGame {
   cleanup() {
     this.clearTimer();
     this.clearSafety();
+    if (this.endTimer) clearTimeout(this.endTimer);
+    this.endTimer = null;
     this.clearBotTimeouts();
   }
 }

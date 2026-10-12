@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useGame } from "@/lib/party/use-game";
 import { useGameStore } from "@/lib/stores/game-store";
 import type { GameProps } from "@/lib/games/types";
@@ -42,6 +42,7 @@ interface InfiltreState {
   eliminatedThisRound: string | null;
   eliminatedIsInfiltre: boolean | null;
   infiltreCount: number;
+  guessNext?: boolean;
   voteTally: Record<string, number> | null;
   voteDetails: VoteDetail[] | null;
   lastGuess: string | null;
@@ -49,6 +50,115 @@ interface InfiltreState {
   clueHistory: ClueEntry[];
   players: InfiltrePlayerState[];
   infiltreIds?: string[];
+}
+
+// ── Helpers UI ────────────────────────────────────────────
+const SAFE_TOP = "calc(env(safe-area-inset-top) + 16px)";
+
+/** Taille de police adaptative selon la longueur du mot (mobile d'abord). */
+function wordFontSize(word: string | null | undefined, maxPx: number): string {
+  const len = Math.max(1, (word ?? "").length);
+  const vw = Math.max(7, Math.min(16, 110 / len));
+  return `min(${maxPx}px, ${vw.toFixed(1)}vw)`;
+}
+
+/** Bouton « maintenir appuyé » pour revoir son mot (ou son rôle d'Infiltré). */
+function RevealWordButton({ isInfiltre, word }: { isInfiltre: boolean; word: string | null }) {
+  const [shown, setShown] = useState(false);
+  const hide = () => setShown(false);
+  return (
+    <button
+      type="button"
+      onPointerDown={(e) => {
+        e.preventDefault();
+        setShown(true);
+      }}
+      onPointerUp={hide}
+      onPointerLeave={hide}
+      onPointerCancel={hide}
+      onContextMenu={(e) => e.preventDefault()}
+      onKeyDown={(e) => {
+        if (e.key === " " || e.key === "Enter") setShown(true);
+      }}
+      onKeyUp={hide}
+      onBlur={hide}
+      className={cn(
+        "mx-auto mb-5 flex min-h-[48px] w-full max-w-md select-none touch-none items-center justify-center rounded-2xl border px-4 py-2.5 backdrop-blur-sm transition-colors [-webkit-touch-callout:none]",
+        shown
+          ? isInfiltre
+            ? "border-red-500/40 bg-red-500/10"
+            : "border-blue-500/40 bg-blue-500/10"
+          : "border-white/15 bg-black/30 active:bg-white/[0.06]"
+      )}
+    >
+      {shown ? (
+        isInfiltre ? (
+          <span className="font-sans text-base font-semibold text-red-400">🕵️ Tu es l&apos;Infiltré</span>
+        ) : (
+          <span
+            lang="fr"
+            className="break-words hyphens-auto font-serif font-semibold leading-tight text-white/90"
+            style={{ fontSize: wordFontSize(word, 30) }}
+          >
+            {word}
+          </span>
+        )
+      ) : (
+        <span className="font-sans text-sm text-white/50">👁 Maintiens appuyé pour revoir ton mot</span>
+      )}
+    </button>
+  );
+}
+
+function RulesList() {
+  return (
+    <ul className="space-y-2 text-left font-sans text-sm leading-relaxed text-white/60">
+      <li>• Tous les joueurs reçoivent le même mot secret, sauf l&apos;Infiltré qui ne le connaît pas.</li>
+      <li>• Il y a 1 Infiltré (1 ou 2 à partir de 6 joueurs).</li>
+      <li>• Chacun son tour, écris un indice : assez clair pour prouver que tu connais le mot, assez vague pour ne pas aider l&apos;Infiltré. Interdit d&apos;écrire le mot lui-même.</li>
+      <li>• Puis tout le monde vote pour éliminer un suspect.</li>
+      <li>• Les civils gagnent s&apos;ils éliminent tous les Infiltrés… mais le dernier Infiltré démasqué peut encore gagner en devinant le mot.</li>
+      <li>• Les Infiltrés gagnent s&apos;ils deviennent aussi nombreux que les civils.</li>
+    </ul>
+  );
+}
+
+function RulesButton() {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        aria-label="Règles"
+        className="flex h-11 min-w-[44px] items-center justify-center rounded-full border border-white/15 bg-black/30 px-3 font-sans text-xs font-semibold text-white/50 active:bg-white/10"
+      >
+        Règles
+      </button>
+      {open && (
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-4 backdrop-blur-sm sm:items-center"
+          style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 16px)" }}
+          onClick={() => setOpen(false)}
+        >
+          <div
+            className="w-full max-w-md rounded-3xl border border-white/10 bg-[#0d0d0d] p-5"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <p className="mb-4 font-serif text-xl font-semibold text-white/90">Règles de L&apos;Infiltré</p>
+            <RulesList />
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              className="mt-5 min-h-[44px] w-full rounded-2xl bg-white/10 font-sans text-sm font-semibold text-white/80 active:bg-white/20"
+            >
+              Compris
+            </button>
+          </div>
+        </div>
+      )}
+    </>
+  );
 }
 
 // ══════════════════════════════════════════════════════════
@@ -60,7 +170,6 @@ export default function InfiltreGame({ roomCode, playerId, playerName }: GamePro
   const voteKey = `${state?.round ?? 0}-${state?.phase === "vote" ? "vote" : state?.phase ?? "waiting"}`;
   const guessKey = `${state?.round ?? 0}-${state?.phase === "guess-word" ? "guess-word" : state?.phase ?? "waiting"}`;
   const [clueInput, setClueInput] = useKeyedState<string>(clueKey, "");
-  const [clueSubmitted, setClueSubmitted] = useKeyedState<boolean>(clueKey, false);
   const [voteTarget, setVoteTarget] = useKeyedState<string | null>(voteKey, null);
   const [voteSubmitted, setVoteSubmitted] = useKeyedState<boolean>(voteKey, false);
   const [guessInput, setGuessInput] = useKeyedState<string>(guessKey, "");
@@ -78,12 +187,13 @@ export default function InfiltreGame({ roomCode, playerId, playerName }: GamePro
   }, [state?.phase]);
 
   // ── Actions ─────────────────────────────────────────────
+  const clueSubmitted = !!state?.players?.find((p) => p.id === playerId)?.hasClue;
   const handleSubmitClue = useCallback(() => {
     const trimmed = clueInput.trim();
     if (!trimmed || clueSubmitted) return;
-    setClueSubmitted(true);
+    useGameStore.getState().setError(null);
     sendAction({ action: "describe", clue: trimmed });
-  }, [clueInput, clueSubmitted, sendAction, setClueSubmitted]);
+  }, [clueInput, clueSubmitted, sendAction]);
 
   const handleVote = useCallback(
     (targetId: string) => {
@@ -116,8 +226,9 @@ export default function InfiltreGame({ roomCode, playerId, playerName }: GamePro
   if (!state || state.phase === "waiting") {
     return (
       <div
-        className="flex flex-1 items-center justify-center"
+        className="flex flex-1 items-center justify-center px-4 pb-6"
         style={{
+          paddingTop: SAFE_TOP,
           background: "radial-gradient(circle at 50% 25%, rgba(101,223,178,0.06), transparent 40%), #060606",
         }}
       >
@@ -129,8 +240,12 @@ export default function InfiltreGame({ roomCode, playerId, playerName }: GamePro
             <span className="text-4xl">🕵️</span>
           </div>
           <p className="text-white/40 animate-pulse font-sans text-lg">
-            En attente des joueurs...
+            En attente des joueurs…
           </p>
+          <div className="mx-auto mt-8 max-w-sm rounded-3xl border border-white/10 bg-black/30 p-5">
+            <p className="mb-3 font-sans text-xs font-semibold uppercase tracking-[0.15em] text-white/40">Comment jouer</p>
+            <RulesList />
+          </div>
         </div>
       </div>
     );
@@ -146,6 +261,8 @@ export default function InfiltreGame({ roomCode, playerId, playerName }: GamePro
       <div
         className="flex flex-1 flex-col items-center justify-center p-6 relative"
         style={{
+          paddingTop: SAFE_TOP,
+          paddingBottom: "calc(env(safe-area-inset-bottom) + 64px)",
           background: isInfiltre
             ? "radial-gradient(circle at 50% 25%, rgba(239,68,68,0.1), transparent 40%), #060606"
             : "radial-gradient(circle at 50% 25%, rgba(59,130,246,0.1), transparent 40%), #060606",
@@ -158,7 +275,7 @@ export default function InfiltreGame({ roomCode, playerId, playerName }: GamePro
         {isInfiltre ? (
           <div className="text-center">
             <div
-              className="inline-flex items-center gap-4 rounded-3xl border border-red-500/25 bg-black/30 backdrop-blur-sm px-8 py-5 mb-8"
+              className="inline-flex items-center gap-4 rounded-3xl border border-red-500/25 bg-black/30 backdrop-blur-sm px-6 py-5 mb-8"
               style={{ boxShadow: "0 0 20px rgba(239,68,68,0.15)" }}
             >
               <span className="text-5xl">🕵️</span>
@@ -186,8 +303,12 @@ export default function InfiltreGame({ roomCode, playerId, playerName }: GamePro
               Le mot secret est
             </p>
             <p
-              className="text-5xl md:text-7xl font-serif font-semibold text-white/90 tracking-wide"
-              style={{ textShadow: "0 0 80px rgba(59,130,246,0.15), 0 0 40px rgba(255,255,255,0.05)" }}
+              lang="fr"
+              className="max-w-full break-words hyphens-auto px-2 font-serif font-semibold leading-tight text-white/90"
+              style={{
+                fontSize: wordFontSize(state.secretWord, 72),
+                textShadow: "0 0 80px rgba(59,130,246,0.15), 0 0 40px rgba(255,255,255,0.05)",
+              }}
             >
               {state.secretWord}
             </p>
@@ -202,8 +323,17 @@ export default function InfiltreGame({ roomCode, playerId, playerName }: GamePro
           </div>
         )}
 
-        <div className="absolute bottom-6 left-1/2 -translate-x-1/2">
-          <p className="text-xs text-white/25 font-sans">
+        {state.round === 1 && (
+          <div className="mt-8 w-full max-w-sm rounded-3xl border border-white/10 bg-black/30 p-4">
+            <RulesList />
+          </div>
+        )}
+
+        <div
+          className="absolute left-1/2 -translate-x-1/2"
+          style={{ bottom: "calc(env(safe-area-inset-bottom) + 24px)" }}
+        >
+          <p className="text-xs text-white/40 font-sans whitespace-nowrap">
             {state.infiltreCount} infiltr&eacute;{state.infiltreCount > 1 ? "s" : ""} parmi {state.players?.length} joueurs
           </p>
         </div>
@@ -220,15 +350,17 @@ export default function InfiltreGame({ roomCode, playerId, playerName }: GamePro
       <div
         className="flex flex-1 flex-col p-4 md:p-6"
         style={{
+          paddingTop: SAFE_TOP,
+          paddingBottom: "calc(env(safe-area-inset-bottom) + 16px)",
           background: "radial-gradient(circle at 50% 25%, rgba(0,200,255,0.06), transparent 40%), #060606",
         }}
       >
         {/* Header */}
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
+        <div className="flex items-center justify-between gap-2 mb-4 pr-14">
+          <div className="flex flex-wrap items-center gap-2">
             <span className="text-xs text-white/25 font-sans tracking-wide">Manche {state.round}</span>
             <span className={cn(
-              "text-[10px] px-3 py-1 rounded-full border font-sans font-semibold uppercase tracking-wider",
+              "text-xs px-3 py-1 rounded-full border font-sans font-semibold uppercase tracking-wider",
               isInfiltre
                 ? "text-red-400 bg-red-500/10 border-red-500/25"
                 : "text-blue-400 bg-blue-500/10 border-blue-500/25"
@@ -245,9 +377,12 @@ export default function InfiltreGame({ roomCode, playerId, playerName }: GamePro
             {state.timeLeft}s
           </span>
         </div>
+        <div className="-mt-2 mb-3 flex justify-start">
+          <RulesButton />
+        </div>
 
         {/* Timer bar */}
-        <div className="w-full h-1.5 rounded-full bg-white/[0.06] overflow-hidden mb-6">
+        <div className="w-full h-1.5 rounded-full bg-white/[0.06] overflow-hidden mb-4">
           <div
             className={cn(
               "h-full rounded-full transition-all duration-1000 ease-linear",
@@ -262,6 +397,8 @@ export default function InfiltreGame({ roomCode, playerId, playerName }: GamePro
           />
         </div>
 
+        <RevealWordButton isInfiltre={isInfiltre} word={state.secretWord} />
+
         {/* Current describer */}
         <div className="text-center mb-6">
           {isMyTurn ? (
@@ -270,31 +407,40 @@ export default function InfiltreGame({ roomCode, playerId, playerName }: GamePro
                 C&apos;est ton tour !
               </p>
               <p className="text-sm text-white/40 font-sans mb-5">
-                Donne un indice pour prouver que tu connais le mot
-                {isInfiltre && " (sans te faire griller)"}
+                {isInfiltre
+                  ? "Écris un indice crédible pour te fondre dans la masse"
+                  : "Écris un indice pour prouver que tu connais le mot (sans le dire !)"}
               </p>
               {!clueSubmitted ? (
+                <>
                 <div className="flex gap-3 max-w-md mx-auto">
                   <input
                     ref={clueInputRef}
                     type="text"
                     value={clueInput}
-                    onChange={(e) => setClueInput(e.target.value)}
+                    onChange={(e) => {
+                      setClueInput(e.target.value);
+                      if (error) useGameStore.getState().setError(null);
+                    }}
                     onKeyDown={(e) => handleKeyDown(e, handleSubmitClue)}
-                    placeholder="Ton indice..."
+                    placeholder="Ton indice…"
                     autoFocus
                     autoComplete="off"
+                    autoCorrect="off"
+                    autoCapitalize="off"
+                    spellCheck={false}
+                    enterKeyHint="send"
                     maxLength={50}
-                    className="flex-1 rounded-2xl border border-white/25 bg-black/30 px-5 py-3.5 font-mono text-lg text-white/90 placeholder:text-white/25 outline-none backdrop-blur-sm transition-all focus:border-cyan-500/50 focus:bg-black/40"
+                    className="min-w-0 flex-1 rounded-2xl border border-white/25 bg-black/30 px-5 py-3.5 font-mono text-lg text-white/90 placeholder:text-white/25 outline-none backdrop-blur-sm transition-all focus:border-cyan-500/50 focus:bg-black/40"
                     style={{ boxShadow: "0 0 20px rgba(0,200,255,0.05)" }}
                   />
                   <button
                     onClick={handleSubmitClue}
                     disabled={!clueInput.trim()}
                     className={cn(
-                      "px-7 py-3.5 rounded-2xl font-sans text-sm font-semibold transition-all",
+                      "shrink-0 px-5 py-3.5 rounded-2xl font-sans text-sm font-semibold transition-all",
                       clueInput.trim()
-                        ? "bg-gradient-to-r from-[#65dfb2] to-[#4ecf8a] text-black hover:brightness-110"
+                        ? "bg-gradient-to-r from-[#65dfb2] to-[#4ecf8a] text-black active:brightness-110"
                         : "bg-white/[0.06] text-white/20"
                     )}
                     style={clueInput.trim() ? { boxShadow: "0 0 20px rgba(101,223,178,0.25)" } : undefined}
@@ -302,6 +448,10 @@ export default function InfiltreGame({ roomCode, playerId, playerName }: GamePro
                     Envoyer
                   </button>
                 </div>
+                {error && (
+                  <p className="mt-3 font-sans text-sm font-semibold text-red-400">{error}</p>
+                )}
+                </>
               ) : (
                 <div
                   className="rounded-3xl border border-white/25 bg-black/30 backdrop-blur-sm px-5 py-4 max-w-md mx-auto"
@@ -323,7 +473,7 @@ export default function InfiltreGame({ roomCode, playerId, playerName }: GamePro
                 {currentDescriber?.name ?? "..."}
               </p>
               <p className="text-xs text-white/25 font-sans mt-2 animate-pulse">
-                En attente de son indice...
+                En attente de son indice…
               </p>
             </div>
           )}
@@ -332,7 +482,7 @@ export default function InfiltreGame({ roomCode, playerId, playerName }: GamePro
         {/* Clue history */}
         {currentRoundClues.length > 0 && (
           <div className="w-full max-w-lg mx-auto mb-6">
-            <p className="text-[10px] text-white/25 font-sans uppercase tracking-[0.2em] mb-3">
+            <p className="text-xs text-white/25 font-sans uppercase tracking-[0.2em] mb-3">
               Indices donn&eacute;s
             </p>
             <div className="space-y-2 max-h-40 overflow-y-auto">
@@ -365,7 +515,7 @@ export default function InfiltreGame({ roomCode, playerId, playerName }: GamePro
                 <div
                   key={p.id}
                   className={cn(
-                    "flex flex-col items-center gap-1.5 rounded-2xl border p-3 min-w-[85px] transition-all backdrop-blur-sm",
+                    "flex flex-col items-center gap-1.5 rounded-2xl border p-3 min-w-[90px] transition-all backdrop-blur-sm",
                     p.isEliminated && "opacity-30",
                     isCurrent && "border-cyan-500/40 bg-cyan-500/10",
                     !isCurrent && hasGone && "border-white/10 bg-black/30",
@@ -374,18 +524,18 @@ export default function InfiltreGame({ roomCode, playerId, playerName }: GamePro
                   style={isCurrent ? { boxShadow: "0 0 20px rgba(0,200,255,0.15)" } : undefined}
                 >
                   <span className={cn(
-                    "text-xs font-semibold truncate max-w-[70px] font-sans",
+                    "text-xs font-semibold truncate max-w-[84px] font-sans",
                     isCurrent ? "text-cyan-400" : "text-white/40"
                   )}>
                     {p.name}{p.id === playerId && " (toi)"}
                   </span>
-                  <span className="text-[10px] text-white/25 font-sans">
+                  <span className="text-xs text-white/25 font-sans">
                     {p.isEliminated
                       ? "\u00c9limin\u00e9"
                       : hasGone
                         ? "Fait"
                         : isCurrent
-                          ? "Parle..."
+                          ? "Écrit…"
                           : "En attente"}
                   </span>
                   <span className="text-xs text-cyan-400/70 font-mono font-bold">{p.score} pts</span>
@@ -406,15 +556,17 @@ export default function InfiltreGame({ roomCode, playerId, playerName }: GamePro
       <div
         className="flex flex-1 flex-col p-4 md:p-6"
         style={{
+          paddingTop: SAFE_TOP,
+          paddingBottom: "calc(env(safe-area-inset-bottom) + 16px)",
           background: "radial-gradient(circle at 50% 25%, rgba(239,68,68,0.08), transparent 40%), #060606",
         }}
       >
         {/* Header */}
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
+        <div className="flex items-center justify-between gap-2 mb-4 pr-14">
+          <div className="flex flex-wrap items-center gap-2">
             <span className="text-xs text-white/25 font-sans tracking-wide">Vote — Manche {state.round}</span>
             <span className={cn(
-              "text-[10px] px-3 py-1 rounded-full border font-sans font-semibold uppercase tracking-wider",
+              "text-xs px-3 py-1 rounded-full border font-sans font-semibold uppercase tracking-wider",
               isInfiltre
                 ? "text-red-400 bg-red-500/10 border-red-500/25"
                 : "text-blue-400 bg-blue-500/10 border-blue-500/25"
@@ -431,9 +583,12 @@ export default function InfiltreGame({ roomCode, playerId, playerName }: GamePro
             {state.timeLeft}s
           </span>
         </div>
+        <div className="-mt-2 mb-3 flex justify-start">
+          <RulesButton />
+        </div>
 
         {/* Timer bar */}
-        <div className="w-full h-1.5 rounded-full bg-white/[0.06] overflow-hidden mb-6">
+        <div className="w-full h-1.5 rounded-full bg-white/[0.06] overflow-hidden mb-4">
           <div
             className={cn(
               "h-full rounded-full transition-all duration-1000 ease-linear",
@@ -448,12 +603,14 @@ export default function InfiltreGame({ roomCode, playerId, playerName }: GamePro
           />
         </div>
 
+        <RevealWordButton isInfiltre={isInfiltre} word={state.secretWord} />
+
         <div className="text-center mb-6">
           <p
             className="text-3xl font-serif font-semibold text-white/90 mb-2"
             style={{ textShadow: "0 0 30px rgba(239,68,68,0.1)" }}
           >
-            Qui est l&apos;infiltr&eacute; ?
+            Qui est l&apos;Infiltr&eacute; ?
           </p>
           <p className="text-sm text-white/40 font-sans">
             Vote pour le joueur que tu suspectes
@@ -463,7 +620,7 @@ export default function InfiltreGame({ roomCode, playerId, playerName }: GamePro
         {/* Clue summary */}
         {currentRoundClues.length > 0 && (
           <div className="w-full max-w-lg mx-auto mb-6">
-            <p className="text-[10px] text-white/25 font-sans uppercase tracking-[0.2em] mb-3">
+            <p className="text-xs text-white/25 font-sans uppercase tracking-[0.2em] mb-3">
               Rappel des indices
             </p>
             <div className="space-y-1.5 max-h-32 overflow-y-auto">
@@ -472,7 +629,7 @@ export default function InfiltreGame({ roomCode, playerId, playerName }: GamePro
                   key={`${c.playerId}-${i}`}
                   className="flex items-center gap-3 rounded-xl border border-white/10 bg-black/30 backdrop-blur-sm px-4 py-2.5"
                 >
-                  <span className="text-[10px] text-white/40 font-sans shrink-0 font-medium">{c.playerName}</span>
+                  <span className="text-xs text-white/40 font-sans shrink-0 font-medium">{c.playerName}</span>
                   <span className="text-xs text-white/60 font-sans">{c.clue}</span>
                 </div>
               ))}
@@ -490,10 +647,10 @@ export default function InfiltreGame({ roomCode, playerId, playerName }: GamePro
                   <button
                     key={p.id}
                     onClick={() => handleVote(p.id)}
-                    className="flex flex-col items-center gap-2 rounded-3xl border border-white/25 bg-black/30 backdrop-blur-sm p-5 transition-all cursor-pointer hover:border-red-500/40 hover:bg-red-500/10 hover:scale-[1.03] active:scale-[0.98]"
+                    className="flex flex-col items-center gap-2 rounded-3xl border border-white/25 bg-black/30 backdrop-blur-sm p-5 transition-all cursor-pointer active:border-red-500/40 active:bg-red-500/10 active:scale-[0.98]"
                     style={{ boxShadow: "0 0 15px rgba(255,255,255,0.02)" }}
                   >
-                    <span className="text-sm font-sans font-semibold text-white/90">{p.name}</span>
+                    <span className="max-w-full truncate text-sm font-sans font-semibold text-white/90">{p.name}</span>
                     <span className="text-xs text-white/25 font-mono">{p.score} pts</span>
                   </button>
                 ))}
@@ -512,7 +669,7 @@ export default function InfiltreGame({ roomCode, playerId, playerName }: GamePro
                 </span>
               </div>
               <p className="text-xs text-white/25 font-sans mt-4 animate-pulse">
-                En attente des autres votes...
+                En attente des autres votes…
               </p>
             </div>
           )}
@@ -531,8 +688,8 @@ export default function InfiltreGame({ roomCode, playerId, playerName }: GamePro
               )}
               style={p.hasVoted ? { boxShadow: "0 0 12px rgba(255,255,255,0.03)" } : undefined}
             >
-              <span className="text-[10px] text-white/40 font-sans font-medium">{p.name}</span>
-              <p className="text-[10px] text-white/25 font-sans">
+              <span className="text-xs text-white/40 font-sans font-medium">{p.name}</span>
+              <p className="text-xs text-white/25 font-sans">
                 {p.hasVoted ? "A vot\u00e9" : "..."}
               </p>
             </div>
@@ -550,6 +707,7 @@ export default function InfiltreGame({ roomCode, playerId, playerName }: GamePro
       <div
         className="flex flex-1 flex-col items-center justify-center p-6"
         style={{
+          paddingTop: SAFE_TOP,
           background: state.eliminatedIsInfiltre
             ? "radial-gradient(circle at 50% 25%, rgba(239,68,68,0.1), transparent 40%), #060606"
             : "radial-gradient(circle at 50% 25%, rgba(59,130,246,0.08), transparent 40%), #060606",
@@ -562,7 +720,7 @@ export default function InfiltreGame({ roomCode, playerId, playerName }: GamePro
         {eliminated ? (
           <div className="text-center mb-8">
             <p
-              className="text-4xl font-serif font-semibold text-white/90 mb-4"
+              className="text-3xl sm:text-4xl break-words font-serif font-semibold text-white/90 mb-4"
               style={{ textShadow: "0 0 40px rgba(255,255,255,0.1)" }}
             >
               {eliminated.name} est &eacute;limin&eacute; !
@@ -586,7 +744,7 @@ export default function InfiltreGame({ roomCode, playerId, playerName }: GamePro
                   </span>
                 ) : (
                   <span className="text-blue-400 font-sans text-sm font-semibold">
-                    C&apos;&eacute;tait un Civil innocent...
+                    C&apos;&eacute;tait un Civil innocent…
                   </span>
                 )}
               </div>
@@ -629,10 +787,12 @@ export default function InfiltreGame({ roomCode, playerId, playerName }: GamePro
 
         {state.eliminatedIsInfiltre && (
           <p
-            className="text-sm text-cyan-400/60 font-sans animate-pulse font-medium"
+            className="text-sm text-cyan-400/60 font-sans animate-pulse font-medium text-center"
             style={{ textShadow: "0 0 20px rgba(0,200,255,0.15)" }}
           >
-            L&apos;infiltr&eacute; va tenter de deviner le mot...
+            {state.guessNext
+              ? "Dernière chance : l\u2019Infiltré va tenter de deviner le mot…"
+              : "Mais un autre Infiltré se cache encore parmi vous…"}
           </p>
         )}
       </div>
@@ -647,6 +807,7 @@ export default function InfiltreGame({ roomCode, playerId, playerName }: GamePro
       <div
         className="flex flex-1 flex-col items-center justify-center p-6 relative"
         style={{
+          paddingTop: SAFE_TOP,
           background: "radial-gradient(circle at 50% 25%, rgba(239,68,68,0.12), transparent 40%), #060606",
         }}
       >
@@ -678,7 +839,7 @@ export default function InfiltreGame({ roomCode, playerId, playerName }: GamePro
             {/* Clue history as hint */}
             {state.clueHistory && state.clueHistory.length > 0 && (
               <div className="mb-6">
-                <p className="text-[10px] text-white/25 font-sans uppercase tracking-[0.2em] mb-3">
+                <p className="text-xs text-white/25 font-sans uppercase tracking-[0.2em] mb-3">
                   Indices donn&eacute;s pendant la partie
                 </p>
                 <div className="space-y-1.5 max-h-32 overflow-y-auto">
@@ -687,8 +848,8 @@ export default function InfiltreGame({ roomCode, playerId, playerName }: GamePro
                       key={`${c.playerId}-${c.round}-${i}`}
                       className="flex items-center gap-2 rounded-xl border border-white/10 bg-black/30 backdrop-blur-sm px-4 py-2.5"
                     >
-                      <span className="text-[10px] text-white/25 font-mono font-bold">M{c.round}</span>
-                      <span className="text-[10px] text-white/40 font-sans shrink-0 font-medium">{c.playerName}</span>
+                      <span className="text-xs text-white/25 font-mono font-bold">M{c.round}</span>
+                      <span className="text-xs text-white/40 font-sans shrink-0 font-medium">{c.playerName}</span>
                       <span className="text-xs text-white/60 font-sans">{c.clue}</span>
                     </div>
                   ))}
@@ -704,19 +865,24 @@ export default function InfiltreGame({ roomCode, playerId, playerName }: GamePro
                   value={guessInput}
                   onChange={(e) => setGuessInput(e.target.value)}
                   onKeyDown={(e) => handleKeyDown(e, handleGuessWord)}
-                  placeholder="Le mot secret est..."
+                  placeholder="Le mot secret est…"
                   autoFocus
                   autoComplete="off"
-                  className="flex-1 rounded-2xl border border-red-500/25 bg-black/30 px-5 py-3.5 font-mono text-lg text-white/90 placeholder:text-white/25 outline-none backdrop-blur-sm transition-all focus:border-red-500/50 focus:bg-black/40"
+                  autoCorrect="off"
+                  autoCapitalize="off"
+                  spellCheck={false}
+                  enterKeyHint="send"
+                  maxLength={50}
+                  className="min-w-0 flex-1 rounded-2xl border border-red-500/25 bg-black/30 px-5 py-3.5 font-mono text-lg text-white/90 placeholder:text-white/25 outline-none backdrop-blur-sm transition-all focus:border-red-500/50 focus:bg-black/40"
                   style={{ boxShadow: "0 0 20px rgba(239,68,68,0.08)" }}
                 />
                 <button
                   onClick={handleGuessWord}
                   disabled={!guessInput.trim()}
                   className={cn(
-                    "px-7 py-3.5 rounded-2xl font-sans text-sm font-semibold transition-all",
+                    "shrink-0 px-5 py-3.5 rounded-2xl font-sans text-sm font-semibold transition-all",
                     guessInput.trim()
-                      ? "bg-gradient-to-r from-red-600 to-red-500 text-white hover:brightness-110"
+                      ? "bg-gradient-to-r from-red-600 to-red-500 text-white active:brightness-110"
                       : "bg-white/[0.06] text-white/20"
                   )}
                   style={guessInput.trim() ? { boxShadow: "0 0 20px rgba(239,68,68,0.25)" } : undefined}
@@ -729,7 +895,7 @@ export default function InfiltreGame({ roomCode, playerId, playerName }: GamePro
                 className="rounded-3xl border border-red-500/25 bg-black/30 backdrop-blur-sm px-5 py-4"
                 style={{ boxShadow: "0 0 20px rgba(239,68,68,0.1)" }}
               >
-                <p className="text-sm text-red-400/60 font-sans">R&eacute;ponse envoy&eacute;e...</p>
+                <p className="text-sm text-red-400/60 font-sans">R&eacute;ponse envoy&eacute;e…</p>
               </div>
             )}
           </div>
@@ -739,7 +905,7 @@ export default function InfiltreGame({ roomCode, playerId, playerName }: GamePro
               className="text-3xl font-serif font-semibold text-white/90 mb-3"
               style={{ textShadow: "0 0 30px rgba(239,68,68,0.1)" }}
             >
-              L&apos;infiltr&eacute; tente de deviner le mot...
+              L&apos;Infiltr&eacute; tente de deviner le mot…
             </p>
             <p className="text-sm text-white/25 font-sans animate-pulse">
               S&apos;il trouve, il gagne !
@@ -756,6 +922,7 @@ export default function InfiltreGame({ roomCode, playerId, playerName }: GamePro
       <div
         className="flex flex-1 flex-col items-center justify-center p-6"
         style={{
+          paddingTop: SAFE_TOP,
           background: state.lastGuessCorrect
             ? "radial-gradient(circle at 50% 25%, rgba(239,68,68,0.12), transparent 40%), #060606"
             : "radial-gradient(circle at 50% 25%, rgba(59,130,246,0.1), transparent 40%), #060606",
@@ -777,7 +944,7 @@ export default function InfiltreGame({ roomCode, playerId, playerName }: GamePro
               className="text-4xl font-serif font-semibold text-red-400 mb-3"
               style={{ textShadow: "0 0 40px rgba(239,68,68,0.3)" }}
             >
-              L&apos;infiltr&eacute; a devin&eacute; le mot !
+              L&apos;Infiltr&eacute; a devin&eacute; le mot !
             </p>
             <p className="text-white/40 font-sans text-sm">
               Le mot &eacute;tait : <span className="text-white/90 font-serif font-semibold">{state.secretWord}</span>
@@ -809,14 +976,14 @@ export default function InfiltreGame({ roomCode, playerId, playerName }: GamePro
             </p>
             {state.lastGuess && (
               <p className="text-xs text-red-400/40 font-sans mt-3">
-                L&apos;infiltr&eacute; a r&eacute;pondu : &laquo;{state.lastGuess}&raquo;
+                L&apos;Infiltr&eacute; a r&eacute;pondu : &laquo;{state.lastGuess}&raquo;
               </p>
             )}
           </div>
         )}
 
         <p className="text-xs text-white/25 font-sans animate-pulse">
-          Fin de la partie...
+          Fin de la partie…
         </p>
       </div>
     );
@@ -833,6 +1000,7 @@ export default function InfiltreGame({ roomCode, playerId, playerName }: GamePro
       <div
         className="flex flex-1 flex-col items-center justify-center p-6"
         style={{
+          paddingTop: SAFE_TOP,
           background: "radial-gradient(circle at 50% 25%, rgba(101,223,178,0.08), transparent 40%), #060606",
         }}
       >
@@ -846,8 +1014,9 @@ export default function InfiltreGame({ roomCode, playerId, playerName }: GamePro
             Le mot secret &eacute;tait
           </p>
           <p
-            className="text-5xl font-serif font-semibold text-white/90 mb-5"
-            style={{ textShadow: "0 0 40px rgba(101,223,178,0.15)" }}
+            lang="fr"
+            className="max-w-full break-words hyphens-auto font-serif font-semibold leading-tight text-white/90 mb-5"
+            style={{ fontSize: wordFontSize(state.secretWord, 48), textShadow: "0 0 40px rgba(101,223,178,0.15)" }}
           >
             {state.secretWord}
           </p>
@@ -890,17 +1059,17 @@ export default function InfiltreGame({ roomCode, playerId, playerName }: GamePro
                   </span>
                   <div className="flex items-center gap-2 mt-1">
                     {p.isInfiltre === true && (
-                      <span className="text-[10px] px-2 py-0.5 rounded-full border border-red-500/25 bg-red-500/10 text-red-400 font-sans font-semibold">
+                      <span className="text-xs px-2 py-0.5 rounded-full border border-red-500/25 bg-red-500/10 text-red-400 font-sans font-semibold">
                         Infiltr&eacute;
                       </span>
                     )}
                     {p.isInfiltre === false && (
-                      <span className="text-[10px] px-2 py-0.5 rounded-full border border-blue-500/25 bg-blue-500/10 text-blue-400 font-sans font-semibold">
+                      <span className="text-xs px-2 py-0.5 rounded-full border border-blue-500/25 bg-blue-500/10 text-blue-400 font-sans font-semibold">
                         Civil
                       </span>
                     )}
                     {p.isEliminated && (
-                      <span className="text-[10px] text-white/25 font-sans line-through">
+                      <span className="text-xs text-white/25 font-sans line-through">
                         &Eacute;limin&eacute;
                       </span>
                     )}
@@ -933,7 +1102,7 @@ export default function InfiltreGame({ roomCode, playerId, playerName }: GamePro
     >
       {error && <p className="text-sm text-red-400 font-sans font-semibold">{error}</p>}
       {!error && (
-        <p className="text-white/40 animate-pulse font-sans text-lg">Chargement...</p>
+        <p className="text-white/40 animate-pulse font-sans text-lg">Chargement…</p>
       )}
     </div>
   );

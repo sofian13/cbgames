@@ -1,6 +1,9 @@
 import type { Connection } from "partykit/server";
 import { BaseGame } from "./base-game";
 import type { GameRanking } from "../shared/types";
+// Banque de questions partagée avec le mode local : fichier de données pur
+// (aucun import), embarqué tel quel dans le bundle PartyKit.
+import { BLUFF_QUESTIONS as QUESTIONS, type BluffQuestion as QA } from "../../src/components/games/le-bluffeur/questions";
 
 // -- Config -----------------------------------------------
 const WRITE_TIME = 40;
@@ -10,44 +13,9 @@ const TOTAL_ROUNDS = 6;
 const START_DELAY = 1300;
 
 // Points
-const PTS_FOUND_TRUTH = 30; // tu votes pour la vraie reponse
-const PTS_FOOLED = 20; // par personne qui tombe dans ton piege
-const PTS_WROTE_TRUTH = 15; // tu as ecrit pile la vraie reponse
-
-// -- Question bank ----------------------------------------
-interface QA {
-  question: string;
-  answer: string;
-}
-
-const QUESTIONS: QA[] = [
-  { question: "Un escargot peut dormir jusqu'à ___ d'affilée.", answer: "3 ans" },
-  { question: "Le cœur d'une crevette se situe dans ___.", answer: "sa tête" },
-  { question: "Les flamants roses naissent de couleur ___.", answer: "grise" },
-  { question: "La Tour Eiffel peut grandir d'environ ___ en été.", answer: "15 cm" },
-  { question: "Le miel ne ___ jamais.", answer: "périme" },
-  { question: "Les koalas dorment environ ___ par jour.", answer: "22 heures" },
-  { question: "Le sang des pieuvres est de couleur ___.", answer: "bleue" },
-  { question: "Une pieuvre possède ___ cœurs.", answer: "3" },
-  { question: "Les loutres dorment en ___ pour ne pas se perdre.", answer: "se tenant la main" },
-  { question: "Il est quasi impossible d'___ les yeux ouverts.", answer: "éternuer" },
-  { question: "Les requins existaient déjà avant ___.", answer: "les arbres" },
-  { question: "Le ketchup était vendu au 19e siècle comme ___.", answer: "médicament" },
-  { question: "Le Nutella consomme environ ___ % des noisettes produites dans le monde.", answer: "25" },
-  { question: "Le premier objet scanné avec un code-barres était ___.", answer: "un paquet de chewing-gum" },
-  { question: "Un nuage moyen pèse environ ___.", answer: "500 tonnes" },
-  { question: "Un humain partage environ ___ % de son ADN avec une banane.", answer: "50" },
-  { question: "Le record du plus long hoquet a duré ___.", answer: "68 ans" },
-  { question: "Un groupe de flamants roses s'appelle ___.", answer: "une flamboyance" },
-  { question: "Sur Vénus, une journée dure plus longtemps qu'___.", answer: "une année" },
-  { question: "La langouste et le homard ont le sang ___.", answer: "transparent" },
-  { question: "Le record du monde du plus long baiser est d'environ ___.", answer: "58 heures" },
-  { question: "Un être humain produit assez de salive dans sa vie pour remplir ___.", answer: "deux piscines" },
-  { question: "Les fourmis ne dorment pas mais font de courtes ___.", answer: "siestes" },
-  { question: "Le mot « ___ » est l'un des plus longs de la langue française.", answer: "anticonstitutionnellement" },
-  { question: "En moyenne, une personne passe ___ de sa vie à attendre aux feux rouges.", answer: "6 mois" },
-  { question: "Le venin d'un seul ___ peut tuer plusieurs adultes.", answer: "poisson-pierre" },
-];
+const PTS_FOUND_TRUTH = 30; // tu votes pour la vraie réponse
+const PTS_FOOLED = 20; // par personne qui tombe dans ton piège
+const PTS_WROTE_TRUTH = 15; // tu as écrit pile la vraie réponse
 
 // -- Types ------------------------------------------------
 interface BluffPlayer {
@@ -56,11 +24,11 @@ interface BluffPlayer {
   score: number;
   fake: string | null;
   vote: string | null; // optionId
-  foundTruth: boolean; // a ecrit pile la verite
+  foundTruth: boolean; // a écrit pile la vérité
 }
 
 interface AnswerOption {
-  id: string;
+  id: string; // id opaque (aléatoire) : ne révèle rien pendant le vote
   text: string;
   authorIds: string[];
   isTruth: boolean;
@@ -68,8 +36,12 @@ interface AnswerOption {
 
 type GamePhase = "waiting" | "writing" | "voting" | "reveal" | "game-over";
 
+const MIN_ONLINE_PLAYERS = 3;
+
 const normalize = (s: string) =>
   s.toLowerCase().trim().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[.!?]+$/, "").replace(/\s+/g, " ");
+
+const randomId = () => Math.random().toString(36).slice(2, 10);
 
 // ==========================================================
 export class LeBluffeurGame extends BaseGame {
@@ -102,11 +74,27 @@ export class LeBluffeurGame extends BaseGame {
     this.startRound();
   }
 
+  /** Joueur présent = encore connecté (les déconnectés ne bloquent plus les phases). */
+  isPresent(id: string) {
+    return this.players.has(id);
+  }
+
+  presentPlayers() {
+    return Array.from(this.gamePlayers.values()).filter((p) => this.isPresent(p.id));
+  }
+
   startRound() {
     this.round++;
     this.phase = "writing";
     this.options = [];
     this.roundPoints = {};
+
+    // Les retardataires (arrivés après le lancement) entrent en jeu à la manche suivante
+    for (const [id, player] of this.players) {
+      if (!this.gamePlayers.has(id)) {
+        this.gamePlayers.set(id, { id, name: player.name, score: 0, fake: null, vote: null, foundTruth: false });
+      }
+    }
     for (const p of this.gamePlayers.values()) {
       p.fake = null;
       p.vote = null;
@@ -122,14 +110,15 @@ export class LeBluffeurGame extends BaseGame {
     this.timeLeft = WRITE_TIME;
     this.broadcastPersonalizedState();
     this.startTimer();
+    this.queueBotFakes();
   }
 
   buildVoting() {
     this.stopTimer();
-    if (!this.currentQ) return;
+    if (!this.currentQ || this.phase !== "writing") return;
     const truthNorm = normalize(this.currentQ.answer);
 
-    // Regroupe les fausses reponses (dedupe), detecte celles qui valent la verite
+    // Regroupe les fausses réponses (dédoublonnées), détecte celles qui valent la vérité
     const fakeMap: Map<string, { text: string; authorIds: string[] }> = new Map();
     for (const p of this.gamePlayers.values()) {
       if (!p.fake) continue;
@@ -144,23 +133,41 @@ export class LeBluffeurGame extends BaseGame {
     }
 
     const opts: AnswerOption[] = [];
-    let i = 0;
     for (const { text, authorIds } of fakeMap.values()) {
-      opts.push({ id: `opt-${i++}`, text, authorIds, isTruth: false });
+      opts.push({ id: randomId(), text, authorIds, isTruth: false });
     }
-    opts.push({ id: "truth", text: this.currentQ.answer, authorIds: [], isTruth: true });
+    opts.push({ id: randomId(), text: this.currentQ.answer, authorIds: [], isTruth: true });
 
-    // Shuffle
-    this.options = opts.sort(() => Math.random() - 0.5);
+    // Mélange (Fisher-Yates)
+    for (let i = opts.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [opts[i], opts[j]] = [opts[j], opts[i]];
+    }
+    this.options = opts;
 
     this.phase = "voting";
     this.timeLeft = VOTE_TIME;
     this.broadcastPersonalizedState();
+    if (this.allVoted()) {
+      this.resolveVotes();
+      return;
+    }
     this.startTimer();
+    this.queueBotVotes();
+  }
+
+  allFaked() {
+    const present = this.presentPlayers();
+    return present.length > 0 && present.every((p) => p.fake !== null);
+  }
+
+  allVoted() {
+    return this.presentPlayers().every((p) => p.vote !== null || p.foundTruth);
   }
 
   resolveVotes() {
     this.stopTimer();
+    if (this.phase !== "voting") return;
 
     const pts: Record<string, number> = {};
     for (const p of this.gamePlayers.values()) pts[p.id] = 0;
@@ -196,46 +203,76 @@ export class LeBluffeurGame extends BaseGame {
     this.stopTimer();
     this.phase = "game-over";
     const players = Array.from(this.gamePlayers.values()).sort((a, b) => b.score - a.score);
-    const rankings: GameRanking[] = players.map((p, i) => ({
+    const rankings: GameRanking[] = players.map((p) => ({
       playerId: p.id,
       playerName: p.name,
-      rank: i + 1,
+      // Ex æquo = même rang
+      rank: 1 + players.filter((o) => o.score > p.score).length,
       score: p.score,
     }));
     this.broadcastPersonalizedState();
     setTimeout(() => this.endGame(rankings), 500);
   }
 
+  // -- Bots (partie lancée « avec des bots ») ---------------
+  queueBotFakes() {
+    for (const p of this.gamePlayers.values()) {
+      if (!this.isBot(p.id)) continue;
+      this.queueBotAction(() => {
+        if (this.phase !== "writing" || p.fake !== null) return;
+        // Bluff de bot : la réponse d'une autre question (crédible mais fausse)
+        let other = QUESTIONS[Math.floor(Math.random() * QUESTIONS.length)];
+        if (other === this.currentQ) other = QUESTIONS[(QUESTIONS.indexOf(other) + 1) % QUESTIONS.length];
+        this.submitFake(p, other.answer);
+      }, 4000, 12000);
+    }
+  }
+
+  queueBotVotes() {
+    for (const p of this.gamePlayers.values()) {
+      if (!this.isBot(p.id) || p.foundTruth) continue;
+      this.queueBotAction(() => {
+        if (this.phase !== "voting" || p.vote !== null) return;
+        const choices = this.options.filter((o) => !o.authorIds.includes(p.id));
+        const pick = choices[Math.floor(Math.random() * choices.length)];
+        if (pick) this.castVote(p, pick.id);
+      }, 3000, 9000);
+    }
+  }
+
   // -- Messages --------------------------------------------
+  submitFake(gp: BluffPlayer, raw: string) {
+    const fake = raw.trim();
+    if (!fake || gp.fake) return;
+    gp.fake = fake.slice(0, 80);
+    this.broadcastPersonalizedState();
+    if (this.allFaked()) this.buildVoting();
+  }
+
+  castVote(gp: BluffPlayer, optId: string) {
+    if (gp.vote || gp.foundTruth) return;
+    const opt = this.options.find((o) => o.id === optId);
+    if (!opt) return;
+    if (opt.authorIds.includes(gp.id)) return; // pas de vote pour son propre piège
+    gp.vote = optId;
+    this.broadcastPersonalizedState();
+    if (this.allVoted()) this.resolveVotes();
+  }
+
   onMessage(payload: Record<string, unknown>, sender: Connection) {
     const action = payload.action as string;
     const sp = this.findPlayerByConnection(sender.id);
     if (!sp) return;
     const gp = this.gamePlayers.get(sp.id);
-    if (!gp) return;
+    if (!gp) return; // spectateur (arrivé en cours de manche)
 
     if (action === "submit-fake" && this.phase === "writing") {
-      const fake = ((payload.fake as string) ?? "").trim();
-      if (!fake || gp.fake) return;
-      gp.fake = fake.slice(0, 80);
-      this.broadcastPersonalizedState();
-      if (Array.from(this.gamePlayers.values()).every((p) => p.fake !== null)) {
-        this.buildVoting();
-      }
+      this.submitFake(gp, typeof payload.fake === "string" ? payload.fake : "");
       return;
     }
 
     if (action === "vote" && this.phase === "voting") {
-      if (gp.vote) return;
-      const optId = payload.optionId as string;
-      const opt = this.options.find((o) => o.id === optId);
-      if (!opt) return;
-      if (opt.authorIds.includes(gp.id)) return; // pas voter pour son propre piege
-      gp.vote = optId;
-      this.broadcastPersonalizedState();
-      if (Array.from(this.gamePlayers.values()).every((p) => p.vote !== null || p.foundTruth)) {
-        this.resolveVotes();
-      }
+      this.castVote(gp, payload.optionId as string);
       return;
     }
   }
@@ -245,10 +282,9 @@ export class LeBluffeurGame extends BaseGame {
     this.timer = setInterval(() => {
       this.timeLeft--;
       this.broadcast({ type: "game-update", payload: { timeLeft: this.timeLeft } });
-      if (this.timeLeft <= 0) {
-        if (this.phase === "writing") this.buildVoting();
-        else if (this.phase === "voting") this.resolveVotes();
-      }
+      // Un joueur s'est déconnecté : on n'attend que les présents
+      if (this.phase === "writing" && (this.timeLeft <= 0 || this.allFaked())) this.buildVoting();
+      else if (this.phase === "voting" && (this.timeLeft <= 0 || this.allVoted())) this.resolveVotes();
     }, 1000);
   }
 
@@ -269,6 +305,7 @@ export class LeBluffeurGame extends BaseGame {
   // -- State -----------------------------------------------
   broadcastPersonalizedState() {
     for (const [pid, player] of this.players) {
+      if (this.isBot(pid)) continue;
       this.sendTo(player.connectionId, { type: "game-state", payload: this.getStateForPlayer(pid) });
     }
   }
@@ -276,16 +313,19 @@ export class LeBluffeurGame extends BaseGame {
   getStateForPlayer(pid: string): Record<string, unknown> {
     const state = this.buildPublicState();
     const me = this.gamePlayers.get(pid);
+    state.spectator = this.phase !== "waiting" && !me;
     state.myFake = me?.fake ?? null;
     state.myVote = me?.vote ?? null;
     state.iFoundTruth = me?.foundTruth ?? false;
+    // Option qui contient MON bluff (comparaison par id, pas par texte)
+    state.myOptionId = me ? this.options.find((o) => o.authorIds.includes(me.id))?.id ?? null : null;
     return state;
   }
 
   buildPublicState(): Record<string, unknown> {
     const isReveal = this.phase === "reveal" || this.phase === "game-over";
 
-    // Options visibles : pendant le vote on cache auteurs/verite ; au reveal on montre tout
+    // Pendant le vote : ids opaques, ni auteurs ni vérité ; au reveal on montre tout
     const optionsOut = this.options.map((o) => {
       const voters = Array.from(this.gamePlayers.values()).filter((p) => p.vote === o.id);
       return {
@@ -293,6 +333,7 @@ export class LeBluffeurGame extends BaseGame {
         text: o.text,
         isTruth: isReveal ? o.isTruth : null,
         authors: isReveal ? o.authorIds.map((id) => this.gamePlayers.get(id)?.name ?? "?") : null,
+        authorIds: isReveal ? o.authorIds : null,
         voterNames: isReveal ? voters.map((v) => v.name) : null,
         voteCount: isReveal ? voters.length : null,
       };
@@ -303,6 +344,8 @@ export class LeBluffeurGame extends BaseGame {
       round: this.round,
       totalRounds: this.totalRounds,
       timeLeft: this.timeLeft,
+      connectedCount: this.players.size,
+      minPlayers: MIN_ONLINE_PLAYERS,
       question: this.currentQ?.question ?? null,
       trueAnswer: isReveal ? this.currentQ?.answer ?? null : null,
       options: this.phase === "voting" || isReveal ? optionsOut : null,
@@ -314,6 +357,7 @@ export class LeBluffeurGame extends BaseGame {
         hasFake: p.fake !== null,
         hasVoted: p.vote !== null,
         foundTruth: isReveal ? p.foundTruth : null,
+        connected: this.isPresent(p.id),
       })),
     };
   }
@@ -324,6 +368,7 @@ export class LeBluffeurGame extends BaseGame {
 
   cleanup() {
     this.stopTimer();
+    this.clearBotTimeouts();
     if (this.startTimeout) clearTimeout(this.startTimeout);
   }
 }

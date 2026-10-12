@@ -5,6 +5,7 @@ import { BookOpen, CheckCircle2, Users, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { GameMeta } from "@/lib/games/types";
 import { GameArt, CB_CAT } from "@/components/lobby/game-art";
+import { GameExplainer } from "@/components/lobby/game-explainer";
 
 interface GameCardProps {
   game: GameMeta;
@@ -55,7 +56,7 @@ export function GameCard({ game, isSelected, isHost, onSelect }: GameCardProps) 
               tabIndex={0}
               onClick={(e) => { e.stopPropagation(); setShowRules(true); }}
               onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); setShowRules(true); } }}
-              className="flex h-6 w-6 items-center justify-center rounded-full text-white"
+              className="-m-1.5 flex h-9 w-9 items-center justify-center rounded-full text-white"
               style={{ background: "rgba(0,0,0,0.4)", backdropFilter: "blur(8px)" }}
               aria-label="Règles"
             >
@@ -70,6 +71,11 @@ export function GameCard({ game, isSelected, isHost, onSelect }: GameCardProps) 
           <div className="cb-display-sm leading-tight text-white" style={{ fontSize: 15, textShadow: "0 2px 8px rgba(0,0,0,0.5)" }}>
             {game.name}
           </div>
+          {game.pitch && (
+            <div className="mt-0.5 line-clamp-1 text-[11px] leading-tight" style={{ color: "rgba(255,255,255,0.82)" }}>
+              {game.pitch}
+            </div>
+          )}
           <div className="mt-1 flex items-center gap-1.5">
             <Users className="h-3 w-3" style={{ color: "rgba(255,255,255,0.75)" }} />
             <span className="cb-mono text-[9px] font-bold tracking-[0.08em]" style={{ color: "rgba(255,255,255,0.75)" }}>
@@ -85,7 +91,7 @@ export function GameCard({ game, isSelected, isHost, onSelect }: GameCardProps) 
           onClick={() => setShowRules(false)}
         >
           <div
-            className="w-full max-w-lg rounded-3xl border bg-[color:var(--surface)] p-6 shadow-2xl"
+            className="max-h-[85dvh] w-full max-w-lg overflow-y-auto overscroll-contain rounded-3xl border bg-[color:var(--surface)] p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] shadow-2xl"
             style={{ borderColor: "var(--line-soft)" }}
             onClick={(event) => event.stopPropagation()}
           >
@@ -121,25 +127,7 @@ export function GameCard({ game, isSelected, isHost, onSelect }: GameCardProps) 
               </button>
             </div>
 
-            <div className="space-y-2">
-              {game.rules.map((rule, index) => (
-                <div
-                  key={index}
-                  className="flex items-start gap-3 rounded-xl border px-4 py-2.5 text-sm leading-6"
-                  style={{
-                    background: "var(--surface-2)",
-                    borderColor: "var(--line-soft)",
-                    color: "var(--foreground)",
-                  }}
-                >
-                  <span
-                    className="mt-2.5 h-1.5 w-1.5 shrink-0 rounded-full"
-                    style={{ background: cat.color }}
-                  />
-                  {rule}
-                </div>
-              ))}
-            </div>
+            <GameExplainer game={game} accent={cat.color} />
           </div>
         </div>
       )}
