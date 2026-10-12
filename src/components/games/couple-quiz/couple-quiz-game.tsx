@@ -12,7 +12,9 @@ import type { GameProps } from "@/lib/games/types";
 import { useGame } from "@/lib/party/use-game";
 import { useGameStore } from "@/lib/stores/game-store";
 import { LocalShell, ModeSelect, PassScreen, colorForIndex, type GameMode } from "@/components/games/local-kit";
-import { MascotAvatar } from "@/components/Mascot";
+import { Mascot, MascotAvatar } from "@/components/Mascot";
+import { ArrowLeft, Hourglass, MessageCircle } from "lucide-react";
+import { GameInlineIcon } from "@/components/games/game-icon-button";
 import { ConfettiBurst } from "@/components/ConfettiBurst";
 import { QPACKS, type Q } from "./questions";
 import { getSavedDuo, saveDuo } from "@/lib/saved-players";
@@ -99,7 +101,7 @@ function CoupleQuizLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) 
     const ok = names[0].trim() && names[1].trim();
     return (
       <Screen>
-        <div className="text-6xl">❤️</div>
+        <Mascot size={84} color="pink" mood="love" arms shadow={false} />
         <h1 className="cb-display-lg mt-2 text-center">Tu me connais ?</h1>
         <p className="mt-2 max-w-sm text-center text-[15px]" style={{ color: "var(--text-dim)" }}>
           À deux, sur un seul tél. L&apos;un répond <b className="text-white">en secret</b> sur lui-même, l&apos;autre doit <b className="text-white">deviner</b> sa réponse. On alterne à chaque question.
@@ -163,7 +165,7 @@ function CoupleQuizLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) 
         <button disabled={pool.length < 2} onClick={begin} className="af-btn af-btn-primary mt-7 w-full max-w-sm disabled:opacity-40" style={{ fontSize: 17, minHeight: 54 }}>
           {pool.length < 2 ? "Choisis au moins un thème" : "C'est parti !"}
         </button>
-        <button onClick={() => setPhase("names")} className="mt-1 text-sm" style={{ color: "var(--text-dim)", minHeight: 44 }}>← Changer les prénoms</button>
+        <button onClick={() => setPhase("names")} className="mt-1 text-sm" style={{ color: "var(--text-dim)", minHeight: 44 }}><GameInlineIcon icon={ArrowLeft} /> Changer les prénoms</button>
       </Screen>
     );
   }
@@ -225,7 +227,7 @@ function CoupleQuizLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) 
             <div className="text-lg font-bold" style={{ color: correct ? "#3DDC97" : "#FF6B5B" }}>{guessText}</div>
           </div>
         </div>
-        {!correct && <p className="mt-3 max-w-sm text-center text-[14px]" style={{ color: "var(--text-dim)" }}>💬 {names[answerer]}, explique-toi !</p>}
+        {!correct && <p className="mt-3 max-w-sm text-center text-[14px]" style={{ color: "var(--text-dim)" }}><GameInlineIcon icon={MessageCircle} /> {names[answerer]}, explique-toi !</p>}
         <div className="mt-4 flex gap-4 text-center">
           <ScorePill name={names[0]} score={scores[0]} idx={0} />
           <ScorePill name={names[1]} score={scores[1]} idx={1} />
@@ -308,7 +310,7 @@ interface OnlineState {
 function Waiting({ title, sub }: { title: string; sub?: string }) {
   return (
     <LocalShell accent={ACCENT} center>
-      <div className="text-5xl mb-3">⏳</div>
+      <Hourglass size={48} strokeWidth={2.4} color={ACCENT} className="mb-3" aria-hidden />
       <h2 className="cb-display-md text-center">{title}</h2>
       {sub && <p className="mt-2 max-w-sm text-center text-sm" style={{ color: "var(--text-dim)" }}>{sub}</p>}
     </LocalShell>
@@ -324,13 +326,13 @@ function CoupleQuizOnline({ roomCode, playerId, playerName, onReturnToLobby }: G
     const here = state?.players?.length ?? 0;
     return (
       <LocalShell accent={ACCENT} center>
-        <div className="text-6xl mb-3">❤️</div>
+        <div className="mb-3"><Mascot size={84} color="pink" mood="love" arms shadow={false} /></div>
         <h1 className="cb-display-lg text-center sm:text-5xl">Tu me connais ?</h1>
         <p className="mt-2 text-sm" style={{ color: "var(--text-dim)" }}>En ligne · <b style={{ color: "#fff" }}>{here}/2</b> joueurs connectés</p>
         <p className="mt-4 max-w-sm text-center text-sm" style={{ color: "var(--text-dim)" }}>
           Ton/ta partenaire doit rejoindre <b style={{ color: "#fff" }}>la même salle</b> (code <b style={{ color: ACCENT }}>{roomCode}</b>) et choisir « Plusieurs téléphones ». Le jeu démarre dès que vous êtes 2.
         </p>
-        <button onClick={onReturnToLobby} className="mt-7 text-sm" style={{ color: "var(--text-muted)" }}>← Quitter</button>
+        <button onClick={onReturnToLobby} className="mt-7 text-sm" style={{ color: "var(--text-muted)" }}><GameInlineIcon icon={ArrowLeft} /> Quitter</button>
       </LocalShell>
     );
   }

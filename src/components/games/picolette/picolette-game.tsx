@@ -15,6 +15,9 @@ import { MascotAvatar } from "@/components/Mascot";
 import { PlayersSetup, colorForIndex } from "@/components/games/local-kit";
 import { useAudio } from "@/lib/hooks/useAudio";
 import { sfxCardPlay, sfxTrickWin, sfxHandChime } from "@/lib/card-sfx";
+import { Mascot } from "@/components/Mascot";
+import { ArrowDown, ArrowLeft, ArrowUp, Check, Circle, CupSoda, Dices, Drama, Hand, Shield, ScrollText, Undo2, Ellipsis, type LucideIcon } from "lucide-react";
+import { GameIconBadge, GameInlineIcon } from "@/components/games/game-icon-button";
 import {
   type PicoletteCard, type Pack,
   PICOLETTE_CARDS, PACK_INFO, TYPE_INFO, GAGES,
@@ -55,7 +58,7 @@ export default function PicoletteGame({ onReturnToLobby }: GameProps) {
   const [ruleToast, setRuleToast] = useState<string | null>(null);
   const [pickMode, setPickMode] = useState<PickMode | null>(null); // overlay "qui perd"
   const [rouletteFor, setRouletteFor] = useState<number | null>(null); // joueur qui prend la peine
-  const [rouletteSym, setRouletteSym] = useState<string>("…");
+  const [rouletteSym, setRouletteSym] = useState<RouletteFace>("wait");
   const [rouletteResult, setRouletteResult] = useState<PenaltyResult | null>(null);
   const [rouletteAdvance, setRouletteAdvance] = useState(false); // passer à la carte suivante après
   const [lastLoserIdx, setLastLoserIdx] = useState<number | null>(null); // pour l'undo
@@ -152,7 +155,7 @@ export default function PicoletteGame({ onReturnToLobby }: GameProps) {
     // Bouclier : la peine est annulée, le bouclier est consommé
     if (shields[idx]) {
       setShields((prev) => prev.map((s, i) => (i === idx ? false : s)));
-      setRouletteSym("🛡️");
+      setRouletteSym("shield");
       setRouletteResult({ kind: "shield" });
       return;
     }
@@ -163,7 +166,7 @@ export default function PicoletteGame({ onReturnToLobby }: GameProps) {
     if (spinRef.current) clearInterval(spinRef.current);
     spinRef.current = setInterval(() => {
       ticks++;
-      setRouletteSym(penaltyMode === "gage" ? "🎭" : Math.random() < 0.5 ? "🥤" : "🎭");
+      setRouletteSym(penaltyMode === "gage" ? "gage" : Math.random() < 0.5 ? "sips" : "gage");
       if (ticks >= total) {
         if (spinRef.current) clearInterval(spinRef.current);
         spinRef.current = null;
@@ -171,7 +174,7 @@ export default function PicoletteGame({ onReturnToLobby }: GameProps) {
         const result: PenaltyResult = isGage
           ? { kind: "gage", text: GAGES[Math.floor(Math.random() * GAGES.length)] }
           : { kind: "sips", n: 1 + Math.floor(Math.random() * 3) }; // 1 à 3, jamais plus
-        setRouletteSym(isGage ? "🎭" : "🥤");
+        setRouletteSym(isGage ? "gage" : "sips");
         setRouletteResult(result);
         setLosses((prev) => prev.map((n, i) => (i === idx ? n + 1 : n)));
         setLastLoserIdx(idx);
@@ -182,7 +185,7 @@ export default function PicoletteGame({ onReturnToLobby }: GameProps) {
 
   const closeRoulette = () => {
     setRouletteFor(null);
-    setRouletteSym("…");
+    setRouletteSym("wait");
     setRouletteResult(null);
     if (rouletteAdvance) nextCard();
   };
@@ -220,7 +223,7 @@ export default function PicoletteGame({ onReturnToLobby }: GameProps) {
     return (
       <div className="flex min-h-[100svh] flex-col items-center justify-center px-6 text-white"
         style={{ background: BG_GRAD, paddingTop: SAFE_TOP, paddingBottom: SAFE_BOTTOM }}>
-        <div className="text-6xl mb-3">🍻</div>
+        <div className="mb-3"><Mascot size={84} color="yellow" mood="laughing" arms shadow={false} /></div>
         <h1 className="cb-display-lg mb-1">La Tournée</h1>
         <p className="text-sm text-center max-w-md" style={{ color: "var(--text-dim)" }}>
           Le tel ne sert qu&apos;à lire les cartes et désigner le perdant. Tout se joue à l&apos;oral, installés dans le canapé.
@@ -259,7 +262,7 @@ export default function PicoletteGame({ onReturnToLobby }: GameProps) {
             <div className="flex min-w-0 flex-1 items-center gap-2 rounded-2xl border bg-black/45 px-3 py-1.5 backdrop-blur-sm"
               style={{ borderColor: "#C58CFF66" }}>
               <div className="min-w-0 flex-1">
-                <p className="text-[12px] uppercase tracking-wider" style={{ color: "#C58CFFbb" }}>📝 Règle live · {formatTime(ruleRemaining)}</p>
+                <p className="text-[12px] uppercase tracking-wider" style={{ color: "#C58CFFbb" }}><GameInlineIcon icon={ScrollText} /> Règle live · {formatTime(ruleRemaining)}</p>
                 <p className="truncate text-[13px] font-semibold">{activeRule.text}</p>
               </div>
               <button onClick={() => setPickMode("rule")}
@@ -303,7 +306,7 @@ export default function PicoletteGame({ onReturnToLobby }: GameProps) {
               <div className="mt-4 space-y-2">
                 <div className="rounded-2xl border px-4 py-3 flex items-center gap-3"
                   style={{ borderColor: `${t.tint}66`, background: `${t.tint}14` }}>
-                  <span className="text-2xl">☝️</span>
+                  <GameIconBadge icon={ArrowUp} bg="#FFFFFF" size={40} />
                   <div className="flex-1">
                     <p className="text-[12px] uppercase tracking-wider mb-0.5" style={{ color: t.tint }}>Main en haut</p>
                     <p className="text-base font-semibold text-white leading-snug">{card.a}</p>
@@ -311,7 +314,7 @@ export default function PicoletteGame({ onReturnToLobby }: GameProps) {
                 </div>
                 <div className="rounded-2xl border px-4 py-3 flex items-center gap-3"
                   style={{ borderColor: `${t.tint}66`, background: `${t.tint}14` }}>
-                  <span className="text-2xl">👇</span>
+                  <GameIconBadge icon={ArrowDown} bg="#FFFFFF" size={40} />
                   <div className="flex-1">
                     <p className="text-[12px] uppercase tracking-wider mb-0.5" style={{ color: t.tint }}>Main en bas</p>
                     <p className="text-base font-semibold text-white leading-snug">{card.b}</p>
@@ -347,7 +350,7 @@ export default function PicoletteGame({ onReturnToLobby }: GameProps) {
             <button onClick={() => setPickMode("loss")}
               className="w-full py-4 rounded-2xl font-sans text-sm font-semibold text-white"
               style={{ background: `linear-gradient(135deg, ${ACCENT}, #C71B7A)`, boxShadow: `0 0 25px ${ACCENT}55` }}>
-              🎲 Désigner un perdant
+              <GameInlineIcon icon={Dices} /> Désigner un perdant
             </button>
           )}
           <button onClick={nextCard}
@@ -361,7 +364,7 @@ export default function PicoletteGame({ onReturnToLobby }: GameProps) {
           <div className="mt-2 flex justify-center">
             <button onClick={undoLastLoss}
               className="min-h-[44px] rounded-full border border-white/20 bg-black/40 px-4 text-[13px] text-white/70 active:bg-white/10 active:text-white">
-              ↩ Annuler la peine de {players[lastLoserIdx]}
+              <GameInlineIcon icon={Undo2} /> Annuler la peine de {players[lastLoserIdx]}
             </button>
           </div>
         )}
@@ -399,7 +402,7 @@ export default function PicoletteGame({ onReturnToLobby }: GameProps) {
     <div className="flex min-h-[100svh] flex-col items-center justify-center px-6 text-white"
       style={{ background: BG_GRAD, paddingTop: SAFE_TOP, paddingBottom: SAFE_BOTTOM }}>
       <p className="af-eyebrow" style={{ color: ACCENT }}>Fin de partie</p>
-      <h2 className="cb-display-lg mt-1 mb-5">🍻 Le palmarès</h2>
+      <h2 className="cb-display-lg mt-1 mb-5">Le palmarès</h2>
       <p className="text-[13px] mb-3" style={{ color: "var(--text-dim)" }}>Plus tu as ramassé de peines, plus t&apos;as fait le show.</p>
       <div className="w-full max-w-sm space-y-2">
         {ranking.map((p, idx) => (
@@ -440,12 +443,12 @@ function JokerAction({
 }) {
   const style = { background: "linear-gradient(135deg, #9B7BFF, #5B36D6)", boxShadow: "0 0 25px #7A4EE855" };
   const cls = "w-full py-4 rounded-2xl font-sans text-sm font-semibold text-white disabled:opacity-40";
-  if (effect === "pick") return <button onClick={onPick} className={cls} style={style}>🃏 Choisir qui prend la peine</button>;
-  if (effect === "shield") return <button onClick={onShield} className={cls} style={style}>🛡️ Donner le bouclier à…</button>;
+  if (effect === "pick") return <button onClick={onPick} className={cls} style={style}><GameInlineIcon icon={Hand} /> Choisir qui prend la peine</button>;
+  if (effect === "shield") return <button onClick={onShield} className={cls} style={style}><GameInlineIcon icon={Shield} /> Donner le bouclier à…</button>;
   if (effect === "amnesty") {
     return (
       <button onClick={onAmnesty} disabled={!canUndo} className={cls} style={style}>
-        {canUndo ? "🕊️ Annuler la dernière peine" : "Aucune peine à annuler"}
+        {canUndo ? <><GameInlineIcon icon={Undo2} /> Annuler la dernière peine</> : "Aucune peine à annuler"}
       </button>
     );
   }
@@ -473,7 +476,7 @@ function PacksScreen({
   return (
     <div className="flex min-h-[100svh] flex-col items-center px-6 text-white"
       style={{ background: BG_GRAD, paddingTop: SAFE_TOP, paddingBottom: SAFE_BOTTOM }}>
-      <div className="text-5xl mb-2 mt-2">🍻</div>
+      <div className="mb-2 mt-2"><Mascot size={72} color="yellow" mood="laughing" arms shadow={false} /></div>
       <h1 className="cb-display-md mb-1">La Tournée</h1>
       <p className="text-[13px] mb-6" style={{ color: "var(--text-dim)" }}>Choisis tes packs.</p>
 
@@ -500,7 +503,7 @@ function PacksScreen({
                   </p>
                   <p className="text-[13px]" style={{ color: "var(--text-dim)" }}>{info.sub} · {count} cartes</p>
                 </div>
-                <div className="text-2xl">{active ? "✓" : "○"}</div>
+                <GameIconBadge icon={active ? Check : Circle} bg={active ? info.tint : "#FFFFFF"} size={34} />
               </div>
             </button>
           );
@@ -510,9 +513,9 @@ function PacksScreen({
       <p className="af-eyebrow mt-6 mb-2" style={{ color: ACCENT }}>La peine</p>
       <div className="grid w-full max-w-md grid-cols-2 gap-2">
         {([
-          { v: "mix", emoji: "🥤🎭", label: "Gorgées (1 à 3) ou gage" },
-          { v: "gage", emoji: "🎭", label: "Gages seulement" },
-        ] as { v: PenaltyMode; emoji: string; label: string }[]).map((o) => (
+          { v: "mix", icons: [CupSoda, Drama], label: "Gorgées (1 à 3) ou gage" },
+          { v: "gage", icons: [Drama], label: "Gages seulement" },
+        ] as { v: PenaltyMode; icons: LucideIcon[]; label: string }[]).map((o) => (
           <button key={o.v} onClick={() => setPenaltyMode(o.v)}
             className={cn("rounded-2xl border px-2 py-3 text-center transition-all active:scale-[0.97]",
               o.v === penaltyMode ? "shadow-lg" : "active:bg-white/[0.04]")}
@@ -520,7 +523,7 @@ function PacksScreen({
               borderColor: o.v === penaltyMode ? `${ACCENT}aa` : "rgba(255,255,255,0.10)",
               background: o.v === penaltyMode ? `${ACCENT}1e` : "rgba(0,0,0,0.32)",
             }}>
-            <p className="text-xl">{o.emoji}</p>
+            <p className="flex justify-center gap-1" style={{ color: o.v === penaltyMode ? ACCENT : "#fff" }}>{o.icons.map((I, k) => <I key={k} size={22} strokeWidth={2.6} aria-hidden />)}</p>
             <p className="text-[13px] mt-1 font-semibold">{o.label}</p>
           </button>
         ))}
@@ -535,7 +538,7 @@ function PacksScreen({
         className="af-btn af-btn-primary mt-6 w-full max-w-md disabled:opacity-40">
         Commencer la partie
       </button>
-      <button onClick={onBack} className="mt-3 min-h-[44px] px-4 text-sm text-white/50">← Modifier les joueurs</button>
+      <button onClick={onBack} className="mt-3 min-h-[44px] px-4 text-sm text-white/50"><GameInlineIcon icon={ArrowLeft} /> Modifier les joueurs</button>
     </div>
   );
 }
@@ -553,7 +556,7 @@ function PickerOverlay({
             className="w-full rounded-2xl border border-white/20 bg-white/[0.05] p-4 flex items-center gap-3 active:bg-white/[0.1] active:scale-[0.98]">
             <MascotAvatar color={colorForIndex(i)} size={36} mood="sad" />
             <span className="flex-1 text-left font-bold">{name}</span>
-            <span className="text-xl">{shields[i] ? "🛡️" : "🎲"}</span>
+            {shields[i] ? <Shield size={22} strokeWidth={2.6} aria-hidden /> : <Dices size={22} strokeWidth={2.6} aria-hidden />}
           </button>
         ))}
       </div>
@@ -562,16 +565,20 @@ function PickerOverlay({
   );
 }
 
+// Faces de la roulette de peine (icônes, plus d'emojis)
+type RouletteFace = "wait" | "shield" | "gage" | "sips";
+const ROULETTE_ICONS: Record<RouletteFace, LucideIcon> = { wait: Ellipsis, shield: Shield, gage: Drama, sips: CupSoda };
+
 function RouletteOverlay({
   sym, playerName, result, onDone,
-}: { sym: string; playerName: string; result: PenaltyResult | null; onDone: () => void }) {
+}: { sym: RouletteFace; playerName: string; result: PenaltyResult | null; onDone: () => void }) {
   return (
     <div className="fixed inset-0 z-[60] flex flex-col items-center justify-center px-6 backdrop-blur-md"
       style={{ background: "rgba(0,0,0,0.85)", paddingTop: SAFE_TOP, paddingBottom: SAFE_BOTTOM }}>
       <p className="af-eyebrow mb-3" style={{ color: ACCENT }}>{playerName} prend la peine</p>
       <div className="flex h-40 w-40 items-center justify-center rounded-[2rem] border bg-black/60 text-[88px]"
-        style={{ borderColor: `${ACCENT}aa`, boxShadow: `0 0 80px ${ACCENT}88` }}>
-        {sym}
+        style={{ borderColor: `${ACCENT}aa`, boxShadow: `0 0 80px ${ACCENT}88`, color: ACCENT }}>
+        {(() => { const I = ROULETTE_ICONS[sym]; return <I size={76} strokeWidth={2.2} aria-hidden />; })()}
       </div>
       {result ? (
         <>
@@ -613,7 +620,7 @@ function LossRecap({
               ? { borderColor: `${ACCENT}88`, background: `${ACCENT}22`, boxShadow: `0 0 18px ${ACCENT}55` }
               : { borderColor: "rgba(255,255,255,0.10)", background: "rgba(0,0,0,0.3)" }}>
             <MascotAvatar color={colorForIndex(i)} size={16} mood={hot ? "sad" : "happy"} />
-            <span className="font-semibold text-[12px]">{name}{shields[i] ? " 🛡️" : ""}</span>
+            <span className="font-semibold text-[12px]">{name}{shields[i] && <> <GameInlineIcon icon={Shield} /></>}</span>
             <span className="text-white/30">·</span>
             <span className="cb-mono text-[12px]" style={{ color: hot ? "#fff" : "rgba(255,255,255,0.7)" }}>{losses[i]}</span>
           </div>

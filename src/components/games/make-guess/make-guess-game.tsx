@@ -6,6 +6,8 @@ import { cn } from "@/lib/utils";
 import { Mascot, MASCOT_COLORS, type MascotColor } from "@/components/Mascot";
 import { registerSoftReplay } from "@/lib/game-replay";
 import { getSavedPlayers, savePlayers } from "@/lib/saved-players";
+import { ArrowRight, Check, Play, RotateCcw, Undo2, X } from "lucide-react";
+import { GameIconBadge, GameIconButton, GameInlineIcon } from "@/components/games/game-icon-button";
 
 // Couleurs de blob par équipe (DA du site).
 const TEAM_BLOB: MascotColor[] = ["yellow", "sky", "coral", "mint", "pink", "lavender"];
@@ -660,7 +662,7 @@ export default function MakeGuessGame({
               <li>• Minimum <b className="text-white">4 joueurs</b> : 2 équipes de 2, sur un seul téléphone.</li>
               <li>• Celui qui fait deviner <b className="text-white">tient le téléphone</b> et décrit le mot sans le dire.</li>
               <li>• Son coéquipier devine — il ne doit <b className="text-white">pas voir l&apos;écran</b>.</li>
-              <li>• ✓ si trouvé, ➜ pour passer, ↶ pour annuler une erreur.</li>
+              <li>• <GameInlineIcon icon={Check} /> si trouvé, <GameInlineIcon icon={ArrowRight} /> pour passer, <GameInlineIcon icon={Undo2} /> pour annuler une erreur.</li>
               <li>• Une manche = chaque joueur fait deviner une fois.</li>
             </ul>
           </div>
@@ -677,8 +679,7 @@ export default function MakeGuessGame({
                     style={{ background: "rgba(0,0,0,0.25)", border: "1px solid rgba(255,255,255,0.1)", fontFamily: "var(--font-display)" }}
                   />
                   {teams.length > 2 && (
-                    <button onClick={() => removeTeam(i)} aria-label="Supprimer"
-                      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-sm" style={{ background: "rgba(255,107,91,0.12)", border: "1px solid rgba(255,107,91,0.3)", color: "#FF8B7A" }}>✕</button>
+                    <GameIconButton icon={X} label="Supprimer l'équipe" onClick={() => removeTeam(i)} />
                   )}
                 </div>
                 <div className="grid grid-cols-2 gap-2.5">
@@ -763,7 +764,7 @@ export default function MakeGuessGame({
           {/* Commencer */}
           <button onClick={startGame} disabled={!canStart} className="mt-6 w-full rounded-2xl py-4 text-base font-bold transition active:scale-[0.99]"
             style={{ background: canStart ? "linear-gradient(180deg,#FFD23F,#C48800)" : "rgba(255,255,255,0.06)", color: canStart ? "#1A0E2E" : "rgba(255,255,255,0.35)", boxShadow: canStart ? "0 14px 30px rgba(255,210,63,0.4)" : "none", fontFamily: "var(--font-display)", cursor: canStart ? "pointer" : "not-allowed" }}>
-            🎬 Commencer la partie
+            <GameInlineIcon icon={Play} /> Commencer la partie
           </button>
           {!canStart && (
             <p className="mt-2 text-center text-xs text-white/50">Remplis tous les noms : au moins 2 équipes de 2 joueurs (4 joueurs).</p>
@@ -865,7 +866,7 @@ export default function MakeGuessGame({
               disabled={turnWords.length === 0}
               className="mt-5 flex min-h-[44px] items-center gap-2 rounded-full border border-white/15 bg-white/5 px-5 text-sm font-semibold text-white/75 transition active:scale-95 active:bg-white/15 disabled:opacity-30"
             >
-              ↶ Annuler le dernier
+              <GameInlineIcon icon={Undo2} /> Annuler le dernier
             </button>
           </div>
 
@@ -876,7 +877,7 @@ export default function MakeGuessGame({
               onClick={handleCorrect}
               className="flex w-1/2 flex-col items-center justify-center border-r border-green-400/10 bg-green-500/5 transition-colors active:bg-green-500/20"
             >
-              <span className="text-4xl">&#10003;</span>
+              <GameIconBadge icon={Check} bg="#3DDC97" size={64} />
               <span className="mt-1 font-sans text-sm uppercase tracking-wider text-green-300/70">
                 Correct
               </span>
@@ -887,7 +888,7 @@ export default function MakeGuessGame({
               onClick={handlePass}
               className="flex w-1/2 flex-col items-center justify-center bg-red-500/5 transition-colors active:bg-red-500/20"
             >
-              <span className="text-4xl">&#10140;</span>
+              <GameIconBadge icon={ArrowRight} bg="#FF6B5B" size={64} />
               <span className="mt-1 font-sans text-sm uppercase tracking-wider text-red-300/70">
                 Passer
               </span>
@@ -1048,7 +1049,7 @@ export default function MakeGuessGame({
           <div className="mt-8 flex w-full max-w-md flex-col gap-2.5">
             <button onClick={replay} className="w-full rounded-2xl py-4 text-base font-bold transition active:scale-[0.99]"
               style={{ background: "linear-gradient(180deg,#FFD23F,#C48800)", color: "#1A0E2E", boxShadow: "0 14px 30px rgba(255,210,63,0.4)", fontFamily: "var(--font-display)" }}>
-              🔄 Revanche (mêmes équipes)
+              <GameInlineIcon icon={RotateCcw} /> Revanche (mêmes équipes)
             </button>
             <div className="flex gap-2.5">
               <button onClick={resetGame} className="flex-1 rounded-2xl py-3 text-sm font-bold text-white/85" style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)" }}>Nouvelle partie</button>

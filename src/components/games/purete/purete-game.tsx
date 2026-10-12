@@ -15,6 +15,8 @@ import { Mascot, MascotAvatar, MASCOT_PALETTE, type MascotColor, type MascotMood
 import { ConfettiBurst } from "@/components/ConfettiBurst";
 import { sfxBarFill, sfxBidPop, sfxHandChime, sfxCardPlay } from "@/lib/card-sfx";
 import { QUESTION_PACKS, GAGES, type PackId } from "@/components/games/purete/questions";
+import { ArrowLeft, BarChart3, CupSoda, EyeOff, Flame, Hand, Heart, Info, PartyPopper, RotateCcw, Sparkles, Target, type LucideIcon } from "lucide-react";
+import { GameIconBadge, GameIconButton, GameInlineIcon } from "@/components/games/game-icon-button";
 
 // ── Constantes visuelles ─────────────────────────────────
 const INK = "#15082E";
@@ -35,10 +37,10 @@ const block = (bg: string, radius = 22, shadow = 5): CSSProperties => ({
   color: INK,
 });
 
-const PACK_INFO: Record<PackId, { emoji: string; label: string; tag: string; color: string }> = {
-  soft: { emoji: "🧸", label: "Soft", tag: "Tout public", color: "#6EC8FF" },
-  soiree: { emoji: "🪩", label: "Soirée", tag: "Fêtes, ex, bêtises", color: YELLOW },
-  coquin: { emoji: "🔞", label: "Coquin", tag: "18+ · suggestif", color: PINK },
+const PACK_INFO: Record<PackId, { icon: LucideIcon; label: string; tag: string; color: string }> = {
+  soft: { icon: Heart, label: "Soft", tag: "Tout public", color: "#6EC8FF" },
+  soiree: { icon: PartyPopper, label: "Soirée", tag: "Fêtes, ex, bêtises", color: YELLOW },
+  coquin: { icon: Flame, label: "Coquin", tag: "18+ · suggestif", color: PINK },
 };
 
 // Barème des titres (du plus pur au moins pur)
@@ -206,27 +208,25 @@ function Toggle({ on, onChange, label, sub, disabled }: { on: boolean; onChange:
   );
 }
 
-// ── Règles (ⓘ) ──
+// ── Règles (bouton i) ──
 function RulesButton() {
   const [open, setOpen] = useState(false);
   return (
     <>
-      <button onClick={() => setOpen(true)} aria-label="Règles du jeu"
-        className="pur-btn fixed z-40 flex h-11 w-11 items-center justify-center text-xl"
-        style={{ ...block(CREAM, 999, 3), top: "calc(env(safe-area-inset-top) + 12px)", right: 14, ...DISPLAY }}>
-        i
-      </button>
+      <div className="fixed z-40" style={{ top: "calc(env(safe-area-inset-top) + 12px)", right: 14 }}>
+        <GameIconButton icon={Info} label="Règles du jeu" bg={CREAM} onClick={() => setOpen(true)} />
+      </div>
       {open && (
         <div className="fixed inset-0 z-50 flex items-end justify-center p-4 sm:items-center" style={{ background: "rgba(10,4,32,0.7)", paddingBottom: "calc(env(safe-area-inset-bottom) + 16px)" }} onClick={() => setOpen(false)}>
           <div className="pur-rise w-full max-w-md p-5" style={block(YELLOW, 26, 6)} onClick={(e) => e.stopPropagation()}>
             <h2 className="text-[32px] leading-none" style={DISPLAY}>Les règles</h2>
             <ul className="mt-3 space-y-2.5 text-[15px] font-medium leading-snug">
-              <li>😇 Une question « As-tu déjà… ? ». Oui = tu perds de la pureté. Jamais = tu restes un ange.</li>
-              <li>🤫 <b>Chacun son tour</b> : on se passe le tél, chacun répond en secret, puis grande révélation du classement.</li>
-              <li>🙌 <b>Tous ensemble</b> : on lit la question à voix haute, ceux qui l&apos;ont déjà fait lèvent la main, on compte sur l&apos;écran.</li>
-              <li>📊 Pureté = % de « jamais ». 100 % : ange tombé du ciel. 0 % : démon certifié.</li>
-              <li>🔞 Le pack Coquin est réservé aux adultes et décoché par défaut. Personne n&apos;est obligé de tout raconter !</li>
-              <li>🎯 Option peines : le moins pur prend un gage, ou 1 à 3 gorgées (eau ou soft, ça compte).</li>
+              <li><GameInlineIcon icon={Sparkles} /> Une question « As-tu déjà… ? ». Oui = tu perds de la pureté. Jamais = tu restes un ange.</li>
+              <li><GameInlineIcon icon={EyeOff} /> <b>Chacun son tour</b> : on se passe le tél, chacun répond en secret, puis grande révélation du classement.</li>
+              <li><GameInlineIcon icon={Hand} /> <b>Tous ensemble</b> : on lit la question à voix haute, ceux qui l&apos;ont déjà fait lèvent la main, on compte sur l&apos;écran.</li>
+              <li><GameInlineIcon icon={BarChart3} /> Pureté = % de « jamais ». 100 % : ange tombé du ciel. 0 % : démon certifié.</li>
+              <li><GameInlineIcon icon={Flame} /> Le pack Coquin est réservé aux adultes et décoché par défaut. Personne n&apos;est obligé de tout raconter !</li>
+              <li><GameInlineIcon icon={CupSoda} /> Option peines : le moins pur prend un gage, ou 1 à 3 gorgées (eau ou soft, ça compte).</li>
             </ul>
             <Btn onClick={() => setOpen(false)} bg={INK} color="#fff" className="mt-4 w-full">Compris</Btn>
           </div>
@@ -407,12 +407,12 @@ export default function PureteGame({ onReturnToLobby }: GameProps) {
           {/* Mode */}
           <div className="grid grid-cols-2 gap-3">
             {([
-              ["secret", "🤫", "Chacun son tour", "En secret, on se passe le tél"],
-              ["groupe", "🙌", "Tous ensemble", "À voix haute, main levée"],
+              ["secret", EyeOff, "Chacun son tour", "En secret, on se passe le tél"],
+              ["groupe", Hand, "Tous ensemble", "À voix haute, main levée"],
             ] as const).map(([m, e, l, s]) => (
               <button key={m} onClick={() => setMode(m)} className="pur-btn flex flex-col items-start gap-1 p-3.5 text-left"
                 style={{ ...block(mode === m ? YELLOW : CREAM, 20, mode === m ? 5 : 3), transform: mode === m ? "rotate(-1.5deg)" : undefined }}>
-                <span className="text-3xl">{e}</span>
+                <GameIconBadge icon={e} />
                 <span className="text-[19px] leading-tight" style={DISPLAY}>{l}</span>
                 <span className="text-[13px] font-medium leading-snug" style={{ color: "#4A3A66" }}>{s}</span>
               </button>
@@ -431,7 +431,7 @@ export default function PureteGame({ onReturnToLobby }: GameProps) {
                     className="pur-btn relative flex flex-col items-center gap-0.5 px-1.5 py-3"
                     style={{ ...block(on ? info.color : "#CFC6E3", 18, on ? 4 : 2), opacity: on ? 1 : 0.75 }}>
                     {on && <span className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full text-[13px] text-white" style={{ background: INK }}>✓</span>}
-                    <span className="text-2xl">{info.emoji}</span>
+                    <GameIconBadge icon={info.icon} size={34} />
                     <span className="text-[17px]" style={DISPLAY}>{info.label}</span>
                     <span className="text-center text-[12px] font-semibold leading-tight">{info.tag}</span>
                   </button>
@@ -531,7 +531,7 @@ export default function PureteGame({ onReturnToLobby }: GameProps) {
 
         <div className="mt-auto flex w-full max-w-md items-center justify-between pt-5 text-[14px] font-bold">
           {q > 0 ? (
-            <button onClick={() => setPhase({ k: "answer", p, q: q - 1 })} className="min-h-11 px-1" style={{ color: INK }}>← Question précédente</button>
+            <button onClick={() => setPhase({ k: "answer", p, q: q - 1 })} className="min-h-11 px-1" style={{ color: INK }}><GameInlineIcon icon={ArrowLeft} /> Question précédente</button>
           ) : <span />}
           <span className="rounded-full px-3 py-1.5" style={{ background: INK, color: "#fff" }}>Score caché 🤫</span>
         </div>
@@ -619,7 +619,7 @@ export default function PureteGame({ onReturnToLobby }: GameProps) {
 
         <div className="mt-auto flex w-full max-w-md items-center gap-3 pt-5">
           {q > 0 && (
-            <Btn onClick={() => setPhase({ k: "group", q: q - 1 })} bg="#fff" className="px-4" ariaLabel="Question précédente">←</Btn>
+            <Btn onClick={() => setPhase({ k: "group", q: q - 1 })} bg="#fff" className="px-4" ariaLabel="Question précédente"><ArrowLeft size={24} strokeWidth={3} aria-hidden /></Btn>
           )}
           <Btn onClick={() => {
             if (last) { sfx(() => sfxHandChime(true)); setPhase({ k: "suspense", i: 0 }); }
@@ -723,7 +723,7 @@ export default function PureteGame({ onReturnToLobby }: GameProps) {
             </div>
           </div>
           <p className="mt-3 rounded-2xl p-3 text-[17px] font-semibold leading-snug" style={{ background: "#fff", border: `3px solid ${INK}` }}>
-            🎯 {gage}
+            <GameInlineIcon icon={Target} /> {gage}
           </p>
           <p className="mt-2 text-[15px] font-bold text-white">
             Ou {gorgees} gorgée{gorgees > 1 ? "s" : ""}, au choix (eau ou soft, ça compte).
@@ -732,7 +732,7 @@ export default function PureteGame({ onReturnToLobby }: GameProps) {
       )}
 
       <div className="mt-8 grid w-full max-w-md gap-3">
-        <Btn onClick={replay} bg={YELLOW} className="text-[22px]" style={{ minHeight: 60 }}>🔁 Rejouer</Btn>
+        <Btn onClick={replay} bg={YELLOW} className="text-[22px]" style={{ minHeight: 60 }}><GameInlineIcon icon={RotateCcw} /> Rejouer</Btn>
         <div className="grid grid-cols-2 gap-3">
           <Btn onClick={changePlayers} bg={CREAM} className="text-[17px]">Changer les joueurs</Btn>
           <Btn onClick={() => (onReturnToLobby ? onReturnToLobby() : setPhase({ k: "setup" }))} bg={INK} color="#fff" className="text-[17px]">Quitter</Btn>

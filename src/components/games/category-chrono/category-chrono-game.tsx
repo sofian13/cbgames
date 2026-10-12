@@ -6,6 +6,8 @@ import { PlayersSetup, colorForIndex } from "@/components/games/local-kit";
 import { Mascot, MascotAvatar } from "@/components/Mascot";
 import { useAudio } from "@/lib/hooks/useAudio";
 import { PACKS, type Category } from "./categories";
+import { ArrowLeft, Check, FolderOpen, Heart, RefreshCw, Skull, X, Zap } from "lucide-react";
+import { GameIconBadge, GameInlineIcon } from "@/components/games/game-icon-button";
 
 // ── Catégorie Chrono ───────────────────────────────────────
 // Une catégorie s'affiche, le tél tourne : chacun doit donner un mot de la
@@ -195,15 +197,15 @@ export default function CategoryChronoGame({ onReturnToLobby }: GameProps) {
   if (phase === "config") {
     return (
       <Shell>
-        <span className="text-5xl">⏱️</span>
+        <Mascot size={78} color="coral" mood="shocked" arms shadow={false} />
         <h1 className="cb-display-lg mt-2 text-center">Catégorie Chrono</h1>
         <div className="mt-4 w-full max-w-sm rounded-2xl p-4 text-left" style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }}>
           <p className="text-[14px] leading-snug text-white/90">
-            🗂️ Une <b>catégorie</b> s&apos;affiche (ex. « Fruits »).
+            <GameInlineIcon icon={FolderOpen} /> Une <b>catégorie</b> s&apos;affiche (ex. « Fruits »).
             <br />
-            🔄 Chacun son tour, dis <b>un mot</b> de la catégorie avant la fin du chrono, puis passe le tél.
+            <GameInlineIcon icon={RefreshCw} /> Chacun son tour, dis <b>un mot</b> de la catégorie avant la fin du chrono, puis passe le tél.
             <br />
-            ⚡ Le chrono <b>raccourcit</b> à chaque mot. Pas de mot, répétition ou hors sujet = <b>une vie en moins</b>.
+            <GameInlineIcon icon={Zap} /> Le chrono <b>raccourcit</b> à chaque mot. Pas de mot, répétition ou hors sujet = <b>une vie en moins</b>.
           </p>
         </div>
 
@@ -250,7 +252,7 @@ export default function CategoryChronoGame({ onReturnToLobby }: GameProps) {
         <div className="mt-2 flex gap-2">
           {[1, 2, 3].map((n) => (
             <Pill key={n} on={startLives === n} onClick={() => setStartLives(n)}>
-              {"❤️".repeat(n)}
+              <LifeHearts n={n} />
             </Pill>
           ))}
         </div>
@@ -264,7 +266,7 @@ export default function CategoryChronoGame({ onReturnToLobby }: GameProps) {
           {pool.length ? `C'est parti ! (${names.length} joueurs)` : "Choisis au moins un thème"}
         </button>
         <button onClick={() => setPhase("setup")} className="mt-1 text-sm" style={{ color: "var(--text-dim)", minHeight: 44 }}>
-          ← Modifier les joueurs
+          <GameInlineIcon icon={ArrowLeft} /> Modifier les joueurs
         </button>
       </Shell>
     );
@@ -329,13 +331,13 @@ export default function CategoryChronoGame({ onReturnToLobby }: GameProps) {
 
         <div className="flex gap-3 px-5">
           <button onClick={valid} className="flex flex-1 flex-col items-center justify-center rounded-3xl" style={{ minHeight: 96, background: "rgba(61,220,151,0.16)", border: "2px solid rgba(61,220,151,0.5)" }}>
-            <span className="text-3xl">✓</span>
+            <GameIconBadge icon={Check} bg="#3DDC97" size={48} />
             <span className="text-[15px] font-black" style={{ color: "#3DDC97" }}>
               Validé
             </span>
           </button>
           <button onClick={lose} className="flex flex-1 flex-col items-center justify-center rounded-3xl" style={{ minHeight: 96, background: "rgba(255,91,91,0.14)", border: "2px solid rgba(255,91,91,0.45)" }}>
-            <span className="text-3xl">✗</span>
+            <GameIconBadge icon={X} bg="#FF6B6B" size={48} />
             <span className="text-[15px] font-black" style={{ color: "#FF8A8A" }}>
               Raté
             </span>
@@ -383,10 +385,10 @@ export default function CategoryChronoGame({ onReturnToLobby }: GameProps) {
             className="flex items-center gap-3 rounded-2xl px-3"
             style={{ minHeight: 48, background: k === 0 ? "rgba(255,210,63,0.12)" : "rgba(255,255,255,0.05)", border: `1px solid ${k === 0 ? "rgba(255,210,63,0.45)" : "rgba(255,255,255,0.1)"}` }}
           >
-            <span className="w-6 text-center text-sm font-black">{k === 0 ? "🥇" : p.lives > 0 ? k + 1 : "💀"}</span>
+            <span className="w-6 text-center text-sm font-black">{k === 0 ? "🥇" : p.lives > 0 ? k + 1 : <Skull size={16} strokeWidth={2.6} className="mx-auto" aria-hidden />}</span>
             <MascotAvatar color={colorForIndex(p.i)} size={28} mood={k === 0 ? "cool" : "sad"} />
             <span className="min-w-0 flex-1 truncate text-[15px] font-bold">{p.name}</span>
-            <span className="text-sm">{p.lives > 0 ? "❤️".repeat(p.lives) : ""}</span>
+            <span className="text-sm">{p.lives > 0 && <LifeHearts n={p.lives} />}</span>
           </div>
         ))}
       </div>
@@ -445,9 +447,20 @@ function Lives({ players, cur }: { players: P[]; cur: number }) {
             border: `1px solid ${i === cur ? ACCENT : "rgba(255,255,255,0.12)"}`,
           }}
         >
-          {p.name} {p.lives > 0 ? "❤️".repeat(p.lives) : "💀"}
+          {p.name} {p.lives > 0 ? <LifeHearts n={p.lives} size={13} /> : <GameInlineIcon icon={Skull} />}
         </span>
       ))}
     </div>
+  );
+}
+
+/** Vies restantes : petits cœurs pleins (icônes, pas d'emoji). */
+function LifeHearts({ n, size = 16 }: { n: number; size?: number }) {
+  return (
+    <span className="inline-flex items-center gap-0.5 align-middle" aria-label={`${n} vie${n > 1 ? "s" : ""}`}>
+      {Array.from({ length: n }, (_, k) => (
+        <Heart key={k} size={size} strokeWidth={2.4} fill="#FF4D6D" color="#FF4D6D" aria-hidden />
+      ))}
+    </span>
   );
 }

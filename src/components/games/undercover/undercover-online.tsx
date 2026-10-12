@@ -5,6 +5,8 @@ import { useGame } from "@/lib/party/use-game";
 import { useGameStore } from "@/lib/stores/game-store";
 import { Mascot, MASCOT_COLORS, type MascotColor, type MascotMood } from "@/components/Mascot";
 import type { GameProps } from "@/lib/games/types";
+import { BookOpen, ChevronDown, ChevronUp, Eye, Lock, Mic, Scale, Shuffle } from "lucide-react";
+import { GameInlineIcon } from "@/components/games/game-icon-button";
 
 /* ─────────────────────────────────────────────────────────────
    L'INTRUS ONLINE — multi-appareils (PartyKit)
@@ -204,7 +206,7 @@ function Btn({
         ...style,
       }}
     >
-      {icon && <span>{icon}</span>}
+      {icon && <span style={{ display: "flex" }}>{icon}</span>}
       <span style={{ display: "flex", flexDirection: "column", alignItems: sub ? "flex-start" : "center" }}>
         <span>{children}</span>
         {sub && <span style={{ fontSize: 11, fontWeight: 600, opacity: 0.78, letterSpacing: 0.3, marginTop: 2 }}>{sub}</span>}
@@ -500,7 +502,7 @@ function WaitingPhase({ state, sendAction, myId }: { state: UCState; sendAction:
 
       <div style={{ marginTop: "auto", paddingTop: 14 }}>
         {isHost ? (
-          <Btn tone="gold" disabled={total < 3} onClick={() => sendAction({ action: "start-game" })} icon={<span style={{ fontSize: 18 }}>🕶️</span>}>
+          <Btn tone="gold" disabled={total < 3} onClick={() => sendAction({ action: "start-game" })} icon={<Shuffle size={20} strokeWidth={2.6} aria-hidden />}>
             {total < 3 ? `Attente · ${total}/3 joueurs` : "Distribuer les rôles"}
           </Btn>
         ) : (
@@ -546,7 +548,7 @@ function RevealPhase({ state, sendAction, myId }: { state: UCState; sendAction: 
         border: "1px solid rgba(255,62,165,0.3)",
         display: "flex", gap: 10, alignItems: "center", marginBottom: 14,
       }}>
-        <span style={{ fontSize: 16 }}>🔒</span>
+        <Lock size={18} strokeWidth={2.6} aria-hidden />
         <div style={{ fontSize: 12, color: "white", fontWeight: 600 }}>Personne d&apos;autre ne doit voir l&apos;écran.</div>
       </div>
       <div style={{ marginTop: "auto" }}>
@@ -697,7 +699,7 @@ function CluePhase({ state, sendAction, myId }: { state: UCState; sendAction: (a
                   color: isCurrent ? "#FFD23F" : isDead ? "#FF3EA5" : "rgba(255,255,255,0.55)",
                   fontWeight: isCurrent ? 700 : 500,
                 }}>
-                  {isCurrent && (isMe ? "🎤 à toi · donne un indice" : "🎤 en train de parler")}
+                  {isCurrent && <><GameInlineIcon icon={Mic} /> {isMe ? "à toi · donne un indice" : "en train de parler"}</>}
                   {isSpoken && p.clue && `« ${p.clue} »`}
                   {isDead && `éliminé · manche ${p.eliminatedRound ?? "?"}`}
                   {!isCurrent && !isSpoken && !isDead && "en attente"}
@@ -735,12 +737,12 @@ function CluePhase({ state, sendAction, myId }: { state: UCState; sendAction: (a
 
       <div style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: 10 }}>
         {!dead && (
-          <Btn tone="ghost" icon={<span style={{ fontSize: 16 }}>👁</span>} onClick={() => setShowWord(true)}>
+          <Btn tone="ghost" icon={<Eye size={19} strokeWidth={2.6} aria-hidden />} onClick={() => setShowWord(true)}>
             Revoir mon mot
           </Btn>
         )}
         {isHost && orderedAlive.every((p) => p.hasClue || p.id === state.currentSpeakerId) && (
-          <Btn tone="danger" icon={<span style={{ fontSize: 16 }}>⚖</span>} onClick={() => sendAction({ action: "force-vote" })}>
+          <Btn tone="danger" icon={<Scale size={19} strokeWidth={2.6} aria-hidden />} onClick={() => sendAction({ action: "force-vote" })}>
             Passer au vote
           </Btn>
         )}
@@ -969,7 +971,7 @@ function MrWhitePhase({ state, sendAction, myId }: { state: UCState; sendAction:
         </div>
         <div style={{ marginTop: 16, fontSize: 13, color: "rgba(255,255,255,0.85)", lineHeight: 1.5 }}>
           {isMe
-            ? "🎯 Une dernière chance. Tape le mot des civils pour gagner seul."
+            ? "Une dernière chance. Tape le mot des civils pour gagner seul."
             : "Le Fantôme a une seule chance. S'il tape le mot exact des civils, il vole la victoire."}
         </div>
       </div>
@@ -1101,8 +1103,8 @@ function RulesCard() {
         width: "100%", minHeight: 44, display: "flex", justifyContent: "space-between", alignItems: "center",
         background: "transparent", border: "none", color: "white", padding: 0, cursor: "pointer", fontFamily: "inherit",
       }}>
-        <span style={{ fontSize: 15, fontWeight: 800 }}>📖 Les règles</span>
-        <span style={{ fontSize: 13, color: "rgba(255,255,255,0.6)" }}>{open ? "Masquer ▲" : "Afficher ▼"}</span>
+        <span style={{ fontSize: 15, fontWeight: 800 }}><GameInlineIcon icon={BookOpen} /> Les règles</span>
+        <span style={{ fontSize: 13, color: "rgba(255,255,255,0.6)" }}>{open ? "Masquer" : "Afficher"} <GameInlineIcon icon={open ? ChevronUp : ChevronDown} /></span>
       </button>
       {open && <RulesList />}
     </FileCard>

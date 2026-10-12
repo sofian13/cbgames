@@ -5,6 +5,8 @@ import { PlayersSetup, PassScreen, colorForIndex } from "@/components/games/loca
 import { Mascot, MascotAvatar } from "@/components/Mascot";
 import { ConfettiBurst } from "@/components/ConfettiBurst";
 import { useAudio } from "@/lib/hooks/useAudio";
+import { ArrowLeft, Ban, CircleHelp, CupSoda, Dices, PenLine, Target, Tv, Zap } from "lucide-react";
+import { GameIconBadge, GameInlineIcon } from "@/components/games/game-icon-button";
 import { fxBad, fxDrum, fxGood, fxOver, fxPerfect, fxTap, fxTick, fxUnlock, vibrate } from "./pp-fx";
 
 // ── Pile Poil · mode Tournoi (tout sur un seul téléphone) ─────────────────
@@ -350,13 +352,13 @@ export function Tournament({ net, onExit }: { net?: TournamentNet; onExit?: () =
   if (phase === "await-remote") {
     return (
       <Screen accent={ACCENT}>
-        <span className="text-6xl">📺</span>
+        <GameIconBadge icon={Tv} bg={ACCENT} size={72} />
         <h2 className="cb-display-lg mt-3 text-center">L&apos;écran choisit…</h2>
         <p className="mt-2 max-w-xs text-center text-sm" style={{ color: "var(--text-dim)" }}>
           Saisis la cible sur le tél « Écran ». Dès qu&apos;elle est validée, la manche continue ici.
         </p>
         <button onClick={() => setPhase("intro")} className="af-btn af-btn-ghost mt-8 w-full max-w-xs" style={{ minHeight: 48 }}>
-          ← Choisir ici
+          <GameInlineIcon icon={ArrowLeft} /> Choisir ici
         </button>
       </Screen>
     );
@@ -373,7 +375,7 @@ export function Tournament({ net, onExit }: { net?: TournamentNet; onExit?: () =
         accent={ACCENT}
         hint={
           mystery
-            ? "❓ Cible mystère : arrête-toi quand tu le sens !"
+            ? "Cible mystère : arrête-toi quand tu le sens !"
             : `Cible : ${targetText}${round.challenge ? ` · ${round.challenge.emoji} ${round.challenge.title}` : ""}`
         }
         buttonLabel="C'est moi — prêt"
@@ -539,7 +541,7 @@ function ConfigScreen(p: {
         paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 24px)",
       }}
     >
-      <span className="text-5xl">⏱️</span>
+      <Mascot size={78} color="yellow" mood="thinking" arms shadow={false} />
       <h1 className="cb-display-lg mt-2 text-center">Pile Poil</h1>
 
       {/* Règle en 3 lignes : un nouveau joueur comprend en 10 s */}
@@ -552,7 +554,7 @@ function ConfigScreen(p: {
           3. STOP quand tu y es. Le plus proche gagne la manche, <b>le plus loin prend une peine</b> (1 gorgée ou un gage).
         </p>
         <p className="mt-2 text-[13px] font-bold" style={{ color: GOLD }}>
-          🎯 À 0,10 s près : PILE POIL ! +1 point bonus.
+          <GameInlineIcon icon={Target} /> À 0,10 s près : PILE POIL ! +1 point bonus.
         </p>
       </div>
 
@@ -569,13 +571,13 @@ function ConfigScreen(p: {
       <div className="mt-2 flex w-full max-w-sm gap-2">
         {(
           [
-            { key: "closest", label: "🎯 Au plus proche", desc: "Avant ou après, peu importe" },
-            { key: "no-over", label: "🚫 Sans dépasser", desc: "Dépasser = dernier de la manche" },
+            { key: "closest", icon: Target, label: "Au plus proche", desc: "Avant ou après, peu importe" },
+            { key: "no-over", icon: Ban, label: "Sans dépasser", desc: "Dépasser = dernier de la manche" },
           ] as const
         ).map((m) => (
           <Chip key={m.key} wide on={p.mode === m.key} onClick={() => p.setMode(m.key)}>
             <span className="block py-2">
-              <span className="block text-sm font-black">{m.label}</span>
+              <span className="block text-sm font-black"><GameInlineIcon icon={m.icon} /> {m.label}</span>
               <span className="mt-0.5 block text-[12px]" style={{ color: "var(--text-dim)" }}>
                 {m.desc}
               </span>
@@ -588,7 +590,7 @@ function ConfigScreen(p: {
       <div className="mt-2 flex w-full max-w-sm gap-2">
         <Chip wide on={p.autoTargets} onClick={() => p.setAutoTargets(true)}>
           <span className="block py-2">
-            <span className="block text-sm font-black">🎲 Surprise</span>
+            <span className="block text-sm font-black"><GameInlineIcon icon={Dices} /> Surprise</span>
             <span className="mt-0.5 block text-[12px]" style={{ color: "var(--text-dim)" }}>
               De plus en plus dures
             </span>
@@ -596,7 +598,7 @@ function ConfigScreen(p: {
         </Chip>
         <Chip wide on={!p.autoTargets} onClick={() => p.setAutoTargets(false)}>
           <span className="block py-2">
-            <span className="block text-sm font-black">✍️ On choisit</span>
+            <span className="block text-sm font-black"><GameInlineIcon icon={PenLine} /> On choisit</span>
             <span className="mt-0.5 block text-[12px]" style={{ color: "var(--text-dim)" }}>
               À chaque manche
             </span>
@@ -612,7 +614,7 @@ function ConfigScreen(p: {
         aria-checked={p.specials}
       >
         <span>
-          <span className="block text-sm font-black">⚡ Défis spéciaux</span>
+          <span className="block text-sm font-black"><GameInlineIcon icon={Zap} /> Défis spéciaux</span>
           <span className="block text-[12px]" style={{ color: "var(--text-dim)" }}>
             Yeux fermés, en chantant, cible mystère…
           </span>
@@ -629,7 +631,7 @@ function ConfigScreen(p: {
         C&apos;est parti ! ({p.players.length} joueurs)
       </button>
       <button onClick={p.onBack} className="mt-2 text-sm" style={{ color: "var(--text-dim)", minHeight: 44 }}>
-        ← Modifier les joueurs
+        <GameInlineIcon icon={ArrowLeft} /> Modifier les joueurs
       </button>
     </div>
   );
@@ -721,7 +723,7 @@ function RoundIntro({
           style={{ background: "rgba(255,210,63,0.1)", border: "2px solid rgba(255,210,63,0.55)", animation: "pp-rise .5s .15s ease-out both" }}
         >
           <p className="af-eyebrow" style={{ color: GOLD }}>
-            ⚡ Défi spécial
+            <GameInlineIcon icon={Zap} /> Défi spécial
           </p>
           <p className="mt-1 text-4xl">{round.challenge.emoji}</p>
           <p className="cb-display-md mt-1">{round.challenge.title}</p>
@@ -731,7 +733,7 @@ function RoundIntro({
         </div>
       ) : (
         <p className="mt-5 text-sm" style={{ color: "var(--text-dim)" }}>
-          {mode === "no-over" ? "🚫 Sans dépasser" : "🎯 Au plus proche"}
+          {mode === "no-over" ? <><GameInlineIcon icon={Ban} /> Sans dépasser</> : <><GameInlineIcon icon={Target} /> Au plus proche</>}
         </p>
       )}
 
@@ -743,7 +745,7 @@ function RoundIntro({
       </button>
       {onRemote && (
         <button onClick={onRemote} className="af-btn af-btn-ghost mt-2 w-full max-w-xs" style={{ fontSize: 14, minHeight: 48 }}>
-          📺 C&apos;est l&apos;écran qui choisit la cible
+          <GameInlineIcon icon={Tv} /> C&apos;est l&apos;écran qui choisit la cible
         </button>
       )}
     </Screen>
@@ -902,8 +904,8 @@ function Reveal({
             style={{ width: `${Math.min(100, (shown / scale) * 100)}%`, background: overFlash ? RED : ACCENT }}
           />
           <div className="absolute -top-1.5 bottom-[-6px] w-[3px] rounded" style={{ left: `${(targetMs / scale) * 100}%`, background: GOLD }} />
-          <span className="absolute top-4 -translate-x-1/2 text-[12px] font-bold" style={{ left: `${(targetMs / scale) * 100}%`, color: GOLD }}>
-            🎯
+          <span className="absolute top-4 -translate-x-1/2" style={{ left: `${(targetMs / scale) * 100}%`, color: GOLD }}>
+            <Target size={14} strokeWidth={3} aria-hidden />
           </span>
         </div>
       )}
@@ -997,7 +999,7 @@ function Board({
     return (
       <Screen accent={GOLD}>
         <style>{KEYFRAMES}</style>
-        <p className="af-eyebrow">❓ Cible mystère</p>
+        <p className="af-eyebrow"><GameInlineIcon icon={CircleHelp} /> Cible mystère</p>
         <p className="mt-2 text-sm" style={{ color: "var(--text-dim)" }}>
           La cible était…
         </p>
@@ -1041,7 +1043,7 @@ function Board({
               }}
             >
               <span className="w-6 text-center text-base font-black" style={{ color: isWin ? GOLD : "rgba(255,255,255,0.6)" }}>
-                {isWin ? "👑" : isLose ? "🥤" : `${i + 1}`}
+                {isWin ? "👑" : isLose ? <CupSoda size={16} strokeWidth={2.6} className="mx-auto" aria-hidden /> : `${i + 1}`}
               </span>
               <MascotAvatar color={colorForIndex(a.pi)} size={32} mood={isWin ? "cool" : isLose ? "dead" : "happy"} />
               <span className="min-w-0 flex-1">
@@ -1087,7 +1089,7 @@ function Board({
             className="mt-2 text-[13px] font-bold"
             style={{ color: "rgba(255,255,255,0.75)", minHeight: 44 }}
           >
-            🎲 Autre gage
+            <GameInlineIcon icon={Dices} /> Autre gage
           </button>
         </div>
       )}

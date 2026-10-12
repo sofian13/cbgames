@@ -5,6 +5,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import "./app.css";
 import { App } from "./App";
+import { ErrorBoundary } from "./ui/ErrorBoundary";
 import { initPremium } from "./premium";
 
 // navigator.vibrate n'existe pas dans la webview iOS : on le branche sur Haptics
@@ -26,6 +27,8 @@ initPremium();
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <App />
+    <ErrorBoundary onBack={() => location.reload()} backLabel="Relancer Zinzin">
+      <App />
+    </ErrorBoundary>
   </StrictMode>,
 );

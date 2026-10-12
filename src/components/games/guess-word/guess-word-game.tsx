@@ -3,7 +3,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { GameProps } from "@/lib/games/types";
 import { PlayersSetup, PassScreen, colorForIndex } from "@/components/games/local-kit";
-import { MascotAvatar } from "@/components/Mascot";
+import { Mascot, MascotAvatar } from "@/components/Mascot";
+import { ArrowLeft, ArrowRight, Check, Smartphone, Speech, X } from "lucide-react";
+import { GameIconBadge, GameInlineIcon } from "@/components/games/game-icon-button";
 import { useAudio } from "@/lib/hooks/useAudio";
 import { PACKS } from "./words";
 
@@ -201,15 +203,15 @@ export default function GuessWordGame({ onReturnToLobby }: GameProps) {
     const canStart = pool.length > 0;
     return (
       <Shell>
-        <span className="text-5xl">🤔</span>
+        <Mascot size={78} color="lavender" mood="thinking" arms shadow={false} />
         <h1 className="cb-display-lg mt-2 text-center">Deviner le Mot</h1>
         <div className="mt-4 w-full max-w-sm rounded-2xl p-4 text-left" style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }}>
           <p className="text-[14px] leading-snug text-white/90">
-            📱 Mets le tél <b>sur ton front</b>, écran vers les autres.
+            <GameInlineIcon icon={Smartphone} /> Mets le tél <b>sur ton front</b>, écran vers les autres.
             <br />
-            🗣️ Ils te font deviner le mot <b>sans le dire</b> (mime, indices, bruitages).
+            <GameInlineIcon icon={Speech} /> Ils te font deviner le mot <b>sans le dire</b> (mime, indices, bruitages).
             <br />
-            👈 Tape <b>à gauche</b> si tu trouves, 👉 <b>à droite</b> pour passer.
+            <GameInlineIcon icon={ArrowLeft} /> Tape <b>à gauche</b> si tu trouves, <b>à droite</b> pour passer <GameInlineIcon icon={ArrowRight} />
           </p>
         </div>
 
@@ -276,7 +278,7 @@ export default function GuessWordGame({ onReturnToLobby }: GameProps) {
           {canStart ? "C'est parti !" : "Choisis au moins un thème"}
         </button>
         <button onClick={() => setPhase("setup")} className="mt-1 text-sm" style={{ color: "var(--text-dim)", minHeight: 44 }}>
-          ← Modifier les joueurs
+          <GameInlineIcon icon={ArrowLeft} /> Modifier les joueurs
         </button>
       </Shell>
     );
@@ -299,7 +301,7 @@ export default function GuessWordGame({ onReturnToLobby }: GameProps) {
     return (
       <div className="flex min-h-[100svh] flex-col items-center justify-center px-6 text-center text-white" style={{ background: BG }}>
         <style>{KEYFRAMES}</style>
-        <p className="text-lg font-bold text-white/80">📱 Tél sur le front !</p>
+        <p className="text-lg font-bold text-white/80"><GameInlineIcon icon={Smartphone} /> Tél sur le front !</p>
         <p key={count} className="mt-4 font-black" style={{ fontFamily: "var(--font-display)", fontSize: 160, lineHeight: 1, color: ACCENT, animation: "gw-pop .5s ease-out" }}>
           {count > 0 ? count : "GO"}
         </p>
@@ -335,13 +337,13 @@ export default function GuessWordGame({ onReturnToLobby }: GameProps) {
         {/* Deux grandes moitiés tactiles : à l'aveugle, le front collé au tél */}
         <div className="absolute inset-0 flex">
           <button onClick={() => answer(true)} className="flex flex-1 flex-col items-center justify-end pb-10" style={{ background: "rgba(61,220,151,0.10)", borderRight: "1px solid rgba(255,255,255,0.08)", paddingBottom: BOTTOM_SAFE }} aria-label="Trouvé">
-            <span className="text-4xl">✓</span>
+            <GameIconBadge icon={Check} bg="#3DDC97" size={60} />
             <span className="mt-1 text-[15px] font-black" style={{ color: "#3DDC97" }}>
               Trouvé
             </span>
           </button>
           <button onClick={() => answer(false)} className="flex flex-1 flex-col items-center justify-end pb-10" style={{ background: "rgba(255,91,91,0.10)", paddingBottom: BOTTOM_SAFE }} aria-label="Passer">
-            <span className="text-4xl">✗</span>
+            <GameIconBadge icon={X} bg="#FF6B6B" size={60} />
             <span className="mt-1 text-[15px] font-black" style={{ color: "#FF8A8A" }}>
               Passer
             </span>

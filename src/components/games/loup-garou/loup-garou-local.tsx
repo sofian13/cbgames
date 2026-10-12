@@ -18,6 +18,8 @@ import {
 } from "./lg-local-data";
 import { Ambience, speak, speechAvailable, stopSpeech } from "./lg-local-audio";
 import { NightRunner, type NightResult } from "./lg-local-night";
+import { Check, Minus, Crosshair, EyeOff, Fingerprint, Hand, Info, Moon, Music, Pause, Play, Plus, RotateCcw, Scale, ScrollText, Shuffle, SkipForward, Sparkles, Speech, Volume2, VolumeX, Vote, ArrowLeft } from "lucide-react";
+import { GameIconBadge, GameIconButton, GameInlineIcon, GameTopRight } from "@/components/games/game-icon-button";
 import { BigButton, Confirm, Modal, PickList, PlayerRow, RoleCard, RulesContent, Screen, SkyBadge, type Tone } from "./lg-local-ui";
 
 // ── Réglages persistants ──────────────────────────────────
@@ -264,10 +266,10 @@ export default function LoupGarouLocal({ onReturnToLobby }: GameProps) {
             Posez le téléphone au centre
           </h1>
           <p className="mx-auto mt-4 max-w-xs text-[17px]" style={{ color: "rgba(255,255,255,0.65)" }}>
-            Écran vers le haut, son allumé {settings.voice && speechAvailable() ? "🔊 : il va tout raconter." : "— quelqu'un lira les textes à voix haute."}
+            Écran vers le haut, son allumé {settings.voice && speechAvailable() ? ": il va tout raconter." : "— quelqu'un lira les textes à voix haute."}
           </p>
           <div className="mt-10">
-            <BigButton onClick={first ? goNight : nextNight}>🌙 Que la nuit tombe</BigButton>
+            <BigButton onClick={first ? goNight : nextNight}><GameInlineIcon icon={Moon} /> Que la nuit tombe</BigButton>
           </div>
         </div>
       </Screen>
@@ -380,7 +382,7 @@ export default function LoupGarouLocal({ onReturnToLobby }: GameProps) {
             <BigButton onClick={() => setPhase(settings.voteMode === "secret"
               ? secretStart(game, phase.tied)
               : { k: "vote", candidates: phase.tied })}>
-              🔁 Revoter{phase.tied ? " entre les ex æquo" : ""}
+              <GameInlineIcon icon={RotateCcw} /> Revoter{phase.tied ? " entre les ex æquo" : ""}
             </BigButton>
             <BigButton variant="ghost" onClick={() => kill(game, [], "vote", "night", "🤝 Égalité : personne n'est éliminé.")}>
               Personne n&apos;est éliminé
@@ -410,14 +412,13 @@ export default function LoupGarouLocal({ onReturnToLobby }: GameProps) {
       {content}
 
       {/* Contrôles en haut à droite (le coin haut-gauche est réservé à l'app) */}
-      <div
-        className="fixed right-3 z-50 flex gap-2"
-        style={{ top: "calc(env(safe-area-inset-top) + 10px)", opacity: nightNow ? 0.55 : 1 }}
-      >
-        <ToolButton label="Règles" onClick={() => setModal("rules")}>ⓘ</ToolButton>
-        {game && <ToolButton label="Historique" onClick={() => setModal("history")}>📜</ToolButton>}
-        <ToolButton label="Son" onClick={() => setModal("sound")}>{settings.voice || settings.music ? "🔊" : "🔇"}</ToolButton>
-      </div>
+      <GameTopRight className="z-50" >
+        <div className="flex gap-2.5" style={{ opacity: nightNow ? 0.55 : 1 }}>
+          <GameIconButton icon={Info} label="Règles" onClick={() => setModal("rules")} />
+          {game && <GameIconButton icon={ScrollText} label="Historique" onClick={() => setModal("history")} />}
+          <GameIconButton icon={settings.voice || settings.music ? Volume2 : VolumeX} label="Son" onClick={() => setModal("sound")} />
+        </div>
+      </GameTopRight>
 
       {modal === "rules" && (
         <Modal title="Règles du jeu" onClose={() => setModal(null)}><RulesContent /></Modal>
@@ -445,21 +446,8 @@ function secretStart(game: GameState, candidates: number[] | null): Phase {
   };
 }
 
-function ToolButton({ label, onClick, children }: { label: string; onClick: () => void; children: React.ReactNode }) {
-  return (
-    <button
-      onClick={onClick}
-      aria-label={label}
-      className="flex h-11 w-11 items-center justify-center rounded-full border text-[19px] text-white"
-      style={{ background: "rgba(10,6,30,0.6)", borderColor: "rgba(255,255,255,0.14)", backdropFilter: "blur(8px)" }}
-    >
-      {children}
-    </button>
-  );
-}
-
 // ── Setup des rôles ───────────────────────────────────────
-function Toggle({ on, onClick, label, sub }: { on: boolean; onClick: () => void; label: string; sub?: string }) {
+function Toggle({ on, onClick, label, sub }: { on: boolean; onClick: () => void; label: React.ReactNode; sub?: string }) {
   return (
     <button onClick={onClick} className="flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-left" style={{ background: "rgba(255,255,255,0.05)", minHeight: 52 }}>
       <span className="flex-1">
@@ -473,7 +461,7 @@ function Toggle({ on, onClick, label, sub }: { on: boolean; onClick: () => void;
   );
 }
 
-function Chips<T extends string | number>({ value, options, onPick }: { value: T; options: { v: T; label: string }[]; onPick: (v: T) => void }) {
+function Chips<T extends string | number>({ value, options, onPick }: { value: T; options: { v: T; label: React.ReactNode }[]; onPick: (v: T) => void }) {
   return (
     <div className="flex flex-wrap gap-2">
       {options.map((o) => (
@@ -501,13 +489,13 @@ function SoundOptions({ settings, setSettings, onToggle }: { settings: Settings;
       <Toggle
         on={settings.voice && canSpeak}
         onClick={() => { onToggle(); if (canSpeak) setSettings({ ...settings, voice: !settings.voice }); }}
-        label="🗣️ Narration vocale"
+        label={<><GameInlineIcon icon={Speech} /> Narration vocale</>}
         sub={canSpeak ? "Le téléphone lit la nuit à voix haute" : "Indisponible sur cet appareil : lisez les textes à voix haute"}
       />
       <Toggle
         on={settings.music}
         onClick={() => { onToggle(); setSettings({ ...settings, music: !settings.music }); }}
-        label="🎵 Ambiance sonore"
+        label={<><GameInlineIcon icon={Music} /> Ambiance sonore</>}
         sub="Nappes discrètes, grillons la nuit"
       />
     </div>
@@ -536,10 +524,10 @@ function RolesSetup({
         {/* Loups : compteur */}
         <div className="flex items-center gap-3 rounded-2xl px-3 py-2" style={{ background: "rgba(255,77,94,0.1)", minHeight: 60 }}>
           <MascotAvatar color="coral" mood="angry" size={40} border={false} />
-          <span className="flex-1 text-[17px] font-bold">🐺 Loups-garous</span>
-          <button aria-label="Moins de loups" onClick={() => setComp({ ...comp, loup: Math.max(1, comp.loup - 1) })} className="h-11 w-11 rounded-full text-2xl" style={{ background: "rgba(255,255,255,0.08)" }}>−</button>
+          <span className="flex-1 text-[17px] font-bold">Loups-garous</span>
+          <GameIconButton icon={Minus} label="Moins de loups" onClick={() => setComp({ ...comp, loup: Math.max(1, comp.loup - 1) })} />
           <span className="w-7 text-center text-2xl font-black">{comp.loup}</span>
-          <button aria-label="Plus de loups" onClick={() => setComp({ ...comp, loup: Math.min(maxWolves, comp.loup + 1) })} className="h-11 w-11 rounded-full text-2xl" style={{ background: "rgba(255,255,255,0.08)" }}>+</button>
+          <GameIconButton icon={Plus} label="Plus de loups" bg="#FF4D5E" onClick={() => setComp({ ...comp, loup: Math.min(maxWolves, comp.loup + 1) })} />
         </div>
 
         {SPECIALS.map((id) => {
@@ -554,24 +542,24 @@ function RolesSetup({
             >
               <MascotAvatar color={r.color} mood={r.mood} size={40} border={false} />
               <span className="flex-1">
-                <span className="block text-[17px] font-bold">{r.emoji} {r.name}</span>
+                <span className="block text-[17px] font-bold">{r.name}</span>
                 <span className="block text-[13px] leading-tight" style={{ color: "var(--text-dim)" }}>{r.power}</span>
               </span>
-              <span className="text-xl">{on ? "✅" : "➕"}</span>
+              <GameIconBadge icon={on ? Check : Plus} bg={on ? "#3DDC97" : "#FFFFFF"} size={34} />
             </button>
           );
         })}
 
         <div className="flex items-center gap-3 rounded-2xl px-3 py-2" style={{ background: "rgba(61,220,151,0.08)", minHeight: 56 }}>
           <MascotAvatar color="mint" mood="happy" size={40} border={false} />
-          <span className="flex-1 text-[17px] font-bold">🧑‍🌾 Villageois</span>
+          <span className="flex-1 text-[17px] font-bold">Villageois</span>
           <span className="w-10 text-center text-2xl font-black">{Math.max(0, villagers)}</span>
         </div>
       </div>
 
       {!isRec && (
         <button onClick={() => setComp(rec)} className="mt-3 self-center rounded-full border px-4 text-[15px] font-semibold" style={{ minHeight: 44, borderColor: "rgba(255,210,63,0.5)", color: "#FFD23F" }}>
-          ✨ Répartition recommandée
+          <GameInlineIcon icon={Sparkles} /> Répartition recommandée
         </button>
       )}
 
@@ -581,15 +569,15 @@ function RolesSetup({
 
       <p className="af-eyebrow mt-5 mb-2" style={{ color: "var(--text-dim)" }}>Vote</p>
       <Chips value={settings.voteMode} onPick={(v) => setSettings({ ...settings, voteMode: v })}
-        options={[{ v: "hands", label: "✋ À main levée (rapide)" }, { v: "secret", label: "🤫 Secret" }]} />
+        options={[{ v: "hands", label: <><GameInlineIcon icon={Hand} /> À main levée (rapide)</> }, { v: "secret", label: <><GameInlineIcon icon={EyeOff} /> Secret</> }]} />
 
       <p className="af-eyebrow mt-5 mb-2" style={{ color: "var(--text-dim)" }}>Son</p>
       <SoundOptions settings={settings} setSettings={setSettings} onToggle={() => {}} />
 
       <div className="mt-6 grid gap-2">
         {problem && <p className="text-center text-[15px] font-semibold" style={{ color: "#FF8A95" }}>{problem}</p>}
-        <BigButton onClick={onStart} disabled={!!problem}>🃏 Distribuer les rôles</BigButton>
-        <button onClick={onBack} className="text-[15px]" style={{ minHeight: 44, color: "var(--text-muted)" }}>← Modifier les joueurs</button>
+        <BigButton onClick={onStart} disabled={!!problem}><GameInlineIcon icon={Shuffle} /> Distribuer les rôles</BigButton>
+        <button onClick={onBack} className="text-[15px]" style={{ minHeight: 44, color: "var(--text-muted)" }}><GameInlineIcon icon={ArrowLeft} /> Modifier les joueurs</button>
       </div>
     </Screen>
   );
@@ -638,7 +626,7 @@ function HoldReveal({ player, last, onDone }: { player: Player; last: boolean; o
               background: "repeating-linear-gradient(45deg, rgba(122,78,232,0.18) 0 14px, rgba(122,78,232,0.08) 14px 28px), #140C34",
             }}
           >
-            <span style={{ fontSize: 64 }}>🌕</span>
+            <Fingerprint size={64} strokeWidth={2} color="#FFE891" aria-hidden />
             <p className="mt-4 px-6" style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 24, lineHeight: 1.15 }}>
               Maintiens le doigt ici pour voir ton rôle
             </p>
@@ -748,7 +736,7 @@ function HunterScreen({ game, hunterId, say, onShoot }: { game: GameState; hunte
   return (
     <Screen tone="day">
       <div className="text-center">
-        <span style={{ fontSize: 54 }}>🎯</span>
+        <div className="flex justify-center"><GameIconBadge icon={Crosshair} bg="#FFD23F" size={64} /></div>
         <h1 className="mt-1" style={{ fontFamily: "var(--font-display)", fontWeight: 900, fontSize: 32, lineHeight: 1.05 }}>
           {hunter.name}, dernier tir !
         </h1>
@@ -821,7 +809,7 @@ function DebateScreen({ game, seconds, say, onBell, onVote }: { game: GameState;
 
       {!over && (
         <div className="mt-5 grid grid-cols-2 gap-2">
-          <BigButton variant="ghost" onClick={() => setRunning((r) => !r)}>{running ? "⏸ Pause" : "▶️ Reprendre"}</BigButton>
+          <BigButton variant="ghost" onClick={() => setRunning((r) => !r)}>{running ? <><GameInlineIcon icon={Pause} /> Pause</> : <><GameInlineIcon icon={Play} /> Reprendre</>}</BigButton>
           <BigButton variant="ghost" onClick={() => setLeft((l) => l + 30)}>+30 s</BigButton>
         </div>
       )}
@@ -836,7 +824,7 @@ function DebateScreen({ game, seconds, say, onBell, onVote }: { game: GameState;
       </div>
 
       <div className="mt-auto pt-8">
-        <BigButton variant={over ? "primary" : "ghost"} onClick={onVote}>{over ? "🗳️ Passer au vote" : "Passer au vote ⏭"}</BigButton>
+        <BigButton variant={over ? "primary" : "ghost"} onClick={onVote}>{over ? <><GameInlineIcon icon={Vote} /> Passer au vote</> : <>Passer au vote <GameInlineIcon icon={SkipForward} /></>}</BigButton>
       </div>
     </Screen>
   );
@@ -870,7 +858,7 @@ function HandsVote({
         <BigButton variant="danger" disabled={!target} onClick={() => setConfirm(true)}>
           {target ? `Éliminer ${target.name}` : "Touchez le joueur désigné"}
         </BigButton>
-        <BigButton variant="ghost" onClick={onTie}>🤝 Égalité</BigButton>
+        <BigButton variant="ghost" onClick={onTie}><GameInlineIcon icon={Scale} /> Égalité</BigButton>
       </div>
       {confirm && target && (
         <Confirm text={`Le village élimine ${target.name} ? Son rôle sera révélé.`} yes="Oui, éliminer" danger onYes={() => onEliminate(target.id)} onNo={() => setConfirm(false)} />
@@ -926,14 +914,14 @@ function TallyScreen({
           <div key={id} className="flex items-center gap-3 rounded-2xl px-3 py-2" style={{ background: top.includes(id) ? "rgba(255,77,94,0.18)" : "rgba(255,255,255,0.07)", minHeight: 56 }}>
             <MascotAvatar color={colorForIndex(id)} size={36} border={false} mood={top.includes(id) ? "shocked" : "neutral"} />
             <span className="flex-1 text-[19px] font-bold">{game.players[id].name}</span>
-            <span className="text-[22px] font-black">{c} {"🗳️"}</span>
+            <span className="flex items-center gap-1.5 text-[22px] font-black">{c} <Vote size={22} strokeWidth={2.6} aria-hidden /></span>
           </div>
         ))}
       </div>
       <div className="mt-auto pt-8">
         {winner
           ? <BigButton variant="danger" onClick={() => onEliminate(winner.id)}>Éliminer {winner.name}</BigButton>
-          : <BigButton onClick={() => onTie(top)}>🤝 Égalité — que faire ?</BigButton>}
+          : <BigButton onClick={() => onTie(top)}><GameInlineIcon icon={Scale} /> Égalité — que faire ?</BigButton>}
       </div>
     </Screen>
   );
@@ -972,10 +960,10 @@ function EndScreen({
         {sorted.map((p) => <PlayerRow key={p.id} p={p} lover={!!game.lovers?.includes(p.id)} />)}
       </div>
       <button onClick={onHistory} className="mt-3 self-center text-[15px] font-semibold underline" style={{ minHeight: 44, color: "rgba(255,255,255,0.75)" }}>
-        📜 Revoir l&apos;historique des nuits
+        <GameInlineIcon icon={ScrollText} /> Revoir l&apos;historique des nuits
       </button>
       <div className="mt-auto grid gap-2 pt-6">
-        <BigButton onClick={onReplay}>🔁 Rejouer (mêmes joueurs)</BigButton>
+        <BigButton onClick={onReplay}><GameInlineIcon icon={RotateCcw} /> Rejouer (mêmes joueurs)</BigButton>
         <BigButton variant="ghost" onClick={onNewPlayers}>Changer les joueurs</BigButton>
         <BigButton variant="ghost" onClick={onQuit}>Quitter</BigButton>
       </div>
@@ -990,7 +978,7 @@ function HistoryModal({ game, spoilerFree, onClose }: { game: GameState; spoiler
     <Modal title="Historique" onClose={onClose}>
       {!unlocked ? (
         <div className="text-center">
-          <span style={{ fontSize: 44 }}>🙈</span>
+          <div className="flex justify-center"><GameIconBadge icon={EyeOff} bg="#B5A1FF" size={60} /></div>
           <p className="mt-2 text-[17px] leading-snug">
             L&apos;historique dévoile qui a fait quoi la nuit. À ouvrir seulement si tout le monde est d&apos;accord (ou en fin de partie).
           </p>

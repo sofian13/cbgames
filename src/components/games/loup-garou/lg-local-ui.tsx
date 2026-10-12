@@ -9,6 +9,8 @@ import { useEffect, type ReactNode } from "react";
 import { Mascot, MascotAvatar } from "@/components/Mascot";
 import { colorForIndex } from "@/components/games/local-kit";
 import { ROLES, SPECIALS, type Player, type RoleId } from "./lg-local-data";
+import { X } from "lucide-react";
+import { GameIconButton } from "@/components/games/game-icon-button";
 
 export type Tone = "night" | "day" | "dusk";
 
@@ -172,7 +174,7 @@ export function Modal({ title, onClose, children }: { title: string; onClose: ()
       >
         <div className="mb-3 flex items-center justify-between gap-3">
           <h3 className="cb-display-md">{title}</h3>
-          <button onClick={onClose} aria-label="Fermer" className="flex h-11 w-11 items-center justify-center rounded-full text-xl" style={{ background: "rgba(255,255,255,0.08)" }}>×</button>
+          <GameIconButton icon={X} label="Fermer" onClick={onClose} />
         </div>
         {children}
       </div>

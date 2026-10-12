@@ -13,6 +13,8 @@ import { Mascot } from "@/components/Mascot";
 import { ConfettiBurst } from "@/components/ConfettiBurst";
 import { sfxBidPop, sfxCardPlay, sfxHandChime, sfxTrickWin } from "@/lib/card-sfx";
 import { CN_LOCAL_WORDS } from "./cn-local-words";
+import { ArrowDown, Shuffle, Dices, Eye, Info, Pencil, Pointer, RotateCcw, X } from "lucide-react";
+import { GameIconButton, GameInlineIcon } from "@/components/games/game-icon-button";
 
 // ── Types ─────────────────────────────────────────────────
 type Team = "red" | "blue";
@@ -358,14 +360,7 @@ export default function MotsEspionsLocal({ onReturnToLobby }: GameProps) {
             {timeLeft}s
           </div>
         )}
-        <button
-          onClick={() => setShowRules(true)}
-          className="flex h-11 w-11 items-center justify-center rounded-full text-lg font-bold"
-          style={{ background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.15)" }}
-          aria-label="Règles"
-        >
-          ⓘ
-        </button>
+        <GameIconButton icon={Info} label="Règles" onClick={() => setShowRules(true)} />
       </header>
 
       {/* ── Compteurs + indice */}
@@ -390,7 +385,7 @@ export default function MotsEspionsLocal({ onReturnToLobby }: GameProps) {
               </>
             ) : (
               <span className="text-xs leading-tight" style={{ color: "rgba(255,255,255,0.75)" }}>
-                ✏️ Noter l&apos;indice
+                <GameInlineIcon icon={Pencil} /> Noter l&apos;indice
                 <br />
                 <span style={{ color: "rgba(255,255,255,0.5)" }}>(optionnel)</span>
               </span>
@@ -441,7 +436,7 @@ export default function MotsEspionsLocal({ onReturnToLobby }: GameProps) {
               Quitter
             </button>
             <button onClick={start} className="af-btn af-btn-primary h-14 flex-[1.6]" style={{ fontSize: 16 }}>
-              🔄 Rejouer
+              <GameInlineIcon icon={RotateCcw} /> Rejouer
             </button>
           </>
         ) : selected !== null ? (
@@ -465,7 +460,7 @@ export default function MotsEspionsLocal({ onReturnToLobby }: GameProps) {
               className="af-btn h-14 flex-[1.5] disabled:opacity-50"
               style={{ fontSize: 15, background: "linear-gradient(180deg, #2A1B52, #1A0F38)", border: "1px solid rgba(255,255,255,0.18)" }}
             >
-              🕵️ Chefs : voir la carte
+              <GameInlineIcon icon={Eye} /> Chefs : voir la carte
             </button>
             <button onClick={() => endTurn()} disabled={busy} className="af-btn af-btn-ghost h-14 flex-1 disabled:opacity-50" style={{ fontSize: 15 }}>
               Fin du tour
@@ -657,8 +652,8 @@ function KeyScreen({ cards, names, onClose }: { cards: Card[]; names: Record<Tea
   return (
     <div className="absolute inset-0 z-[60] flex flex-col text-white" style={{ background: "linear-gradient(180deg, #0B0620, #160C33)" }}>
       <div className="flex items-center justify-end pl-16 pr-3" style={{ paddingTop: "calc(env(safe-area-inset-top) + 10px)" }}>
-        <button onClick={onClose} className="flex h-11 items-center rounded-full px-4 text-sm font-semibold" style={{ background: "rgba(255,255,255,0.1)" }}>
-          ✕ Fermer
+        <button onClick={onClose} className="flex h-11 items-center gap-1.5 rounded-full px-4 text-sm font-bold" style={{ background: "#fff", color: "#15082E", border: "2.5px solid #15082E", boxShadow: "0 3px 0 #15082E" }}>
+          <X size={18} strokeWidth={2.8} aria-hidden /> Fermer
         </button>
       </div>
 
@@ -709,7 +704,7 @@ function KeyScreen({ cards, names, onClose }: { cards: Card[]; names: Record<Tea
             </div>
             {!holding && (
               <p className="pointer-events-none absolute inset-0 flex items-center justify-center px-8 text-center text-lg font-bold">
-                Maintiens le bouton pour voir la carte 👇
+                <span>Maintiens le bouton pour voir la carte <GameInlineIcon icon={ArrowDown} /></span>
               </p>
             )}
           </div>
@@ -732,7 +727,7 @@ function KeyScreen({ cards, names, onClose }: { cards: Card[]; names: Record<Tea
               WebkitTouchCallout: "none",
             }}
           >
-            {holding ? "Relâche pour cacher" : "👆 Maintenir pour voir"}
+            {holding ? "Relâche pour cacher" : <><GameInlineIcon icon={Pointer} /> Maintenir pour voir</>}
           </button>
         </div>
       )}
@@ -832,9 +827,7 @@ function Rules({ onClose }: { onClose: () => void }) {
       >
         <div className="flex items-center justify-between">
           <p className="cb-display-md">Comment on joue</p>
-          <button onClick={onClose} className="flex h-11 w-11 items-center justify-center rounded-full text-lg" style={{ background: "rgba(255,255,255,0.1)" }} aria-label="Fermer">
-            ✕
-          </button>
+          <GameIconButton icon={X} label="Fermer" onClick={onClose} />
         </div>
         <ol className="mt-3 space-y-2.5">
           {items.map((r, i) => (
@@ -893,20 +886,12 @@ function Setup({
     >
       <style>{CSS}</style>
       <div className="flex justify-end pl-16 pr-3" style={{ paddingTop: "calc(env(safe-area-inset-top) + 10px)" }}>
-        <button
-          onClick={onRules}
-          className="flex h-11 w-11 items-center justify-center rounded-full text-lg font-bold"
-          style={{ background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.15)" }}
-          aria-label="Règles"
-        >
-          ⓘ
-        </button>
+        <GameIconButton icon={Info} label="Règles" onClick={onRules} />
       </div>
 
       <div className="mx-auto flex w-full max-w-md flex-1 flex-col px-5 pb-6">
         <div className="flex items-end justify-center gap-1">
           <Mascot size={78} color="coral" mood="shifty" look="right" arms />
-          <span className="mb-4 text-4xl">🕵️</span>
           <Mascot size={78} color="sky" mood="sus" look="left" arms delay={0.4} />
         </div>
         <h1 className="cb-display-lg mt-2 text-center">Mots Espions</h1>
@@ -927,7 +912,7 @@ function Setup({
                 style={{ fontSize: 17, color: "#fff" }}
                 aria-label={`Nom de l'équipe ${TEAM[t].label}`}
               />
-              <span className="text-sm opacity-60">✏️</span>
+              <Pencil size={18} strokeWidth={2.6} className="shrink-0 opacity-60" aria-hidden />
             </label>
           ))}
         </div>
@@ -935,7 +920,7 @@ function Setup({
         <p className="mt-5 mb-2 text-xs font-semibold uppercase tracking-wider" style={{ color: "rgba(255,255,255,0.6)" }}>Qui commence ?</p>
         <div className="grid grid-cols-3 gap-2">
           {([
-            ["random", "🎲 Au hasard"],
+            ["random", "Au hasard"],
             ["red", names.red],
             ["blue", names.blue],
           ] as [StarterChoice, string][]).map(([v, l]) => (
@@ -945,7 +930,7 @@ function Setup({
               className="h-12 truncate rounded-2xl px-2 text-sm font-semibold"
               style={chip(starter === v, v === "random" ? "#5B36D6" : TEAM[v as Team].main)}
             >
-              {l}
+              {v === "random" && <GameInlineIcon icon={Dices} />} {l}
             </button>
           ))}
         </div>
@@ -961,7 +946,7 @@ function Setup({
 
         <div className="mt-auto pt-6">
           <button onClick={onStart} className="af-btn af-btn-pink h-14 w-full" style={{ fontSize: 17 }}>
-            Distribuer les mots 🃏
+            Distribuer les mots <GameInlineIcon icon={Shuffle} />
           </button>
           <p className="mt-2 text-center text-xs" style={{ color: "rgba(255,255,255,0.5)" }}>
             Formez 2 équipes et choisissez un chef par équipe

@@ -14,6 +14,8 @@ import {
 } from "./lg-local-data";
 import { speak, speechMs, type Ambience } from "./lg-local-audio";
 import { BigButton, Confirm, PickList, RoleCard, Screen, SkyBadge } from "./lg-local-ui";
+import { Check, HeartPulse, Skull, X } from "lucide-react";
+import { GameInlineIcon } from "@/components/games/game-icon-button";
 
 type StepId = "intro" | "cupidon" | "amoureux" | "gardien" | "loups" | "voyante" | "sorciere";
 
@@ -346,7 +348,7 @@ function WitchPanel({
 
   const flasks = (
     <p className="mb-3 text-center text-[15px]" style={{ color: "rgba(255,255,255,0.6)" }}>
-      Potion de vie : {potions.life && !saved ? "✅" : "❌"} · Potion de mort : {potions.death ? "✅" : "❌"}
+      Potion de vie : <Flask on={potions.life && !saved} /> · Potion de mort : <Flask on={potions.death} />
     </p>
   );
 
@@ -366,7 +368,7 @@ function WitchPanel({
         {victimBox}
         {flasks}
         <div className="grid gap-2">
-          <BigButton variant="pink" onClick={() => setConfirmSave(true)}>💚 Sauver {victimName}</BigButton>
+          <BigButton variant="pink" onClick={() => setConfirmSave(true)}><GameInlineIcon icon={HeartPulse} /> Sauver {victimName}</BigButton>
           <BigButton variant="ghost" onClick={() => goPoison(false)}>Ne pas sauver</BigButton>
         </div>
         {confirmSave && (
@@ -388,7 +390,7 @@ function WitchPanel({
         {flasks}
         <p className="mb-4 text-center text-[18px]">Veux-tu utiliser ta potion de mort ?</p>
         <div className="grid gap-2">
-          <BigButton variant="danger" onClick={() => setStage("pick")}>☠️ Empoisonner quelqu&apos;un</BigButton>
+          <BigButton variant="danger" onClick={() => setStage("pick")}><GameInlineIcon icon={Skull} /> Empoisonner quelqu&apos;un</BigButton>
           <BigButton variant="ghost" onClick={() => onDone(saved, null)}>Non, rien de plus</BigButton>
         </div>
       </div>
@@ -417,4 +419,9 @@ function WitchPanel({
       )}
     </>
   );
+}
+
+/** Fiole encore pleine (coche verte) ou déjà utilisée (croix rouge). */
+function Flask({ on }: { on: boolean }) {
+  return <GameInlineIcon icon={on ? Check : X} style={{ color: on ? "#3DDC97" : "#FF4D5E" }} />;
 }

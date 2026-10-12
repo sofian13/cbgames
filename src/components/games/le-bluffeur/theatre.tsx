@@ -6,6 +6,7 @@
  */
 
 import type { ReactNode } from "react";
+import { Clapperboard } from "lucide-react";
 
 const CURTAIN_CLIP =
   "polygon(0 0, 100% 0, 100% 60%, 96% 100%, 92% 60%, 88% 100%, 84% 60%, 80% 100%, 76% 60%, 72% 100%, 68% 60%, 64% 100%, 60% 60%, 56% 100%, 52% 60%, 48% 100%, 44% 60%, 40% 100%, 36% 60%, 32% 100%, 28% 60%, 24% 100%, 20% 60%, 16% 100%, 12% 60%, 8% 100%, 4% 60%, 0 100%)";
@@ -87,7 +88,7 @@ export function QuestionBillboard({ question, take }: { question: string | null;
             fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 10, letterSpacing: 2, textTransform: "uppercase",
             borderRadius: 3, boxShadow: "0 2px 6px rgba(255,210,63,0.4)",
           }}>
-            <span style={{ fontSize: 12 }}>🎬</span>{take ? `Le saviez-vous · ${take}` : "Le saviez-vous"}
+            <Clapperboard size={12} strokeWidth={2.8} aria-hidden />{take ? `Le saviez-vous · ${take}` : "Le saviez-vous"}
           </div>
 
           {/* Question */}

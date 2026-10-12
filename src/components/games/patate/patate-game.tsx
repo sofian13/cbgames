@@ -8,6 +8,8 @@ import { ConfettiBurst } from "@/components/ConfettiBurst";
 import { CATEGORIES_CLASSIC, CATEGORIES_SPICY, DARES, DARES_SPICY, pick, shuffle } from "./categories";
 import { buzz, sfxBoom, sfxDing, sfxPass, sfxTick, unlockAudio } from "./fx";
 import { ScrollReset, TopRightControls } from "./rules-sheet";
+import { CupSoda, Drama, Flame, RefreshCw, RotateCw, Vibrate, type LucideIcon } from "lucide-react";
+import { GameIconBadge, GameInlineIcon } from "../game-icon-button";
 
 // ── La Patate 🥔 ───────────────────────────────────────────
 // Le téléphone EST la patate chaude. Une catégorie, chacun dit une réponse
@@ -273,14 +275,14 @@ export default function PatateGame({ onReturnToLobby }: GameProps) {
   if (phase === "setup") {
     return (
       <>
-        <TopRightControls title="La Patate 🥔" rules={RULES} accent={ACCENT} />
+        <TopRightControls title="La Patate" rules={RULES} accent={ACCENT} />
         <ScrollReset dep={phase} />
         <PlayersSetup emoji="🥔" name="La Patate" min={3} max={10} accent={ACCENT} onStart={startGame} />
         <p
           className="pointer-events-none fixed inset-x-0 px-8 text-center text-[13px]"
           style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 20px)", color: "var(--text-muted)" }}
         >
-          🔄 Entrez les prénoms dans l&apos;ordre où vous êtes assis : la patate tourne dans ce sens.
+          <GameInlineIcon icon={RotateCw} /> Entrez les prénoms dans l&apos;ordre où vous êtes assis : la patate tourne dans ce sens.
         </p>
       </>
     );
@@ -289,22 +291,22 @@ export default function PatateGame({ onReturnToLobby }: GameProps) {
   if (phase === "config") {
     return (
       <Screen>
-        <TopRightControls title="La Patate 🥔" rules={RULES} accent={ACCENT} />
+        <TopRightControls title="La Patate" rules={RULES} accent={ACCENT} />
         <ScrollReset dep={phase} />
         <div className="flex flex-1 flex-col items-center justify-center gap-5 px-5" style={{ paddingTop: top }}>
           <div className="text-center">
-            <div className="text-6xl" style={{ animation: "patate-wobble 1.2s ease-in-out infinite" }}>🥔</div>
+            <div className="flex justify-center" style={{ animation: "patate-wobble 1.2s ease-in-out infinite" }}><Mascot size={84} color="yellow" mood="shifty" arms shadow={false} /></div>
             <h1 className="cb-display-lg mt-2">Réglages</h1>
           </div>
 
           <Group label="Le perdant prend…">
-            <Choice on={penalty === "dares"} onClick={() => setPenalty("dares")} emoji="🎭" title="Un gage" sub="Que des gages" />
-            <Choice on={penalty === "sips"} onClick={() => setPenalty("sips")} emoji="🥤" title="Gorgées ou gage" sub="1 à 3, eau OK" />
+            <Choice on={penalty === "dares"} onClick={() => setPenalty("dares")} icon={Drama} title="Un gage" sub="Que des gages" />
+            <Choice on={penalty === "sips"} onClick={() => setPenalty("sips")} icon={CupSoda} title="Gorgées ou gage" sub="1 à 3, eau OK" />
           </Group>
 
           <Group label="Modes">
-            <Toggle on={shakeMode} onClick={() => setShakeMode((s) => !s)} emoji="🫨" title="Ne la secoue pas !" sub="Trop secouée, elle explose plus tôt" />
-            <Toggle on={spicy} onClick={() => setSpicy((s) => !s)} emoji="🌶️" title="Pack 18+" sub="Catégories coquines (rien d'explicite)" />
+            <Toggle on={shakeMode} onClick={() => setShakeMode((s) => !s)} icon={Vibrate} title="Ne la secoue pas !" sub="Trop secouée, elle explose plus tôt" />
+            <Toggle on={spicy} onClick={() => setSpicy((s) => !s)} icon={Flame} title="Pack 18+" sub="Catégories coquines (rien d'explicite)" />
           </Group>
 
           <button onClick={confirmConfig} className="af-btn af-btn-primary w-full max-w-sm" style={{ fontSize: 18, padding: "16px 20px", background: `linear-gradient(160deg, #FFB067, ${ACCENT})`, color: "#2A1100" }}>
@@ -319,7 +321,7 @@ export default function PatateGame({ onReturnToLobby }: GameProps) {
   if (phase === "ready") {
     return (
       <Screen>
-        <TopRightControls title="La Patate 🥔" rules={RULES} accent={ACCENT} />
+        <TopRightControls title="La Patate" rules={RULES} accent={ACCENT} />
         <ScrollReset dep={phase} />
         <div className="flex flex-1 flex-col items-center justify-center px-6 text-center" style={{ paddingTop: top }}>
           <p className="af-eyebrow" style={{ color: ACCENT }}>Manche {round}</p>
@@ -348,7 +350,7 @@ export default function PatateGame({ onReturnToLobby }: GameProps) {
               animation: "patate-pulse 1.4s ease-in-out infinite",
             }}
           >
-            <span className="text-5xl">🔥</span>
+            <Flame size={52} strokeWidth={2.6} aria-hidden />
             <span className="mt-1 text-xl leading-tight">Allumer<br />la mèche</span>
           </button>
           {losses.some((l) => l > 0) && (
@@ -371,7 +373,7 @@ export default function PatateGame({ onReturnToLobby }: GameProps) {
         className="relative flex min-h-dvh select-none flex-col text-white"
         style={{ background: `radial-gradient(120% 70% at 50% 40%, ${tint}, transparent 70%), ${BG}`, touchAction: "manipulation" }}
       >
-        <TopRightControls title="La Patate 🥔" rules={RULES} accent={ACCENT} />
+        <TopRightControls title="La Patate" rules={RULES} accent={ACCENT} />
         <ScrollReset dep={phase} />
         {/* Catégorie */}
         <div className="px-5 text-center" style={{ paddingTop: top }}>
@@ -385,7 +387,7 @@ export default function PatateGame({ onReturnToLobby }: GameProps) {
           </h1>
           {passes === 0 && (
             <button onClick={() => setCategory(nextCategory())} className="mt-2 text-[13px] underline" style={{ color: "var(--text-muted)", minHeight: 36 }}>
-              🔄 Autre catégorie
+              <GameInlineIcon icon={RefreshCw} /> Autre catégorie
             </button>
           )}
         </div>
@@ -404,7 +406,7 @@ export default function PatateGame({ onReturnToLobby }: GameProps) {
                 <div className="h-full rounded-full transition-[width] duration-150" style={{ width: `${Math.min(100, stress)}%`, background: "linear-gradient(90deg,#FFD23F,#FF3E3E)" }} />
               </div>
               <p className="mt-1 text-center text-[12px]" style={{ color: "var(--text-muted)" }}>
-                {shakeOk ? (stress > 50 ? "😰 Doucement !!" : "🫨 Ne la secoue pas !") : "🫨 Ne la secoue pas !"}
+                <GameInlineIcon icon={Vibrate} /> {shakeOk && stress > 50 ? "Doucement !!" : "Ne la secoue pas !"}
               </p>
             </div>
           )}
@@ -441,7 +443,7 @@ export default function PatateGame({ onReturnToLobby }: GameProps) {
     const ranking = players.map((name, i) => ({ name, i, l: losses[i] })).sort((a, b) => b.l - a.l);
     return (
       <div className="relative flex min-h-dvh flex-col items-center px-5 text-white" style={{ background: "radial-gradient(100% 60% at 50% 25%, rgba(255,80,30,0.45), transparent 70%), " + BG, paddingTop: top, paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 20px)", animation: "patate-quake 0.6s ease-out" }}>
-        <TopRightControls title="La Patate 🥔" rules={RULES} accent={ACCENT} />
+        <TopRightControls title="La Patate" rules={RULES} accent={ACCENT} />
         <ScrollReset dep={phase} />
         {/* Flash de l'explosion */}
         <div className="pointer-events-none fixed inset-0 z-30" style={{ animation: "patate-flash 0.9s ease-out forwards" }} />
@@ -460,7 +462,7 @@ export default function PatateGame({ onReturnToLobby }: GameProps) {
         <div className="mt-4 w-full max-w-sm rounded-3xl p-4 text-center" style={{ background: "rgba(255,138,61,0.14)", border: "1px solid rgba(255,138,61,0.4)" }}>
           {boom.alt ? (
             <>
-              <p className="cb-display-md" style={{ color: "#FFC59A" }}>🥤 {boom.penalty}</p>
+              <p className="cb-display-md" style={{ color: "#FFC59A" }}><GameInlineIcon icon={CupSoda} /> {boom.penalty}</p>
               <p className="mt-1 text-[13px]" style={{ color: "var(--text-dim)" }}>ou le gage :</p>
               <p className="mt-1 text-[15px] leading-snug">{boom.alt}</p>
             </>
@@ -565,14 +567,14 @@ function Group({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-function Choice({ on, onClick, emoji, title, sub }: { on: boolean; onClick: () => void; emoji: string; title: string; sub: string }) {
+function Choice({ on, onClick, icon, title, sub }: { on: boolean; onClick: () => void; icon: LucideIcon; title: string; sub: string }) {
   return (
     <button
       onClick={onClick}
       className="flex w-full items-center gap-3 rounded-2xl border px-4 py-3 text-left transition active:scale-[0.99]"
       style={{ background: on ? "rgba(255,138,61,0.18)" : "rgba(255,255,255,0.05)", borderColor: on ? ACCENT : "rgba(255,255,255,0.1)" }}
     >
-      <span className="text-2xl">{emoji}</span>
+      <GameIconBadge icon={icon} bg={on ? ACCENT : "#fff"} />
       <span className="flex-1">
         <span className="block font-bold">{title}</span>
         <span className="block text-[12px]" style={{ color: "var(--text-dim)" }}>{sub}</span>
@@ -584,7 +586,7 @@ function Choice({ on, onClick, emoji, title, sub }: { on: boolean; onClick: () =
   );
 }
 
-function Toggle({ on, onClick, emoji, title, sub }: { on: boolean; onClick: () => void; emoji: string; title: string; sub: string }) {
+function Toggle({ on, onClick, icon, title, sub }: { on: boolean; onClick: () => void; icon: LucideIcon; title: string; sub: string }) {
   return (
     <button
       onClick={onClick}
@@ -592,7 +594,7 @@ function Toggle({ on, onClick, emoji, title, sub }: { on: boolean; onClick: () =
       style={{ background: on ? "rgba(255,138,61,0.18)" : "rgba(255,255,255,0.05)", borderColor: on ? ACCENT : "rgba(255,255,255,0.1)" }}
       aria-pressed={on}
     >
-      <span className="text-2xl">{emoji}</span>
+      <GameIconBadge icon={icon} bg={on ? ACCENT : "#fff"} />
       <span className="flex-1">
         <span className="block font-bold">{title}</span>
         <span className="block text-[12px]" style={{ color: "var(--text-dim)" }}>{sub}</span>

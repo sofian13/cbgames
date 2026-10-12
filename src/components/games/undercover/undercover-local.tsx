@@ -3,6 +3,10 @@
 import { useMemo, useState, useEffect, type CSSProperties, type ReactNode } from "react";
 import { Mascot, MASCOT_COLORS, type MascotColor, type MascotMood } from "@/components/Mascot";
 import { registerSoftReplay } from "@/lib/game-replay";
+import { ArrowLeft, BookOpen, ChevronDown, ChevronUp, Dices, Eye, Lightbulb, Lock, Mic, RefreshCw, RotateCcw, Scale, Shuffle, Target, TriangleAlert } from "lucide-react";
+import { GameInlineIcon } from "@/components/games/game-icon-button";
+import { PlayersSetup } from "@/components/games/local-kit";
+import { isOfflineApp } from "@/lib/offline-app";
 
 /* ─────────────────────────────────────────────────────────────
    L'INTRUS LOCAL — Pass-and-play (un seul téléphone)
@@ -169,13 +173,20 @@ const WORD_CATEGORIES: { id: string; label: string; emoji: string; adult?: boole
     ["Bankai", "Zanpakuto"], ["Manga", "Comics"], ["Shinigami", "Hollow"], ["Titan", "Géant"],
   ] },
   { id: "adult", label: "+18", emoji: "🔞", adult: true, pairs: [
-    ["Premier rendez-vous", "Coup de foudre"], ["Bisou", "Câlin"], ["Suçon", "Bisou dans le cou"], ["Lingerie", "Nuisette"],
-    ["String", "Culotte"], ["Porte-jarretelles", "Bas résille"], ["Strip-tease", "Danse lascive"], ["Massage", "Bain moussant"],
-    ["Menottes", "Bandeau sur les yeux"], ["Plume", "Glaçon"], ["Jeu de rôle", "Déguisement coquin"], ["Coup d'un soir", "Ex qui revient"],
-    ["Appli de rencontre", "Speed dating"], ["Crush", "Ex"], ["Friendzone", "Ghosting"], ["Préservatif", "Lubrifiant"],
-    ["Love hotel", "Suite nuptiale"], ["Sexto", "Photo osée"], ["Préliminaires", "Câlin crapuleux"], ["Fantasme", "Tentation"],
-    ["Infidélité", "Jalousie"], ["Walk of shame", "Lendemain de soirée"], ["Jacuzzi à deux", "Douche à deux"], ["Lit à baldaquin", "Lit rond"],
-    ["Talons aiguilles", "Cuissardes"], ["Effeuillage", "Cabaret"],
+    ["Suçon", "Morsure"], ["Lingerie", "Nuisette"], ["String", "Tanga"],
+    ["Porte-jarretelles", "Bas résille"], ["Strip-tease", "Effeuillage"], ["Lap dance", "Pole dance"],
+    ["Menottes", "Bandeau sur les yeux"], ["Plume", "Glaçon"], ["Jeu de rôle", "Déguisement coquin"],
+    ["Coup d'un soir", "Ex de passage"], ["Plan cul", "Sex friend"], ["Préservatif", "Lubrifiant"],
+    ["Capote XL", "Capote parfumée"], ["Love room", "Love hotel"], ["Sexto", "Nude"],
+    ["Photo osée", "Selfie miroir"], ["Préliminaires", "Câlin crapuleux"], ["Jacuzzi à deux", "Douche à deux"],
+    ["Talons aiguilles", "Cuissardes"], ["Strip-poker", "Action ou vérité"], ["Dirty talk", "Mots doux à l'oreille"],
+    ["Body", "Guêpière"], ["Déshabillé", "Pyjama sexy"], ["Huile de massage", "Bougie de massage"],
+    ["Bain de minuit", "Baignade nue"], ["Cabine d'essayage", "Ascenseur"], ["Toilettes de boîte", "Siège arrière"],
+    ["Fessée", "Fouet"], ["Gémissement", "Soupir"], ["Tatouage caché", "Piercing caché"],
+    ["Sous-vêtement oublié", "Chaussette oubliée"], ["Gage coquin", "Défi osé"], ["Spectacle de strip-teaseurs", "Enterrement de vie de jeune fille"],
+    ["Kamasutra", "Position acrobatique"], ["Nuit blanche", "Grasse mat' à deux"], ["Bisou dans le cou", "Souffle dans l'oreille"],
+    ["Main aux fesses", "Main sur la cuisse"], ["Lit qui grince", "Voisin qui tape au mur"], ["Bain moussant", "Pétales de rose"],
+    ["Regard qui en dit long", "Clin d'œil"],
   ] },
 ];
 // Sans sélection : tout sauf le +18.
@@ -211,6 +222,7 @@ export default function UndercoverLocal({ onReturnToLobby }: { onReturnToLobby?:
 
   // Pair de mots tirée pour la partie
   const [civilWord, setCivilWord]   = useState("");
+  const [rerollNotice, setRerollNotice] = useState(false);
   const [ucWord, setUcWord]         = useState("");
 
   // Config de rôles (configurée en setup-roles)
@@ -271,7 +283,9 @@ export default function UndercoverLocal({ onReturnToLobby }: { onReturnToLobby?:
     const pool = selectedCats.size === 0
       ? ALL_WORD_PAIRS
       : WORD_CATEGORIES.filter((c) => selectedCats.has(c.id)).flatMap((c) => c.pairs);
-    const src = pool.length > 0 ? pool : ALL_WORD_PAIRS;
+    const src0 = pool.length > 0 ? pool : ALL_WORD_PAIRS;
+    // Jamais deux fois la même paire d'affilée (bouton « Changer de mot »)
+    const src = src0.length > 1 ? src0.filter((pp) => !pp.includes(civilWord)) : src0;
     const pair = src[Math.floor(Math.random() * src.length)];
     const [a, b] = Math.random() < 0.5 ? pair : [pair[1], pair[0]];
     setCivilWord(a); setUcWord(b);
@@ -323,6 +337,16 @@ export default function UndercoverLocal({ onReturnToLobby }: { onReturnToLobby?:
     } : null);
     return () => registerSoftReplay(null);
   });
+
+  // « Mot nul ? » : nouvelle paire (et nouveaux rôles). Si c'est le 1er joueur,
+  // il voit directement son nouveau mot ; sinon d'autres ont vu l'ancien → on
+  // refait la distribution depuis le début.
+  const rerollWord = () => {
+    const first = revealIdx === 0;
+    distributeRoles();
+    if (first) setPhase("reveal");
+    else setRerollNotice(true);
+  };
 
   // ── Avancer dans pass-reveal ────────────────────────────
   const ackReveal = () => {
@@ -449,7 +473,7 @@ export default function UndercoverLocal({ onReturnToLobby }: { onReturnToLobby?:
   // 1. Setup joueurs
   if (phase === "setup-players") {
     return (
-      <PlayersSetupUC onStart={handleStartNames} onBack={onReturnToLobby} />
+      <PlayersSetup emoji="🕶️" name="L'Intrus" min={3} max={12} accent="#FF3EA5" onStart={handleStartNames} onBack={onReturnToLobby} />
     );
   }
 
@@ -480,11 +504,12 @@ export default function UndercoverLocal({ onReturnToLobby }: { onReturnToLobby?:
         toName={p.name}
         colorIdx={p.idx}
         label={`${revealIdx + 1} / ${players.length} · Distribution`}
+        tag={rerollNotice ? "Nouveau mot ! On refait la distribution" : undefined}
         players={players}
         currentIdx={p.idx}
-        buttonLabel="🕶️ Voir mon rôle"
+        buttonLabel={<><GameInlineIcon icon={Eye} /> Voir mon rôle</>}
         buttonSub="Maintiens pour confirmer"
-        onReady={() => setPhase("reveal")}
+        onReady={() => { setRerollNotice(false); setPhase("reveal"); }}
       />
     );
   }
@@ -499,6 +524,7 @@ export default function UndercoverLocal({ onReturnToLobby }: { onReturnToLobby?:
         position={revealIdx + 1}
         total={players.length}
         onAck={ackReveal}
+        onReroll={rerollWord}
       />
     );
   }
@@ -534,7 +560,7 @@ export default function UndercoverLocal({ onReturnToLobby }: { onReturnToLobby?:
         colorIdx={p.idx}
         label="Revoir le mot"
         tag="Privé"
-        buttonLabel="🕶️ Voir mon rôle"
+        buttonLabel={<><GameInlineIcon icon={Eye} /> Voir mon rôle</>}
         onReady={() => setPhase("review-show")}
       />
     );
@@ -588,7 +614,7 @@ export default function UndercoverLocal({ onReturnToLobby }: { onReturnToLobby?:
         colorIdx={p.idx}
         label="Fantôme · dernière chance"
         tag="Bonus"
-        buttonLabel="🎯 Tenter ma chance"
+        buttonLabel={<><GameInlineIcon icon={Target} /> Tenter ma chance</>}
         onReady={() => setPhase("mrwhite-guess")}
       />
     );
@@ -763,14 +789,14 @@ function SetupRoles({
         display: "flex", gap: 10, alignItems: "center",
         marginBottom: 14,
       }}>
-        <span style={{ fontSize: 18 }}>💡</span>
+        <Lightbulb size={20} strokeWidth={2.6} color="#FFD23F" aria-hidden />
         <div>Les rôles vont être attribués au hasard. Chacun verra son mot sur ce téléphone, à son tour.</div>
       </div>
 
       <RulesCard jester={jSlots > 0} />
 
       <div style={{ marginTop: "auto" }}>
-        <Btn tone="gold" disabled={!valid} onClick={onStart} icon={<span style={{ fontSize: 18 }}>🎲</span>}>
+        <Btn tone="gold" disabled={!valid} onClick={onStart} icon={<Shuffle size={20} strokeWidth={2.6} aria-hidden />}>
           Distribuer les rôles
         </Btn>
       </div>
@@ -780,7 +806,7 @@ function SetupRoles({
 
 // — REVEAL (carte dossier)
 function RevealScreen({
-  player, round, position, total, review = false, onAck,
+  player, round, position, total, review = false, onAck, onReroll,
 }: {
   player: LocalPlayer;
   round: number;
@@ -788,6 +814,8 @@ function RevealScreen({
   total: number;
   review?: boolean;
   onAck: () => void;
+  /** Mot nul ? On retire une nouvelle paire (absent en relecture) */
+  onReroll?: () => void;
 }) {
   // L'Intrus NE SAIT PAS qu'il l'est : civils et Intrus voient juste leur mot
   // (aucune mention « Civil »). Le Fantôme et le Bouffon connaissent leur rôle
@@ -827,7 +855,7 @@ function RevealScreen({
           border: "1px solid rgba(255,62,165,0.3)",
           display: "flex", gap: 10, alignItems: "center", marginBottom: 14,
         }}>
-          <span style={{ fontSize: 16 }}>🔒</span>
+          <Lock size={18} strokeWidth={2.6} aria-hidden />
           <div style={{ fontSize: 12, color: "white", fontWeight: 600 }}>
             Personne d&apos;autre ne doit voir l&apos;écran. ({position}/{total})
           </div>
@@ -838,6 +866,19 @@ function RevealScreen({
         <Btn tone="gold" onClick={onAck}>
           {review ? "Cacher · revenir" : "J’ai mémorisé · suivant →"}
         </Btn>
+        {onReroll && (
+          <button
+            type="button"
+            onClick={onReroll}
+            style={{
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", minHeight: 44,
+              marginTop: 10, background: "none", border: "none", color: "rgba(255,255,255,0.75)",
+              fontSize: 15, fontWeight: 700, textDecoration: "underline", textUnderlineOffset: 4, cursor: "pointer",
+            }}
+          >
+            <RefreshCw size={16} strokeWidth={2.8} aria-hidden /> Mot nul ? Changer de mot
+          </button>
+        )}
       </div>
     </LocalShell>
   );
@@ -887,8 +928,8 @@ function TableScreen({
       </div>
 
       <div style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: 10, paddingTop: 18 }}>
-        <Btn tone="ghost" icon={<span style={{ fontSize: 16 }}>👁</span>} onClick={onReviewWord}>Revoir mon mot</Btn>
-        <Btn tone="danger" icon={<span style={{ fontSize: 16 }}>⚖</span>} onClick={onForceVote}>Passer au vote</Btn>
+        <Btn tone="ghost" icon={<Eye size={19} strokeWidth={2.6} aria-hidden />} onClick={onReviewWord}>Revoir mon mot</Btn>
+        <Btn tone="danger" icon={<Scale size={19} strokeWidth={2.6} aria-hidden />} onClick={onForceVote}>Passer au vote</Btn>
       </div>
     </LocalShell>
   );
@@ -948,7 +989,7 @@ function PlayerRow({
           color: isCurrent ? "#FFD23F" : isDead ? "#FF3EA5" : hasSpoken ? "#3DDC97" : "rgba(255,255,255,0.5)",
           fontWeight: isCurrent ? 700 : 500,
         }}>
-          {isCurrent && "🎤 à toi · donne un indice à voix haute"}
+          {isCurrent && <><GameInlineIcon icon={Mic} /> à toi · donne un indice à voix haute</>}
           {hasSpoken && "✓ a parlé"}
           {isDead && `éliminé · manche ${player.eliminatedRound ?? "?"}`}
           {!isCurrent && !hasSpoken && !isDead && "en attente"}
@@ -982,7 +1023,7 @@ function ReviewPick({
         marginBottom: 14,
         display: "flex", gap: 10, alignItems: "flex-start",
       }}>
-        <span style={{ fontSize: 18 }}>⚠️</span>
+        <TriangleAlert size={20} strokeWidth={2.6} color="#FF3EA5" style={{ flexShrink: 0 }} aria-hidden />
         <div>Choisis ton blob, puis <strong>personne d&apos;autre ne doit voir l&apos;écran.</strong></div>
       </div>
 
@@ -1007,7 +1048,7 @@ function ReviewPick({
       </div>
 
       <div style={{ marginTop: "auto" }}>
-        <Btn tone="ghost" onClick={onCancel}>← Revenir au tour de table</Btn>
+        <Btn tone="ghost" onClick={onCancel} icon={<ArrowLeft size={19} strokeWidth={2.6} aria-hidden />}>Revenir au tour de table</Btn>
       </div>
     </LocalShell>
   );
@@ -1163,7 +1204,7 @@ function MrWhiteGuess({ player, onSubmit }: { player: LocalPlayer; onSubmit: (g:
           </div>
         </div>
         <div style={{ marginTop: 16, fontSize: 13, color: "rgba(255,255,255,0.85)", lineHeight: 1.5 }}>
-          🎯 Une dernière chance. Tape le mot des civils pour gagner seul.
+          <GameInlineIcon icon={Target} /> Une dernière chance. Tape le mot des civils pour gagner seul.
         </div>
       </div>
 
@@ -1186,8 +1227,8 @@ function MrWhiteGuess({ player, onSubmit }: { player: LocalPlayer; onSubmit: (g:
       </div>
 
       <div style={{ marginTop: "auto" }}>
-        <Btn tone="gold" disabled={!text.trim()} onClick={() => text.trim() && onSubmit(text.trim())}>
-          🎲 Parier
+        <Btn tone="gold" disabled={!text.trim()} onClick={() => text.trim() && onSubmit(text.trim())} icon={<Dices size={20} strokeWidth={2.6} aria-hidden />}>
+          Parier
         </Btn>
       </div>
     </LocalShell>
@@ -1308,7 +1349,7 @@ function GameOverScreen({
 
       <div style={{ marginTop: "auto", display: "flex", gap: 8 }}>
         {onLobby && <Btn tone="ghost" full={false} style={{ flex: 1 }} onClick={onLobby}>Lobby</Btn>}
-        <Btn tone="gold" full={false} style={{ flex: 1.4 }} onClick={onReplay} icon={<span>🔄</span>}>Revanche</Btn>
+        <Btn tone="gold" full={false} style={{ flex: 1.4 }} onClick={onReplay} icon={<RotateCcw size={19} strokeWidth={2.6} aria-hidden />}>Revanche</Btn>
       </div>
     </LocalShell>
   );
@@ -1374,8 +1415,9 @@ function Tag({ children, color = "#FFD23F", style }: { children: ReactNode; colo
 
 function NavBar({ sub, title, right, onBack }: { sub?: string; title?: string; right?: ReactNode; onBack?: () => void }) {
   return (
-    // paddingRight : réserve le coin haut-droit à l'engrenage du shell.
-    <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 18, paddingRight: 52 }}>
+    // paddingRight : coin haut-droit réservé à l'engrenage du shell (site) ;
+    // paddingLeft : coin haut-gauche réservé au bouton quitter (app).
+    <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 18, paddingRight: 52, paddingLeft: isOfflineApp() ? 56 : 0 }}>
       {onBack && (
         <button onClick={onBack} aria-label="Retour" style={{
           width: 44, height: 44, borderRadius: 12,
@@ -1427,7 +1469,7 @@ function Btn({ children, tone = "primary", disabled = false, onClick, full = tru
       display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 10,
       ...style,
     }}>
-      {icon && <span>{icon}</span>}
+      {icon && <span style={{ display: "flex" }}>{icon}</span>}
       <span style={{ display: "flex", flexDirection: "column", alignItems: sub ? "flex-start" : "center" }}>
         <span>{children}</span>
         {sub && <span style={{ fontSize: 11, fontWeight: 600, opacity: 0.78, letterSpacing: 0.3, marginTop: 2 }}>{sub}</span>}
@@ -1611,8 +1653,10 @@ function DossierCard({ word, role, hint, round }: { word: string | null; role: R
         paddingBottom: 12, marginBottom: 16,
         borderBottom: "2px solid rgba(26,14,46,0.25)",
       }}>
-        <div style={{ fontFamily: "var(--font-mono, monospace)", fontSize: 10, fontWeight: 800, letterSpacing: 2 }}>CONFIDENTIEL</div>
-        <div style={{ fontFamily: "var(--font-mono, monospace)", fontSize: 10, fontWeight: 800, letterSpacing: 1, color: "#7A3008" }}>MANCHE {round}</div>
+        {/* Le coin droit est pris par le tampon « Secret » */}
+        <div style={{ fontFamily: "var(--font-mono, monospace)", fontSize: 10, fontWeight: 800, letterSpacing: 2 }}>
+          CONFIDENTIEL <span style={{ color: "#7A3008", letterSpacing: 1 }}>· MANCHE {round}</span>
+        </div>
       </div>
       <div style={{ fontFamily: "var(--font-mono, monospace)", fontSize: 11, color: "#7A3008", textTransform: "uppercase", letterSpacing: 1.5, fontWeight: 700 }}>
         {role === "mrwhite" ? "Pas de mot" : "Ton mot secret"}
@@ -1664,70 +1708,10 @@ function Confetti({ count = 40, accent = "#FFD23F" }: { count?: number; accent?:
 }
 
 // ── Maquette 03 — "Qui joue ?" + grille LES SUSPECTS (remplace le PlayersSetup générique) ──
-function PlayersSetupUC({ onStart, onBack }: { onStart: (names: string[]) => void; onBack?: () => void }) {
-  const [names, setNames] = useState<string[]>(["", "", "", "", ""]);
-  const count = names.length;
-  const setCount = (n: number) =>
-    setNames((prev) => {
-      const next = [...prev];
-      while (next.length < n) next.push("");
-      return next.slice(0, n);
-    });
-  return (
-    <LocalShell tone="noir">
-      <NavBar sub="Étape 2/3" title="Qui joue ?" onBack={onBack} right={<Tag>LOCAL</Tag>} />
-
-      <FileCard accent="#FFD23F" style={{ marginBottom: 16 }}>
-        <Mono style={{ marginBottom: 6 }}>Nombre de joueurs</Mono>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-          <span style={{ fontFamily: "var(--font-display)", fontSize: 48, fontWeight: 800, color: "#FFD23F", lineHeight: 1 }}>{count}</span>
-          <Stepper value={count} min={3} max={7} onChange={setCount} />
-        </div>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          {[3, 4, 5, 6, 7].map((n) => {
-            const sel = n === count, on = n <= count;
-            return (
-              <button key={n} onClick={() => setCount(n)} style={{
-                width: sel ? 36 : 30, height: sel ? 36 : 30, borderRadius: "50%", padding: 0, cursor: "pointer",
-                border: sel ? "2px solid #fff" : "1px solid rgba(255,255,255,0.1)",
-                background: on ? (sel ? "linear-gradient(135deg,#FFD23F,#FF8B5C)" : "rgba(255,210,63,0.3)") : "rgba(255,255,255,0.05)",
-                color: on ? (sel ? "#1A0E2E" : "#fff") : "rgba(255,255,255,0.4)",
-                fontFamily: "var(--font-display)", fontWeight: 800, fontSize: sel ? 15 : 12,
-              }}>{n}</button>
-            );
-          })}
-        </div>
-      </FileCard>
-
-      <Mono style={{ marginBottom: 8 }}>Les suspects</Mono>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-        {names.map((nm, i) => (
-          <div key={i} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, padding: 10, borderRadius: 16, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>
-            <Mascot size={48} color={MASCOT_COLORS[i % MASCOT_COLORS.length]} mood="happy" bob={false} shadow={false} />
-            <input
-              value={nm}
-              onChange={(e) => setNames((prev) => prev.map((x, idx) => (idx === i ? e.target.value.slice(0, 14) : x)))}
-              placeholder={`Joueur ${i + 1}`}
-              autoCorrect="off" autoCapitalize="words" spellCheck={false}
-              style={{ width: "100%", minHeight: 36, textAlign: "center", background: "transparent", border: "none", outline: "none", color: "#fff", fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 16 }}
-            />
-            <Mono style={{ fontSize: 10 }}>Suspect N°{String(i + 1).padStart(2, "0")}</Mono>
-          </div>
-        ))}
-      </div>
-
-      <div style={{ marginTop: 20 }}>
-        <Btn tone="gold" onClick={() => onStart(names.map((n, i) => n.trim() || `Joueur ${i + 1}`))}>Choisir les rôles →</Btn>
-      </div>
-    </LocalShell>
-  );
-}
-
-// ── Maquette 06 — "Passe le téléphone" (remplace le PassScreen générique) ──
 function PassScreenUC({ toName, colorIdx, label, players, currentIdx, buttonLabel, buttonSub, tag = "Rôles prêts", onReady }: {
   toName: string; colorIdx: number; label: string;
   players?: LocalPlayer[]; currentIdx?: number;
-  buttonLabel: string; buttonSub?: string; tag?: string; onReady: () => void;
+  buttonLabel: ReactNode; buttonSub?: string; tag?: string; onReady: () => void;
 }) {
   return (
     <LocalShell tone="noir">
@@ -1785,8 +1769,8 @@ function RulesCard({ jester }: { jester: boolean }) {
         width: "100%", minHeight: 44, display: "flex", justifyContent: "space-between", alignItems: "center",
         background: "transparent", border: "none", color: "white", padding: 0, cursor: "pointer", fontFamily: "inherit",
       }}>
-        <span style={{ fontSize: 15, fontWeight: 800 }}>📖 Les règles</span>
-        <span style={{ fontSize: 13, color: "rgba(255,255,255,0.6)" }}>{open ? "Masquer ▲" : "Afficher ▼"}</span>
+        <span style={{ fontSize: 15, fontWeight: 800 }}><GameInlineIcon icon={BookOpen} /> Les règles</span>
+        <span style={{ fontSize: 13, color: "rgba(255,255,255,0.6)" }}>{open ? "Masquer" : "Afficher"} <GameInlineIcon icon={open ? ChevronUp : ChevronDown} /></span>
       </button>
       {open && (
         <ul style={{ margin: "10px 0 0", paddingLeft: 18, display: "flex", flexDirection: "column", gap: 8, fontSize: 13, lineHeight: 1.45, color: "rgba(255,255,255,0.85)" }}>

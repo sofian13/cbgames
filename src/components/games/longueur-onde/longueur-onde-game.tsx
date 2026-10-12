@@ -10,6 +10,8 @@ import { Mascot, MascotAvatar, MASCOT_PALETTE, type MascotColor } from "@/compon
 import { ConfettiBurst, Sparkles } from "@/components/ConfettiBurst";
 import { ModeSelect, PlayersSetup, PassScreen, colorForIndex, type GameMode } from "@/components/games/local-kit";
 import { SynthwaveScreen, NeonConsole, CassetteInput } from "@/components/games/longueur-onde/synthwave";
+import { Lock, MoveHorizontal } from "lucide-react";
+import { GameInlineIcon } from "@/components/games/game-icon-button";
 
 // ── Spectres pour le mode local (mêmes que le serveur) ────
 const LOCAL_SPECTRUMS: Spectrum[] = [
@@ -158,7 +160,7 @@ function LongueurOndeLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }
       <SynthwaveScreen round={round} total={total} spectrum={spectrum}>
         <NeonConsole readout="TARGET LOCKED">
           <SpectrumDial spectrum={spectrum} target={target} mode="psychic" />
-          <p className="mt-1 text-center" style={{ fontFamily: "var(--font-mono-face)", fontSize: 12, color: "var(--af-yellow)", letterSpacing: 1 }}>🔒 {players[psychic]} : toi seul vois la cible — annonce ton indice à voix haute</p>
+          <p className="mt-1 text-center" style={{ fontFamily: "var(--font-mono-face)", fontSize: 12, color: "var(--af-yellow)", letterSpacing: 1 }}><GameInlineIcon icon={Lock} /> {players[psychic]} : toi seul vois la cible — annonce ton indice à voix haute</p>
         </NeonConsole>
         <CassetteInput value={clueInput} onChange={setClueInput}
           placeholder="Ton indice (à l'oral aussi)"
@@ -202,7 +204,7 @@ function LongueurOndeLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }
       style={{ background: "radial-gradient(circle at 50% 25%, rgba(54,208,224,0.3), transparent 45%), #0E0828" }}>
       <ConfettiBurst count={50} />
       <p className="af-eyebrow" style={{ color: "var(--af-yellow)" }}>Partie terminée</p>
-      <h2 className="cb-display-lg mt-1 mb-5">📡 Meilleur Médium</h2>
+      <h2 className="cb-display-lg mt-1 mb-5">Meilleur Médium</h2>
       <div className="w-full max-w-sm space-y-2">
         {ranking.map((p, idx) => (
           <div key={p.i} className="flex items-center justify-between rounded-2xl border p-4"
@@ -317,7 +319,7 @@ function LongueurOndeOnline({ roomCode, playerId, playerName }: GameProps) {
         <SynthwaveScreen round={state.round} total={state.totalRounds} spectrum={state.spectrum}>
           <NeonConsole readout={`TARGET · ${state.timeLeft}s`}>
             <SpectrumDial spectrum={state.spectrum} target={state.myTarget} mode="psychic" />
-            <p className="mt-1 text-center" style={{ fontFamily: "var(--font-mono-face)", fontSize: 12, color: "var(--af-yellow)", letterSpacing: 1 }}>🔒 Toi seul vois la cible</p>
+            <p className="mt-1 text-center" style={{ fontFamily: "var(--font-mono-face)", fontSize: 12, color: "var(--af-yellow)", letterSpacing: 1 }}><GameInlineIcon icon={Lock} /> Toi seul vois la cible</p>
           </NeonConsole>
           <CassetteInput value={clueInput} onChange={setClueInput} placeholder="Ton indice (un mot, un exemple...)"
             error={clueProblem(clueInput)} onSubmit={submitClue} />
@@ -421,7 +423,7 @@ function LongueurOndeOnline({ roomCode, playerId, playerName }: GameProps) {
         <ConfettiBurst count={50} />
         <div className="relative z-10 w-full max-w-sm">
           <p className="af-eyebrow text-center" style={{ color: "var(--af-yellow)" }}>Partie terminée</p>
-          <h2 className="cb-display-lg mt-2 text-center">📡 Résultats</h2>
+          <h2 className="cb-display-lg mt-2 text-center">Résultats</h2>
           <div className="mt-6 space-y-2.5">
             {sorted.map((p, i) => {
               const c = colorFor(p.id);
@@ -510,7 +512,7 @@ function GuessBoard({
                 style={{ background: `${MASCOT_PALETTE.sky.body}22`, color: MASCOT_PALETTE.sky.body }}>
             {spectrum?.left}
           </span>
-          <span className="text-[10px]" style={{ color: "var(--text-muted)" }}>↔</span>
+          <MoveHorizontal size={16} strokeWidth={2.6} style={{ color: "var(--text-muted)" }} aria-hidden />
           <span className="rounded-full px-3 py-1 text-xs font-bold"
                 style={{ background: `${MASCOT_PALETTE.pink.body}22`, color: MASCOT_PALETTE.pink.body }}>
             {spectrum?.right}
@@ -584,7 +586,7 @@ function SpectrumDial({
               style={{ background: `${MASCOT_PALETTE.sky.body}22`, color: MASCOT_PALETTE.sky.body }}>
           {spectrum?.left}
         </span>
-        <span className="text-[10px]" style={{ color: "var(--text-muted)" }}>↔</span>
+        <MoveHorizontal size={16} strokeWidth={2.6} style={{ color: "var(--text-muted)" }} aria-hidden />
         <span className="rounded-full px-3 py-1 text-xs font-bold"
               style={{ background: `${MASCOT_PALETTE.pink.body}22`, color: MASCOT_PALETTE.pink.body }}>
           {spectrum?.right}

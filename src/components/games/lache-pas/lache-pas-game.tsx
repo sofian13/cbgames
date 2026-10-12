@@ -8,6 +8,8 @@ import { ConfettiBurst } from "@/components/ConfettiBurst";
 import { buzz, sfxBoom, sfxDing, sfxHeart, sfxPop, sfxTick, unlockAudio } from "@/components/games/patate/fx";
 import { ScrollReset, TopRightControls } from "@/components/games/patate/rules-sheet";
 import { DARES, pick } from "@/components/games/patate/categories";
+import { CupSoda, Drama, Fingerprint, Pointer } from "lucide-react";
+import { GameIconBadge, GameInlineIcon } from "@/components/games/game-icon-button";
 
 // ── Lâche pas ! 💣 ─────────────────────────────────────────
 // Tout le monde pose un doigt sur l'écran : une bombe à retardement (cachée,
@@ -258,7 +260,7 @@ export default function LachePasGame({ onReturnToLobby }: GameProps) {
   const top = "calc(env(safe-area-inset-top, 0px) + 64px)";
   const controls = (
     <>
-      <TopRightControls title="Lâche pas ! 💣" rules={RULES} accent={ACCENT} />
+      <TopRightControls title="Lâche pas !" rules={RULES} accent={ACCENT} />
       <ScrollReset dep={phase} />
     </>
   );
@@ -288,7 +290,7 @@ export default function LachePasGame({ onReturnToLobby }: GameProps) {
                 className="rounded-2xl border px-3 py-3 text-left"
                 style={{ background: penalty === k ? "rgba(255,62,108,0.18)" : "rgba(255,255,255,0.05)", borderColor: penalty === k ? ACCENT : "rgba(255,255,255,0.1)", minHeight: 64 }}
               >
-                <span className="block text-xl">{k === "dares" ? "🎭" : "🥤"}</span>
+                <GameIconBadge icon={k === "dares" ? Drama : CupSoda} bg={penalty === k ? ACCENT : "#fff"} size={36} style={{ marginBottom: 6 }} />
                 <span className="block text-[14px] font-bold">{k === "dares" ? "Un gage" : "Gorgées ou gage"}</span>
               </button>
             ))}
@@ -303,7 +305,7 @@ export default function LachePasGame({ onReturnToLobby }: GameProps) {
           className="af-btn af-btn-primary mt-auto w-full max-w-sm"
           style={{ fontSize: 18, padding: "16px 20px", background: `linear-gradient(160deg, #FF7A9A, ${ACCENT})` }}
         >
-          Posez vos doigts 👆
+          Posez vos doigts <GameInlineIcon icon={Pointer} />
         </button>
         <p className="mt-2 text-[12px]" style={{ color: "var(--text-muted)" }}>2 à 5 doigts par manche · posez le tél à plat</p>
         <style>{KEYFRAMES}</style>
@@ -401,12 +403,12 @@ export default function LachePasGame({ onReturnToLobby }: GameProps) {
             </div>
             {outcome.alt ? (
               <p className="mt-2 text-[15px] leading-snug">
-                <b style={{ color: "#FFC59A" }}>🥤 {outcome.penalty}</b>
+                <b style={{ color: "#FFC59A" }}><GameInlineIcon icon={CupSoda} /> {outcome.penalty}</b>
                 <span style={{ color: "var(--text-dim)" }}> ou le gage : </span>
                 {outcome.alt}
               </p>
             ) : (
-              <p className="mt-2 text-[15px] font-semibold leading-snug">🎭 {outcome.penalty}</p>
+              <p className="mt-2 text-[15px] font-semibold leading-snug"><GameInlineIcon icon={Drama} /> {outcome.penalty}</p>
             )}
             {outcome.winner != null && (
               <p className="mt-2 text-[13px]" style={{ color: "#FFE891" }}>
@@ -436,7 +438,7 @@ export default function LachePasGame({ onReturnToLobby }: GameProps) {
   const heat = Math.min(1, t / 18);
   return (
     <>
-    {/* Contrôles HORS de la zone tactile : un tap sur ⓘ ne doit pas compter comme un doigt */}
+    {/* Contrôles HORS de la zone tactile : un tap sur « Règles » ne doit pas compter comme un doigt */}
     {controls}
     <div
       className="relative min-h-dvh select-none overflow-hidden text-white"
@@ -460,7 +462,7 @@ export default function LachePasGame({ onReturnToLobby }: GameProps) {
       <div className="pointer-events-none absolute inset-x-0 z-10 px-6 text-center" style={{ top: phase === "count" ? "38%" : "calc(env(safe-area-inset-top, 0px) + 70px)" }}>
         {phase === "lobby" && (
           <>
-            <div className="text-[64px] leading-none" style={{ animation: "lp-throb 1.2s ease-in-out infinite" }}>👆</div>
+            <div className="flex justify-center" style={{ animation: "lp-throb 1.2s ease-in-out infinite" }}><Fingerprint size={68} strokeWidth={2.2} color={ACCENT} aria-hidden /></div>
             <p className="cb-display-lg mt-3">{fingers.length === 0 ? "Posez tous un doigt" : fingers.length === 1 ? "Encore un doigt…" : `${fingers.length} doigts — on attend…`}</p>
             <p className="mt-2 text-[14px]" style={{ color: "var(--text-dim)" }}>
               {fingers.length >= MAX_FINGERS ? "5 doigts max ! Les autres : à la prochaine." : "Ne bougez plus, ça démarre tout seul"}

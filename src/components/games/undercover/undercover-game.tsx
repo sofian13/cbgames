@@ -7,6 +7,8 @@ import { Mascot } from "@/components/Mascot";
 import UndercoverOnline from "@/components/games/undercover/undercover-online";
 import UndercoverLocal from "@/components/games/undercover/undercover-local";
 import { isOfflineApp } from "@/lib/offline-app";
+import { Users, WifiOff, Zap } from "lucide-react";
+import { GameInlineIcon } from "@/components/games/game-icon-button";
 
 export default function UndercoverGame(props: GameProps) {
   const [mode, setMode] = useState<GameMode | null>(() => (isOfflineApp() ? "local" : null));
@@ -62,7 +64,7 @@ function UCModeSelect({ onPick, onBack }: { onPick: (m: GameMode) => void; onBac
           <div style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 26, marginTop: 4 }}>Un seul téléphone</div>
           <p style={{ color: "rgba(255,255,255,0.65)", fontSize: 14, marginTop: 6, maxWidth: "78%" }}>On se passe l&apos;appareil entre nous. Idéal entre amis à la même table.</p>
           <div style={{ display: "flex", gap: 14, marginTop: 12, fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.8)" }}>
-            <span>🔌 Hors-ligne</span><span>🤝 3-7 joueurs</span><span>⚡ Setup 30s</span>
+            <span><GameInlineIcon icon={WifiOff} /> Hors-ligne</span><span><GameInlineIcon icon={Users} /> 3-7 joueurs</span><span><GameInlineIcon icon={Zap} /> Setup 30s</span>
           </div>
         </button>
 

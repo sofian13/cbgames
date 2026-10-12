@@ -10,6 +10,9 @@
 import { useState } from "react";
 import type { GameProps } from "@/lib/games/types";
 import { LocalShell } from "@/components/games/local-kit";
+import { Mascot } from "@/components/Mascot";
+import { ArrowLeft, Dices, Flame, Hand, Heart, Laugh, Minus, Plus, type LucideIcon } from "lucide-react";
+import { GameIconButton, GameIconBadge, GameInlineIcon } from "@/components/games/game-icon-button";
 import { CLASSIQUE, CHAUD, ABSURDE, COUPLE, type DilemmaTuple } from "@/components/games/tu-prefere/dilemmas";
 
 const ACCENT = "#FF8A3D";
@@ -19,11 +22,11 @@ interface Dilemma { a: string; b: string; quip: string }
 
 const toDilemmas = (list: DilemmaTuple[]): Dilemma[] => list.map(([a, b, quip]) => ({ a, b, quip }));
 
-const PACKS: Record<Cat, { emoji: string; label: string; color: string; tag: string; list: Dilemma[] }> = {
-  classique: { emoji: "🎲", label: "Classique", color: "#5B9CFF", tag: "Pour tout le monde", list: toDilemmas(CLASSIQUE) },
-  hot: { emoji: "🌶️", label: "Chaud", color: "#FF3E6E", tag: "18+ entre potes", list: toDilemmas(CHAUD) },
-  absurde: { emoji: "🤪", label: "Absurde", color: "#3DDC97", tag: "Pour les tordus", list: toDilemmas(ABSURDE) },
-  couple: { emoji: "❤️", label: "Couple", color: "#FF6BAE", tag: "À deux", list: toDilemmas(COUPLE) },
+const PACKS: Record<Cat, { icon: LucideIcon; label: string; color: string; tag: string; list: Dilemma[] }> = {
+  classique: { icon: Dices, label: "Classique", color: "#5B9CFF", tag: "Pour tout le monde", list: toDilemmas(CLASSIQUE) },
+  hot: { icon: Flame, label: "Chaud", color: "#FF3E6E", tag: "18+ entre potes", list: toDilemmas(CHAUD) },
+  absurde: { icon: Laugh, label: "Absurde", color: "#3DDC97", tag: "Pour les tordus", list: toDilemmas(ABSURDE) },
+  couple: { icon: Heart, label: "Couple", color: "#FF6BAE", tag: "À deux", list: toDilemmas(COUPLE) },
 };
 
 function shuffle<T>(arr: T[]): T[] {
@@ -64,16 +67,12 @@ function OptionCard({
       </button>
       <div className="flex items-center justify-between gap-2 px-4 pb-3">
         <span className="text-sm font-bold" style={{ color: "var(--text-dim)" }}>
-          ✋ {count} main{count > 1 ? "s" : ""}
+          <GameInlineIcon icon={Hand} /> {count} main{count > 1 ? "s" : ""}
         </span>
         {!revealed && (
           <div className="flex gap-2">
-            <button onClick={onDec} disabled={count === 0} aria-label="Retirer une main"
-              className="flex h-11 w-11 items-center justify-center rounded-full border text-xl font-bold active:scale-90 disabled:opacity-30"
-              style={{ borderColor: "var(--line-soft)", background: "rgba(255,255,255,0.06)" }}>−</button>
-            <button onClick={onInc} aria-label="Ajouter une main"
-              className="flex h-11 w-11 items-center justify-center rounded-full text-xl font-bold active:scale-90"
-              style={{ background: accent, color: "#180c2e" }}>+</button>
+            <GameIconButton icon={Minus} label="Retirer une main" onClick={onDec} disabled={count === 0} />
+            <GameIconButton icon={Plus} label="Ajouter une main" onClick={onInc} bg={accent} />
           </div>
         )}
       </div>
@@ -109,7 +108,7 @@ export default function TuPrefereGame({ onReturnToLobby }: GameProps) {
     return (
       <LocalShell accent={ACCENT} center>
         <div style={{ height: "env(safe-area-inset-top)" }} />
-        <div className="mb-2 text-5xl sm:text-6xl">🤔</div>
+        <div className="mb-2"><Mascot size={84} color="sky" mood="thinking" arms shadow={false} /></div>
         <h1 className="cb-display-lg text-center sm:text-5xl">Tu préfères ?</h1>
         <p className="mt-2 mb-7 max-w-sm text-center text-sm sm:text-base" style={{ color: "var(--text-dim)" }}>
           Un dilemme, deux choix impossibles. Lisez-le à voix haute, levez la main pour votre choix, comptez les mains sur l&apos;écran… et découvrez ce que pense le groupe.
@@ -121,7 +120,7 @@ export default function TuPrefereGame({ onReturnToLobby }: GameProps) {
               <button key={c} onClick={() => startPack(c)}
                 className="flex flex-col items-start gap-1 rounded-3xl border p-4 text-left transition active:scale-95"
                 style={{ background: `linear-gradient(160deg, ${p.color}22, rgba(255,255,255,0.03))`, borderColor: `${p.color}66` }}>
-                <span className="text-3xl">{p.emoji}</span>
+                <GameIconBadge icon={p.icon} bg={p.color} size={42} />
                 <span className="cb-display-sm">{p.label}</span>
                 <span className="text-xs" style={{ color: "var(--text-dim)" }}>{p.tag} · {p.list.length} dilemmes</span>
               </button>
@@ -129,7 +128,7 @@ export default function TuPrefereGame({ onReturnToLobby }: GameProps) {
           })}
         </div>
         {onReturnToLobby && (
-          <button onClick={onReturnToLobby} className="mt-5 min-h-11 px-4 text-sm" style={{ color: "var(--text-muted)" }}>← Quitter</button>
+          <button onClick={onReturnToLobby} className="mt-5 min-h-11 px-4 text-sm" style={{ color: "var(--text-muted)" }}><GameInlineIcon icon={ArrowLeft} /> Quitter</button>
         )}
       </LocalShell>
     );
@@ -142,11 +141,11 @@ export default function TuPrefereGame({ onReturnToLobby }: GameProps) {
       <div style={{ height: "env(safe-area-inset-top)" }} />
       {/* Coin haut-droit laissé libre pour l'engrenage */}
       <div className="flex w-full max-w-md items-center pr-14">
-        <button onClick={() => setCat(null)} className="-ml-2 min-h-11 px-2 text-sm" style={{ color: "var(--text-muted)" }}>← Ambiances</button>
+        <button onClick={() => setCat(null)} className="-ml-2 min-h-11 px-2 text-sm" style={{ color: "var(--text-muted)" }}><GameInlineIcon icon={ArrowLeft} /> Ambiances</button>
       </div>
 
       <div className="mt-3 mb-2 text-center">
-        <div className="af-eyebrow" style={{ color: "var(--text-dim)" }}>{PACKS[cat].emoji} {PACKS[cat].label} · {idx + 1}/{deck.length}</div>
+        <div className="af-eyebrow" style={{ color: "var(--text-dim)" }}><GameInlineIcon icon={PACKS[cat].icon} /> {PACKS[cat].label} · {idx + 1}/{deck.length}</div>
         <div className="af-eyebrow mt-1" style={{ color: accent }}>Tu préfères…</div>
       </div>
 

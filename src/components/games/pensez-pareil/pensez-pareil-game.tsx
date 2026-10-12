@@ -9,6 +9,8 @@ import { Mascot, MascotAvatar } from "@/components/Mascot";
 import { ConfettiBurst, Sparkles } from "@/components/ConfettiBurst";
 import { ModeSelect, colorForIndex, type GameMode } from "@/components/games/local-kit";
 import { getSavedDuo, saveDuo } from "@/lib/saved-players";
+import { ArrowLeft, Check, Flame, Flower2, Heart, Lock, type LucideIcon } from "lucide-react";
+import { GameIconBadge, GameInlineIcon } from "@/components/games/game-icon-button";
 import {
   recordGame,
   getProgress,
@@ -36,10 +38,10 @@ type Prompt = PPPrompt;
 const LOCAL_PROMPTS = PROMPTS;
 
 type Pack = "soft" | "mix" | "hot";
-const PACKS: { id: Pack; label: string; emoji: string; tiers: Tier[]; sub: string }[] = [
-  { id: "soft", label: "Soft", emoji: "🌸", tiers: ["soft"], sub: "Tout public, on s'échauffe" },
-  { id: "mix", label: "Couple", emoji: "💞", tiers: ["soft", "couple"], sub: "Notre vie à deux" },
-  { id: "hot", label: "Hot 18+", emoji: "🔥", tiers: ["soft", "couple", "spicy"], sub: "Ça monte en température" },
+const PACKS: { id: Pack; label: string; icon: LucideIcon; tiers: Tier[]; sub: string }[] = [
+  { id: "soft", label: "Soft", icon: Flower2, tiers: ["soft"], sub: "Tout public, on s'échauffe" },
+  { id: "mix", label: "Couple", icon: Heart, tiers: ["soft", "couple"], sub: "Notre vie à deux" },
+  { id: "hot", label: "Hot 18+", icon: Flame, tiers: ["soft", "couple", "spicy"], sub: "Ça monte en température" },
 ];
 
 function buildDeck(pack: Pack): Prompt[] {
@@ -179,7 +181,7 @@ function CoupleSetup({ pack, onStart, onBack }: {
   return (
     <div className="relative flex min-h-[100svh] flex-col items-center p-5 pt-[max(env(safe-area-inset-top),20px)] pb-[max(env(safe-area-inset-bottom),20px)] text-white"
       style={{ background: `radial-gradient(circle at 50% 10%, ${ACCENT}30, transparent 45%), linear-gradient(180deg, #0A0420 0%, #0E0828 100%)` }}>
-      <div className="mt-4 text-5xl">💞</div>
+      <div className="mt-4"><Mascot size={78} color="pink" mood="love" arms shadow={false} /></div>
       <h1 className="cb-display-lg mt-1">Pensez Pareil</h1>
       <div className="mt-2 inline-flex items-center gap-2 rounded-full border px-4 py-1.5"
         style={{ background: "rgba(255,255,255,0.05)", borderColor: "var(--line-soft)" }}>
@@ -211,7 +213,7 @@ function CoupleSetup({ pack, onStart, onBack }: {
                 background: on ? `${ACCENT}22` : "rgba(255,255,255,0.04)",
                 borderColor: on ? `${ACCENT}88` : "var(--line-soft)",
               }}>
-              <div className="text-2xl">{p.emoji}</div>
+              <p.icon size={24} strokeWidth={2.6} className="mx-auto" style={{ color: on ? ACCENT : "#fff" }} aria-hidden />
               <div className="mt-1 text-xs font-bold">{p.label}</div>
               <div className="mt-0.5 text-xs leading-tight" style={{ color: "var(--text-muted)" }}>{p.sub}</div>
             </button>
@@ -226,7 +228,7 @@ function CoupleSetup({ pack, onStart, onBack }: {
       <p className="mt-4 max-w-sm text-center text-xs" style={{ color: "var(--text-muted)" }}>
         Règles : un thème, chacun écrit 1 ou 2 mots en secret, puis on compare. Même réponse = sync !
       </p>
-      {onBack && <button onClick={onBack} className="mt-2 min-h-11 px-4 text-sm" style={{ color: "var(--text-muted)" }}>← Mode</button>}
+      {onBack && <button onClick={onBack} className="mt-2 min-h-11 px-4 text-sm" style={{ color: "var(--text-muted)" }}><GameInlineIcon icon={ArrowLeft} /> Mode</button>}
     </div>
   );
 }
@@ -286,13 +288,13 @@ function PensezPareilOnline({ roomCode, playerId, playerName, onReturnToLobby }:
   if (state.phase === "config") {
     const amb = state.ambiance ?? "classic";
     const ready = (state.connectedCount ?? 0) >= 2;
-    const OPTS: { id: "classic" | "spicy"; emoji: string; label: string; sub: string }[] = [
-      { id: "classic", emoji: "💞", label: "Classique", sub: "Tout public + notre vie à deux" },
-      { id: "spicy", emoji: "🔥", label: "Coquin 18+", sub: "Ça monte en température" },
+    const OPTS: { id: "classic" | "spicy"; icon: LucideIcon; label: string; sub: string }[] = [
+      { id: "classic", icon: Heart, label: "Classique", sub: "Tout public + notre vie à deux" },
+      { id: "spicy", icon: Flame, label: "Coquin 18+", sub: "Ça monte en température" },
     ];
     return (
       <div className="relative flex flex-1 flex-col items-center justify-center p-6 pt-[max(env(safe-area-inset-top),24px)] text-white">
-        <div className="text-5xl">💞</div>
+        <Mascot size={78} color="pink" mood="love" arms shadow={false} />
         <h1 className="cb-display-lg mt-1">Pensez Pareil</h1>
         <p className="mt-2 max-w-xs text-center text-sm" style={{ color: "var(--text-dim)" }}>
           Un thème, 35 s, chacun écrit 1 ou 2 mots en secret. Même réponse = sync !
@@ -305,7 +307,7 @@ function PensezPareilOnline({ roomCode, playerId, playerName, onReturnToLobby }:
               <button key={o.id} onClick={() => sendAction({ action: "set-ambiance", ambiance: o.id })}
                 className="rounded-2xl border p-3 text-center transition active:scale-95"
                 style={{ background: on ? `${ACCENT}22` : "rgba(255,255,255,0.04)", borderColor: on ? `${ACCENT}88` : "var(--line-soft)" }}>
-                <div className="text-2xl">{o.emoji}</div>
+                <o.icon size={24} strokeWidth={2.6} className="mx-auto" aria-hidden />
                 <div className="mt-1 text-sm font-bold">{o.label}</div>
                 <div className="mt-0.5 text-xs leading-tight" style={{ color: "var(--text-muted)" }}>{o.sub}</div>
               </button>
@@ -345,7 +347,7 @@ function PensezPareilOnline({ roomCode, playerId, playerName, onReturnToLobby }:
           <PromptCard prompt={state.prompt} />
           <div className="mt-8 rounded-3xl border px-6 py-5 text-center"
             style={{ background: "rgba(255,255,255,0.05)", borderColor: "var(--line-soft)" }}>
-            <div className="text-4xl">✅</div>
+            <div className="flex justify-center"><GameIconBadge icon={Check} bg="#3DDC97" size={52} /></div>
             <p className="mt-2 font-bold">Réponse envoyée !</p>
             <p className="mt-1 animate-pulse text-sm" style={{ color: "var(--text-dim)" }}>
               {other?.hasAnswered ? "Révélation…" : `On attend ${other?.name ?? "l'autre"}…`}
@@ -427,7 +429,7 @@ function AnswerInput({ value, onChange, onSubmit }: {
       />
       <button onClick={onSubmit} disabled={!value.trim()}
         className="af-btn af-btn-primary mt-4 w-full disabled:opacity-40" style={{ fontSize: 15, padding: 16 }}>
-        Verrouiller ma réponse 🔒
+        Verrouiller ma réponse <GameInlineIcon icon={Lock} />
       </button>
     </div>
   );
@@ -618,7 +620,7 @@ function Hand({ toName, idx, hint, onReady }: { toName: string; idx: number; hin
       <Mascot size={130} color={colorForIndex(idx)} mood="wink" arms />
       <h1 className="cb-display-lg mt-3 text-center">{toName}</h1>
       <p className="mt-2 max-w-sm text-center text-sm" style={{ color: "var(--text-dim)" }}>{hint}</p>
-      <button onClick={onReady} className="af-btn af-btn-primary mt-8 w-full max-w-xs" style={{ fontSize: 16 }}>C&apos;est moi 🔒</button>
+      <button onClick={onReady} className="af-btn af-btn-primary mt-8 w-full max-w-xs" style={{ fontSize: 16 }}>C&apos;est moi <GameInlineIcon icon={Lock} /></button>
     </div>
   );
 }

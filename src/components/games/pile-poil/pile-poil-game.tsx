@@ -7,6 +7,9 @@ import type { GameProps } from "@/lib/games/types";
 import { LocalShell } from "@/components/games/local-kit";
 import { Tournament, fmtDelta, type Attempt, type PPMode } from "./tournament";
 import { isOfflineApp } from "@/lib/offline-app";
+import { Mascot } from "@/components/Mascot";
+import { CircleDot, Eye, Pause, Play, RotateCcw, Target, Timer, Tv, Users } from "lucide-react";
+import { GameIconBadge, GameInlineIcon } from "@/components/games/game-icon-button";
 
 // ── Pile Poil ⏱️ ───────────────────────────────────────────
 // Tout le jeu tourne sur le tél « manette » (pass-and-play). Le temps
@@ -32,20 +35,20 @@ export default function PilePoilGame({ roomCode, playerId, playerName, onReturnT
   if (role === "pick") {
     return (
       <LocalShell accent="#00C2A8" center>
-        <span className="text-6xl">⏱️</span>
+        <Mascot size={84} color="mint" mood="thinking" arms shadow={false} />
         <h1 className="cb-display-lg mt-3 text-center">Pile Poil</h1>
         <p className="mt-2 max-w-sm text-center text-sm" style={{ color: "var(--text-dim)" }}>
           Compte les secondes dans ta tête, l&apos;autre voit ton chrono en direct.
         </p>
         <div className="mt-8 flex w-full max-w-xs flex-col gap-3">
           <button onClick={() => setRole("duel")} className="af-btn af-btn-primary" style={{ fontSize: 16 }}>
-            🔘 Le Bouton — c&apos;est moi qui joue
+            <GameInlineIcon icon={CircleDot} /> Le Bouton — c&apos;est moi qui joue
           </button>
           <button onClick={() => setRole("screen")} className="af-btn af-btn-primary" style={{ fontSize: 16, background: "linear-gradient(160deg,#4180D8,#2A5BB0)" }}>
-            📺 L&apos;Écran — je vois son chrono
+            <GameInlineIcon icon={Tv} /> L&apos;Écran — je vois son chrono
           </button>
           <button onClick={() => setRole("pad")} className="af-btn af-btn-ghost" style={{ fontSize: 14 }}>
-            👥 Tournoi — tout sur ce tél (2-10 joueurs)
+            <GameInlineIcon icon={Users} /> Tournoi — tout sur ce tél (2-10 joueurs)
           </button>
         </div>
         <p className="mt-4 max-w-xs text-center text-[11px]" style={{ color: "var(--text-dim)" }}>
@@ -141,7 +144,7 @@ function DuelPad({ roomCode, playerId, playerName }: GameProps) {
         {running
           ? "🤫 Compte dans ta tête…"
           : st === "done"
-            ? "⏸️ Pause — le temps est figé sur l'autre tél. Réappuie pour CONTINUER."
+            ? "Pause — le temps est figé sur l'autre tél. Réappuie pour CONTINUER."
             : "Appuie pour lancer — l'autre tél voit tout"}
       </p>
       <button
@@ -157,11 +160,11 @@ function DuelPad({ roomCode, playerId, playerName }: GameProps) {
           boxShadow: running ? "0 0 60px rgba(226,52,52,0.5)" : "0 0 60px rgba(0,194,168,0.45)",
         }}
       >
-        {running ? "⏸ PAUSE" : st === "done" ? "▶ GO" : "GO"}
+        {running ? <><GameInlineIcon icon={Pause} />&nbsp;PAUSE</> : st === "done" ? <><GameInlineIcon icon={Play} />&nbsp;GO</> : "GO"}
       </button>
       {st === "done" && (
         <button onClick={reset} className="af-btn af-btn-ghost mt-6 w-full max-w-[14rem]" style={{ fontSize: 15 }}>
-          ↺ Réinitialiser
+          <GameInlineIcon icon={RotateCcw} /> Réinitialiser
         </button>
       )}
       {st === "idle" && (
@@ -243,7 +246,7 @@ function TargetControl({ value, onChange }: { value: number | null; onChange: (v
   });
   return (
     <div className="mt-6 w-full max-w-sm rounded-2xl p-3" style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.12)" }}>
-      <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.18em] text-white/50">⏱ Temps max — optionnel</p>
+      <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.18em] text-white/50"><GameInlineIcon icon={Timer} /> Temps max — optionnel</p>
       <div className="flex flex-wrap items-center justify-center gap-1.5">
         <button onClick={() => onChange(null)} className="rounded-xl px-3 py-2 text-sm font-black" style={chip(value == null)}>
           Aucun
@@ -472,7 +475,7 @@ function ScreenView({ roomCode, playerId, playerName }: GameProps) {
         className="flex min-h-dvh flex-col items-center justify-center px-6 text-center"
         style={{ background: "radial-gradient(120% 80% at 50% 0%, #06302A 0%, #020D0B 100%)" }}
       >
-        <span className="text-5xl">👀</span>
+        <GameIconBadge icon={Eye} bg="#00C2A8" size={64} />
         <p className="mt-3 text-xl font-black text-white" style={{ fontFamily: "var(--font-display)" }}>
           Prêt à mater son chrono
         </p>
@@ -492,7 +495,7 @@ function ScreenView({ roomCode, playerId, playerName }: GameProps) {
         className="flex min-h-dvh flex-col items-center justify-center px-6 text-center"
         style={{ background: "radial-gradient(120% 80% at 50% 0%, #06302A 0%, #020D0B 100%)" }}
       >
-        <span className="text-5xl">🎯</span>
+        <GameIconBadge icon={Target} bg="#FFD23F" size={64} />
         <p className="mt-3 text-xl font-black text-white" style={{ fontFamily: "var(--font-display)" }}>
           À toi de fixer la cible !
         </p>
@@ -557,7 +560,7 @@ function ScreenView({ roomCode, playerId, playerName }: GameProps) {
       className="flex min-h-dvh flex-col items-center justify-center px-6 text-center"
       style={{ background: "radial-gradient(120% 80% at 50% 0%, #06302A 0%, #020D0B 100%)" }}
     >
-      <span className="text-5xl">📺</span>
+      <GameIconBadge icon={Tv} bg="#4180D8" size={64} />
       <p className="mt-3 text-lg font-black text-white" style={{ fontFamily: "var(--font-display)" }}>
         Écran Pile Poil
       </p>
@@ -584,7 +587,7 @@ function ScreenView({ roomCode, playerId, playerName }: GameProps) {
         </>
       ) : (
         <p className="mt-2 max-w-xs text-sm" style={{ color: "rgba(255,255,255,0.55)" }}>
-          En attente de la manette… Sur l&apos;autre tél, ouvre ce jeu et choisis « 🎮 Manette ».
+          En attente de la manette… Sur l&apos;autre tél, ouvre ce jeu et choisis « Le Bouton ».
         </p>
       )}
     </div>

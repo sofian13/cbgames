@@ -10,6 +10,8 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { getRecentNames, getSavedPlayers, sameName, savePlayers } from "@/lib/saved-players";
 import { isOfflineApp } from "@/lib/offline-app";
 import { Mascot, MASCOT_COLORS, MASCOT_PALETTE, type MascotColor } from "@/components/Mascot";
+import { ArrowLeft, Smartphone, Wifi, X } from "lucide-react";
+import { GameIconBadge, GameInlineIcon } from "@/components/games/game-icon-button";
 
 export type GameMode = "local" | "online";
 
@@ -39,10 +41,11 @@ export function ModeSelect({
     if (offline) onPick("local");
   }, [offline, onPick]);
   if (offline) return null;
+  void emoji; // gardé pour l'API : un blob remplace l'emoji décoratif
 
   return (
     <div className={SHELL} style={{ background: BG("rgba(91,54,214,0.35)"), justifyContent: "center", padding: 24 }}>
-      <div className="mb-3 text-5xl sm:text-7xl">{emoji}</div>
+      <div className="mb-3"><Mascot size={84} color="purple" mood="happy" arms shadow={false} /></div>
       <h1 className="cb-display-lg text-center sm:text-5xl">{name}</h1>
       <p className="mt-2 mb-8 max-w-md text-center text-sm sm:text-base" style={{ color: "var(--text-dim)" }}>{tagline}</p>
 
@@ -53,7 +56,7 @@ export function ModeSelect({
           style={{ background: "linear-gradient(140deg, rgba(255,62,165,0.18), rgba(255,255,255,0.04))", borderColor: "rgba(255,62,165,0.4)" }}
         >
           <div className="flex items-center gap-3">
-            <span className="text-3xl">📱</span>
+            <GameIconBadge icon={Smartphone} bg="#FF3EA5" size={48} />
             <div>
               <p className="cb-display-sm">Sur ce téléphone</p>
               <p className="text-xs" style={{ color: "var(--text-dim)" }}>On se passe le tél à tour de rôle (pass-and-play)</p>
@@ -67,7 +70,7 @@ export function ModeSelect({
           style={{ background: "linear-gradient(140deg, rgba(78,205,196,0.16), rgba(255,255,255,0.04))", borderColor: "rgba(78,205,196,0.4)" }}
         >
           <div className="flex items-center gap-3">
-            <span className="text-3xl">📡</span>
+            <GameIconBadge icon={Wifi} bg="#4ECDC4" size={48} />
             <div>
               <p className="cb-display-sm">Plusieurs téléphones</p>
               <p className="text-xs" style={{ color: "var(--text-dim)" }}>Chacun sur son tél, en ligne dans la même salle</p>
@@ -274,7 +277,7 @@ export function PlayersSetup({
                       aria-label={n.trim() ? `Retirer ${n.trim()}` : "Retirer ce joueur"}
                       className="absolute -right-6 -top-3 grid h-11 w-11 place-items-center"
                     >
-                      <span className="grid h-7 w-7 place-items-center rounded-full text-[17px] font-bold leading-none" style={{ background: "#fff", color: INK, border: `2.5px solid ${INK}` }}>×</span>
+                      <span className="grid h-7 w-7 place-items-center rounded-full text-[17px] font-bold leading-none" style={{ background: "#fff", color: INK, border: `2.5px solid ${INK}` }}><X size={15} strokeWidth={3.2} aria-hidden /></span>
                     </button>
                   )}
                 </div>
@@ -371,7 +374,7 @@ export function PlayersSetup({
           </button>
           {onBack && (
             <button type="button" onClick={onBack} className="mx-auto mt-1 block min-h-11 px-4 text-[14px] font-semibold" style={{ color: "rgba(255,255,255,0.6)" }}>
-              ← Changer de mode
+              <GameInlineIcon icon={ArrowLeft} /> Changer de mode
             </button>
           )}
         </div>
@@ -393,7 +396,7 @@ export function PassScreen({
   toName: string;
   colorIndex: number;
   hint?: string;
-  buttonLabel?: string;
+  buttonLabel?: React.ReactNode;
   accent?: string;
   onReady: () => void;
 }) {

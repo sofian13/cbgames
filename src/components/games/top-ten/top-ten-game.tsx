@@ -7,6 +7,8 @@ import type { GameProps } from "@/lib/games/types";
 import { cn } from "@/lib/utils";
 import { MascotAvatar } from "@/components/Mascot";
 import { ModeSelect, PlayersSetup, PassScreen, colorForIndex, type GameMode } from "@/components/games/local-kit";
+import { ArrowLeft, Check, Eye, Flame, RefreshCw, Timer, Trophy, type LucideIcon } from "lucide-react";
+import { GameIconBadge, GameInlineIcon } from "@/components/games/game-icon-button";
 
 // ── Types ─────────────────────────────────────────────────
 interface TopTenPlayerState {
@@ -170,7 +172,7 @@ const CULTURE_THEMES: ThemeState[] = [
 ];
 
 type Pack = "adult" | "culture";
-const PACK_LABEL: Record<Pack, string> = { adult: "Thème 18+", culture: "Culture pop 🏆" };
+const PACK_LABEL: Record<Pack, string> = { adult: "Thème 18+", culture: "Culture pop" };
 // Vocabulaire de l'échelle selon le pack (soft↔hard pour 18+, faible↔fort pour les classements)
 const SCALE: Record<Pack, { low: string; high: string; lowFull: string; highFull: string }> = {
   adult: { low: "Soft", high: "Hard", lowFull: "plus soft", highFull: "plus hard" },
@@ -285,7 +287,7 @@ function TopTenLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) {
         <button onClick={() => { setStepIdx(0); setPhase("pass-number"); }}
           className="af-btn af-btn-primary mt-7 w-full max-w-md">C&apos;est bon → distribuer les numéros</button>
         <button onClick={() => setThemeCursor((c) => c + 1)}
-          className="af-btn af-btn-ghost mt-3 w-full max-w-md">🔄 Changer de thème</button>
+          className="af-btn af-btn-ghost mt-3 w-full max-w-md"><GameInlineIcon icon={RefreshCw} /> Changer de thème</button>
       </div>
     );
   }
@@ -398,7 +400,7 @@ function TopTenLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) {
     <div className="flex min-h-[100svh] flex-col items-center justify-center p-6 pt-[max(env(safe-area-inset-top),20px)] pb-[max(env(safe-area-inset-bottom),20px)] text-white"
       style={{ background: `radial-gradient(circle at 50% 25%, ${ACCENT}2e, transparent 45%), #0E0828` }}>
       <p className="af-eyebrow" style={{ color: ACCENT }}>Partie terminée</p>
-      <h2 className="cb-display-lg mt-1 mb-5">🔥 Meilleur flair</h2>
+      <h2 className="cb-display-lg mt-1 mb-5">Meilleur flair</h2>
       <div className="w-full max-w-sm space-y-2">
         {ranking.map((p, idx) => (
           <div key={p.i} className="flex items-center justify-between rounded-2xl border p-4"
@@ -442,7 +444,7 @@ function TopTenOnline({ roomCode, playerId, playerName }: GameProps) {
             className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full border border-white/10 bg-black/30 backdrop-blur-sm"
             style={{ boxShadow: `0 0 40px ${ACCENT}22` }}
           >
-            <span className="text-4xl">🔥</span>
+            <Flame size={36} strokeWidth={2.4} color={ACCENT} aria-hidden />
           </div>
           <p className="text-white/40 animate-pulse font-sans text-lg">
             Distribution des num&eacute;ros...
@@ -476,7 +478,7 @@ function TopTenOnline({ roomCode, playerId, playerName }: GameProps) {
         <span className="text-xs text-white/25 font-sans uppercase tracking-[0.2em] mb-6">
           Manche {state.round}/{state.totalRounds} · sur {state.numberRange}
         </span>
-        <p className="text-5xl mb-6">🔥</p>
+        <Flame size={48} strokeWidth={2.4} color={ACCENT} className="mb-6" aria-hidden />
         <p className="text-2xl font-serif font-semibold text-white/90 mb-3 text-center px-6" style={{ textShadow: `0 0 40px ${ACCENT}33` }}>
           Chacun reçoit un numéro secret
         </p>
@@ -508,7 +510,7 @@ function TopTenOnline({ roomCode, playerId, playerName }: GameProps) {
             onClick={() => sendAction({ action: "change-theme" })}
             className="mt-3 w-full max-w-md py-3 rounded-2xl font-sans text-sm font-semibold text-white/70 border border-white/15 bg-white/[0.04] transition-all hover:bg-white/[0.08] active:scale-[0.98]"
           >
-            🔄 Changer de thème
+            <GameInlineIcon icon={RefreshCw} /> Changer de thème
           </button>
           <p className="text-xs text-white/35 font-sans mt-3 text-center max-w-xs">
             N&apos;importe qui peut changer la phrase ou lancer la distribution.
@@ -564,7 +566,7 @@ function TopTenOnline({ roomCode, playerId, playerName }: GameProps) {
           <span className="text-xs text-white/25 font-sans uppercase tracking-[0.2em] mb-6">
             Manche {state.round}/{state.totalRounds} · sur {state.numberRange}
           </span>
-          <p className="text-3xl mb-4">{state.isSpectator ? "👀" : "✅"}</p>
+          <div className="mb-4 flex justify-center"><GameIconBadge icon={state.isSpectator ? Eye : Check} bg={state.isSpectator ? "#FFFFFF" : "#3DDC97"} size={52} /></div>
           <p className="text-2xl font-serif font-semibold text-white/90 mb-3 text-center px-6">
             {state.isSpectator ? "Les joueurs classent la table" : "Classement envoyé"}
           </p>
@@ -688,7 +690,7 @@ function TopTenOnline({ roomCode, playerId, playerName }: GameProps) {
         style={{ background: `radial-gradient(circle at 50% 25%, ${ACCENT}18, transparent 45%), #060606` }}
       >
         <span className="text-xs text-white/25 font-sans uppercase tracking-[0.2em] mb-2">Partie termin&eacute;e</span>
-        <p className="text-4xl mb-6">🔥</p>
+        <Flame size={40} strokeWidth={2.4} color={ACCENT} className="mb-6" aria-hidden />
         <div className="w-full max-w-sm space-y-2.5">
           {sorted.map((p, i) => (
             <div
@@ -784,9 +786,9 @@ function RangePicker({
     { v: 25, label: "Nuance", sub: "De 1 à 25" },
     { v: 50, label: "Sniper", sub: "De 1 à 50" },
   ];
-  const PACKS: { v: Pack; emoji: string; label: string; sub: string }[] = [
-    { v: "adult", emoji: "🔥", label: "Soirée 18+", sub: "Thèmes osés & malaise" },
-    { v: "culture", emoji: "🏆", label: "Culture pop", sub: "Classements : animés, villes, foot…" },
+  const PACKS: { v: Pack; icon: LucideIcon; label: string; sub: string }[] = [
+    { v: "adult", icon: Flame, label: "Soirée 18+", sub: "Thèmes osés & malaise" },
+    { v: "culture", icon: Trophy, label: "Culture pop", sub: "Classements : animés, villes, foot…" },
   ];
   return (
     <div className="flex w-full max-w-md flex-col items-center text-white">
@@ -812,7 +814,7 @@ function RangePicker({
                     boxShadow: active ? `0 0 30px ${ACCENT}44` : undefined,
                   }}
                 >
-                  <p className="text-2xl">{o.emoji}</p>
+                  <o.icon size={26} strokeWidth={2.6} className="mx-auto" style={{ color: active ? ACCENT : "#fff" }} aria-hidden />
                   <p className="text-xs font-semibold mt-1 text-white/90">{o.label}</p>
                   <p className="text-xs text-white/45 mt-0.5 leading-tight">{o.sub}</p>
                 </button>
@@ -869,7 +871,7 @@ function RangePicker({
         </p>
       )}
       {onBack && (
-        <button onClick={onBack} className="mt-2 min-h-11 px-4 text-sm text-white/40 active:text-white/70">← Modifier les joueurs</button>
+        <button onClick={onBack} className="mt-2 min-h-11 px-4 text-sm text-white/40 active:text-white/70"><GameInlineIcon icon={ArrowLeft} /> Modifier les joueurs</button>
       )}
     </div>
   );
@@ -1130,7 +1132,7 @@ function OrderCountdown({ remainingMs }: { remainingMs: number }) {
       className={cn("text-center text-sm font-mono font-bold mb-3", urgent && "animate-pulse")}
       style={{ color: urgent ? ACCENT : "rgba(255,255,255,0.55)" }}
     >
-      ⏱ {left} s
+      <GameInlineIcon icon={Timer} /> {left} s
     </p>
   );
 }

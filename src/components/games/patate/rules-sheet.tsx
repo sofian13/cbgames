@@ -1,39 +1,29 @@
 "use client";
 
 import { useLayoutEffect, useRef, useState } from "react";
+import { Info, Volume2, VolumeX } from "lucide-react";
+import { GameIconButton, GameTopRight } from "../game-icon-button";
 import { isMuted, setMuted } from "./fx";
 
-/** Boutons du coin haut-droit (règles ⓘ + son) et feuille de règles. Coin haut-gauche laissé libre pour l'app. */
+/** Boutons du coin haut-droit (son + règles) et feuille de règles. Coin haut-gauche laissé libre pour l'app. */
 export function TopRightControls({ title, rules, accent }: { title: string; rules: string[]; accent: string }) {
   const [open, setOpen] = useState(false);
   const [mute, setMute] = useState(isMuted());
 
   return (
     <>
-      <div
-        className="fixed right-3 z-40 flex gap-2"
-        style={{ top: "calc(env(safe-area-inset-top, 0px) + 10px)" }}
-      >
-        <button
+      <GameTopRight>
+        <GameIconButton
+          icon={mute ? VolumeX : Volume2}
+          label={mute ? "Activer le son" : "Couper le son"}
+          active={mute}
           onClick={() => {
             setMuted(!mute);
             setMute(!mute);
           }}
-          aria-label={mute ? "Activer le son" : "Couper le son"}
-          className="flex h-11 w-11 items-center justify-center rounded-full text-lg"
-          style={{ background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.15)" }}
-        >
-          {mute ? "🔇" : "🔊"}
-        </button>
-        <button
-          onClick={() => setOpen(true)}
-          aria-label="Règles"
-          className="flex h-11 w-11 items-center justify-center rounded-full text-xl font-bold text-white"
-          style={{ background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.15)" }}
-        >
-          ⓘ
-        </button>
-      </div>
+        />
+        <GameIconButton icon={Info} label="Règles" bg={accent} onClick={() => setOpen(true)} />
+      </GameTopRight>
 
       {open && (
         <div

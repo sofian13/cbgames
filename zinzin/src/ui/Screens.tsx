@@ -6,6 +6,7 @@ import { isTestMode, resetPremiumForTests, restore } from "../premium";
 import { LEGAL_DOCS, LEGAL_UPDATED_AT, type LegalDocId } from "@/lib/legal/zinzin";
 import { ZBlob, ZPALETTE } from "./ZBlob";
 import { BigBtn, CloseBtn, RoundBtn, Sheet } from "./common";
+import { ErrorBoundary } from "./ErrorBoundary";
 import { APP_VERSION, haptic, setAgeOk } from "./util";
 
 export type LegalPage = "cgu" | "confidentialite" | "mentions";
@@ -205,14 +206,17 @@ function lazyGame(id: string) {
 }
 
 export function GameScreen({ id, onExit }: { id: string; onExit: () => void }) {
+  const game = getZGame(id)!;
   const [Comp] = useState(() => lazyGame(id));
   const [confirm, setConfirm] = useState(false);
 
   return (
     <div className="zz-screen-in fixed inset-0 flex flex-col overflow-y-auto" style={{ background: "#0A0420", zIndex: 30 }}>
-      <Suspense fallback={<Loading />}>
-        <Comp roomCode="LOCAL" playerId="local" playerName="Joueur" onReturnToLobby={onExit} />
-      </Suspense>
+      <ErrorBoundary onBack={onExit} backLabel="Retour à l’accueil">
+        <Suspense fallback={<Loading />}>
+          <Comp roomCode="LOCAL" playerId="local" playerName="Joueur" onReturnToLobby={onExit} />
+        </Suspense>
+      </ErrorBoundary>
 
       {/* Quitter : discret, en haut à gauche (le coin droit reste aux jeux) */}
       <button

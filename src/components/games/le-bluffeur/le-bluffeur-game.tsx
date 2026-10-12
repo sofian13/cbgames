@@ -11,6 +11,8 @@ import { ConfettiBurst, Sparkles } from "@/components/ConfettiBurst";
 import { ModeSelect, PlayersSetup, PassScreen, colorForIndex, type GameMode } from "@/components/games/local-kit";
 import { TheatreScreen, QuestionBillboard, RecWave } from "@/components/games/le-bluffeur/theatre";
 import { BLUFF_QUESTIONS } from "@/components/games/le-bluffeur/questions";
+import { Clapperboard, Lightbulb, Smartphone, Target } from "lucide-react";
+import { GameInlineIcon } from "@/components/games/game-icon-button";
 
 interface BluffPlayerState {
   id: string;
@@ -171,7 +173,7 @@ function LeBluffeurLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) 
           <button onClick={() => { setTurnIdx(0); setDraft(""); setPhase("pass-write"); }}
             className="af-btn af-btn-primary w-full"
             style={{ background: "linear-gradient(135deg, #FFD23F, #C48800)", color: "#1A0E2E" }}>
-            🎬 Action ! Chacun invente son bluff →
+            <GameInlineIcon icon={Clapperboard} /> Action ! Chacun invente son bluff →
           </button>
         </div>
       </TheatreScreen>
@@ -260,7 +262,7 @@ function LeBluffeurLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) 
             return finders.length > 0 ? <p className="mt-2 text-xs font-bold">✓ Trouvée par {finders.join(", ")} (+30)</p> : null;
           })()}
           {wroteTruth.some(Boolean) && (
-            <p className="mt-1 text-xs font-bold">🎯 Écrite pile par {players.filter((_, i) => wroteTruth[i]).join(", ")} (+15)</p>
+            <p className="mt-1 text-xs font-bold"><GameInlineIcon icon={Target} /> Écrite pile par {players.filter((_, i) => wroteTruth[i]).join(", ")} (+15)</p>
           )}
         </div>
         <p className="af-eyebrow mt-5 mb-2" style={{ color: "var(--text-muted)" }}>✘ Les bluffs</p>
@@ -290,7 +292,7 @@ function LeBluffeurLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) 
       style={{ paddingTop: "max(env(safe-area-inset-top), 20px)", paddingBottom: "max(env(safe-area-inset-bottom), 20px)", background: "radial-gradient(circle at 50% 25%, rgba(124,92,255,0.3), transparent 45%), #0E0828" }}>
       <ConfettiBurst count={50} />
       <p className="af-eyebrow" style={{ color: "var(--af-yellow)" }}>Partie terminée</p>
-      <h2 className="cb-display-lg mt-1 mb-5">🎭 Résultats</h2>
+      <h2 className="cb-display-lg mt-1 mb-5">Résultats</h2>
       <div className="w-full max-w-sm space-y-2">
         {ranking.map((p, idx) => (
           <div key={p.i} className="flex items-center justify-between rounded-2xl border p-4"
@@ -343,16 +345,13 @@ function LeBluffeurOnline({ roomCode, playerId, playerName, onSwitchLocal }: Gam
       return (
         <div className="flex flex-1 flex-col items-center justify-center p-6 text-center"
              style={{ paddingTop: "max(env(safe-area-inset-top), 24px)", paddingBottom: "max(env(safe-area-inset-bottom), 24px)" }}>
-          <div className="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-full border"
-               style={{ background: "rgba(255,255,255,0.04)", borderColor: "rgba(255,255,255,0.10)", boxShadow: "0 0 40px rgba(91,54,214,0.3)" }}>
-            <span className="text-4xl">🎭</span>
-          </div>
+          <div className="mx-auto mb-5"><Mascot size={80} color="purple" mood="shifty" arms shadow={false} /></div>
           <p className="cb-display-sm">En attente de joueurs ({count}/{min})</p>
           <p className="mt-2 max-w-xs text-sm" style={{ color: "var(--text-dim)" }}>
             Il faut au moins {min} joueurs en ligne pour que les bluffs piègent quelqu&apos;un — ou jouez sur un seul téléphone en vous le passant.
           </p>
           <button onClick={onSwitchLocal} className="af-btn af-btn-primary mt-6 w-full max-w-xs">
-            📱 Jouer sur ce téléphone
+            <GameInlineIcon icon={Smartphone} /> Jouer sur ce téléphone
           </button>
         </div>
       );
@@ -365,7 +364,7 @@ function LeBluffeurOnline({ roomCode, playerId, playerName, onSwitchLocal }: Gam
     return (
       <div className="flex flex-1 flex-col items-center justify-center p-6 text-center"
            style={{ paddingTop: "max(env(safe-area-inset-top), 24px)", paddingBottom: "max(env(safe-area-inset-bottom), 24px)" }}>
-        <span className="text-5xl">🍿</span>
+        <Mascot size={72} color="yellow" mood="happy" shadow={false} />
         <p className="cb-display-sm mt-4">Partie en cours</p>
         <p className="mt-2 max-w-xs text-sm" style={{ color: "var(--text-dim)" }}>
           Tu es arrivé pendant la manche {state.round}/{state.totalRounds}. Tu entres en jeu dès la prochaine manche !
@@ -412,7 +411,7 @@ function LeBluffeurOnline({ roomCode, playerId, playerName, onSwitchLocal }: Gam
                 </div>
               </div>
               <p className="mt-2 text-center text-xs" style={{ color: "rgba(255,255,255,0.5)" }}>
-                💡 Fais croire que c&apos;est la vraie réponse 😏
+                <GameInlineIcon icon={Lightbulb} /> Fais croire que c&apos;est la vraie réponse 😏
               </p>
             </>
           ) : (
@@ -439,7 +438,7 @@ function LeBluffeurOnline({ roomCode, playerId, playerName, onSwitchLocal }: Gam
         </div>
 
         {state.iFoundTruth ? (
-          <Waiting text="Tu as écrit la vraie réponse ! 🎯 En attente des votes des autres..." />
+          <Waiting text="Tu as écrit la vraie réponse ! En attente des votes des autres..." />
         ) : !voted ? (
           <div className="w-full max-w-md mt-4 space-y-2">
             {state.options?.map((o, i) => {
@@ -532,7 +531,7 @@ function LeBluffeurOnline({ roomCode, playerId, playerName, onSwitchLocal }: Gam
               )}
               {state.players.some((p) => p.foundTruth) && (
                 <p className="mt-2 text-xs font-bold" style={{ color: "#3A1B00" }}>
-                  🎯 Écrite pile par {state.players.filter((p) => p.foundTruth).map((p) => p.name).join(", ")} (+15)
+                  <GameInlineIcon icon={Target} /> Écrite pile par {state.players.filter((p) => p.foundTruth).map((p) => p.name).join(", ")} (+15)
                 </p>
               )}
             </div>
@@ -713,7 +712,7 @@ function BluffScoreboard({ players, playerId }: { players: BluffPlayerState[]; p
       <ConfettiBurst count={50} />
       <div className="relative z-10 w-full max-w-sm">
         <p className="af-eyebrow text-center" style={{ color: "var(--af-yellow)" }}>Partie terminée</p>
-        <h2 className="cb-display-lg text-center mt-2">🎭 Résultats</h2>
+        <h2 className="cb-display-lg text-center mt-2">Résultats</h2>
         <div className="mt-6 space-y-2.5">
           {sorted.map((p, i) => {
             const c = colorFor(p.id);
