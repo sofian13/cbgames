@@ -1,624 +1,453 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { GameProps } from "@/lib/games/types";
-import { cn } from "@/lib/utils";
+import { PlayersSetup, colorForIndex } from "@/components/games/local-kit";
+import { Mascot, MascotAvatar } from "@/components/Mascot";
+import { useAudio } from "@/lib/hooks/useAudio";
+import { PACKS, type Category } from "./categories";
 
-// ── Categories ──────────────────────────────────────────────
+// ── Catégorie Chrono ───────────────────────────────────────
+// Une catégorie s'affiche, le tél tourne : chacun doit donner un mot de la
+// catégorie avant la fin du chrono (qui raccourcit à chaque bonne réponse).
+// Pas de mot, mot déjà dit ou hors sujet = une vie en moins. Dernier en vie gagne.
 
-interface Category {
+const ACCENT = "#FF7A3D";
+const TOP_SAFE = "calc(env(safe-area-inset-top, 0px) + 64px)";
+const BOTTOM_SAFE = "calc(env(safe-area-inset-bottom, 0px) + 20px)";
+const BG = `radial-gradient(circle at 50% 12%, ${ACCENT}26, transparent 45%), linear-gradient(180deg, #0a0118 0%, #120428 60%, #08011a 100%)`;
+const MIN_TIME = 3;
+
+interface P {
   name: string;
-  emoji: string;
-  examples?: string;
+  lives: number;
 }
 
-const CATEGORIES: Category[] = [
-  // -- Adult / Spicy --
-  { name: "Actrices porno", emoji: "🔞", examples: "Lana Rhoades, Mia Khalifa..." },
-  { name: "Acteurs porno", emoji: "🔞", examples: "Johnny Sins, Manuel Ferrara..." },
-  { name: "Positions sexuelles", emoji: "🍑", examples: "Missionnaire, Levrette..." },
-  { name: "Sites porno", emoji: "💻", examples: "Pornhub, Xvideos..." },
-  { name: "Mots liés au sexe", emoji: "🔥", examples: "Orgasme, Capote..." },
-  { name: "Parties du corps sexy", emoji: "👀", examples: "Fesses, Lèvres..." },
-  { name: "Sex toys", emoji: "🎀", examples: "Vibro, Menottes..." },
-  { name: "Trucs qu'on dit au lit", emoji: "🛏️", examples: "Plus fort, Continue..." },
-  { name: "Fantasmes courants", emoji: "💭", examples: "Trio, Uniforme..." },
-  { name: "Fetichismes", emoji: "⛓️", examples: "Pieds, Cuir..." },
-  { name: "Excuses pour un suçon", emoji: "😳", examples: "Le chat, L'aspirateur..." },
-  { name: "Raisons de rompre", emoji: "💔", examples: "Il ronfle, Il triche..." },
-  { name: "Choses interdites en public", emoji: "🚫", examples: "Péter, Se gratter..." },
-  { name: "Pires textos à envoyer à son ex", emoji: "📱", examples: "Tu me manques, T'es où..." },
-  { name: "Excuses pour rentrer tard", emoji: "🌙", examples: "Mon tel était mort..." },
-  { name: "Surnoms coquins", emoji: "😏", examples: "Bébé, Mon coeur..." },
-  { name: "Trucs qu'on fait en cachette", emoji: "🤫", examples: "Stalker un ex..." },
-  { name: "Pickup lines nulles", emoji: "🧀", examples: "T'as un plan ?..." },
-  { name: "Endroits pour faire l'amour", emoji: "📍", examples: "Voiture, Ascenseur..." },
-  { name: "Types de kiss", emoji: "💋", examples: "French, Dans le cou..." },
+type Phase = "setup" | "config" | "reveal" | "playing" | "lost" | "over";
 
-  // -- Drôle / Soirée --
-  { name: "Insultes créatives", emoji: "🤬", examples: "Patate, Cornichon..." },
-  { name: "Choses qu'on fait bourré", emoji: "🍺", examples: "Appeler son ex, Tomber..." },
-  { name: "Pires premiers dates", emoji: "💀", examples: "Il parle de son ex..." },
-  { name: "Excuses pour pas aller en cours", emoji: "📚", examples: "J'ai la gastro..." },
-  { name: "Mensonges qu'on dit tous", emoji: "🤥", examples: "J'arrive dans 5 min..." },
-  { name: "Trucs relous en soirée", emoji: "🎉", examples: "Quelqu'un vomit..." },
-  { name: "Phrases de mère", emoji: "👩", examples: "On a de la nourriture à la maison..." },
-  { name: "Pires cadeaux", emoji: "🎁", examples: "Des chaussettes, Un livre..." },
-  { name: "Trucs qu'on Google en secret", emoji: "🔍", examples: "C'est grave si..." },
-  { name: "Red flags en couple", emoji: "🚩", examples: "Il check ton tel..." },
-  { name: "Icks", emoji: "🤢", examples: "Il court avec un sac à dos..." },
-  { name: "Types de potes en soirée", emoji: "🥳", examples: "Celui qui dort, celui qui pleure..." },
-  { name: "Trucs chiants au réveil", emoji: "⏰", examples: "Pas de café, Le réveil..." },
-  { name: "Raisons d'être en retard", emoji: "⌚", examples: "Le bus, Mon réveil..." },
-  { name: "Bruits du corps humain", emoji: "💨", examples: "Rot, Pet, Gargouilli..." },
-
-  // -- Culture / Classique --
-  { name: "Marques de voiture", emoji: "🚗", examples: "BMW, Mercedes..." },
-  { name: "Pays d'Europe", emoji: "🇪🇺", examples: "France, Espagne..." },
-  { name: "Capitales du monde", emoji: "🌍", examples: "Paris, Tokyo..." },
-  { name: "Rappeurs français", emoji: "🎤", examples: "Booba, Jul..." },
-  { name: "Rappeurs américains", emoji: "🎙️", examples: "Drake, Eminem..." },
-  { name: "Chanteurs/chanteuses", emoji: "🎵", examples: "Beyoncé, Adele..." },
-  { name: "Films Disney", emoji: "🏰", examples: "Le Roi Lion, Aladdin..." },
-  { name: "Séries Netflix", emoji: "📺", examples: "Squid Game, Stranger Things..." },
-  { name: "Jeux vidéo", emoji: "🎮", examples: "GTA, FIFA..." },
-  { name: "Personnages de manga", emoji: "📖", examples: "Naruto, Goku..." },
-  { name: "Footballeurs", emoji: "⚽", examples: "Mbappé, Messi..." },
-  { name: "Marques de luxe", emoji: "👜", examples: "Gucci, Louis Vuitton..." },
-  { name: "Marques de fast-food", emoji: "🍔", examples: "McDo, KFC..." },
-  { name: "Réseaux sociaux", emoji: "📲", examples: "Insta, TikTok..." },
-  { name: "Super-héros", emoji: "🦸", examples: "Batman, Spider-Man..." },
-  { name: "Pokémon", emoji: "⚡", examples: "Pikachu, Dracaufeu..." },
-  { name: "Fruits", emoji: "🍎", examples: "Pomme, Banane..." },
-  { name: "Légumes", emoji: "🥦", examples: "Carotte, Tomate..." },
-  { name: "Animaux de la ferme", emoji: "🐄", examples: "Vache, Cochon..." },
-  { name: "Animaux sauvages", emoji: "🦁", examples: "Lion, Tigre..." },
-  { name: "Sports", emoji: "🏅", examples: "Foot, Tennis..." },
-  { name: "Instruments de musique", emoji: "🎸", examples: "Guitare, Piano..." },
-  { name: "Matières à l'école", emoji: "✏️", examples: "Maths, Français..." },
-  { name: "Couleurs", emoji: "🎨", examples: "Rouge, Bleu..." },
-  { name: "Prénoms de mec", emoji: "👦", examples: "Lucas, Adam..." },
-  { name: "Prénoms de meuf", emoji: "👧", examples: "Léa, Emma..." },
-  { name: "Marques de fringues", emoji: "👕", examples: "Nike, Zara..." },
-  { name: "Marques de téléphone", emoji: "📱", examples: "Apple, Samsung..." },
-  { name: "Desserts", emoji: "🍰", examples: "Tiramisu, Crème brûlée..." },
-  { name: "Boissons alcoolisées", emoji: "🍸", examples: "Vodka, Whisky..." },
-  { name: "Cocktails", emoji: "🍹", examples: "Mojito, Piña Colada..." },
-  { name: "Pays d'Afrique", emoji: "🌍", examples: "Maroc, Sénégal..." },
-  { name: "Villes de France", emoji: "🇫🇷", examples: "Marseille, Lyon..." },
-  { name: "Émissions TV", emoji: "📺", examples: "TPMP, Koh-Lanta..." },
-  { name: "Youtubers/Streamers français", emoji: "🖥️", examples: "Squeezie, Amixem..." },
-  { name: "Applications de téléphone", emoji: "📲", examples: "WhatsApp, Uber..." },
-  { name: "Films d'horreur", emoji: "👻", examples: "Scream, Saw..." },
-  { name: "Marques de chips", emoji: "🥔", examples: "Lay's, Pringles..." },
-  { name: "Marques de soda", emoji: "🥤", examples: "Coca, Fanta..." },
-  { name: "Drapeaux qu'on connait", emoji: "🏳️", examples: "France, Japon..." },
-  { name: "Trucs dans une trousse", emoji: "✏️", examples: "Stylo, Gomme..." },
-  { name: "Trucs dans un frigo", emoji: "🧊", examples: "Lait, Beurre..." },
-  { name: "Trucs dans une salle de bain", emoji: "🚿", examples: "Savon, Shampoing..." },
-  { name: "Métiers qu'on voulait faire enfant", emoji: "👶", examples: "Pompier, Astronaute..." },
-  { name: "Races de chien", emoji: "🐕", examples: "Labrador, Berger allemand..." },
-  { name: "Personnages de film culte", emoji: "🎬", examples: "Dark Vador, Joker..." },
-];
-
-// ── Helpers ─────────────────────────────────────────────────
-
-function shuffleArray<T>(arr: T[]): T[] {
-  const shuffled = [...arr];
-  for (let i = shuffled.length - 1; i > 0; i--) {
+function shuffle<T>(arr: T[]): T[] {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
-    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    [a[i], a[j]] = [a[j], a[i]];
   }
-  return shuffled;
+  return a;
 }
 
-const BG_GRADIENT =
-  "bg-[radial-gradient(circle_at_18%_20%,rgba(255,120,50,0.14),transparent_35%),radial-gradient(circle_at_82%_70%,rgba(168,85,247,0.14),transparent_35%),linear-gradient(145deg,#0a0118,#120428_42%,#08011a)]";
+let actx: AudioContext | null = null;
+function beep(freq: number, dur = 0.1, type: OscillatorType = "triangle", gain = 0.12, delay = 0) {
+  try {
+    const AC = window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    if (!AC) return;
+    actx ??= new AC();
+    if (actx.state === "suspended") void actx.resume();
+    const t0 = actx.currentTime + delay;
+    const o = actx.createOscillator();
+    const g = actx.createGain();
+    o.type = type;
+    o.frequency.setValueAtTime(freq, t0);
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(gain, t0 + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    o.connect(g);
+    g.connect(actx.destination);
+    o.start(t0);
+    o.stop(t0 + dur + 0.03);
+  } catch {
+    /* audio indisponible */
+  }
+}
+const vib = (p: number | number[]) => {
+  try {
+    navigator.vibrate?.(p);
+  } catch {
+    /* rien */
+  }
+};
 
-// ── Component ───────────────────────────────────────────────
+const KEYFRAMES = `
+@keyframes cc-pop { 0% { transform: scale(.6); opacity: 0 } 70% { transform: scale(1.06); opacity: 1 } 100% { transform: scale(1) } }
+@keyframes cc-shake { 0%,100% { transform: translateX(0) } 25% { transform: translateX(-8px) } 50% { transform: translateX(8px) } 75% { transform: translateX(-4px) } }
+`;
 
-export default function CategoryChronoGame({
-  roomCode,
-  playerId,
-  playerName,
-  onReturnToLobby,
-}: GameProps) {
-  // ── Setup ──
-  const [playerNames, setPlayerNames] = useState<string[]>(["", "", "", ""]);
+export default function CategoryChronoGame({ onReturnToLobby }: GameProps) {
+  const { muted } = useAudio();
+  const sound = !muted;
+
+  const [phase, setPhase] = useState<Phase>("setup");
+  const [names, setNames] = useState<string[]>([]);
+  const [packs, setPacks] = useState<string[]>(() => PACKS.filter((p) => p.defaultOn).map((p) => p.id));
   const [timerBase, setTimerBase] = useState(10);
+  const [startLives, setStartLives] = useState(3);
 
-  // ── Game ──
-  const [phase, setPhase] = useState<"setup" | "category-reveal" | "playing" | "eliminated" | "game-over">("setup");
-  const [players, setPlayers] = useState<{ name: string; lives: number; eliminated: boolean }[]>([]);
-  const [currentPlayerIndex, setCurrentPlayerIndex] = useState(0);
-  const [categoryQueue, setCategoryQueue] = useState<Category[]>([]);
-  const [categoryIndex, setCategoryIndex] = useState(0);
+  const [players, setPlayers] = useState<P[]>([]);
+  const [cur, setCur] = useState(0);
+  const [queue, setQueue] = useState<Category[]>([]);
+  const [catIdx, setCatIdx] = useState(0);
+  const [streak, setStreak] = useState(0); // bonnes réponses dans la catégorie
   const [timeLeft, setTimeLeft] = useState(0);
-  const [roundInCategory, setRoundInCategory] = useState(0);
-  const [eliminatedName, setEliminatedName] = useState("");
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const [isPaused, setIsPaused] = useState(false);
+  const [lostIdx, setLostIdx] = useState(0);
+  const endAt = useRef(0);
 
-  const currentCategory = categoryQueue[categoryIndex];
-  const alivePlayers = players.filter((p) => !p.eliminated);
-  const currentPlayer = players[currentPlayerIndex];
+  const pool = useMemo(() => PACKS.filter((p) => packs.includes(p.id)).flatMap((p) => p.items), [packs]);
+  const category = queue[catIdx];
+  const turnTime = (n: number) => Math.max(MIN_TIME, timerBase - n * 0.5);
 
-  // ── Timer ──
-  const stopTimer = useCallback(() => {
-    if (timerRef.current) {
-      clearInterval(timerRef.current);
-      timerRef.current = null;
+  const nextAlive = (from: number, list: P[]) => {
+    for (let k = 1; k <= list.length; k++) {
+      const i = (from + k) % list.length;
+      if (list[i].lives > 0) return i;
     }
-  }, []);
-
-  useEffect(() => {
-    if (phase === "playing" && !isPaused) {
-      timerRef.current = setInterval(() => {
-        setTimeLeft((t) => {
-          const next = Math.max(0, +(t - 0.1).toFixed(1));
-          if (next === 0) {
-            stopTimer();
-          }
-          return next;
-        });
-      }, 100);
-      return () => stopTimer();
-    }
-  }, [phase, isPaused, stopTimer]);
-
-  // ── Derived timer speed: gets faster as rounds go on ──
-  const getTimer = useCallback(() => {
-    const reduction = Math.min(roundInCategory * 0.5, timerBase - 3);
-    return Math.max(3, timerBase - reduction);
-  }, [roundInCategory, timerBase]);
-
-  // ── Setup handlers ──
-  const updateName = (i: number, val: string) => {
-    setPlayerNames((prev) => {
-      const copy = [...prev];
-      copy[i] = val;
-      return copy;
-    });
+    return from;
   };
 
-  const addPlayer = () => setPlayerNames((prev) => [...prev, ""]);
-  const removePlayer = (i: number) => setPlayerNames((prev) => prev.filter((_, idx) => idx !== i));
+  // Chrono (échéance absolue → pas de dérive ; nettoyé à chaque changement)
+  useEffect(() => {
+    if (phase !== "playing") return;
+    let lastBeep = -1;
+    const id = setInterval(() => {
+      const left = Math.max(0, (endAt.current - Date.now()) / 1000);
+      setTimeLeft(left);
+      const s = Math.ceil(left);
+      if (left > 0 && s <= 3 && s !== lastBeep) {
+        lastBeep = s;
+        if (sound) beep(700, 0.06, "square", 0.08);
+      }
+      if (left <= 0) {
+        clearInterval(id);
+        lose();
+      }
+    }, 100);
+    return () => clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, cur, streak]);
 
-  const canStart = playerNames.filter((n) => n.trim()).length >= 2;
+  const startGame = (list: string[]) => {
+    setPlayers(list.map((name) => ({ name, lives: startLives })));
+    setQueue(shuffle(pool));
+    setCatIdx(0);
+    setCur(0);
+    setStreak(0);
+    setPhase("reveal");
+  };
 
-  const startGame = useCallback(() => {
-    const activePlayers = playerNames
-      .filter((n) => n.trim())
-      .map((n) => ({ name: n.trim(), lives: 3, eliminated: false }));
-    setPlayers(activePlayers);
-    setCategoryQueue(shuffleArray(CATEGORIES));
-    setCategoryIndex(0);
-    setCurrentPlayerIndex(0);
-    setRoundInCategory(0);
-    setPhase("category-reveal");
-  }, [playerNames]);
-
-  // ── Category reveal → playing ──
-  const startPlaying = useCallback(() => {
-    setRoundInCategory(0);
+  const go = () => {
+    setStreak(0);
+    endAt.current = Date.now() + timerBase * 1000;
     setTimeLeft(timerBase);
     setPhase("playing");
-    setIsPaused(false);
-  }, [timerBase]);
-
-  // ── Find next alive player ──
-  const nextAlivePlayer = useCallback(
-    (fromIndex: number, playersList: typeof players) => {
-      let idx = (fromIndex + 1) % playersList.length;
-      let loops = 0;
-      while (playersList[idx].eliminated && loops < playersList.length) {
-        idx = (idx + 1) % playersList.length;
-        loops++;
-      }
-      return idx;
-    },
-    []
-  );
-
-  // ── Correct answer → next player ──
-  const handleCorrect = useCallback(() => {
-    if (phase !== "playing") return;
-    stopTimer();
-    const nextRound = roundInCategory + 1;
-    setRoundInCategory(nextRound);
-    const nextIdx = nextAlivePlayer(currentPlayerIndex, players);
-    setCurrentPlayerIndex(nextIdx);
-    const reduction = Math.min(nextRound * 0.5, timerBase - 3);
-    setTimeLeft(Math.max(3, timerBase - reduction));
-    setIsPaused(false);
-  }, [phase, stopTimer, roundInCategory, currentPlayerIndex, players, nextAlivePlayer, timerBase]);
-
-  // ── Player fails (time out or wrong) ──
-  const handleFail = useCallback(() => {
-    if (phase !== "playing") return;
-    stopTimer();
-
-    const updated = [...players];
-    updated[currentPlayerIndex] = {
-      ...updated[currentPlayerIndex],
-      lives: updated[currentPlayerIndex].lives - 1,
-    };
-
-    if (updated[currentPlayerIndex].lives <= 0) {
-      updated[currentPlayerIndex].eliminated = true;
-    }
-
-    setPlayers(updated);
-    setEliminatedName(players[currentPlayerIndex].name);
-
-    const alive = updated.filter((p) => !p.eliminated);
-    if (alive.length <= 1) {
-      setPlayers(updated);
-      setPhase("game-over");
-      return;
-    }
-
-    setPhase("eliminated");
-  }, [phase, stopTimer, players, currentPlayerIndex]);
-
-  // Auto-fail when timer reaches 0
-  useEffect(() => {
-    if (phase === "playing" && timeLeft === 0) {
-      const timeoutId = setTimeout(() => {
-        handleFail();
-      }, 0);
-      return () => clearTimeout(timeoutId);
-    }
-  }, [phase, timeLeft, handleFail]);
-
-  // ── After elimination screen → next category ──
-  const continueGame = useCallback(() => {
-    const nextCat = categoryIndex + 1;
-    const nextIdx = nextAlivePlayer(currentPlayerIndex, players);
-    setCurrentPlayerIndex(nextIdx);
-
-    if (nextCat < categoryQueue.length) {
-      setCategoryIndex(nextCat);
-      setPhase("category-reveal");
-    } else {
-      // Reshuffle if we ran out
-      setCategoryQueue(shuffleArray(CATEGORIES));
-      setCategoryIndex(0);
-      setPhase("category-reveal");
-    }
-  }, [categoryIndex, categoryQueue.length, currentPlayerIndex, players, nextAlivePlayer]);
-
-  const resetGame = () => {
-    setPhase("setup");
-    setPlayers([]);
-    setCategoryIndex(0);
+    if (sound) beep(880, 0.15, "square", 0.1);
   };
 
-  // ── Winner ──
-  const winner = alivePlayers[0];
+  const valid = () => {
+    if (phase !== "playing") return;
+    const n = streak + 1;
+    const t = turnTime(n);
+    endAt.current = Date.now() + t * 1000;
+    setTimeLeft(t);
+    setStreak(n);
+    setCur(nextAlive(cur, players));
+    if (sound) beep(880 + Math.min(n, 12) * 30, 0.08);
+    vib(25);
+  };
 
-  // ── Timer bar width ──
-  const timerPercent = timerBase > 0 ? (timeLeft / timerBase) * 100 : 0;
-  const timerColor =
-    timeLeft > timerBase * 0.5
-      ? "bg-green-500"
-      : timeLeft > timerBase * 0.25
-      ? "bg-yellow-500"
-      : "bg-red-500";
+  function lose() {
+    if (phase !== "playing") return;
+    const updated = players.map((p, i) => (i === cur ? { ...p, lives: p.lives - 1 } : p));
+    setPlayers(updated);
+    setLostIdx(cur);
+    if (sound) {
+      beep(300, 0.25, "sawtooth", 0.1);
+      beep(180, 0.45, "sawtooth", 0.1, 0.2);
+    }
+    vib([200, 80, 200]);
+    setPhase(updated.filter((p) => p.lives > 0).length <= 1 ? "over" : "lost");
+  }
 
-  // ── Render ────────────────────────────────────────────────
+  const continueGame = () => {
+    // Le perdant (s'il est encore en vie) relance sur une nouvelle catégorie
+    setCur(players[lostIdx].lives > 0 ? lostIdx : nextAlive(lostIdx, players));
+    if (catIdx + 1 < queue.length) setCatIdx(catIdx + 1);
+    else {
+      setQueue(shuffle(pool));
+      setCatIdx(0);
+    }
+    setPhase("reveal");
+  };
 
-  return (
-    <div className={cn("relative min-h-screen w-full overflow-hidden text-white", BG_GRADIENT)}>
-      {/* ── SETUP ──────────────────────────────────────────── */}
-      {phase === "setup" && (
-        <div className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center px-4 py-8">
-          <h1
-            className="mb-2 text-center text-4xl font-bold tracking-tight text-orange-100"
-            style={{ animation: "fadeUp 0.5s ease-out" }}
-          >
-            Catégorie Chrono
-          </h1>
-          <p
-            className="mb-8 text-center text-sm text-orange-200/60"
-            style={{ animation: "fadeUp 0.6s ease-out" }}
-          >
-            Trouve un mot dans la catégorie avant que le temps s&apos;écoule !
+  // ── Écrans ─────────────────────────────────────────────
+  if (phase === "setup") {
+    return (
+      <PlayersSetup
+        emoji="⏱️"
+        name="Catégorie Chrono"
+        min={2}
+        max={12}
+        accent={ACCENT}
+        onStart={(list) => {
+          setNames(list);
+          setPhase("config");
+        }}
+      />
+    );
+  }
+
+  if (phase === "config") {
+    return (
+      <Shell>
+        <span className="text-5xl">⏱️</span>
+        <h1 className="cb-display-lg mt-2 text-center">Catégorie Chrono</h1>
+        <div className="mt-4 w-full max-w-sm rounded-2xl p-4 text-left" style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }}>
+          <p className="text-[14px] leading-snug text-white/90">
+            🗂️ Une <b>catégorie</b> s&apos;affiche (ex. « Fruits »).
+            <br />
+            🔄 Chacun son tour, dis <b>un mot</b> de la catégorie avant la fin du chrono, puis passe le tél.
+            <br />
+            ⚡ Le chrono <b>raccourcit</b> à chaque mot. Pas de mot, répétition ou hors sujet = <b>une vie en moins</b>.
           </p>
+        </div>
 
-          <div className="mb-4 w-full space-y-3">
-            {playerNames.map((name, i) => (
-              <div key={i} className="flex gap-2" style={{ animation: `fadeUp ${0.4 + i * 0.08}s ease-out` }}>
-                <input
-                  type="text"
-                  value={name}
-                  onChange={(e) => updateName(i, e.target.value)}
-                  placeholder={`Joueur ${i + 1}`}
-                  className="flex-1 rounded-xl border border-orange-300/20 bg-black/30 px-4 py-3 text-sm text-orange-100 placeholder-orange-300/30 outline-none backdrop-blur-xl focus:border-orange-400/40"
-                />
-                {playerNames.length > 2 && (
-                  <button
-                    onClick={() => removePlayer(i)}
-                    className="rounded-xl px-3 text-xs text-red-400/70 transition hover:bg-red-500/10"
-                  >
-                    X
-                  </button>
-                )}
-              </div>
-            ))}
-          </div>
-
-          {playerNames.length < 8 && (
-            <button
-              onClick={addPlayer}
-              className="mb-6 rounded-xl border border-orange-300/20 bg-black/30 px-5 py-2 text-sm text-orange-300/80 backdrop-blur-xl transition hover:bg-orange-500/10"
-            >
-              + Ajouter un joueur
-            </button>
-          )}
-
-          <div
-            className="mb-6 w-full rounded-2xl border border-orange-300/20 bg-black/35 p-5 backdrop-blur-xl"
-            style={{ animation: "fadeUp 0.7s ease-out" }}
-          >
-            <label className="mb-2 block text-xs uppercase tracking-wider text-orange-200/50">
-              Temps par tour
-            </label>
-            <div className="flex gap-2">
-              {[6, 8, 10, 12, 15].map((d) => (
-                <button
-                  key={d}
-                  onClick={() => setTimerBase(d)}
-                  className={cn(
-                    "rounded-xl px-4 py-2 font-mono text-sm transition-all",
-                    timerBase === d
-                      ? "bg-gradient-to-r from-orange-500 to-pink-500 text-white shadow-lg shadow-orange-500/20"
-                      : "border border-orange-300/20 bg-black/30 text-orange-300/60 hover:bg-orange-500/10"
+        <p className="af-eyebrow mt-6">Thèmes ({pool.length} catégories)</p>
+        <div className="mt-2 grid w-full max-w-sm grid-cols-2 gap-2">
+          {PACKS.map((p) => {
+            const on = packs.includes(p.id);
+            return (
+              <button
+                key={p.id}
+                onClick={() => setPacks((cur) => (on ? cur.filter((x) => x !== p.id) : [...cur, p.id]))}
+                className="flex items-center gap-2 rounded-2xl px-3 text-left"
+                style={{
+                  minHeight: 52,
+                  background: on ? (p.adult ? "rgba(255,62,165,0.18)" : "rgba(255,122,61,0.16)") : "rgba(255,255,255,0.05)",
+                  border: `1.5px solid ${on ? (p.adult ? "#FF3EA5" : ACCENT) : "rgba(255,255,255,0.12)"}`,
+                }}
+                aria-pressed={on}
+              >
+                <span className="text-xl">{p.emoji}</span>
+                <span className="min-w-0 flex-1 text-[14px] font-bold leading-tight">
+                  {p.name}
+                  {p.adult && (
+                    <span className="block text-[12px] font-semibold" style={{ color: "#FF8CC8" }}>
+                      18+ · coquin
+                    </span>
                   )}
-                >
-                  {d}s
-                </button>
-              ))}
-            </div>
-          </div>
+                </span>
+                <span className="text-sm">{on ? "✓" : ""}</span>
+              </button>
+            );
+          })}
+        </div>
 
-          <button
-            onClick={startGame}
-            disabled={!canStart}
-            className={cn(
-              "press-effect rounded-xl px-8 py-3 text-lg font-semibold transition-all",
-              canStart
-                ? "bg-gradient-to-r from-orange-500 to-pink-500 text-white shadow-lg shadow-orange-500/25 hover:shadow-orange-500/40"
-                : "cursor-not-allowed bg-gray-700/50 text-gray-500"
-            )}
-          >
-            C&apos;est parti !
+        <p className="af-eyebrow mt-6">Chrono de départ</p>
+        <div className="mt-2 flex gap-2">
+          {[6, 8, 10, 15].map((d) => (
+            <Pill key={d} on={timerBase === d} onClick={() => setTimerBase(d)}>
+              {d} s
+            </Pill>
+          ))}
+        </div>
+        <p className="af-eyebrow mt-6">Vies</p>
+        <div className="mt-2 flex gap-2">
+          {[1, 2, 3].map((n) => (
+            <Pill key={n} on={startLives === n} onClick={() => setStartLives(n)}>
+              {"❤️".repeat(n)}
+            </Pill>
+          ))}
+        </div>
+
+        <button
+          disabled={!pool.length}
+          onClick={() => startGame(names)}
+          className="af-btn af-btn-primary mt-6 w-full max-w-sm disabled:opacity-40"
+          style={{ fontSize: 17, minHeight: 54 }}
+        >
+          {pool.length ? `C'est parti ! (${names.length} joueurs)` : "Choisis au moins un thème"}
+        </button>
+        <button onClick={() => setPhase("setup")} className="mt-1 text-sm" style={{ color: "var(--text-dim)", minHeight: 44 }}>
+          ← Modifier les joueurs
+        </button>
+      </Shell>
+    );
+  }
+
+  if (phase === "reveal" && category) {
+    return (
+      <Shell>
+        <style>{KEYFRAMES}</style>
+        <Lives players={players} cur={cur} />
+        <p className="af-eyebrow mt-6">Catégorie</p>
+        <div className="mt-1 text-6xl" style={{ animation: "cc-pop .45s ease-out" }}>
+          {category.emoji}
+        </div>
+        <h2 className="cb-display-lg mt-2 max-w-sm text-center" style={{ overflowWrap: "anywhere" }}>
+          {category.name}
+        </h2>
+        <p className="mt-2 text-[14px]" style={{ color: "var(--text-dim)" }}>
+          Ex. : {category.examples}
+        </p>
+        <p className="mt-6 text-[15px]" style={{ color: "var(--text-dim)" }}>
+          <b className="text-white">{players[cur]?.name}</b> commence · {timerBase} s
+        </p>
+        <button onClick={go} className="af-btn af-btn-primary mt-3 w-full max-w-xs" style={{ fontSize: 18, minHeight: 56 }}>
+          GO !
+        </button>
+      </Shell>
+    );
+  }
+
+  if (phase === "playing" && category) {
+    const total = turnTime(streak);
+    const pct = Math.max(0, Math.min(100, (timeLeft / total) * 100));
+    const color = pct > 50 ? "#3DDC97" : pct > 25 ? "#FFD23F" : "#FF5B5B";
+    return (
+      <div className="relative flex min-h-[100svh] select-none flex-col text-white" style={{ background: BG, touchAction: "manipulation", paddingTop: TOP_SAFE, paddingBottom: BOTTOM_SAFE }}>
+        <style>{KEYFRAMES}</style>
+        <div className="px-5 text-center">
+          <p className="text-[15px] font-bold text-white/80">
+            {category.emoji} {category.name}
+          </p>
+          <div className="mx-auto mt-3 h-2.5 w-full max-w-sm overflow-hidden rounded-full" style={{ background: "rgba(255,255,255,0.1)" }}>
+            <div className="h-full rounded-full" style={{ width: `${pct}%`, background: color, transition: "width .1s linear" }} />
+          </div>
+          <p className="mt-2 font-black tabular-nums" style={{ fontFamily: "var(--font-display)", fontSize: 40, lineHeight: 1, color: timeLeft <= 3 ? "#FF5B5B" : "#fff" }}>
+            {timeLeft.toFixed(1).replace(".", ",")}
+          </p>
+        </div>
+
+        <div className="flex flex-1 flex-col items-center justify-center px-5 text-center">
+          <p className="af-eyebrow">C&apos;est à</p>
+          <div key={`${cur}-${streak}`} style={{ animation: "cc-pop .25s ease-out" }} className="flex flex-col items-center">
+            <Mascot size={90} color={colorForIndex(cur)} mood={timeLeft <= 3 ? "shocked" : "happy"} arms />
+            <h2 className="cb-display-lg mt-2 max-w-full" style={{ overflowWrap: "anywhere" }}>
+              {players[cur]?.name}
+            </h2>
+          </div>
+          <p className="mt-2 text-[15px]" style={{ color: "var(--text-dim)" }}>
+            Dis un mot, puis passe le tél ! {streak > 0 ? `· ${streak} mot${streak > 1 ? "s" : ""} déjà dit${streak > 1 ? "s" : ""}` : ""}
+          </p>
+        </div>
+
+        <div className="flex gap-3 px-5">
+          <button onClick={valid} className="flex flex-1 flex-col items-center justify-center rounded-3xl" style={{ minHeight: 96, background: "rgba(61,220,151,0.16)", border: "2px solid rgba(61,220,151,0.5)" }}>
+            <span className="text-3xl">✓</span>
+            <span className="text-[15px] font-black" style={{ color: "#3DDC97" }}>
+              Validé
+            </span>
           </button>
-          {!canStart && <p className="mt-2 text-xs text-orange-300/40">Min. 2 joueurs</p>}
-
-          {onReturnToLobby && (
-            <button onClick={onReturnToLobby} className="mt-4 text-sm text-orange-300/40 transition hover:text-orange-300/70">
-              Retour au lobby
-            </button>
-          )}
+          <button onClick={lose} className="flex flex-1 flex-col items-center justify-center rounded-3xl" style={{ minHeight: 96, background: "rgba(255,91,91,0.14)", border: "2px solid rgba(255,91,91,0.45)" }}>
+            <span className="text-3xl">✗</span>
+            <span className="text-[15px] font-black" style={{ color: "#FF8A8A" }}>
+              Raté
+            </span>
+          </button>
         </div>
-      )}
+      </div>
+    );
+  }
 
-      {/* ── CATEGORY REVEAL ────────────────────────────────── */}
-      {phase === "category-reveal" && currentCategory && (
-        <div className="flex min-h-screen flex-col items-center justify-center px-4">
+  if (phase === "lost") {
+    const p = players[lostIdx];
+    const out = p.lives <= 0;
+    return (
+      <Shell>
+        <style>{KEYFRAMES}</style>
+        <div style={{ animation: "cc-shake .5s ease-out" }}>
+          <Mascot size={110} color={colorForIndex(lostIdx)} mood={out ? "dead" : "sad"} arms />
+        </div>
+        <h2 className="cb-display-lg mt-3 max-w-full text-center" style={{ color: "#FF8A8A", overflowWrap: "anywhere" }}>
+          {p.name}
+        </h2>
+        <p className="mt-1 text-lg font-bold">{out ? "est éliminé·e ! 💀" : "perd une vie 💔"}</p>
+        <Lives players={players} cur={-1} />
+        <button onClick={continueGame} className="af-btn af-btn-primary mt-7 w-full max-w-xs" style={{ fontSize: 16, minHeight: 54 }}>
+          Catégorie suivante →
+        </button>
+      </Shell>
+    );
+  }
+
+  // ── Fin de partie ──
+  const ranking = players.map((p, i) => ({ ...p, i })).sort((a, b) => b.lives - a.lives);
+  const winner = ranking[0];
+  return (
+    <Shell>
+      <span className="text-6xl">🏆</span>
+      <p className="af-eyebrow mt-2">Dernier·e en vie</p>
+      <h2 className="cb-display-lg mt-1 max-w-full text-center" style={{ color: "#FFE07A", overflowWrap: "anywhere" }}>
+        {winner?.name ?? "Personne"}
+      </h2>
+      <div className="mt-5 w-full max-w-sm space-y-1.5">
+        {ranking.map((p, k) => (
           <div
-            className="w-full max-w-sm rounded-3xl border border-orange-300/20 bg-black/40 p-8 text-center backdrop-blur-xl"
-            style={{ animation: "scaleIn 0.4s ease-out" }}
+            key={p.i}
+            className="flex items-center gap-3 rounded-2xl px-3"
+            style={{ minHeight: 48, background: k === 0 ? "rgba(255,210,63,0.12)" : "rgba(255,255,255,0.05)", border: `1px solid ${k === 0 ? "rgba(255,210,63,0.45)" : "rgba(255,255,255,0.1)"}` }}
           >
-            {/* Lives display */}
-            <div className="mb-6 flex flex-wrap justify-center gap-2">
-              {players
-                .filter((p) => !p.eliminated)
-                .map((p, i) => (
-                  <div key={i} className="rounded-full border border-orange-300/15 bg-black/30 px-3 py-1 text-xs">
-                    <span className="text-orange-100">{p.name}</span>
-                    <span className="ml-1 text-red-400">{"❤️".repeat(p.lives)}</span>
-                  </div>
-                ))}
-            </div>
-
-            <p className="mb-2 text-xs uppercase tracking-wider text-orange-200/50">
-              Catégorie
-            </p>
-            <div className="mb-2 text-6xl">{currentCategory.emoji}</div>
-            <h2 className="mb-3 text-3xl font-bold text-orange-100">{currentCategory.name}</h2>
-            {currentCategory.examples && (
-              <p className="mb-6 text-sm text-white/40">{currentCategory.examples}</p>
-            )}
-
-            <p className="mb-6 text-sm text-white/50">
-              <span className="font-semibold text-orange-200">{players[currentPlayerIndex]?.name}</span> commence !
-            </p>
-
-            <button
-              onClick={startPlaying}
-              className="press-effect rounded-xl bg-gradient-to-r from-orange-500 to-pink-500 px-8 py-3 text-lg font-semibold text-white shadow-lg shadow-orange-500/25 transition hover:shadow-orange-500/40"
-            >
-              GO !
-            </button>
+            <span className="w-6 text-center text-sm font-black">{k === 0 ? "🥇" : p.lives > 0 ? k + 1 : "💀"}</span>
+            <MascotAvatar color={colorForIndex(p.i)} size={28} mood={k === 0 ? "cool" : "sad"} />
+            <span className="min-w-0 flex-1 truncate text-[15px] font-bold">{p.name}</span>
+            <span className="text-sm">{p.lives > 0 ? "❤️".repeat(p.lives) : ""}</span>
           </div>
-        </div>
+        ))}
+      </div>
+      <button onClick={() => startGame(names)} className="af-btn af-btn-primary mt-6 w-full max-w-sm" style={{ fontSize: 16, minHeight: 54 }}>
+        Rejouer
+      </button>
+      <button onClick={() => setPhase("config")} className="mt-1 text-sm" style={{ color: "var(--text-dim)", minHeight: 44 }}>
+        Changer les réglages
+      </button>
+      {onReturnToLobby && (
+        <button onClick={onReturnToLobby} className="text-sm" style={{ color: "var(--text-muted)", minHeight: 44 }}>
+          Quitter
+        </button>
       )}
+    </Shell>
+  );
+}
 
-      {/* ── PLAYING ────────────────────────────────────────── */}
-      {phase === "playing" && currentCategory && currentPlayer && (
-        <div className="flex min-h-screen flex-col">
-          {/* Timer bar */}
-          <div className="relative h-2 w-full bg-white/10">
-            <div
-              className={cn("h-full transition-all duration-100", timerColor)}
-              style={{ width: `${timerPercent}%` }}
-            />
-          </div>
+function Shell({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="relative flex min-h-[100svh] flex-col items-center px-5 text-white" style={{ background: BG, paddingTop: TOP_SAFE, paddingBottom: BOTTOM_SAFE }}>
+      <div className="my-auto flex w-full flex-col items-center">{children}</div>
+    </div>
+  );
+}
 
-          {/* Category + Timer */}
-          <div className="flex items-center justify-between px-4 py-3">
-            <div className="flex items-center gap-2">
-              <span className="text-2xl">{currentCategory.emoji}</span>
-              <span className="text-sm font-semibold text-white/70">{currentCategory.name}</span>
-            </div>
-            <div
-              className={cn(
-                "font-mono text-3xl font-bold tabular-nums",
-                timeLeft <= 3 ? "animate-pulse text-red-400" : "text-orange-100"
-              )}
-            >
-              {timeLeft.toFixed(1)}
-            </div>
-          </div>
+function Pill({ on, onClick, children }: { on: boolean; onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button
+      onClick={onClick}
+      className="rounded-2xl px-4 text-base font-black"
+      style={{
+        minHeight: 48,
+        minWidth: 60,
+        fontFamily: "var(--font-display)",
+        background: on ? ACCENT : "rgba(255,255,255,0.06)",
+        color: on ? "#2A0E00" : "#fff",
+        border: `1.5px solid ${on ? ACCENT : "rgba(255,255,255,0.14)"}`,
+      }}
+    >
+      {children}
+    </button>
+  );
+}
 
-          {/* Lives */}
-          <div className="flex flex-wrap justify-center gap-2 px-4 pb-2">
-            {players
-              .filter((p) => !p.eliminated)
-              .map((p, i) => (
-                <div
-                  key={i}
-                  className={cn(
-                    "rounded-full border px-3 py-1 text-xs transition",
-                    p.name === currentPlayer.name
-                      ? "border-orange-400/50 bg-orange-500/20 text-orange-100"
-                      : "border-white/10 bg-black/20 text-white/50"
-                  )}
-                >
-                  {p.name} {"❤️".repeat(p.lives)}
-                </div>
-              ))}
-          </div>
-
-          {/* Current player */}
-          <div className="flex flex-1 flex-col items-center justify-center px-4">
-            <p className="mb-2 text-sm uppercase tracking-wider text-white/40">C&apos;est à</p>
-            <h2
-              className="mb-4 text-5xl font-bold text-orange-100"
-              style={{ animation: "scaleIn 0.2s ease-out" }}
-              key={currentPlayerIndex}
-            >
-              {currentPlayer.name}
-            </h2>
-            <p className="text-lg text-white/50">Dis un mot !</p>
-          </div>
-
-          {/* Action buttons */}
-          <div className="flex">
-            <button
-              onClick={handleCorrect}
-              className="flex flex-1 flex-col items-center justify-center border-r border-green-400/10 bg-green-500/8 py-8 transition active:bg-green-500/20"
-            >
-              <span className="text-4xl">✓</span>
-              <span className="mt-1 text-sm uppercase tracking-wider text-green-300/70">Valide</span>
-            </button>
-            <button
-              onClick={handleFail}
-              className="flex flex-1 flex-col items-center justify-center bg-red-500/8 py-8 transition active:bg-red-500/20"
-            >
-              <span className="text-4xl">✗</span>
-              <span className="mt-1 text-sm uppercase tracking-wider text-red-300/70">Perdu</span>
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* ── ELIMINATED ─────────────────────────────────────── */}
-      {phase === "eliminated" && (
-        <div className="flex min-h-screen flex-col items-center justify-center px-4">
-          <div
-            className="w-full max-w-sm rounded-3xl border border-red-400/20 bg-black/40 p-8 text-center backdrop-blur-xl"
-            style={{ animation: "scaleIn 0.4s ease-out" }}
-          >
-            <div className="mb-4 text-6xl">💀</div>
-            <h2 className="mb-2 text-2xl font-bold text-red-300">{eliminatedName}</h2>
-            <p className="mb-2 text-white/50">
-              {players.find((p) => p.name === eliminatedName)?.eliminated
-                ? "est éliminé !"
-                : "perd une vie !"}
-            </p>
-
-            {/* Lives display */}
-            <div className="mb-6 flex flex-wrap justify-center gap-2">
-              {players
-                .filter((p) => !p.eliminated)
-                .map((p, i) => (
-                  <div key={i} className="rounded-full border border-white/10 bg-black/30 px-3 py-1 text-xs">
-                    <span className="text-orange-100">{p.name}</span>
-                    <span className="ml-1 text-red-400">{"❤️".repeat(p.lives)}</span>
-                  </div>
-                ))}
-            </div>
-
-            <button
-              onClick={continueGame}
-              className="press-effect rounded-xl bg-gradient-to-r from-orange-500 to-pink-500 px-8 py-3 font-semibold text-white shadow-lg shadow-orange-500/25 transition hover:shadow-orange-500/40"
-            >
-              Catégorie suivante
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* ── GAME OVER ──────────────────────────────────────── */}
-      {phase === "game-over" && (
-        <div className="flex min-h-screen flex-col items-center justify-center px-4 py-8">
-          <div
-            className="w-full max-w-sm rounded-3xl border border-orange-300/20 bg-black/40 p-8 text-center backdrop-blur-xl"
-            style={{ animation: "scaleIn 0.5s ease-out" }}
-          >
-            <div className="mb-4 text-6xl">🏆</div>
-            <p className="mb-1 text-xs uppercase tracking-wider text-orange-200/50">Vainqueur</p>
-            <h2 className="mb-6 text-4xl font-bold text-yellow-200" style={{ animation: "fadeUp 0.7s ease-out" }}>
-              {winner?.name ?? "Personne"}
-            </h2>
-
-            <div className="mb-8 space-y-2">
-              {players
-                .sort((a, b) => b.lives - a.lives)
-                .map((p, i) => (
-                  <div
-                    key={i}
-                    className={cn(
-                      "flex items-center justify-between rounded-xl border px-4 py-3",
-                      i === 0 ? "border-yellow-400/30 bg-yellow-500/10" : "border-white/8 bg-black/20"
-                    )}
-                  >
-                    <span className="text-sm text-orange-100">
-                      {i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `${i + 1}.`} {p.name}
-                    </span>
-                    <span className="text-sm text-red-400">
-                      {p.eliminated ? "💀" : "❤️".repeat(p.lives)}
-                    </span>
-                  </div>
-                ))}
-            </div>
-
-            <div className="flex gap-3">
-              <button
-                onClick={startGame}
-                className="press-effect flex-1 rounded-xl bg-gradient-to-r from-orange-500 to-pink-500 py-3 text-sm font-semibold text-white shadow-lg shadow-orange-500/25 transition hover:shadow-orange-500/40"
-              >
-                Rejouer
-              </button>
-              <button
-                onClick={resetGame}
-                className="flex-1 rounded-xl border border-orange-300/20 bg-black/30 py-3 text-sm text-orange-300/70 backdrop-blur-xl transition hover:bg-orange-500/10"
-              >
-                Nouvelle partie
-              </button>
-            </div>
-
-            {onReturnToLobby && (
-              <button onClick={onReturnToLobby} className="mt-4 text-sm text-orange-300/40 transition hover:text-orange-300/70">
-                Retour au lobby
-              </button>
-            )}
-          </div>
-        </div>
-      )}
+function Lives({ players, cur }: { players: P[]; cur: number }) {
+  return (
+    <div className="mt-4 flex max-w-sm flex-wrap justify-center gap-1.5">
+      {players.map((p, i) => (
+        <span
+          key={i}
+          className="rounded-full px-3 py-1.5 text-[13px] font-bold"
+          style={{
+            opacity: p.lives > 0 ? 1 : 0.4,
+            background: i === cur ? "rgba(255,122,61,0.2)" : "rgba(255,255,255,0.06)",
+            border: `1px solid ${i === cur ? ACCENT : "rgba(255,255,255,0.12)"}`,
+          }}
+        >
+          {p.name} {p.lives > 0 ? "❤️".repeat(p.lives) : "💀"}
+        </span>
+      ))}
     </div>
   );
 }

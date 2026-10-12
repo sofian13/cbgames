@@ -52,3 +52,4 @@ next-env.d.ts
 
 # App mobile Zinzin (build Vite)
 zinzin/dist
+zinzin/tsconfig.tsbuildinfo

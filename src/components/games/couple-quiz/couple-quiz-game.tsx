@@ -11,10 +11,12 @@ import { useState } from "react";
 import type { GameProps } from "@/lib/games/types";
 import { useGame } from "@/lib/party/use-game";
 import { useGameStore } from "@/lib/stores/game-store";
-import { LocalShell, ModeSelect, PassScreen, PlayersSetup, colorForIndex, type GameMode } from "@/components/games/local-kit";
+import { LocalShell, ModeSelect, PassScreen, colorForIndex, type GameMode } from "@/components/games/local-kit";
+import { MascotAvatar } from "@/components/Mascot";
+import { ConfettiBurst } from "@/components/ConfettiBurst";
+import { QPACKS, type Q } from "./questions";
 
 const ACCENT = "#FF6BAE";
-const ROUNDS = 12;
 
 function verdictFor(pct: number) {
   return pct >= 85 ? { t: "Âmes sœurs 💍", c: "#3DDC97" }
@@ -35,46 +37,30 @@ export default function CoupleQuizGame(props: GameProps) {
   return <CoupleQuizOnline {...props} />;
 }
 
-interface Q { a: string; b: string; }
-// Chaque question = « plutôt A ou B ? » à propos de celui qui répond.
-const QUESTIONS: Q[] = [
-  { a: "grasse matinée", b: "lève-tôt" },
-  { a: "plage", b: "montagne" },
-  { a: "sucré", b: "salé" },
-  { a: "film d'horreur", b: "comédie romantique" },
-  { a: "soirée canapé", b: "sortir dehors" },
-  { a: "thé", b: "café" },
-  { a: "chien", b: "chat" },
-  { a: "pizza", b: "burger" },
-  { a: "Netflix à la maison", b: "ciné" },
-  { a: "appeler", b: "envoyer un texto" },
-  { a: "fête surprise", b: "soirée tranquille" },
-  { a: "cuisiner maison", b: "commander" },
-  { a: "douche le matin", b: "douche le soir" },
-  { a: "bain", b: "douche" },
-  { a: "vacances organisées", b: "à l'aventure" },
-  { a: "tatouage", b: "piercing" },
-  { a: "garder son calme", b: "exploser puis ça passe" },
-  { a: "romantique", b: "rigolo·te" },
-  { a: "plutôt frileux·se", b: "toujours trop chaud" },
-  { a: "arriver en avance", b: "toujours à la bourre" },
-  { a: "sortie resto", b: "pique-nique improvisé" },
-  { a: "musique à fond", b: "podcast tranquille" },
-  { a: "ranger au fur et à mesure", b: "grand ménage d'un coup" },
-  { a: "série à binge-watcher", b: "un épisode par soir" },
-];
-
 function shuffle<T>(arr: T[]): T[] {
   const a = [...arr];
   for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
   return a;
 }
 
-type Phase = "setup" | "pass-answer" | "answer" | "pass-guess" | "guess" | "reveal" | "over";
+type Phase = "names" | "config" | "pass-answer" | "answer" | "pass-guess" | "guess" | "reveal" | "over";
+const TOP_SAFE = "calc(env(safe-area-inset-top, 0px) + 64px)";
+
+// Conteneur plein écran : centré, sans jamais passer sous les coins du haut
+function Screen({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="relative flex min-h-[100svh] flex-col items-center px-5 text-white"
+      style={{ background: `radial-gradient(circle at 50% 12%, ${ACCENT}30, transparent 45%), linear-gradient(180deg, #0A0420 0%, #0E0828 100%)`, paddingTop: TOP_SAFE, paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 24px)" }}>
+      <div className="my-auto flex w-full flex-col items-center">{children}</div>
+    </div>
+  );
+}
 
 function CoupleQuizLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) {
-  const [phase, setPhase] = useState<Phase>("setup");
-  const [names, setNames] = useState<string[]>([]);
+  const [phase, setPhase] = useState<Phase>("names");
+  const [names, setNames] = useState<[string, string]>(["", ""]);
+  const [packs, setPacks] = useState<string[]>(() => QPACKS.filter((p) => p.defaultOn).map((p) => p.id));
+  const [rounds, setRounds] = useState(10);
   const [deck, setDeck] = useState<Q[]>([]);
   const [round, setRound] = useState(0);
   const [answerer, setAnswerer] = useState(0); // index 0/1
@@ -84,10 +70,12 @@ function CoupleQuizLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) 
 
   const guesser = 1 - answerer;
   const q = deck[round];
+  const pool = QPACKS.filter((p) => packs.includes(p.id)).flatMap((p) => p.qs);
 
-  const begin = (picked: string[]) => {
-    setNames(picked.slice(0, 2));
-    setDeck(shuffle(QUESTIONS).slice(0, ROUNDS));
+  const begin = () => {
+    // Les deux sens (A/B) sont mélangés pour éviter les automatismes
+    const picked = shuffle(pool).slice(0, rounds).map((x) => (Math.random() < 0.5 ? x : { a: x.b, b: x.a }));
+    setDeck(picked);
     setRound(0); setAnswerer(0); setScores([0, 0]); setTruth(null); setGuess(null);
     setPhase("pass-answer");
   };
@@ -96,6 +84,7 @@ function CoupleQuizLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) 
   const onGuess = (pick: "a" | "b") => {
     setGuess(pick);
     if (pick === truth) setScores((s) => (guesser === 0 ? [s[0] + 1, s[1]] : [s[0], s[1] + 1]));
+    try { navigator.vibrate?.(pick === truth ? 60 : [120, 60, 120]); } catch { /* rien */ }
     setPhase("reveal");
   };
   const nextRound = () => {
@@ -103,29 +92,97 @@ function CoupleQuizLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) 
     setRound(round + 1); setAnswerer((a) => 1 - a); setTruth(null); setGuess(null);
     setPhase("pass-answer");
   };
-  const restart = () => { setPhase("setup"); };
 
-  // ── Setup ──
-  if (phase === "setup") {
-    return <PlayersSetup emoji="❤️" name="Tu me connais ?" min={2} max={2} accent={ACCENT} onStart={begin} onBack={onReturnToLobby} />;
+  // ── Prénoms (2 joueurs exactement) ──
+  if (phase === "names") {
+    const ok = names[0].trim() && names[1].trim();
+    return (
+      <Screen>
+        <div className="text-6xl">❤️</div>
+        <h1 className="cb-display-lg mt-2 text-center">Tu me connais ?</h1>
+        <p className="mt-2 max-w-sm text-center text-[15px]" style={{ color: "var(--text-dim)" }}>
+          À deux, sur un seul tél. L&apos;un répond <b className="text-white">en secret</b> sur lui-même, l&apos;autre doit <b className="text-white">deviner</b> sa réponse. On alterne à chaque question.
+        </p>
+        <div className="mt-6 w-full max-w-sm space-y-3">
+          {[0, 1].map((i) => (
+            <div key={i} className="flex items-center gap-3">
+              <MascotAvatar color={colorForIndex(i)} size={40} mood="love" />
+              <input
+                value={names[i]}
+                onChange={(e) => { const v = e.target.value.slice(0, 16); setNames((n) => (i === 0 ? [v, n[1]] : [n[0], v])); }}
+                placeholder={i === 0 ? "Prénom 1" : "Prénom 2"}
+                autoComplete="off" autoCorrect="off" autoCapitalize="words" spellCheck={false} enterKeyHint={i === 0 ? "next" : "done"}
+                className="min-w-0 flex-1 rounded-2xl border px-4 outline-none"
+                style={{ fontSize: 16, minHeight: 52, background: "rgba(255,255,255,0.06)", borderColor: "var(--line-soft)", color: "#fff" }}
+              />
+            </div>
+          ))}
+        </div>
+        <button disabled={!ok} onClick={() => { setNames([names[0].trim(), names[1].trim()]); setPhase("config"); }}
+          className="af-btn af-btn-primary mt-6 w-full max-w-sm disabled:opacity-40" style={{ fontSize: 17, minHeight: 54 }}>
+          Continuer
+        </button>
+      </Screen>
+    );
+  }
+
+  // ── Thèmes + nombre de questions ──
+  if (phase === "config") {
+    return (
+      <Screen>
+        <h1 className="cb-display-lg text-center">{names[0]} & {names[1]}</h1>
+        <p className="af-eyebrow mt-6">Thèmes ({pool.length} questions)</p>
+        <div className="mt-2 grid w-full max-w-sm grid-cols-2 gap-2">
+          {QPACKS.map((p) => {
+            const on = packs.includes(p.id);
+            return (
+              <button key={p.id} aria-pressed={on}
+                onClick={() => setPacks((cur) => (on ? cur.filter((x) => x !== p.id) : [...cur, p.id]))}
+                className="flex items-center gap-2 rounded-2xl px-3 text-left"
+                style={{ minHeight: 52, background: on ? `${ACCENT}26` : "rgba(255,255,255,0.05)", border: `1.5px solid ${on ? ACCENT : "rgba(255,255,255,0.12)"}` }}>
+                <span className="text-xl">{p.emoji}</span>
+                <span className="min-w-0 flex-1 text-[14px] font-bold leading-tight">
+                  {p.name}
+                  {p.adult && <span className="block text-[12px] font-semibold" style={{ color: "#FF8CC8" }}>18+ · coquin</span>}
+                </span>
+                <span className="text-sm">{on ? "✓" : ""}</span>
+              </button>
+            );
+          })}
+        </div>
+        <p className="af-eyebrow mt-6">Nombre de questions</p>
+        <div className="mt-2 flex gap-2">
+          {[6, 10, 16, 20].map((n) => (
+            <button key={n} onClick={() => setRounds(n)} className="rounded-2xl px-4 text-base font-black"
+              style={{ minHeight: 48, minWidth: 60, fontFamily: "var(--font-display)", background: rounds === n ? ACCENT : "rgba(255,255,255,0.06)", color: rounds === n ? "#3A0020" : "#fff", border: `1.5px solid ${rounds === n ? ACCENT : "rgba(255,255,255,0.14)"}` }}>
+              {n}
+            </button>
+          ))}
+        </div>
+        <button disabled={pool.length < 2} onClick={begin} className="af-btn af-btn-primary mt-7 w-full max-w-sm disabled:opacity-40" style={{ fontSize: 17, minHeight: 54 }}>
+          {pool.length < 2 ? "Choisis au moins un thème" : "C'est parti !"}
+        </button>
+        <button onClick={() => setPhase("names")} className="mt-1 text-sm" style={{ color: "var(--text-dim)", minHeight: 44 }}>← Changer les prénoms</button>
+      </Screen>
+    );
   }
 
   // ── Pass to answerer ──
   if (phase === "pass-answer") {
     return <PassScreen toName={names[answerer]} colorIndex={answerer} accent={ACCENT}
-      hint={`Réponds sur TOI, sans montrer. ${names[guesser]} devra deviner.`}
+      hint={`Réponds sur TOI, sans montrer l'écran. ${names[guesser]} devra deviner.`}
       buttonLabel="C'est moi — répondre" onReady={() => setPhase("answer")} />;
   }
 
   // ── Answerer picks their truth ──
   if (phase === "answer" && q) {
     return (
-      <LocalShell accent={ACCENT} center>
-        <div className="af-eyebrow mb-2" style={{ color: ACCENT }}>Manche {round + 1}/{deck.length} · {names[answerer]} répond</div>
-        <h2 className="cb-display-sm mb-1 text-center sm:cb-display-md">Toi, {names[answerer]}, tu es plutôt…</h2>
-        <p className="mb-6 text-sm" style={{ color: "var(--text-muted)" }}>Réponds honnêtement (ne montre pas !)</p>
+      <Screen>
+        <div className="af-eyebrow mb-2" style={{ color: ACCENT }}>Question {round + 1}/{deck.length} · {names[answerer]} répond</div>
+        <h2 className="cb-display-md mb-1 text-center">{names[answerer]}, toi tu es plutôt…</h2>
+        <p className="mb-6 text-sm" style={{ color: "var(--text-dim)" }}>Réponds honnêtement (ne montre pas !)</p>
         <Choice a={q.a} b={q.b} onPick={onAnswer} />
-      </LocalShell>
+      </Screen>
     );
   }
 
@@ -139,12 +196,12 @@ function CoupleQuizLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) 
   // ── Guesser guesses ──
   if (phase === "guess" && q) {
     return (
-      <LocalShell accent={ACCENT} center>
-        <div className="af-eyebrow mb-2" style={{ color: ACCENT }}>Manche {round + 1}/{deck.length} · {names[guesser]} devine</div>
-        <h2 className="cb-display-sm mb-1 text-center sm:cb-display-md">{names[answerer]} est plutôt…</h2>
-        <p className="mb-6 text-sm" style={{ color: "var(--text-muted)" }}>À ton avis, qu&apos;a répondu {names[answerer]} ?</p>
+      <Screen>
+        <div className="af-eyebrow mb-2" style={{ color: ACCENT }}>Question {round + 1}/{deck.length} · {names[guesser]} devine</div>
+        <h2 className="cb-display-md mb-1 text-center">{names[answerer]} est plutôt…</h2>
+        <p className="mb-6 text-sm" style={{ color: "var(--text-dim)" }}>À ton avis, qu&apos;a répondu {names[answerer]} ?</p>
         <Choice a={q.a} b={q.b} onPick={onGuess} />
-      </LocalShell>
+      </Screen>
     );
   }
 
@@ -154,27 +211,28 @@ function CoupleQuizLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) 
     const truthText = truth === "a" ? q.a : q.b;
     const guessText = guess === "a" ? q.a : q.b;
     return (
-      <LocalShell accent={ACCENT} center>
-        <div className="text-6xl mb-2">{correct ? "💞" : "💔"}</div>
-        <h1 className="cb-display-md text-center" style={{ color: correct ? "#3DDC97" : "#FF6B5B" }}>{correct ? "Dans le mille !" : "Raté !"}</h1>
+      <Screen>
+        <div className="mb-2 text-6xl">{correct ? "💞" : "💔"}</div>
+        <h1 className="cb-display-lg text-center" style={{ color: correct ? "#3DDC97" : "#FF6B5B" }}>{correct ? "Dans le mille !" : "Raté !"}</h1>
         <div className="mt-5 w-full max-w-sm space-y-2">
           <div className="rounded-2xl border p-3 text-center" style={{ borderColor: `${ACCENT}66`, background: `${ACCENT}18` }}>
-            <div className="text-[11px]" style={{ color: "var(--text-dim)" }}>{names[answerer]} est plutôt</div>
+            <div className="text-[12px]" style={{ color: "var(--text-dim)" }}>{names[answerer]} est plutôt</div>
             <div className="text-lg font-bold">{truthText}</div>
           </div>
           <div className="rounded-2xl border p-3 text-center" style={{ borderColor: "var(--line-soft)" }}>
-            <div className="text-[11px]" style={{ color: "var(--text-dim)" }}>{names[guesser]} avait deviné</div>
+            <div className="text-[12px]" style={{ color: "var(--text-dim)" }}>{names[guesser]} avait deviné</div>
             <div className="text-lg font-bold" style={{ color: correct ? "#3DDC97" : "#FF6B5B" }}>{guessText}</div>
           </div>
         </div>
+        {!correct && <p className="mt-3 max-w-sm text-center text-[14px]" style={{ color: "var(--text-dim)" }}>💬 {names[answerer]}, explique-toi !</p>}
         <div className="mt-4 flex gap-4 text-center">
           <ScorePill name={names[0]} score={scores[0]} idx={0} />
           <ScorePill name={names[1]} score={scores[1]} idx={1} />
         </div>
-        <button onClick={nextRound} className="af-btn af-btn-primary mt-6 w-full max-w-xs" style={{ fontSize: 16 }}>
-          {round + 1 >= deck.length ? "Voir le résultat →" : "Manche suivante →"}
+        <button onClick={nextRound} className="af-btn af-btn-primary mt-6 w-full max-w-xs" style={{ fontSize: 16, minHeight: 54 }}>
+          {round + 1 >= deck.length ? "Voir le résultat →" : "Question suivante →"}
         </button>
-      </LocalShell>
+      </Screen>
     );
   }
 
@@ -182,26 +240,24 @@ function CoupleQuizLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) 
   if (phase === "over") {
     const total = scores[0] + scores[1];
     const pct = deck.length ? Math.round((total / deck.length) * 100) : 0;
-    const verdict = pct >= 85 ? { t: "Âmes sœurs 💍", c: "#3DDC97" }
-      : pct >= 65 ? { t: "Sacrée complicité ❤️", c: "#FFD23F" }
-      : pct >= 45 ? { t: "Encore des choses à découvrir 👀", c: "#FF8A3D" }
-      : { t: "Premier rendez-vous ? 😅", c: "#FF6B5B" };
+    const verdict = verdictFor(pct);
     return (
-      <LocalShell accent={ACCENT} center>
+      <Screen>
+        {pct >= 65 && <ConfettiBurst count={60} />}
         <div className="af-eyebrow" style={{ color: "var(--text-dim)" }}>Taux de complicité</div>
-        <div className="my-1 text-7xl font-extrabold" style={{ color: verdict.c }}>{pct}%</div>
+        <div className="my-1 text-7xl font-extrabold" style={{ color: verdict.c }}>{pct} %</div>
         <h1 className="cb-display-md text-center" style={{ color: verdict.c }}>{verdict.t}</h1>
-        <p className="mt-2 text-sm" style={{ color: "var(--text-dim)" }}>{total} bonnes devinettes sur {deck.length}</p>
+        <p className="mt-2 text-sm" style={{ color: "var(--text-dim)" }}>{total} bonne{total > 1 ? "s" : ""} réponse{total > 1 ? "s" : ""} sur {deck.length}</p>
         <div className="mt-5 flex gap-5">
           <ScorePill name={names[0]} score={scores[0]} idx={0} big />
           <ScorePill name={names[1]} score={scores[1]} idx={1} big />
         </div>
-        <div className="mt-7 flex w-full max-w-xs flex-col gap-2">
-          <button onClick={() => begin(names)} className="af-btn af-btn-primary" style={{ fontSize: 16 }}>Rejouer</button>
-          <button onClick={restart} className="text-sm" style={{ color: "var(--text-muted)" }}>Changer de joueurs</button>
-          <button onClick={onReturnToLobby} className="text-sm" style={{ color: "var(--text-muted)" }}>Quitter</button>
+        <div className="mt-7 flex w-full max-w-xs flex-col gap-1">
+          <button onClick={begin} className="af-btn af-btn-primary" style={{ fontSize: 16, minHeight: 54 }}>Rejouer (nouvelles questions)</button>
+          <button onClick={() => setPhase("config")} className="text-sm" style={{ color: "var(--text-dim)", minHeight: 44 }}>Changer les thèmes</button>
+          {onReturnToLobby && <button onClick={onReturnToLobby} className="text-sm" style={{ color: "var(--text-muted)", minHeight: 44 }}>Quitter</button>}
         </div>
-      </LocalShell>
+      </Screen>
     );
   }
 
@@ -214,7 +270,7 @@ function Choice({ a, b, onPick }: { a: string; b: string; onPick: (p: "a" | "b")
       {(["a", "b"] as const).map((side) => (
         <button key={side} onClick={() => onPick(side)}
           className="rounded-3xl border p-5 text-center text-lg font-semibold transition active:scale-[0.98]"
-          style={{ background: "rgba(255,255,255,0.05)", borderColor: "var(--line-soft)", minHeight: 76 }}>
+          style={{ background: "rgba(255,255,255,0.05)", borderColor: "var(--line-soft)", minHeight: 76, overflowWrap: "anywhere" }}>
           {side === "a" ? a : b}
         </button>
       ))}

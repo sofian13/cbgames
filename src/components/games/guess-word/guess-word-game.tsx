@@ -1,145 +1,25 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { GameProps } from "@/lib/games/types";
-import { cn } from "@/lib/utils";
+import { PlayersSetup, PassScreen, colorForIndex } from "@/components/games/local-kit";
+import { MascotAvatar } from "@/components/Mascot";
+import { useAudio } from "@/lib/hooks/useAudio";
+import { PACKS } from "./words";
 
-/* ------------------------------------------------------------------ */
-/*  Word lists                                                         */
-/* ------------------------------------------------------------------ */
+// ── Deviner le Mot ─────────────────────────────────────────
+// Un joueur met le tél sur son front (écran vers les autres), les autres le
+// font deviner sans dire le mot. Il tape à gauche s'il trouve, à droite pour
+// passer. Chacun son tour, on cumule les mots trouvés.
 
-const WORD_LISTS: Record<string, string[]> = {
-  "Acteurs porno": [
-    "Clara Morgane", "Lana Rhoades", "Mia Khalifa", "Johnny Sins", "Jordi El Nino",
-    "Riley Reid", "Sasha Grey", "Lisa Ann", "Asa Akira", "Abella Danger",
-    "Brandi Love", "Angela White", "Mia Malkova", "Adriana Chechik", "Madison Ivy",
-    "Eva Elfie", "Lena Paul", "Dani Daniels", "Kendra Lust", "Alexis Texas",
-    "Nicolette Shea", "Valentina Nappi", "Emily Willis", "Gabbie Carter", "Autumn Falls",
-  ],
-  "Positions sexuelles": [
-    "Missionnaire", "Levrette", "Amazone", "Cuillere", "69",
-    "Brouette", "Lotus", "Andromaque", "Elephant", "Pont de Londres",
-    "La balancoire", "Le lotus", "Cowgirl", "La chaise", "L'union du loup",
-    "Le bateau ivre", "Le pilonneur", "La danseuse", "Le paresseux", "La chevauchee",
-    "Le toboggan", "L'arc en ciel", "Le siege arriere", "La planche", "La toupie",
-  ],
-  "Acteurs celebres": [
-    "Leonardo DiCaprio", "Brad Pitt", "Tom Cruise", "Will Smith", "Johnny Depp",
-    "Keanu Reeves", "Ryan Reynolds", "Robert Downey Jr", "Morgan Freeman", "Denzel Washington",
-    "Dwayne Johnson", "Chris Hemsworth", "Tom Hanks", "Samuel L Jackson", "Al Pacino",
-    "Robert De Niro", "Scarlett Johansson", "Margot Robbie", "Angelina Jolie", "Jennifer Lawrence",
-    "Natalie Portman", "Zendaya", "Timothee Chalamet", "Florence Pugh", "Omar Sy",
-    "Matt Damon", "George Clooney", "Hugh Jackman", "Christian Bale", "Joaquin Phoenix",
-    "Ryan Gosling", "Bradley Cooper", "Matthew McConaughey", "Harrison Ford", "Jackie Chan",
-    "Jean Dujardin", "Vincent Cassel", "Marion Cotillard", "Jamel Debbouze", "Kev Adams",
-    "Anne Hathaway", "Emma Stone", "Emma Watson", "Julia Roberts", "Meryl Streep",
-    "Charlize Theron", "Nicole Kidman", "Gal Gadot", "Chris Evans", "Chris Pratt",
-    "Mark Ruffalo", "Sylvester Stallone", "Arnold Schwarzenegger",
-  ],
-  "Animaux": [
-    "Elephant", "Girafe", "Crocodile", "Flamant rose", "Koala",
-    "Paon", "Ornithorynque", "Cameleon", "Pangolin", "Axolotl",
-    "Narval", "Okapi", "Toucan", "Anaconda", "Herisson",
-    "Raie Manta", "Colibri", "Tatou", "Pieuvre", "Capybara",
-    "Mandrill", "Lynx", "Panda roux", "Iguane", "Scarabee",
-    "Lion", "Tigre", "Zebre", "Hippopotame", "Rhinoceros",
-    "Gorille", "Kangourou", "Pingouin", "Dauphin", "Baleine",
-    "Requin", "Tortue", "Escargot", "Papillon", "Abeille",
-    "Coccinelle", "Libellule", "Autruche", "Aigle", "Hibou",
-    "Perroquet", "Pelican", "Castor", "Loutre", "Renard",
-    "Loup", "Ours polaire", "Panthere", "Gazelle", "Suricate",
-    "Cobra", "Meduse", "Furet", "Chauve-souris", "Phoque",
-  ],
-  "Pays": [
-    "Japon", "Bresil", "Australie", "Egypte", "Canada",
-    "Inde", "Mexique", "Russie", "Thailande", "Maroc",
-    "Argentine", "Norvege", "Grece", "Colombie", "Turquie",
-    "Kenya", "Perou", "Islande", "Vietnam", "Portugal",
-    "Nouvelle-Zelande", "Suede", "Cuba", "Philippines", "Senegal",
-    "France", "Italie", "Espagne", "Allemagne", "Chine",
-    "Etats-Unis", "Royaume-Uni", "Pays-Bas", "Belgique", "Suisse",
-    "Pologne", "Croatie", "Tunisie", "Algerie", "Nigeria",
-    "Afrique du Sud", "Madagascar", "Indonesie", "Coree du Sud", "Pakistan",
-    "Iran", "Israel", "Liban", "Chili", "Venezuela",
-    "Costa Rica", "Jamaique", "Finlande", "Danemark", "Ukraine",
-    "Mongolie", "Nepal", "Irlande", "Ethiopie",
-  ],
-  "Sports": [
-    "Football", "Basketball", "Tennis", "Natation", "Boxe",
-    "Escalade", "Surf", "Judo", "Tir a l&apos;arc", "Escrime",
-    "Handball", "Volleyball", "Gymnastique", "Patinage artistique", "Plongee sous-marine",
-    "Polo", "Cricket", "Baseball", "Rugby", "Golf",
-    "Badminton", "Ski", "Kayak", "Lutte", "Aviron",
-    "Hockey", "Cyclisme", "Athletisme", "Marathon", "Equitation",
-    "Skateboard", "Snowboard", "Karate", "Taekwondo", "Ping-pong",
-    "Petanque", "Squash", "Voile", "Triathlon", "Curling",
-    "Trampoline", "Parkour", "Yoga", "Biathlon", "Water-polo",
-    "Beach-volley", "Formule 1", "Moto GP", "Saut a la perche", "Danse",
-  ],
-  "Films": [
-    "Titanic", "Matrix", "Star Wars", "Le Parrain", "Inception",
-    "Interstellar", "Avengers", "Forrest Gump", "Pulp Fiction", "Fight Club",
-    "Le Roi Lion", "Harry Potter", "Jurassic Park", "Shrek", "Batman",
-    "Spider-Man", "Gladiator", "Rocky", "Les Evades", "Alien",
-    "Terminator", "Indiana Jones", "Le Seigneur des Anneaux", "Django Unchained", "Mad Max",
-    "Avatar", "Joker", "Parasite", "La La Land", "Intouchables",
-    "La Haine", "Amelie Poulain", "Coco", "Toy Story", "Frozen",
-    "Aladdin", "Le Voyage de Chihiro", "Dune", "Oppenheimer", "Barbie",
-    "Top Gun", "E.T.", "Retour vers le futur", "Le Cinquieme Element", "Scarface",
-    "Seven", "Shining", "Psychose", "Le Silence des agneaux", "La Liste de Schindler",
-    "Casino", "Apocalypse Now", "Whiplash", "Your Name",
-  ],
-  "Nourriture": [
-    "Sushi", "Tacos", "Croissant", "Pizza", "Hamburger",
-    "Ramen", "Couscous", "Tiramisu", "Paella", "Fondue",
-    "Kebab", "Ceviche", "Pad Thai", "Fish and Chips", "Poutine",
-    "Empanada", "Falafel", "Brownie", "Macaron", "Churros",
-    "Boeuf Bourguignon", "Dim Sum", "Bibimbap", "Creme Brulee", "Guacamole",
-    "Lasagnes", "Spaghetti", "Risotto", "Gnocchi", "Tartiflette",
-    "Quiche", "Crepe", "Gaufre", "Hot-dog", "Nuggets",
-    "Frites", "Salade Cesar", "Omelette", "Sandwich", "Wrap",
-    "Burrito", "Nachos", "Sashimi", "Maki", "Tempura",
-    "Curry", "Biryani", "Samossa", "Houmous", "Tajine",
-    "Pho", "Gyoza", "Donut", "Cheesecake", "Pancakes",
-    "Cookies", "Eclair", "Mille-feuille", "Baklava", "Tarte Tatin",
-  ],
-  "Metiers": [
-    "Pompier", "Astronaute", "Chirurgien", "Detective", "Pilote",
-    "Plombier", "Boulanger", "Architecte", "Veterinaire", "Photographe",
-    "Journaliste", "Electricien", "Avocat", "Pharmacien", "Coach sportif",
-    "Styliste", "Diplomate", "Cascadeur", "Sommelier", "Tatoueur",
-    "Apiculteur", "Paleontologue", "Huissier", "Osteopathe", "Thanatopracteur",
-    "Professeur", "Medecin", "Infirmier", "Dentiste", "Cuisinier",
-    "Serveur", "Mecanicien", "Jardinier", "Facteur", "Policier",
-    "Gendarme", "Juge", "Comptable", "Banquier", "Ingenieur",
-    "Developpeur", "Designer", "Peintre", "Musicien", "Chanteur",
-    "Acteur", "Danseur", "Realisateur", "Ecrivain", "Archeologue",
-    "Astronome", "Chimiste", "Biologiste", "Marin", "Capitaine",
-    "Boucher", "Patissier", "Fleuriste", "Menuisier", "Macon",
-  ],
-};
+const ACCENT = "#50D8FF";
+const TOP_SAFE = "calc(env(safe-area-inset-top, 0px) + 64px)";
+const BOTTOM_SAFE = "calc(env(safe-area-inset-bottom, 0px) + 20px)";
+const BG = `radial-gradient(circle at 50% 12%, ${ACCENT}26, transparent 45%), linear-gradient(180deg, #040424 0%, #05113a 60%, #01072a 100%)`;
+const DURATIONS = [30, 60, 90] as const;
 
-const CATEGORIES = [
-  "Acteurs porno",
-  "Positions sexuelles",
-  "Acteurs celebres",
-  "Animaux",
-  "Pays",
-  "Sports",
-  "Films",
-  "Nourriture",
-  "Metiers",
-  "Melange",
-] as const;
-
-const TIMER_OPTIONS = [30, 60, 90, 120] as const;
-
-type Phase = "setup" | "playing" | "gameover";
-type WordResult = { word: string; status: "correct" | "passed" };
-
-/* ------------------------------------------------------------------ */
-/*  Helpers                                                            */
-/* ------------------------------------------------------------------ */
+type Phase = "setup" | "config" | "pass" | "countdown" | "playing" | "turn-end" | "final";
+type WordResult = { word: string; ok: boolean };
 
 function shuffle<T>(arr: T[]): T[] {
   const a = [...arr];
@@ -150,398 +30,464 @@ function shuffle<T>(arr: T[]): T[] {
   return a;
 }
 
-function buildWordList(category: string): string[] {
-  if (category === "Melange") {
-    const all = Object.values(WORD_LISTS).flat();
-    return shuffle(all);
+// Petits sons synthétisés (aucun fichier)
+let actx: AudioContext | null = null;
+function beep(freq: number, dur = 0.12, type: OscillatorType = "triangle", gain = 0.15, delay = 0) {
+  try {
+    const AC = window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    if (!AC) return;
+    actx ??= new AC();
+    if (actx.state === "suspended") void actx.resume();
+    const t0 = actx.currentTime + delay;
+    const o = actx.createOscillator();
+    const g = actx.createGain();
+    o.type = type;
+    o.frequency.setValueAtTime(freq, t0);
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(gain, t0 + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    o.connect(g);
+    g.connect(actx.destination);
+    o.start(t0);
+    o.stop(t0 + dur + 0.03);
+  } catch {
+    /* audio indisponible */
   }
-  return shuffle(WORD_LISTS[category] ?? []);
 }
+const vib = (p: number | number[]) => {
+  try {
+    navigator.vibrate?.(p);
+  } catch {
+    /* rien */
+  }
+};
 
-/* ------------------------------------------------------------------ */
-/*  Background                                                         */
-/* ------------------------------------------------------------------ */
+const KEYFRAMES = `
+@keyframes gw-pop { 0% { transform: scale(.6); opacity: 0 } 70% { transform: scale(1.06); opacity: 1 } 100% { transform: scale(1) } }
+@keyframes gw-flash { from { opacity: .55 } to { opacity: 0 } }
+`;
 
-const BG_GRADIENT =
-  "bg-[radial-gradient(circle_at_18%_20%,rgba(80,216,255,0.14),transparent_35%),radial-gradient(circle_at_82%_70%,rgba(99,102,241,0.14),transparent_35%),linear-gradient(145deg,#040424,#05113a_42%,#01072a)]";
+export default function GuessWordGame({ onReturnToLobby }: GameProps) {
+  const { muted } = useAudio();
+  const sound = !muted;
 
-/* ------------------------------------------------------------------ */
-/*  Component                                                          */
-/* ------------------------------------------------------------------ */
-
-export default function GuessWordGame({
-  roomCode,
-  playerId,
-  playerName,
-  onReturnToLobby,
-}: GameProps) {
-  /* state */
   const [phase, setPhase] = useState<Phase>("setup");
-  const [category, setCategory] = useState<string>("Animaux");
+  const [players, setPlayers] = useState<string[]>([]);
+  const [scores, setScores] = useState<number[]>([]);
+  const [packs, setPacks] = useState<string[]>(() => PACKS.filter((p) => p.defaultOn).map((p) => p.id));
   const [duration, setDuration] = useState<number>(60);
+  const [tours, setTours] = useState(2);
 
-  const [words, setWords] = useState<string[]>([]);
-  const [wordIndex, setWordIndex] = useState(0);
+  const [turn, setTurn] = useState(0); // numéro de passage global
+  const [deck, setDeck] = useState<string[]>([]);
+  const [wordIdx, setWordIdx] = useState(0);
   const [timeLeft, setTimeLeft] = useState(0);
-  const [score, setScore] = useState(0);
+  const [count, setCount] = useState(3);
   const [results, setResults] = useState<WordResult[]>([]);
+  const [flash, setFlash] = useState<{ ok: boolean; n: number } | null>(null);
 
-  const [flash, setFlash] = useState<"green" | "red" | null>(null);
+  const current = players.length ? turn % players.length : 0;
+  const totalTurns = players.length * tours;
 
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const flashTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Pioche : tous les mots des packs choisis, sans doublon, mélangés
+  const pool = useMemo(() => {
+    const set = new Set<string>();
+    PACKS.filter((p) => packs.includes(p.id)).forEach((p) => p.words.forEach((w) => set.add(w)));
+    return [...set];
+  }, [packs]);
 
-  /* ---- timer ---- */
+  // Compte à rebours 3-2-1 avant le tour
+  useEffect(() => {
+    if (phase !== "countdown") return;
+    if (sound) beep(440, 0.12, "square", 0.1);
+    const id = setTimeout(() => {
+      if (count <= 1) {
+        if (sound) beep(880, 0.25, "square", 0.12);
+        vib(80);
+        endAt.current = Date.now() + duration * 1000;
+        setPhase("playing");
+      } else setCount(count - 1);
+    }, 850);
+    return () => clearTimeout(id);
+  }, [phase, count, sound, duration]);
+
+  // Chrono du tour basé sur une échéance (pas de dérive), nettoyé au démontage
+  const endAt = useRef(0);
   useEffect(() => {
     if (phase !== "playing") return;
-
-    timerRef.current = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev <= 1) {
-          clearInterval(timerRef.current!);
-          timerRef.current = null;
-          setPhase("gameover");
-          return 0;
+    let last = -1;
+    const id = setInterval(() => {
+      const left = Math.max(0, Math.ceil((endAt.current - Date.now()) / 1000));
+      if (left === last) return;
+      last = left;
+      setTimeLeft(left);
+      if (left === 0) {
+        clearInterval(id);
+        if (sound) {
+          beep(300, 0.3, "sawtooth", 0.1);
+          beep(200, 0.5, "sawtooth", 0.1, 0.25);
         }
-        return prev - 1;
-      });
-    }, 1000);
+        vib([200, 80, 200]);
+        // Le mot affiché au gong est grillé : le joueur suivant repart sur un mot neuf
+        setWordIdx((i) => i + 1);
+        setPhase("turn-end");
+      } else if (left <= 5 && sound) beep(660, 0.06, "square", 0.08);
+    }, 200);
+    return () => clearInterval(id);
+  }, [phase, sound]);
 
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
-  }, [phase]);
-
-  /* ---- cleanup flash timeout ---- */
-  useEffect(() => {
-    return () => {
-      if (flashTimeoutRef.current) clearTimeout(flashTimeoutRef.current);
-    };
-  }, []);
-
-  /* ---- start game ---- */
-  const handleStart = useCallback(() => {
-    const list = buildWordList(category);
-    setWords(list);
-    setWordIndex(0);
-    setScore(0);
+  const startTurn = () => {
+    if (wordIdx >= deck.length) {
+      setDeck(shuffle(pool));
+      setWordIdx(0);
+    }
     setResults([]);
     setTimeLeft(duration);
-    setPhase("playing");
-  }, [category, duration]);
+    setCount(3);
+    setPhase("countdown");
+  };
 
-  /* ---- next word helper ---- */
-  const advanceWord = useCallback(() => {
-    setWordIndex((prev) => {
-      if (prev + 1 >= words.length) {
-        // ran out of words — end game
-        if (timerRef.current) clearInterval(timerRef.current);
-        setPhase("gameover");
+  const answer = useCallback(
+    (ok: boolean) => {
+      if (phase !== "playing") return;
+      const word = deck[wordIdx];
+      if (!word) return;
+      setResults((r) => [...r, { word, ok }]);
+      setFlash({ ok, n: Date.now() });
+      if (sound) {
+        if (ok) {
+          beep(660, 0.1);
+          beep(990, 0.16, "triangle", 0.14, 0.08);
+        } else beep(220, 0.18, "sawtooth", 0.08);
       }
-      return prev + 1;
-    });
-  }, [words.length]);
+      vib(ok ? 40 : [30, 40, 30]);
+      if (ok) setScores((s) => s.map((v, i) => (i === current ? v + 1 : v)));
+      if (wordIdx + 1 >= deck.length) {
+        // Pioche épuisée : on remélange plutôt que de bloquer
+        setDeck(shuffle(pool));
+        setWordIdx(0);
+      } else setWordIdx(wordIdx + 1);
+    },
+    [phase, deck, wordIdx, sound, current, pool]
+  );
 
-  /* ---- correct ---- */
-  const handleCorrect = useCallback(() => {
-    if (phase !== "playing") return;
-    const currentWord = words[wordIndex];
-    if (!currentWord) return;
+  const nextTurn = () => {
+    if (turn + 1 >= totalTurns) {
+      setPhase("final");
+      return;
+    }
+    setTurn(turn + 1);
+    setPhase("pass");
+  };
 
-    setScore((s) => s + 1);
-    setResults((r) => [...r, { word: currentWord, status: "correct" }]);
-
-    setFlash("green");
-    if (flashTimeoutRef.current) clearTimeout(flashTimeoutRef.current);
-    flashTimeoutRef.current = setTimeout(() => setFlash(null), 350);
-
-    advanceWord();
-  }, [phase, words, wordIndex, advanceWord]);
-
-  /* ---- pass ---- */
-  const handlePass = useCallback(() => {
-    if (phase !== "playing") return;
-    const currentWord = words[wordIndex];
-    if (!currentWord) return;
-
-    setResults((r) => [...r, { word: currentWord, status: "passed" }]);
-
-    setFlash("red");
-    if (flashTimeoutRef.current) clearTimeout(flashTimeoutRef.current);
-    flashTimeoutRef.current = setTimeout(() => setFlash(null), 350);
-
-    advanceWord();
-  }, [phase, words, wordIndex, advanceWord]);
-
-  /* ---- replay ---- */
-  const handleReplay = useCallback(() => {
-    handleStart();
-  }, [handleStart]);
-
-  const handleChangeOptions = useCallback(() => {
-    setPhase("setup");
-  }, []);
-
-  /* ================================================================ */
-  /*  SETUP PHASE                                                      */
-  /* ================================================================ */
+  // ── Écrans ─────────────────────────────────────────────
   if (phase === "setup") {
     return (
-      <div className={cn("flex flex-1 flex-col items-center justify-center min-h-screen p-4", BG_GRADIENT)}>
-        <div
-          className="w-full max-w-md rounded-3xl border border-cyan-300/20 bg-black/35 backdrop-blur-xl p-8 animate-[scaleIn_0.4s_ease-out]"
-          style={{ boxShadow: "0 0 60px rgba(80,216,255,0.08)" }}
-        >
-          {/* Title */}
-          <h1 className="font-serif text-3xl text-white text-center mb-1">
-            Deviner le Mot
-          </h1>
-          <p className="font-sans text-sm text-white/40 text-center mb-8">
-            Style &quot;Heads Up&quot; — telephone sur le front !
-          </p>
-
-          {/* Category */}
-          <label className="block font-sans text-xs uppercase tracking-widest text-cyan-300/60 mb-2">
-            Categorie
-          </label>
-          <div className="grid grid-cols-2 gap-2 mb-6">
-            {CATEGORIES.map((cat) => (
-              <button
-                key={cat}
-                onClick={() => setCategory(cat)}
-                className={cn(
-                  "rounded-xl px-3 py-2 text-sm font-sans transition-all duration-200 border",
-                  category === cat
-                    ? "border-cyan-400/60 bg-cyan-500/20 text-cyan-200 shadow-[0_0_12px_rgba(80,216,255,0.15)]"
-                    : "border-white/10 bg-white/5 text-white/50 hover:bg-white/10 hover:text-white/70"
-                )}
-              >
-                {cat}
-              </button>
-            ))}
-          </div>
-
-          {/* Timer */}
-          <label className="block font-sans text-xs uppercase tracking-widest text-cyan-300/60 mb-2">
-            Duree (secondes)
-          </label>
-          <div className="flex gap-2 mb-8">
-            {TIMER_OPTIONS.map((t) => (
-              <button
-                key={t}
-                onClick={() => setDuration(t)}
-                className={cn(
-                  "flex-1 rounded-xl py-2 font-mono text-sm transition-all duration-200 border",
-                  duration === t
-                    ? "border-cyan-400/60 bg-cyan-500/20 text-cyan-200 shadow-[0_0_12px_rgba(80,216,255,0.15)]"
-                    : "border-white/10 bg-white/5 text-white/50 hover:bg-white/10 hover:text-white/70"
-                )}
-              >
-                {t}s
-              </button>
-            ))}
-          </div>
-
-          {/* Start */}
-          <button
-            onClick={handleStart}
-            className="press-effect w-full rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 py-3 font-sans font-semibold text-white text-lg shadow-lg shadow-cyan-500/20 hover:shadow-cyan-500/30 transition-shadow"
-          >
-            Commencer
-          </button>
-
-          {/* Return to lobby */}
-          {onReturnToLobby && (
-            <button
-              onClick={onReturnToLobby}
-              className="mt-4 w-full rounded-xl border border-white/10 bg-white/5 py-2.5 font-sans text-sm text-white/40 hover:text-white/60 hover:bg-white/10 transition-all"
-            >
-              Retour au lobby
-            </button>
-          )}
-        </div>
-      </div>
+      <PlayersSetup
+        emoji="🤔"
+        name="Deviner le Mot"
+        min={2}
+        max={12}
+        accent={ACCENT}
+        onStart={(names) => {
+          setPlayers(names);
+          setPhase("config");
+        }}
+      />
     );
   }
 
-  /* ================================================================ */
-  /*  PLAYING PHASE                                                    */
-  /* ================================================================ */
-  if (phase === "playing") {
-    const currentWord = words[wordIndex] ?? "";
-    const timerPct = duration > 0 ? (timeLeft / duration) * 100 : 0;
-    const timerUrgent = timeLeft <= 10;
-
+  if (phase === "config") {
+    const canStart = pool.length > 0;
     return (
-      <div className={cn("relative flex flex-1 flex-col min-h-screen select-none overflow-hidden", BG_GRADIENT)}>
-        {/* Flash overlay */}
-        {flash && (
-          <div
-            className={cn(
-              "absolute inset-0 z-50 pointer-events-none transition-opacity duration-300",
-              flash === "green" ? "bg-emerald-500/25" : "bg-red-500/25"
-            )}
-          />
-        )}
-
-        {/* Top bar: timer + score */}
-        <div className="relative z-10 flex items-center justify-between px-6 pt-6 pb-2">
-          {/* Score */}
-          <div className="rounded-2xl border border-cyan-300/20 bg-black/35 backdrop-blur-xl px-4 py-2">
-            <span className="font-mono text-xs text-white/40 mr-1">Score</span>
-            <span className="font-mono text-xl text-cyan-300">{score}</span>
-          </div>
-
-          {/* Timer */}
-          <div className={cn(
-            "rounded-2xl border bg-black/35 backdrop-blur-xl px-4 py-2",
-            timerUrgent ? "border-red-400/40" : "border-cyan-300/20"
-          )}>
-            <span className={cn(
-              "font-mono text-2xl font-bold",
-              timerUrgent ? "text-red-400 animate-pulse" : "text-white"
-            )}>
-              {timeLeft}s
-            </span>
-          </div>
+      <Shell>
+        <span className="text-5xl">🤔</span>
+        <h1 className="cb-display-lg mt-2 text-center">Deviner le Mot</h1>
+        <div className="mt-4 w-full max-w-sm rounded-2xl p-4 text-left" style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }}>
+          <p className="text-[14px] leading-snug text-white/90">
+            📱 Mets le tél <b>sur ton front</b>, écran vers les autres.
+            <br />
+            🗣️ Ils te font deviner le mot <b>sans le dire</b> (mime, indices, bruitages).
+            <br />
+            👈 Tape <b>à gauche</b> si tu trouves, 👉 <b>à droite</b> pour passer.
+          </p>
         </div>
 
-        {/* Timer bar */}
-        <div className="relative z-10 mx-6 mt-2 h-1 rounded-full bg-white/10 overflow-hidden">
-          <div
-            className={cn(
-              "h-full rounded-full transition-all duration-1000 ease-linear",
-              timerUrgent
-                ? "bg-gradient-to-r from-red-500 to-orange-500"
-                : "bg-gradient-to-r from-cyan-500 to-blue-500"
-            )}
-            style={{ width: `${timerPct}%` }}
-          />
+        <p className="af-eyebrow mt-6">Thèmes ({pool.length} mots)</p>
+        <div className="mt-2 grid w-full max-w-sm grid-cols-2 gap-2">
+          {PACKS.map((p) => {
+            const on = packs.includes(p.id);
+            return (
+              <button
+                key={p.id}
+                onClick={() => setPacks((cur) => (on ? cur.filter((x) => x !== p.id) : [...cur, p.id]))}
+                className="flex items-center gap-2 rounded-2xl px-3 text-left"
+                style={{
+                  minHeight: 52,
+                  background: on ? (p.adult ? "rgba(255,62,165,0.18)" : "rgba(80,216,255,0.16)") : "rgba(255,255,255,0.05)",
+                  border: `1.5px solid ${on ? (p.adult ? "#FF3EA5" : ACCENT) : "rgba(255,255,255,0.12)"}`,
+                }}
+                aria-pressed={on}
+              >
+                <span className="text-xl">{p.emoji}</span>
+                <span className="min-w-0 flex-1 text-[14px] font-bold leading-tight">
+                  {p.name}
+                  {p.adult && <span className="block text-[12px] font-semibold" style={{ color: "#FF8CC8" }}>18+ · coquin</span>}
+                </span>
+                <span className="text-sm">{on ? "✓" : ""}</span>
+              </button>
+            );
+          })}
         </div>
 
-        {/* Word display — center */}
-        <div className="relative z-10 flex flex-1 items-center justify-center px-8">
-          <h2
-            className="font-serif text-5xl sm:text-6xl md:text-7xl text-white text-center leading-tight animate-[scaleIn_0.25s_ease-out]"
-            key={wordIndex}
-          >
-            {currentWord}
-          </h2>
-        </div>
-
-        {/* Tap zones */}
-        <div className="relative z-10 flex flex-1 max-h-[40vh]">
-          {/* LEFT — correct */}
-          <button
-            onClick={handleCorrect}
-            className="flex-1 flex flex-col items-center justify-center gap-2 rounded-tl-3xl border-t border-r border-emerald-400/20 bg-emerald-500/10 active:bg-emerald-500/25 transition-colors"
-          >
-            <svg className="w-10 h-10 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-            </svg>
-            <span className="font-sans text-lg font-semibold text-emerald-300">Devine !</span>
-          </button>
-
-          {/* RIGHT — pass */}
-          <button
-            onClick={handlePass}
-            className="flex-1 flex flex-col items-center justify-center gap-2 rounded-tr-3xl border-t border-l border-red-400/20 bg-red-500/10 active:bg-red-500/25 transition-colors"
-          >
-            <svg className="w-10 h-10 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-            <span className="font-sans text-lg font-semibold text-red-300">Passe !</span>
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  /* ================================================================ */
-  /*  GAME OVER PHASE                                                  */
-  /* ================================================================ */
-  const correctCount = results.filter((r) => r.status === "correct").length;
-  const passedCount = results.filter((r) => r.status === "passed").length;
-
-  return (
-    <div className={cn("flex flex-1 flex-col items-center min-h-screen p-4 overflow-y-auto", BG_GRADIENT)}>
-      <div
-        className="w-full max-w-md mt-8 rounded-3xl border border-cyan-300/20 bg-black/35 backdrop-blur-xl p-8 animate-[scaleIn_0.4s_ease-out]"
-        style={{ boxShadow: "0 0 60px rgba(80,216,255,0.08)" }}
-      >
-        {/* Title */}
-        <h1 className="font-serif text-3xl text-white text-center mb-1">
-          Temps ecoule !
-        </h1>
-        <p className="font-sans text-sm text-white/40 text-center mb-6">
-          {category}
-        </p>
-
-        {/* Score summary */}
-        <div className="flex justify-center gap-6 mb-8">
-          <div className="text-center">
-            <div className="font-mono text-4xl font-bold text-cyan-300">{score}</div>
-            <div className="font-sans text-xs text-white/40 uppercase tracking-wider mt-1">Score</div>
-          </div>
-          <div className="text-center">
-            <div className="font-mono text-4xl font-bold text-emerald-400">{correctCount}</div>
-            <div className="font-sans text-xs text-white/40 uppercase tracking-wider mt-1">Devines</div>
-          </div>
-          <div className="text-center">
-            <div className="font-mono text-4xl font-bold text-red-400">{passedCount}</div>
-            <div className="font-sans text-xs text-white/40 uppercase tracking-wider mt-1">Passes</div>
-          </div>
-        </div>
-
-        {/* Word list */}
-        <div className="space-y-2 mb-8 max-h-[40vh] overflow-y-auto pr-1">
-          {results.map((r, i) => (
-            <div
-              key={i}
-              className={cn(
-                "flex items-center justify-between rounded-xl border px-4 py-2.5 animate-[fadeUp_0.3s_ease-out]",
-                r.status === "correct"
-                  ? "border-emerald-400/20 bg-emerald-500/10"
-                  : "border-red-400/20 bg-red-500/10"
-              )}
-              style={{ animationDelay: `${i * 40}ms`, animationFillMode: "backwards" }}
-            >
-              <span className="font-sans text-sm text-white/80">{r.word}</span>
-              {r.status === "correct" ? (
-                <svg className="w-5 h-5 text-emerald-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                </svg>
-              ) : (
-                <svg className="w-5 h-5 text-red-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              )}
-            </div>
+        <p className="af-eyebrow mt-6">Temps par joueur</p>
+        <div className="mt-2 flex gap-2">
+          {DURATIONS.map((d) => (
+            <Pill key={d} on={duration === d} onClick={() => setDuration(d)}>
+              {d} s
+            </Pill>
           ))}
         </div>
 
-        {/* Buttons */}
+        <p className="af-eyebrow mt-6">Tours</p>
+        <div className="mt-2 flex gap-2">
+          {[1, 2, 3].map((t) => (
+            <Pill key={t} on={tours === t} onClick={() => setTours(t)}>
+              {t}
+            </Pill>
+          ))}
+        </div>
+        <p className="mt-1 text-[12px]" style={{ color: "var(--text-dim)" }}>
+          Chaque joueur passe {tours} fois avec le tél sur le front.
+        </p>
+
         <button
-          onClick={handleReplay}
-          className="press-effect w-full rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 py-3 font-sans font-semibold text-white text-lg shadow-lg shadow-cyan-500/20 hover:shadow-cyan-500/30 transition-shadow mb-3"
+          disabled={!canStart}
+          onClick={() => {
+            setScores(players.map(() => 0));
+            setTurn(0);
+            setDeck(shuffle(pool));
+            setWordIdx(0);
+            setPhase("pass");
+          }}
+          className="af-btn af-btn-primary mt-6 w-full max-w-sm disabled:opacity-40"
+          style={{ fontSize: 17, minHeight: 54 }}
         >
-          Rejouer
+          {canStart ? "C'est parti !" : "Choisis au moins un thème"}
         </button>
-        <button
-          onClick={handleChangeOptions}
-          className="w-full rounded-xl border border-white/10 bg-white/5 py-2.5 font-sans text-sm text-white/40 hover:text-white/60 hover:bg-white/10 transition-all mb-3"
-        >
-          Changer les options
+        <button onClick={() => setPhase("setup")} className="mt-1 text-sm" style={{ color: "var(--text-dim)", minHeight: 44 }}>
+          ← Modifier les joueurs
         </button>
-        {onReturnToLobby && (
-          <button
-            onClick={onReturnToLobby}
-            className="w-full rounded-xl border border-white/10 bg-white/5 py-2.5 font-sans text-sm text-white/40 hover:text-white/60 hover:bg-white/10 transition-all"
+      </Shell>
+    );
+  }
+
+  if (phase === "pass") {
+    return (
+      <PassScreen
+        toName={players[current]}
+        colorIndex={current}
+        accent={ACCENT}
+        hint={`C'est toi qui devines ! Tour ${Math.floor(turn / players.length) + 1}/${tours} · ${duration} s. Prépare-toi à mettre le tél sur ton front.`}
+        buttonLabel="Prêt — lancer le compte à rebours"
+        onReady={startTurn}
+      />
+    );
+  }
+
+  if (phase === "countdown") {
+    return (
+      <div className="flex min-h-[100svh] flex-col items-center justify-center px-6 text-center text-white" style={{ background: BG }}>
+        <style>{KEYFRAMES}</style>
+        <p className="text-lg font-bold text-white/80">📱 Tél sur le front !</p>
+        <p key={count} className="mt-4 font-black" style={{ fontFamily: "var(--font-display)", fontSize: 160, lineHeight: 1, color: ACCENT, animation: "gw-pop .5s ease-out" }}>
+          {count > 0 ? count : "GO"}
+        </p>
+      </div>
+    );
+  }
+
+  if (phase === "playing") {
+    const word = deck[wordIdx] ?? "";
+    const urgent = timeLeft <= 10;
+    const found = results.filter((r) => r.ok).length;
+    const long = word.length > 14;
+    return (
+      <div className="relative flex min-h-[100svh] select-none flex-col overflow-hidden text-white" style={{ background: BG, touchAction: "manipulation" }}>
+        <style>{KEYFRAMES}</style>
+        {flash && (
+          <div
+            key={flash.n}
+            className="pointer-events-none absolute inset-0 z-20"
+            style={{ background: flash.ok ? "#3DDC97" : "#FF5B5B", animation: "gw-flash .4s ease-out forwards" }}
+          />
+        )}
+        {/* Chrono et score centrés : coins du haut laissés libres */}
+        <div className="pointer-events-none absolute inset-x-0 z-10 flex flex-col items-center" style={{ top: "calc(env(safe-area-inset-top, 0px) + 12px)" }}>
+          <span className="font-black tabular-nums" style={{ fontFamily: "var(--font-display)", fontSize: 44, lineHeight: 1, color: urgent ? "#FF6B6B" : "#fff" }}>
+            {timeLeft}
+          </span>
+          <span className="mt-1 text-[13px] font-bold text-white/70">
+            {players[current]} · ✓ {found}
+          </span>
+        </div>
+
+        {/* Deux grandes moitiés tactiles : à l'aveugle, le front collé au tél */}
+        <div className="absolute inset-0 flex">
+          <button onClick={() => answer(true)} className="flex flex-1 flex-col items-center justify-end pb-10" style={{ background: "rgba(61,220,151,0.10)", borderRight: "1px solid rgba(255,255,255,0.08)", paddingBottom: BOTTOM_SAFE }} aria-label="Trouvé">
+            <span className="text-4xl">✓</span>
+            <span className="mt-1 text-[15px] font-black" style={{ color: "#3DDC97" }}>
+              Trouvé
+            </span>
+          </button>
+          <button onClick={() => answer(false)} className="flex flex-1 flex-col items-center justify-end pb-10" style={{ background: "rgba(255,91,91,0.10)", paddingBottom: BOTTOM_SAFE }} aria-label="Passer">
+            <span className="text-4xl">✗</span>
+            <span className="mt-1 text-[15px] font-black" style={{ color: "#FF8A8A" }}>
+              Passer
+            </span>
+          </button>
+        </div>
+
+        <div className="pointer-events-none relative z-10 flex flex-1 items-center justify-center px-5">
+          <h2
+            key={wordIdx + deck.length}
+            className="text-center font-black"
+            style={{
+              fontFamily: "var(--font-display)",
+              fontSize: long ? "min(11vw, 3.2rem)" : "min(15vw, 4.5rem)",
+              lineHeight: 1.05,
+              overflowWrap: "anywhere",
+              hyphens: "auto",
+              animation: "gw-pop .25s ease-out",
+              textShadow: "0 4px 30px rgba(0,0,0,0.5)",
+            }}
           >
-            Retour au lobby
+            {word}
+          </h2>
+        </div>
+      </div>
+    );
+  }
+
+  if (phase === "turn-end") {
+    const found = results.filter((r) => r.ok).length;
+    const last = turn + 1 >= totalTurns;
+    return (
+      <Shell>
+        <p className="af-eyebrow">Temps écoulé !</p>
+        <MascotAvatar color={colorForIndex(current)} size={64} mood={found >= 8 ? "fire" : found >= 4 ? "happy" : "sad"} />
+        <h2 className="cb-display-lg mt-2 text-center">{players[current]}</h2>
+        <p className="font-black" style={{ fontFamily: "var(--font-display)", fontSize: 56, lineHeight: 1, color: ACCENT }}>
+          {found}
+        </p>
+        <p className="text-sm" style={{ color: "var(--text-dim)" }}>
+          mot{found > 1 ? "s" : ""} trouvé{found > 1 ? "s" : ""}
+        </p>
+        <div className="mt-4 flex w-full max-w-sm flex-wrap justify-center gap-1.5">
+          {results.map((r, i) => (
+            <span
+              key={i}
+              className="rounded-full px-3 py-1.5 text-[13px] font-semibold"
+              style={{ background: r.ok ? "rgba(61,220,151,0.14)" : "rgba(255,91,91,0.12)", border: `1px solid ${r.ok ? "rgba(61,220,151,0.4)" : "rgba(255,91,91,0.35)"}`, color: r.ok ? "#9FF0C8" : "#FFB0B0" }}
+            >
+              {r.ok ? "✓" : "✗"} {r.word}
+            </span>
+          ))}
+          {results.length === 0 && <p className="text-sm text-white/60">Aucun mot… on se réveille ! 😴</p>}
+        </div>
+        <Standings players={players} scores={scores} />
+        <button onClick={nextTurn} className="af-btn af-btn-primary mt-6 w-full max-w-sm" style={{ fontSize: 16, minHeight: 54 }}>
+          {last ? "Classement final 🏆" : `Au tour de ${players[(turn + 1) % players.length]} →`}
+        </button>
+        {!last && (
+          <button onClick={() => setPhase("final")} className="mt-1 text-sm" style={{ color: "var(--text-dim)", minHeight: 44 }}>
+            Terminer la partie
           </button>
         )}
-      </div>
+      </Shell>
+    );
+  }
+
+  // ── Classement final ──
+  const ranking = players.map((name, i) => ({ name, i, s: scores[i] ?? 0 })).sort((a, b) => b.s - a.s);
+  const top = ranking[0];
+  const tie = ranking.length > 1 && ranking[1].s === top?.s;
+  return (
+    <Shell>
+      <span className="text-6xl">🏆</span>
+      <p className="af-eyebrow mt-2">{tie ? "Égalité au sommet !" : "Meilleur·e devin·e"}</p>
+      <h2 className="cb-display-lg mt-1 max-w-full break-words text-center">{tie ? ranking.filter((r) => r.s === top.s).map((r) => r.name).join(" & ") : top?.name}</h2>
+      <Standings players={players} scores={scores} big />
+      <button
+        onClick={() => {
+          setScores(players.map(() => 0));
+          setTurn(0);
+          setDeck(shuffle(pool));
+          setWordIdx(0);
+          setPhase("pass");
+        }}
+        className="af-btn af-btn-primary mt-6 w-full max-w-sm"
+        style={{ fontSize: 16, minHeight: 54 }}
+      >
+        Rejouer
+      </button>
+      <button onClick={() => setPhase("config")} className="mt-1 text-sm" style={{ color: "var(--text-dim)", minHeight: 44 }}>
+        Changer les thèmes
+      </button>
+      {onReturnToLobby && (
+        <button onClick={onReturnToLobby} className="text-sm" style={{ color: "var(--text-muted)", minHeight: 44 }}>
+          Quitter
+        </button>
+      )}
+    </Shell>
+  );
+}
+
+function Shell({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="relative flex min-h-[100svh] flex-col items-center px-5 text-white" style={{ background: BG, paddingTop: TOP_SAFE, paddingBottom: BOTTOM_SAFE }}>
+      <div className="my-auto flex w-full flex-col items-center">{children}</div>
+    </div>
+  );
+}
+
+function Pill({ on, onClick, children }: { on: boolean; onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button
+      onClick={onClick}
+      className="rounded-2xl px-5 text-base font-black"
+      style={{
+        minHeight: 48,
+        minWidth: 64,
+        fontFamily: "var(--font-display)",
+        background: on ? ACCENT : "rgba(255,255,255,0.06)",
+        color: on ? "#03203A" : "#fff",
+        border: `1.5px solid ${on ? ACCENT : "rgba(255,255,255,0.14)"}`,
+      }}
+    >
+      {children}
+    </button>
+  );
+}
+
+function Standings({ players, scores, big }: { players: string[]; scores: number[]; big?: boolean }) {
+  const rows = players.map((name, i) => ({ name, i, s: scores[i] ?? 0 })).sort((a, b) => b.s - a.s);
+  return (
+    <div className="mt-5 w-full max-w-sm space-y-1.5">
+      {rows.map((r, k) => (
+        <div
+          key={r.i}
+          className="flex items-center gap-3 rounded-2xl px-3"
+          style={{ minHeight: big ? 52 : 44, background: k === 0 && r.s > 0 ? "rgba(255,210,63,0.12)" : "rgba(255,255,255,0.05)", border: `1px solid ${k === 0 && r.s > 0 ? "rgba(255,210,63,0.45)" : "rgba(255,255,255,0.1)"}` }}
+        >
+          <span className="w-6 text-center text-sm font-black text-white/60">{k === 0 && r.s > 0 ? "👑" : k + 1}</span>
+          <MascotAvatar color={colorForIndex(r.i)} size={28} />
+          <span className="min-w-0 flex-1 truncate text-[15px] font-bold">{r.name}</span>
+          <span className="text-[15px] font-black" style={{ fontFamily: "var(--font-display)" }}>
+            {r.s}
+          </span>
+        </div>
+      ))}
     </div>
   );
 }

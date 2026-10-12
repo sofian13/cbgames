@@ -129,11 +129,12 @@ export function PlayersSetup({
               value={n}
               onChange={(e) => update(i, e.target.value)}
               placeholder={`Joueur ${i + 1}`}
-              className="flex-1 min-w-0 rounded-2xl border px-3 py-2 text-sm outline-none"
+              autoCorrect="off" autoCapitalize="words" spellCheck={false}
+              className="flex-1 min-w-0 rounded-2xl border px-3 py-2.5 text-base outline-none"
               style={{ background: "rgba(255,255,255,0.06)", borderColor: "var(--line-soft)", color: "#fff" }}
             />
             {names.length > min && (
-              <button onClick={() => remove(i)} className="px-1.5 text-lg" style={{ color: "var(--text-muted)" }}>×</button>
+              <button onClick={() => remove(i)} aria-label="Retirer" className="flex h-11 w-11 shrink-0 items-center justify-center text-xl" style={{ color: "var(--text-muted)" }}>×</button>
             )}
           </div>
         ))}

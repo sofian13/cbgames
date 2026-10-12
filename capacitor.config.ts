@@ -22,8 +22,10 @@ const config: CapacitorConfig = {
   },
   plugins: {
     SplashScreen: {
-      launchShowDuration: 900,
-      backgroundColor: "#0E0828",
+      // Court : l'écran de lancement animé (blobs qui tombent) prend le relais
+      launchShowDuration: 300,
+      launchFadeOutDuration: 200,
+      backgroundColor: "#0B0620",
       showSpinner: false,
     },
     StatusBar: {
