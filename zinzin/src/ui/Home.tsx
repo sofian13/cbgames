@@ -4,6 +4,7 @@ import { FEATURED, SECTIONS, getZGame, type ZFeatured, type ZGame } from "../cat
 import { ZBlob, ZPALETTE } from "./ZBlob";
 import { RoundBtn, Tag } from "./common";
 import { gameInfo, haptic, reducedMotion } from "./util";
+import { Backdrop } from "./Backdrop";
 
 export function isLocked(g: ZGame, premium: boolean) {
   return !premium && !g.free;
@@ -17,9 +18,11 @@ export function Home({
   onSettings: () => void;
   onUnlock: () => void;
 }) {
+  const scrollRef = useRef<HTMLDivElement>(null);
   return (
-    <div className="zz-scroll zz-page fixed inset-0">
-      <div className="relative mx-auto max-w-lg" style={{ paddingTop: "calc(var(--sat) + 10px)", paddingBottom: "calc(var(--sab) + 32px)" }}>
+    <div ref={scrollRef} className="zz-scroll zz-page fixed inset-0">
+      <Backdrop scrollRef={scrollRef} />
+      <div className="relative mx-auto max-w-lg" style={{ zIndex: 1, paddingTop: "calc(var(--sat) + 10px)", paddingBottom: "calc(var(--sab) + 32px)" }}>
         {/* En-tête */}
         <header className="flex items-center justify-between px-5">
           <div className="flex items-center gap-2">

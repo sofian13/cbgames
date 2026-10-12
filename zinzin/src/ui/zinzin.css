@@ -178,3 +178,37 @@
   .zb-wob, .zb-rofl, .zb-face, .zb-blink, .zb-pupil-a, .zb-pupil-b, .zb-heart, .zb-flame, .zb-drop, .zb-zz { animation: none !important; }
   .zz-rise, .zz-pop, .zz-logo-in, .zz-sheet, .zz-screen-in { animation-duration: 1ms !important; animation-delay: 0ms !important; }
 }
+
+/* ── Fond vivant de l'accueil (Backdrop.tsx) ── */
+.zz-glow {
+  position: absolute; width: 130%; aspect-ratio: 1; border-radius: 50%;
+  filter: blur(90px); opacity: 0.16;
+  animation: zz-drift 22s ease-in-out infinite alternate;
+}
+@keyframes zz-drift {
+  from { transform: translate3d(0, 0, 0) scale(1); }
+  to   { transform: translate3d(12%, 8%, 0) scale(1.12); }
+}
+.zz-doodle {
+  position: absolute; opacity: 0.6;
+  animation-name: zz-float; animation-iteration-count: infinite; animation-timing-function: ease-in-out;
+}
+@keyframes zz-float {
+  0%, 100% { transform: translate3d(0, 0, 0) rotate(0deg); }
+  50%      { transform: translate3d(0, -14px, 0) rotate(10deg); }
+}
+.zz-twinkle { animation-name: zz-float, zz-twinkle; animation-duration: inherit, 2.6s; }
+@keyframes zz-twinkle {
+  0%, 100% { opacity: 0.55; scale: 1; }
+  50%      { opacity: 0.15; scale: 0.7; }
+}
+.zz-peek { opacity: 0.85; animation: zz-peek 7s ease-in-out infinite; }
+.zz-peek-left  { --zz-peek-x: -18px; }
+.zz-peek-right { --zz-peek-x: 18px; }
+@keyframes zz-peek {
+  0%, 60%, 100% { transform: translate3d(var(--zz-peek-x), 0, 0); }
+  70%, 90%      { transform: translate3d(0, 0, 0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .zz-glow, .zz-doodle, .zz-twinkle, .zz-peek { animation: none !important; }
+}
