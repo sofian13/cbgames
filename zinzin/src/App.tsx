@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { getZGame } from "./catalog";
 import { usePremium } from "./premium";
 import "./ui/zinzin.css";
@@ -8,6 +8,7 @@ import { Home, isLocked } from "./ui/Home";
 import { Paywall } from "./ui/Paywall";
 import { AgeGate, GameScreen, LegalScreen, SettingsSheet, type LegalPage } from "./ui/Screens";
 import { Splash } from "./ui/Splash";
+import { installLookAtFinger } from "./ui/ZBlob";
 import { isAgeOk } from "./ui/util";
 
 type Phase = "splash" | "age" | "app";
@@ -25,6 +26,9 @@ export function App() {
   const [settings, setSettings] = useState(false);
   const [legal, setLegal] = useState<LegalPage | null>(null);
   const [playing, setPlaying] = useState<string | null>(null);
+
+  // Les yeux des blobs suivent le doigt
+  useEffect(() => installLookAtFinger(), []);
 
   const afterIntro = useCallback(() => {
     // Paywall de lancement : uniquement pour les non-premium

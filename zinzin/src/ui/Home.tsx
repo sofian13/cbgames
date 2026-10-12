@@ -1,8 +1,9 @@
-import { ChevronRight, Lock, Settings, Users } from "lucide-react";
-import { SECTIONS, getZGame, type ZGame } from "../catalog";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { ArrowRight, Lock, Settings } from "lucide-react";
+import { FEATURED, SECTIONS, getZGame, type ZFeatured, type ZGame } from "../catalog";
 import { ZBlob, ZPALETTE } from "./ZBlob";
-import { RoundBtn } from "./common";
-import { gameInfo, haptic } from "./util";
+import { RoundBtn, Tag } from "./common";
+import { gameInfo, haptic, playersLabel, reducedMotion } from "./util";
 
 export function isLocked(g: ZGame, premium: boolean) {
   return !premium && !g.free;
@@ -17,60 +18,39 @@ export function Home({
   onUnlock: () => void;
 }) {
   return (
-    <div className="zz-scroll fixed inset-0" style={{ background: "var(--zz-bg)" }}>
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-[420px] overflow-hidden">
-        <div className="zz-glow" style={{ width: 340, height: 340, left: -140, top: -80, background: "#5A2BE0", opacity: 0.45 }} />
-        <div className="zz-glow" style={{ width: 280, height: 280, right: -150, top: 60, background: "#FF3EA5", opacity: 0.2 }} />
-      </div>
-
+    <div className="zz-scroll zz-page fixed inset-0">
       <div className="relative mx-auto max-w-lg" style={{ paddingTop: "calc(var(--sat) + 10px)", paddingBottom: "calc(var(--sab) + 32px)" }}>
         {/* En-tête */}
         <header className="flex items-center justify-between px-5">
-          <div className="flex items-center gap-1.5">
-            <h1 className="zz-font text-white" style={{ fontSize: 34, fontWeight: 700, letterSpacing: "-0.045em", lineHeight: 1 }}>zinzin</h1>
-            {premium && (
-              <span className="ml-1 rounded-full px-2 py-[3px] text-[11px] font-extrabold uppercase" style={{ background: "#FFD23F", color: "#2A1A00", letterSpacing: "0.04em" }}>Premium</span>
-            )}
+          <div className="flex items-center gap-2">
+            <h1 className="zz-title text-white" style={{ fontSize: 38, letterSpacing: "-0.05em" }}>zinzin</h1>
+            {premium && <Tag bg="#FFD23F" tilt={-6}>Premium</Tag>}
           </div>
           <RoundBtn onClick={() => { haptic(); onSettings(); }} label="Réglages">
-            <Settings size={21} strokeWidth={2.2} />
+            <Settings size={21} strokeWidth={2.5} />
           </RoundBtn>
         </header>
 
-        {/* Hero */}
-        <section
-          className="zz-rise relative mx-5 mt-4 overflow-hidden rounded-[30px] px-6 pb-6 pt-6"
-          style={{ background: "linear-gradient(135deg,#7A4EE8 0%,#B743D8 55%,#FF3EA5 100%)", minHeight: 176, boxShadow: "0 20px 50px rgba(122,78,232,0.35)" }}
-        >
-          <div className="absolute inset-0 opacity-30" style={{ background: "radial-gradient(circle at 20% 0%, rgba(255,255,255,0.5), transparent 45%)" }} />
-          <div className="relative max-w-[64%]">
-            <h2 className="zz-font text-white" style={{ fontSize: 29, fontWeight: 700, lineHeight: 1.02, letterSpacing: "-0.03em" }}>
-              On joue à quoi ce soir&nbsp;?
-            </h2>
-            <p className="mt-2 text-[14px] font-medium leading-snug text-white/85">Un seul téléphone, tout le monde joue.</p>
-          </div>
-          <div className="absolute -bottom-7 -right-3">
-            <ZBlob size={150} color="yellow" mood="laughing" seed={2} shadow={false} />
-          </div>
-          <div className="absolute right-5 top-4">
-            <ZBlob size={46} color="mint" mood="shocked" seed={5} shadow={false} speed={2} />
-          </div>
-        </section>
+        <Featured onOpenGame={onOpenGame} />
 
         {/* Bannière premium */}
         {!premium && (
           <button
             type="button"
             onClick={() => { haptic(); onUnlock(); }}
-            className="zz-press zz-rise mx-5 mt-3 flex w-[calc(100%-40px)] items-center gap-3 rounded-[22px] py-3 pl-3 pr-4 text-left"
-            style={{ background: "linear-gradient(90deg, rgba(255,210,63,0.16), rgba(255,210,63,0.05))", border: "1.5px solid rgba(255,210,63,0.45)", ["--d" as string]: "80ms" }}
+            className="zz-push zz-stk zz-rise relative mx-5 mt-5 flex w-[calc(100%-40px)] items-center gap-3 rounded-[26px] py-3.5 pl-[86px] pr-3.5 text-left"
+            style={{ background: "#FFD23F", color: "var(--zz-ink)", rotate: "-1deg", ["--d" as string]: "80ms" }}
           >
-            <ZBlob size={44} color="yellow" mood="cool" seed={1} shadow={false} wobble={false} />
-            <div className="min-w-0 flex-1">
-              <div className="text-[16px] font-extrabold text-white">Débloquer tout</div>
-              <div className="text-[13px]" style={{ color: "var(--zz-dim)" }}>Tous les jeux + les nouveautés chaque mois</div>
+            <div className="absolute -left-2 -top-5">
+              <ZBlob size={88} color="pink" mood="cool" seed={1} shadow={false} outline crown />
             </div>
-            <ChevronRight size={22} style={{ color: "#FFD23F" }} />
+            <div className="min-w-0 flex-1">
+              <div className="zz-title text-[22px]">Débloque tout Zinzin</div>
+              <div className="mt-0.5 text-[14px] font-semibold leading-snug" style={{ opacity: 0.8 }}>Tous les jeux, et du nouveau chaque mois.</div>
+            </div>
+            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full" style={{ background: "var(--zz-ink)", color: "#FFD23F" }}>
+              <ArrowRight size={22} strokeWidth={3} />
+            </span>
           </button>
         )}
 
@@ -80,20 +60,21 @@ export function Home({
           if (!games.length) return null;
           const big = si === 0;
           return (
-            <section key={sec.id} className="mt-7">
-              <div className="mb-2 px-5">
-                <h3 className="zz-font text-white" style={{ fontSize: 22, fontWeight: 700, letterSpacing: "-0.02em", lineHeight: 1.1 }}>
+            <section key={sec.id} className="mt-6">
+              <div className="px-5">
+                <h3 className="zz-title text-white" style={{ fontSize: big ? 34 : 28 }}>
                   {stripTitle(sec.title)}
                 </h3>
-                <p className="mt-0.5 text-[13px]" style={{ color: "var(--zz-mute)" }}>{sec.subtitle}</p>
+                <p className="mt-1 text-[15px] font-medium" style={{ color: "var(--zz-dim)" }}>{sec.subtitle}</p>
               </div>
-              <div className="zz-rail">
+              <div className="zz-rail" style={{ paddingTop: big ? 62 : 52, gap: 14 }}>
                 {games.map((g, i) => (
                   <GameCard
                     key={g.id}
                     game={g}
                     big={big}
                     seed={si * 7 + i * 3}
+                    tilt={(i + si) % 2 ? 1.6 : -1.6}
                     locked={isLocked(g, premium)}
                     showFree={!premium && Boolean(g.free)}
                     delay={big ? 100 + i * 70 : 0}
@@ -105,7 +86,7 @@ export function Home({
           );
         })}
 
-        <p className="mt-6 px-8 text-center text-[12px] leading-relaxed" style={{ color: "var(--zz-mute)" }}>
+        <p className="mt-4 px-8 text-center text-[13px] leading-relaxed" style={{ color: "var(--zz-mute)" }}>
           Les jeux à boire se jouent avec modération. Eau et soft acceptés.
         </p>
       </div>
@@ -118,69 +99,200 @@ function stripTitle(t: string) {
   return t.replace(/[\p{Extended_Pictographic}️]/gu, "").trim();
 }
 
+/* ───────── Carrousel « à la une » ───────── */
+const AUTOPLAY_MS = 4000;
+
+function Featured({ onOpenGame }: { onOpenGame: (id: string) => void }) {
+  // Slides dont le jeu existe (une nouveauté pas encore au catalogue est masquée)
+  const slides = FEATURED.filter((f) => !f.gameId || getZGame(f.gameId));
+  const n = slides.length;
+  // Copie de la 1re slide à la fin : on y glisse puis on revient au début sans à-coup
+  const track = n > 1 ? [...slides, { ...slides[0], id: `${slides[0].id}-loop` }] : slides;
+  const ref = useRef<HTMLDivElement>(null);
+  const [idx, setIdx] = useState(0);
+  const hold = useRef(false);
+  const lastTouch = useRef(0);
+  const settleT = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
+  const settle = useCallback(() => {
+    const el = ref.current;
+    if (!el || hold.current) return;
+    const w = el.clientWidth;
+    if (Math.round(el.scrollLeft / w) >= n) el.scrollTo({ left: 0, behavior: "instant" as ScrollBehavior });
+  }, [n]);
+
+  const onScroll = () => {
+    const el = ref.current;
+    if (!el) return;
+    const i = Math.round(el.scrollLeft / el.clientWidth);
+    setIdx(i % n);
+    clearTimeout(settleT.current);
+    settleT.current = setTimeout(settle, 140);
+  };
+
+  const goTo = (i: number) => {
+    const el = ref.current;
+    if (!el) return;
+    el.scrollTo({ left: i * el.clientWidth, behavior: reducedMotion() ? "instant" as ScrollBehavior : "smooth" });
+  };
+
+  // Défilement auto (pause pendant le doigt posé + 3 s après, et si mouvement réduit)
+  useEffect(() => {
+    if (n < 2 || reducedMotion()) return;
+    const t = setInterval(() => {
+      const el = ref.current;
+      if (!el || hold.current || document.hidden || el.offsetParent === null) return;
+      if (Date.now() - lastTouch.current < 3000) return;
+      const i = Math.round(el.scrollLeft / el.clientWidth);
+      goTo(i + 1);
+    }, AUTOPLAY_MS);
+    return () => { clearInterval(t); clearTimeout(settleT.current); };
+  }, [n]);
+
+  if (!n) return null;
+
+  return (
+    <div className="zz-rise relative mt-2" style={{ ["--d" as string]: "20ms" }}>
+      <div
+        ref={ref}
+        className="zz-carousel"
+        onScroll={onScroll}
+        onPointerDown={() => { hold.current = true; lastTouch.current = Date.now(); }}
+        onPointerUp={() => { hold.current = false; lastTouch.current = Date.now(); }}
+        onPointerCancel={() => { hold.current = false; lastTouch.current = Date.now(); settle(); }}
+        onTouchEnd={() => { hold.current = false; lastTouch.current = Date.now(); }}
+        aria-roledescription="carrousel"
+        aria-label="À la une"
+      >
+        {track.map((f, i) => (
+          <Slide key={f.id} f={f} active={i % n === idx} hidden={i >= n} onOpen={f.gameId ? () => { haptic(); onOpenGame(f.gameId!); } : undefined} />
+        ))}
+      </div>
+
+      {/* Pagination */}
+      {n > 1 && (
+        <div className="mt-1 flex items-center justify-center">
+          {slides.map((f, i) => (
+            <button
+              key={f.id}
+              type="button"
+              onClick={() => { lastTouch.current = Date.now(); goTo(i); }}
+              aria-label={`Slide ${i + 1} sur ${n}`}
+              aria-current={i === idx}
+              className="grid h-9 place-items-center px-1"
+            >
+              <span
+                className="block h-3 rounded-full"
+                style={{
+                  width: i === idx ? 28 : 12,
+                  background: i === idx ? "#FFD23F" : "rgba(255,255,255,0.28)",
+                  border: i === idx ? "2px solid var(--zz-ink)" : "2px solid transparent",
+                  transition: "width 300ms var(--zz-spring), background 200ms",
+                }}
+              />
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Slide({ f, active, hidden, onOpen }: { f: ZFeatured; active: boolean; hidden: boolean; onOpen?: () => void }) {
+  const hero = !f.gameId;
+  const body = (
+    <div
+      className="zz-stk relative h-[232px] w-full overflow-visible rounded-[30px] px-6 pt-5 text-left"
+      style={{ background: f.bg, color: f.ink }}
+    >
+      {hero && <div className="pointer-events-none absolute inset-0 rounded-[27px] opacity-30" style={{ background: "radial-gradient(circle at 20% 0%, rgba(255,255,255,0.55), transparent 45%)" }} />}
+      <div className="relative" style={{ maxWidth: hero ? "64%" : "62%" }}>
+        <Tag bg={hero ? "#fff" : "var(--zz-ink)"} color={hero ? "var(--zz-ink)" : f.bg.startsWith("#") ? f.bg : "#fff"} tilt={-4}>{f.kicker}</Tag>
+        <h2 className="zz-title mt-2.5" style={{ fontSize: hero ? 31 : 36, lineHeight: 0.94 }}>{f.title}</h2>
+        <p className="mt-2 text-[14.5px] font-semibold leading-snug" style={{ opacity: 0.85 }}>{f.subtitle}</p>
+        {onOpen && (
+          <span className="zz-stk-sm mt-3 inline-flex h-9 items-center gap-1.5 rounded-full px-3.5 text-[14px] font-bold" style={{ background: "#fff", color: "var(--zz-ink)", rotate: "2deg" }}>
+            Voir le jeu <ArrowRight size={16} strokeWidth={3} />
+          </span>
+        )}
+      </div>
+      {/* Le blob déborde de la carte */}
+      <div className="absolute -right-3" style={{ bottom: -18 }}>
+        <ZBlob size={hero ? 150 : 140} color={f.blob} mood={f.mood} seed={hero ? 2 : f.id.length} shadow={false} outline={!hero} wobble={active} costume={f.costume ?? (f.gameId ? getZGame(f.gameId)?.costume : undefined)} />
+      </div>
+      {f.buddy && (
+        <div className="absolute right-6 -top-5">
+          <ZBlob size={52} color={f.buddy.color} mood={f.buddy.mood} seed={5} shadow={false} speed={2} outline wobble={active} />
+        </div>
+      )}
+    </div>
+  );
+  return (
+    <div className="px-5 pb-6 pt-7" aria-hidden={hidden || undefined}>
+      {onOpen ? (
+        <button type="button" onClick={onOpen} tabIndex={hidden ? -1 : 0} className="zz-push block w-full rounded-[30px]" aria-label={`${f.title} : voir le jeu`}>
+          {body}
+        </button>
+      ) : body}
+    </div>
+  );
+}
+
+/* ───────── Carte de jeu ───────── */
 function GameCard({
-  game, big, seed, locked, showFree, delay, onClick,
+  game, big, seed, tilt, locked, showFree, delay, onClick,
 }: {
-  game: ZGame; big: boolean; seed: number; locked: boolean; showFree: boolean; delay: number; onClick: () => void;
+  game: ZGame; big: boolean; seed: number; tilt: number; locked: boolean; showFree: boolean; delay: number; onClick: () => void;
 }) {
   const info = gameInfo(game);
   const c = ZPALETTE[game.color] ?? ZPALETTE.pink;
-  const w = big ? 236 : 162;
+  const w = big ? 214 : 172;
+  const blob = big ? 112 : 88;
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`zz-press relative flex shrink-0 flex-col overflow-hidden rounded-[28px] text-left ${big ? "zz-rise" : ""}`}
+      className={`zz-push zz-stk relative flex shrink-0 flex-col rounded-[26px] text-left ${big ? "zz-rise" : ""}`}
       style={{
-        width: w, height: big ? 304 : 236,
-        background: `radial-gradient(120% 80% at 30% 0%, ${c.hi}88 0%, transparent 55%), ${c.body}`,
+        width: w, height: big ? 262 : 214,
+        background: c.body,
         color: c.ink,
-        boxShadow: `inset 0 -6px 0 ${c.deep}55, 0 12px 28px rgba(0,0,0,0.28)`,
+        rotate: `${tilt}deg`,
         ["--d" as string]: `${delay}ms`,
       }}
       aria-label={`${info.name}${locked ? " (verrouillé)" : ""}`}
     >
-      {/* Halo clair derrière le blob */}
-      <div className="absolute left-1/2 rounded-full" style={{ width: w * 0.86, height: w * 0.86, marginLeft: -w * 0.43, top: big ? 8 : 0, background: `radial-gradient(circle, ${c.hi} 0%, transparent 68%)`, opacity: 0.75 }} />
-
-      {/* Badges */}
-      <div className="absolute left-3 top-3 z-[2] flex flex-wrap gap-1.5 pr-12">
-        {game.isNew && <Badge bg="#fff" color="#15082E">Nouveau</Badge>}
-        {game.adult && <Badge bg="#15082E" color="#fff">18+</Badge>}
-        {showFree && <Badge bg="rgba(21,8,46,0.16)" color={c.ink}>Gratuit</Badge>}
+      {/* Blob qui dépasse du haut de la carte */}
+      <div className="absolute" style={{ right: 6, top: -blob * 0.34 }}>
+        <ZBlob size={blob} color={game.color} mood={game.mood} seed={seed} speed={2.4} shadow={false} outline costume={game.costume} />
       </div>
-      {locked && (
-        <div className="absolute right-3 top-3 z-[2] grid h-8 w-8 place-items-center rounded-full" style={{ background: "rgba(21,8,46,0.78)", color: "#fff" }}>
-          <Lock size={15} strokeWidth={2.6} />
-        </div>
-      )}
 
-      <div className="relative flex flex-1 items-center justify-center" style={{ paddingTop: big ? 18 : 14 }}>
-        <ZBlob size={big ? 128 : 86} color={game.color} mood={game.mood} seed={seed} speed={2.4} />
+      {/* Étiquettes */}
+      <div className="relative z-[2] flex flex-wrap items-start gap-1.5 px-3 pt-3" style={{ paddingRight: blob * 0.62 }}>
+        {locked && (
+          <span className="grid h-7 w-7 place-items-center rounded-full" style={{ background: "var(--zz-ink)", color: "#fff" }} aria-hidden>
+            <Lock size={14} strokeWidth={2.8} />
+          </span>
+        )}
+        {game.isNew && <Tag bg="#fff" tilt={-5}>Nouveau</Tag>}
+        {game.adult && <Tag bg="var(--zz-ink)" color="#fff" tilt={4}>18+</Tag>}
+        {showFree && <Tag bg="#fff" tilt={3}>Gratuit</Tag>}
       </div>
+
+      <div className="flex-1" />
 
       <div className="relative px-4 pb-4">
-        <div className="zz-font" style={{ fontSize: big ? 25 : 19, fontWeight: 700, lineHeight: 1.04, letterSpacing: "-0.02em" }}>
+        <div className="zz-title" style={{ fontSize: big ? 30 : 24, lineHeight: 0.95 }}>
           {info.name}
         </div>
         <p
-          className="mt-1 font-medium"
-          style={{ fontSize: big ? 13.5 : 12.5, lineHeight: 1.3, opacity: 0.78, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}
+          className="mt-1.5 font-semibold"
+          style={{ fontSize: big ? 14 : 13, lineHeight: 1.3, opacity: 0.8, display: "-webkit-box", WebkitLineClamp: big ? 3 : 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}
         >
           {info.pitch}
         </p>
-        <div className="mt-2 flex items-center gap-1 text-[12px] font-bold" style={{ opacity: 0.85 }}>
-          <Users size={13} strokeWidth={2.6} /> {game.players}
-        </div>
+        <div className="mt-2 text-[13px] font-bold" style={{ opacity: 0.9 }}>{playersLabel(game.players)}</div>
       </div>
     </button>
-  );
-}
-
-function Badge({ bg, color, children }: { bg: string; color: string; children: string }) {
-  return (
-    <span className="rounded-full px-2 py-[3px] text-[11px] font-extrabold uppercase leading-none" style={{ background: bg, color, letterSpacing: "0.04em" }}>
-      {children}
-    </span>
   );
 }

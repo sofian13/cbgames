@@ -5,6 +5,7 @@ import type { GameProps } from "@/lib/games/types";
 import { cn } from "@/lib/utils";
 import { Mascot, MASCOT_COLORS, type MascotColor } from "@/components/Mascot";
 import { registerSoftReplay } from "@/lib/game-replay";
+import { getSavedPlayers, savePlayers } from "@/lib/saved-players";
 
 // Couleurs de blob par équipe (DA du site).
 const TEAM_BLOB: MascotColor[] = ["yellow", "sky", "coral", "mint", "pink", "lavender"];
@@ -347,10 +348,16 @@ export default function MakeGuessGame({
   onReturnToLobby,
 }: GameProps) {
   // ── Setup state ──
-  const [teams, setTeams] = useState<Team[]>([
-    { name: "Équipe 1", player1: "", player2: "" },
-    { name: "Équipe 2", player1: "", player2: "" },
-  ]);
+  // Équipes pré-remplies avec la dernière bande (mémoire des prénoms), 2 par équipe
+  const [teams, setTeams] = useState<Team[]>(() => {
+    const saved = getSavedPlayers();
+    const count = Math.max(2, Math.floor(saved.length / 2));
+    return Array.from({ length: count }, (_, i) => ({
+      name: `Équipe ${i + 1}`,
+      player1: saved[i * 2] ?? "",
+      player2: saved[i * 2 + 1] ?? "",
+    }));
+  });
   const [timerDuration, setTimerDuration] = useState(60);
   const [totalRounds, setTotalRounds] = useState(1);
   const [selectedThemes, setSelectedThemes] = useState<string[]>([...DEFAULT_THEME_IDS]);
@@ -464,6 +471,7 @@ export default function MakeGuessGame({
   }, []);
 
   const startGame = useCallback(() => {
+    savePlayers(teams.flatMap((t) => [t.player1, t.player2]));
     const shuffled = shuffleArray(getWordsForThemes(selectedThemes));
     setWordPool(shuffled);
     setWordIndex(0);
@@ -472,7 +480,7 @@ export default function MakeGuessGame({
     setSubTurn(0);
     setAllResults([]);
     setPhase("pre-turn");
-  }, [selectedThemes]);
+  }, [selectedThemes, teams]);
 
   // ── Turn handlers ──
   const startTurn = useCallback(() => {

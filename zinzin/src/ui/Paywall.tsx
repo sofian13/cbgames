@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Check, Loader2 } from "lucide-react";
 import { DEFAULT_PLANS, buy, isTestMode, loadPlans, restore, type Plan } from "../premium";
 import { ZBlob } from "./ZBlob";
-import { CloseBtn } from "./common";
+import { BigBtn, CloseBtn } from "./common";
 import { haptic } from "./util";
 
 const PERKS: { text: string; color: string }[] = [
@@ -24,7 +24,7 @@ export function Paywall({
 }: {
   onClose: () => void;
   onUnlocked: () => void;
-  onLegal: (page: "cgu" | "confidentialite") => void;
+  onLegal: (page: "cgu" | "confidentialite" | "mentions") => void;
   toast: (m: string) => void;
 }) {
   const [plans, setPlans] = useState<Plan[]>(DEFAULT_PLANS);
@@ -68,46 +68,41 @@ export function Paywall({
 
   return (
     <div
-      className="zz-scroll fixed inset-0 flex flex-col"
-      style={{ zIndex: 45, background: "var(--zz-bg)", opacity: out ? 0 : 1, transform: out ? "scale(0.98)" : "none", transition: "opacity 240ms ease, transform 240ms ease" }}
+      className="zz-scroll zz-page fixed inset-0 flex flex-col"
+      style={{ zIndex: 45, opacity: out ? 0 : 1, transform: out ? "scale(0.98)" : "none", transition: "opacity 240ms ease, transform 240ms ease" }}
       role="dialog"
       aria-modal
       aria-label="Zinzin Premium"
     >
-      {/* Halos */}
-      <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="zz-glow" style={{ width: 360, height: 360, left: "50%", top: -120, marginLeft: -180, background: "#7A4EE8", opacity: 0.5 }} />
-        <div className="zz-glow" style={{ width: 260, height: 260, right: -120, top: 260, background: "#FF3EA5", opacity: 0.22 }} />
-      </div>
-
       <div className="absolute right-3 z-10" style={{ top: "calc(var(--sat) + 8px)" }}>
-        <CloseBtn onClick={() => { haptic(); leave(onClose); }} style={{ background: "rgba(255,255,255,0.12)" }} />
+        <CloseBtn onClick={() => { haptic(); leave(onClose); }} />
       </div>
 
-      <div className="relative mx-auto flex w-full max-w-md flex-1 flex-col px-5" style={{ paddingTop: "calc(var(--sat) + 16px)", paddingBottom: "calc(var(--sab) + 14px)" }}>
+      <div className="relative mx-auto flex w-full max-w-md flex-1 flex-col px-5" style={{ paddingTop: "calc(var(--sat) + 14px)", paddingBottom: "calc(var(--sab) + 12px)" }}>
         {/* Trio de blobs */}
-        <div className="relative mx-auto flex h-[108px] w-[250px] items-end justify-center">
-          <div className="zz-pop absolute bottom-1 left-2" style={{ ["--d" as string]: "120ms" }}>
-            <ZBlob size={70} color="yellow" mood="shocked" seed={3} />
+        <div className="relative mx-auto flex h-[88px] w-[230px] items-end justify-center">
+          <div className="zz-pop absolute bottom-1 left-1" style={{ ["--d" as string]: "120ms" }}>
+            <ZBlob size={58} color="yellow" mood="shocked" seed={3} outline shadow={false} />
           </div>
-          <div className="zz-pop absolute bottom-0 right-1" style={{ ["--d" as string]: "220ms" }}>
-            <ZBlob size={64} color="mint" mood="love" seed={6} />
+          <div className="zz-pop absolute bottom-0 right-0" style={{ ["--d" as string]: "220ms" }}>
+            <ZBlob size={54} color="mint" mood="love" seed={6} outline shadow={false} />
           </div>
           <div className="zz-pop relative z-[1]" style={{ ["--d" as string]: "40ms" }}>
-            <ZBlob size={104} color="pink" mood="laughing" seed={0} />
+            <ZBlob size={84} color="pink" mood="laughing" seed={0} outline crown shadow={false} />
           </div>
         </div>
 
-        <h1 className="zz-font zz-rise mt-2 text-center text-white" style={{ fontSize: 33, fontWeight: 700, lineHeight: 1.02, letterSpacing: "-0.03em", ["--d" as string]: "80ms" }}>
-          Débloque toute{" "}
-          <span style={{ background: "linear-gradient(90deg,#FF3EA5,#FFD23F)", WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent" }}>la folie</span>
+        <h1 className="zz-title zz-rise mt-4 text-center text-white" style={{ fontSize: 37, ["--d" as string]: "80ms" }}>
+          Débloque toute
+          <br />
+          <span className="zz-stk mt-1.5 inline-block rounded-[16px] px-3 pb-1 pt-0.5" style={{ background: "#FFD23F", color: "var(--zz-ink)", rotate: "-3deg" }}>la folie</span>
         </h1>
 
-        <ul className="zz-rise mx-auto mt-4 grid w-full max-w-[320px] gap-2" style={{ ["--d" as string]: "160ms" }}>
-          {PERKS.map((p) => (
-            <li key={p.text} className="flex items-center gap-3 text-[16px] font-semibold text-white">
-              <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full" style={{ background: p.color, color: "#15082E" }}>
-                <Check size={15} strokeWidth={3.4} />
+        <ul className="zz-rise mx-auto mt-5 grid w-full max-w-[330px] gap-2" style={{ ["--d" as string]: "160ms" }}>
+          {PERKS.map((p, i) => (
+            <li key={p.text} className="flex items-center gap-3 text-[16px] font-bold text-white">
+              <span className="zz-stk-sm grid h-8 w-8 shrink-0 place-items-center rounded-[10px]" style={{ background: p.color, color: "var(--zz-ink)", rotate: `${i % 2 ? 6 : -6}deg` }}>
+                <Check size={17} strokeWidth={3.6} />
               </span>
               {p.text}
             </li>
@@ -115,7 +110,7 @@ export function Paywall({
         </ul>
 
         {/* Offres */}
-        <div className="zz-rise mt-6 grid grid-cols-3 gap-2.5" style={{ ["--d" as string]: "240ms" }} role="radiogroup" aria-label="Offres">
+        <div className="zz-rise mt-6 grid grid-cols-3 gap-3" style={{ ["--d" as string]: "240ms" }} role="radiogroup" aria-label="Offres">
           {plans.map((p) => {
             const on = p.id === sel;
             const pm = /an/.test(p.period) ? perMonth(p.price) : null;
@@ -126,26 +121,29 @@ export function Paywall({
                 role="radio"
                 aria-checked={on}
                 onClick={() => { haptic(); setSel(p.id); }}
-                className="zz-press relative flex min-h-[108px] flex-col items-center justify-center rounded-[22px] px-1.5 pb-3 pt-4 text-center"
+                className="zz-push relative flex min-h-[118px] flex-col items-center justify-center rounded-[22px] px-1.5 pb-3 pt-5 text-center"
                 style={{
-                  background: on ? "linear-gradient(180deg, rgba(255,62,165,0.22), rgba(255,62,165,0.08))" : "rgba(255,255,255,0.05)",
-                  border: `2px solid ${on ? "#FF3EA5" : "rgba(255,255,255,0.1)"}`,
-                  boxShadow: on ? "0 8px 30px rgba(255,62,165,0.28)" : "none",
-                  transition: "background 200ms, border-color 200ms, box-shadow 200ms",
+                  background: on ? "#fff" : "var(--zz-plum)",
+                  color: on ? "var(--zz-ink)" : "#fff",
+                  border: "3px solid var(--zz-ink)",
+                  boxShadow: on ? "0 6px 0 var(--zz-ink)" : "0 3px 0 var(--zz-ink)",
+                  rotate: on ? "-2deg" : "0deg",
+                  translate: on ? "0 -4px" : "0 0",
+                  transition: "background 160ms, rotate 260ms var(--zz-spring), translate 260ms var(--zz-spring)",
                 }}
               >
                 {p.badge && (
                   <span
-                    className="absolute -top-2.5 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full px-2 py-[3px] text-[11px] font-extrabold uppercase"
-                    style={{ background: on ? "#FF3EA5" : "#FFD23F", color: on ? "#fff" : "#2A1A00", letterSpacing: "0.03em" }}
+                    className="absolute -top-3.5 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full px-2 py-[3px] text-[12px] font-bold"
+                    style={{ background: "#FF3EA5", color: "#fff", border: "2px solid var(--zz-ink)", rotate: "3deg" }}
                   >
                     {p.badge}
                   </span>
                 )}
-                <span className="text-[13px] font-bold" style={{ color: on ? "#fff" : "var(--zz-dim)" }}>{p.title}</span>
-                <span className="zz-font mt-1 text-[22px] font-bold leading-none text-white" style={{ letterSpacing: "-0.02em" }}>{p.price}</span>
-                <span className="mt-1 text-[12px]" style={{ color: "var(--zz-mute)" }}>{p.period}</span>
-                {pm && <span className="mt-1 text-[11px] font-semibold" style={{ color: "#FFD23F" }}>soit {pm}/mois</span>}
+                <span className="text-[13px] font-bold" style={{ opacity: on ? 0.75 : 0.7 }}>{p.title}</span>
+                <span className="zz-title mt-1 text-[24px]">{p.price}</span>
+                <span className="mt-1 text-[12px] font-semibold" style={{ opacity: 0.65 }}>{p.period}</span>
+                {pm && <span className="mt-1 whitespace-nowrap text-[12px] font-bold" style={{ color: on ? "#C41F78" : "#FFD23F" }}>{pm}/mois</span>}
               </button>
             );
           })}
@@ -153,16 +151,12 @@ export function Paywall({
 
         <div className="flex-1" />
 
-        <button
-          type="button"
-          onClick={onBuy}
-          disabled={busy !== null}
-          className="zz-press zz-rise mt-5 flex h-[58px] w-full items-center justify-center gap-2 rounded-full text-[18px] font-extrabold text-white"
-          style={{ background: "linear-gradient(90deg,#FF3EA5,#FF6B5B)", boxShadow: "0 12px 34px rgba(255,62,165,0.42)", ["--d" as string]: "320ms" }}
-        >
-          {busy === "buy" ? <Loader2 className="animate-spin" size={22} /> : "Continuer"}
-        </button>
-        <p className="mt-2.5 text-center text-[12px]" style={{ color: "var(--zz-mute)" }}>
+        <div className="zz-rise mt-5" style={{ ["--d" as string]: "320ms" }}>
+          <BigBtn onClick={onBuy} disabled={busy !== null} bg="#FF3EA5" color="#fff">
+            {busy === "buy" ? <Loader2 className="animate-spin" size={24} /> : "Je débloque tout"}
+          </BigBtn>
+        </div>
+        <p className="mt-3 text-center text-[13px]" style={{ color: "var(--zz-mute)" }}>
           Renouvellement automatique, annulable à tout moment.
         </p>
 
@@ -177,8 +171,8 @@ export function Paywall({
         </div>
 
         {test && (
-          <p className="text-center text-[12px]" style={{ color: "rgba(255,210,63,0.6)" }}>
-            Mode test : l'achat débloque gratuitement
+          <p className="text-center text-[12px]" style={{ color: "rgba(255,210,63,0.7)" }}>
+            Mode test : l’achat débloque gratuitement
           </p>
         )}
       </div>

@@ -15,6 +15,7 @@ import { LocalShell, ModeSelect, PassScreen, colorForIndex, type GameMode } from
 import { MascotAvatar } from "@/components/Mascot";
 import { ConfettiBurst } from "@/components/ConfettiBurst";
 import { QPACKS, type Q } from "./questions";
+import { getSavedDuo, saveDuo } from "@/lib/saved-players";
 
 const ACCENT = "#FF6BAE";
 
@@ -58,7 +59,7 @@ function Screen({ children }: { children: React.ReactNode }) {
 
 function CoupleQuizLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) {
   const [phase, setPhase] = useState<Phase>("names");
-  const [names, setNames] = useState<[string, string]>(["", ""]);
+  const [names, setNames] = useState<[string, string]>(() => getSavedDuo());
   const [packs, setPacks] = useState<string[]>(() => QPACKS.filter((p) => p.defaultOn).map((p) => p.id));
   const [rounds, setRounds] = useState(10);
   const [deck, setDeck] = useState<Q[]>([]);
@@ -118,7 +119,7 @@ function CoupleQuizLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) 
             </div>
           ))}
         </div>
-        <button disabled={!ok} onClick={() => { setNames([names[0].trim(), names[1].trim()]); setPhase("config"); }}
+        <button disabled={!ok} onClick={() => { saveDuo(names); setNames([names[0].trim(), names[1].trim()]); setPhase("config"); }}
           className="af-btn af-btn-primary mt-6 w-full max-w-sm disabled:opacity-40" style={{ fontSize: 17, minHeight: 54 }}>
           Continuer
         </button>

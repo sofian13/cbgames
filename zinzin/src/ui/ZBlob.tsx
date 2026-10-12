@@ -1,5 +1,6 @@
-import { useId, type CSSProperties, type ReactNode } from "react";
+import { useId, useRef, type CSSProperties, type ReactNode } from "react";
 import type { MascotColor, MascotMood } from "@/components/Mascot";
+import { POTATO, costumeLayers, type ZCostume } from "./costumes";
 
 /**
  * ZBlob — les « blobs zinzins » de l'app.
@@ -55,16 +56,69 @@ export interface ZBlobProps {
   /** Durée de base du gigotement (s) */
   speed?: number;
   delay?: number;
+  /** Contour épais façon sticker */
+  outline?: boolean;
+  /** Petite couronne (Premium) */
+  crown?: boolean;
+  /** Déguisement du jeu (voir costumes.tsx) */
+  costume?: ZCostume;
+  /** Saute quand on le touche (défaut : oui) */
+  hop?: boolean;
   className?: string;
   style?: CSSProperties;
 }
 
+/** Saut squash & stretch (Web Animations, rien si mouvement réduit). */
+export function hopEl(el: HTMLElement | null) {
+  if (!el || typeof el.animate !== "function") return;
+  if (typeof matchMedia !== "undefined" && matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  el.animate(
+    [
+      { transform: "translateY(0) scale(1,1)" },
+      { transform: "translateY(3%) scale(1.14,0.84)", offset: 0.16 },
+      { transform: "translateY(-22%) scale(0.9,1.12)", offset: 0.48 },
+      { transform: "translateY(0) scale(1.08,0.92)", offset: 0.78 },
+      { transform: "translateY(0) scale(1,1)" },
+    ],
+    { duration: 560, easing: "ease-out" },
+  );
+}
+
+/**
+ * Les yeux de tous les blobs suivent le doigt : un seul écouteur global
+ * pose --zz-lx / --zz-ly (-1…1) sur <html>, les pupilles s'y décalent en CSS.
+ */
+export function installLookAtFinger(): () => void {
+  if (typeof window === "undefined") return () => {};
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches) return () => {};
+  const root = document.documentElement;
+  let raf = 0, x = 0, y = 0;
+  const flush = () => {
+    raf = 0;
+    root.style.setProperty("--zz-lx", x.toFixed(2));
+    root.style.setProperty("--zz-ly", y.toFixed(2));
+  };
+  const on = (e: PointerEvent) => {
+    x = Math.max(-1, Math.min(1, (e.clientX / innerWidth) * 2 - 1));
+    y = Math.max(-1, Math.min(1, (e.clientY / innerHeight) * 2 - 1));
+    if (!raf) raf = requestAnimationFrame(flush);
+  };
+  addEventListener("pointerdown", on, { passive: true });
+  addEventListener("pointermove", on, { passive: true });
+  return () => {
+    removeEventListener("pointerdown", on);
+    removeEventListener("pointermove", on);
+    cancelAnimationFrame(raf);
+  };
+}
+
 export function ZBlob({
   size = 96, color = "pink", mood = "happy", seed = 0, wobble = true, shadow = true,
-  speed = 2.6, delay = 0, className, style,
+  speed = 2.6, delay = 0, outline = false, crown = false, costume, hop = true, className, style,
 }: ZBlobProps) {
+  const ref = useRef<HTMLDivElement>(null);
   const uid = useId().replace(/:/g, "");
-  const c = ZPALETTE[color] ?? ZPALETTE.pink;
+  const c = costume === "potato" ? POTATO : (ZPALETTE[color] ?? ZPALETTE.pink);
   const s = Math.abs(Math.floor(seed));
   const shape = SHAPES[s % SHAPES.length];
   const look = LOOKS[(s + (mood === "sus" || mood === "shifty" ? 4 : 0)) % LOOKS.length];
@@ -113,7 +167,7 @@ export function ZBlob({
       <g className="zb-blink" style={{ animationDelay: `${(s % 5) * 0.7 + side * 0.08}s` }}>
         <ellipse cx={e.x} cy={e.y + 2.2} rx={e.r} ry={e.r} fill={c.deep} opacity={0.55} />
         <circle cx={e.x} cy={e.y} r={e.r} fill="#fff" />
-        <g className={side ? "zb-pupil-b" : "zb-pupil-a"} style={{ animationDelay: `${-(s % 7) * 0.9}s` }}>
+        <g className="zb-follow"><g className={side ? "zb-pupil-b" : "zb-pupil-a"} style={{ animationDelay: `${-(s % 7) * 0.9}s` }}>
           {mood === "mindblown" ? (
             <path
               transform={`translate(${px} ${py}) scale(${pr / 10})`}
@@ -126,7 +180,7 @@ export function ZBlob({
               <circle cx={px + pr * 0.38} cy={py - pr * 0.4} r={pr * 0.3} fill="#fff" />
             </>
           )}
-        </g>
+        </g></g>
         {/* Paupière mi-close (soupçon) */}
         {(mood === "sus" || (mood === "cool" && side === 0)) && (
           <path d={`M${e.x - e.r - 1} ${e.y - 1} A${e.r + 1} ${e.r + 1} 0 0 1 ${e.x + e.r + 1} ${e.y - 1}Z`} fill={c.body} stroke={c.deep} strokeWidth={1.5} />
@@ -202,6 +256,7 @@ export function ZBlob({
     }
   };
 
+  const cos = costumeLayers(costume, { c, L, R, clip });
   const blush = mood === "love" || mood === "kiss" || mood === "happy" || mood === "laughing" || mood === "wink";
 
   return (
@@ -209,6 +264,8 @@ export function ZBlob({
       className={["zb", wobble ? "zb-wob" : "", mood === "rofl" ? "zb-rofl" : "", className ?? ""].join(" ")}
       style={{ width: size, height: size, ["--zb-d" as string]: `${speed + (s % 3) * 0.35}s`, animationDelay: `${-delay - (s % 4) * 0.4}s`, ...style }}
       aria-hidden
+      ref={ref}
+      onPointerDown={hop ? () => hopEl(ref.current) : undefined}
     >
       <svg viewBox="0 0 120 120" width={size} height={size} style={{ overflow: "visible", display: "block" }}>
         <defs>
@@ -227,9 +284,13 @@ export function ZBlob({
         {shadow && <ellipse cx={60} cy={113} rx={38} ry={5} fill="#000" opacity={0.32} />}
 
         {/* Corps : bord inférieur foncé + dégradé + ombrage + reflets */}
+        {cos.back}
+        {outline && <path d={shape} transform="translate(0 4)" fill={INK} stroke={INK} strokeWidth={Math.max(5, 360 / size)} strokeLinejoin="round" />}
         <path d={shape} transform="translate(0 4)" fill={c.deep} />
         <path d={shape} fill={`url(#${gBody})`} />
         <path d={shape} fill={`url(#${gShade})`} />
+        {cos.skin}
+        {outline && <path d={shape} fill="none" stroke={INK} strokeWidth={Math.max(3.4, 300 / size)} strokeLinejoin="round" />}
         <g clipPath={`url(#${clip})`}>
           <ellipse cx={37} cy={30} rx={14} ry={8.5} transform="rotate(-24 37 30)" fill="#fff" opacity={0.5} />
           <circle cx={55} cy={22} r={2.6} fill="#fff" opacity={0.6} />
@@ -256,9 +317,17 @@ export function ZBlob({
             </g>
           )}
           {mouth()}
+          {cos.face}
         </g>
+        {cos.top}
 
         {/* Accessoires d'humeur */}
+        {crown && (
+          <g transform="translate(60 14) rotate(-8)">
+            <path d="M-20 4 L-24 -16 L-11 -6 L0 -22 L11 -6 L24 -16 L20 4Z" fill="#FFD23F" stroke={INK} strokeWidth={3.4} strokeLinejoin="round" />
+            <circle cx={0} cy={-6} r={3.2} fill="#FF3EA5" stroke={INK} strokeWidth={1.6} />
+          </g>
+        )}
         {mood === "fire" && (
           <path className="zb-flame" d="M60 -6 C66 4 74 8 72 18 C70 25 64 26 60 26 C55 26 48 24 48 16 C48 10 53 8 54 2 C57 6 58 9 58 12 C61 8 61 2 60 -6Z" fill="#FFB020" stroke="#FF5A2E" strokeWidth={2.4} strokeLinejoin="round" />
         )}

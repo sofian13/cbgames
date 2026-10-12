@@ -8,6 +8,7 @@ import { useKeyedState } from "@/lib/use-keyed-state";
 import { Mascot, MascotAvatar } from "@/components/Mascot";
 import { ConfettiBurst, Sparkles } from "@/components/ConfettiBurst";
 import { ModeSelect, colorForIndex, type GameMode } from "@/components/games/local-kit";
+import { getSavedDuo, saveDuo } from "@/lib/saved-players";
 import {
   recordGame,
   getProgress,
@@ -168,8 +169,9 @@ function CoupleSetup({ pack, onStart, onBack }: {
   onStart: (names: [string, string], pack: Pack) => void;
   onBack?: () => void;
 }) {
-  const [a, setA] = useState("");
-  const [b, setB] = useState("");
+  // Le dernier duo est pré-rempli (mémoire des prénoms)
+  const [a, setA] = useState(() => getSavedDuo()[0]);
+  const [b, setB] = useState(() => getSavedDuo()[1]);
   const [sel, setSel] = useState<Pack>(pack);
   const lvl = levelFor(getProgress().xp);
   const can = a.trim() && b.trim();
@@ -217,7 +219,7 @@ function CoupleSetup({ pack, onStart, onBack }: {
         })}
       </div>
 
-      <button onClick={() => can && onStart([a.trim(), b.trim()], sel)} disabled={!can}
+      <button onClick={() => { if (!can) return; saveDuo([a, b]); onStart([a.trim(), b.trim()], sel); }} disabled={!can}
         className="af-btn af-btn-primary mt-7 w-full max-w-sm disabled:opacity-40" style={{ fontSize: 16 }}>
         C&apos;est parti 💞
       </button>

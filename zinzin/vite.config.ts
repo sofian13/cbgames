@@ -7,14 +7,17 @@ import path from "node:path";
 // Réutilise les jeux du site via l'alias "@" → ../src.
 // En build uniquement (le dev a besoin du WebSocket HMR) : l'interface ne peut joindre
 // AUCUN serveur. Les achats passent par le SDK natif (Apple / RevenueCat), hors webview.
+// L'origine de l'app est capacitor://localhost (iOS) ou https://localhost (Android) :
+// on la cite explicitement, la webview ne l'associe pas toujours à 'self'.
+const APP = "'self' capacitor://localhost https://localhost http://localhost";
 const CSP = [
-  "default-src 'self'",
-  "script-src 'self'",
-  "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob:",
-  "font-src 'self' data:",
-  "media-src 'self' data: blob:",
-  "connect-src 'self'",
+  `default-src ${APP}`,
+  `script-src ${APP}`,
+  `style-src ${APP} 'unsafe-inline'`,
+  `img-src ${APP} data: blob:`,
+  `font-src ${APP} data:`,
+  `media-src ${APP} data: blob:`,
+  `connect-src ${APP}`,
   "object-src 'none'",
   "base-uri 'self'",
   "form-action 'none'",
@@ -26,6 +29,18 @@ export default defineConfig({
   plugins: [
     react(),
     tailwindcss(),
+    {
+      // Les polices du site sont chargées depuis Internet : dans l'app elles sont embarquées
+      name: "zinzin-no-remote-fonts",
+      apply: "build",
+      generateBundle(_opts: unknown, bundle: Record<string, { type: string; fileName: string; source?: string | Uint8Array }>) {
+        for (const asset of Object.values(bundle)) {
+          if (asset.type === "asset" && asset.fileName.endsWith(".css") && typeof asset.source === "string") {
+            asset.source = asset.source.replace(/@import\s*(?:url\(\s*)?(["'])https:[^"']*\1\s*\)?\s*;?/g, "");
+          }
+        }
+      },
+    },
     {
       name: "zinzin-csp",
       apply: "build",
