@@ -6,7 +6,8 @@
  * alongside their online (multi-device) mode.
  */
 
-import { useState } from "react";
+import { useLayoutEffect, useState } from "react";
+import { isOfflineApp } from "@/lib/offline-app";
 import { Mascot, MascotAvatar, MASCOT_COLORS, type MascotColor } from "@/components/Mascot";
 
 export type GameMode = "local" | "online";
@@ -31,6 +32,13 @@ export function ModeSelect({
   tagline: string;
   onPick: (m: GameMode) => void;
 }) {
+  // App hors-ligne : pas de choix de mode, on part direct en local (avant le 1er paint).
+  const offline = isOfflineApp();
+  useLayoutEffect(() => {
+    if (offline) onPick("local");
+  }, [offline, onPick]);
+  if (offline) return null;
+
   return (
     <div className={SHELL} style={{ background: BG("rgba(91,54,214,0.35)"), justifyContent: "center", padding: 24 }}>
       <div className="mb-3 text-5xl sm:text-7xl">{emoji}</div>

@@ -49,3 +49,6 @@ next-env.d.ts
 
 # local env
 .env*.local
+
+# App mobile Zinzin (build Vite)
+zinzin/dist

@@ -6,9 +6,10 @@ import type { GameMode } from "@/components/games/local-kit";
 import { Mascot } from "@/components/Mascot";
 import UndercoverOnline from "@/components/games/undercover/undercover-online";
 import UndercoverLocal from "@/components/games/undercover/undercover-local";
+import { isOfflineApp } from "@/lib/offline-app";
 
 export default function UndercoverGame(props: GameProps) {
-  const [mode, setMode] = useState<GameMode | null>(null);
+  const [mode, setMode] = useState<GameMode | null>(() => (isOfflineApp() ? "local" : null));
 
   if (mode === null) {
     return <UCModeSelect onPick={setMode} onBack={props.onReturnToLobby} />;

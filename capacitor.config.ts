@@ -1,21 +1,17 @@
 import type { CapacitorConfig } from "@capacitor/cli";
 
-// L'app charge le site déployé (les parties passent par PartyKit en temps réel).
-// En dev : CAP_DEV_URL=http://localhost:3000 npx cap sync ios
+// App 100 % hors-ligne : les jeux (un seul téléphone) sont embarqués (zinzin/dist).
+// Build : npm run app:build && npx cap sync ios
+// Dev à chaud : CAP_DEV_URL=http://localhost:5174 npx cap sync ios (+ npm run app:dev)
 const devUrl = process.env.CAP_DEV_URL;
 
 const config: CapacitorConfig = {
   appId: "fr.zinzin.app",
   appName: "Zinzin",
-  webDir: "cap-www",
+  webDir: "zinzin/dist",
   backgroundColor: "#0E0828",
-  // Permet au site de savoir qu'il tourne dans l'app (accueil /app, jeux phares…)
   appendUserAgent: "ZinzinApp",
-  server: {
-    url: `${devUrl ?? "https://cbgames.vercel.app"}/app`,
-    cleartext: Boolean(devUrl),
-    errorPath: "index.html",
-  },
+  server: devUrl ? { url: devUrl, cleartext: true } : undefined,
   ios: {
     contentInset: "never",
     backgroundColor: "#0E0828",

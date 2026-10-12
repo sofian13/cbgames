@@ -1,0 +1,12 @@
+/* Design system partagé avec le site (Tailwind 4 + tokens) */
+@import "../../src/app/globals.css";
+/* Polices embarquées : l'app marche sans réseau */
+@import "../public/fonts/fonts.css";
+
+/* Classes utilisées par les jeux du site */
+@source "../../src";
+@source "./";
+
+html, body, #root { height: 100%; background: #0B0620; overscroll-behavior: none; }
+body { -webkit-tap-highlight-color: transparent; -webkit-user-select: none; user-select: none; }
+input, textarea { -webkit-user-select: text; user-select: text; }
