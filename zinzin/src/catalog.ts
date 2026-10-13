@@ -83,7 +83,7 @@ export const GAMES: ZGame[] = [
 ];
 
 export const SECTIONS: ZSection[] = [
-  { id: "top", ids: ["undercover", "faux-temoin", "purete", "patate", "top-ten", "lache-pas", "tu-prefere"],
+  { id: "top", ids: ["undercover", "picolette", "faux-temoin", "purete", "patate", "top-ten", "lache-pas", "tu-prefere"],
     title: { fr: "Les incontournables", en: "Must-plays", es: "Imprescindibles" },
     subtitle: { fr: "Pour lancer la soirée", en: "To get the night started", es: "Para arrancar la noche" } },
   { id: "zinzin", ids: ["patate", "lache-pas", "pile-poil"],
