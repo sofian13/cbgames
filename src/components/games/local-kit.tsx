@@ -6,12 +6,13 @@
  * alongside their online (multi-device) mode.
  */
 
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type ReactNode } from "react";
 import { getRecentNames, getSavedPlayers, sameName, savePlayers } from "@/lib/saved-players";
 import { isOfflineApp } from "@/lib/offline-app";
 import { Mascot, MASCOT_COLORS, MASCOT_PALETTE, type MascotColor } from "@/components/Mascot";
-import { ArrowLeft, Smartphone, Wifi, X } from "lucide-react";
-import { GameIconBadge, GameInlineIcon } from "@/components/games/game-icon-button";
+import { ArrowLeft, Check, Crown, Smartphone, Volume2, VolumeX, Wifi, X } from "lucide-react";
+import { GameIconBadge, GameIconButton, GameInlineIcon, GameTopRight } from "@/components/games/game-icon-button";
+import { isSfxMuted, playSfx, setSfxMuted, subscribeSfxMuted } from "@/lib/sfx";
 
 export type GameMode = "local" | "online";
 
@@ -19,9 +20,14 @@ export function colorForIndex(i: number): MascotColor {
   return MASCOT_COLORS[i % MASCOT_COLORS.length];
 }
 
-const SHELL = "relative flex min-h-[100svh] flex-col items-center text-white";
-const BG = (accent: string) =>
-  `radial-gradient(circle at 50% 12%, ${accent}, transparent 45%), linear-gradient(180deg, #0A0420 0%, #0E0828 100%)`;
+const NIGHT = "#1E1250";
+const SHELL = "relative flex min-h-[100dvh] w-full shrink-0 flex-col items-center text-white";
+/** Fond « violet nuit » + pois discrets (DA sticker). L'accent n'est plus utilisé
+ *  en halo : on garde la signature pour ne pas casser les appels existants. */
+const BG = (accent: string) => {
+  void accent;
+  return `radial-gradient(rgba(255,255,255,0.06) 1.4px, transparent 1.6px) 0 0 / 22px 22px, ${NIGHT}`;
+};
 
 // ── Mode selection ────────────────────────────────────────
 export function ModeSelect({
@@ -44,39 +50,31 @@ export function ModeSelect({
   void emoji; // gardé pour l'API : un blob remplace l'emoji décoratif
 
   return (
-    <div className={SHELL} style={{ background: BG("rgba(91,54,214,0.35)"), justifyContent: "center", padding: 24 }}>
+    <div className={SHELL} style={{ background: BG(""), justifyContent: "center", padding: "calc(env(safe-area-inset-top, 0px) + 72px) 20px calc(env(safe-area-inset-bottom, 0px) + 24px)" }}>
       <div className="mb-3"><Mascot size={84} color="purple" mood="happy" arms shadow={false} /></div>
-      <h1 className="cb-display-lg text-center sm:text-5xl">{name}</h1>
-      <p className="mt-2 mb-8 max-w-md text-center text-sm sm:text-base" style={{ color: "var(--text-dim)" }}>{tagline}</p>
+      <h1 className="text-center" style={{ ...DISPLAY, fontSize: "clamp(38px, 11vw, 56px)", lineHeight: 0.95 }}>{name}</h1>
+      <p className="mt-3 mb-8 max-w-md text-center text-[15px] font-semibold" style={{ color: "rgba(255,255,255,0.8)" }}>{tagline}</p>
 
-      <div className="w-full max-w-md space-y-3 sm:max-w-xl">
-        <button
-          onClick={() => onPick("local")}
-          className="w-full rounded-3xl border p-5 text-left transition active:scale-[0.99]"
-          style={{ background: "linear-gradient(140deg, rgba(255,62,165,0.18), rgba(255,255,255,0.04))", borderColor: "rgba(255,62,165,0.4)" }}
-        >
-          <div className="flex items-center gap-3">
-            <GameIconBadge icon={Smartphone} bg="#FF3EA5" size={48} />
-            <div>
-              <p className="cb-display-sm">Sur ce téléphone</p>
-              <p className="text-xs" style={{ color: "var(--text-dim)" }}>On se passe le tél à tour de rôle (pass-and-play)</p>
+      <div className="w-full max-w-md space-y-4 sm:max-w-xl">
+        {([
+          { m: "local" as const, icon: Smartphone, bg: "#FF3EA5", title: "Sur ce téléphone", sub: "On se passe le tél à tour de rôle", tilt: -1.5 },
+          { m: "online" as const, icon: Wifi, bg: "#4ECDC4", title: "Plusieurs téléphones", sub: "Chacun sur son tél, en ligne dans la même salle", tilt: 1.5 },
+        ]).map((o) => (
+          <button
+            key={o.m}
+            onClick={() => onPick(o.m)}
+            className="w-full rounded-[24px] p-5 text-left transition-[translate,box-shadow] active:translate-y-[4px] active:shadow-[0_1px_0_#15082E]"
+            style={{ ...stickerStyle(o.bg, 5), color: inkOn(o.bg), rotate: `${o.tilt}deg` }}
+          >
+            <div className="flex items-center gap-3">
+              <GameIconBadge icon={o.icon} bg="#fff" size={48} />
+              <div>
+                <p style={{ ...DISPLAY, fontSize: 24, lineHeight: 1 }}>{o.title}</p>
+                <p className="mt-1 text-[14px] font-semibold">{o.sub}</p>
+              </div>
             </div>
-          </div>
-        </button>
-
-        <button
-          onClick={() => onPick("online")}
-          className="w-full rounded-3xl border p-5 text-left transition active:scale-[0.99]"
-          style={{ background: "linear-gradient(140deg, rgba(78,205,196,0.16), rgba(255,255,255,0.04))", borderColor: "rgba(78,205,196,0.4)" }}
-        >
-          <div className="flex items-center gap-3">
-            <GameIconBadge icon={Wifi} bg="#4ECDC4" size={48} />
-            <div>
-              <p className="cb-display-sm">Plusieurs téléphones</p>
-              <p className="text-xs" style={{ color: "var(--text-dim)" }}>Chacun sur son tél, en ligne dans la même salle</p>
-            </div>
-          </div>
-        </button>
+          </button>
+        ))}
       </div>
     </div>
   );
@@ -91,8 +89,10 @@ const stickerStyle = (bg: string, shadow = 4): React.CSSProperties => ({
 });
 
 /** Texte lisible sur une couleur pleine : encre foncée ou blanc. */
-function inkOn(hex: string): string {
-  const m = hex.replace("#", "").match(/^([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})/i);
+export function inkOn(hex: string): string {
+  let h = hex.replace("#", "");
+  if (/^[0-9a-f]{3}$/i.test(h)) h = h.split("").map((c) => c + c).join("");
+  const m = h.match(/^([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})/i);
   if (!m) return "#fff";
   const [r, g, b] = m.slice(1).map((h) => {
     const c = parseInt(h, 16) / 255;
@@ -147,6 +147,7 @@ export function PlayersSetup({
   accent,
   onStart,
   onBack,
+  footer,
 }: {
   emoji: string;
   name: string;
@@ -155,6 +156,8 @@ export function PlayersSetup({
   accent: string;
   onStart: (names: string[]) => void;
   onBack?: () => void;
+  /** Contenu discret sous la table (ex. bouton « Propose ton idée ») */
+  footer?: ReactNode;
 }) {
   void emoji; // gardé pour l'API (le titre n'affiche plus d'emoji décoratif)
   const blank = () => Array.from({ length: Math.min(max, Math.max(min, 4)) }, () => "");
@@ -216,7 +219,7 @@ export function PlayersSetup({
 
   return (
     <div
-      className="relative flex min-h-[100svh] w-full flex-col text-white"
+      className="relative flex min-h-[100dvh] w-full shrink-0 flex-col text-white"
       style={{
         background: BG(`${accent}38`),
         paddingTop: "calc(env(safe-area-inset-top, 0px) + 64px)",
@@ -226,7 +229,7 @@ export function PlayersSetup({
       <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col px-5">
         {/* Titre : le jeu en grand, en phrase normale */}
         <div className="flex items-center justify-between gap-3">
-          <p className="text-[16px] font-semibold" style={{ color: "rgba(255,255,255,0.7)" }}>Qui joue à</p>
+          <p className="text-[17px] font-bold" style={{ color: "rgba(255,255,255,0.85)" }}>Qui joue à</p>
           <span
             className="inline-block whitespace-nowrap rounded-full px-3 py-1 text-[14px] font-bold"
             style={{ ...stickerStyle(accent, 3), color: accentInk, transform: "rotate(3deg)" }}
@@ -350,12 +353,14 @@ export function PlayersSetup({
           </div>
         )}
 
+        {footer && <div className="mt-6 flex justify-center">{footer}</div>}
+
         <div className="min-h-6 flex-1" />
 
         {/* Lancer : collant en bas quand la liste est longue */}
         <div
           className="sticky z-[2] -mx-5 px-5 pt-6"
-          style={{ bottom: 0, paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 12px)", marginBottom: "calc(-1 * (env(safe-area-inset-bottom, 0px) + 16px))", background: "linear-gradient(180deg, transparent, rgba(10,4,32,0.92) 40%)" }}
+          style={{ bottom: 0, paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 12px)", marginBottom: "calc(-1 * (env(safe-area-inset-bottom, 0px) + 16px))", background: `linear-gradient(180deg, transparent, ${NIGHT} 40%)` }}
         >
           <button
             type="button"
@@ -372,8 +377,9 @@ export function PlayersSetup({
           >
             {canStart ? "C'est parti !" : `Encore ${missing} joueur${missing > 1 ? "s" : ""} !`}
           </button>
-          {onBack && (
-            <button type="button" onClick={onBack} className="mx-auto mt-1 block min-h-11 px-4 text-[14px] font-semibold" style={{ color: "rgba(255,255,255,0.6)" }}>
+          {/* Dans l'app, la croix « quitter » fait déjà le retour */}
+          {onBack && !isOfflineApp() && (
+            <button type="button" onClick={onBack} className="mx-auto mt-1 block min-h-11 px-4 text-[14px] font-semibold" style={{ color: "rgba(255,255,255,0.75)" }}>
               <GameInlineIcon icon={ArrowLeft} /> Changer de mode
             </button>
           )}
@@ -389,7 +395,7 @@ export function PassScreen({
   toName,
   colorIndex,
   hint,
-  buttonLabel = "C'est moi — ouvrir",
+  buttonLabel = "C'est moi !",
   accent = "#5B36D6",
   onReady,
 }: {
@@ -400,40 +406,44 @@ export function PassScreen({
   accent?: string;
   onReady: () => void;
 }) {
+  void accent; // gardé pour l'API : fond violet nuit commun
   const col = colorForIndex(colorIndex);
   const pal = MASCOT_PALETTE[col];
   const blob = useRef<HTMLDivElement | null>(null);
+  // Le téléphone change de main : petit « whoosh »
+  useEffect(() => { playSfx("whoosh", { volume: 0.45 }); }, [toName]);
   return (
-    <div className={SHELL} style={{ background: BG(`${accent}30`), justifyContent: "center", padding: 24 }}>
-      <p className="mb-2 text-[17px] font-semibold" style={{ color: "rgba(255,255,255,0.75)" }}>Passe le téléphone à…</p>
+    <div
+      className={SHELL}
+      style={{
+        background: BG(""),
+        justifyContent: "center",
+        padding: "calc(env(safe-area-inset-top, 0px) + 72px) 24px calc(env(safe-area-inset-bottom, 0px) + 24px)",
+      }}
+    >
+      <p className="mb-2 text-[18px] font-bold" style={{ color: "rgba(255,255,255,0.85)" }}>Passe le téléphone à…</p>
       <div ref={blob} onPointerDown={() => hop(blob.current)} className="relative z-[1] -mb-6">
         <Mascot size={130} color={col} mood="wink" arms shadow={false} />
       </div>
       <h1
         className="rounded-[24px] px-6 pb-3 pt-7 text-center"
         style={{
-          ...stickerStyle(pal.body, 5),
+          ...stickerStyle(pal.body, 6),
           color: inkOn(pal.body),
           transform: "rotate(-2deg)",
-          fontFamily: "var(--font-display), system-ui, sans-serif", wordSpacing: "0.12em",
-          fontWeight: 700,
+          ...DISPLAY,
           fontSize: "clamp(36px, 11vw, 56px)",
           lineHeight: 1,
-          letterSpacing: "-0.03em",
           maxWidth: "100%",
           overflowWrap: "anywhere",
         }}
       >
         {toName}
       </h1>
-      {hint && <p className="mt-5 max-w-sm text-center text-[16px]" style={{ color: "rgba(255,255,255,0.75)" }}>{hint}</p>}
-      <button
-        onClick={onReady}
-        className="mt-8 h-[58px] w-full max-w-xs rounded-full text-[18px] active:translate-y-[3px] sm:max-w-sm"
-        style={{ ...stickerStyle("#fff", 5), color: INK, fontFamily: "var(--font-display), system-ui, sans-serif", wordSpacing: "0.12em", fontWeight: 700 }}
-      >
+      {hint && <p className="mt-6 max-w-sm text-center text-[16px] font-semibold leading-snug" style={{ color: "rgba(255,255,255,0.85)" }}>{hint}</p>}
+      <ZButton onClick={onReady} bg="#fff" className="mt-8 max-w-sm">
         {buttonLabel}
-      </button>
+      </ZButton>
     </div>
   );
 }
@@ -441,8 +451,364 @@ export function PassScreen({
 // ── Generic centered shell (loading etc.) ─────────────────
 export function LocalShell({ accent = "#5B36D6", center, children }: { accent?: string; center?: boolean; children: React.ReactNode }) {
   return (
-    <div className={SHELL} style={{ background: BG(`${accent}28`), justifyContent: center ? "center" : "flex-start", padding: "24px 20px" }}>
+    <div
+      className={SHELL}
+      style={{
+        background: BG(accent),
+        justifyContent: center ? "center" : "flex-start",
+        padding: "calc(env(safe-area-inset-top, 0px) + 72px) 20px calc(env(safe-area-inset-bottom, 0px) + 20px)",
+      }}
+    >
       {children}
     </div>
   );
+}
+
+// ══════════════════════════════════════════════════════════
+// Kit « sticker » des jeux locaux (DA de l'app Zinzin, aussi sur le site)
+// Blocs pleins, contour encre épais, ombre dure décalée, Clash Display.
+// Aucun CSS global : styles inline + Tailwind de base.
+// ══════════════════════════════════════════════════════════
+
+/** Palette pleine de la DA. */
+export const ZZ = {
+  ink: INK,
+  yellow: "#FFD23F",
+  pink: "#FF3EA5",
+  violet: "#7A4EE8",
+  mint: "#3DDC97",
+  sky: "#4ECDC4",
+  coral: "#FF6B5B",
+  cream: "#FFF6E5",
+  night: NIGHT,
+  deep: "#0B0620",
+} as const;
+
+/** Style de titre : Clash Display gras, serré. */
+export const DISPLAY: CSSProperties = {
+  fontFamily: "var(--font-display), system-ui, sans-serif",
+  fontWeight: 700,
+  letterSpacing: "-0.03em",
+  wordSpacing: "0.12em",
+};
+
+/** Fond plein (couleur du jeu ou violet nuit) + pois. */
+export function zBackground(color: string = NIGHT, dots = true): string {
+  const dot = inkOn(color) === INK ? "rgba(21,8,46,0.08)" : "rgba(255,255,255,0.06)";
+  return dots ? `radial-gradient(${dot} 1.4px, transparent 1.6px) 0 0 / 22px 22px, ${color}` : color;
+}
+
+/**
+ * Écran plein de jeu : rien sous la barre d'état ni sous la croix « quitter »
+ * (haut = safe-area + 72 px), bas = safe-area. Bouton son en haut à droite.
+ */
+export function ZScreen({
+  bg = NIGHT,
+  dots = true,
+  center = false,
+  sound = true,
+  tools,
+  children,
+  className,
+  style,
+  max = "md",
+}: {
+  bg?: string;
+  dots?: boolean;
+  center?: boolean;
+  /** Bouton son (coupure globale) en haut à droite */
+  sound?: boolean;
+  /** Boutons ronds supplémentaires en haut à droite */
+  tools?: ReactNode;
+  children: ReactNode;
+  className?: string;
+  style?: CSSProperties;
+  max?: "sm" | "md" | "lg";
+}) {
+  const ink = inkOn(bg);
+  return (
+    <div
+      className="relative flex min-h-[100dvh] w-full shrink-0 flex-col"
+      style={{
+        background: zBackground(bg, dots),
+        color: ink === INK ? INK : "#fff",
+        paddingTop: "calc(env(safe-area-inset-top, 0px) + 72px)",
+        paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 20px)",
+        ...style,
+      }}
+    >
+      {(sound || tools) && (
+        <GameTopRight>
+          {tools}
+          {sound && <SoundButton />}
+        </GameTopRight>
+      )}
+      <div
+        className={`mx-auto flex w-full flex-1 flex-col px-5 ${max === "sm" ? "max-w-sm" : max === "lg" ? "max-w-xl" : "max-w-md"} ${center ? "justify-center" : ""} ${className ?? ""}`}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+
+/** Coupure du son globale (src/lib/sfx.ts), réactive. */
+export function useSfxMuted(): [boolean, (v: boolean) => void] {
+  const muted = useSyncExternalStore(subscribeSfxMuted, isSfxMuted, () => false);
+  return [muted, setSfxMuted];
+}
+
+/** Bouton rond son on/off (une seule coupure pour toute l'app). */
+export function SoundButton({ bg = "#fff" }: { bg?: string }) {
+  const [muted, setMuted] = useSfxMuted();
+  return (
+    <GameIconButton
+      icon={muted ? VolumeX : Volume2}
+      label={muted ? "Remettre le son" : "Couper le son"}
+      active={muted}
+      bg={bg}
+      onClick={() => {
+        setMuted(!muted);
+        if (muted) playSfx("toggle", { volume: 0.6 });
+      }}
+    />
+  );
+}
+
+/** Gros bouton plein (contour, ombre dure, s'enfonce à l'appui). */
+export function ZButton({
+  onClick,
+  children,
+  bg = "#FFD23F",
+  color,
+  size = "lg",
+  disabled,
+  className,
+  style,
+  label,
+}: {
+  onClick?: () => void;
+  children: ReactNode;
+  bg?: string;
+  color?: string;
+  size?: "lg" | "md" | "sm";
+  disabled?: boolean;
+  className?: string;
+  style?: CSSProperties;
+  label?: string;
+}) {
+  const dims =
+    size === "lg"
+      ? "min-h-[60px] text-[21px] px-6 shadow-[0_5px_0_#15082E] active:shadow-[0_1px_0_#15082E] active:translate-y-[4px]"
+      : size === "md"
+        ? "min-h-[52px] text-[18px] px-5 shadow-[0_4px_0_#15082E] active:shadow-[0_1px_0_#15082E] active:translate-y-[3px]"
+        : "min-h-11 text-[15px] px-4 shadow-[0_3px_0_#15082E] active:shadow-[0_1px_0_#15082E] active:translate-y-[2px]";
+  const fill = disabled ? "#3A2C6E" : bg;
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      aria-label={label}
+      className={`flex w-full items-center justify-center gap-2 rounded-full text-center leading-tight transition-[translate,box-shadow] duration-100 disabled:active:translate-y-0 ${dims} ${className ?? ""}`}
+      style={{
+        background: fill,
+        color: disabled ? "rgba(255,255,255,0.7)" : color ?? inkOn(bg),
+        border: `${size === "sm" ? 2.5 : 3}px solid ${INK}`,
+        ...(size === "sm" ? { fontWeight: 800 } : DISPLAY),
+        letterSpacing: size === "sm" ? 0 : "-0.01em",
+        touchAction: "manipulation",
+        WebkitTapHighlightColor: "transparent",
+        ...style,
+      }}
+    >
+      {children}
+    </button>
+  );
+}
+
+/** Bloc « sticker » plein (carte). */
+export function ZCard({
+  bg = "#fff",
+  tilt = 0,
+  shadow = 5,
+  radius = 24,
+  children,
+  className,
+  style,
+}: {
+  bg?: string;
+  tilt?: number;
+  shadow?: number;
+  radius?: number;
+  children: ReactNode;
+  className?: string;
+  style?: CSSProperties;
+}) {
+  return (
+    <div
+      className={`relative ${className ?? ""}`}
+      style={{
+        background: bg,
+        color: inkOn(bg),
+        border: `3px solid ${INK}`,
+        boxShadow: shadow ? `0 ${shadow}px 0 ${INK}` : undefined,
+        borderRadius: radius,
+        rotate: tilt ? `${tilt}deg` : undefined,
+        ...style,
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+/** Titre en Clash Display (pas de petites capitales espacées). */
+export function ZTitle({
+  children,
+  size = 40,
+  className,
+  style,
+  as: Tag = "h2",
+}: {
+  children: ReactNode;
+  size?: number | string;
+  className?: string;
+  style?: CSSProperties;
+  as?: "h1" | "h2" | "h3" | "p" | "div";
+}) {
+  return (
+    <Tag className={className} style={{ ...DISPLAY, fontSize: size, lineHeight: 0.98, overflowWrap: "break-word", ...style }}>
+      {children}
+    </Tag>
+  );
+}
+
+/** Étiquette sticker inclinée, en phrase normale (Manche 2/5, Soirée 18+…). */
+export function ZChip({ children, bg = "#fff", tilt = -2, className, style }: { children: ReactNode; bg?: string; tilt?: number; className?: string; style?: CSSProperties }) {
+  return (
+    <span
+      className={`inline-flex min-h-8 w-fit self-start items-center gap-1.5 whitespace-nowrap rounded-full px-3 text-[14px] font-bold leading-none ${className ?? ""}`}
+      style={{ background: bg, color: inkOn(bg), border: `2.5px solid ${INK}`, boxShadow: `0 3px 0 ${INK}`, rotate: tilt ? `${tilt}deg` : undefined, ...style }}
+    >
+      {children}
+    </span>
+  );
+}
+
+/** Tuile d'option sélectionnable : pleine dans sa couleur si active, blanche sinon. */
+export function ZChoice({
+  active,
+  onClick,
+  color = "#FFD23F",
+  children,
+  className,
+  style,
+  tilt = 0,
+  label,
+}: {
+  active: boolean;
+  onClick: () => void;
+  color?: string;
+  children: ReactNode;
+  className?: string;
+  style?: CSSProperties;
+  tilt?: number;
+  label?: string;
+}) {
+  const bg = active ? color : "#fff";
+  return (
+    <button
+      type="button"
+      onClick={() => { if (!active) playSfx("select", { volume: 0.5 }); onClick(); }}
+      aria-pressed={active}
+      aria-label={label}
+      className={`relative rounded-[20px] p-3.5 text-left transition-[translate,box-shadow,rotate] duration-150 shadow-[0_4px_0_#15082E] active:translate-y-[3px] active:shadow-[0_1px_0_#15082E] ${className ?? ""}`}
+      style={{
+        background: bg,
+        color: inkOn(bg),
+        border: `3px solid ${INK}`,
+        rotate: active ? `${tilt || -1.5}deg` : tilt ? `${tilt}deg` : undefined,
+        touchAction: "manipulation",
+        ...style,
+      }}
+    >
+      {active && (
+        <span
+          aria-hidden
+          className="absolute -right-2 -top-2 grid h-7 w-7 place-items-center rounded-full"
+          style={{ background: "#fff", color: INK, border: `2.5px solid ${INK}` }}
+        >
+          <Check size={15} strokeWidth={3.4} />
+        </span>
+      )}
+      {children}
+    </button>
+  );
+}
+
+/** Classement final en stickers (1er en jaune avec couronne). */
+export function ZRanking({
+  rows,
+  unit = "pts",
+}: {
+  rows: { name: string; score: number | string; colorIndex: number; note?: ReactNode }[];
+  unit?: string;
+}) {
+  return (
+    <div className="flex w-full flex-col gap-3">
+      {rows.map((r, i) => {
+        const first = i === 0;
+        const bg = first ? "#FFD23F" : "#fff";
+        return (
+          <div
+            key={`${r.name}-${i}`}
+            className="flex items-center gap-3 rounded-[20px] py-2.5 pl-3 pr-4"
+            style={{ ...stickerStyle(bg, first ? 5 : 4), border: `3px solid ${INK}`, color: INK, rotate: first ? "-1.5deg" : i % 2 ? "0.8deg" : "-0.6deg" }}
+          >
+            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-[17px]" style={{ ...DISPLAY, background: first ? INK : "#F1ECFF", color: first ? "#FFD23F" : INK }}>
+              {first ? <Crown size={18} strokeWidth={2.8} aria-hidden /> : i + 1}
+            </span>
+            <Mascot size={38} color={colorForIndex(r.colorIndex)} mood={first ? "laughing" : "happy"} shadow={false} bob={false} />
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-[19px] leading-tight" style={DISPLAY}>{r.name}</p>
+              {r.note && <p className="text-[13px] font-semibold leading-tight" style={{ color: "#4A3A66" }}>{r.note}</p>}
+            </div>
+            <span className="shrink-0 text-[22px] leading-none" style={DISPLAY}>
+              {r.score}
+              <span className="ml-1 text-[13px] font-bold" style={{ fontFamily: "inherit", letterSpacing: 0 }}>{unit}</span>
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/** Lien discret secondaire (texte souligné, ≥ 44 px). */
+export function ZLink({ onClick, children, color = "rgba(255,255,255,0.85)", className }: { onClick: () => void; children: ReactNode; color?: string; className?: string }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`mx-auto flex min-h-11 items-center justify-center gap-1.5 px-4 text-[15px] font-bold underline decoration-2 underline-offset-4 ${className ?? ""}`}
+      style={{ color }}
+    >
+      {children}
+    </button>
+  );
+}
+
+/**
+ * Remonte en haut à chaque changement d'écran (l'app fait défiler le jeu dans un
+ * conteneur fixe : sans ça, l'écran suivant s'ouvrirait à moitié défilé).
+ */
+export function useScrollTopOn(dep: unknown) {
+  useLayoutEffect(() => {
+    if (typeof window === "undefined") return;
+    window.scrollTo(0, 0);
+    document.querySelectorAll<HTMLElement>("body div").forEach((el) => {
+      if (el.scrollTop > 0) el.scrollTop = 0;
+    });
+  }, [dep]);
 }

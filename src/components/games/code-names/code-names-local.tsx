@@ -5,16 +5,18 @@
  * Deux équipes (Rouge / Bleue), les chefs consultent la carte secrète en
  * maintenant un bouton, donnent leur indice à voix haute, et l'équipe touche
  * les mots (1er tap = sélection, 2e tap ou « Valider » = révélation).
+ * DA « sticker » de l'app Zinzin : aplats, contour encre, ombre dure.
  */
 
-import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type ReactNode } from "react";
 import type { GameProps } from "@/lib/games/types";
 import { Mascot } from "@/components/Mascot";
 import { ConfettiBurst } from "@/components/ConfettiBurst";
-import { sfxBidPop, sfxCardPlay, sfxHandChime, sfxTrickWin } from "@/lib/card-sfx";
+import { isSfxMuted, playCombo, playSfx, preloadSfx, setSfxMuted, subscribeSfxMuted } from "@/lib/sfx";
 import { CN_LOCAL_WORDS } from "./cn-local-words";
-import { ArrowDown, Shuffle, Dices, Eye, Info, Pencil, Pointer, RotateCcw, X } from "lucide-react";
+import { ArrowDown, Bomb, Check, Dices, Eye, Info, Pencil, Pointer, RotateCcw, Shuffle, Timer, Trophy, Volume2, VolumeX, X } from "lucide-react";
 import { GameIconButton, GameInlineIcon } from "@/components/games/game-icon-button";
+import { IdeaButton, RerollButton } from "@/components/games/idea-button";
 
 // ── Types ─────────────────────────────────────────────────
 type Team = "red" | "blue";
@@ -47,18 +49,41 @@ interface Toast {
   tone: "good" | "bad" | "info";
 }
 
-// ── Palette ───────────────────────────────────────────────
-const TEAM: Record<Team, { main: string; deep: string; soft: string; mascot: "coral" | "sky"; label: string }> = {
-  red: { main: "#FF4D5E", deep: "#B3172A", soft: "rgba(255,77,94,0.22)", mascot: "coral", label: "Rouge" },
-  blue: { main: "#3D86FF", deep: "#1846B3", soft: "rgba(61,134,255,0.22)", mascot: "sky", label: "Bleue" },
-};
-const NEUTRAL = { main: "#D9CDB2", deep: "#9C8E70", ink: "#3A3122" };
-const BOMB = { main: "#140A24", deep: "#000" };
-const CARD_FACE = "#F5F1E8";
+// ── Palette (aplats « sticker ») ──────────────────────────
 const INK = "#15082E";
+const NIGHT = "#1E1250";
+const TEAM: Record<Team, { main: string; ink: string; mascot: "coral" | "sky"; label: string }> = {
+  red: { main: "#FF5A5F", ink: "#fff", mascot: "coral", label: "Rouge" },
+  blue: { main: "#3D86FF", ink: "#fff", mascot: "sky", label: "Bleue" },
+};
+const NEUTRAL = { main: "#E6D9BC", ink: INK };
+const CARD_FACE = "#FFF6E5";
+const YELLOW = "#FFD23F";
+const PINK = "#FF3EA5";
+const VIOLET = "#7A4EE8";
+const MINT = "#3DDC97";
 
 const TIMER_OPTIONS = [0, 60, 90, 120] as const;
 const other = (t: Team): Team => (t === "red" ? "blue" : "red");
+
+const DISPLAY: CSSProperties = { fontFamily: "var(--font-display), system-ui, sans-serif", fontWeight: 700, letterSpacing: "-0.03em", wordSpacing: "0.1em" };
+/** Fond violet nuit + pois discrets. */
+const PAGE_BG: CSSProperties = {
+  backgroundColor: NIGHT,
+  backgroundImage: "radial-gradient(rgba(255,255,255,0.06) 1.4px, transparent 1.6px)",
+  backgroundSize: "22px 22px",
+};
+/** Bloc « sticker » : aplat + contour encre + ombre dure décalée. */
+const stk = (bg: string, shadow = 4, border = 2.5): CSSProperties => ({
+  background: bg,
+  border: `${border}px solid ${INK}`,
+  boxShadow: `0 ${shadow}px 0 ${INK}`,
+});
+
+const SOUNDS = [
+  "card-shuffle", "card-flip", "card-place", "tap", "ding", "success", "wrong", "tock", "whoosh",
+  "tick", "bell", "pop", "toggle", "boom", "plate", "thump", "whooshdown", "win", "powerup", "lose", "open", "close",
+] as const;
 
 // ── Utilitaires ───────────────────────────────────────────
 function shuffle<T>(arr: T[]): T[] {
@@ -70,8 +95,15 @@ function shuffle<T>(arr: T[]): T[] {
   return a;
 }
 
-function newGame(starter: Team): GameState {
-  const words = shuffle(CN_LOCAL_WORDS).slice(0, 25);
+/** Nouvelle grille ; évite les mots déjà vus dans la session tant qu'il en reste assez. */
+function newGame(starter: Team, seen: Set<string>): GameState {
+  let fresh = CN_LOCAL_WORDS.filter((w) => !seen.has(w));
+  if (fresh.length < 25) {
+    seen.clear();
+    fresh = [...CN_LOCAL_WORDS];
+  }
+  const words = shuffle(fresh).slice(0, 25);
+  words.forEach((w) => seen.add(w));
   const colors: CardColor[] = [
     ...Array<CardColor>(9).fill(starter),
     ...Array<CardColor>(8).fill(other(starter)),
@@ -141,6 +173,63 @@ function useVibrate() {
   }, []);
 }
 
+/** Coupure du son globale (partagée avec toute l'app). */
+function useSfxMuted() {
+  return useSyncExternalStore(subscribeSfxMuted, isSfxMuted, () => false);
+}
+
+function SoundButton() {
+  const muted = useSfxMuted();
+  return (
+    <GameIconButton
+      icon={muted ? VolumeX : Volume2}
+      label={muted ? "Activer le son" : "Couper le son"}
+      active={muted}
+      onClick={() => setSfxMuted(!muted)}
+    />
+  );
+}
+
+/** Bouton « sticker » qui s'enfonce à l'appui. */
+function Btn({
+  bg,
+  color = INK,
+  onClick,
+  disabled,
+  children,
+  className = "",
+  style,
+  big,
+}: {
+  bg: string;
+  color?: string;
+  onClick?: () => void;
+  disabled?: boolean;
+  children: ReactNode;
+  className?: string;
+  style?: CSSProperties;
+  big?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className={`cn-push flex items-center justify-center gap-2 rounded-full px-4 disabled:opacity-50 ${className}`}
+      style={{
+        ...stk(bg, big ? 5 : 4, big ? 3 : 2.5),
+        color,
+        minHeight: big ? 60 : 52,
+        fontSize: big ? 21 : 16,
+        ...(big ? DISPLAY : { fontWeight: 800 }),
+        ...style,
+      }}
+    >
+      {children}
+    </button>
+  );
+}
+
 // ── Composant principal ───────────────────────────────────
 export default function MotsEspionsLocal({ onReturnToLobby }: GameProps) {
   const [phase, setPhase] = useState<Phase>("setup");
@@ -160,6 +249,9 @@ export default function MotsEspionsLocal({ onReturnToLobby }: GameProps) {
   const [boom, setBoom] = useState(false);
   const vibrate = useVibrate();
   const timeouts = useRef<number[]>([]);
+  const seenWords = useRef<Set<string>>(new Set());
+
+  useEffect(() => preloadSfx([...SOUNDS]), []);
 
   const later = useCallback((fn: () => void, ms: number) => {
     timeouts.current.push(window.setTimeout(fn, ms));
@@ -178,7 +270,8 @@ export default function MotsEspionsLocal({ onReturnToLobby }: GameProps) {
   // ── Démarrage / rejouer
   const start = useCallback(() => {
     const starter: Team = starterChoice === "random" ? (Math.random() < 0.5 ? "red" : "blue") : starterChoice;
-    const g = newGame(starter);
+    const g = newGame(starter, seenWords.current);
+    playSfx("card-shuffle", { volume: 0.8 });
     setGame(g);
     setSelected(null);
     setClue(null);
@@ -187,6 +280,18 @@ export default function MotsEspionsLocal({ onReturnToLobby }: GameProps) {
     setTimeLeft(timer);
     setPhase("play");
   }, [starterChoice, timer]);
+
+  // ── Nouvelle grille avant le premier mot révélé (même équipe qui commence)
+  const reroll = useCallback(() => {
+    setGame((g) => {
+      if (!g) return g;
+      const n = newGame(g.starter, seenWords.current);
+      return { ...n, seed: g.seed + 1, turnNo: g.turnNo };
+    });
+    playSfx("card-shuffle", { volume: 0.7, delay: 0.08 });
+    setSelected(null);
+    setClue(null);
+  }, []);
 
   // ── Passage au tour suivant
   const endTurn = useCallback(
@@ -207,6 +312,7 @@ export default function MotsEspionsLocal({ onReturnToLobby }: GameProps) {
   useEffect(() => {
     if (!turnNo) return;
     setSplash(turnNo);
+    playSfx("whoosh", { volume: 0.55 });
     const id = window.setTimeout(() => setSplash((s) => (s === turnNo ? 0 : s)), 1500);
     return () => window.clearTimeout(id);
   }, [turnNo, seed]);
@@ -218,11 +324,15 @@ export default function MotsEspionsLocal({ onReturnToLobby }: GameProps) {
     const id = window.setInterval(() => setTimeLeft((t) => Math.max(0, t - 1)), 1000);
     return () => window.clearInterval(id);
   }, [running, turnNo]);
+  // Tic-tac qui s'accélère sur les 5 dernières secondes
+  useEffect(() => {
+    if (running && timeLeft > 0 && timeLeft <= 5) playSfx(timeLeft % 2 ? "tick" : "tock", { volume: 0.7, rate: 1 + (5 - timeLeft) * 0.08 });
+  }, [timeLeft, running]);
   useEffect(() => {
     if (phase === "play" && timer > 0 && timeLeft === 0 && !busy) {
       vibrate([80, 60, 80]);
-      sfxTrickWin();
-      endTurn("⏰ Temps écoulé !");
+      playSfx("bell", { volume: 0.8 });
+      endTurn("Temps écoulé !");
     }
   }, [timeLeft, phase, timer, busy, endTurn, vibrate]);
 
@@ -236,18 +346,22 @@ export default function MotsEspionsLocal({ onReturnToLobby }: GameProps) {
       const cards = game.cards.map((c, i) => (i === idx ? { ...c, revealed: true } : c));
       const left = (t: Team) => cards.filter((c) => c.color === t && !c.revealed).length;
       setSelected(null);
+      playSfx("card-flip", { volume: 0.8 });
 
       if (card.color === "bomb") {
         setGame({ ...game, cards });
         setBusy(true);
         vibrate([200, 80, 300]);
-        sfxHandChime(false);
-        later(() => setBoom(true), 450);
+        later(() => {
+          setBoom(true);
+          playCombo("explosion");
+        }, 450);
         later(() => {
           setGame((g) => (g ? { ...g, winner: other(team), reason: "bomb" } : g));
           setBoom(false);
           setBusy(false);
           setPhase("end");
+          playSfx("lose", { volume: 0.6 });
         }, 2100);
         return;
       }
@@ -257,26 +371,27 @@ export default function MotsEspionsLocal({ onReturnToLobby }: GameProps) {
       if (winner) {
         setGame({ ...game, cards });
         setBusy(true);
-        if (card.color === team) sfxBidPop();
+        if (card.color === team) playSfx("ding", { volume: 0.7, delay: 0.15 });
         later(() => {
           setGame((g) => (g ? { ...g, winner, reason: "words" } : g));
           setBusy(false);
           setPhase("end");
-          sfxHandChime(true);
+          playCombo("fanfare");
         }, 900);
         return;
       }
 
       setGame({ ...game, cards });
       if (card.color === team) {
-        sfxBidPop();
+        playSfx("success", { volume: 0.65, delay: 0.15 });
         vibrate(25);
         flash("Bien vu ! On continue", "good");
         return;
       }
       // Neutre ou adverse : fin du tour après l'animation
       setBusy(true);
-      sfxTrickWin();
+      if (card.color === "neutral") playSfx("tock", { volume: 0.8, rate: 0.8, delay: 0.15 });
+      else playSfx("wrong", { volume: 0.75, delay: 0.15 });
       vibrate([60, 40, 60]);
       flash(card.color === "neutral" ? "Mot neutre… fin du tour" : `Aïe, un mot de ${names[other(team)]} !`, "bad");
       later(() => endTurn(), 1300);
@@ -290,7 +405,7 @@ export default function MotsEspionsLocal({ onReturnToLobby }: GameProps) {
       reveal(idx);
     } else {
       setSelected(idx);
-      sfxCardPlay();
+      playSfx("tap", { volume: 0.5 });
       vibrate(10);
     }
   };
@@ -320,74 +435,70 @@ export default function MotsEspionsLocal({ onReturnToLobby }: GameProps) {
   const accent = ended && game.winner ? TEAM[game.winner] : TEAM[team];
   const remaining = (t: Team) => game.cards.filter((c) => c.color === t && !c.revealed).length;
   const lowTime = timer > 0 && timeLeft <= 10;
+  const fresh = !ended && game.turnNo === 1 && !busy && game.cards.every((c) => !c.revealed);
 
   return (
     <div
       className="relative flex flex-col overflow-hidden text-white select-none"
-      style={{
-        height: "100dvh",
-        background: `radial-gradient(120% 60% at 50% -10%, ${accent.main}66, transparent 60%), radial-gradient(90% 50% at 50% 115%, ${accent.main}40, transparent 60%), linear-gradient(180deg, #0B0620 0%, #0E0828 100%)`,
-        transition: "background 0.6s ease",
-        WebkitTapHighlightColor: "transparent",
-      }}
+      style={{ height: "100dvh", ...PAGE_BG, WebkitTapHighlightColor: "transparent" }}
     >
       <style>{CSS}</style>
-      {/* Liseré couleur d'équipe : on sait toujours à qui c'est */}
-      <div className="pointer-events-none absolute inset-0" style={{ boxShadow: `inset 0 0 0 4px ${accent.main}`, transition: "box-shadow 0.6s" }} />
+      {/* Cadre couleur d'équipe : on sait toujours à qui c'est */}
+      <div className="pointer-events-none absolute inset-0 z-20" style={{ boxShadow: `inset 0 0 0 6px ${accent.main}`, transition: "box-shadow 0.5s" }} />
 
       {/* ── En-tête (coin haut-gauche laissé libre pour le bouton quitter de l'app) */}
-      <header className="relative z-10 flex items-center gap-2 pl-16 pr-3" style={{ paddingTop: "calc(env(safe-area-inset-top) + 10px)" }}>
+      <header className="relative z-10 flex items-center gap-2 pl-[68px] pr-3" style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 10px)" }}>
         <div className="min-w-0 flex-1">
           {ended ? (
-            <p className="cb-display-sm truncate">Partie terminée</p>
+            <p className="truncate text-[26px] leading-none" style={DISPLAY}>Partie finie</p>
           ) : (
-            <>
-              <p className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "rgba(255,255,255,0.65)" }}>
-                C&apos;est au tour de
-              </p>
-              <p className="cb-display-md truncate" style={{ color: accent.main, textShadow: `0 0 18px ${accent.main}88` }}>
-                {names[team]}
-              </p>
-            </>
+            <span
+              className="inline-block max-w-full truncate rounded-full px-3.5 py-1.5 text-[21px] leading-tight"
+              style={{ ...stk(accent.main, 3), color: accent.ink, ...DISPLAY, rotate: "-2deg" }}
+            >
+              {names[team]}
+            </span>
           )}
         </div>
         {!ended && timer > 0 && (
           <div
-            className={`flex h-11 min-w-[56px] items-center justify-center rounded-2xl px-2 font-bold tabular-nums ${lowTime ? "cn-pulse" : ""}`}
-            style={{ background: lowTime ? "#FF4D5E" : "rgba(255,255,255,0.1)", fontSize: 18 }}
+            className={`flex h-11 min-w-[60px] items-center justify-center gap-1 rounded-full px-2.5 tabular-nums ${lowTime ? "cn-pulse" : ""}`}
+            style={{ ...stk(lowTime ? "#FF5A5F" : "#fff", 3), color: lowTime ? "#fff" : INK, fontSize: 18, ...DISPLAY, letterSpacing: 0 }}
             aria-label="Temps restant"
           >
-            {timeLeft}s
+            <Timer size={16} strokeWidth={3} aria-hidden />
+            {timeLeft}
           </div>
         )}
+        <SoundButton />
         <GameIconButton icon={Info} label="Règles" onClick={() => setShowRules(true)} />
       </header>
 
       {/* ── Compteurs + indice */}
-      <div className="relative z-10 mx-auto mt-2 flex w-full max-w-[560px] items-stretch gap-2 px-3">
+      <div className="relative z-10 mx-auto mt-3 flex w-full max-w-[560px] items-stretch gap-2 px-3">
         <Counter team="red" name={names.red} left={remaining("red")} active={!ended && team === "red"} />
         {ended ? (
-          <div className="flex flex-[1.3] items-center justify-center rounded-2xl px-2 text-center" style={{ background: "rgba(255,255,255,0.06)" }}>
-            <span className="text-xs" style={{ color: "rgba(255,255,255,0.7)" }}>Grille révélée</span>
+          <div className="flex flex-[1.2] items-center justify-center rounded-[18px] px-2 text-center" style={{ ...stk(CARD_FACE, 3), color: INK }}>
+            <span className="text-[14px] font-bold leading-tight">Toute la grille</span>
           </div>
         ) : (
           <button
-            onClick={() => setShowClue(true)}
-            className="flex min-w-0 flex-[1.3] flex-col items-center justify-center rounded-2xl px-2 py-1 text-center"
-            style={{ background: "rgba(255,255,255,0.08)", border: `1px dashed ${clue ? accent.main : "rgba(255,255,255,0.25)"}` }}
+            type="button"
+            onClick={() => {
+              playSfx("open", { volume: 0.5 });
+              setShowClue(true);
+            }}
+            className="cn-push flex min-h-[52px] min-w-0 flex-[1.2] flex-col items-center justify-center rounded-[18px] px-2 py-1 text-center"
+            style={{ ...stk(clue ? YELLOW : CARD_FACE, 3), color: INK }}
           >
             {clue ? (
-              <>
-                <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: "rgba(255,255,255,0.6)" }}>Indice</span>
-                <span className="max-w-full truncate font-bold" style={{ fontSize: 16 }}>
-                  {clue.word || "…"} {clue.count && <span style={{ color: accent.main }}>· {clue.count}</span>}
-                </span>
-              </>
+              <span className="max-w-full truncate text-[18px] leading-tight" style={DISPLAY}>
+                {clue.word || "…"}
+                {clue.count && <span style={{ color: accent.main }}> · {clue.count}</span>}
+              </span>
             ) : (
-              <span className="text-xs leading-tight" style={{ color: "rgba(255,255,255,0.75)" }}>
+              <span className="text-[14px] font-bold leading-tight">
                 <GameInlineIcon icon={Pencil} /> Noter l&apos;indice
-                <br />
-                <span style={{ color: "rgba(255,255,255,0.5)" }}>(optionnel)</span>
               </span>
             )}
           </button>
@@ -397,30 +508,32 @@ export default function MotsEspionsLocal({ onReturnToLobby }: GameProps) {
 
       {/* ── Bandeau fin de partie */}
       {ended && game.winner && (
-        <div className="relative z-10 mx-auto mt-3 flex w-full max-w-[560px] items-center gap-3 px-4 cn-pop">
-          <Mascot size={64} color={TEAM[game.winner].mascot} mood={game.reason === "bomb" ? "cool" : "laughing"} cheering arms />
-          <div className="min-w-0">
-            <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "rgba(255,255,255,0.7)" }}>
-              {game.reason === "bomb" ? `💣 Bombe touchée par ${names[other(game.winner)]}` : "Tous les mots trouvés !"}
-            </p>
-            <p className="text-sm font-semibold" style={{ color: "rgba(255,255,255,0.85)" }}>Victoire de</p>
-            <p className="cb-display-md truncate" style={{ color: TEAM[game.winner].main }}>
-              {names[game.winner]}&nbsp;🏆
-            </p>
+        <div className="relative z-10 mx-auto mt-4 w-full max-w-[560px] px-4 cn-pop">
+          <div className="flex items-center gap-3 rounded-[24px] py-2 pl-2 pr-4" style={{ ...stk(TEAM[game.winner].main, 5, 3), color: "#fff", rotate: "-1.5deg" }}>
+            <Mascot size={62} color={TEAM[game.winner].mascot} mood={game.reason === "bomb" ? "cool" : "laughing"} cheering arms shadow={false} />
+            <div className="min-w-0 flex-1">
+              <p className="text-[15px] font-bold leading-tight">Victoire de</p>
+              <p className="text-[28px] leading-[1.02]" style={{ ...DISPLAY, overflowWrap: "anywhere" }}>
+                {names[game.winner]}
+              </p>
+              <p className="mt-0.5 text-[14px] font-bold leading-snug">
+                {game.reason === "bomb" ? `Bombe touchée par ${names[other(game.winner)]}.` : "Tous leurs mots sont trouvés."}
+              </p>
+            </div>
+            <Trophy size={30} strokeWidth={2.6} className="shrink-0" aria-hidden />
           </div>
         </div>
       )}
 
       {/* ── Grille 5×5 */}
-      <div className="relative z-10 mx-auto flex w-full max-w-[560px] flex-1 items-center px-2.5 py-3" style={{ minHeight: 0 }}>
-        <div className="grid h-full max-h-[620px] w-full grid-cols-5 gap-[6px]" style={{ gridTemplateRows: "repeat(5, minmax(56px, 1fr))" }}>
+      <div className="relative z-10 mx-auto flex w-full max-w-[560px] flex-1 items-center px-3 py-3" style={{ minHeight: 0 }}>
+        <div className="grid h-full max-h-[620px] w-full grid-cols-5 gap-[7px]" style={{ gridTemplateRows: "repeat(5, minmax(54px, 1fr))" }}>
           {game.cards.map((c, i) => (
             <WordCard
               key={`${seed}-${i}`}
               card={c}
               index={i}
               selected={selected === i}
-              teamColor={TEAM[team].main}
               showAll={ended}
               onTap={() => tapCard(i)}
             />
@@ -428,56 +541,64 @@ export default function MotsEspionsLocal({ onReturnToLobby }: GameProps) {
         </div>
       </div>
 
+      {/* ── Grille qui ne plaît pas : on en tire une autre tant que rien n'est révélé */}
+      {fresh && selected === null && (
+        <div className="relative z-10 -mt-1 mb-2.5 flex justify-center">
+          <RerollButton onClick={reroll} label="Pas fou ? Une autre grille" />
+        </div>
+      )}
+
       {/* ── Barre d'actions */}
-      <footer className="relative z-10 mx-auto flex w-full max-w-[560px] gap-2 px-3" style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 12px)" }}>
+      <footer className="relative z-10 mx-auto flex w-full max-w-[560px] items-center gap-2.5 px-3" style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 14px)" }}>
         {ended ? (
           <>
-            <button onClick={quit} className="af-btn af-btn-ghost h-14 flex-1" style={{ fontSize: 16 }}>
+            <IdeaButton game="Mots Espions" kind="mot" compact bg="#fff" />
+            <Btn bg="#fff" onClick={quit} className="flex-1">
               Quitter
-            </button>
-            <button onClick={start} className="af-btn af-btn-primary h-14 flex-[1.6]" style={{ fontSize: 16 }}>
-              <GameInlineIcon icon={RotateCcw} /> Rejouer
-            </button>
+            </Btn>
+            <Btn bg={YELLOW} onClick={start} className="flex-[1.6]" big>
+              <RotateCcw size={20} strokeWidth={3} aria-hidden /> Rejouer
+            </Btn>
           </>
         ) : selected !== null ? (
           <>
-            <button onClick={() => setSelected(null)} className="af-btn af-btn-ghost h-14 flex-1" style={{ fontSize: 15 }}>
+            <Btn bg="#fff" onClick={() => setSelected(null)} className="flex-1">
               Annuler
-            </button>
-            <button
-              onClick={() => reveal(selected)}
-              className="af-btn h-14 min-w-0 flex-[2] truncate cn-pop"
-              style={{ fontSize: 16, background: `linear-gradient(180deg, ${TEAM[team].main}, ${TEAM[team].deep})`, boxShadow: `0 10px 24px ${TEAM[team].main}66` }}
-            >
-              Valider « {game.cards[selected].word} »
-            </button>
+            </Btn>
+            <Btn bg={TEAM[team].main} color="#fff" onClick={() => reveal(selected)} className="min-w-0 flex-[2] cn-pop">
+              <span className="truncate">Valider « {game.cards[selected].word} »</span>
+            </Btn>
           </>
         ) : (
           <>
-            <button
-              onClick={() => setShowKey(true)}
+            <Btn
+              bg={VIOLET}
+              color="#fff"
               disabled={busy}
-              className="af-btn h-14 flex-[1.5] disabled:opacity-50"
-              style={{ fontSize: 15, background: "linear-gradient(180deg, #2A1B52, #1A0F38)", border: "1px solid rgba(255,255,255,0.18)" }}
+              onClick={() => {
+                playSfx("open", { volume: 0.5 });
+                setShowKey(true);
+              }}
+              className="flex-[1.5]"
             >
-              <GameInlineIcon icon={Eye} /> Chefs : voir la carte
-            </button>
-            <button onClick={() => endTurn()} disabled={busy} className="af-btn af-btn-ghost h-14 flex-1 disabled:opacity-50" style={{ fontSize: 15 }}>
+              <Eye size={19} strokeWidth={2.8} aria-hidden /> Chefs : la carte
+            </Btn>
+            <Btn bg="#fff" disabled={busy} onClick={() => endTurn()} className="flex-1">
               Fin du tour
-            </button>
+            </Btn>
           </>
         )}
       </footer>
 
       {/* ── Toast (en haut, pour ne pas masquer la grille) */}
       {toast && (
-        <div key={toast.id} className="pointer-events-none absolute inset-x-0 z-30 flex justify-center px-6" style={{ top: "calc(env(safe-area-inset-top) + 62px)" }}>
+        <div key={toast.id} className="pointer-events-none absolute inset-x-0 z-30 flex justify-center px-6" style={{ top: "calc(env(safe-area-inset-top, 0px) + 66px)" }}>
           <div
-            className="cn-toast rounded-full px-5 py-2.5 text-center font-bold shadow-xl"
+            className="cn-toast rounded-full px-5 py-2.5 text-center text-[16px] font-extrabold"
             style={{
-              fontSize: 15,
-              background: toast.tone === "good" ? "#3DDC97" : toast.tone === "bad" ? "#FF4D5E" : "#FFD23F",
+              ...stk(toast.tone === "good" ? MINT : toast.tone === "bad" ? "#FF5A5F" : YELLOW, 4),
               color: toast.tone === "bad" ? "#fff" : INK,
+              rotate: "-1.5deg",
             }}
           >
             {toast.text}
@@ -487,24 +608,30 @@ export default function MotsEspionsLocal({ onReturnToLobby }: GameProps) {
 
       {/* ── Annonce de tour */}
       {splash > 0 && !ended && (
-        <div className="pointer-events-none absolute inset-0 z-40 flex items-center justify-center" key={splash}>
-          <div className="cn-splash flex flex-col items-center rounded-[32px] px-8 py-6 text-center" style={{ background: `linear-gradient(160deg, ${TEAM[team].main}, ${TEAM[team].deep})`, boxShadow: `0 20px 60px ${TEAM[team].main}88` }}>
-            <Mascot size={86} color={TEAM[team].mascot} mood="wink" arms />
-            <p className="mt-2 text-xs font-semibold uppercase tracking-widest" style={{ color: "rgba(255,255,255,0.85)" }}>
-              {game.turnNo === 1 ? `Ils commencent · ${remaining(team)} mots` : "À vous !"}
+        <div className="pointer-events-none absolute inset-0 z-40 flex items-center justify-center px-6" key={splash}>
+          <div className="cn-splash flex w-full max-w-[330px] flex-col items-center rounded-[30px] px-6 pb-6 pt-3 text-center" style={{ ...stk(TEAM[team].main, 6, 3), color: "#fff" }}>
+            <Mascot size={92} color={TEAM[team].mascot} mood="wink" arms shadow={false} />
+            <p className="mt-1 text-[16px] font-bold">{game.turnNo === 1 ? `Vous commencez, ${remaining(team)} mots à trouver` : "À vous de jouer"}</p>
+            <p className="mt-1 max-w-full text-[40px] leading-[0.95]" style={{ ...DISPLAY, overflowWrap: "anywhere" }}>
+              {names[team]}
             </p>
-            <p className="cb-display-lg">{names[team]}</p>
-            <p className="mt-1 text-sm" style={{ color: "rgba(255,255,255,0.85)" }}>Chef, regarde la carte et donne ton indice</p>
+            <p className="mt-3 rounded-full px-3 py-1.5 text-[14px] font-bold" style={{ ...stk("#fff", 3), color: INK }}>
+              Chef, regarde la carte et donne ton indice
+            </p>
           </div>
         </div>
       )}
 
       {/* ── Explosion */}
       {boom && (
-        <div className="cn-boom absolute inset-0 z-50 flex flex-col items-center justify-center" style={{ background: "radial-gradient(circle, #FF6B5B 0%, #3A0710 55%, #000 100%)" }}>
-          <div style={{ fontSize: 96 }}>💣</div>
-          <p className="cb-display-xl mt-2">BOUM&nbsp;!</p>
-          <p className="mt-2 text-base" style={{ color: "rgba(255,255,255,0.85)" }}>
+        <div className="cn-boom absolute inset-0 z-50 flex flex-col items-center justify-center px-6 text-center" style={{ ...PAGE_BG, backgroundColor: "#FF6B5B" }}>
+          <span className="cn-bomb grid h-36 w-36 place-items-center rounded-full" style={{ ...stk(INK, 6, 3), color: YELLOW }}>
+            <Bomb size={78} strokeWidth={2.4} aria-hidden />
+          </span>
+          <p className="mt-5 text-[76px] leading-none" style={{ ...DISPLAY, color: INK }}>
+            Boum&nbsp;!
+          </p>
+          <p className="mt-3 rounded-full px-4 py-2 text-[17px] font-extrabold" style={{ ...stk("#fff", 4), color: INK, rotate: "-2deg" }}>
             Bombe touchée par {names[team]}
           </p>
         </div>
@@ -518,6 +645,7 @@ export default function MotsEspionsLocal({ onReturnToLobby }: GameProps) {
           team={team}
           initial={clue}
           onSave={(c) => {
+            if (c) playSfx("pop", { volume: 0.6 });
             setClue(c);
             setShowClue(false);
           }}
@@ -534,19 +662,19 @@ function Counter({ team, name, left, active }: { team: Team; name: string; left:
   const t = TEAM[team];
   return (
     <div
-      className="flex min-w-0 flex-1 items-center gap-2 rounded-2xl px-2.5 py-1.5"
+      className="flex min-w-0 flex-1 items-center gap-2 rounded-[18px] px-2.5 py-1.5"
       style={{
-        background: active ? `linear-gradient(160deg, ${t.main}, ${t.deep})` : t.soft,
-        border: `2px solid ${active ? "#fff" : "transparent"}`,
-        transform: active ? "scale(1.03)" : "scale(1)",
-        transition: "all 0.35s ease",
-        boxShadow: active ? `0 8px 22px ${t.main}66` : "none",
+        ...stk(t.main, active ? 4 : 2),
+        color: t.ink,
+                rotate: active ? (team === "red" ? "-2deg" : "2deg") : "0deg",
+        transition: "rotate 0.3s ease",
       }}
+      aria-label={`${name} : ${left} mot${left > 1 ? "s" : ""} à trouver`}
     >
-      <span className="cb-display-md tabular-nums" style={{ fontSize: 26, lineHeight: 1 }}>
+      <span className="tabular-nums" style={{ ...DISPLAY, fontSize: 30, lineHeight: 1 }}>
         {left}
       </span>
-      <span className="min-w-0 truncate text-[11px] font-semibold leading-tight" style={{ color: "rgba(255,255,255,0.9)" }}>
+      <span className="min-w-0 text-[13px] font-bold leading-tight" style={{ overflowWrap: "anywhere" }}>
         {name}
       </span>
     </div>
@@ -555,33 +683,15 @@ function Counter({ team, name, left, active }: { team: Team; name: string; left:
 
 // ── Case de la grille (flip à la révélation) ──────────────
 function faceStyle(color: CardColor): CSSProperties {
-  if (color === "neutral") return { background: `linear-gradient(160deg, ${NEUTRAL.main}, ${NEUTRAL.deep})`, color: NEUTRAL.ink };
-  if (color === "bomb") return { background: `radial-gradient(circle at 50% 35%, #3A1D5C, ${BOMB.main})`, color: "#fff", border: "2px solid #FF4D5E" };
-  return { background: `linear-gradient(160deg, ${TEAM[color].main}, ${TEAM[color].deep})`, color: "#fff" };
+  if (color === "neutral") return { background: NEUTRAL.main, color: NEUTRAL.ink };
+  if (color === "bomb") return { background: INK, color: YELLOW };
+  return { background: TEAM[color].main, color: TEAM[color].ink };
 }
 
-function WordCard({
-  card,
-  index,
-  selected,
-  teamColor,
-  showAll,
-  onTap,
-}: {
-  card: Card;
-  index: number;
-  selected: boolean;
-  teamColor: string;
-  showAll: boolean;
-  onTap: () => void;
-}) {
-  const lines = splitWord(card.word);
-  const font = wordFont(lines);
-  const flipped = card.revealed || showAll;
-  // Cases révélées seulement en fin de partie : légèrement atténuées pour les distinguer
-  const ghost = showAll && !card.revealed;
-  const label = (
-    <span className="block text-center font-extrabold uppercase" style={{ fontSize: font, lineHeight: 1.05, letterSpacing: "-0.02em", fontFamily: "'DM Sans', sans-serif" }}>
+function WordLabel({ word }: { word: string }) {
+  const lines = splitWord(word);
+  return (
+    <span className="block text-center font-extrabold uppercase" style={{ fontSize: wordFont(lines), lineHeight: 1.05, letterSpacing: "-0.02em", fontFamily: "'DM Sans', sans-serif" }}>
       {lines.map((l, i) => (
         <span key={i} className="block">
           {l}
@@ -589,13 +699,32 @@ function WordCard({
       ))}
     </span>
   );
+}
+
+function WordCard({
+  card,
+  index,
+  selected,
+  showAll,
+  onTap,
+}: {
+  card: Card;
+  index: number;
+  selected: boolean;
+  showAll: boolean;
+  onTap: () => void;
+}) {
+  const flipped = card.revealed || showAll;
+    const ghost = showAll && !card.revealed;
+  const tile: CSSProperties = { border: `2.5px solid ${INK}`, borderRadius: 14, backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden" };
   return (
     <button
+      type="button"
       onClick={onTap}
       className="relative h-full w-full"
       style={{
         perspective: 700,
-        transform: selected ? "translateY(-7px) scale(1.06)" : "none",
+        transform: selected ? "translateY(-5px) rotate(-3deg) scale(1.05)" : "none",
         transition: "transform 0.22s cubic-bezier(.3,1.6,.5,1)",
         zIndex: selected ? 5 : 1,
       }}
@@ -606,37 +735,39 @@ function WordCard({
         style={{
           transformStyle: "preserve-3d",
           transform: flipped ? "rotateY(180deg)" : "none",
-          transition: `transform 0.6s cubic-bezier(.4,1.4,.5,1) ${showAll && !card.revealed ? (index % 25) * 35 : 0}ms`,
+          transition: `transform 0.6s cubic-bezier(.4,1.4,.5,1) ${ghost ? (index % 25) * 35 : 0}ms`,
         }}
       >
         {/* Face cachée */}
         <span
-          className="absolute inset-0 flex items-center justify-center rounded-[14px] px-0.5"
+          className="absolute inset-0 flex items-center justify-center px-0.5"
           style={{
-            backfaceVisibility: "hidden",
-            WebkitBackfaceVisibility: "hidden",
-            background: CARD_FACE,
+            ...tile,
+            background: selected ? YELLOW : CARD_FACE,
             color: INK,
-            boxShadow: selected ? `0 0 0 3px ${teamColor}, 0 12px 24px ${teamColor}88` : "0 3px 0 #BDB39F, 0 6px 14px rgba(0,0,0,0.3)",
+            boxShadow: `0 ${selected ? 6 : 3}px 0 ${INK}`,
           }}
         >
-          {label}
+          <WordLabel word={card.word} />
         </span>
         {/* Face révélée */}
         <span
-          className="absolute inset-0 flex flex-col items-center justify-center rounded-[14px] px-0.5"
+          className="absolute inset-0 flex flex-col items-center justify-center px-0.5"
           style={{
-            backfaceVisibility: "hidden",
-            WebkitBackfaceVisibility: "hidden",
+            ...tile,
             transform: "rotateY(180deg)",
-            opacity: ghost ? 0.62 : 1,
-            boxShadow: "inset 0 2px 0 rgba(255,255,255,0.25), 0 4px 10px rgba(0,0,0,0.3)",
+            boxShadow: `0 3px 0 ${INK}`,
             ...faceStyle(card.color),
           }}
         >
-          {card.color === "bomb" && <span style={{ fontSize: 18, lineHeight: 1 }}>💣</span>}
-          <span style={{ opacity: card.revealed || showAll ? 0.95 : 0 }}>{label}</span>
-          {ghost && <span className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full" style={{ background: "rgba(255,255,255,0.7)" }} />}
+          {card.color === "bomb" && <Bomb size={17} strokeWidth={2.6} aria-hidden />}
+          <WordLabel word={card.word} />
+          {/* En fin de partie : pastille sur les mots trouvés pendant la partie */}
+          {showAll && card.revealed && (
+            <span className="absolute -right-1.5 -top-1.5 grid h-5 w-5 place-items-center rounded-full" style={{ background: "#fff", color: INK, border: `2px solid ${INK}` }}>
+              <Check size={12} strokeWidth={3.5} aria-hidden />
+            </span>
+          )}
         </span>
       </span>
     </button>
@@ -650,84 +781,96 @@ function KeyScreen({ cards, names, onClose }: { cards: Card[]; names: Record<Tea
   const stop = () => setHolding(false);
 
   return (
-    <div className="absolute inset-0 z-[60] flex flex-col text-white" style={{ background: "linear-gradient(180deg, #0B0620, #160C33)" }}>
-      <div className="flex items-center justify-end pl-16 pr-3" style={{ paddingTop: "calc(env(safe-area-inset-top) + 10px)" }}>
-        <button onClick={onClose} className="flex h-11 items-center gap-1.5 rounded-full px-4 text-sm font-bold" style={{ background: "#fff", color: "#15082E", border: "2.5px solid #15082E", boxShadow: "0 3px 0 #15082E" }}>
-          <X size={18} strokeWidth={2.8} aria-hidden /> Fermer
+    <div className="absolute inset-0 z-[60] flex flex-col text-white" style={PAGE_BG}>
+      <div className="flex items-center justify-end pl-16 pr-3" style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 10px)" }}>
+        <button
+          type="button"
+          onClick={() => {
+            playSfx("close", { volume: 0.5 });
+            onClose();
+          }}
+          className="cn-push flex h-11 items-center gap-1.5 rounded-full px-4 text-[15px] font-extrabold"
+          style={{ ...stk("#fff", 3), color: INK }}
+        >
+          <X size={18} strokeWidth={3} aria-hidden /> Fermer
         </button>
       </div>
 
       {!confirmed ? (
         <div className="flex flex-1 flex-col items-center justify-center px-6 text-center cn-pop">
-          <Mascot size={120} color="purple" mood="shifty" look="shifty" arms />
-          <p className="cb-display-lg mt-4">Seuls les chefs regardent&nbsp;!</p>
-          <p className="mt-3 max-w-xs text-base" style={{ color: "rgba(255,255,255,0.75)" }}>
+          <Mascot size={120} color="purple" mood="shifty" look="shifty" arms shadow={false} />
+          <h2 className="mt-4 text-[38px] leading-[0.95]" style={DISPLAY}>
+            Seuls les chefs regardent&nbsp;!
+          </h2>
+          <p className="mt-3 max-w-xs text-[16px] font-semibold leading-snug" style={{ color: "rgba(255,255,255,0.85)" }}>
             Les autres, fermez les yeux ou tournez la tête. Chefs, prenez le téléphone en le cachant bien.
           </p>
-          <button onClick={() => setConfirmed(true)} className="af-btn af-btn-pink mt-8 h-14 w-full max-w-xs" style={{ fontSize: 16 }}>
+          <Btn bg={PINK} color="#fff" big onClick={() => setConfirmed(true)} className="mt-8 w-full max-w-xs">
             On est chefs, on regarde
-          </button>
+          </Btn>
         </div>
       ) : (
         <div className="flex flex-1 flex-col px-3" style={{ minHeight: 0 }}>
-          <div className="mt-1 flex items-center justify-center gap-3 text-xs font-semibold">
+          <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
             <Legend color={TEAM.red.main} label={names.red} />
             <Legend color={TEAM.blue.main} label={names.blue} />
             <Legend color={NEUTRAL.main} label="Neutre" />
-            <Legend color="#000" label="Bombe" border="#FF4D5E" />
+            <Legend color={INK} label="Bombe" />
           </div>
           <div className="relative mx-auto mt-3 flex w-full max-w-[560px] flex-1 items-center" style={{ minHeight: 0 }}>
             <div
-              className="grid h-full max-h-[560px] w-full grid-cols-5 gap-[6px]"
-              style={{ gridTemplateRows: "repeat(5, minmax(48px, 1fr))", filter: holding ? "none" : "blur(14px)", transition: "filter 0.15s" }}
+              className="grid h-full max-h-[560px] w-full grid-cols-5 gap-[7px]"
+              style={{ gridTemplateRows: "repeat(5, minmax(48px, 1fr))", filter: holding ? "none" : "blur(10px)", transition: "filter 0.15s" }}
             >
               {cards.map((c, i) => {
-                const lines = splitWord(c.word);
                 // Tant qu'on ne maintient pas, rien n'est rendu (pas de triche par capture)
-                const st: CSSProperties = holding ? faceStyle(c.color) : { background: "rgba(255,255,255,0.12)" };
+                const st: CSSProperties = holding ? faceStyle(c.color) : { background: "#3A2A7A" };
                 return (
-                  <div key={i} className="relative flex flex-col items-center justify-center rounded-xl px-0.5" style={{ ...st, opacity: holding && c.revealed ? 0.35 : 1 }}>
-                    {holding && c.color === "bomb" && <span style={{ fontSize: 16, lineHeight: 1 }}>💣</span>}
-                    {holding && (
-                      <span className="block text-center font-extrabold uppercase" style={{ fontSize: wordFont(lines), lineHeight: 1.05 }}>
-                        {lines.map((l, k) => (
-                          <span key={k} className="block">
-                            {l}
-                          </span>
-                        ))}
-                      </span>
-                    )}
-                    {holding && c.revealed && <span className="absolute right-1 top-0.5 text-xs">✓</span>}
+                  <div
+                    key={i}
+                    className="relative flex flex-col items-center justify-center rounded-[12px] px-0.5"
+                    style={{ ...st, border: `2.5px solid ${INK}`, opacity: holding && c.revealed ? 0.35 : 1 }}
+                  >
+                    {holding && c.color === "bomb" && <Bomb size={16} strokeWidth={2.6} aria-hidden />}
+                    {holding && <WordLabel word={c.word} />}
+                    {holding && c.revealed && <X size={14} strokeWidth={3} className="absolute right-1 top-1" aria-label="déjà trouvé" />}
                   </div>
                 );
               })}
             </div>
             {!holding && (
-              <p className="pointer-events-none absolute inset-0 flex items-center justify-center px-8 text-center text-lg font-bold">
-                <span>Maintiens le bouton pour voir la carte <GameInlineIcon icon={ArrowDown} /></span>
+              <p className="pointer-events-none absolute inset-0 flex items-center justify-center px-8 text-center">
+                <span className="rounded-[20px] px-4 py-3 text-[18px] font-extrabold" style={{ ...stk(YELLOW, 4), color: INK, rotate: "-2deg" }}>
+                  Maintiens le bouton pour voir la carte <GameInlineIcon icon={ArrowDown} />
+                </span>
               </p>
             )}
           </div>
           <button
+            type="button"
             onPointerDown={(e) => {
               e.currentTarget.setPointerCapture(e.pointerId);
+              playSfx("card-flip", { volume: 0.5 });
               setHolding(true);
             }}
             onPointerUp={stop}
             onPointerCancel={stop}
             onLostPointerCapture={stop}
             onContextMenu={(e) => e.preventDefault()}
-            className="af-btn mx-auto mt-3 h-20 w-full max-w-[560px] touch-none"
+            className="mx-auto mt-4 flex h-20 w-full max-w-[560px] touch-none items-center justify-center gap-2 rounded-full"
             style={{
-              fontSize: 17,
-              marginBottom: "calc(env(safe-area-inset-bottom) + 12px)",
-              background: holding ? "linear-gradient(180deg, #3DDC97, #1A7B4F)" : "linear-gradient(180deg, #FF3EA5, #B5226E)",
-              boxShadow: holding ? "0 0 0 4px rgba(61,220,151,0.35)" : "0 10px 24px rgba(255,62,165,0.45)",
+              ...stk(holding ? MINT : PINK, holding ? 1 : 6, 3),
+              transform: holding ? "translateY(5px)" : "none",
+              transition: "transform 0.1s, box-shadow 0.1s",
+              color: holding ? INK : "#fff",
+              fontSize: 21,
+              ...DISPLAY,
+              marginBottom: "calc(env(safe-area-inset-bottom, 0px) + 14px)",
               WebkitUserSelect: "none",
               WebkitTouchCallout: "none",
             }}
           >
-            {holding ? "Relâche pour cacher" : <><GameInlineIcon icon={Pointer} /> Maintenir pour voir</>}
+            {holding ? "Relâche pour cacher" : <><Pointer size={22} strokeWidth={2.8} aria-hidden /> Maintenir pour voir</>}
           </button>
         </div>
       )}
@@ -735,12 +878,30 @@ function KeyScreen({ cards, names, onClose }: { cards: Card[]; names: Record<Tea
   );
 }
 
-function Legend({ color, label, border }: { color: string; label: string; border?: string }) {
+function Legend({ color, label }: { color: string; label: string }) {
   return (
-    <span className="flex min-w-0 items-center gap-1">
-      <span className="h-3 w-3 shrink-0 rounded" style={{ background: color, border: border ? `1.5px solid ${border}` : undefined }} />
-      <span className="max-w-[72px] truncate">{label}</span>
+    <span className="flex min-w-0 items-center gap-1.5 rounded-full py-1 pl-1 pr-2.5 text-[13px] font-bold" style={{ ...stk("#fff", 2, 2), color: INK }}>
+      <span className="h-4 w-4 shrink-0 rounded-full" style={{ background: color, border: `2px solid ${INK}` }} />
+      <span className="max-w-[80px] truncate">{label}</span>
     </span>
+  );
+}
+
+// ── Feuille crème (indice, règles) ─────────────────────────
+function CreamSheet({ onClose, label, children, scroll }: { onClose: () => void; label: string; children: ReactNode; scroll?: boolean }) {
+  return (
+    <div className="absolute inset-0 z-[70] flex items-end sm:items-center sm:justify-center" style={{ background: "rgba(10,4,32,0.6)" }} onClick={onClose} role="dialog" aria-modal aria-label={label}>
+      <div
+        className={`cn-sheet relative w-full px-5 pt-5 sm:max-w-md ${scroll ? "max-h-[88dvh] overflow-y-auto" : ""}`}
+        style={{ background: CARD_FACE, color: INK, borderRadius: "28px 28px 0 0", border: `3px solid ${INK}`, borderBottom: 0, paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 20px)" }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="absolute right-4 top-4">
+          <GameIconButton icon={X} label="Fermer" onClick={onClose} />
+        </div>
+        {children}
+      </div>
+    </div>
   );
 }
 
@@ -760,50 +921,47 @@ function ClueSheet({
   const [count, setCount] = useState(initial?.count ?? "");
   const t = TEAM[team];
   return (
-    <div className="absolute inset-0 z-[55] flex items-end" style={{ background: "rgba(5,2,15,0.7)" }} onClick={onClose}>
-      <div
-        className="cn-sheet w-full rounded-t-[28px] px-5 pt-5"
-        style={{ background: "#1A1038", borderTop: `3px solid ${t.main}`, paddingBottom: "calc(env(safe-area-inset-bottom) + 18px)" }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <p className="cb-display-sm">Noter l&apos;indice du chef</p>
-        <p className="mt-1 text-sm" style={{ color: "rgba(255,255,255,0.65)" }}>
-          Facultatif : le chef le dit à voix haute, ceci sert juste de pense-bête.
-        </p>
-        <input
-          autoFocus
-          value={word}
-          onChange={(e) => setWord(e.target.value.slice(0, 24))}
-          placeholder="Un mot (ex. : plage)"
-          className="mt-4 w-full rounded-2xl border px-4 py-3 outline-none"
-          style={{ fontSize: 16, background: "rgba(255,255,255,0.07)", borderColor: "rgba(255,255,255,0.18)", color: "#fff" }}
-        />
-        <div className="mt-3 flex flex-wrap gap-2">
-          {["1", "2", "3", "4", "5", "6", "∞"].map((n) => (
-            <button
-              key={n}
-              onClick={() => setCount(count === n ? "" : n)}
-              className="h-11 w-11 rounded-xl text-base font-bold"
-              style={{ background: count === n ? t.main : "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.15)" }}
-            >
-              {n}
-            </button>
-          ))}
-        </div>
-        <div className="mt-5 flex gap-2">
-          <button onClick={() => onSave(null)} className="af-btn af-btn-ghost h-12 flex-1">
-            Effacer
-          </button>
+    <CreamSheet onClose={onClose} label="Noter l'indice">
+      <p className="pr-14 text-[28px] leading-[1.02]" style={DISPLAY}>
+        L&apos;indice du chef
+      </p>
+      <p className="mt-1.5 text-[15px] font-semibold leading-snug" style={{ color: "#4A3A66" }}>
+        Facultatif : le chef le dit à voix haute, ça sert juste de pense-bête.
+      </p>
+      <input
+        autoFocus
+        value={word}
+        onChange={(e) => setWord(e.target.value.slice(0, 24))}
+        placeholder="Un mot (ex. : plage)"
+        aria-label="Mot de l'indice"
+        className="mt-4 w-full rounded-2xl px-4 py-3 font-bold outline-none"
+        style={{ fontSize: 17, background: "#fff", border: `2.5px solid ${INK}`, color: INK }}
+      />
+      <p className="mt-4 text-[15px] font-bold">Combien de mots&nbsp;?</p>
+      <div className="mt-2 flex flex-wrap gap-2">
+        {["1", "2", "3", "4", "5", "6", "∞"].map((n) => (
           <button
-            onClick={() => onSave(word.trim() || count ? { word: word.trim().toUpperCase(), count } : null)}
-            className="af-btn h-12 flex-[2]"
-            style={{ background: `linear-gradient(180deg, ${t.main}, ${t.deep})` }}
+            key={n}
+            type="button"
+            aria-label={`${n === "∞" ? "Illimité" : n} mot${n === "1" ? "" : "s"}`}
+            aria-pressed={count === n}
+            onClick={() => setCount(count === n ? "" : n)}
+            className="cn-push h-12 w-12 rounded-full text-[19px]"
+            style={{ ...stk(count === n ? t.main : "#fff", 3), color: count === n ? "#fff" : INK, ...DISPLAY, letterSpacing: 0 }}
           >
-            Afficher
+            {n}
           </button>
-        </div>
+        ))}
       </div>
-    </div>
+      <div className="mt-5 flex gap-2.5">
+        <Btn bg="#fff" onClick={() => onSave(null)} className="flex-1">
+          Effacer
+        </Btn>
+        <Btn bg={t.main} color="#fff" onClick={() => onSave(word.trim() || count ? { word: word.trim().toUpperCase(), count } : null)} className="flex-[2]">
+          Afficher
+        </Btn>
+      </div>
+    </CreamSheet>
   );
 }
 
@@ -811,43 +969,47 @@ function ClueSheet({
 function Rules({ onClose }: { onClose: () => void }) {
   const items = [
     "Deux équipes, chacune avec un chef. Le téléphone reste posé au milieu de la table.",
-    "Seuls les chefs regardent la carte secrète (bouton « Chefs : voir la carte », à maintenir) : elle dit quels mots sont rouges, bleus, neutres… et où est la Bombe.",
-    "À son tour, le chef donne À VOIX HAUTE un seul mot + un nombre (ex. « Plage, 2 ») pour faire deviner ses mots. Interdit de dire un mot de la grille ou de mimer.",
-    "L'équipe touche un mot pour le sélectionner, puis touche encore (ou « Valider ») pour le révéler.",
-    "Mot de ton équipe : tu peux continuer. Mot neutre ou adverse : fin du tour. Tu peux aussi arrêter avec « Fin du tour ».",
-    "La Bombe 💣 : défaite immédiate !",
+    "Seuls les chefs regardent la carte secrète (bouton « Chefs : la carte », à maintenir) : elle dit quels mots sont rouges, bleus, neutres… et où est la bombe.",
+    "À son tour, le chef donne à voix haute un seul mot + un nombre (ex. « Plage, 2 ») pour faire deviner ses mots. Interdit de dire un mot de la grille ou de mimer.",
+    "L'équipe touche un mot pour le sélectionner, puis touche encore (ou « Valider ») pour le révéler.",
+    "Mot de ton équipe : tu peux continuer. Mot neutre ou adverse : fin du tour. Tu peux aussi arrêter avec « Fin du tour ».",
+    "La bombe : défaite immédiate !",
     "La première équipe qui trouve tous ses mots gagne. L'équipe qui commence a 9 mots, l'autre 8.",
   ];
   return (
-    <div className="absolute inset-0 z-[70] flex items-end sm:items-center sm:justify-center" style={{ background: "rgba(5,2,15,0.75)" }} onClick={onClose}>
-      <div
-        className="cn-sheet max-h-[88dvh] w-full overflow-y-auto rounded-t-[28px] px-5 pt-5 sm:max-w-md sm:rounded-[28px]"
-        style={{ background: "#1A1038", paddingBottom: "calc(env(safe-area-inset-bottom) + 18px)" }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between">
-          <p className="cb-display-md">Comment on joue</p>
-          <GameIconButton icon={X} label="Fermer" onClick={onClose} />
-        </div>
-        <ol className="mt-3 space-y-2.5">
-          {items.map((r, i) => (
-            <li key={i} className="flex gap-3 text-[15px] leading-snug" style={{ color: "rgba(255,255,255,0.88)" }}>
-              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold" style={{ background: i % 2 ? TEAM.blue.main : TEAM.red.main }}>
-                {i + 1}
-              </span>
-              <span>{r}</span>
-            </li>
-          ))}
-        </ol>
-        <button onClick={onClose} className="af-btn af-btn-primary mt-5 h-12 w-full">
-          Compris !
-        </button>
-      </div>
-    </div>
+    <CreamSheet onClose={onClose} label="Comment on joue" scroll>
+      <p className="pr-14 text-[30px] leading-[1.02]" style={DISPLAY}>
+        Comment on joue
+      </p>
+      <ol className="mt-4 space-y-3">
+        {items.map((r, i) => (
+          <li key={i} className="flex items-start gap-3 text-[15.5px] font-semibold leading-snug">
+            <span
+              className="grid h-8 w-8 shrink-0 place-items-center rounded-[10px] text-[17px]"
+              style={{ ...stk(i % 2 ? TEAM.blue.main : TEAM.red.main, 2, 2), color: "#fff", ...DISPLAY, letterSpacing: 0, rotate: i % 2 ? "3deg" : "-3deg" }}
+            >
+              {i + 1}
+            </span>
+            <span className="pt-1">{r}</span>
+          </li>
+        ))}
+      </ol>
+      <Btn bg={YELLOW} big onClick={onClose} className="mt-6 w-full">
+        Compris !
+      </Btn>
+    </CreamSheet>
   );
 }
 
 // ── Configuration ─────────────────────────────────────────
+function SectionTitle({ children }: { children: ReactNode }) {
+  return (
+    <h2 className="mb-3 mt-7 text-[25px] leading-none" style={DISPLAY}>
+      {children}
+    </h2>
+  );
+}
+
 function Setup({
   names,
   setNames,
@@ -871,86 +1033,107 @@ function Setup({
   showRules: boolean;
   closeRules: () => void;
 }) {
-  const chip = (active: boolean, color = "#5B36D6"): CSSProperties => ({
-    background: active ? color : "rgba(255,255,255,0.07)",
-    border: `1.5px solid ${active ? "rgba(255,255,255,0.6)" : "rgba(255,255,255,0.14)"}`,
+  const chip = (active: boolean, color: string, i: number): CSSProperties => ({
+    ...stk(active ? color : "#fff", active ? 4 : 3),
+    color: active && color !== YELLOW ? "#fff" : INK,
+    rotate: active ? (i % 2 ? "2deg" : "-2deg") : "0deg",
+    transition: "rotate 0.2s",
   });
   return (
-    <div
-      className="relative flex flex-col overflow-y-auto text-white"
-      style={{
-        height: "100dvh",
-        background:
-          "radial-gradient(70% 40% at 0% 10%, rgba(255,77,94,0.35), transparent 70%), radial-gradient(70% 40% at 100% 10%, rgba(61,134,255,0.35), transparent 70%), linear-gradient(180deg, #0B0620 0%, #0E0828 100%)",
-      }}
-    >
+    <div className="relative flex flex-col overflow-y-auto text-white" style={{ height: "100dvh", ...PAGE_BG }}>
       <style>{CSS}</style>
-      <div className="flex justify-end pl-16 pr-3" style={{ paddingTop: "calc(env(safe-area-inset-top) + 10px)" }}>
+      <div className="flex justify-end gap-2.5 pl-16 pr-3" style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 10px)" }}>
+        <SoundButton />
         <GameIconButton icon={Info} label="Règles" onClick={onRules} />
       </div>
 
-      <div className="mx-auto flex w-full max-w-md flex-1 flex-col px-5 pb-6">
+      <div className="mx-auto flex w-full max-w-md flex-1 flex-col px-5" style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 16px)" }}>
         <div className="flex items-end justify-center gap-1">
-          <Mascot size={78} color="coral" mood="shifty" look="right" arms />
-          <Mascot size={78} color="sky" mood="sus" look="left" arms delay={0.4} />
+          <Mascot size={80} color="coral" mood="shifty" look="right" arms shadow={false} />
+          <Mascot size={80} color="sky" mood="sus" look="left" arms delay={0.4} shadow={false} />
         </div>
-        <h1 className="cb-display-lg mt-2 text-center">Mots Espions</h1>
-        <p className="mt-1 text-center text-sm" style={{ color: "rgba(255,255,255,0.7)" }}>
-          Un téléphone au milieu de la table · 2 équipes · 1 chef chacune
+        <h1 className="mt-2 text-center text-[52px] leading-[0.92]" style={DISPLAY}>
+          Mots Espions
+        </h1>
+        <p className="mx-auto mt-3 max-w-[300px] text-center text-[16px] font-semibold leading-snug" style={{ color: "rgba(255,255,255,0.85)" }}>
+          Un tél au milieu de la table, deux équipes, un chef chacune.
         </p>
 
-        <p className="mt-6 mb-2 text-xs font-semibold uppercase tracking-wider" style={{ color: "rgba(255,255,255,0.6)" }}>Les équipes</p>
-        <div className="space-y-2">
-          {(["red", "blue"] as Team[]).map((t) => (
-            <label key={t} className="flex items-center gap-3 rounded-2xl px-3 py-2" style={{ background: TEAM[t].soft, border: `1.5px solid ${TEAM[t].main}88` }}>
-              <span className="h-8 w-8 shrink-0 rounded-full" style={{ background: `linear-gradient(160deg, ${TEAM[t].main}, ${TEAM[t].deep})` }} />
+        <SectionTitle>Les équipes</SectionTitle>
+        <div className="space-y-3">
+          {(["red", "blue"] as Team[]).map((t, i) => (
+            <label
+              key={t}
+              className="flex items-center gap-3 rounded-[22px] px-4 py-2"
+              style={{ ...stk(TEAM[t].main, 4), color: "#fff", rotate: i ? "1deg" : "-1deg" }}
+            >
+              <Mascot size={38} color={TEAM[t].mascot} mood={i ? "sus" : "shifty"} shadow={false} bob={false} />
               <input
                 value={names[t]}
                 onChange={(e) => setNames({ ...names, [t]: e.target.value.slice(0, 16) })}
                 onBlur={() => !names[t].trim() && setNames({ ...names, [t]: t === "red" ? "Les Rouges" : "Les Bleus" })}
-                className="min-w-0 flex-1 bg-transparent py-1.5 font-bold outline-none"
-                style={{ fontSize: 17, color: "#fff" }}
+                className="min-w-0 flex-1 bg-transparent py-1.5 outline-none"
+                style={{ fontSize: 22, color: "#fff", ...DISPLAY, letterSpacing: "-0.01em" }}
                 aria-label={`Nom de l'équipe ${TEAM[t].label}`}
               />
-              <Pencil size={18} strokeWidth={2.6} className="shrink-0 opacity-60" aria-hidden />
+              <Pencil size={19} strokeWidth={2.8} className="shrink-0" aria-hidden />
             </label>
           ))}
         </div>
 
-        <p className="mt-5 mb-2 text-xs font-semibold uppercase tracking-wider" style={{ color: "rgba(255,255,255,0.6)" }}>Qui commence ?</p>
-        <div className="grid grid-cols-3 gap-2">
+        <SectionTitle>Qui commence&nbsp;?</SectionTitle>
+        <div className="grid grid-cols-3 gap-2.5">
           {([
-            ["random", "Au hasard"],
+            ["random", "Hasard"],
             ["red", names.red],
             ["blue", names.blue],
-          ] as [StarterChoice, string][]).map(([v, l]) => (
+          ] as [StarterChoice, string][]).map(([v, l], i) => (
             <button
               key={v}
-              onClick={() => setStarter(v)}
-              className="h-12 truncate rounded-2xl px-2 text-sm font-semibold"
-              style={chip(starter === v, v === "random" ? "#5B36D6" : TEAM[v as Team].main)}
+              type="button"
+              aria-pressed={starter === v}
+              onClick={() => {
+                playSfx("toggle", { volume: 0.4 });
+                setStarter(v);
+              }}
+              className="cn-push flex h-[52px] min-w-0 items-center justify-center gap-1 rounded-full px-2 text-[15px] font-extrabold"
+              style={chip(starter === v, v === "random" ? YELLOW : TEAM[v as Team].main, i)}
             >
-              {v === "random" && <GameInlineIcon icon={Dices} />} {l}
+              {v === "random" && <Dices size={17} strokeWidth={2.8} className="shrink-0" aria-hidden />}
+              <span className="truncate">{l}</span>
             </button>
           ))}
         </div>
 
-        <p className="mt-5 mb-2 text-xs font-semibold uppercase tracking-wider" style={{ color: "rgba(255,255,255,0.6)" }}>Chrono par tour</p>
-        <div className="grid grid-cols-4 gap-2">
-          {TIMER_OPTIONS.map((t) => (
-            <button key={t} onClick={() => setTimer(t)} className="h-12 rounded-2xl text-sm font-semibold" style={chip(timer === t)}>
+        <SectionTitle>Chrono par tour</SectionTitle>
+        <div className="grid grid-cols-4 gap-2.5">
+          {TIMER_OPTIONS.map((t, i) => (
+            <button
+              key={t}
+              type="button"
+              aria-pressed={timer === t}
+              onClick={() => {
+                playSfx("toggle", { volume: 0.4 });
+                setTimer(t);
+              }}
+              className="cn-push h-[52px] rounded-full text-[18px]"
+              style={{ ...chip(timer === t, YELLOW, i), ...DISPLAY, letterSpacing: 0 }}
+            >
               {t === 0 ? "Sans" : `${t} s`}
             </button>
           ))}
         </div>
 
-        <div className="mt-auto pt-6">
-          <button onClick={onStart} className="af-btn af-btn-pink h-14 w-full" style={{ fontSize: 17 }}>
-            Distribuer les mots <GameInlineIcon icon={Shuffle} />
-          </button>
-          <p className="mt-2 text-center text-xs" style={{ color: "rgba(255,255,255,0.5)" }}>
-            Formez 2 équipes et choisissez un chef par équipe
+        <div className="mt-auto pt-8">
+          <p className="mb-3 text-center text-[15px] font-semibold" style={{ color: "rgba(255,255,255,0.85)" }}>
+            Formez 2 équipes et choisissez un chef par équipe.
           </p>
+          <Btn bg={PINK} color="#fff" big onClick={onStart} className="w-full">
+            Distribuer les mots <Shuffle size={21} strokeWidth={3} aria-hidden />
+          </Btn>
+          <div className="mt-5 flex justify-center">
+            <IdeaButton game="Mots Espions" kind="mot" bg="#fff" />
+          </div>
         </div>
       </div>
       {showRules && <Rules onClose={closeRules} />}
@@ -962,14 +1145,19 @@ function Setup({
 const CSS = `
 @keyframes cn-pop { 0% { transform: scale(.85); opacity: 0 } 60% { transform: scale(1.04); opacity: 1 } 100% { transform: scale(1) } }
 @keyframes cn-toast { 0% { transform: translateY(16px) scale(.9); opacity: 0 } 12% { transform: translateY(0) scale(1); opacity: 1 } 85% { opacity: 1 } 100% { opacity: 0; transform: translateY(-6px) } }
-@keyframes cn-splash { 0% { transform: scale(.6) rotate(-4deg); opacity: 0 } 18% { transform: scale(1.06) rotate(1deg); opacity: 1 } 28% { transform: scale(1) rotate(0) } 82% { opacity: 1; transform: scale(1) } 100% { opacity: 0; transform: scale(.94) } }
-@keyframes cn-boom { 0% { opacity: 0; transform: scale(1.3) } 15% { opacity: 1; transform: scale(1) } 25% { transform: translateX(-8px) } 35% { transform: translateX(8px) } 45% { transform: translateX(-5px) } 55% { transform: translateX(0) } 100% { opacity: 1 } }
+@keyframes cn-splash { 0% { transform: scale(.6) rotate(-6deg); opacity: 0 } 18% { transform: scale(1.06) rotate(1deg); opacity: 1 } 28% { transform: scale(1) rotate(-2deg) } 82% { opacity: 1; transform: scale(1) rotate(-2deg) } 100% { opacity: 0; transform: scale(.94) rotate(-2deg) } }
+@keyframes cn-boom { 0% { opacity: 0; transform: scale(1.3) } 15% { opacity: 1; transform: scale(1) } 25% { transform: translateX(-10px) } 35% { transform: translateX(10px) } 45% { transform: translateX(-6px) } 55% { transform: translateX(0) } 100% { opacity: 1 } }
+@keyframes cn-bomb { 0% { transform: scale(.3) rotate(-30deg) } 50% { transform: scale(1.15) rotate(8deg) } 100% { transform: scale(1) rotate(-4deg) } }
 @keyframes cn-sheet { from { transform: translateY(100%) } to { transform: translateY(0) } }
 @keyframes cn-pulse { 0%,100% { transform: scale(1) } 50% { transform: scale(1.1) } }
 .cn-pop { animation: cn-pop .35s ease-out both }
 .cn-toast { animation: cn-toast 1.9s ease-out both }
 .cn-splash { animation: cn-splash 1.5s cubic-bezier(.3,1.3,.5,1) both }
 .cn-boom { animation: cn-boom 1.6s ease-out both }
+.cn-bomb { animation: cn-bomb .6s cubic-bezier(.3,1.5,.5,1) both }
 .cn-sheet { animation: cn-sheet .28s cubic-bezier(.2,.9,.3,1) both }
 .cn-pulse { animation: cn-pulse .8s ease-in-out infinite }
+.cn-push { transition: translate .11s ease, box-shadow .11s ease; touch-action: manipulation; -webkit-tap-highlight-color: transparent }
+.cn-push:not(:disabled):active { translate: 0 3px; box-shadow: 0 1px 0 ${INK} !important }
+@media (prefers-reduced-motion: reduce) { .cn-pop, .cn-bomb, .cn-sheet, .cn-pulse { animation-duration: 1ms !important } }
 `;

@@ -73,7 +73,7 @@ export const PICOLETTE_CARDS: PicoletteCard[] = [
 
   // ── TOUR DE TABLE — SOFT ─────────────────────────────
   { type: "table", pack: "soft", text: "Citez chacun votre tour un dessin animé.", hint: T },
-  { type: "table", pack: "soft", text: "Citez chacun un Pokémon.", hint: T },
+  { type: "table", pack: "soft", text: "Citez chacun un animal qui vit dans la mer.", hint: T },
   { type: "table", pack: "soft", text: "Citez chacun un président de la République française.", hint: T },
   { type: "table", pack: "soft", text: "Citez chacun un fruit ou un légume qui commence par une voyelle.", hint: T },
   { type: "table", pack: "soft", text: "Citez chacun un personnage d'anime.", hint: T },

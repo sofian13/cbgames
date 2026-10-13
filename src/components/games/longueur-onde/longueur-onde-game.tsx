@@ -1,17 +1,21 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useGame } from "@/lib/party/use-game";
 import { useGameStore } from "@/lib/stores/game-store";
 import type { GameProps } from "@/lib/games/types";
-import { cn } from "@/lib/utils";
 import { useKeyedState } from "@/lib/use-keyed-state";
 import { Mascot, MascotAvatar, MASCOT_PALETTE, type MascotColor } from "@/components/Mascot";
 import { ConfettiBurst, Sparkles } from "@/components/ConfettiBurst";
-import { ModeSelect, PlayersSetup, PassScreen, colorForIndex, type GameMode } from "@/components/games/local-kit";
-import { SynthwaveScreen, NeonConsole, CassetteInput } from "@/components/games/longueur-onde/synthwave";
-import { Lock, MoveHorizontal } from "lucide-react";
-import { GameInlineIcon } from "@/components/games/game-icon-button";
+import {
+  ModeSelect, PlayersSetup, PassScreen, colorForIndex, type GameMode,
+  DISPLAY, ZButton, ZCard, ZChip, ZLink, ZRanking, ZScreen, ZTitle, useScrollTopOn,
+} from "@/components/games/local-kit";
+import { SynthwaveScreen, NeonConsole, CassetteInput, SpectrumPair, WAVE_COLOR } from "@/components/games/longueur-onde/synthwave";
+import { Lock } from "lucide-react";
+import { GameInlineIcon, GAME_INK } from "@/components/games/game-icon-button";
+import { IdeaButton, RerollButton } from "@/components/games/idea-button";
+import { playCombo, playSfx, preloadSfx } from "@/lib/sfx";
 
 // ── Spectres pour le mode local (mêmes que le serveur) ────
 const LOCAL_SPECTRUMS: Spectrum[] = [
@@ -128,11 +132,14 @@ function LongueurOndeLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }
   const [scores, setScores] = useState<number[]>([]);
   const [round, setRound] = useState(0);
   const [psychic, setPsychic] = useState(0);
-  const [spectrums] = useState(() => shuffleArr(LOCAL_SPECTRUMS));
+  const [spectrums, setSpectrums] = useState(() => shuffleArr(LOCAL_SPECTRUMS));
   const [target, setTarget] = useState(50);
   const [clue, setClue] = useState("");
   const [guess, setGuess] = useState(50);
   const [clueInput, setClueInput] = useKeyedState<string>(`${round}-localclue`, "");
+
+  useEffect(() => { preloadSfx(["whoosh", "gong", "confirm", "tick", "tock", "win", "powerup", "ding", "success", "wrong", "lose", "coins", "card-flip"]); }, []);
+  useScrollTopOn(`${phase}-${round}`);
 
   const total = players.length;
   const spectrum = spectrums[(round - 1) % spectrums.length] ?? null;
@@ -140,6 +147,7 @@ function LongueurOndeLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }
 
   const begin = (names: string[]) => {
     setPlayers(names); setScores(names.map(() => 0));
+    setSpectrums(shuffleArr(LOCAL_SPECTRUMS));
     setPsychic(0); setRound(1);
     setTarget(8 + Math.floor(Math.random() * 85)); setClue(""); setPhase("pass");
   };
@@ -147,82 +155,100 @@ function LongueurOndeLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }
     setRound(r); setPsychic(p);
     setTarget(8 + Math.floor(Math.random() * 85)); setClue(""); setPhase("pass");
   };
+  // « Pas fou ? » : la paire d'extrêmes est retirée → une paire jamais vue prend sa place
+  const rerollSpectrum = () => {
+    if (spectrums.length <= total + 1) return;
+    const at = (round - 1) % spectrums.length;
+    playSfx("card-flip", { volume: 0.6, delay: 0.1 });
+    setSpectrums((sp) => sp.filter((_, i) => i !== at));
+    setTarget(8 + Math.floor(Math.random() * 85));
+  };
 
   if (phase === "setup") {
-    return <PlayersSetup emoji="📡" name="Le Curseur" min={2} max={8} accent="#36d0e0" onStart={begin} onBack={onReturnToLobby} />;
+    return <PlayersSetup emoji="📡" name="Le Curseur" min={2} max={8} accent={WAVE_COLOR} onStart={begin} onBack={onReturnToLobby}
+      footer={<IdeaButton game="Le Curseur" kind="idée" />} />;
   }
   if (phase === "pass") {
-    return <PassScreen toName={players[psychic]} colorIndex={psychic} accent="#36d0e0"
-      hint="Toi seul regardes l'écran : tu vas voir la cible secrète." onReady={() => setPhase("clue")} />;
+    return <PassScreen toName={players[psychic]} colorIndex={psychic} accent={WAVE_COLOR}
+      hint="Toi seul regardes l'écran : tu vas voir la cible secrète." onReady={() => { playCombo("reveal"); setPhase("clue"); }} />;
   }
   if (phase === "clue") {
     return (
-      <SynthwaveScreen round={round} total={total} spectrum={spectrum}>
-        <NeonConsole readout="TARGET LOCKED">
-          <SpectrumDial spectrum={spectrum} target={target} mode="psychic" />
-          <p className="mt-1 text-center" style={{ fontFamily: "var(--font-mono-face)", fontSize: 12, color: "var(--af-yellow)", letterSpacing: 1 }}><GameInlineIcon icon={Lock} /> {players[psychic]} : toi seul vois la cible — annonce ton indice à voix haute</p>
+      <SynthwaveScreen round={round} total={total} spectrum={spectrum} title={`${players[psychic]}, la cible est là`}>
+        <NeonConsole readout="Toi seul la vois">
+          <SpectrumDial spectrum={spectrum} target={target} mode="psychic" bare />
         </NeonConsole>
+        <div className="mt-4 flex justify-center">
+          <RerollButton label="Pas fou ? Une autre paire" onClick={rerollSpectrum} />
+        </div>
         <CassetteInput value={clueInput} onChange={setClueInput}
-          placeholder="Ton indice (à l'oral aussi)"
+          placeholder="Ex. : une raclette"
           error={clueProblem(clueInput)}
-          onSubmit={() => { if (clueProblem(clueInput)) return; setClue(clueInput.trim() || "(à l'oral)"); setGuess(50); setPhase("guess"); }} />
-        <div className="pb-20" />
+          onSubmit={() => {
+            if (clueProblem(clueInput)) return;
+            playSfx("whoosh", { volume: 0.6 });
+            setClue(clueInput.trim() || "(à l'oral)"); setGuess(50); setPhase("guess");
+          }} />
       </SynthwaveScreen>
     );
   }
   if (phase === "guess") {
     return <GuessBoard key={`${round}-localguess`} spectrum={spectrum} clue={clue} round={round} total={total}
-      timeLeft={null} submitted={false} psychicName={players[psychic]} role="Équipe"
-      note="Mode local coopératif : discutez ensemble et placez UN seul curseur pour toute l'équipe. Les points vont au Médium."
-      onSubmit={(g) => { setGuess(g); setPhase("reveal"); }} />;
+      timeLeft={null} submitted={false} psychicName={players[psychic]} role="Toute la table"
+      note={`Discutez ensemble et placez UN seul curseur. Les points vont à ${players[psychic]}.`}
+      onSubmit={(g) => {
+        const pts = localPoints(Math.abs(g - target));
+        playCombo("drumroll");
+        if (pts >= 5) { playSfx("win", { volume: 0.9, delay: 1.05 }); playSfx("coins", { volume: 0.7, delay: 1.3 }); }
+        else if (pts > 0) playSfx("success", { volume: 0.8, delay: 1.05 });
+        else { playSfx("wrong", { volume: 0.8, delay: 1.05 }); playSfx("lose", { volume: 0.5, delay: 1.12 }); }
+        setGuess(g); setPhase("reveal");
+      }} />;
   }
   if (phase === "reveal") {
-    const markers = [{ value: guess, label: "Équipe", isMe: true, color: colorForIndex(psychic) }];
+    const markers = [{ value: guess, label: "La table", isMe: true, color: colorForIndex(psychic) }];
     const bull = lastPts >= 5;
+    const verdict = bull ? "Dans le mille !" : lastPts >= 3 ? "Pas loin !" : lastPts > 0 ? "Ça chauffe…" : "Raté !";
     return (
-      <div className="relative flex min-h-[100svh] flex-col items-center p-5 pt-[max(env(safe-area-inset-top),20px)] pb-[max(env(safe-area-inset-bottom),20px)] text-white"
-        style={{ background: "radial-gradient(circle at 50% 12%, rgba(54,208,224,0.28), transparent 45%), #0E0828" }}>
+      <ZScreen bg={bull ? "#3DDC97" : WAVE_COLOR}>
         {bull && <ConfettiBurst count={40} />}
-        <Sparkles count={6} />
-        <p className="af-eyebrow mt-3" style={{ color: "var(--af-yellow)" }}>{bull ? "✦ Dans le mille !" : "Révélation"}</p>
-        <h2 className="cb-display-lg mt-1">+<span style={{ color: "var(--af-yellow)" }}>{lastPts}</span> pts · {players[psychic]}</h2>
-        <ClueBadge clue={clue} authorName={players[psychic]} />
-        <SpectrumDial spectrum={spectrum} target={target} markers={markers} mode="reveal" />
-        <button onClick={() => {
+        <ZChip bg="#fff" tilt={-2}>Manche {round}/{total}</ZChip>
+        <ZTitle size={40} className="mt-3">{verdict}</ZTitle>
+        <div className="mt-4"><SpectrumPair spectrum={spectrum} /></div>
+        <SpectrumDial spectrum={spectrum} target={target} markers={markers} mode="reveal" bare />
+        <ZCard bg="#FFD23F" tilt={-1.5} shadow={5} radius={22} className="mt-3 flex items-center gap-3 px-4 py-3">
+          <Mascot size={46} color={colorForIndex(psychic)} mood={bull ? "laughing" : lastPts ? "happy" : "sad"} shadow={false} bob={false} />
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-[19px] leading-tight" style={DISPLAY}>{players[psychic]}</p>
+            <p className="truncate text-[14px] font-semibold">Indice : {clue} · cible {target}</p>
+          </div>
+          <span className="text-[30px]" style={DISPLAY}>+{lastPts}</span>
+        </ZCard>
+        <div className="min-h-8 flex-1" />
+        <ZButton bg={GAME_INK} onClick={() => {
           const ns = [...scores]; ns[psychic] += lastPts; setScores(ns);
-          if (round >= total) setPhase("over"); else startRound(round + 1, (psychic + 1) % total);
-        }} className="af-btn af-btn-primary mt-6 w-full max-w-md">
+          if (round >= total) { playCombo("fanfare"); setPhase("over"); } else startRound(round + 1, (psychic + 1) % total);
+        }}>
           {round >= total ? "Voir les scores" : "Manche suivante"}
-        </button>
-      </div>
+        </ZButton>
+      </ZScreen>
     );
   }
   // over
-  const ranking = players.map((name, i) => ({ name, score: scores[i], i })).sort((a, b) => b.score - a.score);
+  const ranking = players.map((name, i) => ({ name, score: scores[i], colorIndex: i })).sort((a, b) => b.score - a.score);
   return (
-    <div className="relative flex min-h-[100svh] flex-col items-center justify-center p-6 pt-[max(env(safe-area-inset-top),24px)] pb-[max(env(safe-area-inset-bottom),24px)] text-white"
-      style={{ background: "radial-gradient(circle at 50% 25%, rgba(54,208,224,0.3), transparent 45%), #0E0828" }}>
+    <ZScreen bg={WAVE_COLOR}>
       <ConfettiBurst count={50} />
-      <p className="af-eyebrow" style={{ color: "var(--af-yellow)" }}>Partie terminée</p>
-      <h2 className="cb-display-lg mt-1 mb-5">Meilleur Médium</h2>
-      <div className="w-full max-w-sm space-y-2">
-        {ranking.map((p, idx) => (
-          <div key={p.i} className="flex items-center justify-between rounded-2xl border p-4"
-            style={{ background: idx === 0 ? "rgba(54,208,224,0.14)" : "rgba(255,255,255,0.04)", borderColor: idx === 0 ? "rgba(54,208,224,0.5)" : "var(--line-soft)" }}>
-            <div className="flex items-center gap-3">
-              <span className="cb-mono w-7 font-bold" style={{ color: idx === 0 ? "var(--af-yellow)" : "var(--text-muted)" }}>#{idx + 1}</span>
-              <MascotAvatar color={colorForIndex(p.i)} size={34} mood={idx === 0 ? "wink" : "happy"} />
-              <span className="font-bold">{p.name}</span>
-            </div>
-            <span className="cb-mono font-bold" style={{ color: idx === 0 ? "var(--af-yellow)" : "#fff" }}>{p.score}</span>
-          </div>
-        ))}
+      <ZTitle size={40} className="text-center">{ranking[0]?.name}, meilleur médium</ZTitle>
+      <div className="mt-6"><ZRanking rows={ranking} /></div>
+      <div className="min-h-8 flex-1" />
+      <ZButton bg={GAME_INK} onClick={() => begin(players)}>Rejouer</ZButton>
+      <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
+        <ZButton size="sm" bg="#fff" style={{ width: "auto" }} onClick={() => setPhase("setup")}>Changer les joueurs</ZButton>
+        <IdeaButton game="Le Curseur" kind="idée" bg="#fff" />
       </div>
-      <div className="mt-6 flex gap-2">
-        <button onClick={() => setPhase("setup")} className="af-btn af-btn-ghost">Nouvelle partie</button>
-        {onReturnToLobby && <button onClick={onReturnToLobby} className="af-btn af-btn-primary">Lobby</button>}
-      </div>
-    </div>
+      {onReturnToLobby && <ZLink onClick={onReturnToLobby} color={GAME_INK} className="mt-2">Retour à l&apos;accueil</ZLink>}
+    </ZScreen>
   );
 }
 
@@ -498,116 +524,63 @@ function GuessBoard({
   const locked = sent || submitted;
 
   return (
-    <div className="flex flex-1 flex-col items-center p-5 pt-[max(env(safe-area-inset-top),20px)] pb-[max(env(safe-area-inset-bottom),20px)]">
+    <ZScreen>
       <RoundHeader round={round} total={total} timeLeft={timeLeft} max={30} role={role} />
       <ClueBadge clue={clue} authorName={psychicName} />
-      {note && (
-        <p className="mx-auto mt-3 max-w-md text-center text-sm" style={{ color: "var(--text-dim)" }}>{note}</p>
-      )}
+      {note && <p className="mt-4 text-[15px] font-semibold leading-snug" style={{ color: "rgba(255,255,255,0.88)" }}>{note}</p>}
 
-      <div className="w-full max-w-md mt-6">
-        {/* Spectrum labels */}
-        <div className="mb-3 flex items-center justify-between px-2">
-          <span className="rounded-full px-3 py-1 text-xs font-bold"
-                style={{ background: `${MASCOT_PALETTE.sky.body}22`, color: MASCOT_PALETTE.sky.body }}>
-            {spectrum?.left}
-          </span>
-          <MoveHorizontal size={16} strokeWidth={2.6} style={{ color: "var(--text-muted)" }} aria-hidden />
-          <span className="rounded-full px-3 py-1 text-xs font-bold"
-                style={{ background: `${MASCOT_PALETTE.pink.body}22`, color: MASCOT_PALETTE.pink.body }}>
-            {spectrum?.right}
-          </span>
-        </div>
-
-        {/* Track */}
-        <div
-          ref={trackRef}
-          onPointerDown={onPointerDown}
-          onPointerMove={onPointerMove}
-          onPointerUp={onPointerUp}
-          onPointerCancel={onPointerUp}
-          className="relative h-20 cursor-pointer select-none rounded-full"
-          style={{
-            touchAction: "none",
-            background: "linear-gradient(90deg, #4ECDC4 0%, #5B36D6 50%, #FF3EA5 100%)",
-            boxShadow: "inset 0 4px 16px rgba(0,0,0,0.4), 0 8px 24px rgba(91,54,214,0.3)",
-          }}
-        >
-          {/* Tick marks */}
-          {Array.from({ length: 11 }).map((_, i) => (
-            <div key={i} className="absolute top-1/2 h-3 w-px -translate-y-1/2"
-                 style={{ left: `${i * 10}%`, background: "rgba(255,255,255,0.3)" }} />
-          ))}
-
-          {/* KNOB */}
-          <div
-            className={cn("absolute top-1/2 -translate-x-1/2 -translate-y-1/2 transition-transform", locked ? "" : "scale-100")}
-            style={{ left: `${value}%` }}
-          >
-            {!locked && (
-              <div className="absolute -inset-3 rounded-full border-2"
-                   style={{ borderColor: "rgba(255,255,255,0.3)", animation: "af-pulse-ring 1.8s ease-out infinite" }} />
-            )}
-            <div className="relative flex h-16 w-16 items-center justify-center rounded-full"
-                 style={{
-                   background: "linear-gradient(135deg, #fff 0%, #F0E8FF 100%)",
-                   boxShadow: "0 8px 20px rgba(0,0,0,0.4), 0 0 0 6px rgba(91,54,214,0.25)",
-                   color: "var(--cb-brand)",
-                   fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 18,
-                 }}>
-              {value}
-            </div>
+      <div className="mt-5"><SpectrumPair spectrum={spectrum} /></div>
+      {/* Piste : on glisse le curseur */}
+      <div
+        ref={trackRef}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerCancel={onPointerUp}
+        className="relative mx-2 mt-8 h-16 cursor-pointer select-none rounded-full"
+        style={{ touchAction: "none", background: "#fff", border: `3px solid ${GAME_INK}`, boxShadow: `0 5px 0 ${GAME_INK}` }}
+      >
+        {Array.from({ length: 11 }).map((_, i) => (
+          <div key={i} className="absolute top-1/2 w-[2px] -translate-y-1/2" style={{ left: `${i * 10}%`, height: i % 5 === 0 ? 22 : 12, background: "rgba(21,8,46,0.35)" }} />
+        ))}
+        <div className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2" style={{ left: `${value}%` }}>
+          <div className="grid h-[68px] w-[68px] place-items-center rounded-full text-[24px]"
+            style={{ ...DISPLAY, background: "#FFD23F", color: GAME_INK, border: `3px solid ${GAME_INK}`, boxShadow: `0 4px 0 ${GAME_INK}` }}>
+            {value}
           </div>
         </div>
       </div>
+      {!locked && <p className="mt-6 text-center text-[15px] font-bold" style={{ color: "rgba(255,255,255,0.88)" }}>Fais glisser le rond jaune</p>}
 
-      <button onClick={submit} disabled={locked}
-              className="af-btn af-btn-primary mt-8 w-full max-w-md disabled:opacity-50"
-              style={{ padding: "16px", fontSize: 15 }}>
-        {locked ? "Curseur placé ✓" : "Valider la position"}
-      </button>
-    </div>
+      <div className="min-h-8 flex-1" />
+      <ZButton bg="#FFD23F" onClick={submit} disabled={locked}>
+        {locked ? "Curseur placé" : `Valider : ${value}`}
+      </ZButton>
+    </ZScreen>
   );
 }
 
 // ── Spectrum dial (read-only display) ─────────────────────
 function SpectrumDial({
-  spectrum, target, markers = [], mode,
+  spectrum, target, markers = [], mode, bare,
 }: {
   spectrum: Spectrum | null;
   target: number | null;
   markers?: { value: number; label: string; isMe: boolean; color: MascotColor }[];
   mode: "psychic" | "reveal";
+  /** Sans les étiquettes des extrêmes (affichées à part) */
+  bare?: boolean;
 }) {
   return (
-    <div className="w-full max-w-md mt-4">
-      <div className="mb-3 flex items-center justify-between px-2">
-        <span className="rounded-full px-3 py-1 text-xs font-bold"
-              style={{ background: `${MASCOT_PALETTE.sky.body}22`, color: MASCOT_PALETTE.sky.body }}>
-          {spectrum?.left}
-        </span>
-        <MoveHorizontal size={16} strokeWidth={2.6} style={{ color: "var(--text-muted)" }} aria-hidden />
-        <span className="rounded-full px-3 py-1 text-xs font-bold"
-              style={{ background: `${MASCOT_PALETTE.pink.body}22`, color: MASCOT_PALETTE.pink.body }}>
-          {spectrum?.right}
-        </span>
-      </div>
-
-      {/* Track */}
-      <div className="relative h-20 overflow-hidden rounded-full"
-           style={{
-             background: "linear-gradient(90deg, #4ECDC4 0%, #5B36D6 50%, #FF3EA5 100%)",
-             boxShadow: "inset 0 4px 16px rgba(0,0,0,0.4)",
-           }}>
-        {/* Score zones — psychic sees target, reveal shows them too */}
+    <div className="mt-4 w-full">
+      {!bare && <div className="mb-4"><SpectrumPair spectrum={spectrum} /></div>}
+      <div className="relative h-16 overflow-hidden rounded-full" style={{ background: "#fff", border: `3px solid ${GAME_INK}` }}>
         {target != null && (
           <>
-            <Zone center={target} half={BAND_WIDE}  color="rgba(255,255,255,0.10)" />
-            <Zone center={target} half={BAND_MID}   color="rgba(255,210,63,0.30)" />
-            <Zone center={target} half={BAND_TIGHT} color="rgba(255,62,165,0.65)" />
-            {/* Pts labels at reveal */}
+            <Zone center={target} half={BAND_WIDE}  color="#FFF0B3" />
+            <Zone center={target} half={BAND_MID}   color="#FFD23F" />
+            <Zone center={target} half={BAND_TIGHT} color="#FF3EA5" />
             {mode === "reveal" && (() => {
-              // Les labels 3 et 2 vont du côté où il y a de la place (jamais hors du curseur)
               const side = target - 17 >= 4 ? -1 : 1;
               return (
                 <>
@@ -617,32 +590,28 @@ function SpectrumDial({
                 </>
               );
             })()}
-            {/* Target line */}
-            <div className="absolute top-0 bottom-0 w-1 bg-white"
-                 style={{ left: `${target}%`, transform: "translateX(-50%)", boxShadow: "0 0 14px rgba(255,255,255,0.8)" }} />
+            {mode === "psychic" && (
+              <div className="absolute top-0 bottom-0 w-[3px]" style={{ left: `${target}%`, transform: "translateX(-50%)", background: GAME_INK }} />
+            )}
           </>
         )}
       </div>
+      {mode === "psychic" && target != null && (
+        <p className="mt-2 text-center text-[15px] font-bold" style={{ color: GAME_INK }}>Cible : {target} · vise le rose</p>
+      )}
 
-      {/* Markers below for reveal */}
       {markers.length > 0 && (
-        <div className="relative mt-2" style={{ height: 30 + Math.min(markers.length, 3) * 26 }}>
+        <div className="relative mt-2" style={{ height: 34 + Math.min(markers.length, 3) * 28 }}>
           {[...markers].sort((a, b) => a.value - b.value).map((m, i) => {
-            // Près des bords, l'étiquette s'aligne vers l'intérieur pour ne pas déborder
             const align = m.value < 15 ? "0%" : m.value > 85 ? "-100%" : "-50%";
             return (
-              <div key={i} className="absolute" style={{ left: `${m.value}%`, top: (i % 3) * 26 }}>
+              <div key={i} className="absolute" style={{ left: `${m.value}%`, top: (i % 3) * 28 }}>
                 <div className="flex -translate-x-1/2 justify-center">
-                  <MascotAvatar color={m.color} size={20} mood={m.isMe ? "wink" : "happy"} border={m.isMe} />
+                  <MascotAvatar color={m.color} size={22} mood={m.isMe ? "wink" : "happy"} border={m.isMe} />
                 </div>
-                <span className="absolute mt-0.5 block max-w-[40vw] truncate whitespace-nowrap rounded px-1.5 py-0.5 text-xs"
-                      style={{
-                        left: 0,
-                        transform: `translateX(${align})`,
-                        background: m.isMe ? "var(--cb-brand)" : "rgba(0,0,0,0.55)",
-                        color: "#fff", fontWeight: 700,
-                      }}>
-                  {m.label}
+                <span className="absolute mt-0.5 block max-w-[40vw] truncate whitespace-nowrap rounded-full px-2 py-0.5 text-[13px] font-bold"
+                  style={{ left: 0, transform: `translateX(${align})`, background: "#fff", color: GAME_INK, border: `2px solid ${GAME_INK}` }}>
+                  {m.label} · {m.value}
                 </span>
               </div>
             );
@@ -666,14 +635,13 @@ function Zone({ center, half, color }: { center: number; half: number; color: st
 function ZoneLabel({ value, center, y, bold }: { value: string; center: number; y: string; bold?: boolean }) {
   return (
     <div
-      className="absolute -translate-x-1/2 -translate-y-1/2 text-white pointer-events-none"
+      className="absolute -translate-x-1/2 -translate-y-1/2 pointer-events-none"
       style={{
         left: `${center}%`,
         top: y,
-        fontFamily: "var(--font-display)",
-        fontSize: bold ? 14 : 11,
-        fontWeight: 800,
-        textShadow: "0 1px 4px rgba(0,0,0,0.6)",
+        ...DISPLAY,
+        color: GAME_INK,
+        fontSize: bold ? 18 : 14,
       }}
     >
       {value}
@@ -686,22 +654,15 @@ function RoundHeader({ round, total, timeLeft, max, role }: {
   round: number; total: number; timeLeft: number | null; max: number; role: string;
 }) {
   return (
-    <div className="w-full max-w-md">
-      <div className="mb-1 mr-14 flex items-center justify-between">
-        <span className="af-chip">Manche {round}/{total}</span>
-        <span className="af-chip" style={{
-          background: "rgba(255,210,63,0.18)",
-          borderColor: "rgba(255,210,63,0.3)",
-          color: "var(--af-yellow)",
-        }}>{role}</span>
+    <div className="w-full">
+      <div className="flex flex-wrap items-center gap-2">
+        <ZChip bg="#fff" tilt={-2}>Manche {round}/{total}</ZChip>
+        <ZChip bg={WAVE_COLOR} tilt={2}>{role}</ZChip>
       </div>
       {timeLeft != null && (
-        <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full" style={{ background: "rgba(255,255,255,0.06)" }}>
-          <div className="h-full rounded-full transition-all duration-1000 ease-linear"
-               style={{
-                 width: `${Math.max(0, Math.min(1, timeLeft / max)) * 100}%`,
-                 background: "linear-gradient(90deg, var(--cb-brand), var(--af-pink))",
-               }} />
+        <div className="mt-3 h-4 w-full overflow-hidden rounded-full" style={{ background: "#fff", border: `2.5px solid ${GAME_INK}` }}>
+          <div className="h-full transition-[width] duration-1000 ease-linear"
+            style={{ width: `${Math.max(0, Math.min(1, timeLeft / max)) * 100}%`, background: timeLeft <= 5 ? "#FF3EA5" : "#3DDC97" }} />
         </div>
       )}
     </div>
@@ -711,12 +672,9 @@ function RoundHeader({ round, total, timeLeft, max, role }: {
 function ClueBadge({ clue, authorName }: { clue: string | null; authorName: string | null }) {
   if (!clue) return null;
   return (
-    <div className="mx-auto mt-4 max-w-md rounded-2xl border px-5 py-3 text-center"
-         style={{ background: "rgba(255,255,255,0.06)", borderColor: "rgba(255,255,255,0.10)", backdropFilter: "blur(6px)" }}>
-      <p className="af-eyebrow mb-1">Indice de {authorName ?? "?"}</p>
-      <p className="text-xl font-bold" style={{ fontFamily: "var(--font-display)", letterSpacing: -0.3 }}>
-        « {clue} »
-      </p>
+    <div className="mt-5 rounded-[22px] px-5 pb-4 pt-3" style={{ background: "#fff", color: GAME_INK, border: `3px solid ${GAME_INK}`, boxShadow: `0 5px 0 ${GAME_INK}`, rotate: "-1.5deg" }}>
+      <p className="text-[14px] font-bold">L&apos;indice de {authorName ?? "?"}</p>
+      <p className="mt-0.5 break-words text-[30px] leading-none" style={DISPLAY}>{clue}</p>
     </div>
   );
 }

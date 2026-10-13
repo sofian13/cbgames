@@ -1,11 +1,13 @@
 "use client";
 
 import { useMemo, useState, useEffect, type CSSProperties, type ReactNode } from "react";
-import { Mascot, MASCOT_COLORS, type MascotColor, type MascotMood } from "@/components/Mascot";
+import { Mascot, MASCOT_COLORS, MASCOT_PALETTE, type MascotColor, type MascotMood } from "@/components/Mascot";
 import { registerSoftReplay } from "@/lib/game-replay";
-import { ArrowLeft, BookOpen, ChevronDown, ChevronUp, Dices, Eye, Lightbulb, Lock, Mic, RefreshCw, RotateCcw, Scale, Shuffle, Target, TriangleAlert } from "lucide-react";
-import { GameInlineIcon } from "@/components/games/game-icon-button";
-import { PlayersSetup } from "@/components/games/local-kit";
+import { ArrowLeft, BookOpen, Check, ChevronDown, ChevronUp, Dices, Eye, Lock, Mic, Minus, Plus, RotateCcw, Scale, Shuffle, Target, TriangleAlert } from "lucide-react";
+import { GameIconButton, GameInlineIcon, GameTopRight } from "@/components/games/game-icon-button";
+import { DISPLAY, PlayersSetup, SoundButton, ZButton, ZChip, ZZ, zBackground, useScrollTopOn } from "@/components/games/local-kit";
+import { IdeaButton, RerollButton } from "@/components/games/idea-button";
+import { playCombo, playSfx, preloadSfx } from "@/lib/sfx";
 import { isOfflineApp } from "@/lib/offline-app";
 
 /* ─────────────────────────────────────────────────────────────
@@ -253,6 +255,9 @@ export default function UndercoverLocal({ onReturnToLobby }: { onReturnToLobby?:
   const [mrWhiteGuess, setMrWhiteGuess] = useState<string | null>(null);
   const [mrWhiteRight, setMrWhiteRight] = useState<boolean | null>(null);
 
+  useEffect(() => { preloadSfx(["card-shuffle", "card-flip", "whoosh", "tock", "gong", "boom", "wrong", "lose", "win", "powerup", "ding", "toggle", "select", "success"]); }, []);
+  useScrollTopOn(`${phase}-${revealIdx}-${round}`);
+
   // ── Helpers ─────────────────────────────────────────────
   const alive = players.filter((p) => !p.isEliminated);
   const aliveUC = alive.filter((p) => p.role === "undercover").length;
@@ -319,6 +324,7 @@ export default function UndercoverLocal({ onReturnToLobby }: { onReturnToLobby?:
 
     setPlayers(newPlayers);
     setRevealIdx(0);
+    playSfx("card-shuffle", { volume: 0.8 });
     setPhase("pass-reveal");
   };
 
@@ -396,6 +402,12 @@ export default function UndercoverLocal({ onReturnToLobby }: { onReturnToLobby?:
     if (!target) return;
     setPlayers((ps) => ps.map((p) => (p.idx === id ? { ...p, isEliminated: true, eliminatedRound: round } : p)));
     setEliminatedIdx(id);
+    // Roulement de tambour… puis le verdict (imposteur démasqué = gong, innocent = raté)
+    playCombo("drumroll");
+    if (target.role === "undercover") { playSfx("gong", { volume: 0.9, delay: 1.05 }); playSfx("success", { volume: 0.6, delay: 1.2 }); }
+    else if (target.role === "jester") { playSfx("win", { volume: 0.9, delay: 1.05 }); }
+    else if (target.role === "mrwhite") { playSfx("gong", { volume: 0.8, delay: 1.05 }); }
+    else { playSfx("wrong", { volume: 0.8, delay: 1.05 }); playSfx("lose", { volume: 0.5, delay: 1.12 }); }
     if (target.role === "jester") {
       // Le Bouffon voulait être éliminé → il gagne immédiatement.
       setPlayers((ps) => ps.map((p) => (p.idx === id ? { ...p, score: p.score + 6 } : p)));
@@ -413,6 +425,7 @@ export default function UndercoverLocal({ onReturnToLobby }: { onReturnToLobby?:
     const norm = (s: string) => s.toLowerCase().trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
     const right = norm(guess) === norm(civilWord);
     setMrWhiteRight(right);
+    if (right) playCombo("fanfare"); else playCombo("fail");
     if (right) {
       // Le Fantôme gagne seul
       if (eliminatedIdx !== null) {
@@ -436,6 +449,7 @@ export default function UndercoverLocal({ onReturnToLobby }: { onReturnToLobby?:
     if (remUC === 0 && remMW === 0) {
       setPlayers((ps) => ps.map((p) => (p.role === "civil" && !p.isEliminated) ? { ...p, score: p.score + 3 } : p));
       setEndReason("civils-win");
+      playCombo("fanfare");
       setPhase("over");
       return;
     }
@@ -446,6 +460,7 @@ export default function UndercoverLocal({ onReturnToLobby }: { onReturnToLobby?:
         ((p.role === "undercover" || p.role === "mrwhite") && !p.isEliminated) ? { ...p, score: p.score + 5 } : p
       ));
       setEndReason("undercover-wins");
+      playCombo("fanfare");
       setPhase("over");
       return;
     }
@@ -473,7 +488,8 @@ export default function UndercoverLocal({ onReturnToLobby }: { onReturnToLobby?:
   // 1. Setup joueurs
   if (phase === "setup-players") {
     return (
-      <PlayersSetup emoji="🕶️" name="L'Intrus" min={3} max={12} accent="#FF3EA5" onStart={handleStartNames} onBack={onReturnToLobby} />
+      <PlayersSetup emoji="🕶️" name="L'Intrus" min={3} max={12} accent="#FF3EA5" onStart={handleStartNames} onBack={onReturnToLobby}
+        footer={<IdeaButton game="L'Intrus" kind="mot" />} />
     );
   }
 
@@ -508,8 +524,7 @@ export default function UndercoverLocal({ onReturnToLobby }: { onReturnToLobby?:
         players={players}
         currentIdx={p.idx}
         buttonLabel={<><GameInlineIcon icon={Eye} /> Voir mon rôle</>}
-        buttonSub="Maintiens pour confirmer"
-        onReady={() => { setRerollNotice(false); setPhase("reveal"); }}
+        onReady={() => { setRerollNotice(false); playSfx("card-flip", { volume: 0.8 }); setPhase("reveal"); }}
       />
     );
   }
@@ -712,15 +727,15 @@ function SetupRoles({
 
   return (
     <LocalShell tone="noir">
-      <NavBar sub={`Étape 2 · ${total} joueurs`} title="Composition" onBack={onBack} right={<Tag color="#FF3EA5">RÔLES</Tag>} />
+      <NavBar sub={`Étape 2 · ${total} joueurs`} title="Composition" onBack={onBack} right={<Tag color="#FF3EA5">Rôles</Tag>} />
 
       <FileCard accent="#FF3EA5" style={{ marginBottom: 14 }}>
-        <Mono style={{ marginBottom: 12 }}>La table · {total} joueurs</Mono>
+        <div style={{ ...DISPLAY, fontSize: 24, marginBottom: 10 }}>Qui est qui</div>
 
         {/* Visualisation : un blob par rôle */}
         <div style={{
-          padding: "16px 12px", borderRadius: 14,
-          background: "rgba(0,0,0,0.3)", border: "1px dashed rgba(255,255,255,0.10)",
+          padding: "14px 10px", borderRadius: 18,
+          background: "#fff", border: `2.5px solid ${ZZ.ink}`,
           display: "flex", justifyContent: "center", gap: 4, flexWrap: "wrap",
           marginBottom: 14,
         }}>
@@ -737,7 +752,7 @@ function SetupRoles({
         <div style={{ display: "grid", gridTemplateColumns: jSlots > 0 ? "repeat(4,1fr)" : "repeat(3,1fr)", gap: 6, marginBottom: 14 }}>
           <Stat n={civils} label="Civils" color="#3DDC97" sub="même mot" />
           <Stat n={ucEff} label="Intrus" color="#FF3EA5" sub="mot voisin" />
-          <Stat n={mwSlots} label="Fantôme" color="#FFD23F" sub="aucun mot" />
+          <Stat n={mwSlots} label="Fantôme" color="#FFD23F" sub="sans mot" />
           {jSlots > 0 && <Stat n={jSlots} label="Bouffon" color="#C58CFF" sub="à éliminer" />}
         </div>
 
@@ -753,52 +768,35 @@ function SetupRoles({
       </FileCard>
 
       {/* Catégories de mots */}
-      <FileCard accent="#FFD23F" style={{ marginBottom: 14 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-          <Mono>Thèmes des mots</Mono>
-          <button onClick={toggleAll} style={{
-            fontFamily: "var(--font-mono, monospace)", fontSize: 12, fontWeight: 800, letterSpacing: 1,
-            textTransform: "uppercase", color: "#FFD23F", padding: "0 14px", minHeight: 44, borderRadius: 999,
-            background: allSafe ? "rgba(255,210,63,0.18)" : "rgba(255,255,255,0.06)",
-            border: "1px solid rgba(255,210,63,0.4)", cursor: "pointer",
-          }}>{allSafe ? "Tout ✓" : "Tout sélectionner"}</button>
-        </div>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
-          {WORD_CATEGORIES.map((c) => {
-            const on = selectedCats.has(c.id);
-            return (
-              <button key={c.id} onClick={() => toggleCat(c.id)} style={{
-                display: "flex", alignItems: "center", gap: 6, padding: "8px 12px", minHeight: 44, borderRadius: 12,
-                fontSize: 13, fontWeight: 700, color: on ? "#fff" : "rgba(255,255,255,0.5)",
-                background: on ? "linear-gradient(160deg, rgba(255,210,63,0.22), rgba(0,0,0,0.2))" : "rgba(255,255,255,0.04)",
-                border: on ? "1.5px solid rgba(255,210,63,0.7)" : "1px solid rgba(255,255,255,0.12)",
-                cursor: "pointer", transition: "all 0.15s",
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", margin: "14px 0 10px" }}>
+        <div style={{ ...DISPLAY, fontSize: 28 }}>Les mots</div>
+        <ZButton size="sm" bg={allSafe ? ZZ.yellow : "#fff"} onClick={toggleAll} style={{ width: "auto" }}>{allSafe ? "Tout est coché" : "Tout cocher"}</ZButton>
+      </div>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 18 }}>
+        {WORD_CATEGORIES.map((c, i) => {
+          const on = selectedCats.has(c.id);
+          return (
+            <button key={c.id} type="button" onClick={() => { playSfx("toggle", { volume: 0.45 }); toggleCat(c.id); }} aria-pressed={on}
+              className="transition-[translate,box-shadow] shadow-[0_3px_0_#15082E] active:translate-y-[2px] active:shadow-[0_1px_0_#15082E]"
+              style={{
+                display: "flex", alignItems: "center", gap: 6, padding: "0 14px", minHeight: 44, borderRadius: 999,
+                fontSize: 15, fontWeight: 800, color: ZZ.ink,
+                background: on ? (c.adult ? ZZ.pink : ZZ.yellow) : "rgba(255,255,255,0.55)",
+                border: `2.5px solid ${ZZ.ink}`, rotate: on ? `${i % 2 ? 1.5 : -1.5}deg` : undefined,
               }}>
-                <span style={{ fontSize: 16 }}>{c.emoji}</span>{c.label}
-              </button>
-            );
-          })}
-        </div>
-      </FileCard>
-
-      <div style={{
-        padding: "10px 14px", borderRadius: 12,
-        background: "rgba(255,210,63,0.08)",
-        border: "1px dashed rgba(255,210,63,0.30)",
-        fontSize: 12, color: "rgba(255,255,255,0.75)", lineHeight: 1.4,
-        display: "flex", gap: 10, alignItems: "center",
-        marginBottom: 14,
-      }}>
-        <Lightbulb size={20} strokeWidth={2.6} color="#FFD23F" aria-hidden />
-        <div>Les rôles vont être attribués au hasard. Chacun verra son mot sur ce téléphone, à son tour.</div>
+              {on && <Check size={15} strokeWidth={3.2} aria-hidden />}{c.label}
+            </button>
+          );
+        })}
       </div>
 
       <RulesCard jester={jSlots > 0} />
 
-      <div style={{ marginTop: "auto" }}>
+      <div style={{ marginTop: "auto", paddingTop: 8 }}>
         <Btn tone="gold" disabled={!valid} onClick={onStart} icon={<Shuffle size={20} strokeWidth={2.6} aria-hidden />}>
           Distribuer les rôles
         </Btn>
+        <p style={{ textAlign: "center", fontSize: 14, fontWeight: 600, color: "rgba(255,255,255,0.85)", marginTop: 10 }}>Rôles au hasard. Chacun verra son mot à son tour.</p>
       </div>
     </LocalShell>
   );
@@ -839,24 +837,23 @@ function RevealScreen({
       <NavBar
         sub={review ? "Rappel · ne pas montrer" : `Joueur · ${player.name}`}
         title="Mot secret"
-        right={<Tag color={color}>{label.toUpperCase()}</Tag>}
+        right={<Tag color={color}>{label}</Tag>}
       />
 
       <div style={{ display: "flex", justifyContent: "center", marginBottom: -10 }}>
-        <Mascot color={blobColor} size={88} mood={blobMood} arms />
+        <Mascot color={blobColor} size={64} mood={blobMood} arms shadow={false} />
       </div>
 
       <DossierCard word={player.word} role={displayRole} hint={hint} round={round} />
 
       {position !== null && (
         <div style={{
-          padding: "10px 14px", borderRadius: 12,
-          background: "rgba(0,0,0,0.4)",
-          border: "1px solid rgba(255,62,165,0.3)",
+          padding: "10px 14px", borderRadius: 16, background: ZZ.pink, color: ZZ.ink,
+          border: `2.5px solid ${ZZ.ink}`, boxShadow: `0 3px 0 ${ZZ.ink}`,
           display: "flex", gap: 10, alignItems: "center", marginBottom: 14,
         }}>
-          <Lock size={18} strokeWidth={2.6} aria-hidden />
-          <div style={{ fontSize: 12, color: "white", fontWeight: 600 }}>
+          <Lock size={18} strokeWidth={2.8} aria-hidden />
+          <div style={{ fontSize: 15, fontWeight: 700 }}>
             Personne d&apos;autre ne doit voir l&apos;écran. ({position}/{total})
           </div>
         </div>
@@ -867,17 +864,9 @@ function RevealScreen({
           {review ? "Cacher · revenir" : "J’ai mémorisé · suivant →"}
         </Btn>
         {onReroll && (
-          <button
-            type="button"
-            onClick={onReroll}
-            style={{
-              display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", minHeight: 44,
-              marginTop: 10, background: "none", border: "none", color: "rgba(255,255,255,0.75)",
-              fontSize: 15, fontWeight: 700, textDecoration: "underline", textUnderlineOffset: 4, cursor: "pointer",
-            }}
-          >
-            <RefreshCw size={16} strokeWidth={2.8} aria-hidden /> Mot nul ? Changer de mot
-          </button>
+          <div style={{ display: "flex", justifyContent: "center", marginTop: 14 }}>
+            <RerollButton label="Mot nul ? Changer de mot" onClick={onReroll} />
+          </div>
         )}
       </div>
     </LocalShell>
@@ -904,25 +893,26 @@ function TableScreen({
 
   return (
     <LocalShell tone="noir">
-      <NavBar sub={`Manche ${round}`} title="Tour de table" right={<Tag color="#3DDC97">{alive.length} EN VIE</Tag>} />
-      <Mono style={{ marginBottom: 12 }}>Chacun donne un indice à voix haute, dans l&apos;ordre</Mono>
+      <NavBar sub={`Manche ${round}`} title="Tour de table" right={<Tag color="#3DDC97">{alive.length} en vie</Tag>} />
+      <Mono style={{ marginBottom: 14 }}>Dans l&apos;ordre, chacun dit UN mot-indice à voix haute. Puis on vote.</Mono>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
         {rows.map(({ p, n, dead: d }) => (
           <div key={p.idx} style={{
-            display: "flex", alignItems: "center", gap: 12, padding: "10px 12px", borderRadius: 14,
-            background: d ? "transparent" : "rgba(255,255,255,0.04)",
-            border: d ? "1px dashed rgba(255,255,255,0.12)" : "1px solid rgba(255,255,255,0.08)",
-            opacity: d ? 0.45 : 1,
+            display: "flex", alignItems: "center", gap: 12, padding: "6px 12px", borderRadius: 18,
+            background: d ? "transparent" : n === 1 ? ZZ.yellow : "#fff", color: d ? "rgba(255,255,255,0.75)" : ZZ.ink,
+            border: d ? "2.5px dashed rgba(255,255,255,0.4)" : `3px solid ${ZZ.ink}`,
+            boxShadow: d ? undefined : `0 4px 0 ${ZZ.ink}`,
+            rotate: d ? undefined : `${(n ?? 0) % 2 ? -0.8 : 0.8}deg`,
           }}>
             <span style={{
-              width: 26, height: 26, borderRadius: 8, flexShrink: 0,
+              width: 32, height: 32, borderRadius: 999, flexShrink: 0,
               display: "flex", alignItems: "center", justifyContent: "center",
-              fontFamily: "var(--font-display)", fontWeight: 900, fontSize: 13,
-              background: d ? "transparent" : "rgba(255,255,255,0.08)", color: d ? "#FF3EA5" : "#fff",
+              ...DISPLAY, fontSize: 17, background: d ? "transparent" : ZZ.ink, color: d ? "#FF3EA5" : "#fff",
             }}>{d ? "✕" : n}</span>
             <Mascot size={40} color={colorByIdx(p.idx)} mood={d ? "dead" : "happy"} bob={false} shadow={false} />
-            <span style={{ flex: 1, fontSize: 16, fontWeight: 800, color: d ? "rgba(255,255,255,0.45)" : "#fff", textDecoration: d ? "line-through" : "none" }}>{p.name}</span>
+            <span style={{ flex: 1, ...DISPLAY, fontSize: 20, textDecoration: d ? "line-through" : "none" }}>{p.name}</span>
+            {n === 1 && <span style={{ fontSize: 13, fontWeight: 800 }}>commence</span>}
           </div>
         ))}
       </div>
@@ -1013,36 +1003,30 @@ function ReviewPick({
   const alive = players.filter((p) => !p.isEliminated);
   return (
     <LocalShell tone="noir">
-      <NavBar sub="Mémoire courte ?" title="Qui veut revoir ?" onBack={onCancel} right={<Tag color="#FF3EA5">CONFIDENTIEL</Tag>} />
+      <NavBar sub="Mémoire courte ?" title="Qui veut revoir ?" onBack={onCancel} right={<Tag color="#FF3EA5">Confidentiel</Tag>} />
 
       <div style={{
-        padding: "10px 14px", borderRadius: 12,
-        background: "rgba(255,62,165,0.08)",
-        border: "1px dashed rgba(255,62,165,0.30)",
-        fontSize: 12, color: "rgba(255,255,255,0.85)", lineHeight: 1.4,
-        marginBottom: 14,
+        padding: "10px 14px", borderRadius: 16, background: ZZ.pink, color: ZZ.ink,
+        border: `2.5px solid ${ZZ.ink}`, boxShadow: `0 3px 0 ${ZZ.ink}`,
+        fontSize: 15, fontWeight: 600, lineHeight: 1.35, marginBottom: 16,
         display: "flex", gap: 10, alignItems: "flex-start",
       }}>
-        <TriangleAlert size={20} strokeWidth={2.6} color="#FF3EA5" style={{ flexShrink: 0 }} aria-hidden />
+        <TriangleAlert size={20} strokeWidth={2.8} style={{ flexShrink: 0 }} aria-hidden />
         <div>Choisis ton blob, puis <strong>personne d&apos;autre ne doit voir l&apos;écran.</strong></div>
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14 }}>
         {alive.map((p) => (
-          <button key={p.idx} onClick={() => onPick(p.idx)} style={{
-            padding: "16px 12px 14px", borderRadius: 18,
-            background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.10)",
-            cursor: "pointer", color: "white", textAlign: "center",
+          <button key={p.idx} onClick={() => onPick(p.idx)} className="transition-[translate,box-shadow] shadow-[0_4px_0_#15082E] active:translate-y-[3px] active:shadow-[0_1px_0_#15082E]" style={{
+            padding: "14px 10px 12px", borderRadius: 22,
+            background: "#fff", border: `3px solid ${ZZ.ink}`,
+            cursor: "pointer", color: ZZ.ink, textAlign: "center",
             display: "flex", flexDirection: "column", alignItems: "center", gap: 8,
             fontFamily: "inherit",
           }}>
             <Mascot color={colorByIdx(p.idx)} size={56} mood="neutral" bob={false} />
-            <div style={{ fontFamily: "var(--font-display, system-ui)", fontSize: 16, fontWeight: 800, lineHeight: 1 }}>{p.name}</div>
-            <div style={{
-              padding: "3px 10px", borderRadius: 99,
-              background: "rgba(255,255,255,0.06)",
-              fontSize: 12, color: "rgba(255,255,255,0.7)", fontWeight: 600,
-            }}>touche pour revoir</div>
+            <div style={{ ...DISPLAY, fontSize: 20, lineHeight: 1 }}>{p.name}</div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: "#6B5C88" }}>touche pour revoir</div>
           </button>
         ))}
       </div>
@@ -1072,10 +1056,10 @@ function GroupVoteScreen({
         sub={`Manche ${round} · vote du groupe`}
         title="Qui éliminer ?"
         onBack={onCancel}
-        right={<Tag color="#FF3EA5">{alive.length} EN VIE</Tag>}
+        right={<Tag color="#FF3EA5">{alive.length} en vie</Tag>}
       />
 
-      <Mono style={{ marginBottom: 12 }}>Décidez ensemble qui démasquer, puis confirmez</Mono>
+      <Mono style={{ marginBottom: 14 }}>Mettez-vous d&apos;accord, touchez le suspect, puis confirmez.</Mono>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14 }}>
         {alive.map((p) => {
@@ -1083,19 +1067,18 @@ function GroupVoteScreen({
           return (
             <button key={p.idx} onClick={() => setPicked(p.idx)}
               style={{
-                position: "relative", padding: "16px 12px 14px", borderRadius: 18,
-                background: isPicked ? "linear-gradient(160deg, rgba(255,62,165,0.35), rgba(0,0,0,0.4))" : "rgba(255,255,255,0.04)",
-                border: isPicked ? "2px solid #FF3EA5" : "1px solid rgba(255,255,255,0.10)",
-                boxShadow: isPicked ? "0 18px 36px rgba(255,62,165,0.4)" : "0 4px 10px rgba(0,0,0,0.3)",
-                transform: isPicked ? "scale(1.04)" : "scale(1)",
-                color: "white", textAlign: "center", fontFamily: "inherit", cursor: "pointer",
+                position: "relative", padding: "14px 10px 12px", borderRadius: 22,
+                background: isPicked ? ZZ.pink : "#fff", border: `3px solid ${ZZ.ink}`,
+                boxShadow: `0 ${isPicked ? 6 : 4}px 0 ${ZZ.ink}`,
+                transform: isPicked ? "scale(1.04) rotate(-2deg)" : "scale(1)", transition: "transform 150ms",
+                color: ZZ.ink, textAlign: "center", fontFamily: "inherit", cursor: "pointer",
               }}>
               <div style={{ display: "flex", justifyContent: "center", marginTop: 4 }}>
                 <Mascot color={colorByIdx(p.idx)} size={64} mood={isPicked ? "shocked" : "shifty"} arms bob={false} />
               </div>
-              <div style={{ fontFamily: "var(--font-display, system-ui)", fontSize: 18, marginTop: 10, lineHeight: 1.05, fontWeight: 800, overflowWrap: "anywhere" }}>{p.name}</div>
-              <div style={{ marginTop: 8, padding: "6px 0", borderRadius: 10, background: isPicked ? "#FF3EA5" : "rgba(255,255,255,0.05)", color: isPicked ? "#fff" : "rgba(255,255,255,0.55)", fontSize: 12, fontWeight: 800 }}>
-                {isPicked ? "✕ Éliminer" : "touche pour choisir"}
+              <div style={{ ...DISPLAY, fontSize: 21, marginTop: 8, lineHeight: 1.05, overflowWrap: "anywhere" }}>{p.name}</div>
+              <div style={{ marginTop: 6, fontSize: 13, fontWeight: 800, color: isPicked ? ZZ.ink : "#6B5C88" }}>
+                {isPicked ? "Suspect choisi" : "touche pour choisir"}
               </div>
             </button>
           );
@@ -1129,45 +1112,32 @@ function EliminateScreen({
 
   return (
     <LocalShell tone="danger">
-      <div style={{
-        position: "fixed", top: "30%", left: "50%", transform: "translate(-50%, -50%)",
-        width: 800, height: 800, maxWidth: "180vw",
-        background: `conic-gradient(from 0deg, transparent 0deg, ${color}30 10deg, transparent 28deg, transparent 80deg, ${color}26 90deg, transparent 110deg, transparent 160deg, ${color}30 170deg, transparent 190deg, transparent 240deg, ${color}26 250deg, transparent 270deg, transparent 320deg, ${color}30 330deg, transparent 350deg)`,
-        animation: "uc-rotate 18s linear infinite",
-        opacity: 0.55, pointerEvents: "none", borderRadius: "50%", zIndex: 0,
-        maskImage: "radial-gradient(circle, transparent 25%, black 50%, transparent 85%)",
-      }} />
-
       <NavBar
         sub={`Verdict · manche ${round}`}
         title={eliminated ? (isImpostor ? "Démasqué !" : "Innocent…") : "Personne ne sort"}
-        right={<Tag color={color}>{role ? ROLE_LABEL[role].toUpperCase() : "VOTE"}</Tag>}
+        right={<Tag color={color}>{role ? ROLE_LABEL[role] : "Vote"}</Tag>}
       />
 
       {eliminated ? (
         <>
           <div style={{ position: "relative", display: "flex", flexDirection: "column", alignItems: "center", padding: "12px 0 20px" }}>
-            <div style={{ position: "absolute", top: 10, width: 280, height: 220, background: `radial-gradient(circle, ${color}40 0%, transparent 65%)` }} />
             <div style={{ position: "relative", animation: "uc-die 1.1s cubic-bezier(0.34,1.45,0.64,1) both" }}>
               <SpyMascotById idx={eliminated.idx} size={160} tilt={-14} mood="dead" />
               <div style={{ position: "absolute", top: -8, right: -50, zIndex: 5, animation: "uc-die 0.5s ease-out 0.9s both" }}>
                 <Stamp text="Éliminé" color={color} rotate={-12} size={20} />
               </div>
             </div>
-            <div style={{ fontFamily: "var(--font-display, system-ui)", fontSize: "clamp(28px, 11vw, 44px)", marginTop: 14, letterSpacing: -1.5, fontWeight: 900, textAlign: "center", overflowWrap: "anywhere" }}>{eliminated.name}</div>
+            <div style={{ ...DISPLAY, fontSize: "clamp(30px, 11vw, 46px)", marginTop: 14, textAlign: "center", overflowWrap: "anywhere" }}>{eliminated.name}</div>
           </div>
 
           <div style={{
-            padding: "16px 18px", borderRadius: 18,
-            background: `linear-gradient(160deg, ${color}26, rgba(0,0,0,0.45))`,
-            border: `1px solid ${color}55`,
+            padding: "14px 18px", borderRadius: 24, background: color, color: ZZ.ink,
+            border: `3px solid ${ZZ.ink}`, boxShadow: `0 5px 0 ${ZZ.ink}`, rotate: "-1.5deg",
             textAlign: "center", marginBottom: 16,
           }}>
-            <Mono>C&apos;était…</Mono>
-            <div style={{ fontFamily: "var(--font-display, system-ui)", fontSize: 30, color, fontWeight: 900, marginTop: 4 }}>
-              {role ? ROLE_ARTICLE[role] : "—"}
-            </div>
-            <div style={{ fontSize: 12, color: "rgba(255,255,255,0.55)", marginTop: 4 }}>son mot reste secret</div>
+            <div style={{ fontSize: 15, fontWeight: 700 }}>C&apos;était…</div>
+            <div style={{ ...DISPLAY, fontSize: 34, marginTop: 2 }}>{role ? ROLE_ARTICLE[role] : "—"}</div>
+            <div style={{ fontSize: 14, fontWeight: 600, marginTop: 4 }}>Son mot reste secret.</div>
           </div>
         </>
       ) : (
@@ -1188,30 +1158,28 @@ function MrWhiteGuess({ player, onSubmit }: { player: LocalPlayer; onSubmit: (g:
   const [text, setText] = useState("");
   return (
     <LocalShell tone="gold">
-      <NavBar sub="Coup du destin" title="Le Fantôme devine" right={<Tag color="#FFD23F">DERNIÈRE CHANCE</Tag>} />
+      <NavBar sub="Coup du destin" title="Le Fantôme devine" right={<Tag color="#FFD23F">Dernière chance</Tag>} />
 
       <div style={{
-        padding: 18, borderRadius: 22,
-        background: "linear-gradient(160deg, rgba(255,210,63,0.20) 0%, rgba(0,0,0,0.45) 100%)",
-        border: "1px solid rgba(255,210,63,0.40)",
-        marginBottom: 16,
+        padding: 18, borderRadius: 24, background: ZZ.yellow, color: ZZ.ink,
+        border: `3px solid ${ZZ.ink}`, boxShadow: `0 5px 0 ${ZZ.ink}`, rotate: "-1deg",
+        marginBottom: 18,
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
           <Mascot color={colorByIdx(player.idx)} size={68} mood="thinking" arms />
           <div>
-            <Mono>Fantôme éliminé</Mono>
-            <div style={{ fontFamily: "var(--font-display, system-ui)", fontSize: 26, fontWeight: 900, marginTop: 4 }}>{player.name}</div>
+            <div style={{ fontSize: 15, fontWeight: 700 }}>Fantôme éliminé</div>
+            <div style={{ ...DISPLAY, fontSize: 28, marginTop: 2 }}>{player.name}</div>
           </div>
         </div>
-        <div style={{ marginTop: 16, fontSize: 13, color: "rgba(255,255,255,0.85)", lineHeight: 1.5 }}>
+        <div style={{ marginTop: 14, fontSize: 15, fontWeight: 600, lineHeight: 1.4 }}>
           <GameInlineIcon icon={Target} /> Une dernière chance. Tape le mot des civils pour gagner seul.
         </div>
       </div>
 
       <div style={{
-        display: "flex", gap: 8, padding: 6, borderRadius: 14,
-        background: "rgba(255,255,255,0.06)",
-        border: "1px solid rgba(255,210,63,0.40)",
+        display: "flex", gap: 8, padding: 6, borderRadius: 20,
+        background: "#fff", border: `3px solid ${ZZ.ink}`, boxShadow: `0 4px 0 ${ZZ.ink}`,
         marginBottom: 12,
       }}>
         <input autoFocus value={text}
@@ -1220,9 +1188,8 @@ function MrWhiteGuess({ player, onSubmit }: { player: LocalPlayer; onSubmit: (g:
           placeholder="Ton pari…"
           autoCorrect="off" autoCapitalize="off" spellCheck={false}
           style={{
-            flex: 1, background: "transparent", border: "none", color: "white",
-            fontSize: 18, padding: 10, outline: "none", fontWeight: 700, letterSpacing: 0.5,
-            fontFamily: "inherit",
+            flex: 1, background: "transparent", border: "none", color: ZZ.ink,
+            fontSize: 22, padding: 10, outline: "none", ...DISPLAY, letterSpacing: "-0.01em", minWidth: 0,
           }} />
       </div>
 
@@ -1270,86 +1237,71 @@ function GameOverScreen({
     <LocalShell tone="civ">
       <Confetti accent={accent} count={50} />
 
-      <NavBar sub="Fin de partie" title="" right={<Tag color={accent}>VICTOIRE</Tag>} />
+      <NavBar sub="Fin de partie" title="" right={<Tag color={accent}>Victoire</Tag>} />
 
       <div style={{ textAlign: "center", marginBottom: 8 }}>
-        <h1 style={{
-          fontFamily: "var(--font-display, system-ui)",
-          fontSize: "clamp(34px, 12vw, 48px)", margin: 0, letterSpacing: -2, lineHeight: 0.95, fontWeight: 900,
-          textShadow: `0 0 36px ${accent}88`,
-        }}>
-          <span style={{
-            background: `linear-gradient(120deg, ${accent}, #FFD23F)`,
-            WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
-          }}>{titleTop}</span>
+        <h1 style={{ ...DISPLAY, fontSize: "clamp(36px, 12vw, 50px)", margin: 0, lineHeight: 0.95 }}>
+          <span style={{ color: accent }}>{titleTop}</span>
           <br/>{titleBottom}
         </h1>
       </div>
 
       <div style={{ position: "relative", height: 200, display: "flex", alignItems: "flex-end", justifyContent: "center", marginBottom: 14 }}>
-        <div style={{ position: "absolute", left: "50%", top: 20, transform: "translateX(-50%)", width: 360, height: 220, background: `radial-gradient(ellipse 50% 50% at 50% 50%, ${accent}40, transparent 70%)` }} />
         {winners[1] && <div style={{ position: "absolute", left: "12%", bottom: 0 }}><SpyMascotById idx={winners[1].idx} size={72} tilt={-8} mood="happy" arms delay={0.2} /></div>}
         {winners[2] && <div style={{ position: "absolute", right: "12%", bottom: 0 }}><SpyMascotById idx={winners[2].idx} size={68} tilt={6} mood="wink" arms delay={0.3} /></div>}
         {winners[0] && <div style={{ position: "relative", zIndex: 2 }}><SpyMascotById idx={winners[0].idx} size={130} tilt={-2} mood="happy" cheering arms crown /></div>}
       </div>
 
-      <div style={{
-        padding: "12px 14px", borderRadius: 14,
-        background: "rgba(0,0,0,0.35)", border: "1px solid rgba(255,255,255,0.10)",
-        display: "flex", justifyContent: "space-between", alignItems: "center",
-        marginBottom: 12,
-      }}>
-        <div>
-          <Mono>Civils</Mono>
-          <div style={{ fontFamily: "var(--font-display, system-ui)", fontSize: 20, color: "#3DDC97", fontWeight: 900 }}>{civilWord}</div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14 }}>
+        <div style={{ padding: "10px 12px", borderRadius: 20, background: ZZ.mint, color: ZZ.ink, border: `3px solid ${ZZ.ink}`, boxShadow: `0 4px 0 ${ZZ.ink}`, rotate: "-1.5deg" }}>
+          <div style={{ fontSize: 14, fontWeight: 700 }}>Mot des civils</div>
+          <div style={{ ...DISPLAY, fontSize: 22, lineHeight: 1.05, ...WORD_WRAP }}>{civilWord}</div>
         </div>
-        <div style={{ color: "rgba(255,255,255,0.4)", fontWeight: 800 }}>vs</div>
-        <div style={{ textAlign: "right" }}>
-          <Mono>Intrus</Mono>
-          <div style={{ fontFamily: "var(--font-display, system-ui)", fontSize: 20, color: "#FF3EA5", fontWeight: 900 }}>{ucWord}</div>
+        <div style={{ padding: "10px 12px", borderRadius: 20, background: ZZ.pink, color: ZZ.ink, border: `3px solid ${ZZ.ink}`, boxShadow: `0 4px 0 ${ZZ.ink}`, rotate: "1.5deg", textAlign: "right" }}>
+          <div style={{ fontSize: 14, fontWeight: 700 }}>Mot de l&apos;Intrus</div>
+          <div style={{ ...DISPLAY, fontSize: 22, lineHeight: 1.05, ...WORD_WRAP }}>{ucWord}</div>
         </div>
       </div>
 
       {mrWhiteGuess !== null && (
         <div style={{
-          padding: "10px 14px", borderRadius: 12,
-          background: mrWhiteRight ? "rgba(61,220,151,0.10)" : "rgba(255,62,165,0.10)",
-          border: `1px dashed ${mrWhiteRight ? "rgba(61,220,151,0.30)" : "rgba(255,62,165,0.30)"}`,
-          fontSize: 12, color: "rgba(255,255,255,0.85)", marginBottom: 12, lineHeight: 1.4,
+          padding: "10px 14px", borderRadius: 16,
+          background: "#fff", color: ZZ.ink, border: `2.5px solid ${ZZ.ink}`,
+          fontSize: 15, fontWeight: 600, marginBottom: 14, lineHeight: 1.4,
         }}>
           Le Fantôme a tenté : <strong>{mrWhiteGuess}</strong> {mrWhiteRight ? "✓ pari réussi" : "✕ raté"}
         </div>
       )}
 
-      <Mono style={{ marginBottom: 8 }}>Classement</Mono>
-      <div style={{ display: "flex", flexDirection: "column", gap: 4, marginBottom: 16 }}>
+      <div style={{ ...DISPLAY, fontSize: 28, marginBottom: 10 }}>Le classement</div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 18 }}>
         {sorted.map((p, i) => {
           const win = winners.includes(p);
           const rc = ROLE_COLOR[p.role];
           return (
             <div key={p.idx} style={{
               display: "flex", alignItems: "center", gap: 10,
-              padding: "6px 10px 6px 6px", borderRadius: 10,
-              background: i === 0 ? "rgba(255,210,63,0.10)" : win ? "rgba(61,220,151,0.06)" : "rgba(255,62,165,0.06)",
-              border: `1px solid ${i === 0 ? "rgba(255,210,63,0.30)" : win ? "rgba(61,220,151,0.20)" : "rgba(255,62,165,0.18)"}`,
+              padding: "6px 12px 6px 8px", borderRadius: 18,
+              background: i === 0 ? ZZ.yellow : "#fff", color: ZZ.ink,
+              border: `3px solid ${ZZ.ink}`, boxShadow: `0 3px 0 ${ZZ.ink}`,
             }}>
-              <span style={{ width: 22, fontFamily: "var(--font-mono, monospace)", fontWeight: 800, fontSize: 12, color: i === 0 ? "#FFD23F" : "rgba(255,255,255,0.5)" }}>#{i + 1}</span>
+              <span style={{ width: 22, ...DISPLAY, fontSize: 17 }}>{i + 1}</span>
               <Mascot color={colorByIdx(p.idx)} size={28} mood={win ? "wink" : "dead"} bob={false} shadow={false} />
-              <span style={{ flex: 1, minWidth: 0, fontWeight: 700, fontSize: 14, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</span>
+              <span style={{ flex: 1, minWidth: 0, ...DISPLAY, fontSize: 18, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</span>
               <span style={{
-                fontSize: 11, padding: "2px 7px", borderRadius: 99,
-                background: p.role === "mrwhite" ? "rgba(255,210,63,0.18)" : `${rc}26`,
-                color: rc, fontWeight: 800, textTransform: "uppercase", letterSpacing: 0.4,
+                fontSize: 13, padding: "3px 9px", borderRadius: 99,
+                background: rc, color: ZZ.ink, border: `2px solid ${ZZ.ink}`, fontWeight: 800,
               }}>{ROLE_LABEL[p.role]}</span>
-              <span style={{ fontFamily: "var(--font-mono, monospace)", fontSize: 12, fontWeight: 800, color: win ? "#3DDC97" : "rgba(255,255,255,0.5)", width: 38, textAlign: "right" }}>{p.score}</span>
+              <span style={{ ...DISPLAY, fontSize: 20, width: 40, textAlign: "right" }}>{p.score}</span>
             </div>
           );
         })}
       </div>
 
-      <div style={{ marginTop: "auto", display: "flex", gap: 8 }}>
-        {onLobby && <Btn tone="ghost" full={false} style={{ flex: 1 }} onClick={onLobby}>Lobby</Btn>}
-        <Btn tone="gold" full={false} style={{ flex: 1.4 }} onClick={onReplay} icon={<RotateCcw size={19} strokeWidth={2.6} aria-hidden />}>Revanche</Btn>
+      <div style={{ marginTop: "auto" }}>
+        <Btn tone="gold" onClick={onReplay} icon={<RotateCcw size={20} strokeWidth={2.8} aria-hidden />}>Revanche, nouveau mot</Btn>
+        <div style={{ display: "flex", justifyContent: "center", marginTop: 16 }}><IdeaButton game="L'Intrus" kind="mot" bg="#fff" /></div>
+        {onLobby && <button type="button" onClick={onLobby} className="mx-auto mt-2 flex min-h-11 items-center px-4 text-[15px] font-bold underline decoration-2 underline-offset-4" style={{ color: "rgba(255,255,255,0.9)" }}>Retour à l&apos;accueil</button>}
       </div>
     </LocalShell>
   );
@@ -1363,22 +1315,17 @@ function GameOverScreen({
 type Tone = "noir" | "danger" | "civ" | "gold";
 
 function LocalShell({ tone = "noir", children }: { tone?: Tone; children: ReactNode }) {
-  const bg: Record<Tone, string> = {
-    noir:   "radial-gradient(120% 70% at 50% 0%, rgba(91,54,214,0.40) 0%, transparent 60%), radial-gradient(120% 60% at 50% 100%, rgba(255,62,165,0.18) 0%, transparent 60%), linear-gradient(180deg, #0A0420 0%, #150834 100%)",
-    danger: "radial-gradient(circle at 50% 25%, rgba(255,62,165,0.40), transparent 55%), linear-gradient(180deg, #1A0414 0%, #0E0828 100%)",
-    civ:    "radial-gradient(circle at 50% 25%, rgba(61,220,151,0.30), transparent 55%), linear-gradient(180deg, #0A1A18 0%, #0E0828 100%)",
-    gold:   "radial-gradient(ellipse 90% 50% at 50% 18%, rgba(255,210,63,0.22) 0%, transparent 55%), linear-gradient(180deg, #1A1206 0%, #0E0828 100%)",
-  };
+  // Fonds pleins (DA sticker) : violet nuit, ou la couleur du moment
+  const bg: Record<Tone, string> = { noir: ZZ.night, danger: "#3A0E5C", civ: ZZ.night, gold: "#2B1A6E" };
+  const offline = isOfflineApp();
   return (
-    <div style={{
+    <div className="relative w-full shrink-0" style={{
       minHeight: "100dvh", color: "white",
       fontFamily: "var(--font-body, 'DM Sans'), system-ui, sans-serif",
-      background: bg[tone], position: "relative", overflow: "hidden",
+      background: zBackground(bg[tone]), position: "relative", overflow: "hidden",
     }}>
       <style>{`
         @keyframes uc-pulse { 0% { transform: scale(0.95); opacity: 0.7; } 100% { transform: scale(1.6); opacity: 0; } }
-        @keyframes uc-spin { to { transform: rotate(360deg); } }
-        @keyframes uc-rotate { to { transform: translate(-50%, -50%) rotate(360deg); } }
         @keyframes uc-confetti { 0% { transform: translateY(-30px) rotate(0); opacity: 1; } 100% { transform: translateY(110vh) rotate(720deg); opacity: 1; } }
         @keyframes uc-die {
           0%   { transform: translateY(-26px) scale(1.12) rotate(0deg); opacity: 0; filter: none; }
@@ -1389,13 +1336,8 @@ function LocalShell({ tone = "noir", children }: { tone?: Tone; children: ReactN
           100% { transform: translateY(8px) rotate(-14deg); filter: grayscale(0.55) brightness(0.85); }
         }
       `}</style>
-      <div style={{
-        position: "fixed", inset: 0,
-        background: "repeating-linear-gradient(0deg, rgba(255,255,255,0.025) 0px, rgba(255,255,255,0.025) 1px, transparent 1px, transparent 24px), repeating-linear-gradient(90deg, rgba(255,255,255,0.025) 0px, rgba(255,255,255,0.025) 1px, transparent 1px, transparent 24px)",
-        maskImage: "radial-gradient(circle at 50% 40%, black 0%, transparent 80%)",
-        pointerEvents: "none",
-      }} />
-      <div style={{ position: "relative", zIndex: 1, padding: "calc(env(safe-area-inset-top, 0px) + 18px) 16px calc(env(safe-area-inset-bottom, 0px) + 28px)", maxWidth: 460, margin: "0 auto", minHeight: "100dvh", display: "flex", flexDirection: "column" }}>
+      {offline && <GameTopRight><SoundButton /></GameTopRight>}
+      <div style={{ position: "relative", zIndex: 1, padding: `calc(env(safe-area-inset-top, 0px) + ${offline ? 72 : 18}px) 20px calc(env(safe-area-inset-bottom, 0px) + 24px)`, maxWidth: 460, margin: "0 auto", minHeight: "100dvh", display: "flex", flexDirection: "column" }}>
         {children}
       </div>
     </div>
@@ -1403,41 +1345,17 @@ function LocalShell({ tone = "noir", children }: { tone?: Tone; children: ReactN
 }
 
 function Tag({ children, color = "#FFD23F", style }: { children: ReactNode; color?: string; style?: CSSProperties }) {
-  return (
-    <span style={{
-      fontFamily: "var(--font-mono, monospace)", fontSize: 10, fontWeight: 800, letterSpacing: 2,
-      textTransform: "uppercase", color, padding: "4px 9px",
-      border: `1px solid ${color}55`, borderRadius: 4, background: `${color}11`,
-      whiteSpace: "nowrap", display: "inline-block", ...style,
-    }}>{children}</span>
-  );
+  return <ZChip bg={color} tilt={3} style={{ flexShrink: 0, ...style }}>{children}</ZChip>;
 }
 
 function NavBar({ sub, title, right, onBack }: { sub?: string; title?: string; right?: ReactNode; onBack?: () => void }) {
   return (
-    // paddingRight : coin haut-droit réservé à l'engrenage du shell (site) ;
-    // paddingLeft : coin haut-gauche réservé au bouton quitter (app).
-    <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 18, paddingRight: 52, paddingLeft: isOfflineApp() ? 56 : 0 }}>
-      {onBack && (
-        <button onClick={onBack} aria-label="Retour" style={{
-          width: 44, height: 44, borderRadius: 12,
-          background: "rgba(255,255,255,0.06)",
-          border: "1px solid rgba(255,255,255,0.10)",
-          display: "flex", alignItems: "center", justifyContent: "center",
-          cursor: "pointer", padding: 0, flexShrink: 0,
-        }}>
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-            <path d="M9 2L4 7l5 5" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </button>
-      )}
+    // Sur le site, le coin haut-droit reste à l'engrenage du shell
+    <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 18, paddingRight: isOfflineApp() ? 0 : 52 }}>
+      {onBack && <GameIconButton icon={ArrowLeft} label="Retour" onClick={onBack} />}
       <div style={{ flex: 1, minWidth: 0 }}>
-        {sub && (
-          <div style={{ fontFamily: "var(--font-mono, monospace)", fontSize: 10, color: "#FFD23F", fontWeight: 800, letterSpacing: 2, textTransform: "uppercase" }}>{sub}</div>
-        )}
-        {title && (
-          <div style={{ fontFamily: "var(--font-display, system-ui)", fontWeight: 800, fontSize: 24, color: "white", letterSpacing: -0.6, marginTop: 4, lineHeight: 1.05 }}>{title}</div>
-        )}
+        {sub && <div style={{ fontSize: 15, color: "rgba(255,255,255,0.85)", fontWeight: 700 }}>{sub}</div>}
+        {title && <div style={{ ...DISPLAY, fontSize: 34, color: "white", marginTop: 2, lineHeight: 0.98 }}>{title}</div>}
       </div>
       {right}
     </div>
@@ -1449,32 +1367,15 @@ function Btn({ children, tone = "primary", disabled = false, onClick, full = tru
   children: ReactNode; tone?: BtnTone; disabled?: boolean; onClick?: () => void;
   full?: boolean; icon?: ReactNode; sub?: string; style?: CSSProperties;
 }) {
-  const tones: Record<BtnTone, { bg: string; color: string; shadow: string }> = {
-    primary: { bg: "linear-gradient(180deg, #7A4EE8 0%, #4D26B6 100%)", color: "white", shadow: "0 14px 30px rgba(91,54,214,0.55), inset 0 1px 0 rgba(255,255,255,0.25)" },
-    danger:  { bg: "linear-gradient(180deg, #FF3EA5 0%, #B5176E 100%)", color: "white", shadow: "0 14px 30px rgba(255,62,165,0.55), inset 0 1px 0 rgba(255,255,255,0.25)" },
-    gold:    { bg: "linear-gradient(180deg, #FFD23F 0%, #C48800 100%)", color: "#1A0E2E", shadow: "0 14px 30px rgba(255,210,63,0.45), inset 0 1px 0 rgba(255,255,255,0.4)" },
-    ghost:   { bg: "rgba(255,255,255,0.08)", color: "white", shadow: "inset 0 0 0 1px rgba(255,255,255,0.15)" },
-    mint:    { bg: "linear-gradient(180deg, #3DDC97 0%, #189A66 100%)", color: "#0E0828", shadow: "0 14px 30px rgba(61,220,151,0.45), inset 0 1px 0 rgba(255,255,255,0.3)" },
-  };
-  const t = tones[tone];
+  const tones: Record<BtnTone, string> = { primary: ZZ.violet, danger: ZZ.pink, gold: ZZ.yellow, ghost: "#fff", mint: ZZ.mint };
   return (
-    <button onClick={onClick} disabled={disabled} style={{
-      width: full ? "100%" : "auto",
-      padding: sub ? "12px 20px" : "16px 22px", borderRadius: 18, border: "none",
-      cursor: disabled ? "not-allowed" : "pointer",
-      background: t.bg, color: t.color, boxShadow: t.shadow,
-      opacity: disabled ? 0.45 : 1,
-      fontWeight: 700, fontSize: 16, letterSpacing: -0.2,
-      fontFamily: "var(--font-body, system-ui)",
-      display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 10,
-      ...style,
-    }}>
+    <ZButton bg={tones[tone]} onClick={onClick} disabled={disabled} size={full ? "lg" : "md"} style={{ width: full ? "100%" : "auto", ...style }}>
       {icon && <span style={{ display: "flex" }}>{icon}</span>}
       <span style={{ display: "flex", flexDirection: "column", alignItems: sub ? "flex-start" : "center" }}>
         <span>{children}</span>
-        {sub && <span style={{ fontSize: 11, fontWeight: 600, opacity: 0.78, letterSpacing: 0.3, marginTop: 2 }}>{sub}</span>}
+        {sub && <span style={{ fontFamily: "var(--font-body, 'DM Sans'), system-ui", fontSize: 13, fontWeight: 700, letterSpacing: 0, marginTop: 1 }}>{sub}</span>}
       </span>
-    </button>
+    </ZButton>
   );
 }
 
@@ -1506,53 +1407,21 @@ function SpyMascotById({ idx, size = 80, tilt = -3, mood = "sus", cheering = fal
 function Stamp({ text, color = "#FF3EA5", rotate = -10, size = 18 }: { text: string; color?: string; rotate?: number; size?: number }) {
   return (
     <div style={{
-      display: "inline-block",
-      padding: `${size * 0.25}px ${size * 0.7}px`,
-      border: `3px solid ${color}`, color,
-      fontFamily: "var(--font-display, system-ui)",
-      fontWeight: 900, fontSize: size, letterSpacing: 3,
-      textTransform: "uppercase",
-      transform: `rotate(${rotate}deg)`,
-      borderRadius: 6, background: "rgba(0,0,0,0.3)",
-      boxShadow: `inset 0 0 0 1px ${color}55, 0 6px 18px rgba(0,0,0,0.4)`,
-      textShadow: `0 0 14px ${color}66`,
+      display: "inline-block", padding: `${size * 0.3}px ${size * 0.7}px`,
+      background: color, color: ZZ.ink, border: `3px solid ${ZZ.ink}`, boxShadow: `0 4px 0 ${ZZ.ink}`,
+      ...DISPLAY, fontSize: size, transform: `rotate(${rotate}deg)`, borderRadius: 999, whiteSpace: "nowrap",
     }}>{text}</div>
   );
 }
 
 function Mono({ children, style }: { children: ReactNode; style?: CSSProperties }) {
-  return (
-    <span style={{
-      fontFamily: "var(--font-mono, monospace)", fontSize: 10,
-      color: "rgba(255,255,255,0.5)", fontWeight: 800, letterSpacing: 2, textTransform: "uppercase",
-      ...style,
-    }}>{children}</span>
-  );
+  return <span style={{ fontSize: 15, color: "rgba(255,255,255,0.88)", fontWeight: 700, ...style }}>{children}</span>;
 }
 
 function FileCard({ children, accent = "#FFD23F", style }: { children: ReactNode; accent?: string; style?: CSSProperties }) {
+  void accent;
   return (
-    <div style={{
-      position: "relative",
-      background: "linear-gradient(180deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.025) 100%)",
-      border: "1px solid rgba(255,255,255,0.10)",
-      borderRadius: 18, padding: 16,
-      boxShadow: "0 12px 28px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.06)",
-      ...style,
-    }}>
-      <div style={{
-        position: "absolute", top: -1, right: -1,
-        width: 22, height: 22, background: "#0E0828",
-        clipPath: "polygon(100% 0, 0 0, 100% 100%)",
-        borderLeft: "1px solid rgba(255,255,255,0.10)",
-        borderBottom: "1px solid rgba(255,255,255,0.10)",
-        borderTopRightRadius: 18,
-      }} />
-      <div style={{
-        position: "absolute", left: 0, top: 14, bottom: 14,
-        width: 3, borderRadius: 3, background: accent,
-        boxShadow: `0 0 12px ${accent}`, opacity: 0.9,
-      }} />
+    <div style={{ position: "relative", background: ZZ.violet, color: "#fff", border: `3px solid ${ZZ.ink}`, boxShadow: `0 5px 0 ${ZZ.ink}`, borderRadius: 24, padding: 16, ...style }}>
       {children}
     </div>
   );
@@ -1560,27 +1429,20 @@ function FileCard({ children, accent = "#FFD23F", style }: { children: ReactNode
 
 function Stat({ n, label, color, sub }: { n: number; label: string; color: string; sub?: string }) {
   return (
-    <div style={{
-      padding: "10px 6px", borderRadius: 10,
-      background: "rgba(0,0,0,0.3)", border: "1px solid rgba(255,255,255,0.06)",
-      textAlign: "center",
-    }}>
-      <div style={{ fontFamily: "var(--font-display, system-ui)", fontSize: 26, color, lineHeight: 1, fontWeight: 900 }}>{n}</div>
-      <div style={{ fontSize: 11, color: "white", fontWeight: 700, marginTop: 4 }}>{label}</div>
-      {sub && <div style={{ fontSize: 11, color: "rgba(255,255,255,0.5)", marginTop: 2 }}>{sub}</div>}
+    <div style={{ padding: "8px 4px", borderRadius: 16, background: color, color: ZZ.ink, border: `2.5px solid ${ZZ.ink}`, boxShadow: `0 3px 0 ${ZZ.ink}`, textAlign: "center" }}>
+      <div style={{ ...DISPLAY, fontSize: 28, lineHeight: 1 }}>{n}</div>
+      <div style={{ fontSize: 13, fontWeight: 800, marginTop: 3 }}>{label}</div>
+      {sub && <div style={{ fontSize: 12, fontWeight: 600, marginTop: 1 }}>{sub}</div>}
     </div>
   );
 }
 
 function Row({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
   return (
-    <div style={{
-      display: "flex", justifyContent: "space-between", alignItems: "center",
-      padding: "10px 0", borderTop: "1px dashed rgba(255,255,255,0.08)",
-    }}>
-      <div>
-        <div style={{ fontSize: 13, color: "white", fontWeight: 700 }}>{label}</div>
-        {hint && <div style={{ fontSize: 12, color: "rgba(255,255,255,0.55)", marginTop: 2 }}>{hint}</div>}
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, padding: "10px 0", borderTop: "2px dashed rgba(255,255,255,0.3)" }}>
+      <div style={{ minWidth: 0 }}>
+        <div style={{ ...DISPLAY, fontSize: 19, color: "white" }}>{label}</div>
+        {hint && <div style={{ fontSize: 13, color: "rgba(255,255,255,0.9)", marginTop: 2, fontWeight: 600 }}>{hint}</div>}
       </div>
       {children}
     </div>
@@ -1588,40 +1450,24 @@ function Row({ label, hint, children }: { label: string; hint?: string; children
 }
 
 function Stepper({ value, min, max, onChange, disabled }: { value: number; min: number; max: number; onChange: (v: number) => void; disabled?: boolean }) {
-  const btn: CSSProperties = {
-    width: 44, height: 44, borderRadius: 12, border: "none",
-    background: "rgba(255,255,255,0.06)", color: "white",
-    fontWeight: 900, fontSize: 20,
-    cursor: disabled ? "not-allowed" : "pointer", opacity: disabled ? 0.4 : 1,
-    fontFamily: "inherit",
-  };
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-      <button style={btn} disabled={disabled || value <= min} onClick={() => onChange(value - 1)}>−</button>
-      <span style={{ width: 22, textAlign: "center", fontWeight: 800, fontSize: 18, fontFamily: "var(--font-display, system-ui)" }}>{value}</span>
-      <button style={{ ...btn, background: value < max && !disabled ? "#FFD23F" : "rgba(255,255,255,0.06)", color: value < max && !disabled ? "#1A0E2E" : "white" }} disabled={disabled || value >= max} onClick={() => onChange(value + 1)}>+</button>
+    <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+      <GameIconButton icon={Minus} label="Un de moins" bg="#fff" disabled={disabled || value <= min} onClick={() => onChange(value - 1)} />
+      <span style={{ width: 24, textAlign: "center", ...DISPLAY, fontSize: 24 }}>{value}</span>
+      <GameIconButton icon={Plus} label="Un de plus" bg={ZZ.yellow} disabled={disabled || value >= max} onClick={() => onChange(value + 1)} />
     </div>
   );
 }
 
 function Toggle({ value, onChange, disabled }: { value: boolean; onChange: (v: boolean) => void; disabled?: boolean }) {
   return (
-    <button disabled={disabled} onClick={() => onChange(!value)} aria-pressed={value} style={{
-      // Zone tactile 44 px autour de l'interrupteur visuel
-      minWidth: 56, height: 44, padding: 0, border: "none", background: "transparent",
+    <button type="button" disabled={disabled} onClick={() => { playSfx("toggle", { volume: 0.5 }); onChange(!value); }} aria-pressed={value} style={{
+      minWidth: 64, height: 44, padding: 0, border: "none", background: "transparent", flexShrink: 0,
       display: "inline-flex", alignItems: "center", justifyContent: "flex-end",
       cursor: disabled ? "not-allowed" : "pointer", opacity: disabled ? 0.5 : 1,
     }}>
-      <span style={{
-        width: 46, height: 26, borderRadius: 99,
-        background: value ? "#3DDC97" : "rgba(255,255,255,0.14)",
-        position: "relative", transition: "background .15s", display: "block",
-      }}>
-        <span style={{
-          position: "absolute", top: 2, left: value ? 22 : 2,
-          width: 22, height: 22, borderRadius: "50%", background: "white",
-          transition: "left .15s", boxShadow: "0 2px 6px rgba(0,0,0,0.3)",
-        }} />
+      <span style={{ width: 58, height: 34, borderRadius: 99, background: value ? ZZ.mint : "#fff", border: `2.5px solid ${ZZ.ink}`, boxShadow: `0 3px 0 ${ZZ.ink}`, position: "relative", transition: "background .15s", display: "block" }}>
+        <span style={{ position: "absolute", top: 3, left: value ? 27 : 3, width: 23, height: 23, borderRadius: "50%", background: ZZ.ink, transition: "left .15s" }} />
       </span>
     </button>
   );
@@ -1634,49 +1480,21 @@ function DossierCard({ word, role, hint, round }: { word: string | null; role: R
   const label = special ? ROLE_LABEL[role] : "Secret";
   return (
     <div style={{
-      position: "relative", padding: "22px 20px 24px",
-      borderRadius: 22,
-      background: "linear-gradient(180deg, #FFF7E0 0%, #F0DA9A 100%)",
-      color: "#1A0E2E",
-      boxShadow: "0 24px 50px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.4), inset 0 -2px 0 rgba(0,0,0,0.10)",
+      position: "relative", padding: "20px 20px 18px", borderRadius: 26,
+      background: ZZ.cream, color: ZZ.ink, border: `3px solid ${ZZ.ink}`, boxShadow: `0 6px 0 ${ZZ.ink}`,
       transform: "rotate(-1.5deg)", margin: "16px 4px",
     }}>
-      <div style={{
-        position: "absolute", top: -13, left: "50%", transform: "translateX(-50%) rotate(-2deg)",
-        width: 100, height: 22,
-        background: "linear-gradient(180deg, rgba(255,210,63,0.7) 0%, rgba(255,210,63,0.5) 100%)",
-        borderTop: "1px dashed rgba(0,0,0,0.15)", borderBottom: "1px dashed rgba(0,0,0,0.15)",
-        boxShadow: "0 4px 10px rgba(0,0,0,0.15)",
-      }} />
-      <div style={{
-        display: "flex", justifyContent: "space-between", alignItems: "center",
-        paddingBottom: 12, marginBottom: 16,
-        borderBottom: "2px solid rgba(26,14,46,0.25)",
-      }}>
-        {/* Le coin droit est pris par le tampon « Secret » */}
-        <div style={{ fontFamily: "var(--font-mono, monospace)", fontSize: 10, fontWeight: 800, letterSpacing: 2 }}>
-          CONFIDENTIEL <span style={{ color: "#7A3008", letterSpacing: 1 }}>· MANCHE {round}</span>
-        </div>
+      <div style={{ position: "absolute", top: -18, right: 14 }}>
+        <Stamp text={label} color={color} rotate={6} size={15} />
       </div>
-      <div style={{ fontFamily: "var(--font-mono, monospace)", fontSize: 11, color: "#7A3008", textTransform: "uppercase", letterSpacing: 1.5, fontWeight: 700 }}>
-        {role === "mrwhite" ? "Pas de mot" : "Ton mot secret"}
+      <div style={{ fontSize: 15, fontWeight: 800 }}>
+        {role === "mrwhite" ? "Tu n'as pas de mot" : "Ton mot secret"} <span style={{ fontWeight: 600, color: "#6B5C88" }}>· manche {round}</span>
       </div>
       <div lang="fr" style={{
-        fontFamily: "var(--font-display, system-ui)",
-        fontSize: word ? wordFontSize(word) : 44, lineHeight: 1.02, margin: "10px 0 6px",
-        letterSpacing: -1.5, color: "#1A0E2E", fontWeight: 900,
-        textAlign: role === "mrwhite" ? "center" : "left",
-        opacity: role === "mrwhite" ? 0.4 : 1,
-        ...WORD_WRAP,
+        ...DISPLAY, fontSize: word ? wordFontSize(word) : 44, lineHeight: 1.02, margin: "8px 0 6px",
+        textAlign: role === "mrwhite" ? "center" : "left", opacity: role === "mrwhite" ? 0.4 : 1, ...WORD_WRAP,
       }}>{word ?? "?????"}</div>
-      <div style={{ position: "absolute", top: 22, right: 16, transform: "rotate(8deg)" }}>
-        <Stamp text={label} color={color} rotate={0} size={11} />
-      </div>
-      <div style={{
-        marginTop: 12, paddingTop: 14,
-        borderTop: "1px dashed rgba(26,14,46,0.25)",
-        fontSize: 12, fontStyle: "italic", color: "#3A2700", lineHeight: 1.45,
-      }}>{hint}</div>
+      <div style={{ marginTop: 10, paddingTop: 12, borderTop: `2px dashed rgba(21,8,46,0.25)`, fontSize: 15, fontWeight: 600, color: "#3A2A56", lineHeight: 1.4 }}>{hint}</div>
     </div>
   );
 }
@@ -1716,29 +1534,26 @@ function PassScreenUC({ toName, colorIdx, label, players, currentIdx, buttonLabe
   return (
     <LocalShell tone="noir">
       <NavBar sub={label} right={<Tag color="#3DDC97">{tag}</Tag>} />
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 16, marginTop: 40 }}>
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12, marginTop: 8 }}>
         <div style={{ position: "relative" }}>
-          {[0, 1].map((i) => (
-            <span key={i} style={{ position: "absolute", left: "50%", top: "50%", width: 150, height: 150, borderRadius: "50%", border: "1.5px solid rgba(255,210,63,0.5)", transform: "translate(-50%,-50%)", animation: "uc-pulse 2.6s ease-out infinite", animationDelay: `${i * 1.3}s` }} />
-          ))}
-          <Mascot size={150} color={MASCOT_COLORS[colorIdx % MASCOT_COLORS.length]} mood="neutral" bob={false} shadow={false} />
+          <Mascot size={110} color={MASCOT_COLORS[colorIdx % MASCOT_COLORS.length]} mood="wink" arms shadow={false} />
         </div>
-        <Mono style={{ color: "#FFD23F", marginTop: 12 }}>Passe le téléphone à</Mono>
-        <div style={{ fontFamily: "var(--font-display)", fontSize: `clamp(30px, ${Math.min(14, 110 / Math.max(1, toName.length)).toFixed(1)}vw, 52px)`, fontWeight: 800, color: "#fff", lineHeight: 1.05, textAlign: "center", overflowWrap: "anywhere", maxWidth: "100%", textShadow: "0 0 32px rgba(122,78,232,0.5)" }}>{toName}</div>
+        <div style={{ fontSize: 18, fontWeight: 700, color: "rgba(255,255,255,0.9)", marginTop: 4 }}>Passe le téléphone à</div>
+        <div style={{ ...DISPLAY, fontSize: `clamp(32px, ${Math.min(14, 110 / Math.max(1, toName.length)).toFixed(1)}vw, 54px)`, lineHeight: 1.05, textAlign: "center", overflowWrap: "anywhere", maxWidth: "100%", padding: "8px 22px 10px", borderRadius: 24, background: MASCOT_PALETTE[MASCOT_COLORS[colorIdx % MASCOT_COLORS.length]].body, color: ZZ.ink, border: `3px solid ${ZZ.ink}`, boxShadow: `0 6px 0 ${ZZ.ink}`, rotate: "-2deg" }}>{toName}</div>
       </div>
 
       {players && (
-        <div style={{ marginTop: 28 }}>
-          <Mono style={{ marginBottom: 8, display: "block", textAlign: "center" }}>Tour de distribution</Mono>
+        <div style={{ marginTop: 22 }}>
+          <Mono style={{ marginBottom: 8, display: "block", textAlign: "center" }}>Qui a vu son mot</Mono>
           <div style={{ display: "flex", justifyContent: "center", gap: 8, flexWrap: "wrap" }}>
             {players.map((p) => {
               const active = p.idx === currentIdx;
               return (
                 <div key={p.idx} style={{ textAlign: "center", opacity: active ? 1 : 0.45, width: 52 }}>
-                  <div style={{ borderRadius: "50%", border: active ? "2px solid #FFD23F" : "1px solid rgba(255,255,255,0.1)", padding: 1 }}>
+                  <div style={{ borderRadius: "50%", border: active ? `3px solid ${ZZ.yellow}` : "3px solid transparent", padding: 1 }}>
                     <Mascot size={34} color={MASCOT_COLORS[p.idx % MASCOT_COLORS.length]} mood="happy" bob={false} shadow={false} />
                   </div>
-                  <div style={{ fontSize: 12, marginTop: 3, color: active ? "#FFD23F" : "rgba(255,255,255,0.6)", fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</div>
+                  <div style={{ fontSize: 13, marginTop: 3, color: active ? "#FFD23F" : "rgba(255,255,255,0.85)", fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</div>
                 </div>
               );
             })}
@@ -1746,7 +1561,7 @@ function PassScreenUC({ toName, colorIdx, label, players, currentIdx, buttonLabe
         </div>
       )}
 
-      <div style={{ marginTop: 32 }}>
+      <div style={{ marginTop: "auto", paddingTop: 24 }}>
         <Btn tone="gold" sub={buttonSub} onClick={onReady}>{buttonLabel}</Btn>
       </div>
     </LocalShell>
@@ -1769,11 +1584,11 @@ function RulesCard({ jester }: { jester: boolean }) {
         width: "100%", minHeight: 44, display: "flex", justifyContent: "space-between", alignItems: "center",
         background: "transparent", border: "none", color: "white", padding: 0, cursor: "pointer", fontFamily: "inherit",
       }}>
-        <span style={{ fontSize: 15, fontWeight: 800 }}><GameInlineIcon icon={BookOpen} /> Les règles</span>
-        <span style={{ fontSize: 13, color: "rgba(255,255,255,0.6)" }}>{open ? "Masquer" : "Afficher"} <GameInlineIcon icon={open ? ChevronUp : ChevronDown} /></span>
+        <span style={{ ...DISPLAY, fontSize: 21 }}><GameInlineIcon icon={BookOpen} /> Les règles</span>
+        <span style={{ fontSize: 14, fontWeight: 700, color: "#fff" }}>{open ? "Masquer" : "Afficher"} <GameInlineIcon icon={open ? ChevronUp : ChevronDown} /></span>
       </button>
       {open && (
-        <ul style={{ margin: "10px 0 0", paddingLeft: 18, display: "flex", flexDirection: "column", gap: 8, fontSize: 13, lineHeight: 1.45, color: "rgba(255,255,255,0.85)" }}>
+        <ul style={{ margin: "10px 0 0", paddingLeft: 18, display: "flex", flexDirection: "column", gap: 8, fontSize: 15, fontWeight: 600, lineHeight: 1.4, color: "#fff" }}>
           {items.map((t) => <li key={t}>{t}</li>)}
         </ul>
       )}

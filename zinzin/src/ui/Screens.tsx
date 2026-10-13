@@ -3,7 +3,8 @@ import type { GameProps } from "@/lib/games/types";
 import { ChevronLeft, CreditCard, Mail, RotateCcw, Sparkles, X } from "lucide-react";
 import { getZGame } from "../catalog";
 import { isTestMode, resetPremiumForTests, restore } from "../premium";
-import { LEGAL_DOCS, LEGAL_UPDATED_AT, type LegalDocId } from "@/lib/legal/zinzin";
+import { IDEAS_EMAIL, LEGAL_DOCS, LEGAL_UPDATED_AT, type LegalDocId } from "@/lib/legal/zinzin";
+import { IdeaButton } from "@/components/games/idea-button";
 import { ZBlob, ZPALETTE } from "./ZBlob";
 import { BigBtn, CloseBtn, RoundBtn, Sheet } from "./common";
 import { ErrorBoundary } from "./ErrorBoundary";
@@ -98,7 +99,11 @@ export function SettingsSheet({
               toast(ok ? "Achats restaurés" : "Aucun achat à restaurer");
             }} />
             <Tile bg="#4ECDC4" tilt={-1.5} icon={<CreditCard size={26} strokeWidth={2.6} />} label="Gérer mon abonnement" href="https://apps.apple.com/account/subscriptions" />
-            <Tile bg="#FF6B5B" tilt={-1} icon={<Mail size={26} strokeWidth={2.6} />} label="Nous écrire" sub="Une idée de jeu ? Un bug ?" href="mailto:contact@zinzin.app" wide />
+            <Tile bg="#FF6B5B" tilt={-1} icon={<Mail size={26} strokeWidth={2.6} />} label="Nous écrire" sub="Un bug ? Une question ?" href={`mailto:${IDEAS_EMAIL}`} wide />
+          </div>
+
+          <div className="mt-5 flex justify-center">
+            <IdeaButton game="Zinzin (nouveau jeu)" kind="idée de jeu" />
           </div>
 
           {test && (

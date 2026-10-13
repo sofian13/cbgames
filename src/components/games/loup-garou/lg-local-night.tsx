@@ -13,7 +13,7 @@ import {
   EMPTY_NIGHT, ROLES, type Composition, type NightActions, type Player, type RoleId,
 } from "./lg-local-data";
 import { speak, speechMs, type Ambience } from "./lg-local-audio";
-import { BigButton, Confirm, PickList, RoleCard, Screen, SkyBadge } from "./lg-local-ui";
+import { BigButton, Confirm, DISPLAY, INK, MINT, PickList, RoleCard, Screen, SkyBadge, Tag, Title, stk } from "./lg-local-ui";
 import { Check, HeartPulse, Skull, X } from "lucide-react";
 import { GameInlineIcon } from "@/components/games/game-icon-button";
 
@@ -224,28 +224,26 @@ export function NightRunner({
     <Screen tone="night" center={!body}>
       {body ? (
         <>
-          <p className="af-eyebrow text-center" style={{ color: "rgba(255,255,255,0.5)" }}>Nuit {night}</p>
-          <h1 className="mt-1 text-center" style={{ fontFamily: "var(--font-display)", fontWeight: 900, fontSize: 34, lineHeight: 1.02 }}>
-            {TEXT[step].title}
-          </h1>
+          <div className="text-center"><Tag bg="#2A1866" color="#fff" tilt={-2}>Nuit {night}</Tag></div>
+          <Title size={38} className="mt-2 text-center">{TEXT[step].title}</Title>
           <div className="mt-4 flex flex-1 flex-col">{body}</div>
         </>
       ) : sub === "sleeping" ? (
         <div className="text-center">
-          <div className="flex justify-center"><Mascot size={110} color="lavender" mood="asleep" /></div>
-          <p className="mt-6" style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 30, lineHeight: 1.1 }}>
+          <div className="flex justify-center"><Mascot size={110} color="lavender" mood="asleep" shadow={false} /></div>
+          <Title size={32} className="mt-6" style={{ lineHeight: 1.05 }}>
             Repose le téléphone au centre et ferme les yeux.
-          </p>
+          </Title>
         </div>
       ) : (
         <div className="text-center">
           <SkyBadge tone="night" />
-          <p className="af-eyebrow mt-6" style={{ color: "rgba(255,255,255,0.45)" }}>Nuit {night} · {TEXT[step].title}</p>
-          <p className="mt-3" style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 30, lineHeight: 1.12, color: "rgba(255,255,255,0.92)" }}>
-            {headline}
+          <div className="mt-6"><Tag bg="#2A1866" color="#fff" tilt={-2}>Nuit {night} · {TEXT[step].title}</Tag></div>
+          <p className="mt-4" style={{ ...DISPLAY, fontSize: 30, lineHeight: 1.1 }}>
+            {headline.replace(/ ([!?:;])/g, "\u00A0$1")}
           </p>
-          <p className="mt-8 text-[15px]" style={{ color: "rgba(255,255,255,0.35)" }}>
-            Les autres gardent les yeux fermés 🤫
+          <p className="mt-8 text-[16px] font-semibold" style={{ color: "rgba(255,255,255,0.62)" }}>
+            Les autres gardent les yeux fermés.
           </p>
         </div>
       )}
@@ -265,9 +263,9 @@ function SinglePick({
   const target = players.find((p) => p.id === sel);
   return (
     <>
-      <p className="mb-3 text-center text-[17px]" style={{ color: "rgba(255,255,255,0.75)" }}>{hint}</p>
+      <p className="mb-4 text-center text-[17px] font-semibold" style={{ color: "rgba(255,255,255,0.85)" }}>{hint}</p>
       <PickList players={players} selected={sel === null ? [] : [sel]} onPick={setSel} note={note} />
-      <div className="sticky bottom-0 mt-4 pb-1 pt-2">
+      <div className="sticky bottom-[calc(env(safe-area-inset-bottom,0px)+10px)] mt-4 pb-1 pt-2">
         <BigButton onClick={() => sel !== null && onDone(sel)} disabled={sel === null} variant={danger ? "danger" : "primary"}>
           {target ? `${cta} ${target.name}` : "Choisis un joueur"}
         </BigButton>
@@ -282,13 +280,13 @@ function CupidonPanel({ players, onDone }: { players: Player[]; onDone: (a: numb
     setSel((s) => (s.includes(id) ? s.filter((x) => x !== id) : s.length < 2 ? [...s, id] : [s[1], id]));
   return (
     <>
-      <p className="mb-3 text-center text-[17px]" style={{ color: "rgba(255,255,255,0.75)" }}>
+      <p className="mb-4 text-center text-[17px] font-semibold" style={{ color: "rgba(255,255,255,0.85)" }}>
         Choisis deux joueurs (tu peux te choisir toi-même).
       </p>
       <PickList players={players} selected={sel} onPick={toggle} />
-      <div className="sticky bottom-0 mt-4 pb-1 pt-2">
+      <div className="sticky bottom-[calc(env(safe-area-inset-bottom,0px)+10px)] mt-4 pb-1 pt-2">
         <BigButton variant="pink" disabled={sel.length !== 2} onClick={() => onDone(sel[0], sel[1])}>
-          {sel.length === 2 ? "Unir ces deux-là 💘" : `Encore ${2 - sel.length} à choisir`}
+          {sel.length === 2 ? "Unir ces deux-là" : `Encore ${2 - sel.length} à choisir`}
         </BigButton>
       </div>
     </>
@@ -300,7 +298,7 @@ function SeerPanel({ players, onDone }: { players: Player[]; onDone: (id: number
   if (seen) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-5">
-        <p className="text-center text-[20px]"><b>{seen.name}</b> est…</p>
+        <Title size={30} className="text-center">{seen.name} est…</Title>
         <RoleCard role={seen.role} compact />
         <BigButton onClick={() => onDone(seen.id)}>J&apos;ai vu — cacher</BigButton>
       </div>
@@ -339,24 +337,25 @@ function WitchPanel({
   };
 
   const victimBox = (
-    <div className="mb-4 rounded-3xl border p-4 text-center" style={{ borderColor: "rgba(255,77,94,0.45)", background: "rgba(255,77,94,0.1)" }}>
-      <p className="text-[15px]" style={{ color: "rgba(255,255,255,0.7)" }}>Les loups ont attaqué</p>
-      <p style={{ fontFamily: "var(--font-display)", fontWeight: 900, fontSize: 32 }}>{victimName ?? "personne"}</p>
-      {saved && <p className="mt-1 text-[15px] font-bold" style={{ color: "#3DDC97" }}>Sauvé·e par ta potion ✨</p>}
+    <div className="mb-4 rounded-[24px] p-4 text-center" style={{ ...stk(saved ? MINT : "#FF6B5B", 5, 3), color: INK, transform: "rotate(-1.5deg)" }}>
+      <p className="text-[16px] font-bold">Les loups ont attaqué</p>
+      <p style={{ ...DISPLAY, fontSize: 36, lineHeight: 1 }}>{victimName ?? "personne"}</p>
+      {saved && <p className="mt-1 text-[16px] font-bold">Sauvé·e par ta potion</p>}
     </div>
   );
 
   const flasks = (
-    <p className="mb-3 text-center text-[15px]" style={{ color: "rgba(255,255,255,0.6)" }}>
-      Potion de vie : <Flask on={potions.life && !saved} /> · Potion de mort : <Flask on={potions.death} />
-    </p>
+    <div className="mb-4 flex flex-wrap justify-center gap-2">
+      <Tag bg={potions.life && !saved ? MINT : "#3A2C6B"} color={potions.life && !saved ? INK : "#fff"} tilt={-2}>Potion de vie <Flask on={potions.life && !saved} /></Tag>
+      <Tag bg={potions.death ? "#FF6B5B" : "#3A2C6B"} color={potions.death ? INK : "#fff"} tilt={2}>Potion de mort <Flask on={potions.death} /></Tag>
+    </div>
   );
 
   if (!potions.life && !potions.death) {
     return (
       <div className="flex flex-1 flex-col">
         {victimBox}
-        <p className="mb-6 text-center text-[18px]">Tes fioles sont vides. Tu ne peux plus rien faire.</p>
+        <p className="mb-6 text-center text-[18px] font-semibold">Tes fioles sont vides. Tu ne peux plus rien faire.</p>
         <BigButton onClick={() => onDone(false, null)}>OK</BigButton>
       </div>
     );
@@ -367,7 +366,7 @@ function WitchPanel({
       <div className="flex flex-1 flex-col">
         {victimBox}
         {flasks}
-        <div className="grid gap-2">
+        <div className="grid gap-3">
           <BigButton variant="pink" onClick={() => setConfirmSave(true)}><GameInlineIcon icon={HeartPulse} /> Sauver {victimName}</BigButton>
           <BigButton variant="ghost" onClick={() => goPoison(false)}>Ne pas sauver</BigButton>
         </div>
@@ -388,8 +387,8 @@ function WitchPanel({
       <div className="flex flex-1 flex-col">
         {victimBox}
         {flasks}
-        <p className="mb-4 text-center text-[18px]">Veux-tu utiliser ta potion de mort ?</p>
-        <div className="grid gap-2">
+        <p className="mb-4 text-center text-[18px] font-semibold">Veux-tu utiliser ta potion de mort ?</p>
+        <div className="grid gap-3">
           <BigButton variant="danger" onClick={() => setStage("pick")}><GameInlineIcon icon={Skull} /> Empoisonner quelqu&apos;un</BigButton>
           <BigButton variant="ghost" onClick={() => onDone(saved, null)}>Non, rien de plus</BigButton>
         </div>
@@ -400,9 +399,9 @@ function WitchPanel({
   const target = players.find((p) => p.id === poisonSel);
   return (
     <>
-      <p className="mb-3 text-center text-[17px]" style={{ color: "rgba(255,255,255,0.75)" }}>Qui empoisonnes-tu ?</p>
+      <p className="mb-4 text-center text-[17px] font-semibold" style={{ color: "rgba(255,255,255,0.85)" }}>Qui empoisonnes-tu ?</p>
       <PickList players={players.filter((p) => p.id !== selfId)} selected={poisonSel === null ? [] : [poisonSel]} onPick={setPoisonSel} />
-      <div className="sticky bottom-0 mt-4 grid gap-2 pb-1 pt-2">
+      <div className="sticky bottom-[calc(env(safe-area-inset-bottom,0px)+10px)] mt-4 grid gap-3 pb-1 pt-2">
         <BigButton variant="danger" disabled={!target} onClick={() => setConfirmPoison(true)}>
           {target ? `Empoisonner ${target.name}` : "Choisis un joueur"}
         </BigButton>
@@ -423,5 +422,5 @@ function WitchPanel({
 
 /** Fiole encore pleine (coche verte) ou déjà utilisée (croix rouge). */
 function Flask({ on }: { on: boolean }) {
-  return <GameInlineIcon icon={on ? Check : X} style={{ color: on ? "#3DDC97" : "#FF4D5E" }} />;
+  return <GameInlineIcon icon={on ? Check : X} style={{ marginLeft: 4 }} />;
 }

@@ -1,81 +1,55 @@
-// Effets Pile Poil : petits sons synthétisés (Web Audio, aucun fichier) + vibrations.
+// Effets Pile Poil : vrais samples (src/lib/sfx.ts, coupure du son globale) + vibrations.
 // Tout est « best effort » : si l'API n'existe pas (iOS ne vibre pas en webview), on ignore.
+import { playCombo, playSfx, preloadSfx } from "@/lib/sfx";
 
-let ctx: AudioContext | null = null;
-function ac(): AudioContext | null {
-  if (typeof window === "undefined") return null;
-  const AC = window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-  if (!AC) return null;
-  try {
-    if (!ctx) ctx = new AC();
-    if (ctx.state === "suspended") void ctx.resume();
-  } catch {
-    return null;
-  }
-  return ctx;
+/** Précharge les sons du jeu (au montage). */
+export function fxPreload() {
+  preloadSfx(["tick", "tock", "tap", "select", "wrong", "lose", "ding", "success", "win", "powerup", "whoosh", "gong", "pop"]);
 }
 
-function tone(freq: number, delay: number, dur: number, type: OscillatorType, gain: number, slideTo?: number) {
-  const c = ac();
-  if (!c) return;
-  const t0 = c.currentTime + delay;
-  const osc = c.createOscillator();
-  const g = c.createGain();
-  osc.type = type;
-  osc.frequency.setValueAtTime(freq, t0);
-  if (slideTo) osc.frequency.exponentialRampToValueAtTime(slideTo, t0 + dur);
-  g.gain.setValueAtTime(0.0001, t0);
-  g.gain.exponentialRampToValueAtTime(gain, t0 + 0.01);
-  g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
-  osc.connect(g);
-  g.connect(c.destination);
-  osc.start(t0);
-  osc.stop(t0 + dur + 0.03);
-}
-
-/** Débloque l'audio (à appeler sur un geste utilisateur, ex. le GO). */
+/** Gardé pour compat : sfx.ts réveille déjà l'audio au premier toucher. */
 export function fxUnlock() {
-  ac();
+  fxPreload();
 }
 
 /** Tic du compteur qui défile — la hauteur monte avec les secondes. */
 export function fxTick(step: number) {
-  tone(520 + Math.min(step, 30) * 28, 0, 0.05, "square", 0.05);
+  playSfx(step % 2 ? "tick" : "tock", { volume: 0.55, rate: 0.9 + Math.min(step, 30) * 0.025 });
 }
 
-/** GO / STOP : petit clic franc. */
+/** GO / STOP : clic franc. */
 export function fxTap(high = true) {
-  tone(high ? 880 : 440, 0, 0.07, "triangle", 0.14);
+  playSfx(high ? "select" : "tap", { volume: 0.8, rate: high ? 1.1 : 0.9 });
 }
 
 /** La cible vient d'être dépassée pendant le défilement. */
 export function fxOver() {
-  tone(220, 0, 0.22, "sawtooth", 0.08, 140);
+  playSfx("wrong", { volume: 0.55, rate: 0.9 });
 }
 
 /** Résultat correct (sans être pile poil). */
 export function fxGood() {
-  tone(660, 0, 0.12, "triangle", 0.14);
-  tone(990, 0.1, 0.18, "triangle", 0.12);
+  playSfx("success", { volume: 0.75 });
 }
 
-/** Loin de la cible : « bwah-bwah ». */
+/** Loin de la cible. */
 export function fxBad() {
-  tone(330, 0, 0.25, "sawtooth", 0.07, 260);
-  tone(260, 0.24, 0.4, "sawtooth", 0.07, 180);
+  playCombo("fail");
 }
 
 /** PILE POIL : fanfare. */
 export function fxPerfect() {
-  const notes = [523, 659, 784, 1047, 784, 1047, 1319];
-  notes.forEach((f, i) => tone(f, i * 0.09, i === notes.length - 1 ? 0.6 : 0.14, "square", 0.08));
-  notes.forEach((f, i) => tone(f / 2, i * 0.09, 0.14, "triangle", 0.1));
+  playCombo("fanfare");
 }
 
-/** Roulement de tambour (cible mystère, perdant). */
-export function fxDrum(durS = 1.2) {
-  const n = Math.floor(durS / 0.06);
-  for (let i = 0; i < n; i++) tone(140 + (i % 2) * 20, i * 0.06, 0.05, "triangle", 0.09);
+/** Roulement de tambour (cible mystère, suspense). */
+export function fxDrum() {
+  playCombo("drumroll");
+}
+
+/** Grande révélation (cible mystère dévoilée, champion). */
+export function fxReveal() {
+  playCombo("reveal");
 }
 
 export function vibrate(pattern: number | number[]) {

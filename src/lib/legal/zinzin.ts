@@ -23,6 +23,9 @@ export const EDITOR = {
   mediator: "",
 };
 
+/** Adresse qui reçoit les idées des joueurs (bouton « Propose ton idée » des jeux). */
+export const IDEAS_EMAIL = EDITOR.email;
+
 export type LegalDocId = "mentions-legales" | "confidentialite" | "conditions";
 
 export interface LegalSection {
@@ -108,6 +111,7 @@ export const LEGAL_DOCS: Record<LegalDocId, LegalDoc> = {
         title: "Ce que nous ne faisons pas",
         paragraphs: [
           "Pas de publicité, pas de mesure d'audience, pas de pistage entre applis ou sites (aucune demande « App Tracking Transparency »), pas de revente de données, pas de cookies dans l'application.",
+          "Si tu nous proposes une idée (bouton « Propose ton idée ») ou nous écris, le message part depuis ton application mail : nous recevons alors ton adresse e-mail et ton message, utilisés uniquement pour te lire et te répondre, puis supprimés au plus tard 3 ans après le dernier échange. Base légale : notre intérêt légitime à améliorer l'app. Les idées retenues peuvent être intégrées au jeu, sans mention de ton nom.",
           "L'application n'accède ni à tes contacts, ni à ta position, ni à ton micro, ni à ta caméra. Certains jeux peuvent utiliser le capteur de mouvement du téléphone (ex. « Ne secoue pas la patate ») : la mesure est traitée instantanément sur l'appareil et n'est jamais enregistrée ni transmise. La voix du narrateur est générée par le système de ton téléphone.",
         ],
       },

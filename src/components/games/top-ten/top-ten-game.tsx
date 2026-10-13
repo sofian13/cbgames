@@ -5,10 +5,16 @@ import { useGame } from "@/lib/party/use-game";
 import { useGameStore } from "@/lib/stores/game-store";
 import type { GameProps } from "@/lib/games/types";
 import { cn } from "@/lib/utils";
-import { MascotAvatar } from "@/components/Mascot";
-import { ModeSelect, PlayersSetup, PassScreen, colorForIndex, type GameMode } from "@/components/games/local-kit";
-import { ArrowLeft, Check, Eye, Flame, RefreshCw, Timer, Trophy, type LucideIcon } from "lucide-react";
-import { GameIconBadge, GameInlineIcon } from "@/components/games/game-icon-button";
+import { Mascot } from "@/components/Mascot";
+import { ConfettiBurst } from "@/components/ConfettiBurst";
+import {
+  ModeSelect, PlayersSetup, PassScreen, colorForIndex, type GameMode,
+  DISPLAY, ZButton, ZCard, ZChip, ZChoice, ZLink, ZRanking, ZScreen, ZTitle, useScrollTopOn,
+} from "@/components/games/local-kit";
+import { ArrowDown, ArrowLeft, ArrowUp, Check, Eye, Flame, GripVertical, RefreshCw, Timer, Trophy, type LucideIcon } from "lucide-react";
+import { GameIconBadge, GameIconButton, GameInlineIcon, GAME_INK } from "@/components/games/game-icon-button";
+import { IdeaButton, RerollButton } from "@/components/games/idea-button";
+import { playCombo, playSfx, preloadSfx, type SfxName } from "@/lib/sfx";
 
 // ── Types ─────────────────────────────────────────────────
 interface TopTenPlayerState {
@@ -53,6 +59,8 @@ interface TopTenState {
 }
 
 const ACCENT = "#ff5a8a";
+/** Couleur du jeu dans l'app (corail) */
+const TT_COLOR = "#FF6B5B";
 
 // Mélange uniforme (Fisher-Yates)
 function shuffle<T>(arr: T[]): T[] {
@@ -208,6 +216,8 @@ export default function TopTenGame(props: GameProps) {
 // ══════════════════════════════════════════════════════════
 // MODE LOCAL (pass-and-play — chacun voit son numéro, puis chacun classe)
 // ══════════════════════════════════════════════════════════
+const TT_SFX: SfxName[] = ["card-flip", "card-shuffle", "gong", "whoosh", "tock", "ding", "win", "powerup", "coins", "confirm", "select", "tap"];
+
 function TopTenLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) {
   type Phase = "setup" | "target" | "theme" | "pass-number" | "show-number" | "answer" | "pass-rank" | "rank" | "reveal" | "over";
   const [phase, setPhase] = useState<Phase>("setup");
@@ -215,7 +225,7 @@ function TopTenLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) {
   const [scores, setScores] = useState<number[]>([]);
   const [round, setRound] = useState(0);
   const [numberRange, setNumberRange] = useState<10 | 25 | 50>(10);
-  const [pack, setPack] = useState<Pack>("adult");
+  const [pack, setPack] = useState<Pack>("culture"); // 18+ jamais présélectionné
   const [themes, setThemes] = useState<ThemeState[]>(() => shuffle(LOCAL_THEMES));
   const [themeCursor, setThemeCursor] = useState(0); // avance à chaque manche / changement
   const [numbers, setNumbers] = useState<Record<number, number>>({}); // playerIdx -> numéro
@@ -223,6 +233,9 @@ function TopTenLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) {
   const [stepIdx, setStepIdx] = useState(0); // index dans passOrder (voir numéro / classer)
   const [guesses, setGuesses] = useState<Record<number, number[]>>({}); // playerIdx -> classement (player indices)
   const [results, setResults] = useState<Record<number, RoundResult>>({});
+
+  useEffect(() => { preloadSfx(TT_SFX); }, []);
+  useScrollTopOn(`${phase}-${stepIdx}`);
 
   const theme = themes[themeCursor % themes.length] ?? null;
   const total = players.length;
@@ -242,15 +255,17 @@ function TopTenLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) {
     setGuesses({});
     setResults({});
     setRound(r);
+    playSfx("card-flip", { volume: 0.7 });
     setPhase("theme");
   };
 
   const begin = (names: string[]) => {
     setPlayers(names); setScores(names.map(() => 0));
     setThemeCursor(0);
-    setPhase("target"); // on choisit le score cible avant la 1re manche
+    setPhase("target"); // on choisit l'échelle avant la 1re manche
   };
   const launch = () => {
+    playSfx("card-shuffle", { volume: 0.8 });
     setThemes(shuffle(themesForPack(pack)));
     setThemeCursor(0);
     startRound(1, players);
@@ -269,71 +284,83 @@ function TopTenLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) {
     });
     setResults(res);
     setScores((s) => s.map((v, i) => v + gained[i]));
+    // Roulement de tambour… puis le verdict
+    playCombo("drumroll");
+    const perfect = Object.values(res).some((r) => r.perfect);
+    if (perfect) { playSfx("win", { volume: 0.9, delay: 1.05 }); playSfx("coins", { volume: 0.7, delay: 1.25 }); }
+    else playSfx("ding", { volume: 0.8, delay: 1.05 });
     setPhase("reveal");
   };
 
   if (phase === "setup") {
-    return <PlayersSetup emoji="🔥" name="De 1 à 10" min={3} max={10} accent="#ff5a8a" onStart={begin} onBack={onReturnToLobby} />;
+    return (
+      <PlayersSetup emoji="🔥" name="De 1 à 10" min={3} max={10} accent={TT_COLOR} onStart={begin} onBack={onReturnToLobby}
+        footer={<IdeaButton game="De 1 à 10" kind="thème" />} />
+    );
   }
   if (phase === "target") {
-    return <RangePicker range={numberRange} onPick={setNumberRange} pack={pack} onPickPack={setPack} onStart={launch} onBack={() => setPhase("setup")} />;
+    return (
+      <ZScreen>
+        <RangePicker range={numberRange} onPick={setNumberRange} pack={pack} onPickPack={setPack} onStart={launch} onBack={() => setPhase("setup")} />
+      </ZScreen>
+    );
   }
   if (phase === "theme") {
     return (
-      <div className="flex min-h-[100svh] flex-col items-center justify-center p-5 pt-[max(env(safe-area-inset-top),20px)] pb-[max(env(safe-area-inset-bottom),20px)] text-white"
-        style={{ background: `radial-gradient(circle at 50% 18%, ${ACCENT}26, transparent 45%), #0E0828` }}>
-        <p className="af-eyebrow mb-4">Manche {round}/{totalRounds} · sur {numberRange}</p>
-        <ThemeCard theme={theme} range={numberRange} pack={pack} />
-        <button onClick={() => { setStepIdx(0); setPhase("pass-number"); }}
-          className="af-btn af-btn-primary mt-7 w-full max-w-md">C&apos;est bon → distribuer les numéros</button>
-        <button onClick={() => setThemeCursor((c) => c + 1)}
-          className="af-btn af-btn-ghost mt-3 w-full max-w-md"><GameInlineIcon icon={RefreshCw} /> Changer de thème</button>
-      </div>
+      <ZScreen bg={TT_COLOR}>
+        <RoundChips round={round} total={totalRounds} range={numberRange} />
+        <div className="mt-5 flex flex-1 flex-col justify-center">
+          <ThemeCard theme={theme} range={numberRange} pack={pack} />
+          <div className="mt-6 flex justify-center">
+            <RerollButton label="Pas fou ? Un autre thème" onClick={() => setThemeCursor((c) => c + 1)} />
+          </div>
+        </div>
+        <ZButton bg="#FFD23F" className="mt-6" onClick={() => { setStepIdx(0); setPhase("pass-number"); }}>
+          Distribuer les numéros
+        </ZButton>
+      </ZScreen>
     );
   }
   if (phase === "pass-number") {
     const idx = passOrder[stepIdx];
-    return <PassScreen toName={players[idx]} colorIndex={idx} accent="#ff5a8a"
-      hint={`Toi seul : tu vas voir ton numéro secret (1 = ${SCALE[pack].low.toLowerCase()}, ${numberRange} = ${SCALE[pack].high.toLowerCase()}).`} onReady={() => setPhase("show-number")} />;
+    return <PassScreen toName={players[idx]} colorIndex={idx} accent={TT_COLOR}
+      hint={`Toi seul : tu vas voir ton numéro secret (1 = ${SCALE[pack].low.toLowerCase()}, ${numberRange} = ${SCALE[pack].high.toLowerCase()}).`}
+      onReady={() => { playSfx("card-flip", { volume: 0.8 }); setPhase("show-number"); }} />;
   }
   if (phase === "show-number") {
     const idx = passOrder[stepIdx];
     return (
-      <div className="flex min-h-[100svh] flex-col items-center justify-center p-6 pt-[max(env(safe-area-inset-top),20px)] pb-[max(env(safe-area-inset-bottom),20px)] text-white"
-        style={{ background: `radial-gradient(circle at 50% 25%, ${ACCENT}30, transparent 45%), #0E0828` }}>
-        <p className="af-eyebrow mb-2">{players[idx]} · ton numéro</p>
-        <NumberCard myNumber={numbers[idx]} range={numberRange} />
-        <button onClick={() => {
+      <ZScreen>
+        <ZTitle size={30} className="text-center">{players[idx]}, ton numéro</ZTitle>
+        <div className="flex flex-1 flex-col items-center justify-center">
+          <NumberCard myNumber={numbers[idx]} range={numberRange} pack={pack} />
+        </div>
+        <ZButton bg="#fff" className="mt-6" onClick={() => {
           if (stepIdx < passOrder.length - 1) { setStepIdx(stepIdx + 1); setPhase("pass-number"); }
-          else { setStepIdx(0); setPhase("answer"); }
-        }} className="af-btn af-btn-primary mt-8 w-full max-w-xs">J&apos;ai vu — cacher</button>
-      </div>
+          else { setStepIdx(0); playSfx("gong", { volume: 0.6 }); setPhase("answer"); }
+        }}>J&apos;ai vu, je cache</ZButton>
+      </ZScreen>
     );
   }
   if (phase === "answer") {
     return (
-      <div className="flex min-h-[100svh] flex-col items-center p-5 pt-[max(env(safe-area-inset-top),20px)] pb-[max(env(safe-area-inset-bottom),20px)] text-white"
-        style={{ background: `radial-gradient(circle at 50% 15%, ${ACCENT}26, transparent 45%), #0E0828` }}>
-        <p className="af-eyebrow mt-3">Manche {round}/{totalRounds} · sur {numberRange}</p>
-        <div className="mt-4 w-full max-w-md rounded-3xl border p-6" style={{ borderColor: "rgba(255,255,255,0.1)", background: "rgba(0,0,0,0.4)" }}>
-          <p className="af-eyebrow mb-2 text-center" style={{ color: ACCENT }}>{PACK_LABEL[pack]}</p>
-          <p className="cb-display-sm text-center">{theme?.theme}</p>
-          <div className="mt-4 flex gap-2 text-center text-xs">
-            <div className="flex-1 rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-2"><b className="text-emerald-400">1</b><br/>{theme?.low}</div>
-            <div className="flex-1 rounded-2xl border p-2" style={{ borderColor: `${ACCENT}40`, background: `${ACCENT}14` }}><b style={{ color: ACCENT }}>{numberRange}</b><br/>{theme?.high}</div>
-          </div>
-        </div>
-        <p className="mt-5 max-w-xs text-center text-sm" style={{ color: "var(--text-dim)" }}>
-          Chacun annonce sa réponse <b>à voix haute</b> selon l&apos;intensité de son numéro. Écoutez bien : ensuite <b>chacun</b> classera la table à son tour.
-        </p>
-        <button onClick={() => { setStepIdx(0); setPhase("pass-rank"); }} className="af-btn af-btn-primary mt-6 w-full max-w-md">Tout le monde a parlé → classer</button>
-      </div>
+      <ZScreen bg={TT_COLOR}>
+        <RoundChips round={round} total={totalRounds} range={numberRange} />
+        <div className="mt-5"><ThemeCard theme={theme} range={numberRange} pack={pack} /></div>
+        <ZCard bg="#FFF6E5" tilt={1.5} shadow={4} radius={20} className="mt-6 px-4 py-3.5">
+          <p className="text-[16px] font-semibold leading-snug">
+            Chacun répond <b>à voix haute</b>, selon l&apos;intensité de son numéro. Écoutez bien : ensuite <b>chacun</b> classera toute la table.
+          </p>
+        </ZCard>
+        <div className="min-h-6 flex-1" />
+        <ZButton bg="#FFD23F" onClick={() => { setStepIdx(0); setPhase("pass-rank"); }}>Tout le monde a parlé</ZButton>
+      </ZScreen>
     );
   }
   if (phase === "pass-rank") {
     const idx = passOrder[stepIdx];
-    return <PassScreen toName={players[idx]} colorIndex={idx} accent="#ff5a8a"
-      buttonLabel="C'est moi, je classe" hint={`Personne ne regarde ! Classe toute la table (toi compris) du ${SCALE[pack].lowFull} au ${SCALE[pack].highFull}, selon ce que t'as entendu.`} onReady={() => setPhase("rank")} />;
+    return <PassScreen toName={players[idx]} colorIndex={idx} accent={TT_COLOR}
+      buttonLabel="C'est moi, je classe" hint={`Personne ne regarde ! Classe toute la table (toi compris) du ${SCALE[pack].lowFull} au ${SCALE[pack].highFull}.`} onReady={() => setPhase("rank")} />;
   }
   if (phase === "rank") {
     const ranker = passOrder[stepIdx];
@@ -342,9 +369,11 @@ function TopTenLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) {
         key={`${round}-${stepIdx}`}
         ids={passOrder.map(String)}
         nameOf={(id) => players[+id]}
+        colorOf={(id) => +id}
         rankerName={players[ranker]}
         round={round} total={totalRounds} range={numberRange} pack={pack}
         onSubmit={(o) => {
+          playSfx("confirm", { volume: 0.7 });
           const g = o.map(Number);
           const next = { ...guesses, [ranker]: g };
           setGuesses(next);
@@ -359,65 +388,72 @@ function TopTenLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) {
     const perRound = players
       .map((name, i) => ({ name, i, ...results[i] }))
       .sort((a, b) => (b.points ?? 0) - (a.points ?? 0));
+    const anyPerfect = perRound.some((p) => p.perfect);
     return (
-      <div className="flex min-h-[100svh] flex-col items-center overflow-y-auto p-5 pt-[max(env(safe-area-inset-top),20px)] pb-[max(env(safe-area-inset-bottom),20px)] text-white"
-        style={{ background: `radial-gradient(circle at 50% 15%, ${ACCENT}26, transparent 45%), #0E0828` }}>
-        <p className="af-eyebrow mt-3">Manche {round}/{totalRounds} — Résultat · sur {numberRange}</p>
-        <p className="cb-display-sm mt-1 mb-3">Le vrai classement</p>
-        <div className="w-full max-w-md space-y-1.5">
+      <ZScreen>
+        {anyPerfect && <ConfettiBurst count={40} />}
+        <RoundChips round={round} total={totalRounds} range={numberRange} />
+        <ZTitle size={38} className="mt-4">Le vrai classement</ZTitle>
+        <div className="mt-4 flex flex-col gap-2.5">
           {trueOrder.map((idx, i) => {
             const num = numbers[idx];
+            const hot = num / Math.max(numberRange, total);
             return (
-              <div key={idx} className="flex items-center gap-3 rounded-2xl border border-white/10 bg-black/30 px-4 py-2.5">
-                <span className="cb-mono w-5 text-white/40">{i + 1}.</span>
-                <span className="flex h-9 w-9 items-center justify-center rounded-full font-mono font-bold text-white" style={{ background: ACCENT, opacity: 0.3 + (num / numberRange) * 0.7 }}>{num}</span>
-                <span className="flex-1 font-semibold">{players[idx]}</span>
+              <div key={idx} className="flex items-center gap-3 rounded-[18px] py-2 pl-2 pr-4"
+                style={{ background: "#fff", color: GAME_INK, border: `3px solid ${GAME_INK}`, boxShadow: `0 4px 0 ${GAME_INK}`, rotate: `${i % 2 ? 0.8 : -0.8}deg` }}>
+                <span className="grid h-11 min-w-11 shrink-0 place-items-center rounded-[14px] px-1 text-[22px]"
+                  style={{ ...DISPLAY, background: hot > 0.66 ? "#FF3EA5" : hot > 0.33 ? "#FFD23F" : "#3DDC97", color: GAME_INK, border: `2.5px solid ${GAME_INK}` }}>{num}</span>
+                <Mascot size={34} color={colorForIndex(idx)} mood="happy" shadow={false} bob={false} />
+                <span className="min-w-0 flex-1 truncate text-[19px]" style={DISPLAY}>{players[idx]}</span>
               </div>
             );
           })}
         </div>
 
-        <p className="af-eyebrow mt-6 mb-2" style={{ color: ACCENT }}>Précision de chacun</p>
-        <div className="w-full max-w-md space-y-2">
+        <ZTitle size={28} className="mt-8">Qui a eu le flair ?</ZTitle>
+        <div className="mt-3 flex flex-col gap-2.5">
           {perRound.map((p) => (
-            <div key={p.i} className={cn("flex items-center gap-3 rounded-2xl border px-4 py-3", p.perfect ? "border-emerald-500/40 bg-emerald-500/[0.1]" : "border-white/10 bg-black/30")}>
-              <MascotAvatar color={colorForIndex(p.i)} size={30} mood={p.perfect ? "wink" : "happy"} />
-              <span className="flex-1 font-semibold">{p.name}</span>
-              <span className="cb-mono text-sm text-white/60">{p.correct}/{p.total}{p.perfect ? " 🎉" : ""}</span>
-              <span className="cb-mono font-bold" style={{ color: ACCENT }}>+{p.points}</span>
+            <div key={p.i} className="flex items-center gap-3 rounded-[18px] px-3 py-2.5"
+              style={{ background: p.perfect ? "#3DDC97" : "#FFF6E5", color: GAME_INK, border: `3px solid ${GAME_INK}`, boxShadow: `0 4px 0 ${GAME_INK}` }}>
+              <Mascot size={34} color={colorForIndex(p.i)} mood={p.perfect ? "laughing" : "happy"} shadow={false} bob={false} />
+              <span className="min-w-0 flex-1 truncate text-[18px]" style={DISPLAY}>{p.name}</span>
+              <span className="text-[14px] font-bold">{p.perfect ? "Parfait !" : `${p.correct}/${p.total} paires`}</span>
+              <span className="text-[22px]" style={DISPLAY}>+{p.points}</span>
             </div>
           ))}
         </div>
 
-        <button onClick={() => { if (round >= totalRounds) setPhase("over"); else { setThemeCursor((c) => c + 1); startRound(round + 1); } }}
-          className="af-btn af-btn-primary mt-6 mb-4 w-full max-w-md">{round >= totalRounds ? "Voir les scores" : "Manche suivante"}</button>
-      </div>
+        <ZButton bg="#FFD23F" className="mt-8" onClick={() => {
+          if (round >= totalRounds) { playCombo("fanfare"); setPhase("over"); }
+          else { setThemeCursor((c) => c + 1); startRound(round + 1); }
+        }}>{round >= totalRounds ? "Voir les scores" : "Manche suivante"}</ZButton>
+      </ZScreen>
     );
   }
   // over
-  const ranking = players.map((name, i) => ({ name, score: scores[i], i })).sort((a, b) => b.score - a.score);
+  const ranking = players.map((name, i) => ({ name, score: scores[i], colorIndex: i })).sort((a, b) => b.score - a.score);
   return (
-    <div className="flex min-h-[100svh] flex-col items-center justify-center p-6 pt-[max(env(safe-area-inset-top),20px)] pb-[max(env(safe-area-inset-bottom),20px)] text-white"
-      style={{ background: `radial-gradient(circle at 50% 25%, ${ACCENT}2e, transparent 45%), #0E0828` }}>
-      <p className="af-eyebrow" style={{ color: ACCENT }}>Partie terminée</p>
-      <h2 className="cb-display-lg mt-1 mb-5">Meilleur flair</h2>
-      <div className="w-full max-w-sm space-y-2">
-        {ranking.map((p, idx) => (
-          <div key={p.i} className="flex items-center justify-between rounded-2xl border p-4"
-            style={{ background: idx === 0 ? `${ACCENT}22` : "rgba(255,255,255,0.04)", borderColor: idx === 0 ? `${ACCENT}55` : "var(--line-soft)" }}>
-            <div className="flex items-center gap-3">
-              <span className="cb-mono w-7 font-bold" style={{ color: idx === 0 ? ACCENT : "var(--text-muted)" }}>#{idx + 1}</span>
-              <MascotAvatar color={colorForIndex(p.i)} size={34} mood={idx === 0 ? "wink" : "happy"} />
-              <span className="font-bold">{p.name}</span>
-            </div>
-            <span className="cb-mono font-bold" style={{ color: idx === 0 ? ACCENT : "#fff" }}>{p.score}</span>
-          </div>
-        ))}
+    <ZScreen bg={TT_COLOR}>
+      <ConfettiBurst count={50} />
+      <ZTitle size={40} className="text-center">{ranking[0]?.name} a le meilleur flair</ZTitle>
+      <div className="mt-6"><ZRanking rows={ranking} /></div>
+      <div className="min-h-8 flex-1" />
+      <ZButton bg="#FFD23F" onClick={() => { setPhase("target"); }}>Rejouer</ZButton>
+      <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
+        <ZButton size="sm" bg="#fff" style={{ width: "auto" }} onClick={() => setPhase("setup")}>Changer les joueurs</ZButton>
+        <IdeaButton game="De 1 à 10" kind="thème" bg="#fff" />
       </div>
-      <div className="mt-6 flex gap-2">
-        <button onClick={() => setPhase("setup")} className="af-btn af-btn-ghost">Nouvelle partie</button>
-        {onReturnToLobby && <button onClick={onReturnToLobby} className="af-btn af-btn-primary">Lobby</button>}
-      </div>
+      {onReturnToLobby && <ZLink onClick={onReturnToLobby} color={GAME_INK} className="mt-2">Retour à l&apos;accueil</ZLink>}
+    </ZScreen>
+  );
+}
+
+/** Pastilles « Manche 2/4 » + « De 1 à 10 ». */
+function RoundChips({ round, total, range }: { round: number; total: number; range: number }) {
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <ZChip bg="#fff" tilt={-2}>Manche {round}/{total}</ZChip>
+      <ZChip bg={GAME_INK} tilt={2}>De 1 à {range}</ZChip>
     </div>
   );
 }
@@ -479,7 +515,7 @@ function TopTenOnline({ roomCode, playerId, playerName }: GameProps) {
           Manche {state.round}/{state.totalRounds} · sur {state.numberRange}
         </span>
         <Flame size={48} strokeWidth={2.4} color={ACCENT} className="mb-6" aria-hidden />
-        <p className="text-2xl font-serif font-semibold text-white/90 mb-3 text-center px-6" style={{ textShadow: `0 0 40px ${ACCENT}33` }}>
+        <p className="text-2xl font-display font-semibold text-white/90 mb-3 text-center px-6" style={{ textShadow: `0 0 40px ${ACCENT}33` }}>
           Chacun reçoit un numéro secret
         </p>
         <p className="text-sm text-white/45 font-sans max-w-xs text-center">
@@ -502,7 +538,7 @@ function TopTenOnline({ roomCode, playerId, playerName }: GameProps) {
           <button
             onClick={() => sendAction({ action: "start-answering" })}
             className="mt-7 w-full max-w-md py-4 rounded-2xl font-sans text-sm font-semibold text-white transition-all hover:brightness-110 active:scale-[0.98]"
-            style={{ background: `linear-gradient(135deg, #2bd47a, ${ACCENT})`, boxShadow: `0 0 25px ${ACCENT}44` }}
+            style={{ background: TT_COLOR, color: GAME_INK, border: `3px solid ${GAME_INK}`, boxShadow: `0 5px 0 ${GAME_INK}`, ...DISPLAY }}
           >
             C&apos;est bon → voir mon numéro
           </button>
@@ -546,7 +582,7 @@ function TopTenOnline({ roomCode, playerId, playerName }: GameProps) {
         <button
           onClick={() => sendAction({ action: "start-ordering" })}
           className="mt-7 w-full max-w-md py-4 rounded-2xl font-sans text-sm font-semibold text-white transition-all hover:brightness-110 active:scale-[0.98]"
-          style={{ background: `linear-gradient(135deg, #2bd47a, ${ACCENT})`, boxShadow: `0 0 25px ${ACCENT}44` }}
+          style={{ background: TT_COLOR, color: GAME_INK, border: `3px solid ${GAME_INK}`, boxShadow: `0 5px 0 ${GAME_INK}`, ...DISPLAY }}
         >
           Tout le monde a parlé → Classer
         </button>
@@ -567,7 +603,7 @@ function TopTenOnline({ roomCode, playerId, playerName }: GameProps) {
             Manche {state.round}/{state.totalRounds} · sur {state.numberRange}
           </span>
           <div className="mb-4 flex justify-center"><GameIconBadge icon={state.isSpectator ? Eye : Check} bg={state.isSpectator ? "#FFFFFF" : "#3DDC97"} size={52} /></div>
-          <p className="text-2xl font-serif font-semibold text-white/90 mb-3 text-center px-6">
+          <p className="text-2xl font-display font-semibold text-white/90 mb-3 text-center px-6">
             {state.isSpectator ? "Les joueurs classent la table" : "Classement envoyé"}
           </p>
           <p className="text-sm text-white/40 font-sans animate-pulse">
@@ -618,7 +654,7 @@ function TopTenOnline({ roomCode, playerId, playerName }: GameProps) {
         </span>
 
         <p
-          className={cn("text-3xl font-serif font-semibold mb-1 text-center", myResult?.perfect ? "text-white/95" : "text-white/85")}
+          className={cn("text-3xl font-display font-semibold mb-1 text-center", myResult?.perfect ? "text-white/95" : "text-white/85")}
           style={myResult?.perfect ? { textShadow: `0 0 40px ${ACCENT}55` } : undefined}
         >
           {myResult?.perfect
@@ -763,7 +799,7 @@ function Header({ round, total, range, pack = "adult" }: { round: number; total:
   );
 }
 
-// ── Choix de l'échelle des numéros (1→10 / 25 / 50) ─────
+// ── Choix des thèmes + de l'échelle des numéros (1→10 / 25 / 50) ─────
 function RangePicker({
   range,
   onPick,
@@ -781,148 +817,92 @@ function RangePicker({
   onBack?: () => void;
   shared?: boolean;
 }) {
-  const OPTIONS: { v: 10 | 25 | 50; label: string; sub: string }[] = [
-    { v: 10, label: "Classique", sub: "De 1 à 10" },
-    { v: 25, label: "Nuance", sub: "De 1 à 25" },
-    { v: 50, label: "Sniper", sub: "De 1 à 50" },
+  const OPTIONS: { v: 10 | 25 | 50; label: string; color: string }[] = [
+    { v: 10, label: "Classique", color: "#3DDC97" },
+    { v: 25, label: "Nuance", color: "#FFD23F" },
+    { v: 50, label: "Sniper", color: "#FF3EA5" },
   ];
-  const PACKS: { v: Pack; icon: LucideIcon; label: string; sub: string }[] = [
-    { v: "adult", icon: Flame, label: "Soirée 18+", sub: "Thèmes osés & malaise" },
-    { v: "culture", icon: Trophy, label: "Culture pop", sub: "Classements : animés, villes, foot…" },
+  const PACKS: { v: Pack; icon: LucideIcon; label: string; sub: string; color: string }[] = [
+    { v: "adult", icon: Flame, label: "Soirée 18+", sub: "Thèmes osés et malaise", color: "#FF3EA5" },
+    { v: "culture", icon: Trophy, label: "Culture pop", sub: "Animés, villes, foot…", color: "#4ECDC4" },
   ];
   return (
-    <div className="flex w-full max-w-md flex-col items-center text-white">
+    <div className="flex w-full flex-1 flex-col text-white">
       {pack != null && onPickPack && (
         <>
-          <p className="text-xs uppercase tracking-[0.25em] mb-2" style={{ color: `${ACCENT}cc` }}>
-            Type de thèmes
-          </p>
-          <div className="grid w-full grid-cols-2 gap-2.5 mb-6">
-            {PACKS.map((o) => {
-              const active = o.v === pack;
-              return (
-                <button
-                  key={o.v}
-                  onClick={() => onPickPack(o.v)}
-                  className={cn(
-                    "rounded-3xl border p-4 text-center transition-all active:scale-[0.97]",
-                    active ? "shadow-lg" : "hover:bg-white/[0.04]"
-                  )}
-                  style={{
-                    borderColor: active ? `${ACCENT}aa` : "rgba(255,255,255,0.10)",
-                    background: active ? `${ACCENT}1e` : "rgba(0,0,0,0.32)",
-                    boxShadow: active ? `0 0 30px ${ACCENT}44` : undefined,
-                  }}
-                >
-                  <o.icon size={26} strokeWidth={2.6} className="mx-auto" style={{ color: active ? ACCENT : "#fff" }} aria-hidden />
-                  <p className="text-xs font-semibold mt-1 text-white/90">{o.label}</p>
-                  <p className="text-xs text-white/45 mt-0.5 leading-tight">{o.sub}</p>
-                </button>
-              );
-            })}
+          <ZTitle size={30}>Les thèmes</ZTitle>
+          <div className="mt-3 grid grid-cols-2 gap-3">
+            {PACKS.map((o, i) => (
+              <ZChoice key={o.v} active={o.v === pack} color={o.color} onClick={() => onPickPack(o.v)} tilt={i ? 1.5 : -1.5} className="min-h-[124px]">
+                <GameIconBadge icon={o.icon} bg={o.v === pack ? "#fff" : o.color} size={40} />
+                <p className="mt-2 text-[20px] leading-none" style={DISPLAY}>{o.label}</p>
+                <p className="mt-1 text-[14px] font-semibold leading-tight">{o.sub}</p>
+              </ZChoice>
+            ))}
           </div>
         </>
       )}
-      <p className="text-xs uppercase tracking-[0.25em] mb-2" style={{ color: `${ACCENT}cc` }}>
-        Échelle des numéros
-      </p>
-      <h2 className="text-3xl font-serif font-semibold text-white/95 mb-1 text-center">
-        Les numéros vont jusqu&apos;à…
-      </h2>
-      <p className="text-xs text-white/35 font-sans mb-6 text-center px-3">
-        Chacun reçoit un numéro secret et répond à voix haute selon son intensité. Ensuite, chacun classe toute la table (lui compris). Plus l&apos;échelle est haute, plus il faut être précis.
-      </p>
-      <div className="grid w-full grid-cols-3 gap-2.5">
-        {OPTIONS.map((o) => {
-          const active = o.v === range;
-          return (
-            <button
-              key={o.v}
-              onClick={() => onPick(o.v)}
-              className={cn(
-                "rounded-3xl border p-4 text-center transition-all active:scale-[0.97]",
-                active ? "shadow-lg" : "hover:bg-white/[0.04]"
-              )}
-              style={{
-                borderColor: active ? `${ACCENT}aa` : "rgba(255,255,255,0.10)",
-                background: active ? `${ACCENT}1e` : "rgba(0,0,0,0.32)",
-                boxShadow: active ? `0 0 30px ${ACCENT}44` : undefined,
-              }}
-            >
-              <p className="cb-mono text-3xl font-bold text-white" style={{ color: active ? ACCENT : "#fff" }}>
-                {o.v}
-              </p>
-              <p className="text-xs font-semibold mt-0.5 text-white/85">{o.label}</p>
-              <p className="text-xs text-white/45 mt-0.5 leading-tight">{o.sub}</p>
-            </button>
-          );
-        })}
+      <ZTitle size={30} className="mt-8">Les numéros vont jusqu&apos;à</ZTitle>
+      <div className="mt-3 grid grid-cols-3 gap-3">
+        {OPTIONS.map((o, i) => (
+          <ZChoice key={o.v} active={o.v === range} color={o.color} onClick={() => onPick(o.v)} tilt={i === 1 ? 2 : -2} className="text-center">
+            <p className="text-[38px] leading-none" style={DISPLAY}>{o.v}</p>
+            <p className="mt-1 text-[14px] font-bold">{o.label}</p>
+          </ZChoice>
+        ))}
       </div>
-      <button
-        onClick={onStart}
-        className="mt-7 w-full py-4 rounded-2xl font-sans text-sm font-semibold text-white transition-all hover:brightness-110 active:scale-[0.98]"
-        style={{ background: `linear-gradient(135deg, #2bd47a, ${ACCENT})`, boxShadow: `0 0 25px ${ACCENT}44` }}
-      >
-        Lancer la partie
-      </button>
+      <p className="mt-5 text-[15px] font-semibold leading-snug" style={{ color: "rgba(255,255,255,0.85)" }}>
+        Chacun reçoit un numéro secret et répond à voix haute selon son intensité, puis chacun classe toute la table. Plus l&apos;échelle est grande, plus il faut être précis.
+      </p>
+      <div className="min-h-8 flex-1" />
+      <ZButton bg={TT_COLOR} onClick={() => { playSfx("confirm", { volume: 0.7 }); onStart(); }}>Lancer la partie</ZButton>
       {shared && (
-        <p className="text-xs text-white/35 font-sans mt-3 text-center">
+        <p className="mt-3 text-center text-[14px] font-semibold" style={{ color: "rgba(255,255,255,0.8)" }}>
           N&apos;importe qui peut changer l&apos;échelle ou lancer.
         </p>
       )}
-      {onBack && (
-        <button onClick={onBack} className="mt-2 min-h-11 px-4 text-sm text-white/40 active:text-white/70"><GameInlineIcon icon={ArrowLeft} /> Modifier les joueurs</button>
-      )}
+      {onBack && <ZLink onClick={onBack} className="mt-2"><GameInlineIcon icon={ArrowLeft} /> Modifier les joueurs</ZLink>}
     </div>
   );
 }
 
 function ThemeCard({ theme, range = 10, pack = "adult" }: { theme: ThemeState | null; range?: number; pack?: Pack }) {
   return (
-    <div
-      className="w-full max-w-md rounded-3xl border border-white/10 bg-black/40 backdrop-blur-sm p-6"
-      style={{ boxShadow: `0 0 40px ${ACCENT}1a` }}
-    >
-      <p className="text-xs text-white/35 font-sans uppercase tracking-[0.2em] mb-3 text-center">
-        {PACK_LABEL[pack]} · échelle 1 → {range}
-      </p>
-      <p className="text-2xl font-serif font-semibold text-white/95 text-center leading-snug">
-        {theme?.theme}
-      </p>
-      <div className="mt-5 flex items-stretch gap-2 text-center">
-        <div className="flex-1 rounded-2xl border border-emerald-500/20 bg-emerald-500/5 px-3 py-2.5">
-          <p className="text-emerald-400 font-mono font-bold text-lg">1</p>
-          <p className="text-xs text-white/55 font-sans leading-tight mt-1">{theme?.low}</p>
-        </div>
-        <div className="flex items-center text-white/30 text-xs font-sans">vers</div>
-        <div className="flex-1 rounded-2xl border border-rose-500/25 bg-rose-500/10 px-3 py-2.5">
-          <p className="font-mono font-bold text-lg" style={{ color: ACCENT }}>{range}</p>
-          <p className="text-xs text-white/55 font-sans leading-tight mt-1">{theme?.high}</p>
-        </div>
+    <div className="w-full">
+      <ZCard bg="#fff" tilt={-1.5} shadow={6} radius={26} className="px-5 pb-5 pt-4">
+        <ZChip bg={pack === "adult" ? "#FF3EA5" : "#4ECDC4"} tilt={-3} className="-mt-8 mb-2">{PACK_LABEL[pack]}</ZChip>
+        <ZTitle size={theme && theme.theme.length > 60 ? 26 : 31} as="p" style={{ lineHeight: 1.05 }}>{theme?.theme}</ZTitle>
+      </ZCard>
+      <div className="mt-4 grid grid-cols-2 gap-3">
+        <ZCard bg="#3DDC97" tilt={1.5} shadow={4} radius={20} className="px-3 pb-3 pt-2">
+          <p className="text-[30px] leading-none" style={DISPLAY}>1</p>
+          <p className="mt-1 text-[14px] font-semibold leading-snug">{theme?.low}</p>
+        </ZCard>
+        <ZCard bg="#FFD23F" tilt={-1.5} shadow={4} radius={20} className="px-3 pb-3 pt-2 text-right">
+          <p className="text-[30px] leading-none" style={DISPLAY}>{range}</p>
+          <p className="mt-1 text-[14px] font-semibold leading-snug">{theme?.high}</p>
+        </ZCard>
       </div>
     </div>
   );
 }
 
-function NumberCard({ myNumber, range = 10 }: { myNumber: number | null; range?: number }) {
+function NumberCard({ myNumber, range = 10, pack = "adult" }: { myNumber: number | null; range?: number; pack?: Pack }) {
+  const hot = myNumber != null ? myNumber / range : 0.5;
+  const bg = hot > 0.66 ? "#FF3EA5" : hot > 0.33 ? "#FFD23F" : "#3DDC97";
   return (
-    <div className="flex flex-col items-center mt-2">
-      <p className="text-xs text-white/35 font-sans mb-3 uppercase tracking-[0.15em]">Ton num&eacute;ro secret · sur {range}</p>
+    <div className="flex flex-col items-center">
       <div
-        className="flex h-32 w-32 items-center justify-center rounded-3xl border backdrop-blur-sm"
-        style={{
-          borderColor: `${ACCENT}55`,
-          background: "rgba(0,0,0,0.4)",
-          boxShadow: `0 0 50px ${ACCENT}33`,
-        }}
+        className="grid h-48 w-48 place-items-center rounded-[40px]"
+        style={{ background: bg, color: GAME_INK, border: `4px solid ${GAME_INK}`, boxShadow: `0 8px 0 ${GAME_INK}`, rotate: "-4deg" }}
       >
-        <span className="text-7xl font-serif font-bold text-white/95" style={{ textShadow: `0 0 30px ${ACCENT}66` }}>
-          {myNumber ?? "?"}
-        </span>
+        <span style={{ ...DISPLAY, fontSize: myNumber != null && myNumber >= 10 ? 104 : 124, lineHeight: 1 }}>{myNumber ?? "?"}</span>
       </div>
-      <p className="text-sm text-white/45 font-sans mt-5 max-w-xs text-center leading-relaxed">
-        Donne une r&eacute;ponse <span className="text-white/80">à voix haute</span> qui colle à
-        l&apos;intensit&eacute; de ton num&eacute;ro <span className="text-white/75">(sur {range})</span>. Les autres devront te ranger au bon endroit !
+      <ZChip bg="#fff" tilt={3} className="mt-6">
+        sur {range} · {myNumber != null && hot > 0.5 ? SCALE[pack].highFull : SCALE[pack].lowFull}
+      </ZChip>
+      <p className="mt-5 max-w-xs text-center text-[16px] font-semibold leading-snug" style={{ color: "rgba(255,255,255,0.9)" }}>
+        Donne une réponse à voix haute qui colle à l&apos;intensité de ton numéro. Les autres devront te ranger au bon endroit !
       </p>
     </div>
   );
@@ -942,9 +922,12 @@ function OrderingBoard({
   submittedCount,
   playerCount,
   remainingMs,
+  colorOf,
 }: {
   ids: string[];
   nameOf: (id: string) => string;
+  /** Index de couleur du blob du joueur (mode local) */
+  colorOf?: (id: string) => number;
   onSubmit: (order: string[]) => void;
   round: number;
   total: number;
@@ -1015,35 +998,20 @@ function OrderingBoard({
   };
 
   return (
-    <div
-      className="flex flex-1 flex-col p-5 md:p-6 pt-[max(env(safe-area-inset-top),20px)] pb-[max(env(safe-area-inset-bottom),20px)]"
-      style={{ background: `radial-gradient(circle at 50% 15%, ${ACCENT}14, transparent 45%), #060606` }}
-      onPointerMove={handlePointerMove}
-      onPointerUp={handlePointerUp}
-      onPointerCancel={handlePointerUp}
-    >
-      <div className="flex items-center justify-between mb-1 mr-14">
-        <span className="text-xs text-white/35 font-sans tracking-wide">Manche {round}/{total} · sur {range}</span>
-        <span
-          className="text-xs px-3 py-1 rounded-full border font-sans font-semibold uppercase tracking-wider"
-          style={{ color: ACCENT, borderColor: `${ACCENT}40`, background: `${ACCENT}14` }}
-        >
-          {rankerName ? rankerName : "Ton classement"}
-        </span>
+    <div onPointerMove={handlePointerMove} onPointerUp={handlePointerUp} onPointerCancel={handlePointerUp} className="flex shrink-0 flex-col">
+    <ZScreen>
+      <div className="flex flex-wrap items-center gap-2">
+        <ZChip bg="#fff" tilt={-2}>Manche {round}/{total}</ZChip>
+        {rankerName && <ZChip bg={TT_COLOR} tilt={2}>{rankerName} classe</ZChip>}
       </div>
-      <p className="text-center text-lg font-serif font-semibold text-white/90 mt-2 mb-1">
-        Classe-les du {SCALE[pack].lowFull} au {SCALE[pack].highFull}
-      </p>
-      <p className="text-center text-xs text-white/40 font-sans mb-2">
-        Toi compris ! Glisse avec la poignée ⠿ ou utilise les flèches.
+      <ZTitle size={30} className="mt-4">Classe-les du {SCALE[pack].lowFull} au {SCALE[pack].highFull}</ZTitle>
+      <p className="mt-2 text-[15px] font-semibold" style={{ color: "rgba(255,255,255,0.85)" }}>
+        Toi compris ! Fais glisser avec la poignée ou utilise les flèches.
       </p>
       {remainingMs != null && <OrderCountdown key={round} remainingMs={remainingMs} />}
-      <div className="flex items-center justify-between max-w-md w-full mx-auto px-1 mb-3">
-        <span className="text-xs text-emerald-400 font-sans uppercase tracking-wider">↑ 1 · {SCALE[pack].low}</span>
-        <span className="text-xs font-sans uppercase tracking-wider" style={{ color: ACCENT }}>{range} · {SCALE[pack].high} ↓</span>
-      </div>
 
-      <div className="flex-1 w-full max-w-md mx-auto space-y-2 select-none">
+      <div className="mt-4"><ZChip bg="#3DDC97" tilt={-1.5}><ArrowUp size={15} strokeWidth={3} aria-hidden /> 1 · {SCALE[pack].low}</ZChip></div>
+      <div className="mt-3 flex w-full flex-col gap-2.5 select-none">
         {order.map((id, i) => {
           const isDragging = id === dragId;
           const isMe = myId != null && id === myId;
@@ -1054,65 +1022,46 @@ function OrderingBoard({
                 if (el) itemRefs.current.set(id, el);
                 else itemRefs.current.delete(id);
               }}
-              className={cn(
-                "flex items-center gap-2 rounded-2xl border px-2 py-1.5 backdrop-blur-sm transition-shadow",
-                isDragging
-                  ? "border-white/40 bg-black/60 shadow-2xl scale-[1.02]"
-                  : isMe
-                  ? "border-white/20 bg-white/[0.06]"
-                  : "border-white/10 bg-black/35"
-              )}
-              style={isDragging ? { boxShadow: `0 0 30px ${ACCENT}44` } : undefined}
+              className="flex items-center gap-2 rounded-[18px] py-1.5 pl-1.5 pr-1.5 transition-transform"
+              style={{
+                background: isDragging ? "#FFD23F" : isMe ? "#FFF6E5" : "#fff",
+                color: GAME_INK,
+                border: `3px solid ${GAME_INK}`,
+                boxShadow: `0 ${isDragging ? 8 : 4}px 0 ${GAME_INK}`,
+                transform: isDragging ? "scale(1.03) rotate(-1.5deg)" : undefined,
+              }}
             >
-              <span className="text-sm font-mono font-bold w-6 text-center text-white/30">{i + 1}</span>
               <div
                 onPointerDown={handlePointerDown(id)}
-                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/[0.04] text-white/45 cursor-grab active:cursor-grabbing active:bg-white/10 touch-none"
-                style={{ touchAction: "none" }}
+                className="grid h-11 w-10 shrink-0 cursor-grab place-items-center rounded-[12px] active:cursor-grabbing"
+                style={{ touchAction: "none", background: "#F1ECFF" }}
                 role="button"
                 aria-label="Glisser pour réordonner"
               >
-                <DotsIcon />
+                <GripVertical size={20} strokeWidth={2.6} aria-hidden />
               </div>
-              <span className="flex-1 text-sm font-sans font-semibold text-white/90 truncate">
-                {nameOf(id)}
-                {isMe && <span className="text-white/35"> (toi)</span>}
+              <span className="w-6 shrink-0 text-center text-[18px]" style={DISPLAY}>{i + 1}</span>
+              {colorOf && <Mascot size={30} color={colorForIndex(colorOf(id))} mood="happy" shadow={false} bob={false} />}
+              <span className="min-w-0 flex-1 truncate text-[18px]" style={DISPLAY}>
+                {nameOf(id)}{isMe && " (toi)"}
               </span>
-              <div className="flex gap-1">
-                <button
-                  onClick={() => move(id, -1)}
-                  disabled={i === 0 || submitted}
-                  aria-label="Monter"
-                  className="h-11 w-11 flex items-center justify-center rounded-xl bg-white/5 text-white/55 disabled:opacity-20 active:bg-white/15 active:scale-90"
-                >
-                  ▲
-                </button>
-                <button
-                  onClick={() => move(id, 1)}
-                  disabled={i === order.length - 1 || submitted}
-                  aria-label="Descendre"
-                  className="h-11 w-11 flex items-center justify-center rounded-xl bg-white/5 text-white/55 disabled:opacity-20 active:bg-white/15 active:scale-90"
-                >
-                  ▼
-                </button>
-              </div>
+              <GameIconButton icon={ArrowUp} label={`Monter ${nameOf(id)}`} onClick={() => move(id, -1)} disabled={i === 0 || submitted} bg="#3DDC97" />
+              <GameIconButton icon={ArrowDown} label={`Descendre ${nameOf(id)}`} onClick={() => move(id, 1)} disabled={i === order.length - 1 || submitted} bg="#FF3EA5" />
             </div>
           );
         })}
       </div>
+      <div className="mt-3"><ZChip bg="#FF3EA5" tilt={1.5}><ArrowDown size={15} strokeWidth={3} aria-hidden /> {range} · {SCALE[pack].high}</ZChip></div>
 
-      <button
-        onClick={submit}
-        disabled={submitted}
-        className="mt-4 w-full max-w-md mx-auto py-4 rounded-2xl font-sans text-sm font-semibold text-white transition-all hover:brightness-110 active:scale-[0.98] disabled:opacity-50"
-        style={{ background: `linear-gradient(135deg, #2bd47a, ${ACCENT})`, boxShadow: `0 0 25px ${ACCENT}44` }}
-      >
+      <div className="min-h-6 flex-1" />
+      <ZButton bg="#FFD23F" onClick={submit} disabled={submitted}>
         {submitted
           ? submittedCount != null
-            ? `Envoyé — ${submittedCount}/${playerCount}…`
-            : "Classement envoyé..."
+            ? `Envoyé, ${submittedCount}/${playerCount}…`
+            : "Classement envoyé"
           : "Valider mon classement"}
-      </button>
+      </ZButton>
+    </ZScreen>
     </div>
   );
 }
@@ -1134,15 +1083,5 @@ function OrderCountdown({ remainingMs }: { remainingMs: number }) {
     >
       <GameInlineIcon icon={Timer} /> {left} s
     </p>
-  );
-}
-
-function DotsIcon() {
-  return (
-    <svg width="14" height="20" viewBox="0 0 14 20" fill="currentColor">
-      {[4, 10, 16].map((cy) =>
-        [4, 10].map((cx) => <circle key={`${cx}-${cy}`} cx={cx} cy={cy} r="1.5" />)
-      )}
-    </svg>
   );
 }

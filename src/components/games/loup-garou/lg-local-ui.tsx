@@ -1,25 +1,50 @@
 "use client";
 
 /**
- * Loup-Garou local : briques d'interface (écrans jour/nuit, cartes de rôle,
- * listes de joueurs, fenêtres modales, règles).
+ * Loup-Garou local : briques d'interface en DA « sticker » (blocs pleins,
+ * contour encre épais, ombre dure décalée, Clash Display pour les titres).
+ * Écrans jour/nuit, cartes de rôle, listes de joueurs, modales, règles.
  */
 
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
 import { Mascot, MascotAvatar } from "@/components/Mascot";
 import { colorForIndex } from "@/components/games/local-kit";
 import { ROLES, SPECIALS, type Player, type RoleId } from "./lg-local-data";
-import { X } from "lucide-react";
+import { Check, X } from "lucide-react";
 import { GameIconButton } from "@/components/games/game-icon-button";
 
 export type Tone = "night" | "day" | "dusk";
 
+export const INK = "#15082E";
+export const CREAM = "#FFF6E5";
+export const YELLOW = "#FFD23F";
+export const PINK = "#FF3EA5";
+export const MINT = "#3DDC97";
+export const CORAL = "#FF6B5B";
+export const VIOLET = "#7A4EE8";
+export const SKY = "#4ECDC4";
+
+/** Bloc sticker : couleur pleine + contour encre + ombre dure */
+export const stk = (bg: string, shadow = 4, border = 2.5): CSSProperties => ({
+  background: bg,
+  border: `${border}px solid ${INK}`,
+  boxShadow: `0 ${shadow}px 0 ${INK}`,
+});
+
+export const DISPLAY: CSSProperties = {
+  fontFamily: "var(--font-display), system-ui, sans-serif",
+  fontWeight: 700,
+  letterSpacing: "-0.03em",
+  wordSpacing: "0.1em",
+};
+
+const DOTS = "radial-gradient(rgba(255,255,255,0.06) 1.4px, transparent 1.6px)";
 const BACKGROUNDS: Record<Tone, string> = {
-  // Nuit : quasi noir pour ne pas éclairer la pièce
-  night: "radial-gradient(circle at 50% -10%, #1B1446 0%, #07041A 45%, #020108 100%)",
-  // Jour : plus clair, chaud
-  day: "radial-gradient(circle at 50% -5%, rgba(255,196,110,0.55), transparent 55%), linear-gradient(180deg, #4A3796 0%, #2E2268 100%)",
-  dusk: "radial-gradient(circle at 50% 8%, rgba(122,78,232,0.35), transparent 50%), linear-gradient(180deg, #0F0A2C 0%, #0B0620 100%)",
+  // Nuit : très sombre pour ne pas éclairer la pièce
+  night: "#0B0620",
+  // Jour : la couleur du jeu
+  day: VIOLET,
+  dusk: "#1E1250",
 };
 
 export function Screen({ tone, children, center = false }: { tone: Tone; children: ReactNode; center?: boolean }) {
@@ -28,10 +53,12 @@ export function Screen({ tone, children, center = false }: { tone: Tone; childre
       className="relative flex w-full flex-col items-center text-white"
       style={{
         minHeight: "100dvh",
-        background: BACKGROUNDS[tone],
-        padding: "calc(env(safe-area-inset-top) + 68px) 20px calc(env(safe-area-inset-bottom) + 24px)",
+        backgroundColor: BACKGROUNDS[tone],
+        backgroundImage: DOTS,
+        backgroundSize: "22px 22px",
+        padding: "calc(env(safe-area-inset-top, 0px) + 72px) 20px calc(env(safe-area-inset-bottom, 0px) + 20px)",
         justifyContent: center ? "center" : "flex-start",
-        transition: "background 1s",
+        transition: "background-color 1s",
       }}
     >
       <div className="flex w-full max-w-md flex-1 flex-col" style={{ justifyContent: center ? "center" : "flex-start" }}>
@@ -41,108 +68,138 @@ export function Screen({ tone, children, center = false }: { tone: Tone; childre
   );
 }
 
-/** Lune / soleil décoratif */
+/** Titre Clash Display (gros, serré) */
+export function Title({ children, size = 40, className = "", style }: { children: ReactNode; size?: number; className?: string; style?: CSSProperties }) {
+  return (
+    <h1 className={className} style={{ ...DISPLAY, fontSize: size, lineHeight: 0.98, overflowWrap: "anywhere", ...style }}>
+      {children}
+    </h1>
+  );
+}
+
+/** Petite étiquette sticker inclinée, en phrase normale (remplace les labels en capitales) */
+export function Tag({ children, bg = "#fff", color = INK, tilt = -2, className = "" }: { children: ReactNode; bg?: string; color?: string; tilt?: number; className?: string }) {
+  return (
+    <span
+      className={`inline-flex min-h-8 items-center whitespace-nowrap rounded-full px-3 text-[14px] font-bold leading-none ${className}`}
+      style={{ ...stk(bg, 2, 2), color, transform: `rotate(${tilt}deg)` }}
+    >
+      {children}
+    </span>
+  );
+}
+
+/** Lune / soleil décoratif, façon sticker */
 export function SkyBadge({ tone, size = 84 }: { tone: Tone; size?: number }) {
   const night = tone === "night";
   return (
-    <div
-      aria-hidden
-      className="mx-auto"
-      style={{
-        width: size, height: size, borderRadius: "50%",
-        background: night
-          ? "radial-gradient(circle at 35% 35%, #F7F1DC, #C9C0A3 60%, #8E876F)"
-          : "radial-gradient(circle at 40% 40%, #FFF3B0, #FFC93C 60%, #FF9F1C)",
-        boxShadow: night ? "0 0 60px rgba(247,241,220,0.25)" : "0 0 70px rgba(255,201,60,0.55)",
-      }}
-    />
+    <div aria-hidden className="relative mx-auto" style={{ width: size, height: size }}>
+      <div className="absolute inset-0 rounded-full" style={{ ...stk(night ? CREAM : YELLOW, 5, 3) }} />
+      {night ? (
+        <>
+          <span className="absolute rounded-full" style={{ left: "22%", top: "30%", width: size * 0.18, height: size * 0.18, background: "#E8DCC0", border: `2px solid ${INK}` }} />
+          <span className="absolute rounded-full" style={{ left: "55%", top: "52%", width: size * 0.12, height: size * 0.12, background: "#E8DCC0", border: `2px solid ${INK}` }} />
+        </>
+      ) : (
+        <span className="absolute rounded-full" style={{ inset: "22%", background: "#FFE88A", border: `2px solid ${INK}` }} />
+      )}
+    </div>
   );
 }
+
+type Variant = "primary" | "pink" | "ghost" | "danger";
+const VARIANT_BG: Record<Variant, string> = { primary: YELLOW, pink: PINK, ghost: "#fff", danger: CORAL };
 
 export function BigButton({
   children, onClick, variant = "primary", disabled = false, className = "",
 }: {
-  children: ReactNode; onClick: () => void; variant?: "primary" | "pink" | "ghost" | "danger"; disabled?: boolean; className?: string;
+  children: ReactNode; onClick: () => void; variant?: Variant; disabled?: boolean; className?: string;
 }) {
-  const styles: Record<string, React.CSSProperties> = {
-    primary: {},
-    pink: {},
-    ghost: {},
-    danger: { background: "linear-gradient(180deg, #FF4D5E, #B3122A)", boxShadow: "0 10px 24px rgba(255,77,94,0.35)" },
-  };
-  const cls = variant === "danger" ? "" : variant === "ghost" ? "af-btn-ghost" : variant === "pink" ? "af-btn-pink" : "af-btn-primary";
+  const [down, setDown] = useState(false);
+  const ghost = variant === "ghost";
+  const shadow = ghost ? 4 : 5;
+  const pressed = down && !disabled;
   return (
     <button
+      type="button"
       onClick={onClick}
       disabled={disabled}
-      className={`af-btn ${cls} w-full disabled:opacity-35 ${className}`}
-      style={{ fontSize: 18, minHeight: 58, ...styles[variant] }}
+      onPointerDown={() => setDown(true)}
+      onPointerUp={() => setDown(false)}
+      onPointerLeave={() => setDown(false)}
+      onPointerCancel={() => setDown(false)}
+      className={`flex w-full items-center justify-center gap-2 rounded-full px-5 text-center ${className}`}
+      style={{
+        ...stk(disabled ? "#3A2C6B" : VARIANT_BG[variant], pressed ? 1 : shadow, 3),
+        color: disabled ? "rgba(255,255,255,0.75)" : variant === "pink" ? "#fff" : INK,
+        ...DISPLAY,
+        letterSpacing: "-0.01em",
+        fontSize: ghost ? 18 : 20,
+        minHeight: ghost ? 54 : 60,
+        transform: pressed ? `translateY(${shadow - 1}px)` : undefined,
+        transition: "transform 110ms ease, box-shadow 110ms ease",
+        touchAction: "manipulation",
+        WebkitTapHighlightColor: "transparent",
+      }}
     >
       {children}
     </button>
   );
 }
 
-/** Carte de rôle (blob + nom + pouvoir) */
+/** Carte de rôle : bloc plein dans la couleur du rôle */
 export function RoleCard({ role, compact = false, subtitle }: { role: RoleId; compact?: boolean; subtitle?: string }) {
   const r = ROLES[role];
   return (
     <div
-      className="relative flex w-full flex-col items-center rounded-[28px] border text-center"
-      style={{
-        padding: compact ? "18px 16px" : "26px 20px",
-        borderColor: `${r.accent}66`,
-        background: `radial-gradient(circle at 50% 20%, ${r.accent}38, transparent 65%), linear-gradient(180deg, rgba(255,255,255,0.07), rgba(255,255,255,0.02))`,
-        boxShadow: `0 0 50px ${r.accent}30`,
-      }}
+      className="relative flex w-full flex-col items-center rounded-[28px] text-center"
+      style={{ ...stk(r.accent, 6, 3), color: INK, padding: compact ? "18px 16px 20px" : "24px 20px 26px", transform: "rotate(-1.5deg)" }}
     >
-      <div className="relative">
-        <Mascot size={compact ? 92 : 132} color={r.color} mood={r.mood} sparkle={role === "voyante" || role === "sorciere"} arms={role === "chasseur" || role === "gardien"} look={role === "loup" ? "shifty" : "center"} />
-        <span className="absolute -right-3 -top-1" style={{ fontSize: compact ? 30 : 40 }}>{r.emoji}</span>
-      </div>
-      {subtitle && <p className="af-eyebrow mt-3" style={{ color: "var(--text-dim)" }}>{subtitle}</p>}
-      <h2 className="mt-2" style={{ fontFamily: "var(--font-display)", fontWeight: 900, fontSize: compact ? 30 : 40, lineHeight: 1, color: r.accent }}>
-        {r.name}
-      </h2>
-      <p className="mt-1 text-xs font-bold uppercase tracking-widest" style={{ color: r.camp === "loups" ? "#FF8A95" : "#9BF0C9" }}>
-        {r.camp === "loups" ? "Camp des loups" : "Camp du village"}
-      </p>
-      {!compact && <p className="mt-3 text-[17px] leading-snug" style={{ color: "rgba(255,255,255,0.88)" }}>{r.power}</p>}
+      <Mascot size={compact ? 92 : 128} color={r.color} mood={r.mood} shadow={false} sparkle={role === "voyante" || role === "sorciere"} arms={role === "chasseur" || role === "gardien"} look={role === "loup" ? "shifty" : "center"} />
+      {subtitle && <p className="mt-2 text-[17px] font-bold">{subtitle}</p>}
+      <h2 className="mt-1" style={{ ...DISPLAY, fontSize: compact ? 36 : 48, lineHeight: 0.95 }}>{r.name}</h2>
+      <span className="mt-3">
+        <Tag bg={r.camp === "loups" ? INK : "#fff"} color={r.camp === "loups" ? "#fff" : INK} tilt={2}>
+          {r.camp === "loups" ? "Camp des loups" : "Camp du village"}
+        </Tag>
+      </span>
+      {!compact && <p className="mt-4 text-[17px] font-semibold leading-snug">{r.power}</p>}
     </div>
   );
 }
 
-/** Liste de joueurs à toucher (gros boutons, lisibles de loin) */
+/** Liste de joueurs à toucher (gros boutons sticker, lisibles de loin) */
 export function PickList({
   players, selected, onPick, note,
 }: {
   players: Player[];
   selected: number[];
   onPick: (id: number) => void;
-  /** texte grisé + désactivé si renvoie une chaîne */
+  /** texte + désactivé si renvoie une chaîne */
   note?: (p: Player) => string | null;
 }) {
   return (
-    <div className="grid w-full grid-cols-1 gap-2">
+    <div className="grid w-full grid-cols-1 gap-2.5">
       {players.map((p) => {
         const n = note?.(p) ?? null;
         const on = selected.includes(p.id);
         return (
           <button
             key={p.id}
+            type="button"
             disabled={!!n}
             onClick={() => onPick(p.id)}
-            className="flex w-full items-center gap-3 rounded-2xl border px-3 text-left transition active:scale-[0.99] disabled:opacity-35"
-            style={{
-              minHeight: 58,
-              borderColor: on ? "#FFD23F" : "rgba(255,255,255,0.12)",
-              background: on ? "rgba(255,210,63,0.16)" : "rgba(255,255,255,0.05)",
-            }}
+            className="flex w-full items-center gap-3 rounded-[20px] px-3 text-left transition-transform active:translate-y-[2px] disabled:opacity-50"
+            style={{ ...stk(on ? YELLOW : "#fff", on ? 4 : 3), color: INK, minHeight: 60, transform: on ? "rotate(-1deg)" : undefined }}
           >
-            <MascotAvatar color={colorForIndex(p.id)} size={38} mood={on ? "shocked" : "neutral"} border={false} />
-            <span className="flex-1 truncate" style={{ fontSize: 20, fontWeight: 700 }}>{p.name}</span>
-            {n && <span className="text-xs" style={{ color: "var(--text-dim)" }}>{n}</span>}
-            {on && <span style={{ fontSize: 22 }}>✓</span>}
+            <MascotAvatar color={colorForIndex(p.id)} size={40} mood={on ? "shocked" : "neutral"} border={false} />
+            <span className="flex-1 truncate" style={{ ...DISPLAY, fontSize: 22, letterSpacing: "-0.01em" }}>{p.name}</span>
+            {n && <span className="text-[14px] font-semibold">{n}</span>}
+            {on && (
+              <span className="grid h-8 w-8 place-items-center rounded-full" style={{ ...stk(MINT, 2, 2) }}>
+                <Check size={18} strokeWidth={3.2} aria-hidden />
+              </span>
+            )}
           </button>
         );
       })}
@@ -159,21 +216,26 @@ export function Modal({ title, onClose, children }: { title: string; onClose: ()
   return (
     <div
       className="fixed inset-0 z-[60] flex items-end justify-center sm:items-center"
-      style={{ background: "rgba(3,1,10,0.78)", backdropFilter: "blur(6px)" }}
+      style={{ background: "rgba(10,4,32,0.66)" }}
       onClick={onClose}
+      role="dialog"
+      aria-modal
+      aria-label={title}
     >
       <div
-        className="w-full max-w-md overflow-y-auto rounded-t-[28px] border text-white sm:rounded-[28px]"
+        className="w-full max-w-md overflow-y-auto rounded-t-[28px] sm:rounded-[28px]"
         style={{
           maxHeight: "86dvh",
-          background: "#120C30",
-          borderColor: "rgba(255,255,255,0.1)",
-          padding: "20px 20px calc(env(safe-area-inset-bottom) + 20px)",
+          background: CREAM,
+          color: INK,
+          border: `3px solid ${INK}`,
+          borderBottom: 0,
+          padding: "20px 20px calc(env(safe-area-inset-bottom, 0px) + 22px)",
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="mb-3 flex items-center justify-between gap-3">
-          <h3 className="cb-display-md">{title}</h3>
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <h3 style={{ ...DISPLAY, fontSize: 30, lineHeight: 1 }}>{title}</h3>
           <GameIconButton icon={X} label="Fermer" onClick={onClose} />
         </div>
         {children}
@@ -187,8 +249,8 @@ export function Confirm({
 }: { text: string; yes: string; onYes: () => void; onNo: () => void; danger?: boolean }) {
   return (
     <Modal title="Sûr ?" onClose={onNo}>
-      <p className="mb-5 text-[18px] leading-snug">{text}</p>
-      <div className="grid gap-2">
+      <p className="mb-5 text-[18px] font-semibold leading-snug">{text}</p>
+      <div className="grid gap-3">
         <BigButton onClick={onYes} variant={danger ? "danger" : "primary"}>{yes}</BigButton>
         <BigButton onClick={onNo} variant="ghost">Annuler</BigButton>
       </div>
@@ -196,38 +258,43 @@ export function Confirm({
   );
 }
 
+/** Titre de section en Clash Display (à la place des petites capitales) */
+export function SectionTitle({ children, className = "", style }: { children: ReactNode; className?: string; style?: CSSProperties }) {
+  return <h3 className={className} style={{ ...DISPLAY, fontSize: 24, lineHeight: 1.05, ...style }}>{children}</h3>;
+}
+
 export function RulesContent() {
   return (
-    <div className="space-y-4 text-[15px] leading-relaxed" style={{ color: "rgba(255,255,255,0.86)" }}>
+    <div className="space-y-5 text-[16px] leading-relaxed" style={{ color: INK }}>
       <section>
-        <p className="af-eyebrow mb-1" style={{ color: "#FFD23F" }}>Le but</p>
+        <SectionTitle className="mb-1">Le but</SectionTitle>
         <p>Des loups se cachent parmi vous. <b>Le village</b> gagne s&apos;il élimine tous les loups. <b>Les loups</b> gagnent dès qu&apos;ils sont aussi nombreux que les autres.</p>
       </section>
       <section>
-        <p className="af-eyebrow mb-1" style={{ color: "#FFD23F" }}>Le téléphone est le meneur</p>
+        <SectionTitle className="mb-1">Le téléphone est le meneur</SectionTitle>
         <p>Chacun découvre sa carte en secret. Ensuite, on pose le tél au centre : il raconte la nuit, appelle chaque rôle, et les rôles appelés le prennent pour agir. Tout le monde garde les yeux fermés quand ce n&apos;est pas son tour.</p>
         <p className="mt-2">Même si un rôle est mort, le téléphone fait comme s&apos;il l&apos;appelait : impossible de deviner qui est encore en vie.</p>
       </section>
       <section>
-        <p className="af-eyebrow mb-1" style={{ color: "#FFD23F" }}>Le jour</p>
+        <SectionTitle className="mb-1">Le jour</SectionTitle>
         <p>On découvre qui est mort et son rôle. Puis débat chronométré, et vote : le joueur désigné est éliminé et révèle sa carte. En cas d&apos;égalité, on revote ou on épargne tout le monde.</p>
       </section>
       <section>
-        <p className="af-eyebrow mb-2" style={{ color: "#FFD23F" }}>Les rôles</p>
-        <div className="space-y-2">
-          {(["loup", "villageois", ...SPECIALS] as RoleId[]).map((id) => (
-            <div key={id} className="flex gap-3 rounded-2xl p-3" style={{ background: "rgba(255,255,255,0.05)" }}>
-              <span className="text-2xl">{ROLES[id].emoji}</span>
-              <div>
-                <p className="font-bold" style={{ color: ROLES[id].accent }}>{ROLES[id].name}</p>
-                <p className="text-sm" style={{ color: "var(--text-dim)" }}>{ROLES[id].power}</p>
+        <SectionTitle className="mb-2">Les rôles</SectionTitle>
+        <div className="space-y-2.5">
+          {(["loup", "villageois", ...SPECIALS] as RoleId[]).map((id, i) => (
+            <div key={id} className="flex items-center gap-3 rounded-[18px] p-3" style={{ ...stk(ROLES[id].accent, 3), transform: `rotate(${i % 2 ? 0.8 : -0.8}deg)` }}>
+              <MascotAvatar color={ROLES[id].color} mood={ROLES[id].mood} size={40} border={false} />
+              <div className="min-w-0">
+                <p style={{ ...DISPLAY, fontSize: 20, letterSpacing: "-0.01em" }}>{ROLES[id].name}</p>
+                <p className="text-[14px] font-semibold leading-snug">{ROLES[id].power}</p>
               </div>
             </div>
           ))}
         </div>
       </section>
       <section>
-        <p className="af-eyebrow mb-1" style={{ color: "#FFD23F" }}>Règles d&apos;or</p>
+        <SectionTitle className="mb-1">Règles d&apos;or</SectionTitle>
         <p>On ne montre jamais sa carte. Les morts se taisent (mais peuvent ricaner). Et on ment avec style.</p>
       </section>
     </div>
@@ -238,12 +305,12 @@ export function RulesContent() {
 export function PlayerRow({ p, lover = false, dim = false }: { p: Player; lover?: boolean; dim?: boolean }) {
   const r = ROLES[p.role];
   return (
-    <div className="flex items-center gap-3 rounded-2xl px-3 py-2" style={{ background: "rgba(255,255,255,0.06)", opacity: dim ? 0.55 : 1 }}>
-      <MascotAvatar color={colorForIndex(p.id)} size={36} mood={p.alive ? "happy" : "dead"} border={false} />
-      <span className="flex-1 truncate text-[17px] font-bold" style={{ textDecoration: p.alive ? "none" : "line-through" }}>
-        {p.name} {lover && "💘"}
+    <div className="flex items-center gap-3 rounded-[18px] px-3 py-2" style={{ ...stk("#fff", 3), color: INK, opacity: dim ? 0.6 : 1, minHeight: 56 }}>
+      <MascotAvatar color={colorForIndex(p.id)} size={38} mood={p.alive ? "happy" : "dead"} border={false} />
+      <span className="min-w-0 flex-1 truncate text-[17px] font-bold" style={{ textDecoration: p.alive ? "none" : "line-through" }}>
+        {p.name}{lover && <span style={{ color: PINK }}> · amoureux</span>}
       </span>
-      <span className="text-[15px] font-semibold" style={{ color: r.accent }}>{r.emoji} {r.name}</span>
+      <span className="shrink-0 rounded-full px-2.5 py-1 text-[14px] font-bold" style={{ ...stk(r.accent, 0, 2) }}>{r.name}</span>
     </div>
   );
 }

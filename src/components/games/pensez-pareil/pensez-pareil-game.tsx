@@ -5,9 +5,16 @@ import { useGame } from "@/lib/party/use-game";
 import { useGameStore } from "@/lib/stores/game-store";
 import type { GameProps } from "@/lib/games/types";
 import { useKeyedState } from "@/lib/use-keyed-state";
-import { Mascot, MascotAvatar } from "@/components/Mascot";
+import { Mascot } from "@/components/Mascot";
+import { isOfflineApp } from "@/lib/offline-app";
 import { ConfettiBurst, Sparkles } from "@/components/ConfettiBurst";
-import { ModeSelect, colorForIndex, type GameMode } from "@/components/games/local-kit";
+import {
+  ModeSelect, PassScreen, colorForIndex, type GameMode,
+  DISPLAY, ZButton, ZCard, ZChip, ZChoice, ZLink, ZScreen, ZTitle, useScrollTopOn,
+} from "@/components/games/local-kit";
+import { GAME_INK } from "@/components/games/game-icon-button";
+import { IdeaButton, RerollButton } from "@/components/games/idea-button";
+import { playCombo, playSfx, preloadSfx } from "@/lib/sfx";
 import { getSavedDuo, saveDuo } from "@/lib/saved-players";
 import { ArrowLeft, Check, Flame, Flower2, Heart, Lock, type LucideIcon } from "lucide-react";
 import { GameIconBadge, GameInlineIcon } from "@/components/games/game-icon-button";
@@ -31,6 +38,8 @@ const SYNC_BASE = 100;
 const COMBO_STEP = 25;
 const TOTAL_ROUNDS = 8;
 const ACCENT = "#FF3EA5";
+/** Couleur du jeu dans l'app (rose) */
+const PP_COLOR = "#FF3EA5";
 
 // ── Prompts (partagés avec le serveur) ────────────────────
 type Tier = PPTier;
@@ -96,12 +105,28 @@ function PensezPareilLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }
   const [inputA, setInputA] = useKeyedState<string>(`${round}-A`, "");
   const [inputB, setInputB] = useKeyedState<string>(`${round}-B`, "");
 
+  useEffect(() => { preloadSfx(["whoosh", "confirm", "success", "ding", "ding2", "wrong", "lose", "win", "powerup", "levelup", "card-flip", "gong", "tock"]); }, []);
+  useScrollTopOn(`${phase}-${round}`);
+
   const prompt = deck[round] ?? null;
+  const nameA = names[0] || "Joueur 1";
+  const nameB = names[1] || "Joueur 2";
 
   const begin = (n: [string, string], p: Pack) => {
     setNames(n); setPack(p); setDeck(buildDeck(p));
     setRound(0); setSyncs(0); setStreak(0); setBestStreak(0); setTeamScore(0);
     setPhase("passA");
+  };
+
+  // « Pas fou ? » : thème remplacé par un thème du même pack jamais tiré dans la partie
+  const rerollPrompt = () => {
+    const tiers = PACKS.find((x) => x.id === pack)!.tiers;
+    const used = new Set(deck.map((d) => d.text));
+    const pool = LOCAL_PROMPTS.filter((x) => tiers.includes(x.tier) && !used.has(x.text));
+    if (!pool.length) return;
+    const pick = pool[Math.floor(Math.random() * pool.length)];
+    playSfx("card-flip", { volume: 0.6, delay: 0.1 });
+    setDeck((d) => d.map((x, i) => (i === round ? pick : x)));
   };
 
   const resolveReveal = (bAns: string) => {
@@ -117,6 +142,10 @@ function PensezPareilLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }
     } else {
       setStreak(0);
     }
+    // Suspense… puis sync (ça monte avec la série) ou raté
+    playCombo("drumroll");
+    if (m) { playSfx("success", { volume: 0.9, delay: 1.05 }); playSfx("ding", { volume: 0.7, rate: 1 + Math.min(nStreak, 5) * 0.08, delay: 1.25 }); }
+    else { playSfx("wrong", { volume: 0.8, delay: 1.05 }); playSfx("lose", { volume: 0.5, delay: 1.12 }); }
     setLastResult({ matched: m, points: pts, streak: nStreak, syncs: nSyncs });
   };
 
@@ -124,22 +153,22 @@ function PensezPareilLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }
     return <CoupleSetup pack={pack} onBack={onReturnToLobby} onStart={begin} />;
   }
   if (phase === "passA") {
-    return <Hand toName={names[0] || "Joueur 1"} idx={0}
+    return <PassScreen toName={nameA} colorIndex={0} accent={PP_COLOR}
       hint="Toi seul regardes : écris ta réponse sans la montrer."
       onReady={() => setPhase("typeA")} />;
   }
   if (phase === "typeA") {
-    return <TypeScreen prompt={prompt} player={names[0] || "Joueur 1"} idx={0}
-      value={inputA} onChange={setInputA}
-      onSubmit={() => { setAnsA(inputA.trim()); setPhase("passB"); }} />;
+    return <TypeScreen prompt={prompt} player={nameA} idx={0} round={round + 1}
+      value={inputA} onChange={setInputA} onReroll={rerollPrompt}
+      onSubmit={() => { playSfx("confirm", { volume: 0.7 }); setAnsA(inputA.trim()); setPhase("passB"); }} />;
   }
   if (phase === "passB") {
-    return <Hand toName={names[1] || "Joueur 2"} idx={1}
-      hint="À ton tour : même thème, réponds en secret."
+    return <PassScreen toName={nameB} colorIndex={1} accent={PP_COLOR}
+      hint={`À ton tour : même thème, réponds en secret. ${nameA} a déjà répondu !`}
       onReady={() => setPhase("typeB")} />;
   }
   if (phase === "typeB") {
-    return <TypeScreen prompt={prompt} player={names[1] || "Joueur 2"} idx={1}
+    return <TypeScreen prompt={prompt} player={nameB} idx={1} round={round + 1}
       value={inputB} onChange={setInputB}
       onSubmit={() => { const b = inputB.trim(); setAnsB(b); resolveReveal(b); setPhase("reveal"); }} />;
   }
@@ -147,10 +176,10 @@ function PensezPareilLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }
     return (
       <RevealScreen
         prompt={prompt} matched={lastResult.matched} points={lastResult.points} streak={lastResult.streak}
-        names={[names[0] || "Joueur 1", names[1] || "Joueur 2"]} answers={[ansA, ansB]}
+        names={[nameA, nameB]} answers={[ansA, ansB]}
         round={round + 1} total={TOTAL_ROUNDS} syncs={lastResult.syncs}
         onNext={() => {
-          if (round + 1 >= TOTAL_ROUNDS) setPhase("over");
+          if (round + 1 >= TOTAL_ROUNDS) { playCombo("fanfare"); setPhase("over"); }
           else { setRound((r) => r + 1); setPhase("passA"); }
         }}
       />
@@ -176,60 +205,53 @@ function CoupleSetup({ pack, onStart, onBack }: {
   const [b, setB] = useState(() => getSavedDuo()[1]);
   const [sel, setSel] = useState<Pack>(pack);
   const lvl = levelFor(getProgress().xp);
-  const can = a.trim() && b.trim();
+  const can = !!(a.trim() && b.trim());
+  const COLORS: Record<Pack, string> = { soft: "#3DDC97", mix: "#FFD23F", hot: "#FF3EA5" };
 
   return (
-    <div className="relative flex min-h-[100svh] flex-col items-center p-5 pt-[max(env(safe-area-inset-top),20px)] pb-[max(env(safe-area-inset-bottom),20px)] text-white"
-      style={{ background: `radial-gradient(circle at 50% 10%, ${ACCENT}30, transparent 45%), linear-gradient(180deg, #0A0420 0%, #0E0828 100%)` }}>
-      <div className="mt-4"><Mascot size={78} color="pink" mood="love" arms shadow={false} /></div>
-      <h1 className="cb-display-lg mt-1">Pensez Pareil</h1>
-      <div className="mt-2 inline-flex items-center gap-2 rounded-full border px-4 py-1.5"
-        style={{ background: "rgba(255,255,255,0.05)", borderColor: "var(--line-soft)" }}>
-        <span>{lvl.emoji}</span>
-        <span className="text-xs font-bold" style={{ color: "var(--af-yellow)" }}>Complicité : {lvl.name}</span>
+    <ZScreen>
+      <div className="flex items-end gap-3">
+        <ZTitle as="h1" size={48} style={{ lineHeight: 0.92 }}>Pensez Pareil</ZTitle>
+        <div className="-mb-1 shrink-0"><Mascot size={66} color="pink" mood="love" shadow={false} /></div>
       </div>
+      <p className="mt-3 text-[16px] font-semibold leading-snug" style={{ color: "rgba(255,255,255,0.88)" }}>
+        Un thème, chacun écrit 1 ou 2 mots en secret… et vous comparez. Même réponse = sync !
+      </p>
+      <ZChip bg="#FFD23F" tilt={-2} className="mt-3">Votre complicité : {lvl.name}</ZChip>
 
-      <div className="mt-6 w-full max-w-sm space-y-2.5">
+      <ZTitle size={28} className="mt-7">Vous deux</ZTitle>
+      <div className="mt-3 flex flex-col gap-3">
         {[{ v: a, set: setA, i: 0 }, { v: b, set: setB, i: 1 }].map(({ v, set, i }) => (
-          <div key={i} className="flex items-center gap-3">
-            <MascotAvatar color={colorForIndex(i)} size={36} mood="happy" />
+          <div key={i} className="flex items-center gap-3 rounded-[20px] py-1.5 pl-2 pr-3"
+            style={{ background: "#fff", border: `3px solid ${GAME_INK}`, boxShadow: `0 4px 0 ${GAME_INK}`, rotate: `${i ? 1 : -1}deg` }}>
+            <Mascot size={42} color={colorForIndex(i)} mood="happy" shadow={false} bob={false} />
             <input value={v} onChange={(e) => set(e.target.value.slice(0, 16))}
-              placeholder={i === 0 ? "Toi" : "Ton/ta partenaire"}
-              autoCorrect="off" autoCapitalize="off" spellCheck={false}
-              className="flex-1 rounded-2xl border px-4 py-3 text-base outline-none"
-              style={{ background: "rgba(255,255,255,0.06)", borderColor: "var(--line-soft)", color: "#fff" }} />
+              placeholder={i === 0 ? "Ton prénom" : "Son prénom"} aria-label={i === 0 ? "Ton prénom" : "Prénom de ton/ta partenaire"}
+              autoCorrect="off" autoCapitalize="words" spellCheck={false}
+              className="min-w-0 flex-1 bg-transparent py-2 outline-none"
+              style={{ ...DISPLAY, fontSize: 22, color: GAME_INK, letterSpacing: "-0.01em" }} />
           </div>
         ))}
       </div>
 
-      <p className="af-eyebrow mt-6 mb-2">Ambiance</p>
-      <div className="grid w-full max-w-sm grid-cols-3 gap-2">
-        {PACKS.map((p) => {
-          const on = sel === p.id;
-          return (
-            <button key={p.id} onClick={() => setSel(p.id)}
-              className="rounded-2xl border p-3 text-center transition active:scale-95"
-              style={{
-                background: on ? `${ACCENT}22` : "rgba(255,255,255,0.04)",
-                borderColor: on ? `${ACCENT}88` : "var(--line-soft)",
-              }}>
-              <p.icon size={24} strokeWidth={2.6} className="mx-auto" style={{ color: on ? ACCENT : "#fff" }} aria-hidden />
-              <div className="mt-1 text-xs font-bold">{p.label}</div>
-              <div className="mt-0.5 text-xs leading-tight" style={{ color: "var(--text-muted)" }}>{p.sub}</div>
-            </button>
-          );
-        })}
+      <ZTitle size={28} className="mt-7">L&apos;ambiance</ZTitle>
+      <div className="mt-3 grid grid-cols-3 gap-2.5">
+        {PACKS.map((pk, i) => (
+          <ZChoice key={pk.id} active={sel === pk.id} color={COLORS[pk.id]} onClick={() => setSel(pk.id)} tilt={i === 1 ? 1.5 : -1.5} className="px-2.5 text-center">
+            <pk.icon size={24} strokeWidth={2.6} className="mx-auto" aria-hidden />
+            <p className="mt-1 text-[17px] leading-none" style={DISPLAY}>{pk.label}</p>
+            <p className="mt-1 text-[13px] font-semibold leading-tight">{pk.sub}</p>
+          </ZChoice>
+        ))}
       </div>
 
-      <button onClick={() => { if (!can) return; saveDuo([a, b]); onStart([a.trim(), b.trim()], sel); }} disabled={!can}
-        className="af-btn af-btn-primary mt-7 w-full max-w-sm disabled:opacity-40" style={{ fontSize: 16 }}>
-        C&apos;est parti 💞
-      </button>
-      <p className="mt-4 max-w-sm text-center text-xs" style={{ color: "var(--text-muted)" }}>
-        Règles : un thème, chacun écrit 1 ou 2 mots en secret, puis on compare. Même réponse = sync !
-      </p>
-      {onBack && <button onClick={onBack} className="mt-2 min-h-11 px-4 text-sm" style={{ color: "var(--text-muted)" }}><GameInlineIcon icon={ArrowLeft} /> Mode</button>}
-    </div>
+      <div className="mt-6 flex justify-center"><IdeaButton game="Pensez Pareil" kind="thème" /></div>
+      <div className="min-h-6 flex-1" />
+      <ZButton bg={PP_COLOR} disabled={!can} onClick={() => { if (!can) return; saveDuo([a, b]); onStart([a.trim(), b.trim()], sel); }}>
+        {can ? "C'est parti !" : "Écrivez vos deux prénoms"}
+      </ZButton>
+      {onBack && !isOfflineApp() && <ZLink onClick={onBack} className="mt-2"><GameInlineIcon icon={ArrowLeft} /> Retour</ZLink>}
+    </ZScreen>
   );
 }
 
@@ -398,17 +420,17 @@ function PensezPareilOnline({ roomCode, playerId, playerName, onReturnToLobby }:
 // ══════════════════════════════════════════════════════════
 function PromptCard({ prompt, timed = true }: { prompt: Prompt | null; timed?: boolean }) {
   if (!prompt) return null;
-  const tierLabel = prompt.tier === "spicy" ? "🔥 Coquin" : prompt.tier === "couple" ? "💞 Nous deux" : "🌸 Soft";
+  const tierLabel = prompt.tier === "spicy" ? "Coquin" : prompt.tier === "couple" ? "Nous deux" : "Soft";
+  const tierColor = prompt.tier === "spicy" ? "#FF3EA5" : prompt.tier === "couple" ? "#FFD23F" : "#3DDC97";
   return (
-    <div className="mt-5 w-full max-w-md rounded-3xl border p-7 text-center"
-      style={{
-        background: `linear-gradient(150deg, ${ACCENT}1f, rgba(255,255,255,0.04))`,
-        borderColor: `${ACCENT}55`,
-        boxShadow: `0 0 40px ${ACCENT}22`,
-      }}>
-      <span className="af-chip" style={{ background: `${ACCENT}22`, borderColor: `${ACCENT}44`, color: ACCENT }}>{tierLabel}</span>
-      <p className="cb-display-md mt-3" style={{ fontSize: "clamp(1.4rem,5.5vw,2rem)", letterSpacing: -0.5 }}>{prompt.text}</p>
-      <p className="mt-2 text-xs" style={{ color: "var(--text-muted)" }}>Réponds en 1 ou 2 mots{timed ? " — 35 s" : ""}, sans vous concerter !</p>
+    <div className="mt-6 w-full">
+      <div className="relative rounded-[26px] px-5 pb-5 pt-7 text-center"
+        style={{ background: "#fff", color: GAME_INK, border: `3px solid ${GAME_INK}`, boxShadow: `0 6px 0 ${GAME_INK}`, rotate: "-1.5deg" }}>
+        <span className="absolute -top-4 left-1/2 inline-flex min-h-8 -translate-x-1/2 items-center rounded-full px-3 text-[14px] font-bold"
+          style={{ background: tierColor, border: `2.5px solid ${GAME_INK}`, rotate: "-3deg" }}>{tierLabel}</span>
+        <p style={{ ...DISPLAY, fontSize: prompt.text.length > 40 ? 28 : 34, lineHeight: 1.02 }}>{prompt.text}</p>
+        <p className="mt-2 text-[14px] font-semibold" style={{ color: "#4A3A66" }}>1 ou 2 mots{timed ? " · 35 s" : ""}, sans vous concerter !</p>
+      </div>
     </div>
   );
 }
@@ -417,20 +439,20 @@ function AnswerInput({ value, onChange, onSubmit }: {
   value: string; onChange: (v: string) => void; onSubmit: () => void;
 }) {
   return (
-    <div className="mt-7 w-full max-w-md">
+    <div className="mt-6 w-full">
       <input
         autoFocus value={value} maxLength={40}
         onChange={(e) => onChange(e.target.value)}
         onKeyDown={(e) => { if (e.key === "Enter") onSubmit(); }}
         placeholder="Ta réponse secrète…"
+        aria-label="Ta réponse secrète"
         autoCorrect="off" autoCapitalize="off" spellCheck={false} autoComplete="off"
-        className="w-full rounded-2xl border px-5 py-4 text-center text-lg outline-none"
-        style={{ background: "rgba(255,255,255,0.07)", borderColor: `${ACCENT}55`, color: "#fff", fontFamily: "var(--font-display)" }}
+        className="w-full rounded-[20px] px-5 py-4 text-center outline-none"
+        style={{ ...DISPLAY, fontSize: 24, background: "#FFF6E5", color: GAME_INK, border: `3px solid ${GAME_INK}`, boxShadow: `0 4px 0 ${GAME_INK}` }}
       />
-      <button onClick={onSubmit} disabled={!value.trim()}
-        className="af-btn af-btn-primary mt-4 w-full disabled:opacity-40" style={{ fontSize: 15, padding: 16 }}>
-        Verrouiller ma réponse <GameInlineIcon icon={Lock} />
-      </button>
+      <ZButton bg="#FFD23F" className="mt-5" onClick={onSubmit} disabled={!value.trim()}>
+        <Lock size={20} strokeWidth={2.8} aria-hidden /> Verrouiller ma réponse
+      </ZButton>
     </div>
   );
 }
@@ -439,19 +461,15 @@ function RoundBar({ round, total, timeLeft, streak }: {
   round: number; total: number; timeLeft?: number; streak: number;
 }) {
   return (
-    <div className="w-full max-w-md">
-      <div className="mb-1.5 mr-14 flex items-center justify-between">
-        <span className="af-chip">Manche {round}/{total}</span>
-        {streak > 0 && (
-          <span className="af-chip" style={{ background: "rgba(255,140,0,0.18)", borderColor: "rgba(255,140,0,0.35)", color: "#FFA640" }}>
-            🔥 Série x{streak}
-          </span>
-        )}
+    <div className="w-full">
+      <div className="flex flex-wrap items-center gap-2">
+        <ZChip bg="#fff" tilt={-2}>Manche {round}/{total}</ZChip>
+        {streak > 0 && <ZChip bg="#FFD23F" tilt={2}><Flame size={15} strokeWidth={3} aria-hidden /> Série x{streak}</ZChip>}
       </div>
       {timeLeft != null && (
-        <div className="h-1.5 w-full overflow-hidden rounded-full" style={{ background: "rgba(255,255,255,0.06)" }}>
-          <div className="h-full rounded-full transition-all duration-1000 ease-linear"
-            style={{ width: `${Math.max(0, Math.min(100, (timeLeft / ANSWER_TIME) * 100))}%`, background: `linear-gradient(90deg, var(--cb-brand), ${ACCENT})` }} />
+        <div className="mt-3 h-4 w-full overflow-hidden rounded-full" style={{ background: "#fff", border: `2.5px solid ${GAME_INK}` }}>
+          <div className="h-full transition-[width] duration-1000 ease-linear"
+            style={{ width: `${Math.max(0, Math.min(100, (timeLeft / ANSWER_TIME) * 100))}%`, background: timeLeft <= 5 ? "#FF3EA5" : "#3DDC97" }} />
         </div>
       )}
     </div>
@@ -468,56 +486,38 @@ function RevealScreen({
   onNext?: () => void; auto?: boolean;
 }) {
   return (
-    <div className="relative flex min-h-[100svh] flex-1 flex-col items-center p-5 pt-[max(env(safe-area-inset-top),20px)] pb-[max(env(safe-area-inset-bottom),20px)] text-white"
-      style={{ background: matched
-        ? `radial-gradient(circle at 50% 18%, ${ACCENT}33, transparent 50%), #0E0828`
-        : "radial-gradient(circle at 50% 18%, rgba(91,54,214,0.22), transparent 50%), #0E0828" }}>
+    <ZScreen bg={matched ? PP_COLOR : undefined}>
       {matched && <ConfettiBurst count={50} />}
-      <Sparkles count={matched ? 10 : 4} />
+      <div className="flex flex-wrap items-center gap-2">
+        <ZChip bg="#fff" tilt={-2}>Manche {round}/{total}</ZChip>
+        <ZChip bg="#FFD23F" tilt={2}>{syncs} sync{syncs > 1 ? "s" : ""}</ZChip>
+      </div>
+      <ZTitle size={56} className="mt-4">{matched ? "Sync !" : "Presque…"}</ZTitle>
+      <p className="mt-1 text-[17px] font-bold">
+        {matched ? `+${points} pts${streak >= 2 ? ` · série x${streak}` : ""}` : "Pas la même réponse. La série repart à zéro."}
+      </p>
+      {prompt && <p className="mt-4 text-[16px] font-semibold" style={{ opacity: 0.9 }}>{prompt.text}</p>}
 
-      <div className="mt-3 w-full max-w-md text-center">
-        <p className="af-eyebrow" style={{ color: matched ? "var(--af-yellow)" : "var(--text-muted)" }}>
-          Manche {round}/{total} · {syncs} sync{syncs > 1 ? "s" : ""}
-        </p>
-        <h2 className="cb-display-xl mt-1" style={{ fontSize: "clamp(2.2rem,9vw,3.4rem)", color: matched ? ACCENT : "#fff" }}>
-          {matched ? "SYNC ! 💞" : "Presque…"}
-        </h2>
-        {matched ? (
-          <p className="mt-1 text-sm" style={{ color: "var(--text-dim)" }}>
-            +{points} pts{streak >= 2 && <span style={{ color: "#FFA640" }}> · combo x{streak} 🔥</span>}
-          </p>
-        ) : (
-          <p className="mt-1 text-sm" style={{ color: "var(--text-dim)" }}>Pas la même réponse — la série repart à zéro.</p>
-        )}
-
-        {prompt && <p className="mt-4 text-sm" style={{ color: "var(--text-muted)" }}>« {prompt.text} »</p>}
-
-        <div className="mt-3 grid grid-cols-2 gap-3">
-          {[0, 1].map((i) => (
-            <div key={i} className="rounded-2xl border p-4"
-              style={{
-                background: matched ? `${ACCENT}1a` : "rgba(255,255,255,0.04)",
-                borderColor: matched ? `${ACCENT}55` : "var(--line-soft)",
-              }}>
-              <div className="flex items-center justify-center gap-1.5">
-                <MascotAvatar color={colorForIndex(i)} size={22} mood={matched ? "love" : "neutral"} />
-                <span className="truncate text-xs font-bold" style={{ color: "var(--text-dim)" }}>{names[i]}</span>
-              </div>
-              <p className="mt-2 break-words text-lg font-bold hyphens-auto" style={{ fontFamily: "var(--font-display)" }}>{answers[i] || "—"}</p>
-            </div>
-          ))}
-        </div>
-        {matched && <div className="mt-3 text-center text-2xl">🤝</div>}
+      <div className="mt-3 grid grid-cols-2 gap-3">
+        {[0, 1].map((i) => (
+          <div key={i} className="rounded-[22px] px-3 pb-4 pt-3 text-center"
+            style={{ background: i ? "#FFF6E5" : "#fff", color: GAME_INK, border: `3px solid ${GAME_INK}`, boxShadow: `0 5px 0 ${GAME_INK}`, rotate: `${i ? 2 : -2}deg` }}>
+            <div className="flex justify-center"><Mascot size={44} color={colorForIndex(i)} mood={matched ? "love" : "shocked"} shadow={false} bob={false} /></div>
+            <p className="mt-1 truncate text-[14px] font-bold">{names[i]}</p>
+            <p className="mt-1 break-words hyphens-auto text-[24px] leading-tight" style={DISPLAY}>{answers[i] || "—"}</p>
+          </div>
+        ))}
       </div>
 
+      <div className="min-h-8 flex-1" />
       {auto ? (
-        <p className="mt-6 animate-pulse text-center text-xs" style={{ color: "var(--text-muted)" }}>Manche suivante…</p>
+        <p className="mt-6 animate-pulse text-center text-[15px] font-bold">Manche suivante…</p>
       ) : (
-        <button onClick={onNext} className="af-btn af-btn-primary mt-7 w-full max-w-md" style={{ fontSize: 15 }}>
-          {round >= total ? "Voir la complicité 💞" : "Manche suivante"}
-        </button>
+        <ZButton bg={matched ? "#FFD23F" : PP_COLOR} onClick={onNext}>
+          {round >= total ? "Voir notre complicité" : "Manche suivante"}
+        </ZButton>
       )}
-    </div>
+    </ZScreen>
   );
 }
 
@@ -534,7 +534,9 @@ function GameOverScreen({
   useEffect(() => {
     if (recordedRef.current) return;
     recordedRef.current = true;
-    setResult(recordGame({ syncs, bestStreak, perfect: syncs === total && total > 0 }));
+    const r = recordGame({ syncs, bestStreak, perfect: syncs === total && total > 0 });
+    if (r.leveledUp) playSfx("levelup", { volume: 0.9, delay: 0.8 });
+    setResult(r);
   }, [syncs, bestStreak, total]);
 
   const lvl = result?.toLevel ?? levelFor(getProgress().xp);
@@ -544,101 +546,77 @@ function GameOverScreen({
   const pct = Math.max(0, Math.min(100, into * 100));
 
   return (
-    <div className="relative flex min-h-[100svh] flex-1 flex-col items-center p-6 pt-[max(env(safe-area-inset-top),24px)] pb-[max(env(safe-area-inset-bottom),24px)] text-white"
-      style={{ background: `radial-gradient(circle at 50% 20%, ${ACCENT}33, transparent 50%), #0E0828` }}>
+    <ZScreen bg={PP_COLOR}>
       <ConfettiBurst count={50} />
-      {result?.leveledUp && <ConfettiBurst count={40} />}
+      <ZTitle size={48} className="text-center">{syncs}/{total} syncs</ZTitle>
+      <p className="mt-1 text-center text-[17px] font-bold">{syncs >= total * 0.75 ? "Vous êtes connectés !" : syncs >= total / 2 ? "Belle complicité !" : "On s'entraîne encore un peu ?"}</p>
 
-      <p className="af-eyebrow mt-2" style={{ color: "var(--af-yellow)" }}>Partie terminée</p>
-      <h2 className="cb-display-lg mt-1">💞 {syncs}/{total} syncs</h2>
-
-      <div className="mt-5 grid w-full max-w-sm grid-cols-3 gap-2 text-center">
+      <div className="mt-5 grid grid-cols-3 gap-2.5 text-center">
         <Stat label="Score" value={teamScore} />
         <Stat label="Syncs" value={`${syncs}/${total}`} />
-        <Stat label="Meilleure série" value={`x${bestStreak}`} />
+        <Stat label="Série max" value={`x${bestStreak}`} />
       </div>
 
       {/* Carte complicité */}
-      <div className="mt-6 w-full max-w-sm rounded-3xl border p-5"
-        style={{ background: `linear-gradient(150deg, ${ACCENT}1f, rgba(255,255,255,0.04))`, borderColor: `${ACCENT}55` }}>
-        {result?.leveledUp && (
-          <p className="mb-2 text-center text-sm font-bold" style={{ color: "var(--af-yellow)" }}>
-            ✨ Niveau de complicité débloqué !
-          </p>
-        )}
+      <ZCard bg="#fff" tilt={-1.5} shadow={6} radius={24} className="mt-6 px-4 pb-4 pt-3">
+        {result?.leveledUp && <ZChip bg="#FFD23F" tilt={-3} className="mb-2">Nouveau niveau débloqué !</ZChip>}
         <div className="flex items-center gap-3">
-          <div className="text-4xl">{lvl.emoji}</div>
-          <div className="flex-1">
-            <p className="text-xs uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>Complicité</p>
-            <p className="cb-display-sm" style={{ color: "#fff" }}>{lvl.name}</p>
+          <Mascot size={52} color="pink" mood="love" shadow={false} bob={false} />
+          <div className="min-w-0 flex-1">
+            <p className="text-[14px] font-bold">Votre complicité</p>
+            <p className="text-[22px] leading-tight" style={DISPLAY}>{lvl.name}</p>
           </div>
           <div className="text-right">
-            <p className="cb-mono text-sm font-bold" style={{ color: ACCENT }}>{xp} XP</p>
-            {lvl.next !== Infinity && (
-              <p className="text-xs" style={{ color: "var(--text-muted)" }}>{lvl.next - xp} → niv. suiv.</p>
-            )}
+            <p className="text-[20px]" style={DISPLAY}>{xp} XP</p>
+            {lvl.next !== Infinity && <p className="text-[13px] font-semibold">encore {lvl.next - xp}</p>}
           </div>
         </div>
-        <div className="mt-3 h-2.5 w-full overflow-hidden rounded-full" style={{ background: "rgba(255,255,255,0.08)" }}>
-          <div className="h-full rounded-full transition-all duration-700"
-            style={{ width: `${pct}%`, background: `linear-gradient(90deg, var(--cb-brand), ${ACCENT})` }} />
+        <div className="mt-3 h-4 w-full overflow-hidden rounded-full" style={{ background: "#F1ECFF", border: `2.5px solid ${GAME_INK}` }}>
+          <div className="h-full transition-[width] duration-700" style={{ width: `${pct}%`, background: PP_COLOR }} />
         </div>
         {result && result.newBadges.length > 0 && (
-          <div className="mt-3 flex flex-wrap gap-1.5">
-            {result.newBadges.map((b) => (
-              <span key={b} className="af-chip" style={{ background: "rgba(255,210,63,0.18)", borderColor: "rgba(255,210,63,0.35)", color: "var(--af-yellow)" }}>
-                {PP_BADGES[b]?.emoji} {PP_BADGES[b]?.label}
-              </span>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {result.newBadges.map((bd) => (
+              <ZChip key={bd} bg="#FFD23F" tilt={0}>{PP_BADGES[bd]?.label}</ZChip>
             ))}
           </div>
         )}
-      </div>
+      </ZCard>
 
-      <div className="mt-7 flex gap-2">
-        {onReplay && <button onClick={onReplay} className="af-btn af-btn-ghost">Rejouer</button>}
-        {onReturnToLobby && <button onClick={onReturnToLobby} className="af-btn af-btn-primary">Lobby</button>}
-      </div>
-    </div>
+      <div className="min-h-8 flex-1" />
+      {onReplay && <ZButton bg="#FFD23F" onClick={onReplay}>Rejouer</ZButton>}
+      <div className="mt-4 flex justify-center"><IdeaButton game="Pensez Pareil" kind="thème" bg="#fff" /></div>
+      {onReturnToLobby && <ZLink onClick={onReturnToLobby} color={GAME_INK} className="mt-2">Retour à l&apos;accueil</ZLink>}
+    </ZScreen>
   );
 }
 
 function Stat({ label, value }: { label: string; value: string | number }) {
   return (
-    <div className="rounded-2xl border p-3" style={{ background: "rgba(255,255,255,0.04)", borderColor: "var(--line-soft)" }}>
-      <p className="cb-display-sm" style={{ fontSize: 22 }}>{value}</p>
-      <p className="text-xs uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>{label}</p>
+    <div className="rounded-[18px] px-2 py-2.5" style={{ background: "#fff", color: GAME_INK, border: `3px solid ${GAME_INK}`, boxShadow: `0 4px 0 ${GAME_INK}` }}>
+      <p className="text-[24px] leading-none" style={DISPLAY}>{value}</p>
+      <p className="mt-1 text-[13px] font-bold">{label}</p>
     </div>
   );
 }
 
-// ── Pass / type (local) ───────────────────────────────────
-function Hand({ toName, idx, hint, onReady }: { toName: string; idx: number; hint: string; onReady: () => void }) {
-  return (
-    <div className="relative flex min-h-[100svh] flex-col items-center justify-center p-6 pt-[max(env(safe-area-inset-top),24px)] pb-[max(env(safe-area-inset-bottom),24px)] text-white"
-      style={{ background: `radial-gradient(circle at 50% 12%, ${ACCENT}30, transparent 45%), linear-gradient(180deg, #0A0420 0%, #0E0828 100%)` }}>
-      <p className="af-eyebrow mb-4" style={{ color: "var(--text-dim)" }}>Passe le téléphone à</p>
-      <Mascot size={130} color={colorForIndex(idx)} mood="wink" arms />
-      <h1 className="cb-display-lg mt-3 text-center">{toName}</h1>
-      <p className="mt-2 max-w-sm text-center text-sm" style={{ color: "var(--text-dim)" }}>{hint}</p>
-      <button onClick={onReady} className="af-btn af-btn-primary mt-8 w-full max-w-xs" style={{ fontSize: 16 }}>C&apos;est moi <GameInlineIcon icon={Lock} /></button>
-    </div>
-  );
-}
-
-function TypeScreen({ prompt, player, idx, value, onChange, onSubmit }: {
-  prompt: Prompt | null; player: string; idx: number;
-  value: string; onChange: (v: string) => void; onSubmit: () => void;
+// ── Saisie (local) ────────────────────────────────────────
+function TypeScreen({ prompt, player, idx, round, value, onChange, onSubmit, onReroll }: {
+  prompt: Prompt | null; player: string; idx: number; round: number;
+  value: string; onChange: (v: string) => void; onSubmit: () => void; onReroll?: () => void;
 }) {
   return (
-    <div className="relative flex min-h-[100svh] flex-col items-center p-5 pt-[max(env(safe-area-inset-top),20px)] text-white"
-      style={{ background: `radial-gradient(circle at 50% 10%, ${ACCENT}26, transparent 45%), #0E0828` }}>
-      <div className="mt-4 flex items-center gap-2">
-        <MascotAvatar color={colorForIndex(idx)} size={28} mood="happy" />
-        <span className="text-sm font-bold">{player}</span>
+    <ZScreen>
+      <div className="flex flex-wrap items-center gap-2">
+        <ZChip bg="#fff" tilt={-2}>Manche {round}/{TOTAL_ROUNDS}</ZChip>
+        <ZChip bg={idx ? "#FF3EA5" : "#7A4EE8"} tilt={2}>{player} répond</ZChip>
       </div>
       <PromptCard prompt={prompt} timed={false} />
+      {onReroll && !value.trim() && (
+        <div className="mt-5 flex justify-center"><RerollButton label="Pas fou ? Un autre thème" onClick={onReroll} /></div>
+      )}
       <AnswerInput value={value} onChange={onChange} onSubmit={() => value.trim() && onSubmit()} />
-    </div>
+    </ZScreen>
   );
 }
 

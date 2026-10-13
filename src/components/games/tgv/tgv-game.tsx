@@ -7,23 +7,112 @@
  * (gorgée plafonnée à 3, ou un gage) et retour au premier wagon.
  *
  * 100 % local, cartes dessinées en CSS (aucune image), vrai paquet de 52 mélangé.
+ * DA « sticker » (couleurs pleines, contour encre, ombre dure) + vrais samples (sfx.ts).
  */
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type ReactNode } from "react";
 import type { GameProps } from "@/lib/games/types";
 import { Mascot, MascotAvatar } from "@/components/Mascot";
 import { ConfettiBurst } from "@/components/ConfettiBurst";
 import { PlayersSetup, PassScreen, colorForIndex } from "@/components/games/local-kit";
-import { useAudio } from "@/lib/hooks/useAudio";
-import { sfxCardPlay, sfxTrickWin, sfxHandChime } from "@/lib/card-sfx";
-import { ArrowDown, ArrowLeft, ArrowUp, Check, CupSoda, Dices, Drum, Equal, Flame, Layers, Siren, TrainFront, X, Zap, type LucideIcon } from "lucide-react";
-import { GameInlineIcon } from "@/components/games/game-icon-button";
+import { GameIconButton, GameInlineIcon, GameTopRight } from "@/components/games/game-icon-button";
+import { IdeaButton, RerollButton } from "@/components/games/idea-button";
+import { isSfxMuted, playCombo, playSfx, preloadSfx, setSfxMuted, subscribeSfxMuted } from "@/lib/sfx";
+import {
+  ArrowDown, ArrowLeft, ArrowUp, Check, CupSoda, Dices, Equal, Flame, Home, RotateCcw, Siren, TrainFront,
+  Volume2, VolumeX, X, type LucideIcon,
+} from "lucide-react";
 
-// ── Constantes ────────────────────────────────────────────
-const ACCENT = "#FF3852";
-const BG = `radial-gradient(circle at 50% 14%, ${ACCENT}28, transparent 45%), linear-gradient(180deg, #0A0420 0%, #0E0828 100%)`;
-const TOP_SAFE = "calc(env(safe-area-inset-top, 0px) + 64px)";
-const BOTTOM_SAFE = "calc(env(safe-area-inset-bottom, 0px) + 20px)";
+// ── DA sticker ────────────────────────────────────────────
+const INK = "#15082E";
+const ACCENT = "#FF6B5B"; // corail du train
+const PAGE: CSSProperties = {
+  backgroundColor: "#1E1250",
+  backgroundImage: "radial-gradient(rgba(255,255,255,0.06) 1.4px, transparent 1.6px)",
+  backgroundSize: "22px 22px",
+};
+const TOP = "calc(env(safe-area-inset-top, 0px) + 72px)";
+const BOTTOM = "calc(env(safe-area-inset-bottom, 0px) + 16px)";
+const DISPLAY: CSSProperties = { fontFamily: "var(--font-display), system-ui, sans-serif", fontWeight: 700, letterSpacing: "-0.03em", wordSpacing: "0.1em" };
+const stk = (bg: string, shadow = 4, border = 3): CSSProperties => ({ background: bg, border: `${border}px solid ${INK}`, boxShadow: `0 ${shadow}px 0 ${INK}` });
+
+/** Encre lisible sur un fond plein. */
+function inkOn(hex: string): string {
+  const m = hex.replace("#", "").match(/^([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i);
+  if (!m) return INK;
+  const [r, g, b] = m.slice(1).map((h) => {
+    const c = parseInt(h, 16) / 255;
+    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.22 ? INK : "#fff";
+}
+
+/** Bouton sticker qui s'enfonce dans son ombre à l'appui. */
+function Push({
+  bg, onClick, children, big, disabled, className = "", style, label,
+}: { bg: string; onClick: () => void; children: ReactNode; big?: boolean; disabled?: boolean; className?: string; style?: CSSProperties; label?: string }) {
+  const [down, setDown] = useState(false);
+  const sh = big ? 6 : 4;
+  const pressed = down && !disabled;
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      aria-label={label}
+      onPointerDown={() => setDown(true)}
+      onPointerUp={() => setDown(false)}
+      onPointerLeave={() => setDown(false)}
+      onPointerCancel={() => setDown(false)}
+      className={`flex items-center justify-center gap-2 rounded-full ${className}`}
+      style={{
+        ...stk(bg, pressed ? 1 : sh),
+        color: inkOn(bg),
+        minHeight: big ? 60 : 50,
+        transform: pressed ? `translateY(${sh - 1}px)` : undefined,
+        transition: "transform 110ms ease, box-shadow 110ms ease",
+        opacity: disabled ? 0.55 : 1,
+        touchAction: "manipulation",
+        WebkitTapHighlightColor: "transparent",
+        ...(big ? { ...DISPLAY, fontSize: 21, letterSpacing: "-0.01em" } : { fontSize: 16, fontWeight: 800 }),
+        ...style,
+      }}
+    >
+      {children}
+    </button>
+  );
+}
+
+/** Lien discret (actions secondaires). */
+function TextLink({ onClick, children }: { onClick: () => void; children: ReactNode }) {
+  return (
+    <button type="button" onClick={onClick} className="mx-auto flex min-h-11 items-center gap-1.5 px-4 text-[15px] font-bold underline decoration-2 underline-offset-4" style={{ color: "rgba(255,255,255,0.82)" }}>
+      {children}
+    </button>
+  );
+}
+
+/** Bouton son (coupure globale partagée par toute l'app). */
+function SoundToggle() {
+  const muted = useSyncExternalStore(subscribeSfxMuted, isSfxMuted, () => false);
+  return (
+    <GameTopRight>
+      <GameIconButton icon={muted ? VolumeX : Volume2} label={muted ? "Activer le son" : "Couper le son"} active={muted} onClick={() => setSfxMuted(!muted)} />
+    </GameTopRight>
+  );
+}
+
+/** Remet en haut le conteneur qui défile (l'app garde le scroll entre deux écrans). */
+function ScrollTop({ dep }: { dep: string }) {
+  const ref = useRef<HTMLSpanElement | null>(null);
+  useEffect(() => {
+    for (let el = ref.current?.parentElement ?? null; el; el = el.parentElement) {
+      if (el.scrollTop > 0) el.scrollTop = 0;
+    }
+    if (typeof window !== "undefined") window.scrollTo(0, 0);
+  }, [dep]);
+  return <span ref={ref} hidden />;
+}
 
 const RANKS = ["2", "3", "4", "5", "6", "7", "8", "9", "10", "V", "D", "R", "A"]; // valeur = index + 2
 const RANK_NAMES: Record<string, string> = { V: "Valet", D: "Dame", R: "Roi", A: "As" };
@@ -76,10 +165,13 @@ interface Penalty {
   sips: number;
   gage: string;
 }
+const pickGage = (exclude?: string) => {
+  const pool = GAGES.filter((g) => g !== exclude);
+  return pool[Math.floor(Math.random() * pool.length)];
+};
 function drawPenalty(mode: PenaltyMode, sips: number): Penalty {
-  const gage = GAGES[Math.floor(Math.random() * GAGES.length)];
   const kind = mode === "sips" ? "sips" : mode === "gages" ? "gage" : Math.random() < 0.5 ? "sips" : "gage";
-  return { kind, sips: Math.min(3, Math.max(1, sips)), gage };
+  return { kind, sips: Math.min(3, Math.max(1, sips)), gage: pickGage() };
 }
 
 type Verdict = "win" | "loss" | "tie";
@@ -89,6 +181,7 @@ const KEYFRAMES = `
 @keyframes tgv-flip { 0% { transform: rotateY(90deg) scale(.9); opacity: 0 } 100% { transform: rotateY(0) scale(1); opacity: 1 } }
 @keyframes tgv-pop { 0% { transform: scale(.5); opacity: 0 } 70% { transform: scale(1.08); opacity: 1 } 100% { transform: scale(1) } }
 @keyframes tgv-shake { 0%,100% { transform: translateX(0) } 25% { transform: translateX(-8px) } 50% { transform: translateX(8px) } 75% { transform: translateX(-4px) } }
+@keyframes tgv-wobble { 0%,100% { transform: rotate(-5deg) } 50% { transform: rotate(5deg) } }
 `;
 
 const vib = (p: number | number[]) => {
@@ -119,8 +212,9 @@ export default function TgvGame({ onReturnToLobby }: GameProps) {
   const [penalty, setPenalty] = useState<Penalty | null>(null);
   const [spin, setSpin] = useState<SpinFace | null>(null); // roulette en cours
 
-  const { muted } = useAudio();
-  const sound = !muted;
+  useEffect(() => {
+    preloadSfx(["card-flip", "card-place", "success", "wrong", "lose", "twotone", "tick", "tock", "ding2", "win", "powerup", "ding", "whoosh", "toggle", "card-shuffle"]);
+  }, []);
 
   const draw = (): Card => {
     if (!deckRef.current.length) deckRef.current = newDeck();
@@ -140,11 +234,12 @@ export default function TgvGame({ onReturnToLobby }: GameProps) {
       iv = setInterval(() => {
         ticks++;
         setSpin(faces[ticks % faces.length]);
-        if (sound && ticks % 2 === 0) sfxCardPlay();
+        if (ticks % 2 === 0) playSfx("tick", { volume: 0.5, rate: 0.9 + ticks * 0.03 });
         if (ticks >= 16) {
           clearInterval(iv);
           setSpin(null);
           setPenalty(final);
+          playSfx("ding2", { volume: 0.8 });
           vib([150, 60, 150]);
         }
       }, 75);
@@ -153,11 +248,12 @@ export default function TgvGame({ onReturnToLobby }: GameProps) {
       clearTimeout(start);
       if (iv) clearInterval(iv);
     };
-  }, [verdict, suspense, pileIdx, penaltyMode, sound]);
+  }, [verdict, suspense, pileIdx, penaltyMode]);
 
-  // Suspense sur la dernière carte du train
+  // Suspense sur la dernière carte du train (roulement de tambour)
   useEffect(() => {
     if (!suspense) return;
+    playCombo("drumroll");
     const t = setTimeout(() => setSuspense(false), 1600);
     return () => clearTimeout(t);
   }, [suspense]);
@@ -171,6 +267,7 @@ export default function TgvGame({ onReturnToLobby }: GameProps) {
     setVerdict(null);
     setPenalty(null);
     setSpin(null);
+    playSfx("card-flip", { volume: 0.8 });
     setPhase("play");
   };
 
@@ -190,20 +287,27 @@ export default function TgvGame({ onReturnToLobby }: GameProps) {
   // Son + vibration au moment où la carte est vraiment révélée (après le suspense)
   useEffect(() => {
     if (!verdict || suspense) return;
+    playSfx("card-flip", { volume: 0.8 });
     if (verdict === "win") {
-      if (sound) sfxCardPlay();
+      playSfx("success", { volume: 0.75, delay: 0.12 });
       vib(40);
-    } else if (sound) sfxTrickWin();
-  }, [verdict, suspense, sound]);
+    } else if (verdict === "tie") {
+      playSfx("twotone", { volume: 0.7, delay: 0.12 });
+    } else {
+      playSfx("wrong", { volume: 0.8, delay: 0.12 });
+      playSfx("lose", { volume: 0.5, delay: 0.2 });
+    }
+  }, [verdict, suspense]);
 
   const advanceAfterWin = () => {
     if (verdict !== "win" || !nextCard) return;
     if (pileIdx + 1 >= numPiles) {
-      if (sound) sfxHandChime(true);
+      playCombo("fanfare");
       vib([80, 40, 80, 40, 220]);
       setPhase("win");
       return;
     }
+    playSfx("card-place", { volume: 0.7 });
     setPileIdx(pileIdx + 1);
     setCard(nextCard);
     setNextCard(null);
@@ -218,113 +322,148 @@ export default function TgvGame({ onReturnToLobby }: GameProps) {
     setNextCard(null);
     setVerdict(null);
     setPenalty(null);
+    playSfx("card-place", { volume: 0.7 });
   };
+
+  // Le gage tombe mal : on en tire un autre (la peine reste la même)
+  const rerollGage = () => setPenalty((p) => (p ? { ...p, kind: "gage", gage: pickGage(p.gage) } : p));
 
   const nextPlayer = () => {
     setCurrentIdx((currentIdx + 1) % players.length);
+    playSfx("whoosh", { volume: 0.6 });
     setPhase("pass");
   };
 
+  const endGame = () => { playSfx("win", { volume: 0.7 }); setPhase("over"); };
+
   // ── Écrans ─────────────────────────────────────────────
+  const chrome = (
+    <>
+      <SoundToggle />
+      <ScrollTop dep={phase} />
+    </>
+  );
+
   if (phase === "setup") {
     return (
-      <PlayersSetup
-        emoji="🚄"
-        name="TGV"
-        min={2}
-        max={10}
-        accent={ACCENT}
-        onStart={(names) => {
-          setPlayers(names);
-          setLosses(names.map(() => 0));
-          setCurrentIdx(0);
-          setPhase("config");
-        }}
-      />
+      <>
+        <PlayersSetup
+          emoji="🚄"
+          name="TGV"
+          min={2}
+          max={10}
+          accent={ACCENT}
+          onStart={(names) => {
+            setPlayers(names);
+            setLosses(names.map(() => 0));
+            setCurrentIdx(0);
+            setPhase("config");
+          }}
+        />
+        {chrome}
+      </>
     );
   }
 
   if (phase === "config") {
+    const steps: { icon: LucideIcon; text: ReactNode }[] = [
+      { icon: ArrowUp, text: <>Une carte est retournée : la suivante sera plus haute, plus basse ou égale&nbsp;?</> },
+      { icon: TrainFront, text: <>Enchaîne tous les wagons sans te tromper pour arriver en gare.</> },
+      { icon: CupSoda, text: <>Raté = une peine et retour au wagon 1. Plus tu tombes loin, plus elle grimpe (3 gorgées max, ou un gage).</> },
+    ];
     return (
-      <Shell>
-        <Mascot size={78} color="coral" mood="cool" arms shadow={false} />
-        <h1 className="cb-display-lg mt-2">TGV</h1>
-        <div className="mt-4 w-full max-w-sm rounded-2xl p-4 text-left" style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }}>
-          <p className="text-[14px] leading-snug text-white/90">
-            <GameInlineIcon icon={Layers} /> Une carte est retournée : la suivante sera <b>plus haute</b>, <b>plus basse</b> ou <b>égale</b> ?
-            <br />
-            <GameInlineIcon icon={TrainFront} /> Enchaîne tous les wagons sans te tromper pour arriver en gare.
-            <br />
-            <GameInlineIcon icon={Zap} /> Raté = <b>une peine</b> et retour au wagon 1. Plus tu tombes loin, plus la peine grimpe (3 gorgées max, ou un gage).
-          </p>
+      <Page>
+        {chrome}
+        <div className="flex items-end justify-between gap-3">
+          <h1 style={{ ...DISPLAY, fontSize: 64, lineHeight: 0.9 }}>TGV</h1>
+          <Mascot size={70} color="coral" mood="cool" arms shadow={false} />
         </div>
-
-        <p className="af-eyebrow mt-6">Wagons à enchaîner</p>
-        <div className="mt-2 grid w-full max-w-sm grid-cols-4 gap-2">
-          {PILE_OPTIONS.map((n) => (
-            <button
-              key={n}
-              onClick={() => setNumPiles(n)}
-              className="rounded-2xl border py-3 text-center"
-              style={{ minHeight: 64, borderColor: n === numPiles ? `${ACCENT}aa` : "rgba(255,255,255,0.12)", background: n === numPiles ? `${ACCENT}22` : "rgba(0,0,0,0.3)" }}
-            >
-              <p className="text-2xl font-black" style={{ fontFamily: "var(--font-display)", color: n === numPiles ? ACCENT : "#fff" }}>
-                {n}
-              </p>
-              <p className="text-[12px] text-white/60">{n === 3 ? "express" : n === 4 ? "classique" : n === 5 ? "long" : "marathon"}</p>
-            </button>
+        <ol className="mt-4 space-y-2.5 rounded-[24px] p-4" style={{ ...stk("#FFF6E5", 5), color: INK, transform: "rotate(-1deg)" }}>
+          {steps.map((s, i) => (
+            <li key={i} className="flex gap-3">
+              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full" style={{ ...stk(i === 1 ? "#FFD23F" : i === 2 ? "#FF3EA5" : ACCENT, 2, 2.5) }}>
+                <s.icon size={18} strokeWidth={3} aria-hidden />
+              </span>
+              <span className="text-[15.5px] font-semibold leading-snug">{s.text}</span>
+            </li>
           ))}
+        </ol>
+
+        <h2 className="mt-7" style={{ ...DISPLAY, fontSize: 28, lineHeight: 1 }}>Les wagons</h2>
+        <div className="mt-3 grid grid-cols-4 gap-2.5">
+          {PILE_OPTIONS.map((n) => {
+            const on = n === numPiles;
+            return (
+              <button
+                key={n}
+                type="button"
+                onClick={() => { playSfx("toggle", { volume: 0.5 }); setNumPiles(n); }}
+                aria-pressed={on}
+                className="flex min-h-[74px] flex-col items-center justify-center rounded-[20px]"
+                style={{ ...stk(on ? ACCENT : "#2B1B6E", on ? 4 : 0), color: on ? INK : "#fff" }}
+              >
+                <span style={{ ...DISPLAY, fontSize: 30, lineHeight: 1 }}>{n}</span>
+                <span className="mt-0.5 text-[13px] font-bold">{n === 3 ? "express" : n === 4 ? "classique" : n === 5 ? "long" : "marathon"}</span>
+              </button>
+            );
+          })}
         </div>
 
-        <p className="af-eyebrow mt-6">La peine</p>
-        <div className="mt-2 grid w-full max-w-sm grid-cols-3 gap-2">
+        <h2 className="mt-7" style={{ ...DISPLAY, fontSize: 28, lineHeight: 1 }}>La peine</h2>
+        <div className="mt-3 grid grid-cols-3 gap-2.5">
           {(
             [
               { v: "mix", icons: [CupSoda, Dices], label: "Mixte" },
               { v: "sips", icons: [CupSoda], label: "Gorgées" },
               { v: "gages", icons: [Dices], label: "Gages" },
             ] as { v: PenaltyMode; icons: LucideIcon[]; label: string }[]
-          ).map((o) => (
-            <button
-              key={o.v}
-              onClick={() => setPenaltyMode(o.v)}
-              className="rounded-2xl border py-3 text-center"
-              style={{ minHeight: 64, borderColor: o.v === penaltyMode ? `${ACCENT}aa` : "rgba(255,255,255,0.12)", background: o.v === penaltyMode ? `${ACCENT}22` : "rgba(0,0,0,0.3)" }}
-            >
-              <p className="flex justify-center gap-1" style={{ color: o.v === penaltyMode ? ACCENT : "#fff" }}>
-                {o.icons.map((I, k) => <I key={k} size={22} strokeWidth={2.6} aria-hidden />)}
-              </p>
-              <p className="mt-1 text-[13px] font-bold">{o.label}</p>
-            </button>
-          ))}
+          ).map((o) => {
+            const on = o.v === penaltyMode;
+            return (
+              <button
+                key={o.v}
+                type="button"
+                onClick={() => { playSfx("toggle", { volume: 0.5 }); setPenaltyMode(o.v); }}
+                aria-pressed={on}
+                className="flex min-h-[74px] flex-col items-center justify-center gap-1 rounded-[20px]"
+                style={{ ...stk(on ? "#FFD23F" : "#2B1B6E", on ? 4 : 0), color: on ? INK : "#fff" }}
+              >
+                <span className="flex gap-1">{o.icons.map((I, k) => <I key={k} size={22} strokeWidth={2.8} aria-hidden />)}</span>
+                <span className="text-[15px] font-extrabold">{o.label}</span>
+              </button>
+            );
+          })}
         </div>
-        <p className="mt-2 max-w-sm text-center text-[12px]" style={{ color: "var(--text-dim)" }}>
-          Gorgée = ce que tu bois, eau et soft compris. On peut toujours choisir un gage à la place.
+        <p className="mt-3 text-[15px] font-semibold leading-snug" style={{ color: "rgba(255,255,255,0.8)" }}>
+          Une gorgée, c&apos;est de ce que tu bois, eau et soft compris. On peut toujours prendre un gage à la place. 18+, avec modération, et jamais si tu conduis.
         </p>
 
-        <button onClick={() => { setCurrentIdx(0); setPhase("pass"); }} className="af-btn af-btn-primary mt-6 w-full max-w-sm" style={{ fontSize: 17, minHeight: 54 }}>
-          Lancer le train <GameInlineIcon icon={TrainFront} />
-        </button>
-        <button onClick={() => setPhase("setup")} className="mt-1 text-sm" style={{ color: "var(--text-dim)", minHeight: 44 }}>
-          <GameInlineIcon icon={ArrowLeft} /> Modifier les joueurs
-        </button>
-        <p className="mt-4 max-w-sm text-center text-[12px]" style={{ color: "rgba(255,255,255,0.45)" }}>
-          18+. Bois avec modération, alterne avec de l&apos;eau, et jamais si tu conduis.
-        </p>
-      </Shell>
+        <div className="mt-5 flex justify-center"><IdeaButton game="TGV" kind="gage" /></div>
+
+        <div className="min-h-6 flex-1" />
+        <div className="sticky bottom-0 -mx-5 mt-4 px-5 pt-4" style={{ paddingBottom: BOTTOM, background: "linear-gradient(180deg, transparent, #1E1250 35%)" }}>
+          <Push big bg={ACCENT} onClick={() => { playSfx("whoosh", { volume: 0.6 }); setCurrentIdx(0); setPhase("pass"); }} className="w-full">
+            Lancer le train <TrainFront size={22} strokeWidth={3} aria-hidden />
+          </Push>
+          <TextLink onClick={() => setPhase("setup")}><ArrowLeft size={17} strokeWidth={3} aria-hidden /> Modifier les joueurs</TextLink>
+        </div>
+      </Page>
     );
   }
 
   if (phase === "pass") {
     return (
-      <PassScreen
-        toName={currentName}
-        colorIndex={currentIdx}
-        accent={ACCENT}
-        hint={`À toi de monter dans le TGV : ${numPiles} wagons à enchaîner sans erreur.`}
-        buttonLabel={<>Embarquer <GameInlineIcon icon={TrainFront} /></>}
-        onReady={startRun}
-      />
+      <>
+        <PassScreen
+          toName={currentName}
+          colorIndex={currentIdx}
+          accent={ACCENT}
+          hint={`À toi de monter dans le TGV : ${numPiles} wagons à enchaîner sans erreur.`}
+          buttonLabel={<>Embarquer <GameInlineIcon icon={TrainFront} /></>}
+          onReady={startRun}
+        />
+        {chrome}
+      </>
     );
   }
 
@@ -333,172 +472,169 @@ export default function TgvGame({ onReturnToLobby }: GameProps) {
     const revealed = verdict && !suspense;
     const sipsAtStake = Math.min(3, pileIdx + 1);
     return (
-      <div className="relative flex min-h-[100svh] flex-col items-center overflow-hidden px-5 text-white" style={{ background: BG, paddingTop: TOP_SAFE, paddingBottom: BOTTOM_SAFE }}>
+      <div className="relative flex min-h-[100svh] flex-col overflow-hidden px-5 text-white" style={{ ...PAGE, paddingTop: TOP, paddingBottom: BOTTOM }}>
         <style>{KEYFRAMES}</style>
-        <div className="flex items-center gap-2">
-          <MascotAvatar color={colorForIndex(currentIdx)} size={28} mood="wink" />
-          <span className="text-[15px] font-bold">{currentName}</span>
+        {chrome}
+        <div className="mx-auto flex w-full max-w-md flex-1 flex-col items-center">
+          <div className="flex items-center gap-2 rounded-full py-1 pl-1 pr-4" style={{ ...stk("#fff", 3, 2.5), color: INK, transform: "rotate(-2deg)" }}>
+            <MascotAvatar color={colorForIndex(currentIdx)} size={34} mood="wink" border={false} />
+            <span style={{ ...DISPLAY, fontSize: 22, lineHeight: 1 }}>{currentName}</span>
+          </div>
+          <Train total={numPiles} pileIdx={pileIdx} cleared={verdict === "win" && revealed ? pileIdx + 1 : pileIdx} />
+          <p className="mt-3 text-center text-[15px] font-bold" style={{ color: isLast ? "#FFD23F" : "rgba(255,255,255,0.85)" }}>
+            {isLast ? <><GameInlineIcon icon={Siren} /> Dernier wagon !</> : `Wagon ${pileIdx + 1} sur ${numPiles}`} · en jeu : {sipsAtStake} gorgée{sipsAtStake > 1 ? "s" : ""} ou un gage
+          </p>
+
+          <div className="flex flex-1 items-center justify-center gap-4 py-5" style={{ perspective: 800 }}>
+            <PlayingCard card={card} dim={!!nextCard && !suspense} />
+            {nextCard && (suspense ? <MysteryCard /> : <PlayingCard key={`${nextCard.r}${nextCard.s}`} card={nextCard} ring={verdict === "win" ? "#3DDC97" : verdict === "tie" ? "#FFD23F" : ACCENT} />)}
+          </div>
+
+          <div className="flex min-h-[214px] w-full flex-col justify-end">
+            {suspense ? (
+              <div className="text-center">
+                <p style={{ ...DISPLAY, fontSize: 34, color: "#FFD23F", animation: "tgv-wobble .3s ease-in-out infinite" }}>Dernière carte…</p>
+              </div>
+            ) : !verdict ? (
+              <div className="flex flex-col gap-3">
+                <p className="text-center text-[16px] font-bold" style={{ color: "rgba(255,255,255,0.85)" }}>La prochaine carte sera…</p>
+                <BetButton label="Plus haute" icon={ArrowUp} bg="#FF6B5B" onClick={() => makeBet("plus")} />
+                <BetButton label="Égale" icon={Equal} bg="#FFD23F" onClick={() => makeBet("egal")} />
+                <BetButton label="Plus basse" icon={ArrowDown} bg="#4ECDC4" onClick={() => makeBet("moins")} />
+              </div>
+            ) : verdict === "win" ? (
+              <div className="text-center" style={{ animation: "tgv-pop .35s ease-out" }}>
+                <p className="mx-auto inline-flex items-center gap-2 rounded-full px-5 py-1.5" style={{ ...stk("#3DDC97", 4), color: INK, transform: "rotate(-2deg)", ...DISPLAY, fontSize: 30 }}>
+                  <Check size={28} strokeWidth={3.4} aria-hidden /> Bien vu !
+                </p>
+                <Push big bg="#FFD23F" onClick={advanceAfterWin} className="mt-5 w-full">
+                  {isLast ? <>Arriver en gare <TrainFront size={22} strokeWidth={3} aria-hidden /></> : "Wagon suivant"}
+                </Push>
+              </div>
+            ) : (
+              <div className="pb-4 text-center" style={{ animation: "tgv-shake .45s ease-out" }}>
+                <p className="mx-auto inline-flex items-center gap-2 rounded-full px-5 py-1.5" style={{ ...stk(verdict === "tie" ? "#FFD23F" : ACCENT, 4), color: INK, transform: "rotate(2deg)", ...DISPLAY, fontSize: 30 }}>
+                  {verdict === "tie" ? <><Equal size={28} strokeWidth={3.4} aria-hidden /> Égalité !</> : <><X size={28} strokeWidth={3.4} aria-hidden /> Raté !</>}
+                </p>
+                <p className="mt-3 text-[16px] font-semibold" style={{ color: "rgba(255,255,255,0.85)" }}>{verdict === "tie" ? "Petite peine, mais tu restes sur ce wagon." : "Retour au wagon 1… après la peine."}</p>
+              </div>
+            )}
+          </div>
+
+          <TextLink onClick={endGame}>Terminer la partie</TextLink>
         </div>
-        <Train total={numPiles} pileIdx={pileIdx} cleared={verdict === "win" && revealed ? pileIdx + 1 : pileIdx} />
-        <p className="mt-2 text-[13px]" style={{ color: "var(--text-dim)" }}>
-          {isLast ? <><GameInlineIcon icon={Siren} /> Dernier wagon !</> : `Wagon ${pileIdx + 1}/${numPiles}`} · en jeu : {sipsAtStake} gorgée{sipsAtStake > 1 ? "s" : ""} ou un gage
-        </p>
 
-        <div className="flex flex-1 items-center justify-center gap-4 py-4" style={{ perspective: 800 }}>
-          <PlayingCard card={card} dim={!!nextCard && !suspense} />
-          {nextCard && (suspense ? <MysteryCard /> : <PlayingCard key={`${nextCard.r}${nextCard.s}`} card={nextCard} glow={verdict === "win" ? "#3DDC97" : ACCENT} />)}
-        </div>
-
-        <div className="flex min-h-[220px] w-full max-w-sm flex-col justify-end">
-          {suspense ? (
-            <div className="text-center">
-              <div className="mb-1 flex animate-bounce justify-center" style={{ color: ACCENT }}><Drum size={40} strokeWidth={2.4} aria-hidden /></div>
-              <p className="cb-display-md" style={{ color: ACCENT }}>
-                Dernière carte…
-              </p>
-            </div>
-          ) : !verdict ? (
-            <div className="flex flex-col gap-2">
-              <p className="mb-1 text-center text-[14px] text-white/70">La prochaine carte sera…</p>
-              <BetButton label="Plus haute" icon={ArrowUp} tint="#FF6B5B" onClick={() => makeBet("plus")} />
-              <BetButton label="Égale" icon={Equal} tint="#E0A800" onClick={() => makeBet("egal")} />
-              <BetButton label="Plus basse" icon={ArrowDown} tint="#4B8DFF" onClick={() => makeBet("moins")} />
-            </div>
-          ) : verdict === "win" ? (
-            <div className="text-center" style={{ animation: "tgv-pop .35s ease-out" }}>
-              <p className="cb-display-md" style={{ color: "#3DDC97" }}>
-                <GameInlineIcon icon={Check} /> Bien vu !
-              </p>
-              <button onClick={advanceAfterWin} className="af-btn af-btn-primary mt-3 w-full" style={{ fontSize: 17, minHeight: 56 }}>
-                {isLast ? <>Arriver en gare <GameInlineIcon icon={TrainFront} /></> : "Wagon suivant →"}
-              </button>
-            </div>
-          ) : (
-            <div className="text-center" style={{ animation: "tgv-shake .45s ease-out" }}>
-              <p className="cb-display-md" style={{ color: verdict === "tie" ? "#FFD23F" : ACCENT }}>
-                {verdict === "tie" ? <><GameInlineIcon icon={Equal} /> Égalité !</> : <><GameInlineIcon icon={X} /> Raté !</>}
-              </p>
-              <p className="mt-1 text-[14px] text-white/70">{verdict === "tie" ? "Petite peine, mais tu restes sur ce wagon." : "Retour au wagon 1… après la peine."}</p>
-            </div>
-          )}
-        </div>
-
-        <button onClick={() => setPhase("over")} className="mt-3 text-sm" style={{ color: "var(--text-dim)", minHeight: 44 }}>
-          Terminer la partie
-        </button>
-
-        {(spin || penalty) && <PenaltyOverlay name={currentName} spin={spin} penalty={penalty} onDone={afterPenalty} />}
+        {(spin || penalty) && <PenaltyOverlay name={currentName} colorIndex={currentIdx} spin={spin} penalty={penalty} onReroll={rerollGage} onDone={afterPenalty} />}
       </div>
     );
   }
 
   if (phase === "win") {
     return (
-      <Shell>
-        <ConfettiBurst count={80} />
-        <div style={{ animation: "tgv-pop .5s ease-out" }}>
-          <Mascot size={110} color={colorForIndex(currentIdx)} mood="laughing" cheering crown />
-        </div>
+      <Page center>
+        {chrome}
         <style>{KEYFRAMES}</style>
-        <p className="af-eyebrow mt-3" style={{ color: ACCENT }}>
-          Arrivé en gare !
-        </p>
-        <h2 className="cb-display-lg mt-1 max-w-full text-center" style={{ overflowWrap: "anywhere" }}>
-          {currentName}
-        </h2>
-        <p className="mt-2 max-w-sm text-center text-[15px]" style={{ color: "rgba(255,255,255,0.85)" }}>
-          Tous les wagons d&apos;un coup ! Tu <b>distribues 2 gorgées</b> (ou un gage) à qui tu veux.
-        </p>
-        <button onClick={nextPlayer} className="af-btn af-btn-primary mt-6 w-full max-w-sm" style={{ fontSize: 16, minHeight: 54 }}>
-          Au tour de {players[(currentIdx + 1) % players.length]} →
-        </button>
-        <button onClick={() => setPhase("over")} className="mt-1 text-sm" style={{ color: "var(--text-dim)", minHeight: 44 }}>
-          Terminer la partie
-        </button>
-      </Shell>
+        <ConfettiBurst count={80} />
+        <h1 className="text-center" style={{ ...DISPLAY, fontSize: 46, lineHeight: 0.95 }}>Arrivé en gare&nbsp;!</h1>
+        <div className="relative mt-16 rounded-[26px] px-5 pb-5 pt-12 text-center" style={{ ...stk("#FFD23F", 6), color: INK, transform: "rotate(-2deg)", animation: "tgv-pop .5s ease-out" }}>
+          <div className="absolute -top-16 left-1/2 -translate-x-1/2"><Mascot size={96} color={colorForIndex(currentIdx)} mood="laughing" cheering crown shadow={false} /></div>
+          <p style={{ ...DISPLAY, fontSize: 40, lineHeight: 1, overflowWrap: "anywhere" }}>{currentName}</p>
+          <p className="mt-2 text-[16px] font-semibold leading-snug">Tous les wagons d&apos;un coup&nbsp;! Tu distribues 2 gorgées (ou un gage) à qui tu veux.</p>
+        </div>
+        <div className="min-h-8 flex-1" />
+        <Push big bg={ACCENT} onClick={nextPlayer} className="mt-8 w-full">
+          Au tour de {players[(currentIdx + 1) % players.length]}
+        </Push>
+        <div className="mt-1"><TextLink onClick={endGame}>Terminer la partie</TextLink></div>
+      </Page>
     );
   }
 
   // ── OVER : classement (le moins de peines en tête) ──
   const ranking = players.map((name, i) => ({ name, i, losses: losses[i] ?? 0 })).sort((a, b) => a.losses - b.losses);
+  const top = ranking[0];
   return (
-    <Shell>
-      <p className="af-eyebrow" style={{ color: ACCENT }}>
-        Terminus
-      </p>
-      <h2 className="cb-display-lg mt-1 text-center">Le bilan du voyage</h2>
-      <div className="mt-5 w-full max-w-sm space-y-2">
-        {ranking.map((p, idx) => (
-          <div
-            key={p.i}
-            className="flex items-center gap-3 rounded-2xl border px-3"
-            style={{ minHeight: 52, background: idx === 0 ? `${ACCENT}22` : "rgba(255,255,255,0.04)", borderColor: idx === 0 ? `${ACCENT}55` : "var(--line-soft)" }}
-          >
-            <span className="w-7 font-bold" style={{ color: idx === 0 ? ACCENT : "var(--text-muted)" }}>
-              #{idx + 1}
-            </span>
-            <MascotAvatar color={colorForIndex(p.i)} size={32} mood={idx === 0 ? "cool" : "happy"} />
-            <span className="min-w-0 flex-1 truncate font-bold">{p.name}</span>
-            <span className="text-sm font-bold" style={{ color: idx === 0 ? ACCENT : "#fff" }}>
-              {p.losses} peine{p.losses > 1 ? "s" : ""}
-            </span>
+    <Page>
+      {chrome}
+      <h1 style={{ ...DISPLAY, fontSize: 48, lineHeight: 0.95 }}>Terminus&nbsp;!</h1>
+      <p className="mt-2 text-[16px] font-semibold" style={{ color: "rgba(255,255,255,0.82)" }}>Le bilan du voyage : le moins de peines gagne.</p>
+      {top && (
+        <div className="relative mt-16 rounded-[26px] px-5 pb-4 pt-[52px] text-center" style={{ ...stk("#3DDC97", 6), color: INK, transform: "rotate(-2deg)" }}>
+          <div className="absolute -top-[62px] left-1/2 -translate-x-1/2"><Mascot size={76} color={colorForIndex(top.i)} mood="cool" crown arms shadow={false} /></div>
+          <p className="text-[15px] font-bold">Meilleur conducteur</p>
+          <p style={{ ...DISPLAY, fontSize: 40, lineHeight: 1, overflowWrap: "anywhere" }}>{top.name}</p>
+          <p className="mt-1 text-[15px] font-bold">{top.losses} peine{top.losses > 1 ? "s" : ""}</p>
+        </div>
+      )}
+      <div className="mt-5 space-y-2.5">
+        {ranking.slice(1).map((p, k) => (
+          <div key={p.i} className="flex items-center gap-3 rounded-[18px] px-3.5" style={{ ...stk("#fff", 3, 2.5), color: INK, minHeight: 54, transform: `rotate(${k % 2 ? 0.8 : -0.8}deg)` }}>
+            <span className="w-7 text-[18px]" style={DISPLAY}>{k + 2}</span>
+            <MascotAvatar color={colorForIndex(p.i)} size={32} mood="happy" />
+            <span className="min-w-0 flex-1 truncate text-[17px] font-bold">{p.name}</span>
+            <span className="text-[15px] font-bold">{p.losses} peine{p.losses > 1 ? "s" : ""}</span>
           </div>
         ))}
       </div>
-      <button
-        onClick={() => {
-          setLosses(players.map(() => 0));
-          setCurrentIdx(0);
-          deckRef.current = newDeck();
-          setPhase("pass");
-        }}
-        className="af-btn af-btn-primary mt-7 w-full max-w-sm"
-        style={{ fontSize: 16, minHeight: 54 }}
-      >
-        Rejouer
-      </button>
-      <button onClick={() => setPhase("config")} className="mt-1 text-sm" style={{ color: "var(--text-dim)", minHeight: 44 }}>
-        Changer les réglages
-      </button>
-      {onReturnToLobby && (
-        <button onClick={onReturnToLobby} className="text-sm" style={{ color: "var(--text-muted)", minHeight: 44 }}>
-          Quitter
-        </button>
-      )}
-    </Shell>
+      <div className="mt-5 flex justify-center"><IdeaButton game="TGV" kind="gage" /></div>
+      <div className="min-h-6 flex-1" />
+      <div className="mt-6 space-y-3">
+        <Push
+          big
+          bg={ACCENT}
+          onClick={() => {
+            setLosses(players.map(() => 0));
+            setCurrentIdx(0);
+            deckRef.current = newDeck();
+            playSfx("card-shuffle", { volume: 0.7 });
+            setPhase("pass");
+          }}
+          className="w-full"
+        >
+          <RotateCcw size={22} strokeWidth={3} aria-hidden /> Rejouer
+        </Push>
+        <div className="grid grid-cols-2 gap-3">
+          <Push bg="#fff" onClick={() => setPhase("config")}>Réglages</Push>
+          {onReturnToLobby && <Push bg="#fff" onClick={onReturnToLobby}><Home size={18} strokeWidth={3} aria-hidden /> Accueil</Push>}
+        </div>
+      </div>
+    </Page>
   );
 }
 
 // ─────────────────────────────────────────────────────────────
 // Sous-composants
 // ─────────────────────────────────────────────────────────────
-function Shell({ children }: { children: React.ReactNode }) {
+function Page({ children, center }: { children: ReactNode; center?: boolean }) {
   return (
-    <div className="relative flex min-h-[100svh] flex-col items-center px-5 text-white" style={{ background: BG, paddingTop: TOP_SAFE, paddingBottom: BOTTOM_SAFE }}>
-      <div className="my-auto flex w-full flex-col items-center">{children}</div>
+    <div className="relative flex min-h-[100svh] flex-col px-5 text-white" style={{ ...PAGE, paddingTop: TOP, paddingBottom: BOTTOM }}>
+      <div className={`mx-auto flex w-full max-w-md flex-1 flex-col ${center ? "justify-center" : ""}`}>{children}</div>
     </div>
   );
 }
 
 function Train({ total, pileIdx, cleared }: { total: number; pileIdx: number; cleared: number }) {
   return (
-    <div className="mt-3 flex items-center gap-1.5">
-      <TrainFront size={26} strokeWidth={2.6} color={ACCENT} aria-hidden />
+    <div className="mt-4 flex items-center gap-1.5">
+      <span className="grid h-10 w-12 place-items-center rounded-[12px_18px_12px_12px]" style={{ ...stk(ACCENT, 3, 2.5), color: INK }}>
+        <TrainFront size={22} strokeWidth={2.8} aria-hidden />
+      </span>
       {Array.from({ length: total }, (_, i) => {
         const done = i < cleared;
         const here = i === pileIdx && !done;
         return (
           <div
             key={i}
-            className="flex h-8 w-10 items-center justify-center rounded-lg border text-[13px] font-bold"
+            className="grid h-10 w-10 place-items-center rounded-[12px]"
             style={{
-              background: done ? "#3DDC97" : here ? `${ACCENT}40` : "rgba(255,255,255,0.05)",
-              borderColor: done ? "#1AA66A" : here ? `${ACCENT}aa` : "rgba(255,255,255,0.12)",
-              color: done ? "#0a0420" : "#fff",
-              boxShadow: here ? `0 0 12px ${ACCENT}66` : undefined,
+              ...stk(done ? "#3DDC97" : here ? "#FFD23F" : "#2B1B6E", here ? 3 : done ? 2 : 0, 2.5),
+              color: done || here ? INK : "rgba(255,255,255,0.8)",
+              transform: here ? "translateY(-3px)" : undefined,
+              ...DISPLAY,
+              fontSize: 18,
             }}
           >
-            {done ? "✓" : i + 1}
+            {done ? <Check size={20} strokeWidth={3.4} aria-hidden /> : i + 1}
           </div>
         );
       })}
@@ -507,33 +643,35 @@ function Train({ total, pileIdx, cleared }: { total: number; pileIdx: number; cl
 }
 
 // Carte dessinée en CSS : coin + gros symbole, lisible de loin
-function PlayingCard({ card, dim, glow }: { card: Card; dim?: boolean; glow?: string }) {
-  const color = card.red ? "#D7263D" : "#14111F";
+function PlayingCard({ card, dim, ring }: { card: Card; dim?: boolean; ring?: string }) {
+  const color = card.red ? "#E0263D" : INK;
   return (
     <div
-      className="relative flex flex-col rounded-2xl bg-white"
+      className="relative flex flex-col rounded-[20px]"
       aria-label={`${RANK_NAMES[card.r] ?? card.r} ${card.s}`}
       style={{
-        width: 130,
-        height: 182,
+        ...stk("#fff", 6),
+        width: 132,
+        height: 184,
         color,
-        opacity: dim ? 0.55 : 1,
-        transform: dim ? "scale(0.9)" : undefined,
+        opacity: dim ? 0.6 : 1,
+        transform: dim ? "scale(0.9) rotate(-4deg)" : ring ? "rotate(3deg)" : undefined,
         transition: "opacity .3s, transform .3s",
-        boxShadow: glow ? `0 0 40px ${glow}aa, 0 10px 30px rgba(0,0,0,0.45)` : "0 10px 30px rgba(0,0,0,0.45)",
+        outline: ring ? `5px solid ${ring}` : undefined,
+        outlineOffset: 3,
         animation: "tgv-flip .4s ease-out",
         fontFamily: "var(--font-display)",
       }}
     >
       <div className="absolute left-2.5 top-2 flex flex-col items-center leading-none">
-        <span className="text-[22px] font-black">{card.r}</span>
+        <span className="text-[24px] font-bold">{card.r}</span>
         <span className="text-[18px]">{card.s}</span>
       </div>
       <div className="absolute bottom-2 right-2.5 flex rotate-180 flex-col items-center leading-none">
-        <span className="text-[22px] font-black">{card.r}</span>
+        <span className="text-[24px] font-bold">{card.r}</span>
         <span className="text-[18px]">{card.s}</span>
       </div>
-      <div className="m-auto text-[64px] leading-none">{card.s}</div>
+      <div className="m-auto text-[66px] leading-none">{card.s}</div>
     </div>
   );
 }
@@ -541,70 +679,74 @@ function PlayingCard({ card, dim, glow }: { card: Card; dim?: boolean; glow?: st
 function MysteryCard() {
   return (
     <div
-      className="flex animate-pulse items-center justify-center rounded-2xl border-2"
-      style={{ width: 130, height: 182, borderColor: `${ACCENT}cc`, background: "linear-gradient(135deg, #1a0a2e, #2a0f4a)", boxShadow: `0 0 35px ${ACCENT}88` }}
+      className="grid place-items-center rounded-[20px]"
+      style={{ ...stk("#7A4EE8", 6), width: 132, height: 184, color: "#fff", animation: "tgv-wobble .3s ease-in-out infinite", backgroundImage: "radial-gradient(rgba(255,255,255,0.18) 2px, transparent 2.4px)", backgroundSize: "16px 16px" }}
     >
-      <span className="text-5xl font-bold" style={{ color: ACCENT, textShadow: `0 0 12px ${ACCENT}` }}>
-        ?
-      </span>
+      <span style={{ ...DISPLAY, fontSize: 72, lineHeight: 1 }}>?</span>
     </div>
   );
 }
 
-function BetButton({ label, icon: Icon, tint, onClick }: { label: string; icon: LucideIcon; tint: string; onClick: () => void }) {
+function BetButton({ label, icon: Icon, bg, onClick }: { label: string; icon: LucideIcon; bg: string; onClick: () => void }) {
   return (
-    <button
-      onClick={onClick}
-      className="flex items-center justify-center gap-3 rounded-2xl font-bold text-white transition-transform active:scale-[0.97]"
-      style={{ minHeight: 58, background: `linear-gradient(135deg, ${tint}, ${tint}99)`, boxShadow: `0 0 22px ${tint}44` }}
-    >
-      <Icon size={26} strokeWidth={3} aria-hidden />
-      <span className="text-[17px]">{label}</span>
-    </button>
+    <Push big bg={bg} onClick={onClick} className="w-full">
+      <Icon size={24} strokeWidth={3.2} aria-hidden /> {label}
+    </Push>
   );
 }
 
-function PenaltyOverlay({ name, spin, penalty, onDone }: { name: string; spin: SpinFace | null; penalty: Penalty | null; onDone: () => void }) {
+function PenaltyOverlay({
+  name, colorIndex, spin, penalty, onReroll, onDone,
+}: { name: string; colorIndex: number; spin: SpinFace | null; penalty: Penalty | null; onReroll: () => void; onDone: () => void }) {
   return (
-    <div className="absolute inset-0 z-50 flex flex-col items-center justify-center px-6 text-center backdrop-blur-md" style={{ background: "rgba(0,0,0,0.85)" }}>
-      <p className="af-eyebrow mb-3" style={{ color: ACCENT }}>
-        {name} prend une peine
-      </p>
-      {spin ? (
-        <div className="flex h-32 w-32 items-center justify-center rounded-[2rem] border text-[72px]" style={{ borderColor: `${ACCENT}aa`, boxShadow: `0 0 80px ${ACCENT}88` }}>
-          <SpinIcon face={spin} />
+    <div className="fixed inset-0 z-50 flex flex-col overflow-y-auto px-5 text-white" style={{ ...PAGE, paddingTop: TOP, paddingBottom: BOTTOM }}>
+      <div className="mx-auto flex w-full max-w-md flex-1 flex-col items-center justify-center text-center">
+        <p className="text-[17px] font-bold" style={{ color: "rgba(255,255,255,0.85)" }}>Une peine pour</p>
+        <div className="mt-2 flex items-center gap-2.5 rounded-full py-1.5 pl-1.5 pr-5" style={{ ...stk("#fff", 4), color: INK, transform: "rotate(-2deg)" }}>
+          <MascotAvatar color={colorForIndex(colorIndex)} size={40} mood="shocked" />
+          <span style={{ ...DISPLAY, fontSize: 30, lineHeight: 1, overflowWrap: "anywhere" }}>{name}</span>
         </div>
-      ) : penalty ? (
-        <div className="flex w-full max-w-sm flex-col items-center" style={{ animation: "tgv-pop .4s ease-out" }}>
-          <Mascot size={90} color="coral" mood="rofl" arms />
-          {penalty.kind === "sips" ? (
-            <>
-              <p className="cb-display-lg mt-3">
-                <GameInlineIcon icon={CupSoda} /> {penalty.sips} gorgée{penalty.sips > 1 ? "s" : ""}
-              </p>
-              <p className="mt-2 text-[15px] text-white/80">ou le gage : « {penalty.gage} »</p>
-            </>
-          ) : (
-            <>
-              <p className="cb-display-md mt-3"><GameInlineIcon icon={Dices} /> « {penalty.gage} »</p>
-              <p className="mt-2 text-[15px] text-white/80">
-                ou {penalty.sips} gorgée{penalty.sips > 1 ? "s" : ""}, au choix
-              </p>
-            </>
-          )}
-          <button onClick={onDone} className="af-btn af-btn-primary mt-6 w-full" style={{ fontSize: 16, minHeight: 54 }}>
-            C&apos;est fait ✓
-          </button>
+        {spin ? (
+          <div className="mt-8 grid h-36 w-36 place-items-center rounded-[34px]" style={{ ...stk(ACCENT, 6), color: INK, animation: "tgv-wobble .25s linear infinite" }}>
+            <SpinIcon face={spin} />
+          </div>
+        ) : penalty ? (
+          <div className="mt-6 w-full" style={{ animation: "tgv-pop .4s ease-out" }}>
+            <Mascot size={86} color="coral" mood="rofl" arms shadow={false} className="mx-auto" />
+            <div className="mt-2 rounded-[24px] px-5 py-4" style={{ ...stk("#FFF6E5", 5), color: INK, transform: "rotate(1deg)" }}>
+              {penalty.kind === "sips" ? (
+                <>
+                  <p style={{ ...DISPLAY, fontSize: 36, lineHeight: 1.05 }}>{penalty.sips} gorgée{penalty.sips > 1 ? "s" : ""}</p>
+                  <p className="mt-2 text-[15px] font-semibold" style={{ opacity: 0.8 }}>Ou le gage, au choix : « {penalty.gage} »</p>
+                </>
+              ) : (
+                <>
+                  <p style={{ ...DISPLAY, fontSize: 26, lineHeight: 1.1 }}>{penalty.gage}</p>
+                  <p className="mt-2 text-[15px] font-semibold" style={{ opacity: 0.8 }}>Ou {penalty.sips} gorgée{penalty.sips > 1 ? "s" : ""}, au choix (eau ou soft, ça compte).</p>
+                </>
+              )}
+            </div>
+            <div className="mt-5 flex justify-center">
+              <RerollButton onClick={onReroll} label="Pas fou ? Un autre gage" />
+            </div>
+          </div>
+        ) : null}
+      </div>
+      {penalty && !spin && (
+        <div className="mx-auto mt-6 w-full max-w-md">
+          <Push big bg="#FFD23F" onClick={onDone} className="w-full">
+            <Check size={22} strokeWidth={3.2} aria-hidden /> C&apos;est fait
+          </Push>
         </div>
-      ) : null}
+      )}
     </div>
   );
 }
 
-// Faces de la roulette de peine (icônes, plus d'emojis)
+// Faces de la roulette de peine (icônes)
 type SpinFace = "sips" | "gage" | "hot";
 const SPIN_ICONS: Record<SpinFace, LucideIcon> = { sips: CupSoda, gage: Dices, hot: Flame };
 function SpinIcon({ face }: { face: SpinFace }) {
   const I = SPIN_ICONS[face];
-  return <I size={64} strokeWidth={2.4} color={ACCENT} aria-hidden />;
+  return <I size={70} strokeWidth={2.4} aria-hidden />;
 }

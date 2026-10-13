@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useGame } from "@/lib/party/use-game";
 import { useGameStore } from "@/lib/stores/game-store";
 import type { GameProps } from "@/lib/games/types";
@@ -8,10 +8,16 @@ import { cn } from "@/lib/utils";
 import { useKeyedState } from "@/lib/use-keyed-state";
 import { Mascot, MascotAvatar, MASCOT_PALETTE, type MascotColor } from "@/components/Mascot";
 import { ConfettiBurst, Sparkles } from "@/components/ConfettiBurst";
-import { ModeSelect, PlayersSetup, PassScreen, colorForIndex, type GameMode } from "@/components/games/local-kit";
-import { TheatreScreen, QuestionBillboard, RecWave } from "@/components/games/le-bluffeur/theatre";
+import {
+  ModeSelect, PlayersSetup, PassScreen, type GameMode,
+  DISPLAY, ZButton, ZCard, ZChip, ZLink, ZRanking, ZScreen, ZTitle, useScrollTopOn,
+} from "@/components/games/local-kit";
+import { TheatreScreen, QuestionBillboard, RecWave, BLUFF_COLOR } from "@/components/games/le-bluffeur/theatre";
+import { GAME_INK } from "@/components/games/game-icon-button";
+import { IdeaButton, RerollButton } from "@/components/games/idea-button";
+import { playCombo, playSfx, preloadSfx } from "@/lib/sfx";
 import { BLUFF_QUESTIONS } from "@/components/games/le-bluffeur/questions";
-import { Clapperboard, Lightbulb, Smartphone, Target } from "lucide-react";
+import { Smartphone, Target } from "lucide-react";
 import { GameInlineIcon } from "@/components/games/game-icon-button";
 
 interface BluffPlayerState {
@@ -103,6 +109,17 @@ function LeBluffeurLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) 
   const q = questions[(round - 1) % questions.length] ?? null;
   const totalRounds = Math.min(TOTAL_LOCAL_ROUNDS, questions.length);
 
+  useEffect(() => { preloadSfx(["card-flip", "card-shuffle", "confirm", "select", "whoosh", "gong", "coins", "win", "powerup", "ding", "wrong"]); }, []);
+  useScrollTopOn(`${phase}-${turnIdx}-${round}`);
+
+  // « Pas fou ? » : la question est retirée de la pioche → la suivante (jamais vue) prend sa place
+  const rerollQuestion = () => {
+    if (questions.length <= TOTAL_LOCAL_ROUNDS) return;
+    const at = (round - 1) % questions.length;
+    playSfx("card-flip", { volume: 0.6, delay: 0.1 });
+    setQuestions((qs) => qs.filter((_, i) => i !== at));
+  };
+
   const begin = (names: string[]) => {
     setPlayers(names); setScores(names.map(() => 0));
     // Nouvelle pioche à chaque partie (sinon « Nouvelle partie » rejouerait les mêmes questions)
@@ -117,6 +134,7 @@ function LeBluffeurLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) 
     setOptions([]);
     setTurnIdx(0);
     setDraft("");
+    playSfx("card-flip", { volume: 0.7 });
     setPhase("question");
   };
 
@@ -159,157 +177,176 @@ function LeBluffeurLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) 
     });
     wt.forEach((w, i) => { if (w) pts[i] += 15; });
     setScores((s) => s.map((v, i) => v + pts[i]));
+    // Révélation : gong, puis pluie de pièces s'il y a eu des points
+    playCombo("reveal");
+    if (pts.some((p) => p > 0)) playSfx("coins", { volume: 0.7, delay: 0.55 });
     setPhase("reveal");
   };
 
   if (phase === "setup") {
-    return <PlayersSetup emoji="🎭" name="Le Bluffeur" min={3} max={8} accent="#7c5cff" onStart={begin} onBack={onReturnToLobby} />;
+    return <PlayersSetup emoji="🎭" name="Le Bluffeur" min={3} max={8} accent={BLUFF_COLOR} onStart={begin} onBack={onReturnToLobby}
+      footer={<IdeaButton game="Le Bluffeur" kind="question" />} />;
   }
   if (phase === "question") {
     return (
       <TheatreScreen round={round} total={totalRounds}>
-        <QuestionBillboard question={q?.question ?? null} take={`prise ${String(round).padStart(2, "0")}`} />
-        <div className="relative z-[3] px-6 pb-24 pt-1">
-          <button onClick={() => { setTurnIdx(0); setDraft(""); setPhase("pass-write"); }}
-            className="af-btn af-btn-primary w-full"
-            style={{ background: "linear-gradient(135deg, #FFD23F, #C48800)", color: "#1A0E2E" }}>
-            <GameInlineIcon icon={Clapperboard} /> Action ! Chacun invente son bluff →
-          </button>
+        <QuestionBillboard question={q?.question ?? null} />
+        <p className="mt-6 text-[16px] font-semibold leading-snug">
+          Chacun invente en secret une fausse réponse crédible. Ensuite, trouvez la vraie parmi les bluffs !
+        </p>
+        <div className="mt-5 flex justify-center">
+          <RerollButton label="Pas fou ? Une autre question" onClick={rerollQuestion} />
         </div>
+        <div className="min-h-8 flex-1" />
+        <ZButton bg={GAME_INK} onClick={() => { setTurnIdx(0); setDraft(""); setPhase("pass-write"); }}>
+          Action ! On invente
+        </ZButton>
       </TheatreScreen>
     );
   }
   if (phase === "pass-write") {
-    return <PassScreen toName={players[turnIdx]} colorIndex={turnIdx} accent="#7c5cff"
+    return <PassScreen toName={players[turnIdx]} colorIndex={turnIdx} accent={BLUFF_COLOR}
       hint="Toi seul : invente une fausse réponse crédible, sans la montrer aux autres." onReady={() => { setDraft(""); setPhase("write"); }} />;
   }
   if (phase === "write") {
     return (
       <TheatreScreen round={round} total={totalRounds}>
         <QuestionBillboard question={q?.question ?? null} take={players[turnIdx]} />
-        <div className="relative z-[3] px-6 pb-24 pt-1">
-          <div className="rounded-2xl border p-3" style={{ background: "linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.04))", borderColor: "rgba(255,210,63,0.4)", boxShadow: "0 8px 24px rgba(0,0,0,0.5)" }}>
-            <div className="mb-1.5 flex items-center justify-between">
-              <span style={{ fontFamily: "var(--font-mono-face)", fontSize: 9, color: "#FFD23F", fontWeight: 800, letterSpacing: 2, textTransform: "uppercase" }}>{players[turnIdx]} · TON BLUFF · TAKE 01</span>
-              <span style={{ fontFamily: "var(--font-mono-face)", fontSize: 9, color: "rgba(255,255,255,0.4)" }}>{draft.length}/80</span>
-            </div>
-            <input value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="Ta fausse réponse crédible..." maxLength={80} autoComplete="off" autoFocus
-              className="w-full bg-transparent text-base outline-none"
-              style={{ color: "#fff", fontFamily: "var(--font-display)" }} />
-          </div>
-          <button disabled={!draft.trim()} onClick={() => {
-            const nf = [...fakes]; nf[turnIdx] = draft.trim(); setFakes(nf);
-            if (turnIdx < total - 1) { setTurnIdx(turnIdx + 1); setDraft(""); setPhase("pass-write"); }
-            else {
-              const built = buildOptions(nf, q?.answer ?? "");
-              const first = nextVoter(-1, built.wt);
-              if (first < 0) resolve(players.map(() => -1), built.opts, built.wt);
-              else { setTurnIdx(first); setPhase("pass-vote"); }
-            }
-          }} className="af-btn mt-3 w-full disabled:opacity-40"
-            style={{ background: "linear-gradient(135deg, #FFD23F, #C48800)", color: "#1A0E2E" }}>
-            Valider mon bluff →
-          </button>
+        <div className="mt-6">
+          <BluffInput value={draft} onChange={setDraft} autoFocus onSubmit={() => {}} />
         </div>
+        <div className="min-h-8 flex-1" />
+        <ZButton bg={GAME_INK} disabled={!draft.trim()} onClick={() => {
+          playSfx("confirm", { volume: 0.7 });
+          const nf = [...fakes]; nf[turnIdx] = draft.trim(); setFakes(nf);
+          if (turnIdx < total - 1) { setTurnIdx(turnIdx + 1); setDraft(""); setPhase("pass-write"); }
+          else {
+            const built = buildOptions(nf, q?.answer ?? "");
+            const first = nextVoter(-1, built.wt);
+            playSfx("card-shuffle", { volume: 0.7, delay: 0.15 });
+            if (first < 0) resolve(players.map(() => -1), built.opts, built.wt);
+            else { setTurnIdx(first); setPhase("pass-vote"); }
+          }
+        }}>Valider mon bluff</ZButton>
       </TheatreScreen>
     );
   }
   if (phase === "pass-vote") {
-    return <PassScreen toName={players[turnIdx]} colorIndex={turnIdx} accent="#7c5cff"
+    return <PassScreen toName={players[turnIdx]} colorIndex={turnIdx} accent={BLUFF_COLOR}
       buttonLabel="C'est moi, je vote" hint="Trouve la VRAIE réponse parmi les propositions." onReady={() => setPhase("vote")} />;
   }
   if (phase === "vote") {
     const voter = turnIdx;
     return (
-      <div className="flex min-h-[100svh] flex-col items-center p-5 text-white"
-        style={{ paddingTop: "max(env(safe-area-inset-top), 20px)", paddingBottom: "max(env(safe-area-inset-bottom), 20px)", background: "radial-gradient(circle at 50% 15%, rgba(124,92,255,0.26), transparent 45%), #0E0828" }}>
-        <p className="af-eyebrow mt-3">{players[voter]} · vote</p>
-        <p className="mt-1 mb-3 max-w-md text-center text-sm" style={{ color: "var(--text-dim)" }}>{q?.question}</p>
-        <div className="w-full max-w-md space-y-2">
-          {options.map((o) => {
+      <ZScreen>
+        <ZChip bg={BLUFF_COLOR} tilt={-2}>{players[voter]} vote</ZChip>
+        <ZTitle size={34} className="mt-3">Laquelle est la vraie&nbsp;?</ZTitle>
+        <p className="mt-2 text-[16px] font-semibold leading-snug" style={{ color: "rgba(255,255,255,0.88)" }}>{q?.question?.replace(/_{2,}\.?/g, "…")}</p>
+        <div className="mt-5 flex flex-col gap-3">
+          {options.map((o, i) => {
             const own = o.authors.includes(voter);
             return (
-              <button key={o.id} disabled={own}
+              <button key={o.id} type="button" disabled={own}
                 onClick={() => {
+                  playSfx("select", { volume: 0.6 });
                   const nv = [...votes]; nv[voter] = o.id; setVotes(nv);
                   const next = nextVoter(voter, wroteTruth);
                   if (next >= 0) { setTurnIdx(next); setPhase("pass-vote"); }
                   else { resolve(nv); }
                 }}
-                className={cn("min-h-[48px] w-full break-words rounded-2xl border px-4 py-3.5 text-left text-sm transition", own ? "opacity-40" : "active:scale-[0.99]")}
-                style={{ background: "rgba(255,255,255,0.05)", borderColor: "rgba(255,255,255,0.1)" }}>
-                {o.text}{own && <span className="ml-2 text-xs text-white/40">(ton bluff)</span>}
+                className="min-h-[56px] w-full break-words rounded-[20px] px-4 py-3 text-left text-[18px] transition-[translate,box-shadow] shadow-[0_4px_0_#15082E] active:translate-y-[3px] active:shadow-[0_1px_0_#15082E] disabled:shadow-none"
+                style={{
+                  ...DISPLAY, letterSpacing: "-0.01em",
+                  background: own ? "transparent" : "#fff", color: own ? "rgba(255,255,255,0.75)" : GAME_INK,
+                  border: own ? "2.5px dashed rgba(255,255,255,0.5)" : `3px solid ${GAME_INK}`,
+                  rotate: own ? undefined : `${i % 2 ? 0.8 : -0.8}deg`,
+                }}>
+                {o.text}{own && <span className="ml-2 text-[14px] font-semibold" style={{ fontFamily: "inherit" }}>(ton bluff)</span>}
               </button>
             );
           })}
         </div>
-      </div>
+      </ZScreen>
     );
   }
   if (phase === "reveal") {
     const truth = options.find((o) => o.isTruth);
     const bluffs = options.filter((o) => !o.isTruth);
+    const finders = truth ? votes.map((v, i) => (v === truth.id ? players[i] : null)).filter(Boolean) : [];
     return (
-      <div className="relative flex min-h-[100svh] flex-col items-center overflow-y-auto p-5 text-white"
-        style={{ paddingTop: "max(env(safe-area-inset-top), 20px)", paddingBottom: "max(env(safe-area-inset-bottom), 20px)", background: "radial-gradient(circle at 50% 25%, #FF3EA5 0%, #5B36D6 40%, #0E0828 100%)" }}>
-        <ConfettiBurst count={40} />
-        <p className="af-eyebrow mt-2" style={{ color: "var(--af-yellow)" }}>✦ La vraie réponse</p>
-        <div className="mt-3 w-full max-w-md rounded-3xl p-5" style={{ background: "linear-gradient(160deg, var(--af-yellow), #FFA800)", color: "#1A0E2E" }}>
-          <p className="text-xs font-semibold opacity-60">{q?.question}</p>
-          <p className="mt-1 break-words text-2xl font-extrabold" style={{ fontFamily: "var(--font-display)" }}>{q?.answer}</p>
-          {truth && (() => {
-            const finders = votes.map((v, i) => (v === truth.id ? players[i] : null)).filter(Boolean);
-            return finders.length > 0 ? <p className="mt-2 text-xs font-bold">✓ Trouvée par {finders.join(", ")} (+30)</p> : null;
-          })()}
+      <ZScreen>
+        <ConfettiBurst count={30} />
+        <ZChip bg="#fff" tilt={-2}>Manche {round}/{totalRounds}</ZChip>
+        <ZTitle size={38} className="mt-3">La vraie réponse</ZTitle>
+        <ZCard bg={BLUFF_COLOR} tilt={-1.5} shadow={6} radius={26} className="mt-4 px-5 pb-5 pt-4">
+          <p className="text-[15px] font-semibold leading-snug">{q?.question?.replace(/_{2,}\.?/g, "…")}</p>
+          <p className="mt-2 break-words" style={{ ...DISPLAY, fontSize: 34, lineHeight: 1 }}>{q?.answer}</p>
+          {finders.length > 0 && <p className="mt-3 text-[15px] font-bold">Trouvée par {finders.join(", ")} · +30</p>}
           {wroteTruth.some(Boolean) && (
-            <p className="mt-1 text-xs font-bold"><GameInlineIcon icon={Target} /> Écrite pile par {players.filter((_, i) => wroteTruth[i]).join(", ")} (+15)</p>
+            <p className="mt-1 text-[15px] font-bold"><GameInlineIcon icon={Target} /> Écrite pile par {players.filter((_, i) => wroteTruth[i]).join(", ")} · +15</p>
           )}
-        </div>
-        <p className="af-eyebrow mt-5 mb-2" style={{ color: "var(--text-muted)" }}>✘ Les bluffs</p>
-        <div className="w-full max-w-md space-y-2">
-          {bluffs.map((o) => {
-            const voters = votes.map((v, i) => (v === o.id ? players[i] : null)).filter(Boolean);
+        </ZCard>
+        {bluffs.length > 0 && <ZTitle size={28} className="mt-8">Les bluffs</ZTitle>}
+        <div className="mt-3 flex flex-col gap-3">
+          {bluffs.map((o, i) => {
+            const voters = votes.map((v, k) => (v === o.id ? players[k] : null)).filter(Boolean);
             return (
-              <div key={o.id} className="rounded-2xl border p-3" style={{ background: "rgba(0,0,0,0.4)", borderColor: "rgba(255,255,255,0.08)" }}>
-                <div className="flex items-center justify-between">
-                  <span className="min-w-0 break-words text-sm">“{o.text}”</span>
-                  <span className="cb-mono text-xs" style={{ color: voters.length ? "var(--af-mint)" : "var(--text-muted)" }}>{voters.length ? `+${voters.length * 20}${o.authors.length > 1 ? " chacun" : ""}` : "0"}</span>
+              <ZCard key={o.id} bg={voters.length ? "#FF3EA5" : "#fff"} tilt={i % 2 ? 1 : -1} shadow={4} radius={20} className="px-4 py-3">
+                <div className="flex items-start justify-between gap-3">
+                  <p className="min-w-0 break-words text-[19px] leading-tight" style={DISPLAY}>{o.text}</p>
+                  {voters.length > 0 && <span className="shrink-0 text-[20px]" style={DISPLAY}>+{voters.length * 20}</span>}
                 </div>
-                <p className="text-xs" style={{ color: "var(--text-muted)" }}>de {o.authors.map((a) => players[a]).join(", ")}{voters.length ? ` · piégé : ${voters.join(", ")}` : ""}</p>
-              </div>
+                <p className="mt-1 text-[14px] font-semibold">
+                  De {o.authors.map((a) => players[a]).join(", ")}{o.authors.length > 1 && voters.length ? " (chacun)" : ""}
+                  {voters.length ? ` · a piégé ${voters.join(", ")}` : " · personne n'est tombé dedans"}
+                </p>
+              </ZCard>
             );
           })}
         </div>
-        <button onClick={() => { if (round >= totalRounds) setPhase("over"); else startRound(round + 1); }}
-          className="af-btn af-btn-primary mt-6 w-full max-w-md">{round >= totalRounds ? "Voir les scores" : "Manche suivante"}</button>
-      </div>
+        <ZButton bg={BLUFF_COLOR} className="mt-8" onClick={() => {
+          if (round >= totalRounds) { playCombo("fanfare"); setPhase("over"); } else startRound(round + 1);
+        }}>{round >= totalRounds ? "Voir les scores" : "Manche suivante"}</ZButton>
+      </ZScreen>
     );
   }
   // over
-  const ranking = players.map((name, i) => ({ name, score: scores[i], i })).sort((a, b) => b.score - a.score);
+  const ranking = players.map((name, i) => ({ name, score: scores[i], colorIndex: i })).sort((a, b) => b.score - a.score);
   return (
-    <div className="relative flex min-h-[100svh] flex-col items-center justify-center p-6 text-white"
-      style={{ paddingTop: "max(env(safe-area-inset-top), 20px)", paddingBottom: "max(env(safe-area-inset-bottom), 20px)", background: "radial-gradient(circle at 50% 25%, rgba(124,92,255,0.3), transparent 45%), #0E0828" }}>
+    <ZScreen bg={BLUFF_COLOR}>
       <ConfettiBurst count={50} />
-      <p className="af-eyebrow" style={{ color: "var(--af-yellow)" }}>Partie terminée</p>
-      <h2 className="cb-display-lg mt-1 mb-5">Résultats</h2>
-      <div className="w-full max-w-sm space-y-2">
-        {ranking.map((p, idx) => (
-          <div key={p.i} className="flex items-center justify-between rounded-2xl border p-4"
-            style={{ background: idx === 0 ? "rgba(124,92,255,0.22)" : "rgba(255,255,255,0.04)", borderColor: idx === 0 ? "rgba(124,92,255,0.55)" : "var(--line-soft)" }}>
-            <div className="flex items-center gap-3">
-              <span className="cb-mono w-7 font-bold" style={{ color: idx === 0 ? "#a896ff" : "var(--text-muted)" }}>#{idx + 1}</span>
-              <MascotAvatar color={colorForIndex(p.i)} size={34} mood={idx === 0 ? "wink" : "happy"} />
-              <span className="font-bold">{p.name}</span>
-            </div>
-            <span className="cb-mono font-bold" style={{ color: idx === 0 ? "#a896ff" : "#fff" }}>{p.score}</span>
-          </div>
-        ))}
+      <ZTitle size={40} className="text-center">{ranking[0]?.name}, roi du bluff</ZTitle>
+      <div className="mt-6"><ZRanking rows={ranking} /></div>
+      <div className="min-h-8 flex-1" />
+      <ZButton bg={GAME_INK} onClick={() => begin(players)}>Rejouer</ZButton>
+      <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
+        <ZButton size="sm" bg="#fff" style={{ width: "auto" }} onClick={() => setPhase("setup")}>Changer les joueurs</ZButton>
+        <IdeaButton game="Le Bluffeur" kind="question" bg="#fff" />
       </div>
-      <div className="mt-6 flex gap-2">
-        <button onClick={() => setPhase("setup")} className="af-btn af-btn-ghost">Nouvelle partie</button>
-        {onReturnToLobby && <button onClick={onReturnToLobby} className="af-btn af-btn-primary">Lobby</button>}
+      {onReturnToLobby && <ZLink onClick={onReturnToLobby} color={GAME_INK} className="mt-2">Retour à l&apos;accueil</ZLink>}
+    </ZScreen>
+  );
+}
+
+/** Champ du bluff : bloc blanc sticker, police ≥ 16 px (pas de zoom iOS). */
+function BluffInput({ value, onChange, onSubmit, autoFocus, inputRef }: {
+  value: string; onChange: (v: string) => void; onSubmit: () => void; autoFocus?: boolean;
+  inputRef?: React.Ref<HTMLInputElement>;
+}) {
+  return (
+    <div className="rounded-[20px] px-4 pb-3 pt-2.5" style={{ background: "#fff", color: GAME_INK, border: `3px solid ${GAME_INK}`, boxShadow: `0 4px 0 ${GAME_INK}` }}>
+      <div className="flex items-center justify-between text-[14px] font-bold">
+        <span>Ton bluff</span>
+        <span style={{ color: "#6B5C88" }}>{value.length}/80</span>
       </div>
+      <input
+        ref={inputRef}
+        value={value} onChange={(e) => onChange(e.target.value)}
+        onKeyDown={(e) => e.key === "Enter" && onSubmit()}
+        placeholder="Une fausse réponse crédible…" maxLength={80} autoComplete="off" autoFocus={autoFocus}
+        className="mt-1 w-full bg-transparent outline-none"
+        style={{ ...DISPLAY, fontSize: 22, color: GAME_INK, letterSpacing: "-0.01em" }}
+      />
     </div>
   );
 }
@@ -386,38 +423,16 @@ function LeBluffeurOnline({ roomCode, playerId, playerName, onSwitchLocal }: Gam
       <TheatreScreen round={state.round} total={state.totalRounds}>
         <QuestionBillboard question={state.question} take={`prise ${String(state.round).padStart(2, "0")}`} />
         <RecWave timeLeft={state.timeLeft} max={40} />
-        <div className="relative z-[3] px-6 pb-24 pt-1">
+        <div className="mt-5">
           {!submitted ? (
             <>
-              <div className="rounded-2xl border p-3" style={{ background: "linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.04))", borderColor: "rgba(255,210,63,0.4)", boxShadow: "0 8px 24px rgba(0,0,0,0.5)" }}>
-                <div className="mb-1.5 flex items-center justify-between">
-                  <span style={{ fontFamily: "var(--font-mono-face)", fontSize: 9, color: "#FFD23F", fontWeight: 800, letterSpacing: 2, textTransform: "uppercase" }}>TON BLUFF · TAKE 01</span>
-                  <span style={{ fontFamily: "var(--font-mono-face)", fontSize: 9, color: "rgba(255,255,255,0.4)" }}>{fakeInput.length}/80</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <input
-                    ref={fakeRef} value={fakeInput} onChange={(e) => setFakeInput(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && submitFake()}
-                    placeholder="Ta fausse réponse crédible..." maxLength={80} autoComplete="off"
-                    className="flex-1 bg-transparent text-base outline-none"
-                    style={{ color: "#fff", fontFamily: "var(--font-display)" }}
-                  />
-                  <button onClick={submitFake} disabled={!fakeInput.trim()}
-                    aria-label="Envoyer mon bluff"
-                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-lg active:scale-95 disabled:opacity-30"
-                    style={{ background: "linear-gradient(135deg, #FFD23F, #C48800)", border: "1.5px solid #FFE891", color: "#1A0E2E", fontWeight: 800 }}>
-                    →
-                  </button>
-                </div>
-              </div>
-              <p className="mt-2 text-center text-xs" style={{ color: "rgba(255,255,255,0.5)" }}>
-                <GameInlineIcon icon={Lightbulb} /> Fais croire que c&apos;est la vraie réponse 😏
-              </p>
+              <BluffInput value={fakeInput} onChange={setFakeInput} onSubmit={submitFake} inputRef={fakeRef} />
+              <ZButton bg={GAME_INK} className="mt-4" onClick={submitFake} disabled={!fakeInput.trim()}>Envoyer mon bluff</ZButton>
             </>
           ) : (
-            <div className="rounded-2xl border px-5 py-4 text-center" style={{ background: "rgba(255,210,63,0.1)", borderColor: "rgba(255,210,63,0.3)" }}>
-              <p className="text-sm" style={{ color: "#FFE7D2" }}>Bluff envoyé ! {state.players.filter((p) => p.hasFake).length}/{state.players.filter((p) => p.connected !== false).length} prêts</p>
-            </div>
+            <ZCard bg="#fff" tilt={1} shadow={4} radius={20} className="px-5 py-4 text-center">
+              <p className="text-[16px] font-bold">Bluff envoyé ! {state.players.filter((p) => p.hasFake).length}/{state.players.filter((p) => p.connected !== false).length} prêts</p>
+            </ZCard>
           )}
           <div className="mt-4"><PlayerProgress players={state.players} done={(p) => p.hasFake} selfId={playerId} /></div>
         </div>
