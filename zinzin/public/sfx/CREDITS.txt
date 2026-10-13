@@ -1,3 +1,45 @@
-Sons : Kenney (www.kenney.nl) — packs Interface Sounds, Impact Sounds, Casino Audio, Digital Audio, UI Audio.
-Licence : Creative Commons Zero (CC0) — usage commercial libre, crédit non obligatoire.
-Convertis en AAC (.m4a) pour iOS.
+Sons de Zinzin — bruitages réels, tous sous licence CC0 1.0 ou dans le domaine public.
+Usage commercial libre (app payante comprise), crédit NON obligatoire. Licence vérifiée sur la page source de chaque fichier (13/10/2026).
+Traitement : découpe, fondus, filtrage, superposition, normalisation du volume ; AAC .m4a mono 44,1 kHz 96 kbit/s.
+Noms partagés (alias dans src/lib/sfx.ts) : success→correct, wrong→buzzer, question→pop2, powerup→chime, win/levelup→tada, lose→crowd-aww.
+
+FICHIER            | SOURCE (auteur)                                                        | LICENCE      | URL
+-------------------+------------------------------------------------------------------------+--------------+----------------------------------------------------------------------
+bomb-tick          | OpenGameArt « Ticking clock. » (bart), tick1                           | CC0          | https://opengameart.org/content/ticking-clock
+bomb-tock          | OpenGameArt « Ticking clock. » (bart), tick4                           | CC0          | https://opengameart.org/content/ticking-clock
+tick               | OpenGameArt « Ticking clock. » (bart), tick2                           | CC0          | https://opengameart.org/content/ticking-clock
+tock               | OpenGameArt « Ticking clock. » (bart), tick3                           | CC0          | https://opengameart.org/content/ticking-clock
+fuse (boucle)      | OpenGameArt « Simple Fuse Sound » (themightyglider)                    | CC0          | https://opengameart.org/content/simple-fuse-sound
+                   | + OpenGameArt « Fire Crackling » (AntumDeluge)                         | CC0          | https://opengameart.org/content/fire-crackling
+detonator-beep     | Wikimedia Commons « Short Beep.ogg » (YJJcoolcool)                     | CC0          | https://commons.wikimedia.org/wiki/File:Short_Beep.ogg
+explosion          | Wikimedia Commons « Explosion 10.ogg » (tcpp)                          | Dom. public  | https://commons.wikimedia.org/wiki/File:Explosion_10.ogg
+                   | + Wikimedia Commons « Explosion-LS100155.ogg » (Fg2, Nikko)            | Dom. public  | https://commons.wikimedia.org/wiki/File:Explosion-LS100155.ogg
+                   | + OpenGameArt « Chunky Explosion » (Joth)                              | CC0          | https://opengameart.org/content/chunky-explosion
+firecracker        | OpenGameArt « 25 CC0 bang / firework SFX » (rubberduck), bang_07       | CC0          | https://opengameart.org/content/25-cc0-bang-firework-sfx
+boom               | idem, cannon_01 + bang_03                                              | CC0          | https://opengameart.org/content/25-cc0-bang-firework-sfx
+applause           | Wikimedia Commons « 277021 sandermotions applause-2.wav » (Sandermotions) | CC0       | https://commons.wikimedia.org/wiki/File:277021_sandermotions_applause-2.wav
+crowd-cheer        | Wikimedia Commons « Hurray.ogg » (starlite, pdsounds.org)              | Dom. public  | https://commons.wikimedia.org/wiki/File:Hurray.ogg
+                   | + « Clapping hurray (cropped).oga » (starlite)                         | Dom. public  | https://commons.wikimedia.org/wiki/File:Clapping_hurray_(cropped).oga
+crowd-aww          | Wikimedia Commons « Ohhh ahhh.ogg » (starlite), hauteur descendante    | Dom. public  | https://commons.wikimedia.org/wiki/File:Ohhh_ahhh.ogg
+drumroll           | Wikimedia Commons « Drum Roll - Concert Band - United States Air Force Band.mp3 » | Dom. public (US Gov) | https://commons.wikimedia.org/wiki/File:Drum_Roll_-_Concert_Band_-_United_States_Air_Force_Band.mp3
+drumroll-end       | idem (fin du roulement)                                                | Dom. public (US Gov) | idem
+cymbal             | Wikimedia Commons « CrashCymbalSample.ogg » (RyGuy)                    | Dom. public  | https://commons.wikimedia.org/wiki/File:CrashCymbalSample.ogg
+tada               | OpenGameArt « Classic fanfare lick » (fvcalderan) + cymbale ci-dessus  | CC0 / D.P.   | https://opengameart.org/content/classic-fanfare-lick
+gong               | Wikimedia Commons « Gong or bell vibrant (short).ogg » (stephan)       | CC0          | https://commons.wikimedia.org/wiki/File:Gong_or_bell_vibrant_(short).ogg
+bell               | Wikimedia Commons « Striking a bell 15cm large.ogg » (stephan)         | Dom. public  | https://commons.wikimedia.org/wiki/File:Striking_a_bell_15cm_large.ogg
+ding, correct      | Wikimedia Commons « 406243 stubb typewriter-ding-near-mono.wav » (_stubb) | CC0       | https://commons.wikimedia.org/wiki/File:406243_stubb_typewriter-ding-near-mono.wav
+ding2              | OpenGameArt « 100 CC0 SFX » (rubberduck), bell_02                      | CC0          | https://opengameart.org/content/100-cc0-sfx
+buzzer, error      | Wikimedia Commons « Buzzer.wav » (David Pride)                         | CC0          | https://commons.wikimedia.org/wiki/File:Buzzer.wav
+heartbeat          | OpenGameArt « Heartbeat (single sound) » (qubodup)                     | CC0          | https://opengameart.org/content/heartbeat-single-sound
+whistle            | Wikimedia Commons « 218318 splicesound referee-whistle-blow-gymnasium.wav » (SpliceSound) | CC0 | https://commons.wikimedia.org/wiki/File:218318_splicesound_referee-whistle-blow-gymnasium.wav
+chime              | Wikimedia Commons « Windchimes.ogg » (Esc861)                          | Dom. public  | https://commons.wikimedia.org/wiki/File:Windchimes.ogg
+twotone            | Wikimedia Commons « Airplane Chime Sound Effect.ogg » (Sharelk)        | CC0          | https://commons.wikimedia.org/wiki/File:Airplane_Chime_Sound_Effect.ogg
+whoosh, whooshdown, rise, open, close | OpenGameArt « Swishes Sound Pack » (artisticdude)   | CC0          | https://opengameart.org/content/swishes-sound-pack
+pop, pop2, pep     | OpenGameArt « Pop sounds » (cogitollc)                                 | CC0          | https://opengameart.org/content/pop-sounds
+confirm            | « Pop sounds » (cogitollc) + Kenney UI Audio (click3)                  | CC0          | https://opengameart.org/content/pop-sounds
+tap, tap2, select, toggle, back | Kenney « UI Audio » (51 UI sound effects)                 | CC0          | https://opengameart.org/content/51-ui-sound-effects-buttons-switches-and-clicks
+pluck, pluck2, scratch | OpenGameArt « 100 CC0 SFX » (rubberduck), switch_01/02, paper_02   | CC0          | https://opengameart.org/content/100-cc0-sfx
+coin               | Wikimedia Commons « Coin dropped on wooden floor.ogg » (ezwa)          | Dom. public  | https://commons.wikimedia.org/wiki/File:Coin_dropped_on_wooden_floor.ogg
+coins              | Wikimedia Commons « Coins dropped in metallic moneybox 0.ogg » (ezwa)  | Dom. public  | https://commons.wikimedia.org/wiki/File:Coins_dropped_in_metallic_moneybox_0.ogg
+card-place, card-slide, card-shuffle, card-fan, card-flip, dice-shake, dice-throw | Kenney « Casino Audio » | CC0 | https://kenney.nl/assets/casino-audio
+thump, plate, clink, glass | Kenney « Impact Sounds »                                       | CC0          | https://kenney.nl/assets/impact-sounds

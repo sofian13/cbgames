@@ -62,7 +62,7 @@ Server -> Client:  { type: "game-state", payload: { ... } }
 - **Path alias:** `@/*` maps to `./src/*`
 - **Server is source of truth** — clients only render state received via WebSocket
 - **60Hz real-time data** (e.g., Motion Tennis): use mutable store pattern (`src/components/games/motion-tennis/tennis-store.ts`) with `useFrame()` reads, NOT React state/useEffect. Zustand's `subscribe()` fires synchronously, bypassing React 19 batching.
-- **Sounds:** synthesized via Web Audio API (no audio files)
+- **Sounds:** real CC0 samples in public/sfx (+ zinzin/public/sfx), played via src/lib/sfx.ts (playSfx / playCombo / playLoop)
 - **UI components:** shadcn/ui (new-york style) with Tailwind CSS 4, icons from lucide-react
 - **State management:** Zustand stores in `src/lib/stores/`
 - **All UI text is in French**

@@ -893,7 +893,7 @@ function Board({
   const [rollShown, setRollShown] = useState(0);
   useEffect(() => {
     if (!mystery) return;
-    if (sound) fxDrum();
+    if (sound) fxDrum(1.6); // fin du roulement = cible révélée
     const iv = setInterval(() => setRollShown(3 + Math.random() * 17), 70);
     const to = setTimeout(() => {
       clearInterval(iv);

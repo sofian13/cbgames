@@ -5,12 +5,12 @@ import type { GameProps } from "@/lib/games/types";
 import { colorForIndex } from "@/components/games/local-kit";
 import { Mascot, MascotAvatar, MASCOT_PALETTE } from "@/components/Mascot";
 import { ConfettiBurst } from "@/components/ConfettiBurst";
-import { buzz, preloadObjectSfx, sfxBoom, sfxCount, sfxHeart, sfxLift, sfxPop, unlockAudio } from "@/components/games/patate/fx";
+import { buzz, preloadObjectSfx, sfxBoom, sfxCount, sfxHeart, sfxLift, sfxPop, startFuse, unlockAudio } from "@/components/games/patate/fx";
 import { ScrollReset, TopRightControls } from "@/components/games/patate/rules-sheet";
 import { DARES, pick } from "@/components/games/patate/categories";
 import { BombBlob, C, DISPLAY, INK, KitStyles, OptionCard, SectionTitle, SoftLink, StickerBtn, StickerCard, StickerScreen, TOP_PAD, BOTTOM_PAD, dotted, sticker } from "@/components/games/patate/sticker-kit";
 import { IdeaButton, RerollButton } from "@/components/games/idea-button";
-import { playCombo, playSfx } from "@/lib/sfx";
+import { playCombo, playSfx, type LoopHandle } from "@/lib/sfx";
 import { Crown, CupSoda, Drama, Fingerprint } from "lucide-react";
 import { GameInlineIcon } from "@/components/games/game-icon-button";
 
@@ -73,6 +73,7 @@ export default function LachePasGame({ onReturnToLobby }: GameProps) {
   const fuseRef = useRef(0);
   const timers = useRef<number[]>([]);
   const rafRef = useRef(0);
+  const fuseLoopRef = useRef<LoopHandle | null>(null); // mèche qui crépite pendant la bombe
 
   const setF = (f: Finger[]) => {
     fingersRef.current = f;
@@ -86,6 +87,9 @@ export default function LachePasGame({ onReturnToLobby }: GameProps) {
     timers.current.forEach((t) => window.clearTimeout(t));
     timers.current = [];
     cancelAnimationFrame(rafRef.current);
+    // fin de manche, nouvelle manche ou démontage : la mèche s'éteint
+    fuseLoopRef.current?.(0.05);
+    fuseLoopRef.current = null;
   };
   useEffect(() => {
     preloadObjectSfx();
@@ -141,6 +145,9 @@ export default function LachePasGame({ onReturnToLobby }: GameProps) {
     fuseRef.current = 4000 + Math.random() * 18000;
     setElapsed(0);
     setTaunt(null);
+    // Mèche discrète en fond (son constant : aucun indice sur l'heure du boum)
+    fuseLoopRef.current?.(0.05);
+    fuseLoopRef.current = startFuse(0.35);
     // Explosion
     timers.current.push(window.setTimeout(() => resolve(true), fuseRef.current));
     // Fausses alertes : 1 à 3 pétards au hasard pour faire lâcher les nerveux
@@ -162,11 +169,12 @@ export default function LachePasGame({ onReturnToLobby }: GameProps) {
     const heart = () => {
       if (phaseRef.current !== "live") return;
       const t = performance.now() - startRef.current;
-      sfxHeart();
+      const gap = Math.max(380, 1000 - t / 25);
+      sfxHeart(1 + (1000 - gap) / 900);
       buzz("tick");
       beat++;
       if (beat % 4 === 0) setTaunt(pick(TAUNTS));
-      timers.current.push(window.setTimeout(heart, Math.max(380, 1000 - t / 25)));
+      timers.current.push(window.setTimeout(heart, gap));
     };
     timers.current.push(window.setTimeout(heart, 400));
     const frame = () => {

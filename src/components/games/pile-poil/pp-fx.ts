@@ -1,10 +1,11 @@
-// Effets Pile Poil : vrais samples (src/lib/sfx.ts, coupure du son globale) + vibrations.
+// Effets Pile Poil : vrais bruitages (src/lib/sfx.ts, coupure du son globale) + vibrations :
+// tic-tac d'horloge, vrai roulement de tambour, « ta-da » + applaudissements sur PILE POIL.
 // Tout est « best effort » : si l'API n'existe pas (iOS ne vibre pas en webview), on ignore.
 import { playCombo, playSfx, preloadSfx } from "@/lib/sfx";
 
 /** Précharge les sons du jeu (au montage). */
 export function fxPreload() {
-  preloadSfx(["tick", "tock", "tap", "select", "wrong", "lose", "ding", "success", "win", "powerup", "whoosh", "gong", "pop"]);
+  preloadSfx(["tick", "tock", "tap", "select", "error", "buzzer", "crowd-aww", "correct", "tada", "applause", "crowd-cheer", "drumroll", "drumroll-end", "whoosh", "gong"]);
 }
 
 /** Gardé pour compat : sfx.ts réveille déjà l'audio au premier toucher. */
@@ -24,7 +25,7 @@ export function fxTap(high = true) {
 
 /** La cible vient d'être dépassée pendant le défilement. */
 export function fxOver() {
-  playSfx("wrong", { volume: 0.55, rate: 0.9 });
+  playSfx("error", { volume: 0.5 });
 }
 
 /** Résultat correct (sans être pile poil). */
@@ -37,14 +38,15 @@ export function fxBad() {
   playCombo("fail");
 }
 
-/** PILE POIL : fanfare. */
+/** PILE POIL : « ta-da », applaudissements et la foule qui crie. */
 export function fxPerfect() {
   playCombo("fanfare");
+  playSfx("crowd-cheer", { volume: 0.55, delay: 0.45 });
 }
 
-/** Roulement de tambour (cible mystère, suspense). */
-export function fxDrum() {
-  playCombo("drumroll");
+/** Vrai roulement de tambour (cible mystère, suspense), en crescendo, arrêté net après `seconds`. */
+export function fxDrum(seconds = 1.2) {
+  playCombo("drumroll", { duration: seconds });
 }
 
 /** Grande révélation (cible mystère dévoilée, champion). */

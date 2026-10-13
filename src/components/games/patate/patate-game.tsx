@@ -6,11 +6,11 @@ import { PlayersSetup, colorForIndex } from "@/components/games/local-kit";
 import { Mascot, MascotAvatar } from "@/components/Mascot";
 import { ConfettiBurst } from "@/components/ConfettiBurst";
 import { CATEGORIES_CLASSIC, CATEGORIES_SPICY, DARES, DARES_SPICY, pick, shuffle } from "./categories";
-import { buzz, preloadObjectSfx, sfxBoom, sfxDing, sfxPass, sfxTick, unlockAudio } from "./fx";
+import { buzz, fuseHeat, preloadObjectSfx, sfxBoom, sfxDetonator, sfxIgnite, sfxPass, sfxTick, startFuse, unlockAudio } from "./fx";
 import { ScrollReset, TopRightControls } from "./rules-sheet";
 import { C, DISPLAY, INK, NameTag, OptionCard, PotatoBlob, SectionTitle, SoftLink, StickerBtn, StickerCard, StickerScreen, KitStyles, TOP_PAD, BOTTOM_PAD, dotted, sticker } from "./sticker-kit";
 import { IdeaButton, RerollButton } from "../idea-button";
-import { playCombo } from "@/lib/sfx";
+import { playCombo, type LoopHandle } from "@/lib/sfx";
 import { CupSoda, Drama, Flame, RotateCw, Vibrate } from "lucide-react";
 import { GameInlineIcon } from "../game-icon-button";
 import { MASCOT_PALETTE } from "@/components/Mascot";
@@ -43,9 +43,16 @@ interface Run {
   lastFrame: number;
   nextTick: number;
   high: boolean;
+  /** prochain bip de détonateur (dernières secondes) */
+  nextBeep: number;
+  /** mèche qui crépite en boucle pendant la manche */
+  fuseLoop: LoopHandle | null;
   raf: number;
   over: boolean;
 }
+
+/** Les bips de détonateur commencent quand il reste moins de … ms. */
+const BEEP_WINDOW = 2200;
 
 // Typage de l'API iOS (absente des types DOM standard)
 type MotionCtor = { requestPermission?: () => Promise<"granted" | "denied"> };
@@ -93,6 +100,8 @@ export default function PatateGame({ onReturnToLobby }: GameProps) {
       if (!r || r.over) return;
       r.over = true;
       cancelAnimationFrame(r.raf);
+      r.fuseLoop?.(0.04);
+      r.fuseLoop = null;
       sfxBoom();
       buzz("boom");
       const loser = holderRef.current;
@@ -135,8 +144,15 @@ export default function PatateGame({ onReturnToLobby }: GameProps) {
         if (p > 0.55) buzz("tick");
         const interval = Math.max(110, 720 - 600 * Math.pow(p, 1.3));
         r.nextTick = now + interval;
+        fuseHeat(r.fuseLoop, p);
         setHeat(p);
         setStress(r.stress);
+      }
+      // Dernières secondes : bips de détonateur de plus en plus rapprochés
+      const left = r.fuse - elapsed;
+      if (left < BEEP_WINDOW && now >= r.nextBeep) {
+        sfxDetonator();
+        r.nextBeep = now + Math.max(110, left / 6);
       }
       r.raf = requestAnimationFrame(step);
     };
@@ -148,11 +164,13 @@ export default function PatateGame({ onReturnToLobby }: GameProps) {
     preloadObjectSfx();
   }, []);
 
-  // Arrêt propre si on quitte le jeu en pleine manche
+  // Arrêt propre si on quitte le jeu en pleine manche (mèche comprise)
   useEffect(() => () => {
     if (run.current) {
       run.current.over = true;
       cancelAnimationFrame(run.current.raf);
+      run.current.fuseLoop?.(0.05);
+      run.current.fuseLoop = null;
     }
   }, []);
 
@@ -231,6 +249,7 @@ export default function PatateGame({ onReturnToLobby }: GameProps) {
   const light = () => {
     unlockAudio();
     const now = performance.now();
+    run.current?.fuseLoop?.(0.05); // sécurité : jamais deux mèches
     run.current = {
       start: now,
       fuse: 15000 + Math.random() * 45000,
@@ -239,6 +258,8 @@ export default function PatateGame({ onReturnToLobby }: GameProps) {
       lastFrame: now,
       nextTick: now + 300,
       high: true,
+      nextBeep: 0,
+      fuseLoop: startFuse(),
       raf: 0,
       over: false,
     };
@@ -249,7 +270,7 @@ export default function PatateGame({ onReturnToLobby }: GameProps) {
     setStress(0);
     setBoom(null);
     setPhase("play");
-    sfxDing();
+    sfxIgnite();
     loop();
   };
 
