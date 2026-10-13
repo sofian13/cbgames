@@ -137,7 +137,7 @@ export const UI: I18n<{
     plans: {
       weekly: { title: "Pass soirée", period: "7 jours" },
       monthly: { title: "Mensuel", period: "par mois", badge: "Le + choisi" },
-      yearly: { title: "Annuel", period: "par an", badge: "-58 %" },
+      yearly: { title: "Annuel", period: "par an", badge: "-50 %" },
     },
     perMonthSuffix: "/mois",
     buyCta: "Je débloque tout",
@@ -228,7 +228,7 @@ export const UI: I18n<{
     plans: {
       weekly: { title: "Party Pass", period: "7 days" },
       monthly: { title: "Monthly", period: "per month", badge: "Most popular" },
-      yearly: { title: "Yearly", period: "per year", badge: "-58%" },
+      yearly: { title: "Yearly", period: "per year", badge: "-50%" },
     },
     perMonthSuffix: "/mo",
     buyCta: "Unlock everything",
@@ -319,7 +319,7 @@ export const UI: I18n<{
     plans: {
       weekly: { title: "Pase fiesta", period: "7 días" },
       monthly: { title: "Mensual", period: "al mes", badge: "El más elegido" },
-      yearly: { title: "Anual", period: "al año", badge: "-58 %" },
+      yearly: { title: "Anual", period: "al año", badge: "-50 %" },
     },
     perMonthSuffix: "/mes",
     buyCta: "Lo desbloqueo todo",

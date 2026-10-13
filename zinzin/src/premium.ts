@@ -60,9 +60,9 @@ export interface Plan {
 
 /** Prix par défaut (mode test ou avant chargement), au format de la langue. */
 const DEFAULT_PRICES: Record<PlanKind, Record<Lang, string>> = {
-  weekly: { fr: "1,99 €", en: "€1.99", es: "1,99 €" },
-  monthly: { fr: "2,99 €", en: "€2.99", es: "2,99 €" },
-  yearly: { fr: "14,99 €", en: "€14.99", es: "14,99 €" },
+  weekly: { fr: "2,99 €", en: "€2.99", es: "2,99 €" },
+  monthly: { fr: "4,99 €", en: "€4.99", es: "4,99 €" },
+  yearly: { fr: "29,99 €", en: "€29.99", es: "29,99 €" },
 };
 
 /** Offres affichées par défaut (mode test ou avant chargement). */
