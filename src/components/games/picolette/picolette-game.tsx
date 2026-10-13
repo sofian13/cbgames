@@ -27,7 +27,7 @@ import {
 import {
   type PicoletteCard, type Pack, type PicoletteType,
   cardsFor, gagesFor, packInfoFor, typeInfoFor,
-  filterDeck, shuffleDeck,
+  filterDeck, shuffleDeck, splitHint,
 } from "./cards";
 import { pick, useLang, useT } from "@/lib/i18n";
 import { STR } from "./i18n";
@@ -162,7 +162,7 @@ type ActiveRule = { text: string; by: string } & (
   | { kind: "next" }
 );
 
-type PickMode = "loss" | "rule" | "shield" | "duel" | "reader";
+type PickMode = "loss" | "rule" | "shield" | "duel" | "reader" | "camp"; // camp = plusieurs perdants (Tu préfères)
 
 /** Carte distribuée : les joueurs tirés pour {p1} / {p2} (indices). */
 type DealtCard = PicoletteCard & { who: number[] };
@@ -231,6 +231,12 @@ function fill(text: string, who: number[], players: string[]): string {
   return text.replace(/\{p([12])\}/g, (_, n: string) => players[who[Number(n) - 1]] ?? pick(STR).someone);
 }
 
+/** « Léa, Tom et Max » (liste de prénoms dans la langue courante). */
+function joinNames(names: string[]): string {
+  if (names.length < 2) return names[0] ?? "";
+  return `${names.slice(0, -1).join(", ")} ${pick(STR).and} ${names[names.length - 1]}`;
+}
+
 /** Texte de carte avec les prénoms mis en valeur (sticker). */
 function RichText({ text, who, players, cardBg }: { text: string; who: number[]; players: string[]; cardBg: string }) {
   const hl = cardBg === "#FFD23F" ? "#fff" : ["#FFFFFF", "#FFF6E5", "#fff"].includes(cardBg) ? "#FFD23F" : "#fff";
@@ -290,11 +296,12 @@ export default function PicoletteGame({ onReturnToLobby }: GameProps) {
   const [activeRule, setActiveRule] = useState<ActiveRule | null>(null);
   const [ruleToast, setRuleToast] = useState<string | null>(null);
   const [pickMode, setPickMode] = useState<PickMode | null>(null); // overlay "qui perd"
-  const [rouletteFor, setRouletteFor] = useState<number | null>(null); // joueur qui prend la peine
+  const [rouletteFor, setRouletteFor] = useState<number[] | null>(null); // joueur(s) qui prennent la peine
   const [rouletteSym, setRouletteSym] = useState<RouletteFace>("wait");
   const [rouletteResult, setRouletteResult] = useState<PenaltyResult | null>(null);
   const [rouletteAdvance, setRouletteAdvance] = useState(false); // passer à la carte suivante après
-  const [lastLoserIdx, setLastLoserIdx] = useState<number | null>(null); // pour l'undo
+  const [rouletteSpared, setRouletteSpared] = useState<number[]>([]); // perdants sauvés par leur bouclier
+  const [lastLosers, setLastLosers] = useState<number[]>([]); // pour l'undo (plusieurs si camp perdant)
   const spinRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const card = deck[cardIdx];
@@ -340,7 +347,7 @@ export default function PicoletteGame({ onReturnToLobby }: GameProps) {
     setPlayers(names);
     setLosses(names.map(() => 0));
     setShields(names.map(() => false));
-    setLastLoserIdx(null);
+    setLastLosers([]);
     setPhase("packs");
   };
 
@@ -431,17 +438,26 @@ export default function PicoletteGame({ onReturnToLobby }: GameProps) {
       nextCard({ readerTo: idx });
       return;
     }
-    spinPenalty(idx, mode !== "rule");
+    spinPenalty([idx], mode !== "rule");
   };
 
-  const spinPenalty = (idx: number, advance: boolean) => {
-    setRouletteFor(idx);
+  // Camp perdant (Tu préfères) : tous prennent la même peine
+  const onPickCamp = (idxs: number[]) => {
+    setPickMode(null);
+    if (idxs.length) spinPenalty(idxs, true);
+  };
+
+  const spinPenalty = (idxs: number[], advance: boolean) => {
+    // Bouclier : la peine est annulée pour ceux qui en ont un, le bouclier est consommé
+    const spared = idxs.filter((i) => shields[i]);
+    const hit = idxs.filter((i) => !shields[i]);
+    if (spared.length) setShields((prev) => prev.map((s, i) => (spared.includes(i) ? false : s)));
+    setRouletteSpared(hit.length ? spared : []);
+    setRouletteFor(hit.length ? hit : spared);
     setRouletteResult(null);
     setRouletteAdvance(advance);
 
-    // Bouclier : la peine est annulée, le bouclier est consommé
-    if (shields[idx]) {
-      setShields((prev) => prev.map((s, i) => (i === idx ? false : s)));
+    if (!hit.length) {
       setRouletteSym("shield");
       setRouletteResult({ kind: "shield" });
       playSfx("powerup", { volume: 0.8 });
@@ -465,8 +481,8 @@ export default function PicoletteGame({ onReturnToLobby }: GameProps) {
         setRouletteSym(isGage ? "gage" : "sips");
         setRouletteResult(result);
         playSfx(isGage ? "ding2" : "glass", { volume: 0.8 });
-        setLosses((prev) => prev.map((n, i) => (i === idx ? n + 1 : n)));
-        setLastLoserIdx(idx);
+        setLosses((prev) => prev.map((n, i) => (hit.includes(i) ? n + 1 : n)));
+        setLastLosers(hit);
         if (typeof navigator !== "undefined" && navigator.vibrate) navigator.vibrate(90);
       }
     }, 70);
@@ -480,6 +496,7 @@ export default function PicoletteGame({ onReturnToLobby }: GameProps) {
 
   const closeRoulette = () => {
     setRouletteFor(null);
+    setRouletteSpared([]);
     setRouletteSym("wait");
     setRouletteResult(null);
     if (rouletteAdvance) nextCard();
@@ -489,10 +506,10 @@ export default function PicoletteGame({ onReturnToLobby }: GameProps) {
 
   // Annule la dernière peine (erreur de joueur, ou joker Amnistie)
   const undoLastLoss = () => {
-    if (lastLoserIdx == null) return;
+    if (!lastLosers.length) return;
     playSfx("back", { volume: 0.6 });
-    setLosses((prev) => prev.map((n, i) => (i === lastLoserIdx ? Math.max(0, n - 1) : n)));
-    setLastLoserIdx(null);
+    setLosses((prev) => prev.map((n, i) => (lastLosers.includes(i) ? Math.max(0, n - 1) : n)));
+    setLastLosers([]);
   };
 
   // ── Render par phase ─────────────────────────────────────
@@ -555,6 +572,8 @@ export default function PicoletteGame({ onReturnToLobby }: GameProps) {
     const t = typeInfoFor()[card.type];
     const ink = inkOn(look.bg);
     const isJoker = card.type === "joker";
+    const isPref = card.type === "prefere" && !!card.a && !!card.b;
+    const hint = splitHint(card.hint);
     const TypeIcon = look.icon;
     const shown = fill(card.text, card.who, players);
     const dur = card.type === "rule" ? ruleDurationLabel(card) : null;
@@ -564,7 +583,8 @@ export default function PicoletteGame({ onReturnToLobby }: GameProps) {
       <div className="relative flex min-h-[100svh] flex-col px-4 text-white" style={{ ...PAGE, paddingTop: TOP, paddingBottom: BOTTOM }}>
         <style>{KEYFRAMES}</style>
         <SoundToggle />
-        <ScrollTop dep={phase} />
+        {/* Chaque nouvelle carte repart du haut (sinon on arrive au milieu de la carte sur petit écran) */}
+        <ScrollTop dep={`${phase}-${cardIdx}-${card.text}`} />
 
         {/* Règle live en cours */}
         {activeRule && (
@@ -602,7 +622,7 @@ export default function PicoletteGame({ onReturnToLobby }: GameProps) {
             style={{ ...stk(look.bg, 6), color: ink, transform: `rotate(${cardIdx % 2 ? 1.2 : -1.2}deg)`, animation: "pt-in .4s ease-out" }}
           >
             <div className="flex items-center justify-between gap-2">
-              <span className="inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-[15px] font-extrabold" style={{ ...stk("#fff", 2, 2.5), color: INK, transform: "rotate(-3deg)" }}>
+              <span className="inline-flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-3 text-[15px] font-extrabold" style={{ ...stk("#fff", 2, 2.5), color: INK, transform: "rotate(-3deg)" }}>
                 <TypeIcon size={17} strokeWidth={3} aria-hidden /> {t.label}
               </span>
               {readerName && (
@@ -640,21 +660,41 @@ export default function PicoletteGame({ onReturnToLobby }: GameProps) {
                 )}
               </div>
             )}
-            {card.type === "prefere" && card.a && card.b && (
-              <div className="mt-3 space-y-2">
-                {[{ icon: ArrowUp, label: tr.handUp, v: card.a, bg: "#fff" }, { icon: ArrowDown, label: tr.handDown, v: card.b, bg: "#FFF6E5" }].map((o, k) => (
-                  <div key={k} className="flex items-center gap-3 rounded-[18px] px-3.5 py-2.5" style={{ ...stk(o.bg, 3, 2.5), color: INK }}>
-                    <o.icon size={26} strokeWidth={3} className="shrink-0" aria-hidden />
-                    <div className="min-w-0 flex-1">
-                      <p className="text-[13px] font-bold" style={{ opacity: 0.65 }}>{o.label}</p>
-                      <p className="text-[16px] font-bold leading-snug">{fill(o.v, card.who, players)}</p>
+            {isPref ? (
+              <>
+                <p className="mt-1.5 text-center text-[14px] font-semibold leading-snug" style={{ opacity: 0.88 }}>{tr.prefHow}</p>
+                <div className="mt-2">
+                  {[{ up: true, label: tr.handUp, v: card.a ?? "", bg: "#fff" }, { up: false, label: tr.handDown, v: card.b ?? "", bg: "#FFF6E5" }].map((o, k) => (
+                    <div key={k}>
+                      {k === 1 && (
+                        <div className="relative z-[1] -my-2 flex justify-center">
+                          <span className="rounded-full px-2.5 py-0.5 text-[13px] font-extrabold" style={{ background: INK, color: "#fff", border: `2px solid ${INK}` }}>{tr.or}</span>
+                        </div>
+                      )}
+                      <div className="flex items-center gap-3 rounded-[18px] px-3 py-2" style={{ ...stk(o.bg, 3, 2.5), color: INK }}>
+                        {/* Main levée ↑ / main baissée ↓ */}
+                        <span className="flex h-12 w-10 shrink-0 flex-col items-center justify-center rounded-[14px]" style={{ background: INK, color: "#fff" }} aria-hidden>
+                          {o.up && <ArrowUp size={17} strokeWidth={3.4} />}
+                          <Hand size={20} strokeWidth={2.6} style={o.up ? undefined : { transform: "rotate(180deg)" }} />
+                          {!o.up && <ArrowDown size={17} strokeWidth={3.4} />}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-[12px] font-extrabold uppercase tracking-wide" style={{ opacity: 0.6 }}>{o.label}</p>
+                          <p className="text-[16px] font-bold leading-snug">{fill(o.v, card.who, players)}</p>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-            )}
-            {card.hint && (
-              <p className="mt-3 text-center text-[15px] font-semibold leading-snug" style={{ opacity: 0.88 }}>{fill(card.hint, card.who, players)}</p>
+                  ))}
+                </div>
+                <LoseBox lose={tr.prefLose} extra={tr.prefTie} who={card.who} players={players} penaltyMode={penaltyMode} />
+              </>
+            ) : isJoker ? (
+              card.hint && <p className="mt-3 text-center text-[15px] font-semibold leading-snug" style={{ opacity: 0.88 }}>{fill(card.hint, card.who, players)}</p>
+            ) : (
+              <>
+                {hint.how && <p className="mt-3 text-center text-[15px] font-semibold leading-snug" style={{ opacity: 0.88 }}><RichText text={hint.how} who={card.who} players={players} cardBg={look.bg} /></p>}
+                {hint.lose && <LoseBox lose={hint.lose} who={card.who} players={players} penaltyMode={penaltyMode} />}
+              </>
             )}
           </div>
           <div className="mt-4">
@@ -671,7 +711,7 @@ export default function PicoletteGame({ onReturnToLobby }: GameProps) {
           ) : isJoker ? (
             <JokerAction
               effect={card.joker ?? "none"}
-              canUndo={lastLoserIdx != null}
+              canUndo={lastLosers.length > 0}
               onPick={() => setPickMode("loss")}
               onShield={() => setPickMode("shield")}
               onAmnesty={() => { undoLastLoss(); nextCard(); }}
@@ -679,6 +719,10 @@ export default function PicoletteGame({ onReturnToLobby }: GameProps) {
               onClear={clearRule}
               onReader={() => setPickMode("reader")}
             />
+          ) : isPref && players.length > 2 ? (
+            <Push big bg="#FF3EA5" onClick={() => { playSfx("pop", { volume: 0.6 }); setPickMode("camp"); }} className="w-full">
+              <Users size={22} strokeWidth={3} aria-hidden /> {tr.pickCamp}
+            </Push>
           ) : card.type === "duel" && card.who.length > 1 ? (
             <Push big bg="#FF3EA5" onClick={() => { playSfx("pop", { volume: 0.6 }); setPickMode("duel"); }} className="w-full">
               <Swords size={22} strokeWidth={3} aria-hidden /> {tr.whoLosesDuel}
@@ -694,20 +738,32 @@ export default function PicoletteGame({ onReturnToLobby }: GameProps) {
         </div>
 
         {/* Undo dernière peine (si on s'est planté de joueur) */}
-        {lastLoserIdx != null && (
+        {lastLosers.length > 0 && (
           <button type="button" onClick={undoLastLoss} className="mx-auto mt-2 flex min-h-11 items-center gap-1.5 px-3 text-[15px] font-bold" style={{ color: "rgba(255,255,255,0.85)" }}>
-            <Undo2 size={17} strokeWidth={3} aria-hidden /> {tr.undoPenalty(players[lastLoserIdx])}
+            <Undo2 size={17} strokeWidth={3} aria-hidden /> {tr.undoPenalty(joinNames(lastLosers.map((i) => players[i])))}
           </button>
         )}
 
         {/* Récap des peines */}
-        <LossRecap players={players} losses={losses} shields={shields} highlight={lastLoserIdx ?? -1} />
+        <LossRecap players={players} losses={losses} shields={shields} highlight={lastLosers} />
 
         <div className="mt-1">
           <TextLink onClick={finishGame}>{tr.endGame}</TextLink>
         </div>
 
-        {pickMode && (
+        {pickMode === "camp" && (
+          <PickerOverlay
+            title={tr.campTitle}
+            sub={tr.campSub}
+            players={players}
+            shields={shields}
+            multi
+            onPick={() => {}}
+            onConfirm={onPickCamp}
+            onCancel={() => setPickMode(null)}
+          />
+        )}
+        {pickMode && pickMode !== "camp" && (
           <PickerOverlay
             title={
               pickMode === "shield" ? tr.pickShield
@@ -728,8 +784,9 @@ export default function PicoletteGame({ onReturnToLobby }: GameProps) {
         {rouletteFor != null && (
           <RouletteOverlay
             sym={rouletteSym}
-            playerName={players[rouletteFor]}
-            colorIndex={rouletteFor}
+            losers={rouletteFor}
+            players={players}
+            spared={rouletteSpared}
             result={rouletteResult}
             onReroll={rerollGage}
             onDone={closeRoulette}
@@ -937,9 +994,20 @@ function PacksScreen({
 }
 
 function PickerOverlay({
-  title, players, shields, onPick, onCancel, only, mood = "sad",
-}: { title: string; players: string[]; shields: boolean[]; onPick: (i: number) => void; onCancel: () => void; only?: number[]; mood?: "sad" | "happy" }) {
+  title, sub, players, shields, onPick, onCancel, only, mood = "sad", multi, onConfirm,
+}: {
+  title: string; sub?: string; players: string[]; shields: boolean[]; onPick: (i: number) => void; onCancel: () => void;
+  only?: number[]; mood?: "sad" | "happy";
+  /** multi : on coche plusieurs joueurs puis on valide (camp perdant). */
+  multi?: boolean; onConfirm?: (idxs: number[]) => void;
+}) {
   const t = useT(STR);
+  const [sel, setSel] = useState<number[]>([]);
+  const tap = (i: number) => {
+    if (!multi) { onPick(i); return; }
+    playSfx("toggle", { volume: 0.5 });
+    setSel((prev) => (prev.includes(i) ? prev.filter((x) => x !== i) : [...prev, i]));
+  };
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center" role="dialog" aria-modal aria-label={title}>
       <div className="absolute inset-0" style={{ background: "rgba(10,4,32,0.66)" }} onClick={onCancel} />
@@ -947,15 +1015,17 @@ function PickerOverlay({
         className="relative max-h-[88dvh] w-full max-w-lg overflow-y-auto px-5 pt-5"
         style={{ background: "#FFF6E5", color: INK, borderRadius: "30px 30px 0 0", border: `3px solid ${INK}`, borderBottom: 0, paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 16px)", animation: "pt-pop .3s ease-out" }}
       >
-        <h2 style={{ ...DISPLAY, fontSize: 32, lineHeight: 1 }}>{title}</h2>
+        <h2 style={{ ...DISPLAY, fontSize: multi ? 28 : 32, lineHeight: 1 }}>{title}</h2>
+        {sub && <p className="mt-1.5 text-[15px] font-semibold leading-snug" style={{ opacity: 0.75 }}>{sub}</p>}
         <div className="mt-4 grid grid-cols-2 gap-3">
           {players.map((name, i) => (only && !only.includes(i) ? null : (
             <button
               key={i}
               type="button"
-              onClick={() => onPick(i)}
+              onClick={() => tap(i)}
+              aria-pressed={multi ? sel.includes(i) : undefined}
               className="flex min-h-[58px] items-center gap-2.5 rounded-[18px] px-3 text-left active:translate-y-[3px]"
-              style={{ ...stk("#fff", 3, 2.5), color: INK }}
+              style={{ ...stk(multi && sel.includes(i) ? "#FF3EA5" : "#fff", 3, 2.5), color: INK }}
             >
               <MascotAvatar color={colorForIndex(i)} size={34} mood={mood} />
               <span className="line-clamp-2 min-w-0 flex-1 text-[16px] font-bold leading-tight" style={{ overflowWrap: "anywhere" }}>{name}</span>
@@ -963,6 +1033,11 @@ function PickerOverlay({
             </button>
           )))}
         </div>
+        {multi && (
+          <Push big bg={ACCENT} onClick={() => onConfirm?.(sel)} disabled={sel.length === 0} className="mt-4 w-full">
+            <Check size={22} strokeWidth={3.2} aria-hidden /> {t.confirm(sel.length)}
+          </Push>
+        )}
         <button type="button" onClick={onCancel} className="mx-auto mt-3 block min-h-11 px-4 text-[16px] font-bold underline decoration-2 underline-offset-4">{t.cancel}</button>
       </div>
     </div>
@@ -974,18 +1049,28 @@ type RouletteFace = "wait" | "shield" | "gage" | "sips";
 const ROULETTE_ICONS: Record<RouletteFace, LucideIcon> = { wait: Ellipsis, shield: Shield, gage: Drama, sips: CupSoda };
 
 function RouletteOverlay({
-  sym, playerName, colorIndex, result, onReroll, onDone,
-}: { sym: RouletteFace; playerName: string; colorIndex: number; result: PenaltyResult | null; onReroll: () => void; onDone: () => void }) {
+  sym, losers, players, spared, result, onReroll, onDone,
+}: { sym: RouletteFace; losers: number[]; players: string[]; spared: number[]; result: PenaltyResult | null; onReroll: () => void; onDone: () => void }) {
   const Icon = ROULETTE_ICONS[sym];
   const t = useT(STR);
+  const names = joinNames(losers.map((i) => players[i] ?? ""));
   return (
     <div className="fixed inset-0 z-[60] flex flex-col overflow-y-auto px-5 text-white" style={{ ...PAGE, paddingTop: TOP, paddingBottom: BOTTOM }}>
       <div className="mx-auto flex w-full max-w-md flex-1 flex-col items-center justify-center text-center">
         <p className="text-[17px] font-bold" style={{ color: "rgba(255,255,255,0.85)" }}>{t.penaltyFallsOn}</p>
         <div className="mt-2 flex items-center gap-2.5 rounded-full py-1.5 pl-1.5 pr-5" style={{ ...stk("#fff", 4), color: INK, transform: "rotate(-2deg)" }}>
-          <MascotAvatar color={colorForIndex(colorIndex)} size={40} mood="shocked" />
-          <span style={{ ...DISPLAY, fontSize: 30, lineHeight: 1, overflowWrap: "anywhere" }}>{playerName}</span>
+          <span className="flex shrink-0">
+            {losers.slice(0, 3).map((i, k) => (
+              <span key={i} style={{ marginLeft: k ? -14 : 0 }}><MascotAvatar color={colorForIndex(i)} size={40} mood="shocked" /></span>
+            ))}
+          </span>
+          <span style={{ ...DISPLAY, fontSize: losers.length > 1 || names.length > 14 ? 24 : 30, lineHeight: 1.05, overflowWrap: "anywhere" }}>{names}</span>
         </div>
+        {spared.length > 0 && (
+          <p className="mt-3 inline-flex items-center gap-1.5 text-[15px] font-bold" style={{ color: "rgba(255,255,255,0.85)" }}>
+            <Shield size={16} strokeWidth={3} aria-hidden /> {t.shieldSpared(joinNames(spared.map((i) => players[i] ?? "")), spared.length)}
+          </p>
+        )}
 
         <div
           className="mt-8 grid h-36 w-36 place-items-center rounded-[34px]"
@@ -1034,13 +1119,13 @@ function RouletteOverlay({
 }
 
 function LossRecap({
-  players, losses, shields, highlight = -1,
-}: { players: string[]; losses: number[]; shields: boolean[]; highlight?: number }) {
+  players, losses, shields, highlight = [],
+}: { players: string[]; losses: number[]; shields: boolean[]; highlight?: number[] }) {
   const t = useT(STR);
   return (
     <div className="mx-auto mt-4 flex w-full max-w-md flex-wrap items-center justify-center gap-2">
       {players.map((name, i) => {
-        const hot = i === highlight;
+        const hot = highlight.includes(i);
         return (
           <div
             key={i}
@@ -1054,6 +1139,29 @@ function LossRecap({
           </div>
         );
       })}
+    </div>
+  );
+}
+
+/** Pastille « Qui perd ? » : la condition de défaite + ce que vaut la peine (s'adapte au mode Chill). */
+function LoseBox({
+  lose, extra, who, players, penaltyMode,
+}: { lose: string; extra?: string; who: number[]; players: string[]; penaltyMode: PenaltyMode }) {
+  const t = useT(STR);
+  return (
+    <div className="mt-3 rounded-[18px] px-3.5 py-2.5 text-left" style={{ background: INK, color: "#fff", border: `2.5px solid ${INK}`, transform: "rotate(-0.6deg)" }}>
+      <p className="text-[16px] font-bold leading-snug" style={{ overflowWrap: "break-word" }}>
+        <span className="mr-1.5 inline-flex translate-y-[-1px] items-center gap-1 whitespace-nowrap rounded-full px-2 py-0.5 align-middle text-[13px] font-extrabold" style={{ background: "#FF3EA5", color: INK }}>
+          <Skull size={14} strokeWidth={3} aria-hidden /> {t.loseTitle}
+        </span>
+        <RichText text={lose} who={who} players={players} cardBg={INK} />
+      </p>
+      {extra && <p className="mt-0.5 text-[14px] font-semibold leading-snug" style={{ color: "rgba(255,255,255,0.8)" }}>{extra}</p>}
+      <p className="mt-1.5 flex items-center gap-1.5 text-[13px] font-semibold leading-tight" style={{ color: "rgba(255,255,255,0.7)" }}>
+        {penaltyMode === "mix" && <CupSoda size={15} strokeWidth={2.6} className="shrink-0" aria-hidden />}
+        <Drama size={15} strokeWidth={2.6} className="shrink-0" aria-hidden />
+        <span>{penaltyMode === "mix" ? t.penaltyIsMix : t.penaltyIsDare}</span>
+      </p>
     </div>
   );
 }

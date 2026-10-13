@@ -133,11 +133,11 @@ const BASE_CARDS_EN: PicoletteCard[] = [
   { type: "coquin", pack: "coquin", text: "The worst place you've ever kissed someone?", hint: "Go around the circle. The lamest story takes the penalty." },
   { type: "coquin", pack: "coquin", text: "Name three things that make you fall for someone, in 5 seconds.", hint: "The reader picks who answers. Fail = penalty." },
   { type: "coquin", pack: "coquin", text: "Flirty text at 3 a.m.: what do you write?", hint: "Out loud. The group votes for the weakest one: penalty." },
-  { type: "coquin", pack: "coquin", text: "The worst pet name anyone's ever given you?", hint: "Go around the circle, out loud." },
-  { type: "coquin", pack: "coquin", text: "Read the cutest message from your latest chat (or make one up).", hint: "The reader picks someone. Refuse = dare." },
-  { type: "coquin", pack: "coquin", text: "Your worst pickup move, demonstrated on the nearest cushion.", hint: "The reader picks someone. Refuse = dare." },
+  { type: "coquin", pack: "coquin", text: "The worst pet name anyone's ever given you?", hint: "Go around the circle, out loud. The least cringe one takes the penalty." },
+  { type: "coquin", pack: "coquin", text: "Read the cutest message from your latest chat (or make one up).", hint: "The reader picks someone. Refuse = penalty." },
+  { type: "coquin", pack: "coquin", text: "Your worst pickup move, demonstrated on the nearest cushion.", hint: "The reader picks someone. Refuse = penalty." },
   { type: "coquin", pack: "coquin", text: "Describe your first kiss in three words.", hint: "Go around the circle. The lamest one takes the penalty." },
-  { type: "coquin", pack: "coquin", text: "The most awkward date of your life, in 30 seconds.", hint: "The reader picks someone. The group judges." },
+  { type: "coquin", pack: "coquin", text: "The most awkward date of your life, in 30 seconds.", hint: "The reader picks someone. Not awkward enough for the group? Penalty." },
   { type: "vote", pack: "coquin", text: "Who's the best kisser here (according to rumours)?", hint: V },
   { type: "vote", pack: "coquin", text: "Who's the biggest flirt without even trying?", hint: V },
   { type: "vote", pack: "coquin", text: "Who has the most complicated love life?", hint: V },
@@ -154,10 +154,10 @@ const BASE_CARDS_EN: PicoletteCard[] = [
   { type: "vote", pack: "trash", text: "Who'd end up in jail first (for something ridiculous)?", hint: V },
   { type: "vote", pack: "trash", text: "Who still stalks their ex?", hint: V },
   { type: "vote", pack: "trash", text: "Who has the most incriminating screenshots of everyone else?", hint: V },
-  { type: "coquin", pack: "trash", text: "Confess the weirdest thing you've done to impress someone.", hint: "The reader picks someone. Lips sealed = dare." },
+  { type: "coquin", pack: "trash", text: "Confess the weirdest thing you've done to impress someone.", hint: "The reader picks someone. Lips sealed = penalty." },
   { type: "coquin", pack: "trash", text: "The worst place you've ever ended a night out?", hint: "Go around the circle. Nobody believes your story = penalty." },
-  { type: "coquin", pack: "trash", text: "The biggest lie you've ever told someone here?", hint: "The reader picks someone. Refuse = dare." },
-  { type: "coquin", pack: "trash", text: "Show your last internet search (or take the penalty).", hint: "The reader picks someone." },
+  { type: "coquin", pack: "trash", text: "The biggest lie you've ever told someone here?", hint: "The reader picks someone. Refuse = penalty." },
+  { type: "coquin", pack: "trash", text: "Show your last internet search.", hint: "The reader picks who shows it. Refuse = penalty." },
 
   // ── SILLY QUIZ ───────────────────────────────────────
   { type: "table", pack: "quiz", text: "Take turns naming an emoji you never use.", hint: T },
@@ -622,7 +622,7 @@ const MORE_CARDS_EN: PicoletteCard[] = [
   { type: "avoue", pack: "trash", text: "{p1}, confess the night out you regret the most.", hint: AV },
 
   // ── SPICY (suggestive, never explicit) ────────────────
-  { type: "coquin", pack: "coquin", text: "Your most epic rejection, told in 20 seconds.", hint: "The reader picks who tells it. Refuse = dare." },
+  { type: "coquin", pack: "coquin", text: "Your most epic rejection, told in 20 seconds.", hint: "The reader picks who tells it. Refuse = penalty." },
   { type: "coquin", pack: "coquin", text: "Describe your ideal date using only emojis, out loud.", hint: "Go around the circle. The lamest one takes the penalty." },
   { type: "coquin", pack: "coquin", text: "Come up with a cute nickname for everyone here.", hint: "The reader picks who does it. A blank = penalty." },
   { type: "coquin", pack: "coquin", text: "The worst pickup line you know, delivered properly.", hint: "Go around the circle. The group votes for the least funny: penalty." },

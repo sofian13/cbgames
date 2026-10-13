@@ -181,11 +181,11 @@ const BASE_CARDS: PicoletteCard[] = [
   { type: "coquin", pack: "coquin", text: "Le pire endroit où t'as embrassé quelqu'un ?", hint: "Tour de table. L'histoire la plus bidon prend la peine." },
   { type: "coquin", pack: "coquin", text: "Cite trois trucs qui te font craquer chez quelqu'un, en 5 secondes.", hint: "Le lecteur désigne qui répond. Échec = peine." },
   { type: "coquin", pack: "coquin", text: "Message de drague à 3 h du mat : qu'est-ce que t'écris ?", hint: "À voix haute. Le groupe vote pour le plus tiède : peine." },
-  { type: "coquin", pack: "coquin", text: "Le pire surnom affectueux qu'on t'a déjà donné ?", hint: "Tour de table à voix haute." },
-  { type: "coquin", pack: "coquin", text: "Lis le message le plus mignon de ta dernière conversation (ou invente-le).", hint: "Le lecteur désigne. Refus = gage." },
-  { type: "coquin", pack: "coquin", text: "Ta pire technique de drague, démonstration sur le coussin le plus proche.", hint: "Le lecteur désigne. Refus = gage." },
+  { type: "coquin", pack: "coquin", text: "Le pire surnom affectueux qu'on t'a déjà donné ?", hint: "Tour de table à voix haute. Le surnom le moins pire prend la peine." },
+  { type: "coquin", pack: "coquin", text: "Lis le message le plus mignon de ta dernière conversation (ou invente-le).", hint: "Le lecteur désigne. Refus = peine." },
+  { type: "coquin", pack: "coquin", text: "Ta pire technique de drague, démonstration sur le coussin le plus proche.", hint: "Le lecteur désigne. Refus = peine." },
   { type: "coquin", pack: "coquin", text: "Raconte ton premier bisou en trois mots.", hint: "Tour de table. Le plus nul prend la peine." },
-  { type: "coquin", pack: "coquin", text: "Le date le plus gênant de ta vie, en 30 secondes.", hint: "Le lecteur désigne. Le groupe juge." },
+  { type: "coquin", pack: "coquin", text: "Le date le plus gênant de ta vie, en 30 secondes.", hint: "Le lecteur désigne. Pas assez gênant selon le groupe ? Peine." },
   { type: "vote", pack: "coquin", text: "Qui embrasse le mieux ici (d'après la rumeur) ?", hint: V },
   { type: "vote", pack: "coquin", text: "Qui est le plus charmeur sans le faire exprès ?", hint: V },
   { type: "vote", pack: "coquin", text: "Qui a la vie amoureuse la plus compliquée ?", hint: V },
@@ -202,10 +202,10 @@ const BASE_CARDS: PicoletteCard[] = [
   { type: "vote", pack: "trash", text: "Qui finirait premier en prison (pour un truc ridicule) ?", hint: V },
   { type: "vote", pack: "trash", text: "Qui stalke encore son ex ?", hint: V },
   { type: "vote", pack: "trash", text: "Qui a le plus de captures d'écran compromettantes sur les autres ?", hint: V },
-  { type: "coquin", pack: "trash", text: "Avoue le truc le plus chelou que t'as fait pour plaire à quelqu'un.", hint: "Le lecteur désigne. Bouche cousue = gage." },
+  { type: "coquin", pack: "trash", text: "Avoue le truc le plus chelou que t'as fait pour plaire à quelqu'un.", hint: "Le lecteur désigne. Bouche cousue = peine." },
   { type: "coquin", pack: "trash", text: "Le pire endroit où t'as fini une soirée ?", hint: "Tour de table. Personne ne croit ton histoire = peine." },
-  { type: "coquin", pack: "trash", text: "Le mensonge le plus gros que t'as dit à quelqu'un ici ?", hint: "Le lecteur désigne. Refus = gage." },
-  { type: "coquin", pack: "trash", text: "Montre ta dernière recherche internet (ou prends la peine).", hint: "Le lecteur désigne." },
+  { type: "coquin", pack: "trash", text: "Le mensonge le plus gros que t'as dit à quelqu'un ici ?", hint: "Le lecteur désigne. Refus = peine." },
+  { type: "coquin", pack: "trash", text: "Montre ta dernière recherche internet.", hint: "Le lecteur désigne qui montre. Refus = peine." },
 
   // ── QUIZ DÉBILE ──────────────────────────────────────
   { type: "table", pack: "quiz", text: "Citez chacun un emoji que vous n'utilisez jamais.", hint: T },
@@ -670,7 +670,7 @@ const MORE_CARDS: PicoletteCard[] = [
   { type: "avoue", pack: "trash", text: "{p1}, avoue la soirée que tu regrettes le plus.", hint: AV },
 
   // ── COQUIN (suggestif, jamais explicite) ──────────────
-  { type: "coquin", pack: "coquin", text: "Ton plus beau râteau, raconté en 20 secondes.", hint: "Le lecteur désigne qui raconte. Refus = gage." },
+  { type: "coquin", pack: "coquin", text: "Ton plus beau râteau, raconté en 20 secondes.", hint: "Le lecteur désigne qui raconte. Refus = peine." },
   { type: "coquin", pack: "coquin", text: "Décris ton date idéal uniquement avec des emojis, à voix haute.", hint: "Tour de table. Le plus nul prend la peine." },
   { type: "coquin", pack: "coquin", text: "Trouve un surnom mignon pour chaque personne ici.", hint: "Le lecteur désigne qui s'y colle. Un blanc = peine." },
   { type: "coquin", pack: "coquin", text: "La phrase de drague la plus nulle que tu connais, avec le ton.", hint: "Tour de table. Le groupe vote pour la moins drôle : peine." },
@@ -746,6 +746,57 @@ export function gagesFor(lang: Lang = getLang()): string[] {
 
 export function filterDeck(packs: Set<Pack>, lang: Lang = getLang()): PicoletteCard[] {
   return cardsFor(lang).filter((c) => packs.has(c.pack));
+}
+
+// ── « Qui perd ? » ─────────────────────────────────────────
+// Le hint mélange parfois consigne (« Tour de table, pas de répétition. ») et condition de défaite
+// (« Le premier qui sèche perd. »). On isole la partie « qui perd » pour l'afficher dans sa pastille.
+const LOSE_WORDS: I18n<RegExp> = {
+  fr: /perd|peine|défaite|raté/i,
+  en: /\blos(e|es|er)\b|penalty|defeat/i,
+  es: /pierde|perdedor|castigo|derrota/i,
+};
+
+/** Découpe un texte en phrases (gère « … », ?!, guillemets fermants). */
+function sentences(s: string): string[] {
+  const out: string[] = [];
+  let cur = "";
+  for (let i = 0; i < s.length; i++) {
+    cur += s[i];
+    if (!/[.!?…]/.test(s[i])) continue;
+    const tail = /^(?:[.!?…]|\s*[»"”])*/.exec(s.slice(i + 1))?.[0] ?? "";
+    cur += tail;
+    i += tail.length;
+    // « Réponds franchement… ou prends la peine » : pas de coupure si la suite repart en minuscule
+    if (i + 1 >= s.length || (/\s/.test(s[i + 1]) && !/^\s*\p{Ll}/u.test(s.slice(i + 1)))) {
+      if (cur.trim()) out.push(cur.trim());
+      cur = "";
+    }
+  }
+  if (cur.trim()) out.push(cur.trim());
+  return out;
+}
+
+/**
+ * Sépare un hint en { how : consigne, lose : qui perd }.
+ * lose = la dernière phrase qui parle de défaite, avec les conditions en « ? » qui la précèdent
+ * (« Personne ne trouve ? {p1} prend la peine. »). Le reste (avant / après) = consigne.
+ */
+export function splitHint(hint: string | undefined, lang: Lang = getLang()): { how: string; lose: string } {
+  if (!hint) return { how: "", lose: "" };
+  const kw = LOSE_WORDS[lang] ?? LOSE_WORDS.fr;
+  const ss = sentences(hint);
+  let end = -1;
+  for (let i = ss.length - 1; i >= 0; i--) if (kw.test(ss[i])) { end = i; break; }
+  if (end < 0) return { how: hint, lose: "" };
+  let start = end;
+  while (start > 0 && (kw.test(ss[start - 1]) || /[?？]$/.test(ss[start - 1]))) start--;
+  // « … {p2} perd. Sinon c'est {p1}. » : l'alternative reste avec la défaite
+  while (end + 1 < ss.length && /^(Sinon|Otherwise|Si no)\b/.test(ss[end + 1])) end++;
+  return {
+    how: [...ss.slice(0, start), ...ss.slice(end + 1)].join(" "),
+    lose: ss.slice(start, end + 1).join(" "),
+  };
 }
 
 export function shuffleDeck<T>(deck: T[]): T[] {

@@ -78,6 +78,20 @@ type Str = {
   anotherDare: string;
   spinning: string;
   done: string;
+  // Pastille « Qui perd ? »
+  loseTitle: string;
+  penaltyIsMix: string;
+  penaltyIsDare: string;
+  prefHow: string;
+  prefLose: string;
+  prefTie: string;
+  or: string;
+  pickCamp: string;
+  campTitle: string;
+  campSub: string;
+  confirm: (n: number) => string;
+  and: string;
+  shieldSpared: (names: string, n: number) => string;
 };
 
 export const STR: I18n<Str> = {
@@ -160,6 +174,19 @@ export const STR: I18n<Str> = {
     anotherDare: "Pas fou ? Un autre gage",
     spinning: "La roulette tourne…",
     done: "C'est fait",
+    loseTitle: "Qui perd ?",
+    penaltyIsMix: "1 à 3 gorgées de zinzin ou un gage",
+    penaltyIsDare: "Un gage tiré au sort",
+    prefHow: "Au « 3-2-1 », tout le monde lève ou baisse la main en même temps.",
+    prefLose: "Le camp le moins nombreux prend la peine.",
+    prefTie: "Égalité ou tous pareil : personne ne perd.",
+    or: "OU",
+    pickCamp: "Désigner les perdants",
+    campTitle: "Qui est dans le petit camp ?",
+    campSub: "Touche tous les perdants : même peine pour tout le camp.",
+    confirm: (n) => `Valider (${n})`,
+    and: "et",
+    shieldSpared: (names, n) => `Bouclier : ${names} y échappe${n > 1 ? "nt" : ""}.`,
   },
   en: {
     gameName: "The Round",
@@ -240,6 +267,19 @@ export const STR: I18n<Str> = {
     anotherDare: "Meh? Another dare",
     spinning: "The wheel is spinning…",
     done: "Done",
+    loseTitle: "Who loses?",
+    penaltyIsMix: "1 to 3 zinzin sips or a dare",
+    penaltyIsDare: "A random dare",
+    prefHow: "On “3-2-1”, everyone raises or lowers a hand at the same time.",
+    prefLose: "The smaller side takes the penalty.",
+    prefTie: "Tie or all the same: nobody loses.",
+    or: "OR",
+    pickCamp: "Pick the losers",
+    campTitle: "Who's on the smaller side?",
+    campSub: "Tap every loser: the whole side gets the same penalty.",
+    confirm: (n) => `Confirm (${n})`,
+    and: "and",
+    shieldSpared: (names, n) => `Shield: ${names} ${n > 1 ? "escape" : "escapes"} it.`,
   },
   es: {
     gameName: "La Ronda",
@@ -320,5 +360,18 @@ export const STR: I18n<Str> = {
     anotherDare: "¿No mola? Otro reto",
     spinning: "La ruleta gira…",
     done: "Hecho",
+    loseTitle: "¿Quién pierde?",
+    penaltyIsMix: "De 1 a 3 tragos de zinzin o un reto",
+    penaltyIsDare: "Un reto al azar",
+    prefHow: "Al «3, 2, 1», todos suben o bajan la mano a la vez.",
+    prefLose: "El grupo con menos gente se lleva el castigo.",
+    prefTie: "Empate o todos igual: nadie pierde.",
+    or: "O",
+    pickCamp: "Señalar perdedores",
+    campTitle: "¿Quién está en el grupo pequeño?",
+    campSub: "Toca a todos los perdedores: el mismo castigo para todo el grupo.",
+    confirm: (n) => `Confirmar (${n})`,
+    and: "y",
+    shieldSpared: (names, n) => `Escudo: ${names} se ${n > 1 ? "libran" : "libra"}.`,
   },
 };

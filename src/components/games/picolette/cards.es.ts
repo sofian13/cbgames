@@ -142,11 +142,11 @@ export const CARDS_ES: PicoletteCard[] = [
   { type: "coquin", pack: "coquin", text: "¿El peor sitio donde has besado a alguien?", hint: "Ronda por turnos. La historia más floja se lleva el castigo." },
   { type: "coquin", pack: "coquin", text: "Di tres cosas que te pierden de alguien, en 5 segundos.", hint: "El lector elige quién responde. Fallo = castigo." },
   { type: "coquin", pack: "coquin", text: "Mensaje para ligar a las 3 de la mañana: ¿qué escribes?", hint: "En voz alta. El grupo vota el más soso: castigo." },
-  { type: "coquin", pack: "coquin", text: "¿El peor apodo cariñoso que te han puesto?", hint: "Ronda en voz alta." },
-  { type: "coquin", pack: "coquin", text: "Lee el mensaje más tierno de tu última conversación (o invéntalo).", hint: "El lector elige. Negarse = reto." },
-  { type: "coquin", pack: "coquin", text: "Tu peor técnica para ligar, con demostración al cojín más cercano.", hint: "El lector elige. Negarse = reto." },
+  { type: "coquin", pack: "coquin", text: "¿El peor apodo cariñoso que te han puesto?", hint: "Ronda en voz alta. El apodo menos malo se lleva el castigo." },
+  { type: "coquin", pack: "coquin", text: "Lee el mensaje más tierno de tu última conversación (o invéntalo).", hint: "El lector elige. Negarse = castigo." },
+  { type: "coquin", pack: "coquin", text: "Tu peor técnica para ligar, con demostración al cojín más cercano.", hint: "El lector elige. Negarse = castigo." },
   { type: "coquin", pack: "coquin", text: "Cuenta tu primer beso en tres palabras.", hint: "Ronda por turnos. El más flojo se lleva el castigo." },
-  { type: "coquin", pack: "coquin", text: "La cita más incómoda de tu vida, en 30 segundos.", hint: "El lector elige. El grupo juzga." },
+  { type: "coquin", pack: "coquin", text: "La cita más incómoda de tu vida, en 30 segundos.", hint: "El lector elige. ¿Al grupo no le parece incómoda? Castigo." },
   { type: "vote", pack: "coquin", text: "¿Quién besa mejor aquí (según los rumores)?", hint: V },
   { type: "vote", pack: "coquin", text: "¿Quién liga sin querer?", hint: V },
   { type: "vote", pack: "coquin", text: "¿Quién tiene la vida amorosa más complicada?", hint: V },
@@ -163,10 +163,10 @@ export const CARDS_ES: PicoletteCard[] = [
   { type: "vote", pack: "trash", text: "¿Quién acabaría primero en la cárcel (por algo ridículo)?", hint: V },
   { type: "vote", pack: "trash", text: "¿Quién sigue stalkeando a su ex?", hint: V },
   { type: "vote", pack: "trash", text: "¿Quién tiene más capturas de pantalla comprometedoras de los demás?", hint: V },
-  { type: "coquin", pack: "trash", text: "Confiesa lo más raro que has hecho para gustarle a alguien.", hint: "El lector elige. Si no sueltas prenda = reto." },
+  { type: "coquin", pack: "trash", text: "Confiesa lo más raro que has hecho para gustarle a alguien.", hint: "El lector elige. Si no sueltas prenda = castigo." },
   { type: "coquin", pack: "trash", text: "¿El peor sitio donde has acabado una noche de fiesta?", hint: "Ronda por turnos. Si nadie se cree tu historia = castigo." },
-  { type: "coquin", pack: "trash", text: "¿La mentira más gorda que le has dicho a alguien de aquí?", hint: "El lector elige. Negarse = reto." },
-  { type: "coquin", pack: "trash", text: "Enseña tu última búsqueda en internet (o llévate el castigo).", hint: "El lector elige." },
+  { type: "coquin", pack: "trash", text: "¿La mentira más gorda que le has dicho a alguien de aquí?", hint: "El lector elige. Negarse = castigo." },
+  { type: "coquin", pack: "trash", text: "Enseña tu última búsqueda en internet.", hint: "El lector elige quién la enseña. Negarse = castigo." },
 
   // ── QUIZ ABSURDO ─────────────────────────────────────
   { type: "table", pack: "quiz", text: "Por turnos, nombrad un emoji que nunca usáis.", hint: T },
@@ -620,7 +620,7 @@ export const CARDS_ES: PicoletteCard[] = [
   { type: "avoue", pack: "trash", text: "{p1}, confiesa la noche de fiesta de la que más te arrepientes.", hint: AV },
 
   // ── PÍCARO (sugerente, nunca explícito) ──────────────
-  { type: "coquin", pack: "coquin", text: "La mejor calabaza que te han dado, contada en 20 segundos.", hint: "El lector elige quién lo cuenta. Negarse = reto." },
+  { type: "coquin", pack: "coquin", text: "La mejor calabaza que te han dado, contada en 20 segundos.", hint: "El lector elige quién lo cuenta. Negarse = castigo." },
   { type: "coquin", pack: "coquin", text: "Describe tu cita ideal solo con emojis, en voz alta.", hint: "Ronda por turnos. El más flojo se lleva el castigo." },
   { type: "coquin", pack: "coquin", text: "Ponle un apodo tierno a cada persona de aquí.", hint: "El lector elige a quién le toca. Si te quedas en blanco = castigo." },
   { type: "coquin", pack: "coquin", text: "La frase para ligar más mala que conozcas, con el tono adecuado.", hint: "Ronda por turnos. El grupo vota la menos graciosa: castigo." },
