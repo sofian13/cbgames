@@ -4,6 +4,10 @@
  * soft = tout public · soiree = vie de jeune 18-30 · coquin = suggestif 18+, jamais explicite.
  */
 
+import type { I18n, Lang } from "@/lib/i18n";
+import { COQUIN_EN, GAGES_EN, SOFT_EN, SOIREE_EN } from "./questions.en";
+import { COQUIN_ES, GAGES_ES, SOFT_ES, SOIREE_ES } from "./questions.es";
+
 export type PackId = "soft" | "soiree" | "coquin";
 
 export const SOFT: string[] = [
@@ -312,3 +316,13 @@ export const GAGES: string[] = [
   "Prends l'accent de ton choix jusqu'à la fin de la prochaine partie.",
   "Laisse le groupe te donner un surnom pour le reste de la soirée.",
 ];
+
+/** Questions + gages dans la langue voulue (versions EN / ES : questions.en.ts, questions.es.ts). */
+const CONTENT: I18n<{ packs: Record<PackId, string[]>; gages: string[] }> = {
+  fr: { packs: QUESTION_PACKS, gages: GAGES },
+  en: { packs: { soft: SOFT_EN, soiree: SOIREE_EN, coquin: COQUIN_EN }, gages: GAGES_EN },
+  es: { packs: { soft: SOFT_ES, soiree: SOIREE_ES, coquin: COQUIN_ES }, gages: GAGES_ES },
+};
+export function pureteContent(lang: Lang) {
+  return CONTENT[lang] ?? CONTENT.fr;
+}
