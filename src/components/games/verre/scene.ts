@@ -304,7 +304,8 @@ export class VerreScene {
     const tanZ = Math.tan(clamp(this.tiltZ, -0.9, 0.9));
     const kx = -this.ax / 9.81 * d.accel;
     const kz = this.ay / 9.81 * d.accel;
-    const jolt = Math.min(6, Math.hypot(this.ax, this.ay, this.az));
+    // secousse utile : le bruit du capteur (< 0,35 m/s²) est ignoré
+    const jolt = Math.min(6, Math.max(0, Math.hypot(this.ax, this.ay, this.az) - 0.35));
     const sub = 3;
     const h = dt / sub;
     for (const g of this.glasses) {
@@ -330,7 +331,10 @@ export class VerreScene {
       for (const w of g.waves) w.v += (Math.random() - 0.5) * (accSlope * 0.004 + jolt * 0.012) * dt * 10;
       // mousse : monte quand on bouge, retombe doucement
       if (this.foamOn) g.foam += (Math.abs(g.vx) + Math.abs(g.vz)) * 0.045 * dt + jolt * 0.006 * dt;
-      g.foam = clamp(g.foam - (this.foamOn ? 0.01 : 0.12) * dt, 0, 0.22);
+      // boisson gazeuse secouée : ça mousse (et la mousse compte pour le débordement)
+      const fz = this.liquid.fizz;
+      if (fz > 0 && !this.foamOn) g.foam += fz * (jolt * 0.009 + (Math.abs(g.vx) + Math.abs(g.vz)) * 0.02) * dt;
+      g.foam = clamp(g.foam - (this.foamOn ? 0.01 : fz > 0 ? 0.035 : 0.12) * dt, 0, 0.22);
       // clapotis : la vague repart dans l'autre sens
       const sign = Math.sign(g.vx);
       if (sign !== 0 && sign !== g.lastSign && Math.abs(g.sx) > 0.05) this.fx.push({ t: "slosh", v: Math.min(1, Math.abs(g.sx) * 3) });
@@ -345,7 +349,7 @@ export class VerreScene {
     // ── Gouttelettes qui sautent quand ça frôle le bord (sans déborder) ──
     const dg = this.danger();
     this.dangerSmooth += (dg - this.dangerSmooth) * Math.min(1, dt * 6);
-    if (!this.spill && dg > 0.88 && this.time - this.lastSpray > 0.25) {
+    if (!this.spill && dg > 0.8 && this.time - this.lastSpray > (dg > 0.92 ? 0.18 : 0.32)) {
       this.lastSpray = this.time;
       const g = this.glasses[0];
       const gm = this.gm(g);

@@ -50,6 +50,11 @@ function shuffle<T>(a: T[]): T[] {
 }
 
 const deg = (d: number) => (d * Math.PI) / 180;
+/** Inclinaison utile (°) : rien sous 1,5°, puis réponse progressive (pas de verre hystérique). */
+const soft = (v: number) => {
+  const a = Math.max(0, Math.abs(v) - 1.5);
+  return Math.sign(v) * (a < 8 ? a * (0.55 + 0.45 * (a / 8)) : a);
+};
 const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
 
 export default function VerreGame({ onReturnToLobby }: GameProps) {
@@ -574,10 +579,11 @@ function RoundPlay({
     const r = run.current!;
     const sc = r.scene;
     const L = sc.main.L;
-    const chance = r.turn === 0 ? (round > 1 ? 0.25 : 0) : 0.42;
+    const chance = r.turn === 0 ? (round > 1 ? 0.3 : 0) : 0.55;
     let ev: EventId | null = null;
     if (Math.random() < chance) {
-      const pool: EventId[] = ["oneHand", "eyes", "spin", "foam", "crack"];
+      // les défis de passage (une main, yeux fermés, tour sur soi) sortent plus souvent
+      const pool: EventId[] = ["oneHand", "oneHand", "eyes", "eyes", "spin", "spin", "spin", "foam", "crack"];
       if (L < 0.7) pool.push("ice", "ice");
       if (L < 0.6) pool.push("small");
       if (L < 0.72) pool.push("tray");
@@ -662,8 +668,9 @@ function RoundPlay({
           r.refG += (clamp(input.gamma, -20, 20) - r.refG) * k;
           r.refB += (clamp(input.beta, -20, 20) - r.refB) * k;
         }
-        rx = input.gamma - r.refG;
-        rz = input.beta - r.refB;
+        // zone morte : le léger tremblement des mains ne compte pas, un vrai geste oui
+        rx = soft(input.gamma - r.refG);
+        rz = soft(input.beta - r.refB);
         const ka = 1 - Math.exp(-dt / 0.08);
         r.ax += (input.ax - r.ax) * ka;
         r.ay += (input.ay - r.ay) * ka;
@@ -676,10 +683,13 @@ function RoundPlay({
         }
         rx = r.touchX;
         rz = r.touchZ;
-        // pas de capteur : des « mains qui tremblent » pendant le passage, pour garder le suspense
-        if (r.sub === "pass") {
+        // pas de capteur : des « mains qui tremblent » EN PERMANENCE (plus fort pendant le passage),
+        // on doit surveiller le verre du début à la fin
+        if (r.sub !== "spill") {
           r.turbPh += dt;
-          const amp = DIFF[diff].turb * (0.6 + 0.8 * clamp(r.subT / Math.max(1, r.passTotal), 0, 1));
+          const amp = r.sub === "pass"
+            ? DIFF[diff].turb * (0.6 + 0.8 * clamp(r.subT / Math.max(1, r.passTotal), 0, 1))
+            : DIFF[diff].turb * (r.holding ? 0.55 : 0.4);
           rx += amp * (3.2 * Math.sin(r.turbPh * 1.9) + 1.6 * Math.sin(r.turbPh * 4.7 + 1));
           rz += amp * (2.2 * Math.sin(r.turbPh * 1.3 + 2) + 1.2 * Math.sin(r.turbPh * 5.3));
         }
@@ -692,6 +702,11 @@ function RoundPlay({
       sc.tiltZ = r.tiltZ;
       sc.ax = r.ax; sc.ay = r.ay; sc.az = r.az;
       sc.pouring = r.sub === "pour" && r.holding;
+      // de temps en temps quelqu'un cogne la table : petite secousse imprévue (sauf en facile)
+      if ((r.sub === "pour" || r.sub === "pass") && diff !== "easy" && Math.random() < dt * (diff === "pro" ? 0.45 : 0.28)) {
+        sc.kick((0.22 + Math.random() * 0.18) * DIFF[diff].turb);
+        vibrate(12);
+      }
       sc.step(dt);
 
       // ── Points en direct (plus le verre est plein, plus chaque goutte rapporte) ──
