@@ -472,15 +472,16 @@ export default function MakeGuessGame({
               {allThemesSelected ? t.clearAll : t.mixAll}
             </button>
           </div>
-          <div className="flex flex-wrap gap-2">
+          {/* Grille 2 colonnes : lisible sur iPhone même avec ~30 thèmes (libellé sur 2 lignes si besoin) */}
+          <div className="grid grid-cols-2 gap-2">
             {THEME_IDS.map((id) => {
               const on = selectedThemes.includes(id);
               return (
                 <button key={id} type="button" onClick={() => toggleTheme(id)} aria-pressed={on}
-                  className="zk-push flex min-h-11 items-center gap-1.5 px-3.5 text-[15px] font-bold"
-                  style={{ ...sticker(on ? (id === "adult" ? C.pink : ACCENT) : C.cream, { radius: 999, shadow: on ? 3 : 2, border: 2.5 }), opacity: on ? 1 : 0.8 }}>
-                  {on && <Check size={15} strokeWidth={3.5} aria-hidden />}
-                  {t.themeLabels[id]}
+                  className="zk-push flex min-h-11 min-w-0 items-center gap-1.5 px-3 py-1.5 text-left text-[14px] font-bold leading-tight"
+                  style={{ ...sticker(on ? (id === "adult" ? C.pink : ACCENT) : C.cream, { radius: 16, shadow: on ? 3 : 2, border: 2.5 }), opacity: on ? 1 : 0.8 }}>
+                  <span className="flex w-4 shrink-0 justify-center">{on && <Check size={15} strokeWidth={3.5} aria-hidden />}</span>
+                  <span className="min-w-0">{t.themeLabels[id]}</span>
                 </button>
               );
             })}

@@ -7,8 +7,9 @@ import { WORDS_ES } from "./words.es";
 // une liste de mots par langue (adaptée, pas traduite mot à mot).
 
 export const THEME_IDS = [
-  "simple", "objects", "animals", "famous", "actions", "places", "nature", "legends", "expressions",
-  "movies", "food", "jobs", "fun", "abstract", "culture", "brands", "adult",
+  "simple", "objects", "animals", "food", "jobs", "sports", "body", "places", "countries", "nature",
+  "actions", "famous", "characters", "legends", "movies", "manga", "music", "culture", "y2k", "internet",
+  "party", "school", "holidays", "doctor", "fun", "abstract", "expressions", "brands", "adult",
 ] as const;
 
 export type ThemeId = (typeof THEME_IDS)[number];

@@ -129,8 +129,11 @@ export const STR: I18n<MakeGuessStrings> = {
     themeLabels: {
       simple: "Facile", objects: "Objets", animals: "Animaux", famous: "Célébrités", actions: "Actions",
       places: "Lieux", nature: "Nature & espace", legends: "Contes & légendes", expressions: "Expressions",
-      movies: "Films & séries", food: "Nourriture", jobs: "Métiers", fun: "Drôle", abstract: "Émotions & idées",
+      movies: "Films & séries", food: "Bouffe & plats", jobs: "Métiers", fun: "Drôle", abstract: "Émotions & idées",
       culture: "Culture pop", brands: "Marques & logos", adult: "18+",
+      sports: "Sports", body: "Corps humain", countries: "Pays & villes", characters: "Personnages",
+      manga: "Manga & anime", music: "Musique", y2k: "Années 2000", internet: "Internet & réseaux",
+      party: "Soirée", school: "École", holidays: "Vacances", doctor: "Chez le médecin",
     },
   },
   en: {
@@ -201,8 +204,11 @@ export const STR: I18n<MakeGuessStrings> = {
     themeLabels: {
       simple: "Easy", objects: "Objects", animals: "Animals", famous: "Famous people", actions: "Actions",
       places: "Places", nature: "Nature & space", legends: "Myths & legends", expressions: "Idioms",
-      movies: "Movies & TV", food: "Food", jobs: "Jobs", fun: "Funny", abstract: "Feelings & ideas",
+      movies: "Movies & TV", food: "Food & dishes", jobs: "Jobs", fun: "Funny", abstract: "Feelings & ideas",
       culture: "Pop culture", brands: "Brands & logos", adult: "18+",
+      sports: "Sports", body: "Human body", countries: "Countries & cities", characters: "Characters",
+      manga: "Manga & anime", music: "Music", y2k: "The 2000s", internet: "Internet & social",
+      party: "Party", school: "School", holidays: "Holidays", doctor: "At the doctor's",
     },
   },
   es: {
@@ -270,8 +276,11 @@ export const STR: I18n<MakeGuessStrings> = {
     themeLabels: {
       simple: "Fácil", objects: "Objetos", animals: "Animales", famous: "Famosos", actions: "Acciones",
       places: "Lugares", nature: "Naturaleza y espacio", legends: "Cuentos y leyendas", expressions: "Expresiones",
-      movies: "Pelis y series", food: "Comida", jobs: "Profesiones", fun: "Divertido", abstract: "Emociones e ideas",
+      movies: "Pelis y series", food: "Comida y platos", jobs: "Profesiones", fun: "Divertido", abstract: "Emociones e ideas",
       culture: "Cultura pop", brands: "Marcas y logos", adult: "18+",
+      sports: "Deportes", body: "Cuerpo humano", countries: "Países y ciudades", characters: "Personajes",
+      manga: "Manga y anime", music: "Música", y2k: "Los 2000", internet: "Internet y redes",
+      party: "Fiesta", school: "Escuela", holidays: "Vacaciones", doctor: "En el médico",
     },
   },
 };
