@@ -6,7 +6,7 @@
  * ou égale. Il doit passer tous les tas (wagons) d'affilée. Raté = une peine
  * (gorgée plafonnée à 3, ou un gage) et retour au premier wagon.
  *
- * 100 % local, cartes dessinées en CSS (aucune image), vrai paquet de 52 mélangé.
+ * 100 % local, cartes dessinées en SVG (figures en image), vrai paquet de 52 mélangé.
  * DA « sticker » (couleurs pleines, contour encre, ombre dure) + vrais samples (sfx.ts).
  */
 
@@ -20,6 +20,7 @@ import { GameIconButton, GameInlineIcon, GameTopRight } from "@/components/games
 import { IdeaButton, RerollButton } from "@/components/games/idea-button";
 import { getLang, pick, useT } from "@/lib/i18n";
 import { GAGES, RANK_LABEL, RANK_NAME, STR } from "./i18n";
+import { CARD_FACE_CSS, CardFace, SUIT_KEY } from "./card-face";
 import { isSfxMuted, playCombo, playSfx, preloadSfx, setSfxMuted, subscribeSfxMuted } from "@/lib/sfx";
 import {
   ArrowDown, ArrowLeft, ArrowUp, Check, CupSoda, Dices, Equal, Flame, Home, RotateCcw, Siren, TrainFront,
@@ -175,6 +176,7 @@ const KEYFRAMES = `
 @keyframes tgv-pop { 0% { transform: scale(.5); opacity: 0 } 70% { transform: scale(1.08); opacity: 1 } 100% { transform: scale(1) } }
 @keyframes tgv-shake { 0%,100% { transform: translateX(0) } 25% { transform: translateX(-8px) } 50% { transform: translateX(8px) } 75% { transform: translateX(-4px) } }
 @keyframes tgv-wobble { 0%,100% { transform: rotate(-5deg) } 50% { transform: rotate(5deg) } }
+${CARD_FACE_CSS}
 `;
 
 const vib = (p: number | number[]) => {
@@ -639,51 +641,35 @@ function Train({ total, pileIdx, cleared }: { total: number; pileIdx: number; cl
   );
 }
 
-// Carte dessinée en CSS : coin + gros symbole, lisible de loin
+// Carte à jouer : cadre sticker + face SVG (vrais symboles, coins valeur + symbole)
 function PlayingCard({ card, dim, ring }: { card: Card; dim?: boolean; ring?: string }) {
   const rankLabel = useT(RANK_LABEL);
   const rankName = useT(RANK_NAME);
   const corner = rankLabel[card.r] ?? card.r;
-  const color = card.red ? "#E0263D" : INK;
   return (
     <div
-      className="relative flex flex-col rounded-[20px]"
+      className="relative overflow-hidden rounded-[16px]"
+      role="img"
       aria-label={`${rankName[card.r] ?? card.r} ${card.s}`}
       style={{
         ...stk("#fff", 6),
         height: CARD_H,
-        aspectRatio: "132 / 184",
-        color,
+        aspectRatio: "63 / 88",
         opacity: dim ? 0.6 : 1,
         transform: dim ? "scale(0.9) rotate(-4deg)" : ring ? "rotate(3deg)" : undefined,
         transition: "opacity .3s, transform .3s",
         outline: ring ? `5px solid ${ring}` : undefined,
         outlineOffset: 3,
         animation: "tgv-flip .4s ease-out",
-        fontFamily: "var(--font-display)",
       }}
     >
-      <div className="absolute left-2.5 top-2 flex flex-col items-center leading-none">
-        <span className="text-[24px] font-bold">{corner}</span>
-        <span className="text-[18px]">{card.s}</span>
-      </div>
-      <div className="absolute bottom-2 right-2.5 flex rotate-180 flex-col items-center leading-none">
-        <span className="text-[24px] font-bold">{corner}</span>
-        <span className="text-[18px]">{card.s}</span>
-      </div>
-      {FACE_FILE[card.r] ? (
-        // Vraies figures (Valet / Dame / Roi), lettres des coins selon la langue
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={`/cards/faces/${FACE_FILE[card.r]}${SUIT_FILE[card.s]}.jpg`}
-          alt=""
-          draggable={false}
-          className="m-auto block rounded-[8px] object-cover"
-          style={{ width: "65%", height: "75%", border: `2px solid ${INK}` }}
-        />
-      ) : (
-        <div className="m-auto leading-none" style={{ fontSize: "min(66px, 9svh)" }}>{card.s}</div>
-      )}
+      <CardFace
+        value={card.v}
+        label={corner}
+        suit={SUIT_KEY[card.s]}
+        red={card.red}
+        faceSrc={FACE_FILE[card.r] ? `/cards/faces/${FACE_FILE[card.r]}${SUIT_FILE[card.s]}.jpg` : undefined}
+      />
     </div>
   );
 }
@@ -695,8 +681,8 @@ const SUIT_FILE: Record<string, string> = { "♣": "C", "♦": "D", "♥": "H", 
 function MysteryCard() {
   return (
     <div
-      className="grid place-items-center rounded-[20px]"
-      style={{ ...stk("#7A4EE8", 6), height: CARD_H, aspectRatio: "132 / 184", color: "#fff", animation: "tgv-wobble .3s ease-in-out infinite", backgroundImage: "radial-gradient(rgba(255,255,255,0.18) 2px, transparent 2.4px)", backgroundSize: "16px 16px" }}
+      className="grid place-items-center rounded-[16px]"
+      style={{ ...stk("#7A4EE8", 6), height: CARD_H, aspectRatio: "63 / 88", color: "#fff", animation: "tgv-wobble .3s ease-in-out infinite", backgroundImage: "radial-gradient(rgba(255,255,255,0.18) 2px, transparent 2.4px)", backgroundSize: "16px 16px" }}
     >
       <span style={{ ...DISPLAY, fontSize: 72, lineHeight: 1 }}>?</span>
     </div>
