@@ -698,7 +698,10 @@ function RoundPlay({
       const dP = sc.poured - r.lastPoured;
       r.lastPoured = sc.poured;
       if (dP > 0 && r.sub !== "spill") {
-        r.pts += dP * 100 * (0.6 + 1.2 * sc.main.L) * r.trayMul;
+        // On paie la PLACE RESTANTE prise, pas le volume : remplir la moitié de ce qui reste
+        // rapporte pareil dans un verre vide ou presque plein (le 1er joueur n'est plus avantagé).
+        const room = Math.max(0.06, sc.main.rim - sc.main.L);
+        r.pts += (dP / room) * 40 * r.trayMul;
         if (ptsRef.current) ptsRef.current.textContent = `+${Math.round(r.pts)}`;
       }
 
@@ -810,7 +813,13 @@ function RoundPlay({
     r.holding = true;
     setMinHint(false);
   };
-  const pourUp = () => { run.current!.holding = false; };
+  // Un seul appui par tour : dès qu'on lâche, c'est fini, on passe le tél
+  const pourUp = () => {
+    const r = run.current!;
+    if (!r.holding) return;
+    r.holding = false;
+    if (r.sub === "pour") done();
+  };
 
   const done = () => {
     const r = run.current!;
@@ -962,20 +971,11 @@ function RoundPlay({
                 onContextMenu={(e) => e.preventDefault()}
                 disabled={sub !== "pour"}
                 aria-label={t.pourBtn}
-                className="vv-press flex min-h-[96px] flex-[1.5] flex-col items-center justify-center rounded-[28px]"
+                className="vv-press flex min-h-[96px] flex-1 flex-col items-center justify-center rounded-[28px]"
                 style={{ background: sub === "pour" ? liquid.body : "#3A2C6E", color: inkOn(liquid.body), border: `3.5px solid ${INK}`, boxShadow: `0 6px 0 ${INK}`, touchAction: "none", WebkitTouchCallout: "none" }}
               >
                 <CupSoda size={30} strokeWidth={2.6} aria-hidden style={{ rotate: "-35deg" }} />
                 <span className="mt-1 text-[26px] leading-none" style={DISPLAY}>{t.pourBtn}</span>
-              </button>
-              <button
-                type="button"
-                onClick={done}
-                disabled={sub !== "pour"}
-                className="vv-press min-h-[96px] flex-1 rounded-[28px] px-2 text-[21px] leading-[1.05]"
-                style={{ ...DISPLAY, background: sub === "pour" ? ZZ.mint : "#3A2C6E", color: INK, border: `3.5px solid ${INK}`, boxShadow: `0 6px 0 ${INK}` }}
-              >
-                {t.doneBtn}
               </button>
             </div>
           </div>
