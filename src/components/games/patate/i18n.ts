@@ -27,6 +27,8 @@ interface PatateStr {
   sipsTitle: string;
   sipsSub: string;
   modes: string;
+  /** Version découverte : titre de la liste des thèmes */
+  themesTitle: string;
   shakeTitle: string;
   shakeSub: string;
   spicyTitle: string;
@@ -85,6 +87,7 @@ export const PATATE_STR: I18n<PatateStr> = {
     sipsTitle: "Gorgées ou gage",
     sipsSub: "1 à 3 gorgées de zinzin",
     modes: "Les modes",
+    themesTitle: "Les catégories",
     shakeTitle: "Ne la secoue pas !",
     shakeSub: "Trop secouée, elle explose plus tôt",
     spicyTitle: "Pack 18+",
@@ -141,6 +144,7 @@ export const PATATE_STR: I18n<PatateStr> = {
     sipsTitle: "Sips or a dare",
     sipsSub: "1 to 3 zinzin sips",
     modes: "Modes",
+    themesTitle: "Categories",
     shakeTitle: "Don't shake it!",
     shakeSub: "Shake it too hard and it blows up sooner",
     spicyTitle: "18+ pack",
@@ -197,6 +201,7 @@ export const PATATE_STR: I18n<PatateStr> = {
     sipsTitle: "Tragos o reto",
     sipsSub: "1 a 3 tragos de zinzin",
     modes: "Los modos",
+    themesTitle: "Las categorías",
     shakeTitle: "¡No la agites!",
     shakeSub: "Si la agitas mucho, explota antes",
     spicyTitle: "Pack +18",

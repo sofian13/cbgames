@@ -21,7 +21,9 @@ import { officielQuestions, OFFICIEL_COUNT } from "@/components/games/purete/off
 import { getLang, useT } from "@/lib/i18n";
 import { adultDefault, getPartyMood, sipsAllowed } from "@/lib/party-mood";
 import { PURETE_STR } from "./i18n";
-import { ArrowLeft, Award, EyeOff, Flame, Hand, Heart, PartyPopper, RotateCcw, Shuffle, Target, User, type LucideIcon } from "lucide-react";
+import { ArrowLeft, Award, EyeOff, Flame, Hand, Heart, Lock, PartyPopper, RotateCcw, Shuffle, Target, User, type LucideIcon } from "lucide-react";
+import { isUnlockedNow, requestPaywall, useUnlocked } from "@/lib/entitlements";
+import { PLUS_STR, PremiumNudge, useNudgeText } from "@/components/games/premium-nudge";
 import { GameIconBadge, GameInlineIcon } from "@/components/games/game-icon-button";
 import { useGameFinished } from "@/lib/game-finished";
 import { ShareResultButton } from "@/components/games/share-result-button";
@@ -310,8 +312,12 @@ export default function PureteGame({ onReturnToLobby }: GameProps) {
   const [mood] = useState(getPartyMood);
   const [mode, setMode] = useState<Mode>("secret");
   // Ambiance « chill » : rien de 18+ → au hasard, Soft seulement (le Test Officiel contient des questions adultes)
-  const [qmode, setQmodeState] = useState<QMode>(() => (mood === "chill" ? "hasard" : loadQMode()));
-  const [packs, setPacks] = useState<Record<PackId, boolean>>(() => ({ soft: true, soiree: mood !== "chill", coquin: adultDefault(false) }));
+  // App sans Zinzin+ : test classique (au hasard, Soft + Soirée) ; Test Officiel et pack Coquin = Zinzin+
+  const unlocked = useUnlocked();
+  const plus = useT(PLUS_STR);
+  const nudge = useNudgeText();
+  const [qmode, setQmodeState] = useState<QMode>(() => (mood === "chill" || !isUnlockedNow() ? "hasard" : loadQMode()));
+  const [packs, setPacks] = useState<Record<PackId, boolean>>(() => ({ soft: true, soiree: mood !== "chill", coquin: adultDefault(false) && isUnlockedNow() }));
   const [count, setCount] = useState<20 | 40 | 60>(20);
   const [anonymous, setAnonymous] = useState(true);
   const [withNames, setWithNames] = useState(true);
@@ -341,7 +347,11 @@ export default function PureteGame({ onReturnToLobby }: GameProps) {
     try { localStorage.setItem(QMODE_KEY, m); } catch { /* pas grave */ }
   };
 
-  const selected = (Object.keys(packs) as PackId[]).filter((p) => packs[p]);
+  const selected = (Object.keys(packs) as PackId[]).filter((p) => packs[p] && (unlocked || p !== "coquin"));
+  // Contenu Zinzin+ touché sans abonnement → paywall ; s'il s'abonne, on applique son choix
+  const lockedOfficiel = !unlocked;
+  const askOfficiel = () => { playSfx("tap", { volume: 0.5 }); void requestPaywall().then((ok) => { if (ok) setQmode("officiel"); }); };
+  const askCoquin = () => { playSfx("tap", { volume: 0.5 }); void requestPaywall().then((ok) => { if (ok) setPacks((x) => ({ ...x, coquin: true })); }); };
   const pool = selected.reduce((n, p) => n + QUESTION_PACKS[p].length, 0);
   const anonymousMode = !withNames && mode === "groupe";
 
@@ -486,11 +496,14 @@ export default function PureteGame({ onReturnToLobby }: GameProps) {
                 ["officiel", Award, ...t.qOfficiel],
                 ["hasard", Shuffle, ...t.qRandom],
               ] as const).map(([m, icon, l, sub]) => (
-                <button key={m} onClick={() => setQmode(m)} aria-pressed={qmode === m}
+                <button key={m} onClick={() => (m === "officiel" && lockedOfficiel ? askOfficiel() : setQmode(m))} aria-pressed={qmode === m}
+                  aria-label={m === "officiel" && lockedOfficiel ? plus.lockedAria(l) : undefined}
                   className="pur-btn relative flex flex-col items-start gap-1 p-3.5 text-left"
                   style={{ ...block(qmode === m ? MINT : CREAM, 20, qmode === m ? 5 : 3), transform: qmode === m ? "rotate(1.5deg)" : undefined }}>
                   {m === "officiel" && (
-                    <span className="absolute -right-2 -top-3 rounded-full px-2.5 py-0.5 text-[15px]" style={{ ...DISPLAY, background: PINK, color: "#fff", border: `2.5px solid ${INK}` }}>{OFFICIEL_COUNT}</span>
+                    <span className="absolute -right-2 -top-3 inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[15px]" style={{ ...DISPLAY, background: lockedOfficiel ? YELLOW : PINK, color: lockedOfficiel ? INK : "#fff", border: `2.5px solid ${INK}` }}>
+                      {lockedOfficiel ? <><Lock size={13} strokeWidth={3} aria-hidden /> {plus.plus}</> : OFFICIEL_COUNT}
+                    </span>
                   )}
                   <GameIconBadge icon={icon} />
                   <span className="text-[19px] leading-tight" style={DISPLAY}>{l}</span>
@@ -510,12 +523,15 @@ export default function PureteGame({ onReturnToLobby }: GameProps) {
             <div className="grid grid-cols-3 gap-2.5">
               {(Object.keys(PACK_INFO) as PackId[]).map((p) => {
                 const info = PACK_INFO[p];
-                const on = packs[p];
+                const locked = !unlocked && p === "coquin";
+                const on = packs[p] && !locked;
                 return (
-                  <button key={p} onClick={() => setPacks((x) => ({ ...x, [p]: !x[p] }))} aria-pressed={on}
+                  <button key={p} onClick={() => (locked ? askCoquin() : setPacks((x) => ({ ...x, [p]: !x[p] })))} aria-pressed={on}
+                    aria-label={locked ? plus.lockedAria(t.packs[p].label) : undefined}
                     className="pur-btn relative flex flex-col items-center gap-0.5 px-1.5 py-3"
-                    style={{ ...block(on ? info.color : "#CFC6E3", 18, on ? 4 : 2), opacity: on ? 1 : 0.75 }}>
+                    style={{ ...block(on ? info.color : locked ? "#fff" : "#CFC6E3", 18, on ? 4 : 2), opacity: on || locked ? 1 : 0.75 }}>
                     {on && <span className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full text-[13px] text-white" style={{ background: INK }}>✓</span>}
+                    {locked && <span className="absolute -right-2 -top-2.5 inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[11px] font-extrabold" style={{ background: YELLOW, border: `2px solid ${INK}` }}><Lock size={11} strokeWidth={3} aria-hidden />{plus.plus}</span>}
                     <GameIconBadge icon={info.icon} size={34} />
                     <span className="text-[17px]" style={DISPLAY}>{t.packs[p].label}</span>
                     <span className="text-center text-[12px] font-semibold leading-tight">{t.packs[p].tag}</span>
@@ -847,6 +863,9 @@ export default function PureteGame({ onReturnToLobby }: GameProps) {
           )}
         </div>
       )}
+
+      {/* Version découverte : une petite bannière, en fin de partie seulement */}
+      {!unlocked && <div className="mt-7 w-full max-w-md"><PremiumNudge text={nudge.purete} /></div>}
 
       <div className="mt-8 grid w-full max-w-md gap-3">
         <Btn onClick={replay} bg={YELLOW} className="text-[22px]" style={{ minHeight: 60 }}><GameInlineIcon icon={RotateCcw} /> {t.replay}</Btn>

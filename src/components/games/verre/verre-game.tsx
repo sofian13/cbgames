@@ -10,6 +10,7 @@ import { Mascot, MASCOT_PALETTE } from "@/components/Mascot";
 import { ConfettiBurst } from "@/components/ConfettiBurst";
 import { sipsAllowed } from "@/lib/party-mood";
 import { getLang, pick, useT } from "@/lib/i18n";
+import { requestPaywall, useUnlocked } from "@/lib/entitlements";
 import { playCombo, playLoop, playSfx, preloadSfx, type LoopHandle, type SfxName } from "@/lib/sfx";
 import { VERRE_STR, VERRE_MAX_PLAYERS, VERRE_MIN_PLAYERS, type EventId } from "./i18n";
 import { DIFF, LIQUIDS, VerreScene, type Difficulty, type LiquidStyle } from "./scene";
@@ -30,7 +31,7 @@ const INK = ZZ.ink;
 const TUTO_KEY = "zz-verre-tuto";
 const GAME_FR = "Le Verre Invisible";
 
-type Phase = "setup" | "tuto" | "config" | "intro" | "round" | "result" | "end";
+type Phase = "setup" | "tuto" | "config" | "intro" | "round" | "result" | "more" | "end";
 type Penalty = "dare" | "sips";
 type Cause = "pour" | "pass" | "slow" | "leak";
 type Sub = "calib" | "event" | "pour" | "pass" | "spill";
@@ -84,6 +85,9 @@ export default function VerreGame({ onReturnToLobby }: GameProps) {
   const stopSensors = useRef<(() => void) | null>(null);
   const usedDares = useRef(new Set<string>());
   const tutoNext = useRef<Phase>("config");
+  // App sans Zinzin+ : une manche découverte, puis « Continuer la partie ? »
+  const unlocked = useUnlocked();
+  const [askingPlus, setAskingPlus] = useState(false);
 
   useScrollTopOn(phase);
   useEffect(() => { preloadSfx(SFX); }, []);
@@ -170,6 +174,16 @@ export default function VerreGame({ onReturnToLobby }: GameProps) {
   const finish = () => {
     playCombo("fanfare");
     setPhase("end");
+  };
+
+  // Après la manche découverte : paywall ; Zinzin+ pris → la partie continue, sinon classement final
+  const continueWithPlus = async () => {
+    if (askingPlus) return;
+    setAskingPlus(true);
+    const ok = await requestPaywall();
+    setAskingPlus(false);
+    if (ok) nextRound();
+    else finish();
   };
 
   const replay = () => {
@@ -365,10 +379,32 @@ export default function VerreGame({ onReturnToLobby }: GameProps) {
             <ZButton bg={ZZ.yellow} onClick={finish}>{t.finalRanking}</ZButton>
           ) : (
             <>
-              <ZButton bg={ZZ.yellow} onClick={nextRound}>{t.nextRound}</ZButton>
+              <ZButton bg={ZZ.yellow} onClick={!unlocked && round === 1 ? () => setPhase("more") : nextRound}>{t.nextRound}</ZButton>
               <ZLink color={INK} onClick={finish}>{t.stopHere}</ZLink>
             </>
           )}
+        </div>
+      </Screen>
+    );
+  }
+
+  // Version découverte : fin de la 1re manche
+  if (phase === "more") {
+    return (
+      <Screen>
+        <Tools />
+        <ZChip bg={ZZ.yellow} tilt={-3}>{t.moreChip}</ZChip>
+        <div className="mt-4 flex items-end justify-center gap-2">
+          <MiniGlass />
+          <Mascot size={96} color="mint" mood="wink" arms shadow={false} />
+        </div>
+        <h1 className="mt-3 text-center text-[clamp(38px,11vw,52px)] leading-[0.95]" style={{ ...DISPLAY, textShadow: `4px 4px 0 ${INK}` }}>{t.moreTitle}</h1>
+        <ZCard bg={ZZ.cream} radius={22} shadow={4} tilt={-1} className="mt-5 px-4 py-3.5">
+          <p className="text-[16px] font-semibold leading-snug">{t.moreText}</p>
+        </ZCard>
+        <div className="mt-auto flex flex-col gap-1 pt-7">
+          <ZButton bg={ZZ.pink} onClick={() => { playSfx("tap", { volume: 0.5 }); void continueWithPlus(); }} disabled={askingPlus}>{t.moreCta}</ZButton>
+          <ZLink onClick={finish}>{t.moreStop}</ZLink>
         </div>
       </Screen>
     );

@@ -2,7 +2,7 @@ import { useSyncExternalStore } from "react";
 import { isOfflineApp } from "@/lib/offline-app";
 
 /**
- * Accès Premium, lisible par les jeux (qui ne peuvent pas importer zinzin/).
+ * Accès Zinzin+ (abonnement, « premium » dans le code), lisible par les jeux (qui ne peuvent pas importer zinzin/).
  * Source de vérité : zinzin/src/premium.ts, qui écrit `zz-premium` et émet `zz:premium`.
  * Sur le site (hors app), tout est accessible : les limites ne concernent que l'app.
  */
@@ -31,7 +31,28 @@ export function notifyPremiumChanged() {
   window.dispatchEvent(new Event(EVENT));
 }
 
-/** Ouvre l'écran d'abonnement de l'app (écouté par zinzin/src/App.tsx). */
-export function requestPaywall() {
-  window.dispatchEvent(new Event("zz:paywall"));
+/** Vrai abonnement Zinzin+ actif (lecture ponctuelle, hors React). */
+export function isUnlockedNow(): boolean {
+  return !isOfflineApp() || read();
+}
+
+/**
+ * Ouvre l'écran d'abonnement Zinzin+ de l'app (écouté par zinzin/src/App.tsx).
+ * La promesse se résout à la fermeture du paywall : true = Zinzin+ actif.
+ * (Hors app : résolue tout de suite à true, tout est déjà accessible.)
+ */
+export function requestPaywall(): Promise<boolean> {
+  if (!isOfflineApp()) return Promise.resolve(true);
+  return new Promise((resolve) => {
+    const done = () => { window.removeEventListener(CLOSED, done); resolve(read()); };
+    window.addEventListener(CLOSED, done);
+    window.dispatchEvent(new Event("zz:paywall"));
+  });
+}
+
+const CLOSED = "zz:paywall-closed";
+
+/** Appelé par l'app quand le paywall se ferme (achat ou croix). */
+export function notifyPaywallClosed() {
+  window.dispatchEvent(new Event(CLOSED));
 }

@@ -4,7 +4,7 @@ import { buy, defaultPlans, defaultYearlyPrice, isAndroid, isTestMode, loadPlans
 import { pick, useLang } from "@/lib/i18n";
 import { TRIAL, UI } from "../strings";
 import { ZBlob } from "./ZBlob";
-import { BigBtn, CloseBtn } from "./common";
+import { BigBtn, CloseBtn, Tag } from "./common";
 import { haptic } from "./util";
 
 /** Couleurs des 4 avantages (textes : UI.perks) */
@@ -83,7 +83,7 @@ export function Paywall({
       style={{ zIndex: 45, opacity: out ? 0 : 1, transform: out ? "scale(0.98)" : "none", transition: "opacity 240ms ease, transform 240ms ease" }}
       role="dialog"
       aria-modal
-      aria-label="Zinzin Premium"
+      aria-label={t.premium}
     >
       <div className="absolute right-3 z-10" style={{ top: "calc(var(--sat) + 8px)" }}>
         <CloseBtn onClick={() => { haptic(); leave(onClose); }} />
@@ -103,7 +103,10 @@ export function Paywall({
           </div>
         </div>
 
-        <h1 className="zz-title zz-rise mt-4 text-center text-white" style={{ fontSize: 37, ["--d" as string]: "80ms" }}>
+        <div className="zz-rise mt-3 flex justify-center" style={{ ["--d" as string]: "60ms" }}>
+          <Tag bg="#FF3EA5" color="#fff" tilt={-4}>{t.premium}</Tag>
+        </div>
+        <h1 className="zz-title zz-rise mt-2 text-center text-white" style={{ fontSize: 37, ["--d" as string]: "80ms" }}>
           {t.paywallTitle1}
           <br />
           <span className="zz-stk mt-1.5 inline-block rounded-[16px] px-3 pb-1 pt-0.5" style={{ background: "#FFD23F", color: "var(--zz-ink)", rotate: "-3deg" }}>{t.paywallTitle2}</span>

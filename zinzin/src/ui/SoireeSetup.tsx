@@ -12,6 +12,8 @@ import { BigBtn, Tag } from "./common";
 import { CornerBtn, DiscoBall, SOIREE_BG, SoireeStyles } from "./SoireeKit";
 import { gameInfo, haptic } from "./util";
 import { soberKind, soberVibeSub } from "../no-alcohol";
+import { usePremium } from "../premium";
+import { PremiumNudge } from "@/components/games/premium-nudge";
 
 const VIBE_LOOK: Record<Vibe, { bg: string; mood: "asleep" | "laughing" | "fire"; color: "mint" | "yellow" | "coral" }> = {
   chill: { bg: "#3DDC97", mood: "asleep", color: "mint" },
@@ -151,6 +153,7 @@ function Recap({ band, vibe, length, playlist, setPlaylist, onLaunch }: {
   const lang = useLang();
   const t = pick(SOIREE, lang);
   const [flash, setFlash] = useState<number | null>(null);
+  const premium = usePremium();
   return (
     <div className="mx-auto flex min-h-[100dvh] max-w-lg flex-col px-5" style={{ paddingTop: "calc(var(--sat) + 72px)" }}>
       <div className="relative">
@@ -172,7 +175,9 @@ function Recap({ band, vibe, length, playlist, setPlaylist, onLaunch }: {
         </div>
       ) : (
         <>
-          {playlist.length < length && (
+          {/* Sans Zinzin+ : soirée avec les jeux gratuits (rappel discret, fermable) */}
+          {!premium && <PremiumNudge text={t.freeOnly} style={{ marginTop: 16 }} />}
+          {premium && playlist.length < length && (
             <p className="mt-4 rounded-[16px] px-3 py-2 text-[14px] font-bold" style={{ background: "#FFF6E5", color: "var(--zz-ink)", border: "2.5px solid var(--zz-ink)" }}>
               {t.fewGames(playlist.length)}
             </p>

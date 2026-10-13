@@ -1,5 +1,7 @@
 import type { I18n } from "@/lib/i18n";
-import type { ThemeId } from "./words";
+import { THEME_IDS, type ThemeId } from "./words";
+
+const THEME_COUNT = THEME_IDS.length;
 
 // Chaînes d'interface de « Fais Deviner » (FR / EN / ES).
 
@@ -26,6 +28,9 @@ export interface MakeGuessStrings {
   mixAll: string;
   pickOne: string;
   optInNote: string;
+  /** Version découverte (app sans Zinzin+) */
+  freeNote: (n: number) => string;
+  lockedTheme: (name: string) => string;
   timer: string;
   timerChip: (d: number) => string;
   rounds: string;
@@ -92,6 +97,8 @@ export const STR: I18n<MakeGuessStrings> = {
     mixAll: "Tout mélanger",
     pickOne: "Choisis au moins un thème.",
     optInNote: "« Marques & logos » et « 18+ » ne sont pas inclus par défaut.",
+    freeNote: (n) => `${n} mots offerts qui tournent. Les ${THEME_COUNT} thèmes sont dans Zinzin+.`,
+    lockedTheme: (name) => `${name} : disponible avec Zinzin+`,
     timer: "Durée du chrono",
     timerChip: (d) => (d === 120 ? "2 min" : `${d} s`),
     rounds: "Nombre de manches",
@@ -164,6 +171,8 @@ export const STR: I18n<MakeGuessStrings> = {
     mixAll: "Mix them all",
     pickOne: "Pick at least one theme.",
     optInNote: "“Brands & logos” and “18+” aren't included by default.",
+    freeNote: (n) => `${n} free words on rotation. All ${THEME_COUNT} themes are in Zinzin+.`,
+    lockedTheme: (name) => `${name}: available with Zinzin+`,
     timer: "Timer",
     timerChip: (d) => (d === 120 ? "2 min" : `${d} s`),
     rounds: "Rounds",
@@ -239,6 +248,8 @@ export const STR: I18n<MakeGuessStrings> = {
     mixAll: "Mezclar todo",
     pickOne: "Elige al menos un tema.",
     optInNote: "«Marcas y logos» y «18+» no están incluidos por defecto.",
+    freeNote: (n) => `${n} palabras gratis que van rotando. Los ${THEME_COUNT} temas están en Zinzin+.`,
+    lockedTheme: (name) => `${name}: disponible con Zinzin+`,
     timer: "Tiempo por turno",
     timerChip: (d) => (d === 120 ? "2 min" : `${d} s`),
     rounds: "Número de rondas",

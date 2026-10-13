@@ -3,7 +3,7 @@ import type { Pack, PicoletteCard, PicoletteType } from "./cards";
 
 const V = "3-2-1, everyone points at someone. Whoever gets the most fingers takes the penalty.";
 const T = "Go around the circle, no repeats. First one to blank loses.";
-const P = "3-2-1: hand up for the top option, hand down for the bottom one. The minority takes the penalty.";
+const P = "3-2-1: hand up for the top option, hand down for the bottom one. The minority takes the penalty. Tie or all the same: everyone takes it.";
 const R = "First one to slip up takes the penalty.";
 const VAL = "Everyone repeats the WHOLE list and adds one thing. First one to forget or mess up loses.";
 

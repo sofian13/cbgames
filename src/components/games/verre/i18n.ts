@@ -63,6 +63,12 @@ interface Strings {
   nextRound: string;
   finalRanking: string;
   stopHere: string;
+  /** Version découverte (app sans Zinzin+) : écran après la 1re manche */
+  moreChip: string;
+  moreTitle: string;
+  moreText: string;
+  moreCta: string;
+  moreStop: string;
   // Fin
   winner: (name: string) => string;
   bestBarman: string;
@@ -99,7 +105,7 @@ export const VERRE_STR: I18n<Strings> = {
     normal: "Normal", normalSub: "Ça tangue pour de vrai.",
     pro: "Barman pro", proSub: "Le moindre geste fait des vagues.",
     loserTakes: "Celui qui renverse prend",
-    dareTitle: "Un gage", dareSub: "Sans alcool, juste la honte.",
+    dareTitle: "Un gage", dareSub: "Zéro gorgée, juste la honte.",
     sipsTitle: "Gorgées ou gage", sipsSub: "1 à 3 gorgées de zinzin (eau acceptée) ou un gage.",
     roundsTitle: "Les manches",
     roundsN: (n) => `${n} manches`,
@@ -141,6 +147,11 @@ export const VERRE_STR: I18n<Strings> = {
     nextRound: "Manche suivante",
     finalRanking: "Voir le classement final",
     stopHere: "Arrêter là",
+    moreChip: "Manche découverte terminée",
+    moreTitle: "Continuer la partie ?",
+    moreText: "Le plateau commence à peine à chauffer… La suite de la partie (et tous les liquides) est dans Zinzin+.",
+    moreCta: "Continuer avec Zinzin+",
+    moreStop: "Terminer ici",
     winner: (name) => `${name} gagne !`,
     bestBarman: "Le meilleur barman de la soirée",
     spillKing: (name, n) => `Roi du renversé : ${name} (${n})`,
@@ -201,7 +212,7 @@ export const VERRE_STR: I18n<Strings> = {
       "Donne un surnom de barman à chaque joueur.",
       "Fais une déclaration d'amour passionnée à ton verre.",
       "Garde un objet en équilibre sur le dos de ta main pendant 20 secondes.",
-      "Invente un cocktail sans alcool et vends-le avec passion.",
+      "Invente un cocktail imaginaire, décris-le et vends-le avec passion.",
       "Fais « glouglou » pendant 10 secondes sans rire.",
       "Les autres choisissent un mot interdit : si tu le dis avant ton prochain tour, tu refais un gage.",
       "Goûte un verre d'eau comme si c'était un grand cru hors de prix.",
@@ -222,7 +233,7 @@ export const VERRE_STR: I18n<Strings> = {
     normal: "Normal", normalSub: "It really sloshes around.",
     pro: "Pro bartender", proSub: "The tiniest move makes waves.",
     loserTakes: "Whoever spills takes",
-    dareTitle: "A dare", dareSub: "No drinking, just shame.",
+    dareTitle: "A dare", dareSub: "Zero sips, just shame.",
     sipsTitle: "Sips or a dare", sipsSub: "1 to 3 zinzin sips (water counts) or a dare.",
     roundsTitle: "Rounds",
     roundsN: (n) => `${n} rounds`,
@@ -264,6 +275,11 @@ export const VERRE_STR: I18n<Strings> = {
     nextRound: "Next round",
     finalRanking: "See the final leaderboard",
     stopHere: "Stop here",
+    moreChip: "Trial round done",
+    moreTitle: "Keep playing?",
+    moreText: "The tray's only just warming up… The rest of the game (and every drink) is in Zinzin+.",
+    moreCta: "Continue with Zinzin+",
+    moreStop: "End here",
     winner: (name) => `${name} wins!`,
     bestBarman: "Best bartender of the night",
     spillKing: (name, n) => `Spill champion: ${name} (${n})`,
@@ -324,7 +340,7 @@ export const VERRE_STR: I18n<Strings> = {
       "Give every player a bartender nickname.",
       "Make a passionate declaration of love to your glass.",
       "Balance an object on the back of your hand for 20 seconds.",
-      "Invent an alcohol-free cocktail and sell it with passion.",
+      "Invent an imaginary cocktail, describe it and sell it with passion.",
       "Go \"glug glug\" for 10 seconds without laughing.",
       "The others pick a forbidden word: say it before your next turn and you do another dare.",
       "Taste a glass of water as if it were a ridiculously expensive vintage.",
@@ -345,7 +361,7 @@ export const VERRE_STR: I18n<Strings> = {
     normal: "Normal", normalSub: "Se mueve de verdad.",
     pro: "Barman pro", proSub: "El mínimo gesto hace olas.",
     loserTakes: "Quien lo derrame se lleva",
-    dareTitle: "Un reto", dareSub: "Sin alcohol, solo vergüenza.",
+    dareTitle: "Un reto", dareSub: "Cero tragos, solo vergüenza.",
     sipsTitle: "Tragos o reto", sipsSub: "De 1 a 3 tragos de zinzin (vale agua) o un reto.",
     roundsTitle: "Las rondas",
     roundsN: (n) => `${n} rondas`,
@@ -387,6 +403,11 @@ export const VERRE_STR: I18n<Strings> = {
     nextRound: "Siguiente ronda",
     finalRanking: "Ver la clasificación final",
     stopHere: "Parar aquí",
+    moreChip: "Ronda de prueba terminada",
+    moreTitle: "¿Seguimos la partida?",
+    moreText: "La bandeja apenas se está calentando… El resto de la partida (y todas las bebidas) está en Zinzin+.",
+    moreCta: "Seguir con Zinzin+",
+    moreStop: "Terminar aquí",
     winner: (name) => `¡${name} gana!`,
     bestBarman: "El mejor barman de la noche",
     spillKing: (name, n) => `Rey del derrame: ${name} (${n})`,
@@ -447,7 +468,7 @@ export const VERRE_STR: I18n<Strings> = {
       "Ponle un apodo de barman a cada jugador.",
       "Haz una declaración de amor apasionada a tu vaso.",
       "Mantén un objeto en equilibrio sobre el dorso de la mano durante 20 segundos.",
-      "Inventa un cóctel sin alcohol y véndelo con pasión.",
+      "Inventa un cóctel imaginario, descríbelo y véndelo con pasión.",
       "Haz «glu glu» durante 10 segundos sin reírte.",
       "Los demás eligen una palabra prohibida: si la dices antes de tu próximo turno, haces otro reto.",
       "Prueba un vaso de agua como si fuera un vino carísimo.",

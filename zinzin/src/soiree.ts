@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from "react";
 import { GAMES, GAME_KIND, playerRange, type ZGame, type ZKind } from "./catalog";
 import type { ZGameId } from "./catalog-text";
+import { isPremium } from "./premium";
 
 /**
  * Soirée Zinzin : une « playlist » de jeux enchaînés avec la même bande,
@@ -39,6 +40,8 @@ const LONG: ZGameId[] = ["loup-garou"];
 
 /** Le jeu est-il jouable dans cette soirée (nombre de joueurs + ambiance) ? */
 export function eligible(g: ZGame, players: number, vibe: Vibe): boolean {
+  // Sans Zinzin+ : uniquement les jeux gratuits (en version découverte)
+  if (!g.free && !isPremium()) return false;
   const [min, max] = playerRange(g);
   if (players < min || players > max) return false;
   const kind = GAME_KIND[g.id];

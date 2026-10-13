@@ -24,7 +24,7 @@ export function Home({
   onOpenGame: (id: string) => void;
   onSettings: () => void;
   onUnlock: () => void;
-  /** Soirée Zinzin : nouvelle soirée (paywall si pas premium) / reprise */
+  /** Soirée Zinzin : nouvelle soirée / reprise */
   onSoiree: () => void;
   onResumeSoiree: () => void;
 }) {
@@ -50,15 +50,15 @@ export function Home({
 
         <Featured onOpenGame={onOpenGame} lang={lang} />
 
-        {/* Soirée Zinzin : les jeux s'enchaînent tout seuls (Premium) */}
+        {/* Soirée Zinzin : les jeux s'enchaînent tout seuls (sans Zinzin+ : jeux gratuits seulement) */}
         <SoireeEntry
-          locked={!premium}
-          resume={premium && resumable(soiree) ? { i: soiree.index + 1, n: soiree.playlist.length } : null}
+          locked={false}
+          resume={resumable(soiree) ? { i: soiree.index + 1, n: soiree.playlist.length } : null}
           onStart={onSoiree}
           onResume={onResumeSoiree}
         />
 
-        {/* Bannière premium */}
+        {/* Bannière Zinzin+ */}
         {!premium && (
           <button
             type="button"

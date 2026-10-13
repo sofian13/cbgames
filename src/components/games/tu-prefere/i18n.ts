@@ -35,8 +35,9 @@ interface TPStrings {
   penaltyNoAlc: string;
   /** Pastille sur la carte du camp minoritaire après révélation */
   minorityBadge: string;
-  noPenaltyTie: string;
-  noPenaltyUnanimous: string;
+  /** Égalité / unanimité : tout le monde prend la peine */
+  everyoneTie: string;
+  everyoneUnanimous: string;
   /** « Camp B (2 mains) prend la peine » */
   loserHead: (side: "A" | "B", n: number) => string;
   /** Gorgées pour chaque membre du camp minoritaire (n ≤ 3) */
@@ -48,13 +49,18 @@ interface TPStrings {
   waterOk: string;
   /** Gages courts, faisables par une ou plusieurs personnes */
   dares: string[];
+  /** Gages pour toute la table (égalité / unanimité) */
+  groupDares: string[];
+  /** Version découverte (app sans Zinzin+) */
+  freeDilemmas: (n: number) => string;
+  restOfClassic: (n: number) => string;
 }
 
 export const TP_STR: I18n<TPStrings> = {
   fr: {
     gameName: "Tu préfères",
     title: "Tu préfères ?",
-    intro: "Lisez le dilemme à voix haute. À 3, chacun lève la main pour A ou B, on compte les mains sur l'écran… et le camp minoritaire prend la peine.",
+    intro: "Lisez le dilemme à voix haute. À 3, chacun lève la main pour A ou B, on compte les mains sur l'écran… et le camp minoritaire prend la peine. Égalité ou unanimité ? Tout le monde prend !",
     vibe: "L'ambiance",
     packs: {
       classique: { label: "Classique", tag: "Pour tout le monde" },
@@ -73,17 +79,17 @@ export const TP_STR: I18n<TPStrings> = {
     tie: "Égalité parfaite, la table est coupée en deux !",
     tableChose: (s) => `La table a choisi ${s} !`,
     nextDilemma: "Dilemme suivant",
-    raiseHands: "À 3, chacun lève la main pour A ou B. Touchez une carte une fois par main levée. La minorité prend la peine !",
+    raiseHands: "À 3, chacun lève la main pour A ou B. Touchez une carte une fois par main levée. La minorité prend la peine (égalité ou unanimité : tout le monde) !",
     reroll: "Pas fou ? Un autre",
     seeResult: (n) => `Voir le résultat (${n} main${n > 1 ? "s" : ""})`,
     penaltyTitle: "La minorité prend…",
     penaltyDares: { title: "Un gage", sub: "Zéro gorgée" },
     penaltySips: { title: "Gorgées ou gage", sub: "1 à 2 gorgées de zinzin" },
-    penaltyChill: "Ambiance chill : le camp minoritaire fait un gage.",
-    penaltyNoAlc: "Que des gages : le camp minoritaire fait un gage.",
+    penaltyChill: "Ambiance chill : le camp minoritaire fait un gage (égalité ou unanimité : tout le monde).",
+    penaltyNoAlc: "Que des gages : le camp minoritaire fait un gage (égalité ou unanimité : tout le monde).",
     minorityBadge: "Minorité",
-    noPenaltyTie: "Personne ne prend : débattez !",
-    noPenaltyUnanimous: "Unanimité ! Personne ne prend.",
+    everyoneTie: "Égalité : tout le monde prend !",
+    everyoneUnanimous: "Unanimité : pas de minorité… donc tout le monde prend !",
     loserHead: (s, n) => `Camp ${s} (${n} main${n > 1 ? "s" : ""}) prend la peine`,
     sipsEach: (n) => `${n} gorgée${n > 1 ? "s" : ""} de zinzin chacun`,
     sipsSolo: (n) => `Seul contre tous : ${n} gorgée${n > 1 ? "s" : ""} de zinzin`,
@@ -107,11 +113,25 @@ export const TP_STR: I18n<TPStrings> = {
       "Mimer ton choix sans parler jusqu'à ce que le groupe devine",
       "Faire une déclaration d'amour à ton choix, avec émotion",
     ],
+    groupDares: [
+      "Tout le monde fait sa pire grimace pendant 5 secondes, photo de groupe à l'appui",
+      "Tout le monde crie le même mot à 3 (sans se concerter)",
+      "Tout le monde échange de place avec son voisin de gauche",
+      "Tout le monde parle avec un accent jusqu'au prochain dilemme",
+      "Tout le monde fait une danse de la victoire de 5 secondes, en même temps",
+      "Tout le monde imite le cri d'un animal choisi par le plus jeune",
+      "Tout le monde reste debout jusqu'au prochain dilemme",
+      "Chacun fait un compliment à son voisin de droite",
+      "Tout le monde chante le même refrain, choisi par le plus âgé",
+      "Tout le monde fait 5 squats en même temps en comptant à voix haute",
+    ],
+    freeDilemmas: (n) => `${n} dilemmes offerts`,
+    restOfClassic: (n) => `Tout le Classique · ${n} dilemmes de plus`,
   },
   en: {
     gameName: "Would You Rather",
     title: "Would You Rather?",
-    intro: "Read the dilemma out loud. On 3, everyone raises a hand for A or B, you count the hands on screen… and the minority side takes the penalty.",
+    intro: "Read the dilemma out loud. On 3, everyone raises a hand for A or B, you count the hands on screen… and the minority side takes the penalty. A tie or everyone agrees? Everyone takes it!",
     vibe: "Pick a vibe",
     packs: {
       classique: { label: "Classic", tag: "For everyone" },
@@ -130,17 +150,17 @@ export const TP_STR: I18n<TPStrings> = {
     tie: "Dead even, the table is split down the middle!",
     tableChose: (s) => `The table picked ${s}!`,
     nextDilemma: "Next dilemma",
-    raiseHands: "On 3, everyone raises a hand for A or B. Tap a card once per raised hand. The minority takes the penalty!",
+    raiseHands: "On 3, everyone raises a hand for A or B. Tap a card once per raised hand. The minority takes the penalty (tie or unanimous: everyone does)!",
     reroll: "Meh? Another one",
     seeResult: (n) => `See the result (${n} hand${n === 1 ? "" : "s"})`,
     penaltyTitle: "The minority gets…",
     penaltyDares: { title: "A dare", sub: "Zero sips" },
     penaltySips: { title: "Sips or a dare", sub: "1 to 2 zinzin sips" },
-    penaltyChill: "Chill vibe: the minority does a dare.",
-    penaltyNoAlc: "Dares only: the minority does a dare.",
+    penaltyChill: "Chill vibe: the minority does a dare (tie or unanimous: everyone does).",
+    penaltyNoAlc: "Dares only: the minority does a dare (tie or unanimous: everyone does).",
     minorityBadge: "Minority",
-    noPenaltyTie: "Nobody takes it: debate!",
-    noPenaltyUnanimous: "Unanimous! Nobody takes it.",
+    everyoneTie: "It's a tie: everyone takes it!",
+    everyoneUnanimous: "Unanimous: no minority… so everyone takes it!",
     loserHead: (s, n) => `Side ${s} (${n} hand${n === 1 ? "" : "s"}) takes the penalty`,
     sipsEach: (n) => `${n} zinzin sip${n === 1 ? "" : "s"} each`,
     sipsSolo: (n) => `Alone against everyone: ${n} zinzin sip${n === 1 ? "" : "s"}`,
@@ -164,11 +184,25 @@ export const TP_STR: I18n<TPStrings> = {
       "Mime your choice without talking until the group guesses it",
       "Make a heartfelt love declaration to your choice",
     ],
+    groupDares: [
+      "Everyone pulls their worst face for 5 seconds, group photo included",
+      "Everyone shouts the same word on 3 (no planning allowed)",
+      "Everyone swaps seats with the person on their left",
+      "Everyone talks in an accent until the next dilemma",
+      "Everyone does a 5-second victory dance, all at once",
+      "Everyone does the animal noise picked by the youngest player",
+      "Everyone stays standing until the next dilemma",
+      "Everyone gives the person on their right a compliment",
+      "Everyone sings the same chorus, picked by the oldest player",
+      "Everyone does 5 squats together, counting out loud",
+    ],
+    freeDilemmas: (n) => `${n} free dilemmas`,
+    restOfClassic: (n) => `All of Classic · ${n} more dilemmas`,
   },
   es: {
     gameName: "¿Qué prefieres?",
     title: "¿Qué prefieres?",
-    intro: "Lee el dilema en voz alta. A la de 3, cada uno levanta la mano por la A o la B, se cuentan las manos en la pantalla… y el bando minoritario paga.",
+    intro: "Lee el dilema en voz alta. A la de 3, cada uno levanta la mano por la A o la B, se cuentan las manos en la pantalla… y el bando minoritario paga. ¿Empate o unanimidad? ¡Paga todo el mundo!",
     vibe: "El ambiente",
     packs: {
       classique: { label: "Clásico", tag: "Para todo el mundo" },
@@ -187,17 +221,17 @@ export const TP_STR: I18n<TPStrings> = {
     tie: "¡Empate total, la mesa está partida en dos!",
     tableChose: (s) => `¡La mesa eligió la ${s}!`,
     nextDilemma: "Siguiente dilema",
-    raiseHands: "A la de 3, cada uno levanta la mano por la A o la B. Toca una carta una vez por mano. ¡La minoría paga!",
+    raiseHands: "A la de 3, cada uno levanta la mano por la A o la B. Toca una carta una vez por mano. ¡La minoría paga (empate o unanimidad: todo el mundo)!",
     reroll: "¿No mola? Otra",
     seeResult: (n) => `Ver el resultado (${n} mano${n === 1 ? "" : "s"})`,
     penaltyTitle: "La minoría se lleva…",
     penaltyDares: { title: "Un reto", sub: "Cero tragos" },
     penaltySips: { title: "Tragos o reto", sub: "1 a 2 tragos de zinzin" },
-    penaltyChill: "Ambiente chill: la minoría hace un reto.",
-    penaltyNoAlc: "Solo retos: la minoría hace un reto.",
+    penaltyChill: "Ambiente chill: la minoría hace un reto (empate o unanimidad: todo el mundo).",
+    penaltyNoAlc: "Solo retos: la minoría hace un reto (empate o unanimidad: todo el mundo).",
     minorityBadge: "Minoría",
-    noPenaltyTie: "Nadie paga: ¡a debatir!",
-    noPenaltyUnanimous: "¡Unanimidad! Nadie paga.",
+    everyoneTie: "Empate: ¡paga todo el mundo!",
+    everyoneUnanimous: "Unanimidad: no hay minoría… ¡así que paga todo el mundo!",
     loserHead: (s, n) => `El bando ${s} (${n} mano${n === 1 ? "" : "s"}) paga`,
     sipsEach: (n) => `${n} trago${n === 1 ? "" : "s"} de zinzin cada uno`,
     sipsSolo: (n) => `Solo contra todos: ${n} trago${n === 1 ? "" : "s"} de zinzin`,
@@ -221,5 +255,19 @@ export const TP_STR: I18n<TPStrings> = {
       "Hacer mímica de tu elección sin hablar hasta que el grupo acierte",
       "Declararle tu amor a tu elección, con emoción",
     ],
+    groupDares: [
+      "Todo el mundo pone su peor mueca 5 segundos, con foto de grupo",
+      "Todo el mundo grita la misma palabra a la de 3 (sin ponerse de acuerdo)",
+      "Todo el mundo cambia de sitio con quien tenga a la izquierda",
+      "Todo el mundo habla con acento hasta el siguiente dilema",
+      "Todo el mundo hace un baile de la victoria de 5 segundos, a la vez",
+      "Todo el mundo imita el animal que elija el más joven",
+      "Todo el mundo se queda de pie hasta el siguiente dilema",
+      "Cada uno le hace un cumplido a quien tenga a la derecha",
+      "Todo el mundo canta el mismo estribillo, elegido por el mayor",
+      "Todo el mundo hace 5 sentadillas a la vez, contando en voz alta",
+    ],
+    freeDilemmas: (n) => `${n} dilemas gratis`,
+    restOfClassic: (n) => `Todo el Clásico · ${n} dilemas más`,
   },
 };

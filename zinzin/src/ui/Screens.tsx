@@ -72,7 +72,7 @@ export function SettingsSheet({
             <CloseBtn onClick={close} />
           </div>
 
-          {/* Carte Premium vivante */}
+          {/* Carte Zinzin+ vivante */}
           <div
             className="zz-stk relative mt-8 rounded-[28px] px-5 pb-4 pt-4"
             style={{ background: premium ? "#FFD23F" : "#FF3EA5", color: premium ? "var(--zz-ink)" : "#fff", rotate: "-1deg" }}
@@ -82,7 +82,7 @@ export function SettingsSheet({
             </div>
             <div className="pr-24">
               <div className="text-[14px] font-bold" style={{ opacity: 0.85 }}>{premium ? t.yourStatus : t.freeVersion}</div>
-              <div className="zz-title mt-1 text-[30px]">{premium ? "Zinzin Premium" : t.freeGames}</div>
+              <div className="zz-title mt-1 text-[30px]">{premium ? t.premium : t.freeGames}</div>
               <p className="mt-1.5 text-[15px] font-semibold leading-snug" style={{ opacity: 0.88 }}>
                 {premium ? t.premiumText : t.freeText}
               </p>

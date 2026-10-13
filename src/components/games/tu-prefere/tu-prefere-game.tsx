@@ -5,7 +5,8 @@
  * On choisit une ambiance, on lit le dilemme à voix haute, tout le monde
  * lève la main pour son choix, on compte les mains sur l'écran, puis on
  * révèle le résultat du groupe + une petite punchline. Le camp minoritaire
- * prend la peine (gage, ou 1 à 2 gorgées de zinzin selon le réglage). 100% local.
+ * prend la peine (gage, ou 1 à 2 gorgées de zinzin selon le réglage) ; en cas
+ * d'égalité ou d'unanimité, TOUT LE MONDE prend. 100% local.
  */
 
 import { useEffect, useRef, useState } from "react";
@@ -24,6 +25,8 @@ import type { DilemmaTuple } from "@/components/games/tu-prefere/dilemmas";
 import { getLang, useT, type I18n, type Lang } from "@/lib/i18n";
 import { TP_STR } from "@/components/games/tu-prefere/i18n";
 import { adultDefault, isNoAlcohol, sipsAllowed } from "@/lib/party-mood";
+import { useUnlocked } from "@/lib/entitlements";
+import { LockedPack, PremiumNudge, fmtCount, useNudgeText } from "@/components/games/premium-nudge";
 
 type Cat = "classique" | "hot" | "absurde" | "couple";
 type Penalty = "dares" | "sips";
@@ -37,6 +40,15 @@ const listFor = (c: Cat, lang: Lang): Dilemma[] => {
   const d = DILEMMAS[lang] ?? DIL_FR;
   return toDilemmas(c === "classique" ? d.CLASSIQUE : c === "hot" ? d.CHAUD : c === "absurde" ? d.ABSURDE : d.COUPLE);
 };
+// Version découverte (app sans Zinzin+) : les 40 premiers dilemmes du Classique
+// (toujours les mêmes) ; Chaud, Absurde, Couple et le reste du Classique = Zinzin+.
+const FREE_COUNT = 40;
+const FREE_CAT: Cat = "classique";
+const deckFor = (c: Cat, lang: Lang, unlocked: boolean): Dilemma[] =>
+  unlocked ? listFor(c, lang) : listFor(FREE_CAT, lang).slice(0, FREE_COUNT);
+const totalAll = (lang: Lang) => (["classique", "hot", "absurde", "couple"] as Cat[]).reduce((n, c) => n + listFor(c, lang).length, 0);
+// Bannière Zinzin+ (version découverte) : une seule fois, au résultat de ce dilemme
+const NUDGE_AT = 12;
 const PACKS: Record<Cat, { icon: LucideIcon; color: string }> = {
   classique: { icon: Dices, color: "#4ECDC4" },
   hot: { icon: Flame, color: "#FF3EA5" },
@@ -108,11 +120,16 @@ function OptionCard({
 
 export default function TuPrefereGame({ onReturnToLobby }: GameProps) {
   const t = useT(TP_STR);
+  const nudge = useNudgeText();
   // Langue des dilemmes figée à l'ouverture du jeu.
   const [lang] = useState<Lang>(() => getLang());
+  // Abonné Zinzin+ (ou site web) : tous les packs ; sinon 40 dilemmes du Classique
+  const unlocked = useUnlocked();
   // Soirée « Folle » : on démarre directement sur l'ambiance Chaud (le chip permet d'en changer).
-  const [cat, setCat] = useState<Cat | null>(() => (adultDefault(false) ? "hot" : null));
-  const [deck, setDeck] = useState<Dilemma[]>(() => (adultDefault(false) ? shuffle(listFor("hot", lang)) : []));
+  const [cat, setCat] = useState<Cat | null>(() => (adultDefault(false) && unlocked ? "hot" : null));
+  const [deck, setDeck] = useState<Dilemma[]>(() => (adultDefault(false) && unlocked ? shuffle(listFor("hot", lang)) : []));
+  // Nombre de dilemmes révélés (bannière Zinzin+ une seule fois)
+  const [played, setPlayed] = useState(0);
   const [idx, setIdx] = useState(0);
   const [votes, setVotes] = useState<{ a: number; b: number }>({ a: 0, b: 0 });
   const [revealed, setRevealed] = useState(false);
@@ -133,7 +150,7 @@ export default function TuPrefereGame({ onReturnToLobby }: GameProps) {
 
   const startPack = (c: Cat) => {
     playSfx("card-flip", { volume: 0.7 });
-    setCat(c); setDeck(shuffle(listFor(c, lang))); setIdx(0); setVotes({ a: 0, b: 0 }); setRevealed(false);
+    setCat(c); setDeck(shuffle(deckFor(c, lang, unlocked))); setIdx(0); setVotes({ a: 0, b: 0 }); setRevealed(false);
   };
   const current = deck[idx];
   const color = cat ? PACKS[cat].color : "#4ECDC4";
@@ -141,7 +158,7 @@ export default function TuPrefereGame({ onReturnToLobby }: GameProps) {
 
   const next = () => {
     playSfx("card-slide", { volume: 0.7 });
-    if (idx + 1 >= deck.length) { setDeck(shuffle(listFor(cat!, lang))); setIdx(0); }
+    if (idx + 1 >= deck.length) { setDeck(shuffle(deckFor(cat!, lang, unlocked))); setIdx(0); }
     else setIdx(idx + 1);
     setVotes({ a: 0, b: 0 });
     setRevealed(false);
@@ -156,8 +173,11 @@ export default function TuPrefereGame({ onReturnToLobby }: GameProps) {
   };
   const reveal = () => {
     const tie = votes.a === votes.b;
+    const all = tie || Math.max(votes.a, votes.b) === total; // égalité ou unanimité : tout le monde prend
     playCombo("reveal");
-    setDare(t.dares[Math.floor(Math.random() * t.dares.length)]);
+    const pool = all ? t.groupDares : t.dares;
+    setDare(pool[Math.floor(Math.random() * pool.length)]);
+    setPlayed((n) => n + 1);
     if (!tie && Math.max(votes.a, votes.b) === total) playSfx("win", { volume: 0.6, delay: 0.35 }); // unanimité
     setRevealed(true);
   };
@@ -195,6 +215,26 @@ export default function TuPrefereGame({ onReturnToLobby }: GameProps) {
           <p className="mt-2 text-[15px] font-semibold" style={{ color: "rgba(255,255,255,0.88)" }}>{isNoAlcohol() ? t.penaltyNoAlc : t.penaltyChill}</p>
         )}
         <ZTitle size={28} className="mt-6">{t.vibe}</ZTitle>
+        {!unlocked ? (
+          // Version découverte : Classique (40 dilemmes) offert, les autres ambiances avec cadenas + aperçu
+          <div className="mt-3 flex flex-col gap-3">
+            <button type="button" onClick={() => startPack(FREE_CAT)}
+              className="flex min-h-[84px] items-center gap-3 rounded-[22px] p-3.5 text-left transition-[translate,box-shadow] shadow-[0_5px_0_#15082E] active:translate-y-[4px] active:shadow-[0_1px_0_#15082E]"
+              style={{ background: PACKS[FREE_CAT].color, color: inkOn(PACKS[FREE_CAT].color), border: `3px solid ${GAME_INK}`, rotate: "-1deg" }}>
+              <GameIconBadge icon={PACKS[FREE_CAT].icon} bg="#fff" size={40} />
+              <span className="min-w-0">
+                <span className="block text-[22px] leading-none" style={DISPLAY}>{t.packs[FREE_CAT].label}</span>
+                <span className="mt-1 block text-[14px] font-semibold leading-tight">{t.packs[FREE_CAT].tag}{"\u00A0·\u00A0"}{t.freeDilemmas(FREE_COUNT)}</span>
+              </span>
+            </button>
+            {(["hot", "absurde", "couple"] as Cat[]).map((c) => (
+              <LockedPack key={c} label={`${t.packs[c].label} · ${t.packs[c].tag}`}
+                preview={listFor(c, lang).slice(0, 2).map((d) => `${d.a} ${t.or} ${d.b}`)} />
+            ))}
+            <LockedPack label={t.restOfClassic(listFor(FREE_CAT, lang).length - FREE_COUNT)}
+              preview={listFor(FREE_CAT, lang).slice(FREE_COUNT, FREE_COUNT + 2).map((d) => `${d.a} ${t.or} ${d.b}`)} />
+          </div>
+        ) : (
         <div className="mt-3 grid grid-cols-2 gap-3">
           {(Object.keys(PACKS) as Cat[]).map((c, i) => {
             const pk = PACKS[c];
@@ -209,6 +249,7 @@ export default function TuPrefereGame({ onReturnToLobby }: GameProps) {
             );
           })}
         </div>
+        )}
         <div className="min-h-8 flex-1" />
         <div className="flex justify-center"><IdeaButton game={t.gameName} kind="dilemme" /></div>
         {onReturnToLobby && <ZLink onClick={onReturnToLobby} className="mt-2"><GameInlineIcon icon={ArrowLeft} /> {t.backHome}</ZLink>}
@@ -217,11 +258,15 @@ export default function TuPrefereGame({ onReturnToLobby }: GameProps) {
   }
 
   const winner: "a" | "b" | "tie" | null = !revealed || total === 0 ? null : votes.a === votes.b ? "tie" : votes.a > votes.b ? "a" : "b";
-  // Camp minoritaire = l'autre camp, s'il a au moins une main (sinon unanimité : personne ne prend)
+  // Camp minoritaire = l'autre camp, s'il a au moins une main.
+  // Égalité ou unanimité (pas de minorité) : TOUT LE MONDE prend la peine.
   const loser: "a" | "b" | null = winner === "a" && votes.b > 0 ? "b" : winner === "b" && votes.a > 0 ? "a" : null;
+  const everyone = winner !== null && loser === null;
   const loserCount = loser ? votes[loser] : 0;
-  // Seul(e) contre tous : 2 gorgées ; sinon 1 chacun (jamais plus de 3)
+  // Seul(e) contre tous : 2 gorgées ; sinon (minorité ou tout le monde) 1 chacun (jamais plus de 3)
   const sips = loserCount === 1 ? 2 : 1;
+  // Version découverte : la bannière Zinzin+ apparaît au résultat du 12e dilemme (ou au dernier du paquet)
+  const showNudge = revealed && !unlocked && (played === NUDGE_AT || (played < NUDGE_AT && idx + 1 >= deck.length));
 
   return (
     <ZScreen tools={<IdeaButton game={t.gameName} kind="dilemme" compact bg="#fff" />}>
@@ -261,9 +306,11 @@ export default function TuPrefereGame({ onReturnToLobby }: GameProps) {
             {/* Peine : explicite, qui prend quoi */}
             <div ref={penaltyRef}>
             <ZCard bg="#fff" tilt={1} shadow={4} radius={20} className="mt-3 px-4 py-3">
-              {loser ? (
+              {loser || everyone ? (
                 <>
-                  <p className="text-[18px] leading-tight" style={{ ...DISPLAY, color: "#E0218A" }}>{t.loserHead(loser === "a" ? "A" : "B", loserCount)}</p>
+                  <p className="text-[18px] leading-tight" style={{ ...DISPLAY, color: "#E0218A" }}>
+                    {loser ? t.loserHead(loser === "a" ? "A" : "B", loserCount) : winner === "tie" ? t.everyoneTie : t.everyoneUnanimous}
+                  </p>
                   {penalty === "sips" ? (
                     <>
                       <p className="mt-1.5 text-[17px] font-bold leading-snug">
@@ -276,11 +323,10 @@ export default function TuPrefereGame({ onReturnToLobby }: GameProps) {
                     <p className="mt-1.5 text-[16px] font-bold leading-snug">{t.dareOnly} {dare}</p>
                   )}
                 </>
-              ) : (
-                <p className="text-[17px] leading-tight" style={DISPLAY}>{winner === "tie" ? t.noPenaltyTie : t.noPenaltyUnanimous}</p>
-              )}
+              ) : null}
             </ZCard>
             </div>
+            {showNudge && <PremiumNudge text={nudge.tuPrefere(fmtCount(totalAll(lang) - FREE_COUNT, lang))} style={{ marginTop: 16 }} />}
             <ZButton bg={color} className="mt-5" onClick={next}>{t.nextDilemma}</ZButton>
           </>
         ) : (

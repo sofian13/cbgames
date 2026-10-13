@@ -51,7 +51,7 @@ export interface PicoletteCard {
 
 const V = "3-2-1, tout le monde pointe quelqu'un. Le plus désigné prend la peine.";
 const T = "Tour de table, pas de répétition. Le premier qui sèche perd.";
-const P = "3-2-1 : main en haut pour le choix du haut, main en bas pour le bas. Le camp minoritaire prend la peine.";
+const P = "3-2-1 : main en haut pour le choix du haut, main en bas pour le bas. Le camp minoritaire prend la peine. Égalité ou tous pareil : tout le monde la prend.";
 const R = "Le premier qui dérape prend la peine.";
 const VAL = "Chacun répète TOUTE la liste et ajoute un truc. Le premier qui oublie ou se trompe perd.";
 
@@ -746,6 +746,42 @@ export function gagesFor(lang: Lang = getLang()): string[] {
 
 export function filterDeck(packs: Set<Pack>, lang: Lang = getLang()): PicoletteCard[] {
   return cardsFor(lang).filter((c) => packs.has(c.pack));
+}
+
+// ── Version découverte (app sans Zinzin+) ─────────────────────
+// 60 cartes soft FIXES, choisies à la main (variées en types, rien de coquin),
+// repérées par leur position : EN / ES suivent exactement le même ordre que le FR.
+const FREE_IDX: number[] = [
+  // Votes (10)
+  0, 3, 8, 11, 20, 21, 24, 322, 325, 330,
+  // Tours de table (8)
+  31, 39, 41, 48, 52, 214, 227, 249,
+  // Règles live (7)
+  54, 68, 69, 71, 280, 284, 298,
+  // Tu préfères (7)
+  79, 85, 88, 396, 400, 403, 405,
+  // Dans ma valise (2)
+  100, 101,
+  // Je n'ai jamais (5)
+  358, 360, 361, 364, 366,
+  // Duels (5)
+  415, 416, 419, 423, 425,
+  // Défis (4)
+  488, 490, 495, 501,
+  // Mimes (3)
+  505, 506, 509,
+  // Chansons (2)
+  526, 527,
+  // Avoue… (4)
+  530, 531, 537, 540,
+  // Jokers (3)
+  158, 160, 554,
+];
+
+/** Paquet découverte gratuit (toujours les mêmes cartes, dans la langue demandée). */
+export function freeDeck(lang: Lang = getLang()): PicoletteCard[] {
+  const all = cardsFor(lang);
+  return FREE_IDX.map((i) => all[i]).filter((c): c is PicoletteCard => Boolean(c) && c.pack === "soft");
 }
 
 // ── « Qui perd ? » ─────────────────────────────────────────

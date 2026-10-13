@@ -10,6 +10,7 @@ import { IdeaButton, RerollButton } from "@/components/games/idea-button";
 import { playCombo, playSfx, preloadSfx } from "@/lib/sfx";
 import { isOfflineApp } from "@/lib/offline-app";
 import { requestPaywall, useUnlocked } from "@/lib/entitlements";
+import { PremiumNudge, fmtCount, useNudgeText } from "@/components/games/premium-nudge";
 import { adultDefault } from "@/lib/party-mood";
 import { getLang, useT, type Lang } from "@/lib/i18n";
 import { FREE_CAT_IDS, allWordPairs, freePairs, wordCategories, type WordCategory } from "@/components/games/undercover/words";
@@ -1076,6 +1077,7 @@ function GameOverScreen({
   onLobby?: () => void;
 }) {
   const t = useT(UC_STR);
+  const nudge = useNudgeText();
   const [titleTop, titleBottom] =
     endReason === "civils-win" ? t.winTitle.civils :
     endReason === "undercover-wins" ? (players.filter((p) => p.role === "undercover" || p.role === "mrwhite").length > 1 ? t.winTitle.impostors : t.winTitle.impostor) :
@@ -1158,6 +1160,9 @@ function GameOverScreen({
           );
         })}
       </div>
+
+      {/* Version découverte : petite bannière Zinzin+ (rien si abonné / site web) */}
+      <PremiumNudge text={nudge.undercover(fmtCount(allWordPairs(getLang()).length - freePairs(getLang()).length))} style={{ marginBottom: 18 }} />
 
       <div style={{ marginTop: "auto" }}>
         <Btn tone="gold" onClick={onReplay} icon={<RotateCcw size={20} strokeWidth={2.8} aria-hidden />} sub={t.rematchSub}>{t.rematch}</Btn>

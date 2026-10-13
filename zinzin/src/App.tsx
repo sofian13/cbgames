@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { notifyPaywallClosed } from "@/lib/entitlements";
 import { getZGame } from "./catalog";
 import { usePremium } from "./premium";
 import "./ui/zinzin.css";
@@ -25,7 +26,7 @@ export function App() {
   const premium = usePremium();
   const toast = useToast();
   const [phase, setPhase] = useState<Phase>("splash");
-  const [paywall, setPaywall] = useState<{ thenOpen?: string; thenSoiree?: boolean } | null>(null);
+  const [paywall, setPaywall] = useState<{ thenOpen?: string } | null>(null);
   const [sheet, setSheet] = useState<string | null>(null);
   const [settings, setSettings] = useState(false);
   const [legal, setLegal] = useState<LegalPage | null>(null);
@@ -43,6 +44,12 @@ export function App() {
     window.addEventListener("zz:paywall", open);
     return () => window.removeEventListener("zz:paywall", open);
   }, []);
+  // Paywall refermé (achat ou croix) : le jeu qui l'a demandé reprend la main
+  const hadPaywall = useRef(false);
+  useEffect(() => {
+    if (paywall) hadPaywall.current = true;
+    else if (hadPaywall.current) { hadPaywall.current = false; notifyPaywallClosed(); }
+  }, [paywall]);
   useEffect(() => {
     const open = () => setReplayTuto(true);
     window.addEventListener("zz:onboarding", open);
@@ -55,8 +62,8 @@ export function App() {
   }, [premium]);
 
   const openGame = (id: string) => setSheet(id);
+  // Soirée ouverte à tous : sans Zinzin+, elle n'enchaîne que les jeux gratuits (soiree.ts)
   const newSoiree = () => {
-    if (!premium) { setPaywall({ thenSoiree: true }); return; }
     clearSoiree();
     setSoiree("setup");
   };
@@ -118,10 +125,8 @@ export function App() {
           onClose={() => setPaywall(null)}
           onUnlocked={() => {
             const next = paywall.thenOpen;
-            const toSoiree = paywall.thenSoiree;
             setPaywall(null);
             if (next) setTimeout(() => setSheet(next), 80);
-            if (toSoiree) setTimeout(() => { clearSoiree(); setSoiree("setup"); }, 80);
           }}
           onLegal={setLegal}
           toast={toast.show}

@@ -62,6 +62,8 @@ interface TTStrings {
   sent: (n: number, total: number) => string;
   rankingSent: string;
   submitRanking: string;
+  /** Version découverte : « 30 thèmes offerts » */
+  freeThemes: (n: number) => string;
 }
 
 export const TT_STR: I18n<TTStrings> = {
@@ -124,6 +126,7 @@ export const TT_STR: I18n<TTStrings> = {
     sent: (n, t) => `Envoyé, ${n}/${t}…`,
     rankingSent: "Classement envoyé",
     submitRanking: "Valider mon classement",
+    freeThemes: (n) => `${n} thèmes offerts`,
   },
   en: {
     gameName: "From 1 to 10",
@@ -184,6 +187,7 @@ export const TT_STR: I18n<TTStrings> = {
     sent: (n, t) => `Sent, ${n}/${t}…`,
     rankingSent: "Ranking sent",
     submitRanking: "Lock in my ranking",
+    freeThemes: (n) => `${n} free themes`,
   },
   es: {
     gameName: "Del 1 al 10",
@@ -244,5 +248,6 @@ export const TT_STR: I18n<TTStrings> = {
     sent: (n, t) => `Enviado, ${n}/${t}…`,
     rankingSent: "Orden enviado",
     submitRanking: "Confirmar mi orden",
+    freeThemes: (n) => `${n} temas gratis`,
   },
 };

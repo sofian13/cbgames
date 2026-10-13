@@ -110,4 +110,8 @@ export const CULTURE_THEMES_ES: ThemeState[] = [
   { theme: "Una fiesta, del fracaso a la leyenda", low: "Solo frente a la tele", high: "La fiesta de la que aún se habla" },
   { theme: "Un hechizo de mago, por poder", low: "Un hechizo para atar cordones", high: "Un hechizo que acaba con la guerra" },
   { theme: "Una telenovela, de tranquila a dramática", low: "Un malentendido sin importancia", high: "Gemelos perdidos, amnesia y boda cancelada" },
+  { theme: "Un superpoder, del más inútil al más chetado", low: "Hablar con las palomas", high: "Parar el tiempo" },
+  { theme: "Una excusa para llegar tarde, de la más creíble a la más loca", low: "«El metro iba fatal»", high: "«Me abdujeron unos extraterrestres»" },
+  { theme: "Un snack, del más sano al más culpable", low: "Una manzana", high: "Una bolsa entera de patatas fritas a las 2 de la mañana" },
+  { theme: "Una canción de fiesta, de la más tranquila al temazo", low: "Una balada a piano", high: "El tema que hace saltar a toda la sala" },
 ];

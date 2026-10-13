@@ -296,6 +296,31 @@ export function patateContent(lang: Lang): PatateContent {
   return CONTENT[lang] ?? CONTENT.fr;
 }
 
+/**
+ * Thèmes des catégories classiques (tranches de la liste, mêmes indices dans les 3 langues).
+ * App sans Zinzin+ : seuls les thèmes `free` sont joués ; les autres restent visibles avec un cadenas.
+ */
+export interface PatateTheme { id: string; label: I18n<string>; start: number; count: number; free?: boolean }
+export const PATATE_THEMES: PatateTheme[] = [
+  { id: "food", label: { fr: "Bouffe", en: "Food", es: "Comida" }, start: 0, count: 24, free: true },
+  { id: "home", label: { fr: "Maison & quotidien", en: "Home & everyday", es: "Casa y día a día" }, start: 24, count: 23, free: true },
+  { id: "animals", label: { fr: "Animaux & nature", en: "Animals & nature", es: "Animales y naturaleza" }, start: 47, count: 15, free: true },
+  { id: "geo", label: { fr: "Géo & voyages", en: "Geography & travel", es: "Geografía y viajes" }, start: 62, count: 14 },
+  { id: "pop", label: { fr: "Pop culture", en: "Pop culture", es: "Cultura pop" }, start: 76, count: 31 },
+  { id: "lang", label: { fr: "Langage", en: "Language", es: "Lenguaje" }, start: 107, count: 20 },
+  { id: "life", label: { fr: "Vie & soirée", en: "Life & parties", es: "Vida y fiesta" }, start: 127, count: 50 },
+];
+
+/** Catégories d'un thème. */
+export function themeCategories(c: PatateContent, th: PatateTheme): string[] {
+  return c.classic.slice(th.start, th.start + th.count);
+}
+
+/** Version découverte (app sans Zinzin+) : catégories des thèmes gratuits uniquement. */
+export function freeCategories(c: PatateContent): string[] {
+  return PATATE_THEMES.filter((th) => th.free).flatMap((th) => themeCategories(c, th));
+}
+
 export function pick<T>(arr: T[]): T {
   return arr[Math.floor(Math.random() * arr.length)];
 }

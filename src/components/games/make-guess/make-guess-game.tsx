@@ -6,7 +6,7 @@ import { Mascot, type MascotColor } from "@/components/Mascot";
 import { ConfettiBurst } from "@/components/ConfettiBurst";
 import { registerSoftReplay } from "@/lib/game-replay";
 import { getSavedPlayers, savePlayers } from "@/lib/saved-players";
-import { ArrowRight, Check, Crown, Plus, Undo2, X } from "lucide-react";
+import { ArrowRight, Check, Crown, Lock, Plus, Undo2, X } from "lucide-react";
 import { GameIconBadge, GameIconButton, GameInlineIcon } from "@/components/games/game-icon-button";
 import { IdeaButton, RerollButton } from "@/components/games/idea-button";
 import { TopRightControls } from "@/components/games/patate/rules-sheet";
@@ -15,7 +15,9 @@ import { playCombo, playSfx, preloadSfx } from "@/lib/sfx";
 import { useLang, type Lang } from "@/lib/i18n";
 import { adultDefault } from "@/lib/party-mood";
 import { STR } from "./i18n";
-import { DEFAULT_THEME_IDS, OPT_IN_THEME_IDS, THEME_IDS, WORDS, type ThemeId } from "./words";
+import { DEFAULT_THEME_IDS, FREE_THEME_IDS, OPT_IN_THEME_IDS, THEME_IDS, WORDS, freeWords, type ThemeId } from "./words";
+import { requestPaywall, useUnlocked } from "@/lib/entitlements";
+import { PremiumNudge, fmtCount, useNudgeText } from "../premium-nudge";
 import { useGameFinished } from "@/lib/game-finished";
 
 const ACCENT = "#FFD23F";
@@ -123,6 +125,10 @@ export default function MakeGuessGame({
   // Soirée « Folle » : thème 18+ coché d'office (Marques reste décoché).
   const [selectedThemes, setSelectedThemes] = useState<ThemeId[]>(() => (adultDefault(false) ? [...DEFAULT_THEME_IDS, "adult"] : [...DEFAULT_THEME_IDS]));
 
+  // App sans Zinzin+ : version découverte (60 mots fixes qui tournent)
+  const unlocked = useUnlocked();
+  const nudge = useNudgeText();
+
   // ── Game state ──
   const [phase, setPhase] = useState<Phase>("setup");
   useGameFinished(phase === "game-over"); // fin de partie → demande de note éventuelle (app)
@@ -229,7 +235,7 @@ export default function MakeGuessGame({
   const canStart =
     teams.length >= 2 &&
     teams.every((t) => t.name.trim() && t.player1.trim() && t.player2.trim()) &&
-    getWordsForThemes(selectedThemes, lang).length > 0;
+    (!unlocked || getWordsForThemes(selectedThemes, lang).length > 0);
 
   const toggleTheme = useCallback((id: ThemeId) => {
     setSelectedThemes((prev) =>
@@ -248,7 +254,10 @@ export default function MakeGuessGame({
 
   const startGame = useCallback(() => {
     savePlayers(teams.flatMap((t) => [t.player1, t.player2]));
-    const shuffled = shuffleArray(getWordsForThemes(selectedThemes, lang));
+    // Version découverte : les 60 mots offerts, remélangés à chaque tour de liste
+    const shuffled = unlocked
+      ? shuffleArray(getWordsForThemes(selectedThemes, lang))
+      : Array.from({ length: 5 }, () => shuffleArray(freeWords(lang))).flat();
     setWordPool(shuffled);
     setWordIndex(0);
     setCurrentRound(1);
@@ -256,7 +265,7 @@ export default function MakeGuessGame({
     setSubTurn(0);
     setAllResults([]);
     setPhase("pre-turn");
-  }, [selectedThemes, teams, lang]);
+  }, [selectedThemes, teams, lang, unlocked]);
 
   // ── Turn handlers ──
   const startTurn = useCallback(() => {
@@ -413,7 +422,7 @@ export default function MakeGuessGame({
     fontSize: big ? 20 : 17,
     fontWeight: big ? 700 : 600,
   });
-  const words = getWordsForThemes(selectedThemes, lang).length;
+  const words = unlocked ? getWordsForThemes(selectedThemes, lang).length : freeWords(lang).length;
 
   // ── SETUP ──
   if (phase === "setup") {
@@ -470,13 +479,30 @@ export default function MakeGuessGame({
         <div className="mt-7 w-full">
           <div className="mb-2.5 flex items-center justify-between gap-3">
             <h2 className="text-[22px] leading-tight" style={DISPLAY}>{t.themes} <span className="text-[16px]" style={{ color: "rgba(255,255,255,0.8)" }}>· {t.words(words)}</span></h2>
-            <button type="button" onClick={selectAllThemes} className="zk-push min-h-11 shrink-0 px-3.5 text-[14px] font-bold" style={sticker(allThemesSelected ? C.cream : C.yellow, { radius: 999, shadow: 3, border: 2.5 })}>
+            {unlocked && <button type="button" onClick={selectAllThemes} className="zk-push min-h-11 shrink-0 px-3.5 text-[14px] font-bold" style={sticker(allThemesSelected ? C.cream : C.yellow, { radius: 999, shadow: 3, border: 2.5 })}>
               {allThemesSelected ? t.clearAll : t.mixAll}
-            </button>
+            </button>}
           </div>
           {/* Grille 2 colonnes : lisible sur iPhone même avec ~30 thèmes (libellé sur 2 lignes si besoin) */}
           <div className="grid grid-cols-2 gap-2">
             {THEME_IDS.map((id) => {
+              // Version découverte : 4 thèmes offerts (cochés, fixes), les autres avec cadenas → Zinzin+
+              if (!unlocked) {
+                const free = FREE_THEME_IDS.includes(id);
+                return (
+                  <button key={id} type="button"
+                    onClick={free ? undefined : () => { playSfx("tap", { volume: 0.5 }); void requestPaywall(); }}
+                    aria-disabled={free || undefined}
+                    aria-label={free ? undefined : t.lockedTheme(t.themeLabels[id])}
+                    className="zk-push flex min-h-11 min-w-0 items-center gap-1.5 px-3 py-1.5 text-left text-[14px] font-bold leading-tight"
+                    style={sticker(free ? ACCENT : C.cream, { radius: 16, shadow: free ? 3 : 2, border: 2.5 })}>
+                    <span className="flex w-4 shrink-0 justify-center">
+                      {free ? <Check size={15} strokeWidth={3.5} aria-hidden /> : <Lock size={13} strokeWidth={3} aria-hidden />}
+                    </span>
+                    <span className="min-w-0">{t.themeLabels[id]}</span>
+                  </button>
+                );
+              }
               const on = selectedThemes.includes(id);
               return (
                 <button key={id} type="button" onClick={() => toggleTheme(id)} aria-pressed={on}
@@ -489,7 +515,7 @@ export default function MakeGuessGame({
             })}
           </div>
           <p className="mt-2.5 text-[14px] font-semibold" style={{ color: "rgba(255,255,255,0.82)" }}>
-            {words === 0 ? t.pickOne : t.optInNote}
+            {!unlocked ? t.freeNote(words) : words === 0 ? t.pickOne : t.optInNote}
           </p>
         </div>
 
@@ -721,6 +747,13 @@ export default function MakeGuessGame({
             </div>
           ))}
         </div>
+      )}
+
+      {!unlocked && (
+        <PremiumNudge
+          style={{ marginTop: 20 }}
+          text={nudge.makeGuess(fmtCount(getWordsForThemes([...THEME_IDS], lang).length - freeWords(lang).length, lang))}
+        />
       )}
 
       <div className="mt-auto flex w-full flex-col items-center pt-8">

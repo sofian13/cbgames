@@ -6,15 +6,17 @@ import type { GameProps } from "@/lib/games/types";
 import { PlayersSetup, colorForIndex } from "@/components/games/local-kit";
 import { Mascot, MascotAvatar } from "@/components/Mascot";
 import { ConfettiBurst } from "@/components/ConfettiBurst";
-import { patateContent, pick, shuffle } from "./categories";
+import { PATATE_THEMES, freeCategories, patateContent, pick, shuffle, themeCategories } from "./categories";
 import { PATATE_STR, decimal } from "./i18n";
-import { getLang, useT } from "@/lib/i18n";
+import { getLang, useLang, useT } from "@/lib/i18n";
+import { useUnlocked } from "@/lib/entitlements";
+import { LockedPack, PremiumNudge, fmtCount, useNudgeText } from "../premium-nudge";
 import { buzz, fuseHeat, preloadObjectSfx, sfxBoom, sfxDetonator, sfxIgnite, sfxPass, sfxTick, startFuse, unlockAudio } from "./fx";
 import { ScrollReset, TopRightControls } from "./rules-sheet";
 import { C, DISPLAY, INK, NameTag, OptionCard, PotatoBlob, SectionTitle, SoftLink, StickerBtn, StickerCard, StickerScreen, KitStyles, TOP_PAD, BOTTOM_PAD, dotted, sticker } from "./sticker-kit";
 import { IdeaButton, RerollButton } from "../idea-button";
 import { playCombo, type LoopHandle } from "@/lib/sfx";
-import { CupSoda, Drama, Flame, RotateCw, Vibrate } from "lucide-react";
+import { Check, CupSoda, Drama, Flame, RotateCw, Vibrate } from "lucide-react";
 import { GameInlineIcon } from "../game-icon-button";
 import { MASCOT_PALETTE } from "@/components/Mascot";
 import { useGameFinished } from "@/lib/game-finished";
@@ -83,6 +85,11 @@ export default function PatateGame({ onReturnToLobby }: GameProps) {
   const t = useT(PATATE_STR);
   // Contenu figé dans la langue du début de partie
   const [content] = useState(() => patateContent(getLang()));
+  // App sans Zinzin+ : version découverte (3 thèmes de base, pas de pack 18+)
+  const unlocked = useUnlocked();
+  const lang = useLang();
+  const nudge = useNudgeText();
+  const spicyOn = spicy && unlocked;
 
   const deck = useRef<string[]>([]);
   const run = useRef<Run | null>(null);
@@ -91,10 +98,13 @@ export default function PatateGame({ onReturnToLobby }: GameProps) {
 
   const nextCategory = useCallback(() => {
     if (deck.current.length === 0) {
-      deck.current = shuffle(spicy ? [...content.classic, ...content.spicy] : content.classic);
+      const base = unlocked ? content.classic : freeCategories(content);
+      deck.current = shuffle(spicyOn ? [...base, ...content.spicy] : base);
     }
     return deck.current.pop()!;
-  }, [spicy, content]);
+  }, [spicyOn, unlocked, content]);
+  // Zinzin+ activé en cours de partie : la pioche se recharge avec tout le contenu
+  useEffect(() => { deck.current = []; }, [unlocked]);
 
   // ── Explosion ──
   const explode = useCallback(
@@ -108,13 +118,13 @@ export default function PatateGame({ onReturnToLobby }: GameProps) {
       sfxBoom();
       buzz("boom");
       const loser = holderRef.current;
-      const dares = spicy ? [...content.dares, ...content.daresSpicy] : content.dares;
+      const dares = spicyOn ? [...content.dares, ...content.daresSpicy] : content.dares;
       const sips = penalty === "dares" ? null : 1 + Math.floor(Math.random() * 3);
       setLosses((l) => l.map((v, i) => (i === loser ? v + 1 : v)));
       setBoom({ loser, reason, sips, dare: pick(dares), secs: (performance.now() - r.start) / 1000 });
       setPhase("boom");
     },
-    [penalty, spicy, content],
+    [penalty, spicyOn, content],
   );
 
   // ── Boucle de jeu : tic-tac qui accélère + mèche cachée ──
@@ -286,7 +296,7 @@ export default function PatateGame({ onReturnToLobby }: GameProps) {
   // Autre gage (le perdant n'a encore rien fait : aucun impact sur le score)
   const rerollDare = () => {
     if (!boom) return;
-    const dares = (spicy ? [...content.dares, ...content.daresSpicy] : content.dares).filter((d) => d !== boom.dare);
+    const dares = (spicyOn ? [...content.dares, ...content.daresSpicy] : content.dares).filter((d) => d !== boom.dare);
     setBoom({ ...boom, dare: pick(dares) });
   };
 
@@ -357,8 +367,30 @@ export default function PatateGame({ onReturnToLobby }: GameProps) {
         <div className="mt-6 w-full space-y-2.5">
           <SectionTitle>{t.modes}</SectionTitle>
           <OptionCard kind="switch" on={shakeMode} onClick={() => setShakeMode((s) => !s)} icon={Vibrate} title={t.shakeTitle} sub={t.shakeSub} onBg={C.yellow} />
-          <OptionCard kind="switch" on={spicy} onClick={() => setSpicy((s) => !s)} icon={Flame} title={t.spicyTitle} sub={t.spicySub} onBg={C.pink} />
+          {unlocked ? (
+            <OptionCard kind="switch" on={spicy} onClick={() => setSpicy((s) => !s)} icon={Flame} title={t.spicyTitle} sub={t.spicySub} onBg={C.pink} />
+          ) : (
+            <LockedPack label={t.spicyTitle} preview={content.spicy.slice(0, 2)} />
+          )}
         </div>
+
+        {/* Version découverte : thèmes offerts + thèmes Zinzin+ (cadenas, aperçu) */}
+        {!unlocked && (
+          <div className="mt-6 w-full space-y-2.5">
+            <SectionTitle>{t.themesTitle}</SectionTitle>
+            <div className="flex flex-wrap gap-2">
+              {PATATE_THEMES.filter((th) => th.free).map((th, i) => (
+                <span key={th.id} className="inline-flex min-h-11 items-center gap-1.5 px-3.5 text-[15px] font-extrabold"
+                  style={{ ...sticker(C.yellow, { radius: 999, shadow: 3, border: 2.5 }), rotate: `${i % 2 ? 1.5 : -1.5}deg` }}>
+                  <Check size={15} strokeWidth={3.2} aria-hidden /> {th.label[lang]}
+                </span>
+              ))}
+            </div>
+            {PATATE_THEMES.filter((th) => !th.free).map((th) => (
+              <LockedPack key={th.id} label={th.label[lang]} preview={themeCategories(content, th).filter((c) => !/[«»“”"]/.test(c)).slice(0, 2)} />
+            ))}
+          </div>
+        )}
 
         <div className="mt-auto w-full pt-7">
           <StickerBtn big bg={ACCENT} onClick={confirmConfig}>{t.go}</StickerBtn>
@@ -593,6 +625,12 @@ export default function PatateGame({ onReturnToLobby }: GameProps) {
           </div>
         ))}
       </div>
+      {!unlocked && (
+        <PremiumNudge
+          style={{ marginTop: 18 }}
+          text={nudge.patate(fmtCount(content.classic.length - freeCategories(content).length + content.spicy.length, lang))}
+        />
+      )}
       <div className="mt-auto flex w-full flex-col items-center gap-1 pt-7">
         <StickerBtn big bg={ACCENT} onClick={replay}>{t.replay}</StickerBtn>
         <div className="mt-2 grid w-full grid-cols-2 gap-3">

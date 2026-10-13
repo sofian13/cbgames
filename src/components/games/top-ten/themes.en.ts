@@ -110,4 +110,8 @@ export const CULTURE_THEMES_EN: ThemeState[] = [
   { theme: "A party, from flop to legendary", low: "Alone in front of the TV", high: "The party people still talk about" },
   { theme: "A wizard's spell, by power", low: "A spell to tie shoelaces", high: "A spell that ends the war" },
   { theme: "A reality TV moment, from mild to iconic", low: "Someone burns the toast", high: "The meltdown everyone still memes" },
+  { theme: "A superpower, from most useless to most overpowered", low: "Talking to pigeons", high: "Stopping time" },
+  { theme: "An excuse for being late, from believable to unhinged", low: "“The train was delayed”", high: "“I was abducted by aliens”" },
+  { theme: "A snack, from healthiest to most shameful", low: "An apple", high: "A whole family-size bag of crisps at 2 a.m." },
+  { theme: "A party song, from chill to banger", low: "A soft piano ballad", high: "The track that makes the whole room jump" },
 ];

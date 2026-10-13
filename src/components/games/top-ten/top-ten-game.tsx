@@ -17,6 +17,8 @@ import { IdeaButton, RerollButton } from "@/components/games/idea-button";
 import { playCombo, playSfx, preloadSfx, type SfxName } from "@/lib/sfx";
 import { getLang, useT } from "@/lib/i18n";
 import { adultDefault } from "@/lib/party-mood";
+import { useUnlocked } from "@/lib/entitlements";
+import { LockedPack, PremiumNudge, fmtCount, useNudgeText } from "@/components/games/premium-nudge";
 import { THEMES, type ThemeState } from "@/components/games/top-ten/themes";
 import { TT_STR } from "@/components/games/top-ten/i18n";
 import { useGameFinished } from "@/lib/game-finished";
@@ -78,6 +80,11 @@ type Pack = "adult" | "culture";
 // Vocabulaire de l'échelle selon le pack : voir TT_STR.scale (soft↔hard pour 18+, faible↔fort pour les classements).
 // Thèmes de la langue courante, figée au lancement de la partie.
 const themesForPack = (p: Pack) => THEMES[getLang()][p];
+// Version découverte (app sans Zinzin+) : tout le pack Culture pop (30 thèmes fixes) ;
+// le pack Soirée 18+ (thèmes chauds et malaise) est réservé à Zinzin+.
+const FREE_PACK: Pack = "culture";
+// Aperçu du pack 18+ verrouillé : thèmes « malaise » drôles, pas les plus crus
+const PREVIEW_IDX = [41, 42];
 
 // Score un classement (paires adjacentes bien ordonnées soft→hard)
 function scorePairs(orderedNums: number[]): { correct: number; total: number; perfect: boolean; points: number } {
@@ -120,7 +127,11 @@ function TopTenLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) {
   const [round, setRound] = useState(0);
   const [numberRange, setNumberRange] = useState<10 | 25 | 50>(10);
   // 18+ jamais présélectionné, sauf en Soirée « Folle »
-  const [pack, setPack] = useState<Pack>(() => (adultDefault(false) ? "adult" : "culture"));
+  const unlocked = useUnlocked();
+  const nudge = useNudgeText();
+  const [packChoice, setPack] = useState<Pack>(() => (adultDefault(false) ? "adult" : "culture"));
+  // Sans Zinzin+ : on reste sur le pack gratuit (réactif : tout se débloque dès l'abonnement)
+  const pack: Pack = unlocked ? packChoice : FREE_PACK;
   const [themes, setThemes] = useState<ThemeState[]>(() => shuffle(themesForPack("adult")));
   const [themeCursor, setThemeCursor] = useState(0); // avance à chaque manche / changement
   const [numbers, setNumbers] = useState<Record<number, number>>({}); // playerIdx -> numéro
@@ -196,7 +207,7 @@ function TopTenLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) {
   if (phase === "target") {
     return (
       <ZScreen>
-        <RangePicker range={numberRange} onPick={setNumberRange} pack={pack} onPickPack={setPack} onStart={launch} onBack={() => setPhase("setup")} />
+        <RangePicker range={numberRange} onPick={setNumberRange} pack={pack} onPickPack={setPack} locked={!unlocked} onStart={launch} onBack={() => setPhase("setup")} />
       </ZScreen>
     );
   }
@@ -337,6 +348,8 @@ function TopTenLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) {
       </ZTitle>
       <div className="mt-6"><ZRanking rows={ranking} /></div>
       <div className="min-h-8 flex-1" />
+      {/* Version découverte : un petit mot sur Zinzin+, une seule fois, en fin de partie */}
+      <PremiumNudge text={nudge.topTen(fmtCount(themesForPack("adult").length))} style={{ marginBottom: 16 }} />
       <ZButton bg="#FFD23F" onClick={() => { setPhase("target"); }}>{t.playAgain}</ZButton>
       <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
         <ZButton size="sm" bg="#fff" style={{ width: "auto" }} onClick={() => setPhase("setup")}>{t.changePlayers}</ZButton>
@@ -708,6 +721,7 @@ function RangePicker({
   onPick,
   pack,
   onPickPack,
+  locked,
   onStart,
   onBack,
   shared,
@@ -716,6 +730,8 @@ function RangePicker({
   onPick: (r: 10 | 25 | 50) => void;
   pack?: Pack;
   onPickPack?: (p: Pack) => void;
+  /** App sans Zinzin+ : le pack 18+ est verrouillé (cadenas + aperçu) */
+  locked?: boolean;
   onStart: () => void;
   onBack?: () => void;
   shared?: boolean;
@@ -735,6 +751,25 @@ function RangePicker({
       {pack != null && onPickPack && (
         <>
           <ZTitle size={30}>{t.themesTitle}</ZTitle>
+          {locked ? (
+            // Version découverte : Culture pop offert, Soirée 18+ visible avec cadenas + aperçu
+            <div className="mt-3 flex flex-col gap-3">
+              {PACKS.filter((o) => o.v === FREE_PACK).map((o) => (
+                <ZChoice key={o.v} active color={o.color} onClick={() => onPickPack(o.v)} tilt={-1} className="flex items-center gap-3">
+                  <GameIconBadge icon={o.icon} bg="#fff" size={40} />
+                  <span className="min-w-0 text-left">
+                    <span className="block text-[20px] leading-none" style={DISPLAY}>{o.label}</span>
+                    <span className="mt-1 block text-[14px] font-semibold leading-tight">{o.sub}{"\u00A0·\u00A0"}{t.freeThemes(themesForPack(FREE_PACK).length)}</span>
+                  </span>
+                </ZChoice>
+              ))}
+              <LockedPack
+                emoji="🔥"
+                label={`${t.packs.adult.label} · ${t.packs.adult.sub}`}
+                preview={PREVIEW_IDX.map((i) => themesForPack("adult")[i]?.theme).filter((x): x is string => Boolean(x))}
+              />
+            </div>
+          ) : (
           <div className="mt-3 grid grid-cols-2 gap-3">
             {PACKS.map((o, i) => (
               <ZChoice key={o.v} active={o.v === pack} color={o.color} onClick={() => onPickPack(o.v)} tilt={i ? 1.5 : -1.5} className="flex min-h-[124px] flex-col items-start justify-start">
@@ -744,6 +779,7 @@ function RangePicker({
               </ZChoice>
             ))}
           </div>
+          )}
         </>
       )}
       <ZTitle size={30} className="mt-8">{t.numbersUpTo}</ZTitle>

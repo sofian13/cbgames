@@ -106,5 +106,11 @@ export const CULTURE_THEMES_FR: ThemeState[] = [
   { theme: "Un méchant de film ou d'anime, du soft au terrifiant", low: "Un sbire de base", high: "Le boss final ultime" },
   { theme: "Un téléphone, du plus pourri au plus haut de gamme", low: "Un vieux téléphone à clapet", high: "Le dernier smartphone à 1 500 €" },
   { theme: "Une soirée, du flop au légendaire", low: "Seul devant la TV", high: "La soirée dont on parle encore" },
+  { theme: "Un super-pouvoir, du plus inutile au plus cheaté", low: "Parler aux pigeons", high: "Arrêter le temps" },
+  { theme: "Une excuse pour être en retard, de la plus crédible à la plus folle", low: "« Le métro était bloqué »", high: "« J'ai été enlevé par des extraterrestres »" },
+  { theme: "Un snack, du plus sain au plus coupable", low: "Une pomme", high: "Un paquet de chips entier à 2h du mat" },
+  { theme: "Une chanson de soirée, du calme au gros son", low: "Une ballade au piano", high: "Le son qui fait sauter toute la salle" },
+  { theme: "Un endroit, du plus frais au plus étouffant", low: "Une banquise", high: "Le métro bondé en plein mois d'août" },
+  { theme: "Un dessin animé de ton enfance, du plus oubliable au plus culte", low: "Celui que personne regardait", high: "Celui que tout le monde chante encore" },
 ];
 

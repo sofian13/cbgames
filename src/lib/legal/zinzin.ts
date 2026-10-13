@@ -161,7 +161,7 @@ export const LEGAL_DOCS: Record<LegalDocId, LegalDoc> = {
       {
         title: "1. Objet",
         paragraphs: [
-          `Les présentes conditions encadrent l'utilisation de l'application Zinzin, éditée par ${E.name} (« nous »), et l'achat de l'abonnement Zinzin Premium. En utilisant l'application, tu les acceptes. Elles complètent les conditions de l'App Store ou de Google Play (pour Apple : le contrat de licence d'utilisation standard de l'utilisateur final, « EULA »).`,
+          `Les présentes conditions encadrent l'utilisation de l'application Zinzin, éditée par ${E.name} (« nous »), et l'achat de l'abonnement Zinzin+. En utilisant l'application, tu les acceptes. Elles complètent les conditions de l'App Store ou de Google Play (pour Apple : le contrat de licence d'utilisation standard de l'utilisateur final, « EULA »).`,
         ],
       },
       {
@@ -173,11 +173,11 @@ export const LEGAL_DOCS: Record<LegalDocId, LegalDoc> = {
       {
         title: "3. Le service",
         paragraphs: [
-          "Zinzin propose des jeux d'ambiance qui se jouent à plusieurs sur un seul téléphone, sans connexion. Certains jeux sont gratuits ; les autres, les contenus 18+ et les nouveautés sont accessibles avec l'abonnement Zinzin Premium. Le catalogue peut évoluer (ajout, modification ou retrait de jeux).",
+          "Zinzin propose des jeux d'ambiance qui se jouent à plusieurs sur un seul téléphone, sans connexion. Certains jeux sont jouables gratuitement, dans une version découverte au contenu limité ; les autres jeux, l'intégralité des contenus (dont les contenus 18+) et les nouveautés sont accessibles avec l'abonnement Zinzin+. Le catalogue peut évoluer (ajout, modification ou retrait de jeux).",
         ],
       },
       {
-        title: "4. Abonnement Zinzin Premium",
+        title: "4. Abonnement Zinzin+",
         paragraphs: [
           "Formules proposées (prix TTC affichés dans l'application au moment de l'achat, susceptibles de varier selon le pays) : Pass soirée (7 jours), Mensuel, Annuel.",
           "Essai gratuit : la formule Annuel peut être proposée avec un essai gratuit de 3 jours, réservé aux personnes qui n'en ont pas déjà bénéficié (éligibilité vérifiée par Apple ou Google). Rien n'est prélevé pendant l'essai ; à son terme, il se convertit automatiquement en abonnement annuel payant au prix affiché, sauf résiliation au moins 24 heures avant la fin de l'essai. Si tu résilies pendant l'essai, tu gardes l'accès jusqu'à sa fin et rien ne t'est facturé.",
@@ -362,7 +362,7 @@ const DOCS_EN: Record<LegalDocId, LegalDoc> = {
       {
         title: "1. Purpose",
         paragraphs: [
-          `These terms govern the use of the Zinzin app, published by ${E.name} ("we"), and the purchase of the Zinzin Premium subscription. By using the app, you accept them. They supplement the terms of the App Store or Google Play (for Apple: the standard end user licence agreement, "EULA").`,
+          `These terms govern the use of the Zinzin app, published by ${E.name} ("we"), and the purchase of the Zinzin+ subscription. By using the app, you accept them. They supplement the terms of the App Store or Google Play (for Apple: the standard end user licence agreement, "EULA").`,
         ],
       },
       {
@@ -374,11 +374,11 @@ const DOCS_EN: Record<LegalDocId, LegalDoc> = {
       {
         title: "3. The service",
         paragraphs: [
-          "Zinzin offers party games played together on a single phone, with no connection. Some games are free; the others, the 18+ content and new releases are available with the Zinzin Premium subscription. The catalogue may change (games added, modified or removed).",
+          "Zinzin offers party games played together on a single phone, with no connection. Some games can be played for free, in a discovery version with limited content; the other games, all content (including 18+ content) and new releases are available with the Zinzin+ subscription. The catalogue may change (games added, modified or removed).",
         ],
       },
       {
-        title: "4. Zinzin Premium subscription",
+        title: "4. Zinzin+ subscription",
         paragraphs: [
           "Plans offered (prices including tax shown in the app at the time of purchase, which may vary by country): Party Pass (7 days), Monthly, Yearly.",
           "Free trial: the Yearly plan may be offered with a 3-day free trial, available only to people who have not already had one (eligibility checked by Apple or Google). Nothing is charged during the trial; when it ends, it automatically converts into a paid yearly subscription at the price shown, unless cancelled at least 24 hours before the end of the trial. If you cancel during the trial, you keep access until it ends and are not charged.",
@@ -543,7 +543,7 @@ const DOCS_ES: Record<LegalDocId, LegalDoc> = {
       {
         title: "1. Objeto",
         paragraphs: [
-          `Estas condiciones regulan el uso de la aplicación Zinzin, editada por ${E.name} («nosotros»), y la compra de la suscripción Zinzin Premium. Al usar la aplicación, las aceptas. Completan las condiciones del App Store o de Google Play (en el caso de Apple: el contrato de licencia estándar para el usuario final, «EULA»).`,
+          `Estas condiciones regulan el uso de la aplicación Zinzin, editada por ${E.name} («nosotros»), y la compra de la suscripción Zinzin+. Al usar la aplicación, las aceptas. Completan las condiciones del App Store o de Google Play (en el caso de Apple: el contrato de licencia estándar para el usuario final, «EULA»).`,
         ],
       },
       {
@@ -555,11 +555,11 @@ const DOCS_ES: Record<LegalDocId, LegalDoc> = {
       {
         title: "3. El servicio",
         paragraphs: [
-          "Zinzin ofrece juegos de fiesta que se juegan en grupo con un solo móvil, sin conexión. Algunos juegos son gratuitos; los demás, los contenidos 18+ y las novedades están disponibles con la suscripción Zinzin Premium. El catálogo puede cambiar (juegos añadidos, modificados o retirados).",
+          "Zinzin ofrece juegos de fiesta que se juegan en grupo con un solo móvil, sin conexión. Algunos juegos se pueden jugar gratis, en una versión de descubrimiento con contenido limitado; los demás juegos, todo el contenido (incluidos los contenidos 18+) y las novedades están disponibles con la suscripción Zinzin+. El catálogo puede cambiar (juegos añadidos, modificados o retirados).",
         ],
       },
       {
-        title: "4. Suscripción Zinzin Premium",
+        title: "4. Suscripción Zinzin+",
         paragraphs: [
           "Planes disponibles (precios con impuestos incluidos mostrados en la aplicación en el momento de la compra, que pueden variar según el país): Pase fiesta (7 días), Mensual, Anual.",
           "Prueba gratuita: el plan Anual puede ofrecerse con una prueba gratuita de 3 días, reservada a quienes no la hayan disfrutado ya (Apple o Google comprueban la elegibilidad). No se cobra nada durante la prueba; al terminar, se convierte automáticamente en una suscripción anual de pago al precio indicado, salvo que la canceles al menos 24 horas antes del final de la prueba. Si cancelas durante la prueba, conservas el acceso hasta que termine y no se te cobra nada.",

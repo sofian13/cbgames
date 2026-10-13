@@ -92,6 +92,10 @@ type Str = {
   pickCamp: string;
   campTitle: string;
   campSub: string;
+  everyone: string;
+  freeDeck: (n: number) => string;
+  freeDeckSub: string;
+  morePacks: string;
   confirm: (n: number) => string;
   and: string;
   shieldSpared: (names: string, n: number) => string;
@@ -188,11 +192,15 @@ export const STR: I18n<Str> = {
     penaltyIsDare: "Un gage tiré au sort",
     prefHow: "Au « 3-2-1 », tout le monde lève ou baisse la main en même temps.",
     prefLose: "Le camp le moins nombreux prend la peine.",
-    prefTie: "Égalité ou tous pareil : personne ne perd.",
+    prefTie: "Égalité ou tout le monde pareil ? Tout le monde prend la peine !",
     or: "OU",
     pickCamp: "Désigner les perdants",
-    campTitle: "Qui est dans le petit camp ?",
-    campSub: "Touche tous les perdants : même peine pour tout le camp.",
+    campTitle: "Qui prend la peine ?",
+    everyone: "Tout le monde",
+    freeDeck: (n) => `Découverte · ${n} cartes`,
+    freeDeckSub: "Une sélection de cartes soft, prête à jouer.",
+    morePacks: "Tous les packs avec Zinzin+",
+    campSub: "Touche le petit camp. Égalité ou tous pareil ? Tout le monde y passe.",
     confirm: (n) => `Valider (${n})`,
     and: "et",
     shieldSpared: (names, n) => `Bouclier : ${names} y échappe${n > 1 ? "nt" : ""}.`,
@@ -287,11 +295,15 @@ export const STR: I18n<Str> = {
     penaltyIsDare: "A random dare",
     prefHow: "On “3-2-1”, everyone raises or lowers a hand at the same time.",
     prefLose: "The smaller side takes the penalty.",
-    prefTie: "Tie or all the same: nobody loses.",
+    prefTie: "Tie, or everyone the same? Everyone takes the penalty!",
     or: "OR",
     pickCamp: "Pick the losers",
-    campTitle: "Who's on the smaller side?",
-    campSub: "Tap every loser: the whole side gets the same penalty.",
+    campTitle: "Who takes the penalty?",
+    everyone: "Everyone",
+    freeDeck: (n) => `Starter · ${n} cards`,
+    freeDeckSub: "A hand-picked set of soft cards, ready to play.",
+    morePacks: "Every pack with Zinzin+",
+    campSub: "Tap the smaller side. Tie or all the same? Everyone's in.",
     confirm: (n) => `Confirm (${n})`,
     and: "and",
     shieldSpared: (names, n) => `Shield: ${names} ${n > 1 ? "escape" : "escapes"} it.`,
@@ -386,11 +398,15 @@ export const STR: I18n<Str> = {
     penaltyIsDare: "Un reto al azar",
     prefHow: "Al «3, 2, 1», todos suben o bajan la mano a la vez.",
     prefLose: "El grupo con menos gente se lleva el castigo.",
-    prefTie: "Empate o todos igual: nadie pierde.",
+    prefTie: "¿Empate o todos igual? ¡Todo el mundo se lleva el castigo!",
     or: "O",
     pickCamp: "Señalar perdedores",
-    campTitle: "¿Quién está en el grupo pequeño?",
-    campSub: "Toca a todos los perdedores: el mismo castigo para todo el grupo.",
+    campTitle: "¿Quién se lleva el castigo?",
+    everyone: "Todo el mundo",
+    freeDeck: (n) => `Descubrimiento · ${n} cartas`,
+    freeDeckSub: "Una selección de cartas suaves, lista para jugar.",
+    morePacks: "Todos los packs con Zinzin+",
+    campSub: "Toca al grupo pequeño. ¿Empate o todos igual? Le toca a todo el mundo.",
     confirm: (n) => `Confirmar (${n})`,
     and: "y",
     shieldSpared: (names, n) => `Escudo: ${names} se ${n > 1 ? "libran" : "libra"}.`,

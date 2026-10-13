@@ -27,8 +27,10 @@ import {
 import {
   type PicoletteCard, type Pack, type PicoletteType,
   cardsFor, gagesFor, packInfoFor, typeInfoFor,
-  filterDeck, shuffleDeck, splitHint,
+  filterDeck, freeDeck, shuffleDeck, splitHint,
 } from "./cards";
+import { useUnlocked } from "@/lib/entitlements";
+import { LockedPack, PremiumNudge, fmtCount, useNudgeText } from "@/components/games/premium-nudge";
 import { pick, useLang, useT } from "@/lib/i18n";
 import { STR } from "./i18n";
 import { useGameFinished } from "@/lib/game-finished";
@@ -210,7 +212,7 @@ function mixTypes<T extends { type: PicoletteType }>(cards: T[]): T[] {
 }
 
 /** Mélange le paquet et tire les prénoms des cartes ciblées, en répartissant équitablement. */
-function dealDeck(packs: Set<Pack>, nPlayers: number): DealtCard[] {
+function dealDeck(cards: PicoletteCard[], nPlayers: number): DealtCard[] {
   const count = new Array<number>(nPlayers).fill(0);
   const pickLeast = (exclude: number[]) => {
     const pool = Array.from({ length: nPlayers }, (_, i) => i).filter((i) => !exclude.includes(i));
@@ -220,7 +222,7 @@ function dealDeck(packs: Set<Pack>, nPlayers: number): DealtCard[] {
     count[p]++;
     return p;
   };
-  return mixTypes(filterDeck(packs)).map((c) => {
+  return mixTypes(cards).map((c) => {
     const all = `${c.text} ${c.hint ?? ""} ${c.a ?? ""} ${c.b ?? ""}`;
     const who: number[] = [];
     if (all.includes("{p1}") || all.includes("{p2}")) who.push(pickLeast([]));
@@ -309,6 +311,22 @@ export default function PicoletteGame({ onReturnToLobby }: GameProps) {
   const spinRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const card = deck[cardIdx];
+  // App sans Zinzin+ : paquet découverte (60 cartes soft fixes) ; abonné / site : les packs choisis
+  const unlocked = useUnlocked();
+  const lang = useLang();
+  const nudge = useNudgeText();
+  const source = () => (unlocked ? filterDeck(packs) : freeDeck());
+  // Zinzin+ activé en pleine partie : tous les packs arrivent dès la carte suivante (sans relancer)
+  const wasUnlocked = useRef(unlocked);
+  useEffect(() => {
+    if (unlocked && !wasUnlocked.current && phase === "play") {
+      const cur = deck[cardIdx];
+      setDeck([...(cur ? [cur] : []), ...dealDeck(filterDeck(packs), players.length)]);
+      setCardIdx(0);
+    }
+    wasUnlocked.current = unlocked;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [unlocked]);
 
   // Sons du jeu préchargés + nettoyage de la roulette si démonté en plein tirage
   useEffect(() => {
@@ -356,7 +374,7 @@ export default function PicoletteGame({ onReturnToLobby }: GameProps) {
   };
 
   const launch = () => {
-    const d = dealDeck(packs, players.length);
+    const d = dealDeck(source(), players.length);
     if (d.length === 0) return;
     setDeck(d);
     setCardIdx(0);
@@ -384,7 +402,7 @@ export default function PicoletteGame({ onReturnToLobby }: GameProps) {
     const next = cardIdx + 1;
     if (next >= deck.length) {
       // Paquet épuisé : on rebat pour une partie infinie
-      setDeck(dealDeck(packs, players.length));
+      setDeck(dealDeck(source(), players.length));
       setCardIdx(0);
     } else {
       setCardIdx(next);
@@ -396,7 +414,7 @@ export default function PicoletteGame({ onReturnToLobby }: GameProps) {
     setRevealed(false);
     const rest = deck.filter((_, i) => i !== cardIdx);
     if (cardIdx >= rest.length) {
-      setDeck(dealDeck(packs, players.length));
+      setDeck(dealDeck(source(), players.length));
       setCardIdx(0);
     } else {
       setDeck(rest);
@@ -531,7 +549,7 @@ export default function PicoletteGame({ onReturnToLobby }: GameProps) {
     return (
       <>
         <PacksScreen
-          packs={packs} setPacks={setPacks}
+          packs={packs} setPacks={setPacks} unlocked={unlocked}
           penaltyMode={penaltyMode} setPenaltyMode={setPenaltyMode}
           onLaunch={launch} onBack={() => setPhase("setup")}
         />
@@ -723,7 +741,7 @@ export default function PicoletteGame({ onReturnToLobby }: GameProps) {
               onClear={clearRule}
               onReader={() => setPickMode("reader")}
             />
-          ) : isPref && players.length > 2 ? (
+          ) : isPref ? (
             <Push big bg="#FF3EA5" onClick={() => { playSfx("pop", { volume: 0.6 }); setPickMode("camp"); }} className="w-full">
               <Users size={22} strokeWidth={3} aria-hidden /> {tr.pickCamp}
             </Push>
@@ -737,7 +755,7 @@ export default function PicoletteGame({ onReturnToLobby }: GameProps) {
             </Push>
           )}
           <Push bg="#fff" onClick={() => nextCard()} className="w-full">
-            {isJoker ? tr.nextCard : card.type === "rule" ? tr.skipRule : tr.nobodyLoses}
+            {isJoker || isPref ? tr.nextCard : card.type === "rule" ? tr.skipRule : tr.nobodyLoses}
           </Push>
         </div>
 
@@ -838,6 +856,8 @@ export default function PicoletteGame({ onReturnToLobby }: GameProps) {
         </div>
 
         <p className="mt-5 text-center text-[15px] font-semibold" style={{ color: "rgba(255,255,255,0.82)" }}>{tr.overWater}</p>
+        {/* Version découverte : une seule petite bannière, en fin de partie */}
+        {!unlocked && <PremiumNudge style={{ marginTop: 16 }} text={nudge.picolette(fmtCount(cardsFor(lang).length - freeDeck(lang).length, lang))} />}
         <div className="mt-4 flex flex-wrap justify-center gap-3">
           <ShareResultButton card={() => tourneeCard(ranking.map((p) => ({ name: p.name, losses: p.losses, colorIndex: p.i })))} />
           <IdeaButton game={tr.gameName} kind={tr.ideaKind} />
@@ -894,9 +914,10 @@ function JokerAction({
 }
 
 function PacksScreen({
-  packs, setPacks, penaltyMode, setPenaltyMode, onLaunch, onBack,
+  packs, setPacks, unlocked, penaltyMode, setPenaltyMode, onLaunch, onBack,
 }: {
   packs: Set<Pack>;
+  unlocked: boolean;
   setPacks: (s: Set<Pack>) => void;
   penaltyMode: PenaltyMode;
   setPenaltyMode: (p: PenaltyMode) => void;
@@ -913,7 +934,8 @@ function PacksScreen({
   };
   const t = useT(STR);
   const lang = useLang();
-  const total = useMemo(() => filterDeck(packs, lang).length, [packs, lang]);
+  const free = useMemo(() => freeDeck(lang), [lang]);
+  const total = useMemo(() => (unlocked ? filterDeck(packs, lang).length : free.length), [packs, lang, unlocked, free]);
   const packInfo = packInfoFor(lang);
   const allCards = cardsFor(lang);
 
@@ -923,7 +945,42 @@ function PacksScreen({
         <h1 style={{ ...DISPLAY, fontSize: 48, lineHeight: 0.95 }}>{t.packsTitle}</h1>
         <p className="mt-2 text-[16px] font-semibold" style={{ color: "rgba(255,255,255,0.82)" }}>{t.packsSub}</p>
 
-        <div className="mt-5 grid grid-cols-1 gap-3">
+        {!unlocked && (
+          <div className="mt-5 grid grid-cols-1 gap-3">
+            {/* Paquet découverte, toujours le même */}
+            <div className="flex w-full items-center gap-3 rounded-[22px] px-4 py-3.5 text-left" style={{ ...stk(PACK_LOOK.soft.bg, 4), color: inkOn(PACK_LOOK.soft.bg), transform: "rotate(-1deg)" }}>
+              <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full" style={{ ...stk("#fff", 2, 2.5), color: INK }}>
+                <Sparkles size={22} strokeWidth={2.8} aria-hidden />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block" style={{ ...DISPLAY, fontSize: 22, lineHeight: 1.05 }}>{t.freeDeck(free.length)}</span>
+                <span className="mt-0.5 block text-[14px] font-semibold" style={{ opacity: 0.85 }}>{t.freeDeckSub}</span>
+              </span>
+              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full" style={{ background: INK, border: `2.5px solid ${INK}`, color: "#fff" }}>
+                <Check size={18} strokeWidth={3.4} aria-hidden />
+              </span>
+            </div>
+            <p className="mt-2 text-[15px] font-bold" style={{ color: "rgba(255,255,255,0.82)" }}>{t.morePacks}</p>
+            {(Object.keys(packInfo) as Pack[]).map((p) => {
+              const info = packInfo[p];
+              const freeSet = new Set(free.map((c) => c.text));
+              // Aperçu : 2 cartes courtes du pack, hors paquet découverte, sans prénom à remplacer
+              const preview = allCards
+                .filter((c) => c.pack === p && !freeSet.has(c.text) && !c.text.includes("{") && c.text.length <= 60 && c.type !== "prefere")
+                .slice(0, 2)
+                .map((c) => c.text);
+              return (
+                <LockedPack
+                  key={p}
+                  label={`${info.label}${info.adult ? " · 18+" : ""} · ${t.cardsCount(allCards.filter((c) => c.pack === p).length)}`}
+                  preview={preview}
+                />
+              );
+            })}
+          </div>
+        )}
+
+        {unlocked && <div className="mt-5 grid grid-cols-1 gap-3">
           {(Object.keys(packInfo) as Pack[]).map((p, k) => {
             const info = packInfo[p];
             const look = PACK_LOOK[p];
@@ -957,7 +1014,7 @@ function PacksScreen({
               </button>
             );
           })}
-        </div>
+        </div>}
 
         <h2 className="mt-8" style={{ ...DISPLAY, fontSize: 30, lineHeight: 1 }}>{t.penaltyTitle}</h2>
         {/* Mode sans alcool / Soirée Chill : pas de choix, gages seulement */}
@@ -1042,6 +1099,20 @@ function PickerOverlay({
             </button>
           )))}
         </div>
+        {multi && (
+          <>
+            {/* Égalité / tous pareil : tout le monde prend la peine, en un tap */}
+            <button
+              type="button"
+              onClick={() => { playSfx("toggle", { volume: 0.5 }); setSel((prev) => (prev.length === players.length ? [] : players.map((_, i) => i))); }}
+              aria-pressed={sel.length === players.length}
+              className="mt-3 flex min-h-[52px] w-full items-center justify-center gap-2 rounded-[18px] px-3 text-[17px] font-extrabold active:translate-y-[3px]"
+              style={{ ...stk(sel.length === players.length ? "#FF3EA5" : "#fff", 3, 2.5), color: INK }}
+            >
+              <Users size={20} strokeWidth={3} aria-hidden /> {t.everyone}
+            </button>
+          </>
+        )}
         {multi && (
           <Push big bg={ACCENT} onClick={() => onConfirm?.(sel)} disabled={sel.length === 0} className="mt-4 w-full">
             <Check size={22} strokeWidth={3.2} aria-hidden /> {t.confirm(sel.length)}

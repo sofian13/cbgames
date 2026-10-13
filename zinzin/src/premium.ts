@@ -5,7 +5,7 @@ import { TRIAL, UI } from "./strings";
 import { notificationsOn } from "./settings";
 
 /**
- * Abonnement « Zinzin Premium » (tout débloquer).
+ * Abonnement « Zinzin+ » (tout débloquer ; « premium » dans le code).
  * Achats via RevenueCat (App Store / Play Store). Tant que la clé n'est pas
  * configurée (VITE_RC_IOS_KEY / VITE_RC_ANDROID_KEY), on est en mode test :
  * le bouton d'achat débloque localement, pour pouvoir tester l'app.
@@ -22,6 +22,11 @@ function setPremium(v: boolean) {
   localStorage.setItem(KEY, v ? "1" : "0");
   listeners.forEach((l) => l());
   notifyPremiumChanged(); // les jeux (src/) se mettent à jour
+}
+
+/** Lecture ponctuelle (hors React). */
+export function isPremium(): boolean {
+  return premium;
 }
 
 export function usePremium(): boolean {

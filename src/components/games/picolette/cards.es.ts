@@ -4,7 +4,7 @@ import type { Pack, PicoletteCard, PicoletteType } from "./cards";
 
 const V = "3, 2, 1: todos señalan a alguien. El más señalado se lleva el castigo.";
 const T = "Ronda por turnos, sin repetir. El primero que se quede en blanco pierde.";
-const P = "3, 2, 1: mano arriba para la opción de arriba, mano abajo para la de abajo. El grupo minoritario se lleva el castigo.";
+const P = "3, 2, 1: mano arriba para la opción de arriba, mano abajo para la de abajo. El grupo minoritario se lleva el castigo. Empate o todos igual: se lo lleva todo el mundo.";
 const R = "El primero que falle se lleva el castigo.";
 const VAL = "Cada uno repite TODA la lista y añade una cosa. El primero que olvide algo o se equivoque pierde.";
 const TC = "Por turnos, sin repetir. El primero que se quede en blanco (o se lo invente) pierde.";
