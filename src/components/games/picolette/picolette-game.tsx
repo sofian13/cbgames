@@ -578,8 +578,8 @@ export default function PicoletteGame({ onReturnToLobby }: GameProps) {
                 {activeRule.by ? `Par ${activeRule.by} · ` : ""}{ruleLeft}
               </p>
             </div>
-            <button type="button" onClick={() => setPickMode("rule")} className="min-h-11 shrink-0 rounded-full px-3 text-[14px] font-extrabold" style={{ ...stk("#fff", 2, 2.5), color: INK }}>
-              Qqn a craqué
+            <button type="button" onClick={() => setPickMode("rule")} className="min-h-11 shrink-0 rounded-full px-3.5 py-1.5 text-center text-[14px] font-extrabold leading-tight" style={{ ...stk("#fff", 2, 2.5), color: INK }}>
+              Quelqu&apos;un<br />a craqué
             </button>
           </div>
         )}
@@ -612,7 +612,7 @@ export default function PicoletteGame({ onReturnToLobby }: GameProps) {
                 </span>
               )}
             </div>
-            <p className="mt-4 text-center" style={{ ...DISPLAY, fontSize: Math.min(shown.length > 90 ? 25 : shown.length > 55 ? 29 : 33, longName > 13 ? 25 : longName > 10 ? 29 : 33), lineHeight: 1.12, overflowWrap: "break-word" }}>
+            <p className="mt-4 text-center" style={{ ...DISPLAY, fontSize: Math.min(shown.length > 90 ? 25 : shown.length > 55 ? 29 : 33, longName > 13 ? 25 : longName > 10 ? 29 : 33), lineHeight: 1.12, overflowWrap: "break-word", textWrap: "balance" }}>
               <RichText text={card.text} who={card.who} players={players} cardBg={look.bg} />
             </p>
             {dur && (
@@ -747,7 +747,7 @@ export default function PicoletteGame({ onReturnToLobby }: GameProps) {
   return (
     <div className="relative flex min-h-[100svh] flex-col px-5 text-white" style={{ ...PAGE, paddingTop: TOP, paddingBottom: BOTTOM }}>
       <SoundToggle />
-        <ScrollTop dep={phase} />
+      <ScrollTop dep={phase} />
       <ConfettiBurst count={60} />
       <div className="mx-auto flex w-full max-w-md flex-1 flex-col">
         <h1 style={{ ...DISPLAY, fontSize: 48, lineHeight: 0.95 }}>Le palmarès</h1>
@@ -759,7 +759,7 @@ export default function PicoletteGame({ onReturnToLobby }: GameProps) {
           <div className="relative mt-16 rounded-[26px] px-5 pb-4 pt-[52px] text-center" style={{ ...stk(ACCENT, 6), color: INK, transform: "rotate(-2deg)" }}>
             <div className="absolute -top-[62px] left-1/2 -translate-x-1/2"><Mascot size={76} color={colorForIndex(top.i)} mood="rofl" crown arms shadow={false} /></div>
             <p className="text-[15px] font-bold">La star de la soirée</p>
-            <p style={{ ...DISPLAY, fontSize: 40, lineHeight: 1, overflowWrap: "anywhere" }}>{top.name}</p>
+            <p style={{ ...DISPLAY, fontSize: top.name.length > 11 ? 32 : 40, lineHeight: 1, overflowWrap: "anywhere" }}>{top.name}</p>
             <p className="mt-1 text-[15px] font-bold">{top.losses} peine{top.losses > 1 ? "s" : ""}</p>
           </div>
         )}
@@ -767,7 +767,8 @@ export default function PicoletteGame({ onReturnToLobby }: GameProps) {
         <div className="mt-5 space-y-2.5">
           {ranking.slice(1).map((p, k) => (
             <div key={p.i} className="flex items-center gap-3 rounded-[18px] px-3.5" style={{ ...stk("#fff", 3, 2.5), color: INK, minHeight: 54, transform: `rotate(${k % 2 ? 0.8 : -0.8}deg)` }}>
-              <span className="w-7 text-[18px]" style={DISPLAY}>{k + 2}</span>
+              {/* Ex aequo = même rang */}
+              <span className="w-7 text-[18px]" style={DISPLAY}>{1 + ranking.filter((x) => x.losses > p.losses).length}</span>
               <MascotAvatar color={colorForIndex(p.i)} size={32} mood="happy" />
               <span className="min-w-0 flex-1 truncate text-[17px] font-bold">{p.name}</span>
               <span className="text-[15px] font-bold">{p.losses} peine{p.losses > 1 ? "s" : ""}</span>
@@ -878,7 +879,7 @@ function PacksScreen({
                     {info.label}
                     {info.adult && <span className="rounded-full px-2 py-0.5 text-[13px]" style={{ background: INK, color: "#fff", fontFamily: "inherit", letterSpacing: 0 }}>18+</span>}
                   </span>
-                  <span className="mt-0.5 block text-[14px] font-semibold" style={{ opacity: 0.85 }}>{info.sub.replace(/^18\+ · /, "")} · {count} cartes</span>
+                  <span className="mt-0.5 block text-[14px] font-semibold" style={{ opacity: 0.85 }}>{info.sub.replace(/^18\+ · (.)/, (_m, c: string) => c.toUpperCase())}{"\u00A0"}· {count}{"\u00A0"}cartes</span>
                 </span>
                 <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full" style={{ background: active ? INK : "transparent", border: `2.5px solid ${active ? INK : "rgba(255,255,255,0.5)"}`, color: "#fff" }}>
                   {active && <Check size={18} strokeWidth={3.4} aria-hidden />}
@@ -951,7 +952,7 @@ function PickerOverlay({
               style={{ ...stk("#fff", 3, 2.5), color: INK }}
             >
               <MascotAvatar color={colorForIndex(i)} size={34} mood={mood} />
-              <span className="min-w-0 flex-1 truncate text-[17px] font-bold">{name}</span>
+              <span className="line-clamp-2 min-w-0 flex-1 text-[16px] font-bold leading-tight" style={{ overflowWrap: "anywhere" }}>{name}</span>
               {shields[i] && <Shield size={20} strokeWidth={2.8} aria-label="Bouclier" />}
             </button>
           )))}

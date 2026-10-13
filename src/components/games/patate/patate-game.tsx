@@ -28,8 +28,8 @@ const RULES = [
   "Asseyez-vous en cercle, dans l'ordre des prénoms.",
   "Une catégorie s'affiche : dis UNE réponse à voix haute.",
   "Tape « J'ai répondu » et passe le tél au voisin. Pas de répétition !",
-  "La mèche est cachée et le tic-tac accélère. BOUM = celui qui tient le tél a perdu.",
-  "Le perdant fait un gage (ou 1 à 3 gorgées, eau OK).",
+  "La mèche est cachée et le tic\u2011tac accélère. BOUM = celui qui tient le tél a perdu.",
+  "Le perdant fait un gage (ou 1\u00a0à\u00a03\u00a0gorgées, eau\u00a0OK).",
 ];
 
 type Phase = "setup" | "config" | "ready" | "play" | "boom" | "end";
@@ -49,6 +49,11 @@ interface Run {
 
 // Typage de l'API iOS (absente des types DOM standard)
 type MotionCtor = { requestPermission?: () => Promise<"granted" | "denied"> };
+
+/** Taille d'un gros prénom : réduite pour les prénoms longs (évite « Jean- / Christophe »). */
+function fitName(name: string, base: string, vw: number): string {
+  return `min(${base}, max(24px, ${(vw / (Math.max(name.length, 1) * 0.6)).toFixed(2)}vw))`;
+}
 
 export default function PatateGame({ onReturnToLobby }: GameProps) {
   const [phase, setPhase] = useState<Phase>("setup");
@@ -360,8 +365,8 @@ export default function PatateGame({ onReturnToLobby }: GameProps) {
           <Mascot size={92} color={colorForIndex(holder)} mood="shifty" arms shadow={false} />
         </div>
         <h1
-          className="max-w-full px-6 pb-2 pt-6 text-center text-[clamp(36px,11vw,54px)] leading-none"
-          style={{ ...sticker(pal.body, { radius: 24, shadow: 5, color: pal.body === "#7A4EE8" ? "#fff" : INK }), ...DISPLAY, transform: "rotate(-2deg)", overflowWrap: "anywhere" }}
+          className="max-w-full px-6 pb-2 pt-6 text-center leading-none"
+          style={{ ...sticker(pal.body, { radius: 24, shadow: 5, color: pal.body === "#7A4EE8" ? "#fff" : INK }), ...DISPLAY, fontSize: fitName(players[holder], "clamp(36px,11vw,54px)", 76), transform: "rotate(-2deg)", overflowWrap: "anywhere" }}
         >
           {players[holder]}
         </h1>
@@ -378,8 +383,8 @@ export default function PatateGame({ onReturnToLobby }: GameProps) {
         <button
           type="button"
           onClick={light}
-          className="zk-push mt-6 flex h-40 w-40 shrink-0 flex-col items-center justify-center rounded-full"
-          style={{ ...sticker(C.yellow, { radius: 999, shadow: 7, border: 3.5 }), ...DISPLAY, animation: "patate-pulse 1.4s ease-in-out infinite" }}
+          className="zk-push mt-6 flex shrink-0 flex-col items-center justify-center rounded-full"
+          style={{ ...sticker(C.yellow, { radius: 999, shadow: 7, border: 3.5 }), ...DISPLAY, width: "max(132px, min(160px, 21dvh))", height: "max(132px, min(160px, 21dvh))", animation: "patate-pulse 1.4s ease-in-out infinite" }}
         >
           <Flame size={44} strokeWidth={2.6} aria-hidden />
           <span className="mt-1 text-[21px] leading-[1.05]">Allumer<br />la mèche</span>
@@ -441,7 +446,7 @@ export default function PatateGame({ onReturnToLobby }: GameProps) {
             </div>
           )}
           <p className="mt-3 flex items-center gap-2 text-[24px] leading-none" style={DISPLAY}>
-            <NameTag bg={pal.body} style={{ color: pal.body === "#7A4EE8" ? "#fff" : INK, maxWidth: 200 }}>{players[holder]}</NameTag>
+            <NameTag bg={pal.body} style={{ color: pal.body === "#7A4EE8" ? "#fff" : INK, maxWidth: "calc(100vw - 130px)" }}>{players[holder]}</NameTag>
             <span>l&apos;a !</span>
           </p>
         </div>
@@ -490,7 +495,7 @@ export default function PatateGame({ onReturnToLobby }: GameProps) {
             className="max-w-full px-5 pb-2 pt-5 text-center"
             style={{ ...sticker(pal.body, { radius: 22, shadow: 5, color: pal.body === "#7A4EE8" ? "#fff" : INK }), transform: "rotate(-2deg)" }}
           >
-            <p className="text-[clamp(32px,10vw,46px)] leading-none" style={{ ...DISPLAY, overflowWrap: "anywhere" }}>{players[boom.loser]}</p>
+            <p className="leading-none" style={{ ...DISPLAY, fontSize: fitName(players[boom.loser], "clamp(32px,10vw,46px)", 78), overflowWrap: "anywhere" }}>{players[boom.loser]}</p>
           </div>
           <p className="mt-3 text-[20px]" style={{ ...DISPLAY, color: INK }}>tenait la patate !</p>
 
@@ -554,7 +559,7 @@ export default function PatateGame({ onReturnToLobby }: GameProps) {
         <Mascot size={110} color={colorForIndex(worst?.i ?? 0)} mood={hasLoser ? "rofl" : "cool"} crown />
         <PotatoBlob size={70} face="smug" style={{ marginLeft: -18 }} />
       </div>
-      <h1 className="mt-2 max-w-full text-center text-[clamp(40px,12vw,56px)] leading-[0.95]" style={{ ...DISPLAY, textShadow: `4px 4px 0 ${INK}`, overflowWrap: "anywhere" }}>
+      <h1 className="mt-2 max-w-full text-center leading-[0.95]" style={{ ...DISPLAY, fontSize: fitName(hasLoser ? worst.name : "Personne", "clamp(40px,12vw,56px)", 88), textShadow: `4px 4px 0 ${INK}`, overflowWrap: "anywhere" }}>
         {hasLoser ? worst.name : "Personne"}
       </h1>
       <p className="mt-2 text-center text-[19px] leading-tight" style={{ ...DISPLAY, color: C.yellow }}>

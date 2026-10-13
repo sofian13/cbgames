@@ -488,7 +488,9 @@ export default function TgvGame({ onReturnToLobby }: GameProps) {
           </div>
           <Train total={numPiles} pileIdx={pileIdx} cleared={verdict === "win" && revealed ? pileIdx + 1 : pileIdx} />
           <p className="mt-3 text-center text-[15px] font-bold" style={{ color: isLast ? "#FFD23F" : "rgba(255,255,255,0.85)" }}>
-            {isLast ? <><GameInlineIcon icon={Siren} /> Dernier wagon !</> : `Wagon ${pileIdx + 1} sur ${numPiles}`} · en jeu : {sipsAtStake} gorgée{sipsAtStake > 1 ? "s" : ""} ou un gage
+            {isLast ? <><GameInlineIcon icon={Siren} /> Dernier wagon !</> : `Wagon ${pileIdx + 1} sur ${numPiles}`}
+            {/* « en jeu… » reste d'un bloc : pas de « un gage » orphelin à la ligne */}
+            {isLast ? <br /> : " · "}<span className="whitespace-nowrap">en jeu : {sipsAtStake} gorgée{sipsAtStake > 1 ? "s" : ""} ou un gage</span>
           </p>
 
           <div className="flex flex-1 items-center justify-center gap-4 py-4" style={{ perspective: 800 }}>
@@ -542,7 +544,7 @@ export default function TgvGame({ onReturnToLobby }: GameProps) {
         <style>{KEYFRAMES}</style>
         <ConfettiBurst count={80} />
         <h1 className="text-center" style={{ ...DISPLAY, fontSize: 46, lineHeight: 0.95 }}>Arrivé en gare&nbsp;!</h1>
-        <div className="relative mt-16 rounded-[26px] px-5 pb-5 pt-[60px] text-center" style={{ ...stk("#FFD23F", 6), color: INK, transform: "rotate(-2deg)", animation: "tgv-pop .5s ease-out" }}>
+        <div className="relative mt-16 rounded-[26px] px-5 pb-5 pt-[72px] text-center" style={{ ...stk("#FFD23F", 6), color: INK, transform: "rotate(-2deg)", animation: "tgv-pop .5s ease-out" }}>
           <div className="absolute -top-16 left-1/2 -translate-x-1/2"><Mascot size={96} color={colorForIndex(currentIdx)} mood="laughing" cheering crown shadow={false} /></div>
           <p style={{ ...DISPLAY, fontSize: nameSize(currentName, 40), lineHeight: 1, overflowWrap: "anywhere" }}>{currentName}</p>
           <p className="mt-2 text-[16px] font-semibold leading-snug">Tous les wagons d&apos;un coup&nbsp;! Tu distribues 2 gorgées (ou un gage) à qui tu veux.</p>

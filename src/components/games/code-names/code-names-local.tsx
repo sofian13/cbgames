@@ -512,7 +512,7 @@ export default function MotsEspionsLocal({ onReturnToLobby }: GameProps) {
           <div className="flex items-center gap-3 rounded-[24px] py-2 pl-2 pr-4" style={{ ...stk(TEAM[game.winner].main, 5, 3), color: "#fff", rotate: "-1.5deg" }}>
             <Mascot size={62} color={TEAM[game.winner].mascot} mood={game.reason === "bomb" ? "cool" : "laughing"} cheering arms shadow={false} />
             <div className="min-w-0 flex-1">
-              <p className="text-[15px] font-bold leading-tight">Victoire de</p>
+              <p className="text-[15px] font-bold leading-tight">Victoire pour</p>
               <p className="text-[28px] leading-[1.02]" style={{ ...DISPLAY, overflowWrap: "anywhere" }}>
                 {names[game.winner]}
               </p>
@@ -666,7 +666,7 @@ function Counter({ team, name, left, active }: { team: Team; name: string; left:
       style={{
         ...stk(t.main, active ? 4 : 2),
         color: t.ink,
-                rotate: active ? (team === "red" ? "-2deg" : "2deg") : "0deg",
+        rotate: active ? (team === "red" ? "-2deg" : "2deg") : "0deg",
         transition: "rotate 0.3s ease",
       }}
       aria-label={`${name} : ${left} mot${left > 1 ? "s" : ""} à trouver`}
@@ -674,7 +674,11 @@ function Counter({ team, name, left, active }: { team: Team; name: string; left:
       <span className="tabular-nums" style={{ ...DISPLAY, fontSize: 30, lineHeight: 1 }}>
         {left}
       </span>
-      <span className="min-w-0 text-[13px] font-bold leading-tight" style={{ overflowWrap: "anywhere" }}>
+      <span
+        className="min-w-0 text-[13px] font-bold leading-tight"
+        lang="fr"
+        style={{ hyphens: "auto", WebkitHyphens: "auto", overflowWrap: "anywhere", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}
+      >
         {name}
       </span>
     </div>
@@ -715,7 +719,7 @@ function WordCard({
   onTap: () => void;
 }) {
   const flipped = card.revealed || showAll;
-    const ghost = showAll && !card.revealed;
+  const ghost = showAll && !card.revealed;
   const tile: CSSProperties = { border: `2.5px solid ${INK}`, borderRadius: 14, backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden" };
   return (
     <button
@@ -925,7 +929,7 @@ function ClueSheet({
       <p className="pr-14 text-[28px] leading-[1.02]" style={DISPLAY}>
         L&apos;indice du chef
       </p>
-      <p className="mt-1.5 text-[15px] font-semibold leading-snug" style={{ color: "#4A3A66" }}>
+      <p className="mt-1.5 pr-12 text-[15px] font-semibold leading-snug" style={{ color: "#4A3A66" }}>
         Facultatif : le chef le dit à voix haute, ça sert juste de pense-bête.
       </p>
       <input

@@ -436,7 +436,10 @@ function TopTenLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) {
   return (
     <ZScreen bg={TT_COLOR}>
       <ConfettiBurst count={50} />
-      <ZTitle size={(ranking[0]?.name.length ?? 0) > 10 ? 32 : 40} className="text-center">{ranking[0]?.name} a le meilleur flair</ZTitle>
+      {/* Ex æquo en tête : pas de « X a le meilleur flair » arbitraire */}
+      <ZTitle size={(ranking[0]?.name.length ?? 0) > 10 ? 32 : 40} className="text-center">
+        {ranking.length > 1 && ranking[1].score === ranking[0]?.score ? "Égalité au sommet !" : `${ranking[0]?.name} a le meilleur flair`}
+      </ZTitle>
       <div className="mt-6"><ZRanking rows={ranking} /></div>
       <div className="min-h-8 flex-1" />
       <ZButton bg="#FFD23F" onClick={() => { setPhase("target"); }}>Rejouer</ZButton>
@@ -454,7 +457,7 @@ function RoundChips({ round, total, range }: { round: number; total: number; ran
   return (
     <div className="flex flex-wrap items-center gap-2">
       <ZChip bg="#fff" tilt={-2}>Manche {round}/{total}</ZChip>
-      <ZChip bg={GAME_INK} tilt={2}>De 1 à {range}</ZChip>
+      <ZChip bg="#FFD23F" tilt={2}>De 1 à {range}</ZChip>
     </div>
   );
 }
@@ -834,7 +837,7 @@ function RangePicker({
           <ZTitle size={30}>Les thèmes</ZTitle>
           <div className="mt-3 grid grid-cols-2 gap-3">
             {PACKS.map((o, i) => (
-              <ZChoice key={o.v} active={o.v === pack} color={o.color} onClick={() => onPickPack(o.v)} tilt={i ? 1.5 : -1.5} className="min-h-[124px]">
+              <ZChoice key={o.v} active={o.v === pack} color={o.color} onClick={() => onPickPack(o.v)} tilt={i ? 1.5 : -1.5} className="flex min-h-[124px] flex-col items-start justify-start">
                 <GameIconBadge icon={o.icon} bg={o.v === pack ? "#fff" : o.color} size={40} />
                 <p className="mt-2 text-[20px] leading-none" style={DISPLAY}>{o.label}</p>
                 <p className="mt-1 text-[14px] font-semibold leading-tight">{o.sub}</p>
@@ -846,7 +849,7 @@ function RangePicker({
       <ZTitle size={30} className="mt-8">Les numéros vont jusqu&apos;à</ZTitle>
       <div className="mt-3 grid grid-cols-3 gap-3">
         {OPTIONS.map((o, i) => (
-          <ZChoice key={o.v} active={o.v === range} color={o.color} onClick={() => onPick(o.v)} tilt={i === 1 ? 2 : -2} className="text-center">
+          <ZChoice key={o.v} active={o.v === range} color={o.color} onClick={() => onPick(o.v)} tilt={i === 1 ? 2 : -2} style={{ textAlign: "center" }}>
             <p className="text-[38px] leading-none" style={DISPLAY}>{o.v}</p>
             <p className="mt-1 text-[14px] font-bold">{o.label}</p>
           </ZChoice>
@@ -867,21 +870,26 @@ function RangePicker({
   );
 }
 
+/** « 1 500 € » ne doit pas se couper entre les chiffres (ni avant €/%). */
+function nbNum(t?: string) {
+  return t?.replace(/(\d) (?=\d{3}\b|€|%)/g, "$1\u00A0");
+}
+
 function ThemeCard({ theme, range = 10, pack = "adult" }: { theme: ThemeState | null; range?: number; pack?: Pack }) {
   return (
     <div className="w-full">
       <ZCard bg="#fff" tilt={-1.5} shadow={6} radius={26} className="px-5 pb-5 pt-4">
         <ZChip bg={pack === "adult" ? "#FF3EA5" : "#4ECDC4"} tilt={-3} className="-mt-8 mb-2">{PACK_LABEL[pack]}</ZChip>
-        <ZTitle size={theme && theme.theme.length > 60 ? 26 : 31} as="p" style={{ lineHeight: 1.05 }}>{theme?.theme}</ZTitle>
+        <ZTitle size={theme && theme.theme.length > 60 ? 26 : 31} as="p" style={{ lineHeight: 1.05, textWrap: "pretty" }}>{nbNum(theme?.theme)}</ZTitle>
       </ZCard>
       <div className="mt-4 grid grid-cols-2 gap-3">
         <ZCard bg="#3DDC97" tilt={1.5} shadow={4} radius={20} className="px-3 pb-3 pt-2">
           <p className="text-[30px] leading-none" style={DISPLAY}>1</p>
-          <p className="mt-1 text-[14px] font-semibold leading-snug">{theme?.low}</p>
+          <p className="mt-1 text-[14px] font-semibold leading-snug">{nbNum(theme?.low)}</p>
         </ZCard>
         <ZCard bg="#FFD23F" tilt={-1.5} shadow={4} radius={20} className="px-3 pb-3 pt-2 text-right">
           <p className="text-[30px] leading-none" style={DISPLAY}>{range}</p>
-          <p className="mt-1 text-[14px] font-semibold leading-snug">{theme?.high}</p>
+          <p className="mt-1 text-[14px] font-semibold leading-snug">{nbNum(theme?.high)}</p>
         </ZCard>
       </div>
     </div>
@@ -899,7 +907,7 @@ function NumberCard({ myNumber, range = 10, pack = "adult" }: { myNumber: number
       >
         <span style={{ ...DISPLAY, fontSize: myNumber != null && myNumber >= 10 ? 104 : 124, lineHeight: 1 }}>{myNumber ?? "?"}</span>
       </div>
-      <ZChip bg="#fff" tilt={3} className="mt-6">
+      <ZChip bg="#fff" tilt={3} className="mt-6" style={{ alignSelf: "center" }}>
         sur {range} · {myNumber != null && hot > 0.5 ? SCALE[pack].highFull : SCALE[pack].lowFull}
       </ZChip>
       <p className="mt-5 max-w-xs text-center text-[16px] font-semibold leading-snug" style={{ color: "rgba(255,255,255,0.9)" }}>
@@ -1043,7 +1051,8 @@ function OrderingBoard({
               </div>
               <span className="w-6 shrink-0 text-center text-[18px]" style={DISPLAY}>{i + 1}</span>
               {colorOf && <Mascot size={30} color={colorForIndex(colorOf(id))} mood="happy" shadow={false} bob={false} />}
-              <span className="min-w-0 flex-1 truncate text-[18px]" style={DISPLAY}>
+              {/* Prénom long : plus petit et sur 2 lignes (coupure au trait d'union) plutôt que « Jean-Chri… » */}
+              <span className={`min-w-0 flex-1 ${nameOf(id).length > 10 ? "line-clamp-2 text-[15px] leading-[1.05]" : "truncate text-[18px]"}`} style={DISPLAY}>
                 {nameOf(id)}{isMe && " (toi)"}
               </span>
               <GameIconButton icon={ArrowUp} label={`Monter ${nameOf(id)}`} onClick={() => move(id, -1)} disabled={i === 0 || submitted} bg="#3DDC97" />

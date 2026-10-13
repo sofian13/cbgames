@@ -66,7 +66,7 @@ function OptionCard({
       </button>
       <div className="flex items-center justify-between gap-2 px-4 pb-3.5">
         {revealed ? (
-          <span style={{ ...DISPLAY, fontSize: 34, lineHeight: 1 }}>{pct}%</span>
+          <span style={{ ...DISPLAY, fontSize: 34, lineHeight: 1 }}>{pct}{"\u00A0"}%</span>
         ) : (
           <span className="inline-flex items-center gap-1.5 text-[16px] font-bold">
             <Hand size={18} strokeWidth={2.6} aria-hidden /> {count} main{count > 1 ? "s" : ""}
@@ -143,7 +143,7 @@ export default function TuPrefereGame({ onReturnToLobby }: GameProps) {
                 style={{ background: pk.color, color: inkOn(pk.color), border: `3px solid ${GAME_INK}`, rotate: `${i % 2 ? 1.5 : -1.5}deg` }}>
                 <GameIconBadge icon={pk.icon} bg="#fff" size={40} />
                 <span className="mt-1 text-[22px] leading-none" style={DISPLAY}>{pk.label}</span>
-                <span className="text-[14px] font-semibold leading-tight">{pk.tag} · {pk.list.length}</span>
+                <span className="text-[14px] font-semibold leading-tight">{pk.tag}{"\u00A0·\u00A0"}{pk.list.length}</span>
               </button>
             );
           })}

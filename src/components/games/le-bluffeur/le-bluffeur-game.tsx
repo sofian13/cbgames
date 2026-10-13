@@ -283,7 +283,7 @@ function LeBluffeurLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) 
           <p className="mt-2 break-words" style={{ ...DISPLAY, fontSize: 34, lineHeight: 1 }}>{q?.answer}</p>
           {finders.length > 0 && <p className="mt-3 text-[15px] font-bold">Trouvée par <NameList names={finders as string[]} /> · +30</p>}
           {wroteTruth.some(Boolean) && (
-            <p className="mt-1 text-[15px] font-bold"><GameInlineIcon icon={Target} /> Écrite pile par {players.filter((_, i) => wroteTruth[i]).join(", ")} · +15</p>
+            <p className="mt-1 text-[15px] font-bold"><GameInlineIcon icon={Target} /> Écrite pile par <NameList names={players.filter((_, i) => wroteTruth[i])} /> · +15</p>
           )}
         </ZCard>
         {bluffs.length > 0 && <ZTitle size={28} className="mt-8">Les bluffs</ZTitle>}

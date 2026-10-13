@@ -10,7 +10,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, use
 import type { GameProps } from "@/lib/games/types";
 import { Mascot, MascotAvatar } from "@/components/Mascot";
 import { ConfettiBurst } from "@/components/ConfettiBurst";
-import { PassScreen, PlayersSetup, colorForIndex } from "@/components/games/local-kit";
+import { PassScreen, PlayersSetup, colorForIndex, useScrollTopOn } from "@/components/games/local-kit";
 import {
   MAX_PLAYERS, MIN_PLAYERS, ROLES, SPECIALS,
   applyDeaths, checkWinner, compositionProblem, deal, nightKills, recommended, villagersCount,
@@ -20,7 +20,7 @@ import { Ambience, lgSfx, preloadLgSfx, speak, speechAvailable, stopSpeech } fro
 import { isSfxMuted, setSfxMuted, subscribeSfxMuted } from "@/lib/sfx";
 import { IdeaButton } from "@/components/games/idea-button";
 import { NightRunner, type NightResult } from "./lg-local-night";
-import { Check, Minus, Crosshair, EyeOff, Fingerprint, Hand, Info, Moon, Music, Pause, Play, Plus, RotateCcw, Scale, ScrollText, Shuffle, SkipForward, Sparkles, Speech, Volume2, VolumeX, Vote, ArrowLeft } from "lucide-react";
+import { Check, Minus, Crosshair, Eye, EyeOff, FlaskConical, Handshake, Heart, HeartCrack, PawPrint, Shield, Skull, Fingerprint, Hand, Info, Moon, Music, Pause, Play, Plus, RotateCcw, Scale, ScrollText, Shuffle, SkipForward, Sparkles, Speech, Volume2, VolumeX, Vote, ArrowLeft } from "lucide-react";
 import { GameIconBadge, GameIconButton, GameInlineIcon, GameTopRight } from "@/components/games/game-icon-button";
 import {
   BigButton, Confirm, CORAL, DISPLAY, INK, MINT, Modal, PickList, PlayerRow, RoleCard, RulesContent, Screen, SectionTitle, SkyBadge, Tag, Title, YELLOW, stk, type Tone,
@@ -93,6 +93,8 @@ export default function LoupGarouLocal({ onReturnToLobby }: GameProps) {
   const [game, setGame] = useState<GameState | null>(null);
   const [phase, setPhase] = useState<Phase>({ k: "players" });
   const [modal, setModal] = useState<null | "rules" | "history" | "sound">(null);
+  // Chaque nouvel écran s'ouvre en haut (l'app garde le défilement entre deux écrans)
+  useScrollTopOn(`${phase.k}-${"i" in phase ? phase.i : ""}-${"reveal" in phase ? phase.reveal : ""}-${game?.history.length ?? 0}`);
 
   const ambience = useMemo(() => new Ambience(), []);
   const wakeLock = useRef<{ release: () => Promise<void> } | null>(null);
@@ -256,7 +258,7 @@ export default function LoupGarouLocal({ onReturnToLobby }: GameProps) {
         toName={p.name}
         colorIndex={p.id}
         accent={ACCENT}
-        hint="Les autres, regardez ailleurs 👀"
+        hint="Les autres, regardez ailleurs."
         buttonLabel="C'est moi — voir ma carte"
         onReady={() => setPhase({ k: "deal", i: phase.i, reveal: true })}
       />
@@ -534,11 +536,11 @@ function RolesSetup({
         <Tag bg={CORAL} tilt={2}>{comp.loup} loup{comp.loup > 1 ? "s" : ""} contre {n - comp.loup}</Tag>
       </div>
 
-      <div className="mt-6 grid gap-3">
-        {/* Loups : compteur */}
-        <div className="flex items-center gap-3 rounded-[22px] px-3 py-2" style={{ ...stk(ROLES.loup.accent, 4, 3), color: INK, minHeight: 66, transform: "rotate(-1deg)" }}>
+      <div className="mt-6 grid grid-cols-[minmax(0,1fr)] gap-3">
+        {/* Loups : compteur (gap réduit : tient en 375 px sans déborder) */}
+        <div className="flex items-center gap-2 rounded-[22px] px-3 py-2" style={{ ...stk(ROLES.loup.accent, 4, 3), color: INK, minHeight: 66, transform: "rotate(-1deg)" }}>
           <MascotAvatar color="coral" mood="angry" size={42} border={false} />
-          <span className="flex-1 whitespace-nowrap" style={{ ...DISPLAY, fontSize: 20, letterSpacing: "-0.01em" }}>Loups-garous</span>
+          <span className="ml-1 min-w-0 flex-1 truncate" style={{ ...DISPLAY, fontSize: 20, letterSpacing: "-0.01em" }}>Les loups</span>
           <GameIconButton icon={Minus} label="Moins de loups" onClick={() => setComp({ ...comp, loup: Math.max(1, comp.loup - 1) })} />
           <span className="w-7 text-center" style={{ ...DISPLAY, fontSize: 30 }}>{comp.loup}</span>
           <GameIconButton icon={Plus} label="Plus de loups" bg={INK} color="#fff" onClick={() => setComp({ ...comp, loup: Math.min(maxWolves, comp.loup + 1) })} />
@@ -625,10 +627,10 @@ function HoldReveal({ player, last, onDone }: { player: Player; last: boolean; o
   return (
     <Screen tone="dusk">
       <p className="text-center text-[17px] font-semibold" style={{ color: "rgba(255,255,255,0.8)" }}>La carte secrète de</p>
-      <Title size={48} className="mt-1 text-center">{player.name}</Title>
+      <Title size={player.name.length > 10 ? 38 : 48} className="mt-1 text-center">{player.name}</Title>
 
       <div
-        className="mt-6 select-none"
+        className="mt-5 select-none"
         style={{ touchAction: "none", WebkitTouchCallout: "none" } as React.CSSProperties}
         onPointerDown={down}
         onPointerUp={up}
@@ -644,7 +646,7 @@ function HoldReveal({ player, last, onDone }: { player: Player; last: boolean; o
             className="flex flex-col items-center justify-center rounded-[28px] text-center"
             style={{
               ...stk("#7A4EE8", 6, 3),
-              minHeight: 380,
+              minHeight: "min(380px, 50dvh)",
               transform: "rotate(1.5deg)",
               backgroundImage: "repeating-linear-gradient(45deg, rgba(255,255,255,0.10) 0 14px, transparent 14px 28px)",
             }}
@@ -1006,6 +1008,27 @@ function EndScreen({
 }
 
 // ── Historique (pour le meneur / la fin de partie) ───────
+/** Pastille d'icône (DA sticker) à la place des emojis stockés en tête des lignes d'historique. */
+const LOG_ICONS: { e: string; icon: typeof Eye; bg: string }[] = [
+  { e: "🐺", icon: PawPrint, bg: CORAL }, { e: "☠️", icon: Skull, bg: "#B5A1FF" }, { e: "🗳️", icon: Vote, bg: "#FFF6E5" },
+  { e: "🎯", icon: Crosshair, bg: YELLOW }, { e: "💔", icon: HeartCrack, bg: "#FF3EA5" }, { e: "💘", icon: Heart, bg: "#FF3EA5" },
+  { e: "🛡️", icon: Shield, bg: "#4ECDC4" }, { e: "🔮", icon: Eye, bg: "#B5A1FF" }, { e: "🧪", icon: FlaskConical, bg: "#FF3EA5" },
+  { e: "🤝", icon: Handshake, bg: MINT },
+];
+function HistoryLine({ line }: { line: string }) {
+  const m = LOG_ICONS.find((x) => line.startsWith(x.e));
+  const text = m ? line.slice(m.e.length).trimStart() : line;
+  const Icon = m?.icon ?? Check;
+  return (
+    <li className="flex items-start gap-2.5">
+      <span className="mt-[0px] grid h-[26px] w-[26px] shrink-0 place-items-center rounded-full" style={{ background: m?.bg ?? "#fff", border: `2px solid ${INK}`, color: INK }}>
+        <Icon size={14} strokeWidth={2.5} aria-hidden />
+      </span>
+      <span className="min-w-0 flex-1">{text}</span>
+    </li>
+  );
+}
+
 function HistoryModal({ game, spoilerFree, onClose }: { game: GameState; spoilerFree: boolean; onClose: () => void }) {
   const [unlocked, setUnlocked] = useState(spoilerFree);
   return (
@@ -1028,7 +1051,7 @@ function HistoryModal({ game, spoilerFree, onClose }: { game: GameState; spoiler
             <div key={i}>
               <SectionTitle className="mb-1.5">{h.title}</SectionTitle>
               <ul className="space-y-1 text-[16px] font-medium leading-snug">
-                {h.lines.map((l, j) => <li key={j}>{l}</li>)}
+                {h.lines.map((l, j) => <HistoryLine key={j} line={l} />)}
               </ul>
             </div>
           ))}

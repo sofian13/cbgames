@@ -317,6 +317,8 @@ export default function GuessWordGame({ onReturnToLobby }: GameProps) {
     const urgent = timeLeft <= 10;
     const found = results.filter((r) => r.ok).length;
     const long = word.length > 14;
+    // le mot le plus long doit tenir sur une ligne (pas de « Antarc-tique »)
+    const longestWord = Math.max(1, ...word.split(/\s+/).map((w) => w.length));
     return (
       <div className="relative flex min-h-[100dvh] shrink-0 select-none flex-col overflow-hidden" style={{ ...dotted(urgent ? "#5E1640" : C.night), color: "#fff", touchAction: "manipulation", transition: "background-color .5s" }}>
         <KitStyles />
@@ -359,7 +361,7 @@ export default function GuessWordGame({ onReturnToLobby }: GameProps) {
           <div key={wordIdx + deck.length} className="max-w-full px-5 py-4 text-center" style={{ ...sticker(C.cream, { radius: 26, shadow: 6 }), transform: "rotate(-2deg)", animation: "gw-pop .25s ease-out" }}>
             <h2
               lang="fr"
-              style={{ ...DISPLAY, fontSize: long ? "min(10vw, 3rem)" : "min(14vw, 4.2rem)", lineHeight: 1.02, overflowWrap: "anywhere", hyphens: "auto" }}
+              style={{ ...DISPLAY, fontSize: `min(${long ? "10vw, 3rem" : "14vw, 4.2rem"}, ${(130 / longestWord).toFixed(1)}vw)`, lineHeight: 1.02, overflowWrap: "anywhere", hyphens: "auto" }}
             >
               {word}
             </h2>
@@ -397,7 +399,7 @@ export default function GuessWordGame({ onReturnToLobby }: GameProps) {
         <Standings players={players} scores={scores} />
         <div className="mt-auto flex w-full flex-col items-center pt-7">
           <StickerBtn big bg={ACCENT} onClick={nextTurn}>
-            {last ? "Classement final" : `Au tour de ${players[(turn + 1) % players.length]}`}
+            {last ? "Classement final" : `Au tour ${deOf(players[(turn + 1) % players.length])}`}
           </StickerBtn>
           {!last && (
             <SoftLink
@@ -446,6 +448,11 @@ export default function GuessWordGame({ onReturnToLobby }: GameProps) {
       </div>
     </StickerScreen>
   );
+}
+
+/** « de Léa » / « d'Al » (élision devant une voyelle). */
+function deOf(name: string): string {
+  return /^[aeiouyàâäéèêëîïôöùûü]/i.test(name) ? `d'${name}` : `de ${name}`;
 }
 
 function Standings({ players, scores, big }: { players: string[]; scores: number[]; big?: boolean }) {

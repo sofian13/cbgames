@@ -56,7 +56,8 @@ export function GameSheet({
                 {playersLabel(game.players)}
               </span>
               {/* Blob géant qui déborde sous l'en-tête */}
-              <div className="absolute -right-4" style={{ bottom: -58 }}>
+              {/* Calé contre le bord sans couper le costume (le nez de Pinocchio s'allonge vers la droite) */}
+              <div className="absolute" style={{ bottom: -58, right: game.costume === "pinocchio" ? 18 : -4 }}>
                 <ZBlob size={178} color={game.color} mood={game.mood} seed={4} speed={2.2} shadow={false} outline costume={game.costume} />
               </div>
             </div>
@@ -98,7 +99,8 @@ export function GameSheet({
                     onClick={() => setAllRules((v) => !v)}
                     aria-expanded={allRules}
                     className="flex min-h-11 items-center gap-1.5 text-[15px] font-bold"
-                    style={{ color: c.body }}
+                    // Violet foncé illisible sur le fond nuit → version claire
+                    style={{ color: game.color === "purple" ? "#B59CFF" : c.body }}
                   >
                     {allRules ? "Masquer les règles détaillées" : "Les règles en détail"}
                     <ChevronDown size={18} strokeWidth={3} style={{ rotate: allRules ? "180deg" : "0deg", transition: "rotate 200ms" }} />

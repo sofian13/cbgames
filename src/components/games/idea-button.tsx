@@ -76,6 +76,8 @@ export function IdeaButton({ game, kind = "idée", bg = "#FFD23F", className = "
 }
 
 function IdeaSheet({ game, kind, onClose }: { game: string; kind: string; onClose: () => void }) {
+  /** Idée générale (réglages de l'app), pas liée à un jeu précis */
+  const general = game.startsWith("Zinzin");
   const [text, setText] = useState("");
   const [sent, setSent] = useState(false);
   const ok = text.trim().length >= 3;
@@ -107,15 +109,16 @@ function IdeaSheet({ game, kind, onClose }: { game: string; kind: string; onClos
           <div className="py-6 text-center">
             <div className="text-[30px] leading-tight" style={{ fontFamily: "var(--font-display)", fontWeight: 700 }}>Merci !</div>
             <p className="mt-2 text-[16px] font-semibold">Ton appli mail s&apos;est ouverte : il ne reste qu&apos;à appuyer sur Envoyer. On lit tout.</p>
-            <button type="button" onClick={onClose} className="mt-5 min-h-12 w-full text-[17px] font-extrabold" style={sticker("#FFD23F")}>Retour au jeu</button>
+            <button type="button" onClick={onClose} className="mt-5 min-h-12 w-full text-[17px] font-extrabold" style={sticker("#FFD23F")}>{general ? "Retour" : "Retour au jeu"}</button>
           </div>
         ) : (
           <>
-            <div className="pr-14 text-[28px] leading-[1.05]" style={{ fontFamily: "var(--font-display)", fontWeight: 700 }}>
+            <div className="pr-14 text-[28px] leading-[1.05]" style={{ fontFamily: "var(--font-display)", fontWeight: 700, textWrap: "balance" }}>
               Propose {poss(kind)}
             </div>
             <p className="mt-1.5 pr-12 text-[15px] font-semibold" style={{ color: "#4A3A66" }}>
-              Pour « {game} ». Les meilleures idées arrivent dans une prochaine mise à jour !
+              {/* Depuis les réglages (« Zinzin (nouveau jeu) ») : pas de « Pour … » qui sonne faux */}
+              {general ? "" : <>Pour « {game} ». </>}Les meilleures idées arrivent dans une prochaine mise à jour !
             </p>
             <textarea
               value={text}
@@ -135,7 +138,7 @@ function IdeaSheet({ game, kind, onClose }: { game: string; kind: string; onClos
             >
               <Send size={18} strokeWidth={3} aria-hidden /> Envoyer
             </button>
-            <p className="mt-2 text-center text-[12px] font-semibold" style={{ color: "#6B5C88" }}>
+            <p className="mt-2 text-center text-[13px] font-semibold" style={{ color: "#6B5C88" }}>
               S&apos;envoie depuis ton appli mail. On ne garde rien d&apos;autre que ton message.
             </p>
           </>

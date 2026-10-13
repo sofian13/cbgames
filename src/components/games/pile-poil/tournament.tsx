@@ -82,10 +82,10 @@ const GOLD = "#FFD23F";
 const RED = "#FF6B5B";
 
 const RULES = [
-  "Une cible s'affiche, par exemple 7 s.",
+  "Une cible s'affiche, par exemple 7\u00a0s.",
   "GO, compte dans ta tête (le chrono est caché), puis STOP.",
-  "Le plus proche gagne la manche. À 0,10 s près : PILE POIL, +1 bonus.",
-  "Le plus loin prend un gage ou 1 gorgée (eau OK).",
+  "Le plus proche gagne la manche. À 0,10\u00a0s près : PILE POIL, +1\u00a0bonus.",
+  "Le plus loin prend un gage ou 1\u00a0gorgée (eau\u00a0OK).",
 ];
 
 const rnd = <T,>(arr: T[]) => arr[Math.floor(Math.random() * arr.length)];
@@ -443,7 +443,7 @@ export function Tournament({ net, onExit }: { net?: TournamentNet; onExit?: () =
           {running
             ? "Compte dans ta tête…"
             : mystery
-              ? "Personne ne connaît la cible"
+              ? "Fie-toi à ton instinct !"
               : mode === "no-over"
                 ? "Le plus proche SANS dépasser !"
                 : "Le plus proche possible !"}
@@ -468,7 +468,7 @@ export function Tournament({ net, onExit }: { net?: TournamentNet; onExit?: () =
           {running ? "STOP" : "GO"}
         </button>
         <p className="mt-6 text-[15px] font-semibold" style={{ color: "rgba(255,255,255,0.85)" }}>
-          {running ? "Le chrono est caché. Appuie quand tu penses y être." : "Appuie sur GO et commence à compter."}
+          {running ? "Le chrono est caché. Appuie quand tu penses y\u00A0être." : "Appuie sur GO et commence à compter."}
         </p>
       </div>
     );
@@ -558,7 +558,7 @@ function ConfigScreen(p: {
         <ol className="space-y-1.5 text-[15px] font-semibold leading-snug">
           <li>1. Une <b>cible</b> s&apos;affiche (ex. 7 s).</li>
           <li>2. GO, tu comptes <b>dans ta tête</b> : le chrono est caché.</li>
-          <li>3. STOP quand tu y es. Le plus proche gagne, <b>le plus loin prend une peine</b> (1 gorgée, eau OK, ou un gage).</li>
+          <li>3. STOP quand tu y es. Le plus proche gagne, <b>le plus loin prend une peine</b> (1 gorgée, eau OK, ou un gage).</li>
         </ol>
         <p className="mt-2 text-[16px] leading-tight" style={DISPLAY}>
           <GameInlineIcon icon={Target} /> À 0,10 s près : PILE POIL, +1 bonus.
@@ -921,7 +921,7 @@ function Board({
         <style>{KEYFRAMES}</style>
         <p className="text-[24px]" style={DISPLAY}>La cible mystère était…</p>
         <div className="mt-4 px-7 py-3" style={{ ...sticker(GOLD, { radius: 28, shadow: 6 }), transform: "rotate(-2deg)" }}>
-          <p className="tabular-nums leading-none" style={{ ...DISPLAY, fontSize: 92 }}>{rollShown.toFixed(1).replace(".", ",")}</p>
+          <p className="tabular-nums leading-none" style={{ ...DISPLAY, fontSize: 92 }}>{rollShown.toFixed(1).replace(".", ",")}<span style={{ fontSize: "0.6em" }}>&nbsp;s</span></p>
         </div>
       </Screen>
     );
@@ -1051,7 +1051,7 @@ function FinalScreen({
       <div className="mt-3" style={{ animation: "pp-pop .6s ease-out" }}>
         <Mascot size={104} color={colorForIndex(champ?.i ?? 0)} mood="cool" arms crown shadow={false} />
       </div>
-      <h2 className="mt-1 max-w-full break-words text-center text-[clamp(40px,12vw,56px)] leading-[0.95]" style={{ ...DISPLAY, textShadow: `4px 4px 0 ${INK}` }}>{champ?.name ?? "—"}</h2>
+      <h2 className="mt-1 max-w-full break-words text-center leading-[0.95]" style={{ ...DISPLAY, fontSize: `min(clamp(40px,12vw,56px), max(26px, ${(88 / (Math.max((champ?.name ?? "").length, 1) * 0.6)).toFixed(2)}vw))`, textShadow: `4px 4px 0 ${INK}` }}>{champ?.name ?? "—"}</h2>
       <p className="mt-2 text-center text-[16px] font-bold">
         {champ?.pts ?? 0} point{(champ?.pts ?? 0) > 1 ? "s" : ""}
         {standings[1] && standings[1].pts === champ?.pts ? " · départagé au plus petit écart cumulé" : ""}
@@ -1072,12 +1072,12 @@ function FinalScreen({
         <div className="mt-5 grid w-full grid-cols-2 gap-3 text-left">
           <div className="p-3" style={{ ...sticker(ACCENT, { radius: 18, shadow: 4 }), transform: "rotate(-1.5deg)" }}>
             <p className="text-[14px] font-bold">Meilleur tir</p>
-            <p className="truncate text-[19px] leading-tight" style={DISPLAY}>{best.name}</p>
+            <p className="leading-tight" style={{ ...DISPLAY, fontSize: best.name.length > 10 ? 16 : 19, overflowWrap: "anywhere" }}>{best.name}</p>
             <p className="text-[13px] font-semibold">à {fmtS(best.gap)} de {num(best.target)}&nbsp;s</p>
           </div>
           <div className="p-3" style={{ ...sticker(RED, { radius: 18, shadow: 4 }), transform: "rotate(1.5deg)" }}>
             <p className="text-[14px] font-bold">Le plus à côté</p>
-            <p className="truncate text-[19px] leading-tight" style={DISPLAY}>{worst.name}</p>
+            <p className="leading-tight" style={{ ...DISPLAY, fontSize: worst.name.length > 10 ? 16 : 19, overflowWrap: "anywhere" }}>{worst.name}</p>
             <p className="text-[13px] font-semibold">{fmtS(worst.elapsedMs)} pour {num(worst.target)}&nbsp;s</p>
           </div>
         </div>

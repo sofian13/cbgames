@@ -36,8 +36,8 @@ export const PP_LEVELS = [
 
 export const PP_BADGES: Record<string, { label: string; emoji: string }> = {
   "first-sync": { label: "Premier sync", emoji: "✨" },
-  "streak-3": { label: "Combo x3", emoji: "🔥" },
-  "streak-5": { label: "Combo x5", emoji: "⚡" },
+  "streak-3": { label: "Combo ×3", emoji: "🔥" },
+  "streak-5": { label: "Combo ×5", emoji: "⚡" },
   "perfect": { label: "Partie parfaite", emoji: "💯" },
   "veteran": { label: "10 parties", emoji: "🏅" },
 };

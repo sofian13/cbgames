@@ -13,7 +13,7 @@ import { useGame } from "@/lib/party/use-game";
 import { useGameStore } from "@/lib/stores/game-store";
 import { LocalShell, ModeSelect, colorForIndex, type GameMode } from "@/components/games/local-kit";
 import { Mascot, MASCOT_PALETTE } from "@/components/Mascot";
-import { ArrowLeft, Check, Hourglass, MessageCircle, RotateCcw, Volume2, VolumeX } from "lucide-react";
+import { ArrowLeft, Brain, Check, Flame, Heart, Hourglass, House, MessageCircle, Pizza, RotateCcw, Sparkles, Volume2, VolumeX, type LucideIcon } from "lucide-react";
 import { GameIconButton, GameInlineIcon, GameTopRight } from "@/components/games/game-icon-button";
 import { IdeaButton, RerollButton } from "@/components/games/idea-button";
 import { isSfxMuted, playCombo, playSfx, preloadSfx, setSfxMuted, subscribeSfxMuted } from "@/lib/sfx";
@@ -135,6 +135,12 @@ function SectionTitle({ children }: { children: ReactNode }) {
 }
 
 /** Prénom mis en valeur : même police que la phrase, couleur du joueur. */
+/** Icône de chaque thème (pas d'emoji : icônes du kit, cohérentes avec la DA). */
+const PACK_ICON: Record<string, LucideIcon> = { gouts: Pizza, quotidien: House, caractere: Brain, couple: Heart, hypo: Sparkles, coquin: Flame };
+
+/** Prénom propre : pas d'espace ni de trait d'union qui traîne (coupure à 16 caractères). */
+const cleanName = (s: string) => s.trim().replace(/[\s\-–'’.]+$/, "");
+
 function Who({ i, children }: { i: number; children: ReactNode }) {
   return <span style={{ color: MASCOT_PALETTE[colorForIndex(i)].hi }}>{children}</span>;
 }
@@ -204,13 +210,16 @@ function CoupleQuizLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) 
     setPhase("pass-answer");
   };
 
+  // prénoms longs → scores l'un sous l'autre (sinon « Jean-Chri… » tronqué)
+  const longDuo = names[0].length > 9 || names[1].length > 9;
+
   // ── Prénoms (2 joueurs exactement) ──
   if (phase === "names") {
-    const ok = names[0].trim() && names[1].trim();
+    const ok = cleanName(names[0]) && cleanName(names[1]);
     return (
       <Screen
         footer={
-          <BigBtn bg={PINK} disabled={!ok} onClick={() => { saveDuo(names); setNames([names[0].trim(), names[1].trim()]); setPhase("config"); playSfx("confirm", { volume: 0.6 }); }}>
+          <BigBtn bg={PINK} disabled={!ok} onClick={() => { const clean: [string, string] = [cleanName(names[0]), cleanName(names[1])]; saveDuo(clean); setNames(clean); setPhase("config"); playSfx("confirm", { volume: 0.6 }); }}>
             {ok ? "Continuer" : "Vos deux prénoms"}
           </BigBtn>
         }
@@ -294,7 +303,7 @@ function CoupleQuizLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) 
                 className="flex items-center gap-2 rounded-[18px] pl-2.5 pr-2 text-left transition-transform active:translate-y-[3px]"
                 style={{ ...sticker(bg), color: on ? INK : "#fff", minHeight: 60, transform: `rotate(${i % 2 ? 1 : -1}deg)` }}
               >
-                <span className="text-[18px]" aria-hidden>{p.emoji}</span>
+                {(() => { const Ic = PACK_ICON[p.id] ?? Sparkles; return <Ic size={20} strokeWidth={2.6} className="shrink-0" aria-hidden />; })()}
                 <span className="min-w-0 flex-1 text-[14.5px] font-bold leading-tight">
                   {p.name}
                   {p.adult && <span className="block text-[13px] font-semibold" style={{ opacity: 0.8 }}>18+, coquin</span>}
@@ -357,7 +366,7 @@ function CoupleQuizLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) 
         </div>
         <h1
           className="max-w-full rounded-[24px] px-6 pb-3 pt-7 text-center"
-          style={{ ...sticker(bg, 6), ...DISPLAY, color: inkOn(bg), fontSize: "clamp(36px, 11vw, 54px)", lineHeight: 1, transform: "rotate(-2deg)", overflowWrap: "anywhere" }}
+          style={{ ...sticker(bg, 6), ...DISPLAY, color: inkOn(bg), fontSize: names[to].length > 10 ? "clamp(26px, 8vw, 38px)" : "clamp(36px, 11vw, 54px)", lineHeight: 1, transform: "rotate(-2deg)", overflowWrap: "anywhere" }}
         >
           {names[to]}
         </h1>
@@ -428,7 +437,7 @@ function CoupleQuizLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) 
             <GameInlineIcon icon={MessageCircle} /> {names[answerer]}, explique-toi&nbsp;!
           </p>
         )}
-        <div className="mt-5 grid w-full grid-cols-2 gap-3">
+        <div className={`mt-5 grid w-full gap-3 ${longDuo ? "grid-cols-1" : "grid-cols-2"}`}>
           <DuoScore name={names[0]} score={scores[0]} idx={0} />
           <DuoScore name={names[1]} score={scores[1]} idx={1} />
         </div>
@@ -457,20 +466,20 @@ function CoupleQuizLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) 
         <div className="flex flex-col items-center">
           <p className="text-[18px] font-semibold text-white/85">Votre taux de complicité</p>
           <div className="mt-3 flex items-end justify-center gap-1">
-            <Mascot size={70} color={colorForIndex(0)} mood={pct >= 45 ? "love" : "sad"} shadow={false} />
+            <Mascot size={60} color={colorForIndex(0)} mood={pct >= 45 ? "love" : "sad"} shadow={false} />
             <div
               className="rounded-[26px] px-6 pb-2 pt-3"
-              style={{ ...sticker(verdict.c, 6), ...DISPLAY, color: INK, fontSize: 64, lineHeight: 1, transform: "rotate(-3deg)" }}
+              style={{ ...sticker(verdict.c, 6), ...DISPLAY, color: INK, fontSize: "clamp(46px, 14vw, 64px)", lineHeight: 1, transform: "rotate(-3deg)", whiteSpace: "nowrap" }}
             >
               {pct}&nbsp;%
             </div>
-            <Mascot size={70} color={colorForIndex(1)} mood={pct >= 45 ? "kiss" : "sad"} shadow={false} delay={0.3} />
+            <Mascot size={60} color={colorForIndex(1)} mood={pct >= 45 ? "kiss" : "sad"} shadow={false} delay={0.3} />
           </div>
           <h1 className="mt-5 text-center" style={{ ...DISPLAY, fontSize: 34, lineHeight: 1 }}>{verdict.t}</h1>
           <p className="mt-2 text-[16px] font-semibold text-white/80">
             {total} bonne{total > 1 ? "s" : ""} réponse{total > 1 ? "s" : ""} sur {deck.length}
           </p>
-          <div className="mt-5 grid w-full grid-cols-2 gap-3">
+          <div className={`mt-5 grid w-full gap-3 ${longDuo ? "grid-cols-1" : "grid-cols-2"}`}>
             <DuoScore name={names[0]} score={scores[0]} idx={0} big />
             <DuoScore name={names[1]} score={scores[1]} idx={1} big />
           </div>
@@ -529,7 +538,7 @@ function DuoScore({ name, score, idx, big }: { name: string; score: number; idx:
       <span className="grid shrink-0 place-items-center rounded-[12px]" style={{ ...sticker("#fff", 2), ...DISPLAY, color: INK, width: big ? 46 : 38, height: big ? 46 : 38, fontSize: big ? 26 : 21 }}>
         {score}
       </span>
-      <span className="min-w-0 truncate text-[15px] font-bold">{name}</span>
+      <span className="min-w-0 text-[15px] font-bold leading-tight" style={{ overflowWrap: "break-word" }}>{name}</span>
     </div>
   );
 }

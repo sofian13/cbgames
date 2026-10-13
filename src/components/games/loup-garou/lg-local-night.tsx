@@ -183,7 +183,7 @@ export function NightRunner({
       const pack = alive.filter((p) => p.role === "loup");
       body = <SinglePick
         players={alive.filter((p) => p.role !== "loup")}
-        hint={`La meute : ${pack.map((p) => p.name).join(", ")}. Mettez-vous d'accord en silence.`}
+        hint={<>La meute : {pack.map((p) => p.name).join(", ")}. <span className="whitespace-nowrap">Mettez-vous</span> d&apos;accord en silence.</>}
         cta="Dévorer"
         danger
         onDone={(id) => {
@@ -256,7 +256,7 @@ export function NightRunner({
 function SinglePick({
   players, hint, cta, onDone, note, danger = false,
 }: {
-  players: Player[]; hint: string; cta: string; onDone: (id: number) => void;
+  players: Player[]; hint: React.ReactNode; cta: string; onDone: (id: number) => void;
   note?: (p: Player) => string | null; danger?: boolean;
 }) {
   const [sel, setSel] = useState<number | null>(null);

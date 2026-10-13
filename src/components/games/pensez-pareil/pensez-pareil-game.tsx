@@ -432,7 +432,7 @@ function PromptCard({ prompt, timed = true }: { prompt: Prompt | null; timed?: b
         style={{ background: "#fff", color: GAME_INK, border: `3px solid ${GAME_INK}`, boxShadow: `0 6px 0 ${GAME_INK}`, rotate: "-1.5deg" }}>
         <span className="absolute -top-4 left-1/2 inline-flex min-h-8 -translate-x-1/2 items-center rounded-full px-3 text-[14px] font-bold"
           style={{ background: tierColor, border: `2.5px solid ${GAME_INK}`, rotate: "-3deg" }}>{tierLabel}</span>
-        <p style={{ ...DISPLAY, fontSize: prompt.text.length > 40 ? 28 : 34, lineHeight: 1.02 }}>{prompt.text}</p>
+        <p style={{ ...DISPLAY, fontSize: prompt.text.length > 40 ? 28 : 34, lineHeight: 1.02, textWrap: "balance" }}>{prompt.text}</p>
         <p className="mt-2 text-[14px] font-semibold" style={{ color: "#4A3A66" }}>1 ou 2 mots{timed ? " · 35 s" : ""}, sans vous concerter !</p>
       </div>
     </div>
@@ -468,7 +468,7 @@ function RoundBar({ round, total, timeLeft, streak }: {
     <div className="w-full">
       <div className="flex flex-wrap items-center gap-2">
         <ZChip bg="#fff" tilt={-2}>Manche {round}/{total}</ZChip>
-        {streak > 0 && <ZChip bg="#FFD23F" tilt={2}><Flame size={15} strokeWidth={3} aria-hidden /> Série x{streak}</ZChip>}
+        {streak > 0 && <ZChip bg="#FFD23F" tilt={2}><Flame size={15} strokeWidth={3} aria-hidden /> Série ×{streak}</ZChip>}
       </div>
       {timeLeft != null && (
         <div className="mt-3 h-4 w-full overflow-hidden rounded-full" style={{ background: "#fff", border: `2.5px solid ${GAME_INK}` }}>
@@ -498,7 +498,7 @@ function RevealScreen({
       </div>
       <ZTitle size={56} className="mt-4">{matched ? "Sync !" : "Presque…"}</ZTitle>
       <p className="mt-1 text-[17px] font-bold">
-        {matched ? `+${points} pts${streak >= 2 ? ` · série x${streak}` : ""}` : "Pas la même réponse. La série repart à zéro."}
+        {matched ? `+${points} pts${streak >= 2 ? ` · série ×${streak}` : ""}` : "Pas la même réponse. La série repart à zéro."}
       </p>
       {prompt && <p className="mt-4 text-[16px] font-semibold" style={{ opacity: 0.9 }}>{prompt.text}</p>}
 
@@ -559,7 +559,7 @@ function GameOverScreen({
       <div className="mt-5 grid grid-cols-3 gap-2.5 text-center">
         <Stat label="Score" value={teamScore} />
         <Stat label="Syncs" value={`${syncs}/${total}`} />
-        <Stat label="Série max" value={`x${bestStreak}`} />
+        <Stat label="Série max" value={`×${bestStreak}`} />
       </div>
 
       {/* Carte complicité */}
@@ -569,11 +569,11 @@ function GameOverScreen({
           <Mascot size={52} color="pink" mood="love" shadow={false} bob={false} />
           <div className="min-w-0 flex-1">
             <p className="text-[14px] font-bold">Votre complicité</p>
-            <p className="text-[22px] leading-tight" style={DISPLAY}>{lvl.name}</p>
+            <p className="text-[22px] leading-tight" style={{ ...DISPLAY, textWrap: "balance" }}>{lvl.name}</p>
           </div>
           <div className="text-right">
-            <p className="text-[20px]" style={DISPLAY}>{xp} XP</p>
-            {lvl.next !== Infinity && <p className="text-[13px] font-semibold">encore {lvl.next - xp}</p>}
+            <p className="whitespace-nowrap text-[20px]" style={DISPLAY}>{xp} XP</p>
+            {lvl.next !== Infinity && <p className="whitespace-nowrap text-[13px] font-semibold">encore {lvl.next - xp} XP</p>}
           </div>
         </div>
         <div className="mt-3 h-4 w-full overflow-hidden rounded-full" style={{ background: "#F1ECFF", border: `2.5px solid ${GAME_INK}` }}>

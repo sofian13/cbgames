@@ -210,7 +210,7 @@ function Toggle({ on, onChange, label, sub, disabled }: { on: boolean; onChange:
       style={{ ...block(CREAM, 18, 4) }} role="switch" aria-checked={on}>
       <div className="min-w-0 flex-1">
         <div className="text-[17px]" style={DISPLAY}>{label}</div>
-        {sub && <div className="text-[13px] font-medium leading-snug" style={{ color: "#4A3A66" }}>{sub}</div>}
+        {sub && <div className="text-balance text-[13px] font-medium leading-snug" style={{ color: "#4A3A66" }}>{sub}</div>}
       </div>
       <div style={{ width: 54, height: 32, borderRadius: 999, border: `3px solid ${INK}`, background: on ? MINT : "#D9D2E6", position: "relative", flexShrink: 0, transition: "background .2s" }}>
         <div style={{ position: "absolute", top: 2, left: on ? 24 : 2, width: 22, height: 22, borderRadius: 999, background: "#fff", border: `3px solid ${INK}`, transition: "left .2s cubic-bezier(.4,1.6,.5,1)" }} />
@@ -777,8 +777,8 @@ export default function PureteGame({ onReturnToLobby }: GameProps) {
       <div className="mt-8 grid w-full max-w-md gap-3">
         <Btn onClick={replay} bg={YELLOW} className="text-[22px]" style={{ minHeight: 60 }}><GameInlineIcon icon={RotateCcw} /> Rejouer</Btn>
         <div className="grid grid-cols-2 gap-3">
-          <Btn onClick={mode === "solo" ? () => setPhase({ k: "setup" }) : changePlayers} bg={CREAM} className="text-[17px]">{mode === "solo" ? "Jouer à plusieurs" : "Changer les joueurs"}</Btn>
-          <Btn onClick={() => (onReturnToLobby ? onReturnToLobby() : setPhase({ k: "setup" }))} bg={INK} color="#fff" className="text-[17px]">Quitter</Btn>
+          <Btn onClick={mode === "solo" ? () => setPhase({ k: "setup" }) : changePlayers} bg={CREAM} className="text-[16px] leading-tight">{mode === "solo" ? "Jouer à plusieurs" : "Changer les joueurs"}</Btn>
+          <Btn onClick={() => (onReturnToLobby ? onReturnToLobby() : setPhase({ k: "setup" }))} bg={INK} color="#fff" className="text-[16px] leading-tight">Quitter</Btn>
         </div>
         <div className="flex justify-center pt-1">
           <IdeaButton game="Test de pureté" kind="question" bg={CREAM} />
@@ -857,13 +857,13 @@ function SuspenseReveal({ label, name, color, purity, last, onNext, nextLabel = 
     <Screen bg={bg} center>
       <RulesButton />
       {done && purity >= 90 && <ConfettiBurst count={50} />}
-      <p className="px-12 text-center text-[20px] leading-tight" style={DISPLAY}>{label}</p>
-      {name && <h1 className="mt-1 max-w-full truncate text-center text-[clamp(40px,12vw,60px)] leading-none" style={{ ...DISPLAY, color: done && !pure ? "#fff" : INK, textShadow: done && !pure ? `3px 3px 0 ${INK}` : undefined }}>{name}</h1>}
+      <p className="px-12 text-center text-[20px] leading-tight" style={{ ...DISPLAY, textWrap: "balance" }}>{label}</p>
+      {name && <h1 className={`mt-1 max-w-full truncate text-center leading-none ${name.length > 11 ? "text-[clamp(30px,9vw,44px)]" : "text-[clamp(40px,12vw,60px)]"}`} style={{ ...DISPLAY, whiteSpace: "nowrap", color: done && !pure ? "#fff" : INK, textShadow: done && !pure ? `3px 3px 0 ${INK}` : undefined }}>{name}</h1>}
       <div className={`mt-6 ${!done && go ? "pur-shake" : ""}`}>
         <PureBlob key={done ? "d" : "w"} color={color} purity={purity} size={150} show={done} cheering={done && pure} />
       </div>
       <div className="mt-5 px-6 py-2" style={{ ...block("#fff", 26, 6), transform: "rotate(-2deg)" }}>
-        <span className="text-[clamp(72px,24vw,112px)] leading-none tabular-nums" style={DISPLAY}>{v}%</span>
+        <span className="text-[clamp(72px,24vw,112px)] leading-none tabular-nums" style={DISPLAY}>{v}{"\u00A0"}%</span>
       </div>
       <div className="mt-5 min-h-[86px] text-center">
         {done && (

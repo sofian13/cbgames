@@ -315,8 +315,9 @@ export default function CategoryChronoGame({ onReturnToLobby }: GameProps) {
         <style>{KEYFRAMES}</style>
         {soundBtn}
         <Lives players={players} cur={cur} />
-        <div className="flex flex-1 flex-col items-center justify-center py-6">
-          <p className="text-[17px] font-semibold text-white/80">La catégorie&nbsp;:</p>
+        <div className={`flex flex-1 flex-col items-center justify-center ${players.length > 6 ? "py-3" : "py-6"}`}>
+          {/* beaucoup de joueurs : on gagne de la place pour que « Une autre » reste visible */}
+          {players.length <= 6 && <p className="text-[17px] font-semibold text-white/80">La catégorie&nbsp;:</p>}
           <div
             key={category.name}
             className="mt-3 w-full max-w-sm rounded-[28px] px-5 pb-6 pt-5 text-center"
@@ -327,7 +328,7 @@ export default function CategoryChronoGame({ onReturnToLobby }: GameProps) {
               Par exemple&nbsp;: {category.examples}
             </p>
           </div>
-          <div className="mt-6">
+          <div className={players.length > 6 ? "mt-4" : "mt-6"}>
             <RerollButton onClick={() => { nextCategory(); playSfx("card-flip", { volume: 0.7, delay: 0.08 }); }} />
           </div>
         </div>
@@ -584,18 +585,20 @@ function Pill({ on, onClick, children }: { on: boolean; onClick: () => void; chi
 }
 
 function Lives({ players, cur }: { players: P[]; cur: number }) {
+  // beaucoup de joueurs → pastilles plus compactes (la catégorie reste visible sur petit écran)
+  const many = players.length > 6;
   return (
-    <div className="flex max-w-md flex-wrap justify-center gap-2">
+    <div className={`flex max-w-md flex-wrap justify-center ${many ? "gap-1.5" : "gap-2"}`}>
       {players.map((p, i) => {
         const on = i === cur;
         const alive = p.lives > 0;
         return (
           <span
             key={i}
-            className="inline-flex min-h-9 items-center gap-1.5 rounded-full px-3 text-[14px] font-bold"
+            className={`inline-flex items-center gap-1.5 rounded-full font-bold ${many ? "min-h-7 px-2.5 text-[13px]" : "min-h-9 px-3 text-[14px]"}`}
             style={{ ...sticker(on ? MASCOT_PALETTE[colorForIndex(i)].body : alive ? "#FFF6E5" : "#8F86AD", on ? 3 : 2), color: on ? inkOn(MASCOT_PALETTE[colorForIndex(i)].body) : INK, opacity: alive ? 1 : 0.75, transform: on ? "rotate(-3deg)" : undefined }}
           >
-            {p.name} {alive ? <LifeHearts n={p.lives} size={13} /> : <GameInlineIcon icon={Skull} />}
+            {p.name} {alive ? <LifeHearts n={p.lives} size={many ? 11 : 13} /> : <GameInlineIcon icon={Skull} />}
           </span>
         );
       })}

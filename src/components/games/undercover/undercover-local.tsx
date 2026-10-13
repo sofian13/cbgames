@@ -3,7 +3,7 @@
 import { useMemo, useState, useEffect, type CSSProperties, type ReactNode } from "react";
 import { Mascot, MASCOT_COLORS, MASCOT_PALETTE, type MascotColor, type MascotMood } from "@/components/Mascot";
 import { registerSoftReplay } from "@/lib/game-replay";
-import { ArrowLeft, BookOpen, Check, ChevronDown, ChevronUp, Dices, Eye, Lock, Mic, Minus, Plus, RotateCcw, Scale, Shuffle, Target, TriangleAlert } from "lucide-react";
+import { ArrowLeft, ArrowRight, BookOpen, Check, ChevronDown, ChevronUp, Dices, Eye, Lock, Mic, Minus, Plus, RotateCcw, Scale, Shuffle, Target, TriangleAlert } from "lucide-react";
 import { GameIconButton, GameInlineIcon, GameTopRight } from "@/components/games/game-icon-button";
 import { DISPLAY, PlayersSetup, SoundButton, ZButton, ZChip, ZZ, zBackground, useScrollTopOn } from "@/components/games/local-kit";
 import { IdeaButton, RerollButton } from "@/components/games/idea-button";
@@ -770,14 +770,14 @@ function SetupRoles({
           {jSlots > 0 && <Stat n={jSlots} label="Bouffon" color="#C58CFF" sub="à éliminer" />}
         </div>
 
-        <Row label="Intrus" hint={`1 à ${maxUC}`}>
+        <Row label="Intrus" hint={maxUC > 1 ? `1 à ${maxUC}` : "1 maximum"}>
           <Stepper value={ucEff} min={1} max={maxUC} onChange={setUcCount} />
         </Row>
         <Row label="Fantôme" hint={canMrWhite ? "aucun mot · devine s'il sort" : "5 joueurs min"}>
-          <Toggle value={mwSlots > 0} onChange={toggleMrWhite} />
+          <Toggle value={mwSlots > 0} onChange={toggleMrWhite} disabled={!canMrWhite} />
         </Row>
         <Row label="Bouffon" hint={canJester ? "gagne seul s'il se fait éliminer par le vote" : "pas assez de civils"}>
-          <Toggle value={jSlots > 0} onChange={toggleJester} />
+          <Toggle value={jSlots > 0} onChange={toggleJester} disabled={!canJester} />
         </Row>
       </FileCard>
 
@@ -801,7 +801,7 @@ function SetupRoles({
                   background: on ? (c.adult ? ZZ.pink : ZZ.yellow) : "#fff",
                   border: `2.5px solid ${ZZ.ink}`, rotate: on ? `${i % 2 ? 1.5 : -1.5}deg` : undefined,
                 }}>
-                {on ? <Check size={15} strokeWidth={3.2} aria-hidden /> : <Plus size={15} strokeWidth={3.2} aria-hidden />}{c.label}
+                {on ? <Check size={15} strokeWidth={3.2} aria-hidden /> : <Plus size={15} strokeWidth={3.2} aria-hidden />}{c.adult ? "Coquin 18+" : c.label}
               </button>
             );
           })}
@@ -826,7 +826,7 @@ function SetupRoles({
                   display: "flex", alignItems: "center", gap: 6, padding: "0 14px", minHeight: 44, borderRadius: 999,
                   fontSize: 15, fontWeight: 800, color: ZZ.ink, background: "#fff", border: `2.5px solid ${ZZ.ink}`,
                 }}>
-                <Lock size={14} strokeWidth={3} aria-hidden /> {c.label}
+                <Lock size={14} strokeWidth={3} aria-hidden /> {c.adult ? "Coquin 18+" : c.label}
               </button>
             ))}
           </div>
@@ -905,7 +905,7 @@ function RevealScreen({
           display: "flex", gap: 10, alignItems: "center", marginBottom: 14,
         }}>
           <Lock size={18} strokeWidth={2.8} aria-hidden />
-          <div style={{ fontSize: 15, fontWeight: 700, flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 15, fontWeight: 700, flex: 1, minWidth: 0, textWrap: "balance" }}>
             Personne d&apos;autre ne doit voir l&apos;écran.
           </div>
           {/* Compteur à part : jamais seul sur une ligne */}
@@ -915,7 +915,7 @@ function RevealScreen({
 
       <div style={{ marginTop: "auto" }}>
         <Btn tone="gold" onClick={onAck}>
-          {review ? "Cacher · revenir" : "J’ai mémorisé · suivant →"}
+          {review ? "Cacher et revenir" : <>J’ai mémorisé, suivant <GameInlineIcon icon={ArrowRight} /></>}
         </Btn>
         {onReroll && (
           <div style={{ display: "flex", justifyContent: "center", marginTop: 14 }}>
@@ -1130,7 +1130,7 @@ function GroupVoteScreen({
               <div style={{ display: "flex", justifyContent: "center", marginTop: 4 }}>
                 <Mascot color={colorByIdx(p.idx)} size={64} mood={isPicked ? "shocked" : "shifty"} arms bob={false} />
               </div>
-              <div style={{ ...DISPLAY, fontSize: p.name.length > 13 ? 15 : p.name.length > 10 ? 17 : 21, marginTop: 8, lineHeight: 1.05, overflowWrap: "anywhere" }}>{p.name}</div>
+              <div style={{ ...DISPLAY, fontSize: p.name.length > 13 ? 15 : p.name.length > 10 ? 17 : 21, marginTop: 8, lineHeight: 1.05, overflowWrap: "anywhere", minHeight: 34, display: "flex", alignItems: "center", justifyContent: "center" }}>{p.name}</div>
               <div style={{ marginTop: 6, fontSize: 13, fontWeight: 800, color: isPicked ? ZZ.ink : "#6B5C88" }}>
                 {isPicked ? "Suspect choisi" : "Touche pour choisir"}
               </div>
@@ -1176,8 +1176,8 @@ function EliminateScreen({
         <>
           <div style={{ position: "relative", display: "flex", flexDirection: "column", alignItems: "center", padding: "12px 0 20px" }}>
             <div style={{ position: "relative", animation: "uc-die 1.1s cubic-bezier(0.34,1.45,0.64,1) both" }}>
-              <SpyMascotById idx={eliminated.idx} size={160} tilt={-14} mood="dead" />
-              <div style={{ position: "absolute", top: -8, right: -50, zIndex: 5, animation: "uc-die 0.5s ease-out 0.9s both" }}>
+              <SpyMascotById idx={eliminated.idx} size={160} tilt={-4} mood="dead" />
+              <div style={{ position: "absolute", top: -34, right: -56, zIndex: 5, animation: "uc-die 0.5s ease-out 0.9s both" }}>
                 <Stamp text="Éliminé" color={color} rotate={-12} size={20} />
               </div>
             </div>
@@ -1272,7 +1272,7 @@ function GameOverScreen({
 }) {
   const [titleTop, titleBottom] =
     endReason === "civils-win" ? ["Civils", "victorieux"] :
-    endReason === "undercover-wins" ? ["Imposteurs", "victorieux"] :
+    endReason === "undercover-wins" ? [players.filter((p) => p.role === "undercover" || p.role === "mrwhite").length > 1 ? "Imposteurs" : "Imposteur", "victorieux"] :
     endReason === "jester-wins" ? ["Le Bouffon", "gagne"] :
     ["Le Fantôme", "triomphe"];
   const accent =
@@ -1310,11 +1310,11 @@ function GameOverScreen({
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14 }}>
         <div style={{ padding: "10px 12px", borderRadius: 20, background: ZZ.mint, color: ZZ.ink, border: `3px solid ${ZZ.ink}`, boxShadow: `0 4px 0 ${ZZ.ink}`, rotate: "-1.5deg" }}>
           <div style={{ fontSize: 14, fontWeight: 700 }}>Mot des civils</div>
-          <div style={{ ...DISPLAY, fontSize: 22, lineHeight: 1.05, ...WORD_WRAP }}>{civilWord}</div>
+          <div style={{ ...DISPLAY, fontSize: 22, lineHeight: 1.05, textWrap: "balance", ...WORD_WRAP }}>{civilWord}</div>
         </div>
         <div style={{ padding: "10px 12px", borderRadius: 20, background: ZZ.pink, color: ZZ.ink, border: `3px solid ${ZZ.ink}`, boxShadow: `0 4px 0 ${ZZ.ink}`, rotate: "1.5deg", textAlign: "right" }}>
           <div style={{ fontSize: 14, fontWeight: 700 }}>Mot de l&apos;Intrus</div>
-          <div style={{ ...DISPLAY, fontSize: 22, lineHeight: 1.05, ...WORD_WRAP }}>{ucWord}</div>
+          <div style={{ ...DISPLAY, fontSize: 22, lineHeight: 1.05, textWrap: "balance", ...WORD_WRAP }}>{ucWord}</div>
         </div>
       </div>
 
@@ -1406,13 +1406,17 @@ function Tag({ children, color = "#FFD23F", style }: { children: ReactNode; colo
 function NavBar({ sub, title, right, onBack }: { sub?: string; title?: string; right?: ReactNode; onBack?: () => void }) {
   return (
     // Sur le site, le coin haut-droit reste à l'engrenage du shell
-    <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 18, paddingRight: isOfflineApp() ? 0 : 52 }}>
-      {onBack && <GameIconButton icon={ArrowLeft} label="Retour" onClick={onBack} />}
-      <div style={{ flex: 1, minWidth: 0 }}>
+    // Grille : le titre passe SOUS le tag de droite (pleine largeur) → plus de « Qui » seul sur sa ligne
+    <div style={{
+      display: "grid", gridTemplateColumns: onBack ? "auto minmax(0,1fr) auto" : "minmax(0,1fr) auto",
+      columnGap: 12, alignItems: "center", marginBottom: 18, paddingRight: isOfflineApp() ? 0 : 52,
+    }}>
+      {onBack && <div style={{ gridRow: title ? "1 / span 2" : "1" }}><GameIconButton icon={ArrowLeft} label="Retour" onClick={onBack} /></div>}
+      <div style={{ minWidth: 0 }}>
         {sub && <div style={{ fontSize: 15, color: "rgba(255,255,255,0.85)", fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{sub}</div>}
-        {title && <div style={{ ...DISPLAY, fontSize: 34, color: "white", marginTop: 2, lineHeight: 0.98 }}>{title}</div>}
       </div>
-      {right}
+      <div style={{ justifySelf: "end" }}>{right}</div>
+      {title && <div style={{ ...DISPLAY, gridColumn: onBack ? "2 / span 2" : "1 / span 2", fontSize: 34, color: "white", marginTop: 2, lineHeight: 0.98, textWrap: "balance" }}>{title}</div>}
     </div>
   );
 }
@@ -1550,7 +1554,7 @@ function DossierCard({ word, role, hint, round }: { word: string | null; role: R
         ...DISPLAY, fontSize: word ? wordFontSize(word) : 44, lineHeight: 1.02, margin: "8px 0 6px",
         textAlign: role === "mrwhite" ? "center" : "left", opacity: role === "mrwhite" ? 0.4 : 1, ...WORD_WRAP,
       }}>{word ?? "?????"}</div>
-      <div style={{ marginTop: 10, paddingTop: 12, borderTop: `2px dashed rgba(21,8,46,0.25)`, fontSize: 15, fontWeight: 600, color: "#3A2A56", lineHeight: 1.4 }}>{hint}</div>
+      <div style={{ marginTop: 10, paddingTop: 12, borderTop: `2px dashed rgba(21,8,46,0.25)`, fontSize: 15, fontWeight: 600, color: "#3A2A56", lineHeight: 1.4, textWrap: "pretty" }}>{hint}</div>
     </div>
   );
 }
@@ -1567,7 +1571,7 @@ function Confetti({ count = 40, accent = "#FFD23F" }: { count?: number; accent?:
     }));
   }, [count, accent]);
   return (
-    <div style={{ position: "fixed", inset: 0, overflow: "hidden", pointerEvents: "none", zIndex: 0 }}>
+    <div style={{ position: "fixed", inset: 0, overflow: "hidden", pointerEvents: "none", zIndex: -1 }}>
       {pieces.map((p, i) => (
         <span key={i} style={{
           position: "absolute", top: -20, left: `${p.left}%`,

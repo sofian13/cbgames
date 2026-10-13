@@ -12,5 +12,5 @@ body { -webkit-tap-highlight-color: transparent; -webkit-user-select: none; user
 input, textarea { -webkit-user-select: text; user-select: text; }
 
 /* Typo : pas de mot seul sur la dernière ligne, titres équilibrés */
-p, li, dd, blockquote { text-wrap: pretty; }
-h1, h2, h3, h4, .zz-title, .cb-display-xl, .cb-display-lg, .cb-display-md { text-wrap: balance; }
+p, li, dd, blockquote { text-wrap-style: pretty; }
+h1, h2, h3, h4, .zz-title, .cb-display-xl, .cb-display-lg, .cb-display-md { text-wrap-style: balance; }

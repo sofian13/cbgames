@@ -304,6 +304,8 @@ export function PlayersSetup({
                   autoCorrect="off" autoCapitalize="words" autoComplete="off" spellCheck={false}
                   className="zz-name w-full min-w-0 rounded-[18px] px-2 pb-2 pt-[22px] text-center outline-none"
                   style={{
+                    // Focus / défilement auto : le champ reste au-dessus de la barre collante du bas
+                    scrollMarginBottom: 170,
                     ...stickerStyle(pal.body),
                     color: ink,
                     fontFamily: "var(--font-display), system-ui, sans-serif", wordSpacing: "0.12em",
@@ -324,7 +326,7 @@ export function PlayersSetup({
               type="button"
               onClick={add}
               className="flex min-h-[100px] flex-col items-center justify-center gap-2 rounded-[18px] active:translate-y-[2px]"
-              style={{ border: "2.5px dashed rgba(255,255,255,0.35)", color: "#fff" }}
+              style={{ border: "2.5px dashed rgba(255,255,255,0.35)", color: "#fff", scrollMarginBottom: 170 }}
               aria-label="Ajouter un joueur"
             >
               <span className="grid h-14 w-14 place-items-center rounded-full text-[34px] font-bold leading-none" style={{ ...stickerStyle("#fff", 4), color: INK }}>+</span>
@@ -362,7 +364,7 @@ export function PlayersSetup({
         {/* Lancer : collant en bas quand la liste est longue */}
         <div
           className="sticky z-[2] -mx-5 px-5 pt-6"
-          style={{ bottom: 0, paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 12px)", marginBottom: "calc(-1 * (env(safe-area-inset-bottom, 0px) + 16px))", background: `linear-gradient(180deg, transparent, ${NIGHT} 40%)` }}
+          style={{ bottom: 0, paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 12px)", marginBottom: "calc(-1 * (env(safe-area-inset-bottom, 0px) + 16px))", background: `linear-gradient(180deg, ${NIGHT}00 0px, ${NIGHT} 20px)` }}
         >
           {/* « Propose ton idée » : toujours visible, juste au-dessus du bouton principal */}
           {footer && <div className="mb-3.5 flex justify-center">{footer}</div>}
@@ -693,7 +695,7 @@ export function ZTitle({
 export function ZChip({ children, bg = "#fff", tilt = -2, className, style }: { children: ReactNode; bg?: string; tilt?: number; className?: string; style?: CSSProperties }) {
   return (
     <span
-      className={`inline-flex min-h-8 w-fit self-start items-center gap-1.5 whitespace-nowrap rounded-full px-3 text-[14px] font-bold leading-none ${className ?? ""}`}
+      className={`inline-flex min-h-8 w-fit ${/\bself-/.test(className ?? "") ? "" : "self-start"} items-center gap-1.5 whitespace-nowrap rounded-full px-3 text-[14px] font-bold leading-none ${className ?? ""}`}
       style={{ background: bg, color: inkOn(bg), border: `2.5px solid ${INK}`, boxShadow: `0 3px 0 ${INK}`, rotate: tilt ? `${tilt}deg` : undefined, ...style }}
     >
       {children}
@@ -728,7 +730,7 @@ export function ZChoice({
       onClick={() => { if (!active) playSfx("select", { volume: 0.5 }); onClick(); }}
       aria-pressed={active}
       aria-label={label}
-      className={`relative rounded-[20px] p-3.5 text-left transition-[translate,box-shadow,rotate] duration-150 shadow-[0_4px_0_#15082E] active:translate-y-[3px] active:shadow-[0_1px_0_#15082E] ${className ?? ""}`}
+      className={`relative rounded-[20px] p-3.5 ${/\btext-(center|right|left)\b/.test(className ?? "") ? "" : "text-left"} transition-[translate,box-shadow,rotate] duration-150 shadow-[0_4px_0_#15082E] active:translate-y-[3px] active:shadow-[0_1px_0_#15082E] ${className ?? ""}`}
       style={{
         background: bg,
         color: inkOn(bg),
@@ -763,7 +765,10 @@ export function ZRanking({
   return (
     <div className="flex w-full flex-col gap-3">
       {rows.map((r, i) => {
-        const first = i === 0;
+        // Ex æquo : même score que la ligne précédente → même rang (et même couronne si 1er)
+        let rank = 1;
+        for (let k = 1; k <= i; k++) if (rows[k].score !== rows[k - 1].score) rank = k + 1;
+        const first = rank === 1;
         const bg = first ? "#FFD23F" : "#fff";
         return (
           <div
@@ -772,16 +777,17 @@ export function ZRanking({
             style={{ ...stickerStyle(bg, first ? 5 : 4), border: `3px solid ${INK}`, color: INK, rotate: first ? "-1.5deg" : i % 2 ? "0.8deg" : "-0.6deg" }}
           >
             <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-[17px]" style={{ ...DISPLAY, background: first ? INK : "#F1ECFF", color: first ? "#FFD23F" : INK }}>
-              {first ? <Crown size={18} strokeWidth={2.8} aria-hidden /> : i + 1}
+              {first ? <Crown size={18} strokeWidth={2.8} aria-hidden /> : rank}
             </span>
             <Mascot size={38} color={colorForIndex(r.colorIndex)} mood={first ? "laughing" : "happy"} shadow={false} bob={false} />
             <div className="min-w-0 flex-1">
-              <p className="truncate text-[19px] leading-tight" style={DISPLAY}>{r.name}</p>
+              {/* Prénom long : plus petit et sur 2 lignes max plutôt que tronqué */}
+              <p className="line-clamp-2 leading-tight" style={{ ...DISPLAY, fontSize: r.name.length > 12 ? 16 : 19, overflowWrap: "anywhere" }}>{r.name}</p>
               {r.note && <p className="text-[13px] font-semibold leading-tight" style={{ color: "#4A3A66" }}>{r.note}</p>}
             </div>
             <span className="shrink-0 text-[22px] leading-none" style={DISPLAY}>
               {r.score}
-              <span className="ml-1 text-[13px] font-bold" style={{ fontFamily: "inherit", letterSpacing: 0 }}>{unit}</span>
+              <span className="ml-1 text-[13px] font-bold" style={{ fontFamily: "inherit", letterSpacing: 0 }}>{unit === "pts" && typeof r.score === "number" && Math.abs(r.score) < 2 ? "pt" : unit}</span>
             </span>
           </div>
         );

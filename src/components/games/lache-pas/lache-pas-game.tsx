@@ -330,7 +330,7 @@ export default function LachePasGame({ onReturnToLobby }: GameProps) {
           <BombBlob size={64} face="dead" lit={false} style={{ marginLeft: -14 }} />
         </div>
         <h1 className="mt-3 text-center text-[clamp(38px,11vw,52px)] leading-[0.95]" style={{ ...DISPLAY, textShadow: `4px 4px 0 ${INK}` }}>
-          Bien joué les têtes brûlées
+          Bien joué, les têtes brûlées
         </h1>
         <div className="mt-6 grid w-full grid-cols-3 gap-2.5">
           {[

@@ -10,7 +10,7 @@ import { ArrowRight, Check, Crown, Plus, Undo2, X } from "lucide-react";
 import { GameIconBadge, GameIconButton, GameInlineIcon } from "@/components/games/game-icon-button";
 import { IdeaButton, RerollButton } from "@/components/games/idea-button";
 import { TopRightControls } from "@/components/games/patate/rules-sheet";
-import { C, Chip, DISPLAY, INK, KitStyles, SectionTitle, SoftLink, StickerBtn, StickerCard, StickerScreen, BOTTOM_PAD, dotted, sticker } from "@/components/games/patate/sticker-kit";
+import { C, Chip, DISPLAY, INK, KitStyles, SectionTitle, StickerBtn, StickerCard, StickerScreen, BOTTOM_PAD, dotted, sticker } from "@/components/games/patate/sticker-kit";
 import { playCombo, playSfx, preloadSfx } from "@/lib/sfx";
 
 const RULES = [
@@ -275,12 +275,12 @@ const THEMES: { id: string; label: string; emoji: string; words: string[] }[] = 
   { id: "nature", label: "Nature & espace", emoji: "🌍", words: WORDS_NATURE },
   { id: "legends", label: "Contes & légendes", emoji: "🐉", words: WORDS_LEGENDS },
   { id: "expressions", label: "Expressions", emoji: "💬", words: WORDS_EXPRESSIONS },
-  { id: "movies", label: "Films/Séries", emoji: "🎬", words: WORDS_MOVIES },
+  { id: "movies", label: "Films & séries", emoji: "🎬", words: WORDS_MOVIES },
   { id: "food", label: "Nourriture", emoji: "🍕", words: WORDS_FOOD },
   { id: "jobs", label: "Métiers", emoji: "👷", words: WORDS_JOBS },
   { id: "fun", label: "Drôle", emoji: "😂", words: WORDS_FUN },
   { id: "abstract", label: "Émotions & idées", emoji: "💭", words: WORDS_ABSTRACT },
-  { id: "culture", label: "Culture Pop", emoji: "🎮", words: WORDS_CULTURE },
+  { id: "culture", label: "Culture pop", emoji: "🎮", words: WORDS_CULTURE },
   { id: "brands", label: "Marques & logos", emoji: "🏷️", words: WORDS_BRANDS },
   { id: "adult", label: "18+", emoji: "🔞", words: WORDS_ADULT },
 ];
@@ -349,6 +349,18 @@ function shuffleArray<T>(arr: T[]): T[] {
 }
 
 // ── Component ──────────────────────────────────────────────
+
+/** Remet l'écran en haut à chaque changement de phase (sinon on arrive « scrollé » depuis les réglages). */
+function ScrollTop({ dep }: { dep: string }) {
+  const ref = useRef<HTMLSpanElement | null>(null);
+  useEffect(() => {
+    for (let el = ref.current?.parentElement ?? null; el; el = el.parentElement) {
+      if (el.scrollTop > 0) el.scrollTop = 0;
+    }
+    window.scrollTo(0, 0);
+  }, [dep]);
+  return <span ref={ref} hidden />;
+}
 
 export default function MakeGuessGame({
   roomCode,
@@ -648,7 +660,12 @@ export default function MakeGuessGame({
   });
 
   // ── Render ───────────────────────────────────────────────
-  const controls = <TopRightControls title="Fais Deviner" rules={RULES} accent={ACCENT} />;
+  const controls = (
+    <>
+      <ScrollTop dep={phase} />
+      <TopRightControls title="Fais Deviner" rules={RULES} accent={ACCENT} />
+    </>
+  );
   const input = (bg: string, big = false): React.CSSProperties => ({
     ...sticker(bg, { radius: 16, shadow: 0, border: 2.5 }),
     ...(big ? DISPLAY : {}),
@@ -779,14 +796,14 @@ export default function MakeGuessGame({
         <h2 className="max-w-full break-words px-6 pb-2 pt-6 text-center text-[clamp(34px,10vw,48px)] leading-none" style={{ ...sticker(MASCOT_BG[blob], { radius: 24, shadow: 5 }), ...DISPLAY, transform: "rotate(-2deg)" }}>
           {currentTeam.name}
         </h2>
-        <div className="mt-6 grid w-full gap-3">
+        <div className="mt-6 grid w-full grid-cols-[minmax(0,1fr)] gap-3">
           <StickerCard bg={C.yellow} radius={20} shadow={4} tilt={-1} className="px-4 py-3">
             <p className="text-[15px] font-bold">Fait deviner, tient le tél</p>
-            <p className="truncate text-[28px] leading-tight" style={DISPLAY}>{describer}</p>
+            <p className="text-[28px] leading-tight" style={{ ...DISPLAY, overflowWrap: "anywhere" }}>{describer}</p>
           </StickerCard>
           <StickerCard bg={C.cream} radius={20} shadow={4} tilt={1} className="px-4 py-3">
             <p className="text-[15px] font-bold">Devine, sans regarder l&apos;écran</p>
-            <p className="truncate text-[28px] leading-tight" style={DISPLAY}>{guesser}</p>
+            <p className="text-[28px] leading-tight" style={{ ...DISPLAY, overflowWrap: "anywhere" }}>{guesser}</p>
           </StickerCard>
         </div>
         <p className="mt-5 text-center text-[16px] font-semibold">Passe le tél à {describer}. {guesser} ne doit pas voir l&apos;écran !</p>
@@ -860,7 +877,7 @@ export default function MakeGuessGame({
         <span className="px-3.5 py-1 text-[17px]" style={{ ...sticker(C.coral, { radius: 999, shadow: 3, border: 2.5 }), ...DISPLAY, transform: "rotate(-3deg)" }}>
           Temps écoulé !
         </span>
-        <h2 className="mt-3 max-w-full truncate text-center text-[40px] leading-none" style={{ ...DISPLAY, textShadow: `3px 3px 0 ${INK}` }}>{currentTeam.name}</h2>
+        <h2 className="mt-3 max-w-full text-center text-[40px] leading-[0.95]" style={{ ...DISPLAY, overflowWrap: "anywhere", textWrap: "balance", textShadow: `3px 3px 0 ${INK}` }}>{currentTeam.name}</h2>
         <div className="mt-3 px-6 py-1.5 text-center" style={{ ...sticker(ACCENT, { radius: 22, shadow: 5 }), transform: "rotate(-2deg)" }}>
           <p className="text-[56px] leading-none" style={DISPLAY}>{turnScore}</p>
           <p className="text-[16px] font-bold">mot{turnScore > 1 ? "s" : ""} trouvé{turnScore > 1 ? "s" : ""}</p>
@@ -893,14 +910,18 @@ export default function MakeGuessGame({
         </span>
         <h2 className="mt-3 text-[48px] leading-none" style={{ ...DISPLAY, textShadow: `4px 4px 0 ${INK}` }}>Classement</h2>
         <div className="mt-5 w-full space-y-2">
-          {rows.map((t, i) => (
-            <div key={t.idx} className="flex items-center gap-3 px-3" style={{ ...sticker(i === 0 ? C.yellow : C.cream, { radius: 18, shadow: 3 }), minHeight: 54 }}>
-              <span className="grid w-6 place-items-center text-[20px]" style={DISPLAY}>{i === 0 ? <Crown size={18} strokeWidth={2.8} aria-hidden /> : i + 1}</span>
-              <Mascot size={32} color={TEAM_BLOB[t.idx % TEAM_BLOB.length]} mood="happy" bob={false} shadow={false} />
-              <span className="min-w-0 flex-1 truncate text-[18px]" style={DISPLAY}>{t.name}</span>
-              <span className="text-[20px]" style={DISPLAY}>{t.score}</span>
-            </div>
-          ))}
+          {rows.map((t) => {
+            // Ex aequo = même rang (et même couronne)
+            const rank = 1 + rows.filter((x) => x.score > t.score).length;
+            return (
+              <div key={t.idx} className="flex items-center gap-3 px-3" style={{ ...sticker(rank === 1 ? C.yellow : C.cream, { radius: 18, shadow: 3 }), minHeight: 54 }}>
+                <span className="grid w-6 place-items-center text-[20px]" style={DISPLAY}>{rank === 1 ? <Crown size={18} strokeWidth={2.8} aria-hidden /> : rank}</span>
+                <Mascot size={32} color={TEAM_BLOB[t.idx % TEAM_BLOB.length]} mood="happy" bob={false} shadow={false} />
+                <span className="min-w-0 flex-1 truncate text-[18px]" style={DISPLAY}>{t.name}</span>
+                <span className="text-[20px]" style={DISPLAY}>{t.score}</span>
+              </div>
+            );
+          })}
         </div>
         <div className="mt-8 w-full">
           <StickerBtn big bg={ACCENT} onClick={nextRound}>Manche {currentRound + 1}</StickerBtn>
@@ -937,9 +958,9 @@ export default function MakeGuessGame({
             return (
               <div key={t.idx} className="flex flex-col items-center">
                 <Mascot size={place === 1 ? 72 : 54} color={TEAM_BLOB[t.idx % TEAM_BLOB.length]} mood="happy" arms cheering={place === 1} crown={place === 1} delay={place * 0.12} shadow={false} />
-                <div className="mt-1 flex w-full flex-col items-center pt-2" style={{ ...sticker(PODIUM_BG[place], { radius: 18, shadow: 4 }), borderBottomLeftRadius: 6, borderBottomRightRadius: 6, height: heights[place] }}>
+                <div className="mt-1 flex w-full flex-col items-center pt-2" style={{ ...sticker(PODIUM_BG[place], { radius: 18, shadow: 4 }), borderBottomLeftRadius: 6, borderBottomRightRadius: 6, minHeight: heights[place] }}>
                   <div className="leading-none" style={{ ...DISPLAY, fontSize: place === 1 ? 32 : 24 }}>{place}</div>
-                  <div className="mt-1 w-full truncate px-1 text-center text-[14px] font-bold leading-tight">{t.name}</div>
+                  <div className="mt-1 line-clamp-2 w-full px-1.5 text-center text-[14px] font-bold leading-tight" lang="fr" style={{ hyphens: "auto", overflowWrap: "anywhere" }}>{t.name}</div>
                   <div className="text-[14px] font-bold">{t.score} pt{t.score > 1 ? "s" : ""}</div>
                 </div>
               </div>
@@ -962,14 +983,14 @@ export default function MakeGuessGame({
 
       <div className="mt-auto flex w-full flex-col items-center pt-8">
         <StickerBtn big bg={ACCENT} onClick={replay}>Revanche</StickerBtn>
+        <p className="mt-2 text-center text-[14px] font-semibold text-white/75">Mêmes équipes, nouveaux mots</p>
         <div className="mt-3 grid w-full grid-cols-2 gap-3">
           <StickerBtn bg={C.cream} onClick={resetGame}>Réglages</StickerBtn>
-          {onReturnToLobby ? <StickerBtn bg={INK} color="#fff" onClick={onReturnToLobby}>Quitter</StickerBtn> : <span />}
+          {onReturnToLobby ? <StickerBtn bg="#fff" onClick={onReturnToLobby}>Quitter</StickerBtn> : <span />}
         </div>
         <div className="mt-4">
           <IdeaButton game="Fais Deviner" kind="mot" bg={C.cream} />
         </div>
-        <SoftLink onClick={replay}>Mêmes équipes, nouveaux mots</SoftLink>
       </div>
     </StickerScreen>
   );
