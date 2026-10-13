@@ -5,6 +5,7 @@ import { ZBlob, ZPALETTE } from "./ZBlob";
 import { RoundBtn, Tag } from "./common";
 import { gameInfo, haptic, reducedMotion } from "./util";
 import { Backdrop } from "./Backdrop";
+import { ZLogo } from "./Logo";
 
 export function isLocked(g: ZGame, premium: boolean) {
   return !premium && !g.free;
@@ -26,7 +27,7 @@ export function Home({
         {/* En-tête */}
         <header className="flex items-center justify-between px-5">
           <div className="flex items-center gap-2">
-            <h1 className="zz-title text-white" style={{ fontSize: 38, letterSpacing: "-0.05em" }}>zinzin</h1>
+            <h1 className="leading-none"><ZLogo size={44} /></h1>
             {premium && <Tag bg="#FFD23F" tilt={-6}>Premium</Tag>}
           </div>
           <RoundBtn onClick={() => { haptic(); onSettings(); }} label="Réglages">

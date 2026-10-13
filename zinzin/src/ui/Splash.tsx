@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { MascotMood } from "@/components/Mascot";
 import { ZBlob, ZCOLORS, type ZColor } from "./ZBlob";
 import { reducedMotion } from "./util";
+import { ZLogo } from "./Logo";
 
 /**
  * Écran de lancement : des blobs tombent, rebondissent (squash & stretch),
@@ -188,9 +189,7 @@ export function Splash({ onDone }: { onDone: () => void }) {
 
       {logo && (
         <div className="absolute inset-x-0 flex flex-col items-center" style={{ top: "28%" }}>
-          <h1 className="zz-font zz-logo-in select-none text-white" style={{ fontSize: Math.min(96, W * 0.24), fontWeight: 700, letterSpacing: "-0.045em", lineHeight: 1, textShadow: "0 6px 30px rgba(255,62,165,0.45)" }}>
-            zinzin
-          </h1>
+          <h1 className="zz-logo-in select-none" style={{ lineHeight: 1 }}><ZLogo size={Math.min(104, W * 0.26)} /></h1>
           <p className="zz-fade mt-3 text-[15px] font-semibold" style={{ color: "var(--zz-dim)", animationDelay: "250ms" }}>
             Jeux de soirée · un seul téléphone
           </p>

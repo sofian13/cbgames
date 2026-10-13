@@ -7,8 +7,9 @@
   --zz-plum: #2A1866;
   --zz-card: #1A1140;
   --zz-line: rgba(255, 255, 255, 0.09);
-  --zz-dim: rgba(255, 255, 255, 0.62);
-  --zz-mute: rgba(255, 255, 255, 0.42);
+  /* Gris opaques (et non rgba) : les dessins du fond ne transparaissent pas à travers le texte */
+  --zz-dim: #B3ADC9;
+  --zz-mute: #9A92B4;
   --zz-pink: #FF3EA5;
   --zz-yellow: #FFD23F;
   --zz-violet: #7A4EE8;
@@ -157,7 +158,8 @@
 @keyframes zz-sheet-out { to { transform: translateY(105%); } }
 @keyframes zz-fade-out { to { opacity: 0; } }
 
-.zz-screen-in { animation: zz-screen-in 420ms var(--zz-ease) both; }
+/* backwards (pas both) : une fois fini, plus de transform → les modales `fixed` des jeux restent calées sur l'écran */
+.zz-screen-in { animation: zz-screen-in 420ms var(--zz-ease) backwards; }
 @keyframes zz-screen-in { from { opacity: 0; transform: scale(1.03); } to { opacity: 1; transform: none; } }
 
 /* ── Splash ───────────────────────────────── */
@@ -212,3 +214,21 @@
 @media (prefers-reduced-motion: reduce) {
   .zz-glow, .zz-doodle, .zz-twinkle, .zz-peek { animation: none !important; }
 }
+
+/* ── Logo multicolore (Logo.tsx), identique au site ── */
+.zz-wordmark {
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: -0.06em;
+  line-height: 0.82;
+  -webkit-text-stroke: 0.045em var(--zz-ink);
+  paint-order: stroke fill;
+  text-shadow: 0 0.07em 0 var(--zz-ink);
+}
+.zz-letter { display: inline-block; animation: zz-letter 3.2s var(--zz-ease) infinite; animation-delay: var(--d, 0ms); }
+@keyframes zz-letter {
+  0%, 70%, 100% { transform: translateY(0) rotate(var(--r, 0deg)); }
+  78% { transform: translateY(-9%) rotate(calc(var(--r, 0deg) * -1)) scale(1.04, 0.96); }
+  86% { transform: translateY(0) rotate(var(--r, 0deg)) scale(0.97, 1.03); }
+}
+@media (prefers-reduced-motion: reduce) { .zz-letter { animation: none !important; } }
