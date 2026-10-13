@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { adultDefault, sipsAllowed } from "@/lib/party-mood";
 import type { GameProps } from "@/lib/games/types";
 import { PlayersSetup, colorForIndex } from "@/components/games/local-kit";
 import { Mascot, MascotAvatar } from "@/components/Mascot";
@@ -61,8 +62,8 @@ export default function PatateGame({ onReturnToLobby }: GameProps) {
   const [phase, setPhase] = useState<Phase>("setup");
   const [players, setPlayers] = useState<string[]>([]);
   const [losses, setLosses] = useState<number[]>([]);
-  const [penalty, setPenalty] = useState<Penalty>("sips");
-  const [spicy, setSpicy] = useState(false);
+  const [penalty, setPenalty] = useState<Penalty>(() => (sipsAllowed(true) ? "sips" : "dares")); // Soirée « Chill » : gages seulement
+  const [spicy, setSpicy] = useState(() => adultDefault(false)); // pack 18+ selon l'ambiance de soirée
   const [shakeMode, setShakeMode] = useState(true);
   const [shakeOk, setShakeOk] = useState(false); // capteur réellement dispo
   const [notice, setNotice] = useState<string | null>(null);

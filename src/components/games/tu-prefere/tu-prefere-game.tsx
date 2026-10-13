@@ -22,6 +22,7 @@ import * as DIL_ES from "@/components/games/tu-prefere/dilemmas.es";
 import type { DilemmaTuple } from "@/components/games/tu-prefere/dilemmas";
 import { getLang, useT, type I18n, type Lang } from "@/lib/i18n";
 import { TP_STR } from "@/components/games/tu-prefere/i18n";
+import { adultDefault } from "@/lib/party-mood";
 
 type Cat = "classique" | "hot" | "absurde" | "couple";
 interface Dilemma { a: string; b: string; quip: string }
@@ -98,8 +99,9 @@ export default function TuPrefereGame({ onReturnToLobby }: GameProps) {
   const t = useT(TP_STR);
   // Langue des dilemmes figée à l'ouverture du jeu.
   const [lang] = useState<Lang>(() => getLang());
-  const [cat, setCat] = useState<Cat | null>(null);
-  const [deck, setDeck] = useState<Dilemma[]>([]);
+  // Soirée « Folle » : on démarre directement sur l'ambiance Chaud (le chip permet d'en changer).
+  const [cat, setCat] = useState<Cat | null>(() => (adultDefault(false) ? "hot" : null));
+  const [deck, setDeck] = useState<Dilemma[]>(() => (adultDefault(false) ? shuffle(listFor("hot", lang)) : []));
   const [idx, setIdx] = useState(0);
   const [votes, setVotes] = useState<{ a: number; b: number }>({ a: 0, b: 0 });
   const [revealed, setRevealed] = useState(false);

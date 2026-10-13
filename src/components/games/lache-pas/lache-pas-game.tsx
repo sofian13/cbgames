@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { sipsAllowed } from "@/lib/party-mood";
 import type { GameProps } from "@/lib/games/types";
 import { colorForIndex } from "@/components/games/local-kit";
 import { Mascot, MascotAvatar, MASCOT_PALETTE } from "@/components/Mascot";
@@ -52,7 +53,7 @@ interface Outcome {
 
 export default function LachePasGame({ onReturnToLobby }: GameProps) {
   const [phase, setPhase] = useState<Phase>("intro");
-  const [penalty, setPenalty] = useState<Penalty>("sips");
+  const [penalty, setPenalty] = useState<Penalty>(() => (sipsAllowed(true) ? "sips" : "dares")); // Soirée « Chill » : gages seulement
   const [fingers, setFingers] = useState<Finger[]>([]);
   const [count, setCount] = useState(3);
   const [taunt, setTaunt] = useState<string | null>(null);

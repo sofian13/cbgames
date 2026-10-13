@@ -16,6 +16,7 @@ import { GameIconBadge, GameIconButton, GameInlineIcon, GameTopRight, GAME_INK }
 import { IdeaButton, RerollButton } from "@/components/games/idea-button";
 import { playCombo, playSfx, preloadSfx, type SfxName } from "@/lib/sfx";
 import { getLang, useT } from "@/lib/i18n";
+import { adultDefault } from "@/lib/party-mood";
 import { THEMES, type ThemeState } from "@/components/games/top-ten/themes";
 import { TT_STR } from "@/components/games/top-ten/i18n";
 
@@ -114,7 +115,8 @@ function TopTenLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) {
   const [scores, setScores] = useState<number[]>([]);
   const [round, setRound] = useState(0);
   const [numberRange, setNumberRange] = useState<10 | 25 | 50>(10);
-  const [pack, setPack] = useState<Pack>("culture"); // 18+ jamais présélectionné
+  // 18+ jamais présélectionné, sauf en Soirée « Folle »
+  const [pack, setPack] = useState<Pack>(() => (adultDefault(false) ? "adult" : "culture"));
   const [themes, setThemes] = useState<ThemeState[]>(() => shuffle(themesForPack("adult")));
   const [themeCursor, setThemeCursor] = useState(0); // avance à chaque manche / changement
   const [numbers, setNumbers] = useState<Record<number, number>>({}); // playerIdx -> numéro

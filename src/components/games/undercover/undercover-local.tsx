@@ -10,6 +10,7 @@ import { IdeaButton, RerollButton } from "@/components/games/idea-button";
 import { playCombo, playSfx, preloadSfx } from "@/lib/sfx";
 import { isOfflineApp } from "@/lib/offline-app";
 import { requestPaywall, useUnlocked } from "@/lib/entitlements";
+import { adultDefault } from "@/lib/party-mood";
 import { getLang, useT, type Lang } from "@/lib/i18n";
 import { FREE_CAT_IDS, allWordPairs, freePairs, wordCategories, type WordCategory } from "@/components/games/undercover/words";
 import { UC_STR } from "@/components/games/undercover/i18n";
@@ -87,12 +88,13 @@ export default function UndercoverLocal({ onReturnToLobby }: { onReturnToLobby?:
   const [lang] = useState<Lang>(() => getLang());
   const t = useT(UC_STR);
   const cats = wordCategories(lang);
-  const [selectedCats, setSelectedCats] = useState<Set<string>>(() => new Set(cats.filter((c) => !c.adult).map((c) => c.id)));
+  // Abonné (ou site web) = tous les thèmes ; sinon 50 paires gratuites
+  const unlocked = useUnlocked();
+  // Soirée « Folle » : le +18 est coché d'office (seulement s'il est débloqué).
+  const [selectedCats, setSelectedCats] = useState<Set<string>>(() => new Set(cats.filter((c) => !c.adult || (unlocked && adultDefault(false))).map((c) => c.id)));
 
   // Pair de mots tirée pour la partie
   const [civilWord, setCivilWord]   = useState("");
-  // Abonné (ou site web) = tous les thèmes ; sinon 50 paires gratuites
-  const unlocked = useUnlocked();
   const [rerollNotice, setRerollNotice] = useState(false);
   const [ucWord, setUcWord]         = useState("");
 

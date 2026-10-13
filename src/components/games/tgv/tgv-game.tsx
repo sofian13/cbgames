@@ -11,6 +11,7 @@
  */
 
 import { useEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type ReactNode } from "react";
+import { sipsAllowed } from "@/lib/party-mood";
 import type { GameProps } from "@/lib/games/types";
 import { Mascot, MascotAvatar } from "@/components/Mascot";
 import { ConfettiBurst } from "@/components/ConfettiBurst";
@@ -193,7 +194,7 @@ export default function TgvGame({ onReturnToLobby }: GameProps) {
   const [losses, setLosses] = useState<number[]>([]);
   const [currentIdx, setCurrentIdx] = useState(0);
   const [numPiles, setNumPiles] = useState<number>(4);
-  const [penaltyMode, setPenaltyMode] = useState<PenaltyMode>("mix");
+  const [penaltyMode, setPenaltyMode] = useState<PenaltyMode>(() => (sipsAllowed(true) ? "mix" : "gages")); // Soirée « Chill » : gages seulement
 
   // Partie en cours
   const deckRef = useRef<Card[]>([]);

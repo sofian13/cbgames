@@ -183,9 +183,11 @@ interface PPStr {
   results: string;
   bustedTag: string;
   perfectTag: string;
-  perfectFor: (names: string, many: boolean) => string;
+  perfectFor: (names: string, many: boolean, sips?: boolean) => string;
   takesPenalty: (name: string) => string;
   sipsOrDare: (n: number) => string;
+  /** Soirée « Chill » : gage seulement, pas de gorgée */
+  dareOnly: string;
   rerollDare: string;
   pts: (n: number) => string;
   finalStandings: string;
@@ -280,9 +282,10 @@ export const PP_STR: I18n<PPStr> = {
     results: "Résultats",
     bustedTag: " · dépassé",
     perfectTag: " · pile poil, +1",
-    perfectFor: (names, many) => `PILE POIL pour ${names} : ${many ? "chacun distribue" : "distribue"} 1 gorgée ou un gage !`,
+    perfectFor: (names, many, sips = true) => `PILE POIL pour ${names} : ${many ? "chacun distribue" : "distribue"} ${sips ? "1 gorgée ou un gage" : "un gage"} !`,
     takesPenalty: (name) => `${name} prend une peine`,
     sipsOrDare: (n) => `${n} gorgée${n > 1 ? "s" : ""} de zinzin ou le gage :`,
+    dareOnly: "Le gage :",
     rerollDare: "Pas fou ? Un autre gage",
     pts: (n) => `${n} pt${n > 1 ? "s" : ""}`,
     finalStandings: "Classement final",
@@ -373,9 +376,10 @@ export const PP_STR: I18n<PPStr> = {
     results: "Results",
     bustedTag: " · over",
     perfectTag: " · spot on, +1",
-    perfectFor: (names, many) => `SPOT ON for ${names}: ${many ? "each of you hands out" : "hand out"} 1 sip or a dare!`,
+    perfectFor: (names, many, sips = true) => `SPOT ON for ${names}: ${many ? "each of you hands out" : "hand out"} ${sips ? "1 sip or a dare" : "a dare"}!`,
     takesPenalty: (name) => `${name} gets a penalty`,
     sipsOrDare: (n) => `${n} zinzin sip${n !== 1 ? "s" : ""} or the dare:`,
+    dareOnly: "The dare:",
     rerollDare: "Meh? Another dare",
     pts: (n) => `${n} pt${n !== 1 ? "s" : ""}`,
     finalStandings: "Final standings",
@@ -466,9 +470,10 @@ export const PP_STR: I18n<PPStr> = {
     results: "Resultados",
     bustedTag: " · pasado",
     perfectTag: " · justo, +1",
-    perfectFor: (names, many) => `¡JUSTO A TIEMPO para ${names}! ${many ? "Cada uno reparte" : "Reparte"} 1 trago o un reto.`,
+    perfectFor: (names, many, sips = true) => `¡JUSTO A TIEMPO para ${names}! ${many ? "Cada uno reparte" : "Reparte"} ${sips ? "1 trago o un reto" : "un reto"}.`,
     takesPenalty: (name) => `${name} se lleva un castigo`,
     sipsOrDare: (n) => `${n} trago${n !== 1 ? "s" : ""} de zinzin o el reto:`,
+    dareOnly: "El reto:",
     rerollDare: "¿No mola? Otro reto",
     pts: (n) => `${n} pt${n !== 1 ? "s" : ""}`,
     finalStandings: "Clasificación final",

@@ -10,6 +10,7 @@
  */
 
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type CSSProperties, type ReactNode } from "react";
+import { adultDefault, sipsAllowed } from "@/lib/party-mood";
 import type { GameProps } from "@/lib/games/types";
 import { Mascot, MascotAvatar } from "@/components/Mascot";
 import { ConfettiBurst } from "@/components/ConfettiBurst";
@@ -278,9 +279,9 @@ export default function PicoletteGame({ onReturnToLobby }: GameProps) {
   const [players, setPlayers] = useState<string[]>([]);
   const [losses, setLosses] = useState<number[]>([]);
   const [shields, setShields] = useState<boolean[]>([]);
-  // Coquin / Trash (18+) ne sont PAS cochés par défaut
-  const [packs, setPacks] = useState<Set<Pack>>(new Set<Pack>(["soft", "quiz", "pop"]));
-  const [penaltyMode, setPenaltyMode] = useState<PenaltyMode>("mix");
+  // Coquin / Trash (18+) ne sont PAS cochés par défaut (sauf en Soirée « Folle »)
+  const [packs, setPacks] = useState<Set<Pack>>(() => new Set<Pack>(adultDefault(false) ? ["soft", "quiz", "pop", "coquin", "trash"] : ["soft", "quiz", "pop"]));
+  const [penaltyMode, setPenaltyMode] = useState<PenaltyMode>(() => (sipsAllowed(true) ? "mix" : "gage")); // Soirée « Chill » : gages seulement
   const [deck, setDeck] = useState<DealtCard[]>([]);
   const [cardIdx, setCardIdx] = useState(0);
   const [turn, setTurn] = useState(0);       // nombre de cartes passées (durée des règles en cartes)

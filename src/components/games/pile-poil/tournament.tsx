@@ -10,6 +10,7 @@ import { IdeaButton, RerollButton } from "@/components/games/idea-button";
 import { TopRightControls } from "@/components/games/patate/rules-sheet";
 import { C, Chip as KitChip, DISPLAY, INK, KitStyles, NameTag, OptionCard, SectionTitle, SoftLink, StickerBtn, StickerCard, StickerScreen, TOP_PAD, BOTTOM_PAD, dotted, sticker } from "@/components/games/patate/sticker-kit";
 import { getLang, pick as pickLang, useT } from "@/lib/i18n";
+import { sipsAllowed } from "@/lib/party-mood";
 import { CHALLENGES as CHALLENGE_TEXT, CHALLENGE_IDS, GAGES as GAGES_I18N, PP_STR } from "./i18n";
 import { fxBad, fxDrum, fxGood, fxOver, fxPerfect, fxPreload, fxReveal, fxTap, fxTick, fxUnlock, vibrate } from "./pp-fx";
 
@@ -872,6 +873,7 @@ function Board({
   }, [mystery, sound]);
 
   const [gages] = useState(() => pickLang(GAGES_I18N));
+  const [sipsOk] = useState(() => sipsAllowed(true)); // Soirée « Chill » : gage seulement
   const [gage, setGage] = useState(() => rnd(gages));
   const ranked = useMemo(() => rankAttempts(attempts, round.target, mode), [attempts, round.target, mode]);
   const loser = ranked.length > 1 ? ranked[ranked.length - 1] : null;
@@ -932,7 +934,7 @@ function Board({
 
       {perfects.length > 0 && (
         <StickerCard bg={GOLD} radius={18} shadow={3} tilt={-1} className="mt-4 px-4 py-2.5 text-center text-[16px] font-bold">
-          {t.perfectFor(perfects.map((a) => a.name).join(", "), perfects.length > 1)}
+          {t.perfectFor(perfects.map((a) => a.name).join(", "), perfects.length > 1, sipsOk)}
         </StickerCard>
       )}
 
@@ -941,7 +943,7 @@ function Board({
         <StickerCard bg={RED} radius={24} shadow={5} tilt={1} className="mt-5 p-4 text-center" style={{ animation: `pp-pop .45s ${ranked.length * 0.08 + 0.1}s ease-out both` }}>
           <p className="text-[26px] leading-tight" style={DISPLAY}>{t.takesPenalty(loser.name)}</p>
           <p className="mt-1 text-[16px] font-bold">
-            {t.sipsOrDare(sips)}
+            {sipsOk ? t.sipsOrDare(sips) : t.dareOnly}
           </p>
           <p className="mt-2 px-3 py-2 text-[17px] font-semibold leading-snug" style={sticker("#fff", { radius: 16, shadow: 0, border: 2.5 })}>
             {gage}

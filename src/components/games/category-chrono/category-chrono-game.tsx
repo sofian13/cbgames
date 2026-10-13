@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type CSSProperties, type ReactNode } from "react";
+import { adultDefault } from "@/lib/party-mood";
 import type { GameProps } from "@/lib/games/types";
 import { PlayersSetup, colorForIndex, useScrollTopOn } from "@/components/games/local-kit";
 import { Mascot, MascotAvatar, MASCOT_PALETTE } from "@/components/Mascot";
@@ -76,7 +77,7 @@ export default function CategoryChronoGame({ onReturnToLobby }: GameProps) {
   // Chaque écran repart du haut (sinon la catégorie s'ouvre défilée si on a scrollé les réglages)
   useScrollTopOn(phase);
   const [names, setNames] = useState<string[]>([]);
-  const [packs, setPacks] = useState<string[]>(() => PACKS.filter((p) => p.defaultOn).map((p) => p.id));
+  const [packs, setPacks] = useState<string[]>(() => PACKS.filter((p) => (p.adult ? adultDefault(!!p.defaultOn) : p.defaultOn)).map((p) => p.id)); // pack 18+ selon l'ambiance de soirée
   const [timerBase, setTimerBase] = useState(10);
   const [startLives, setStartLives] = useState(3);
 

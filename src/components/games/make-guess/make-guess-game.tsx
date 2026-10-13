@@ -13,6 +13,7 @@ import { TopRightControls } from "@/components/games/patate/rules-sheet";
 import { C, Chip, DISPLAY, INK, KitStyles, SectionTitle, StickerBtn, StickerCard, StickerScreen, BOTTOM_PAD, dotted, sticker } from "@/components/games/patate/sticker-kit";
 import { playCombo, playSfx, preloadSfx } from "@/lib/sfx";
 import { useLang, type Lang } from "@/lib/i18n";
+import { adultDefault } from "@/lib/party-mood";
 import { STR } from "./i18n";
 import { DEFAULT_THEME_IDS, OPT_IN_THEME_IDS, THEME_IDS, WORDS, type ThemeId } from "./words";
 
@@ -118,7 +119,8 @@ export default function MakeGuessGame({
   });
   const [timerDuration, setTimerDuration] = useState(60);
   const [totalRounds, setTotalRounds] = useState(1);
-  const [selectedThemes, setSelectedThemes] = useState<ThemeId[]>([...DEFAULT_THEME_IDS]);
+  // Soirée « Folle » : thème 18+ coché d'office (Marques reste décoché).
+  const [selectedThemes, setSelectedThemes] = useState<ThemeId[]>(() => (adultDefault(false) ? [...DEFAULT_THEME_IDS, "adult"] : [...DEFAULT_THEME_IDS]));
 
   // ── Game state ──
   const [phase, setPhase] = useState<Phase>("setup");

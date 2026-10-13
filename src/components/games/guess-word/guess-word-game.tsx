@@ -1,6 +1,7 @@
 "use client";
 
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { adultDefault } from "@/lib/party-mood";
 import type { GameProps } from "@/lib/games/types";
 import { PlayersSetup, PassScreen, colorForIndex } from "@/components/games/local-kit";
 import { Mascot, MascotAvatar } from "@/components/Mascot";
@@ -62,7 +63,7 @@ export default function GuessWordGame({ onReturnToLobby }: GameProps) {
   const [phase, setPhase] = useState<Phase>("setup");
   const [players, setPlayers] = useState<string[]>([]);
   const [scores, setScores] = useState<number[]>([]);
-  const [packs, setPacks] = useState<string[]>(() => PACKS.filter((p) => p.defaultOn).map((p) => p.id));
+  const [packs, setPacks] = useState<string[]>(() => PACKS.filter((p) => (p.adult ? adultDefault(!!p.defaultOn) : p.defaultOn)).map((p) => p.id)); // pack 18+ selon l'ambiance de soirée
   const [duration, setDuration] = useState<number>(60);
   const [tours, setTours] = useState(2);
 

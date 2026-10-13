@@ -8,6 +8,7 @@
  */
 
 import { useEffect, useState, useSyncExternalStore, type CSSProperties, type ReactNode } from "react";
+import { adultDefault } from "@/lib/party-mood";
 import type { GameProps } from "@/lib/games/types";
 import { useGame } from "@/lib/party/use-game";
 import { useGameStore } from "@/lib/stores/game-store";
@@ -156,7 +157,7 @@ function CoupleQuizLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) 
   const QPACKS = packsFor(lang);
   const [phase, setPhase] = useState<Phase>("names");
   const [names, setNames] = useState<[string, string]>(() => getSavedDuo());
-  const [packs, setPacks] = useState<string[]>(() => QPACKS.filter((p) => p.defaultOn).map((p) => p.id));
+  const [packs, setPacks] = useState<string[]>(() => QPACKS.filter((p) => (p.adult ? adultDefault(!!p.defaultOn) : p.defaultOn)).map((p) => p.id)); // pack 18+ selon l'ambiance de soirée
   const [rounds, setRounds] = useState(10);
   const [deck, setDeck] = useState<Q[]>([]);
   const [round, setRound] = useState(0);

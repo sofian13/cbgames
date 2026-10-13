@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { adultDefault } from "@/lib/party-mood";
 import { useGame } from "@/lib/party/use-game";
 import { useGameStore } from "@/lib/stores/game-store";
 import type { GameProps } from "@/lib/games/types";
@@ -95,7 +96,7 @@ function PensezPareilLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }
   // Langue figée au début de la partie (thèmes + règles de comparaison des réponses)
   const [lang, setLang] = useState<Lang>(getLang);
   const [names, setNames] = useState<[string, string]>(["", ""]);
-  const [pack, setPack] = useState<Pack>("mix");
+  const [pack, setPack] = useState<Pack>(() => (adultDefault(false) ? "hot" : "mix")); // Soirée « Folle » : pack coquin
   const [deck, setDeck] = useState<Prompt[]>([]);
   const [round, setRound] = useState(0);
   const [ansA, setAnsA] = useState("");

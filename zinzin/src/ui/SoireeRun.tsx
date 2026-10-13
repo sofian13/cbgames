@@ -3,6 +3,7 @@ import { Check, Crown, Home as HomeIcon, Pause, Share2, Sparkles } from "lucide-
 import { ConfettiBurst } from "@/components/ConfettiBurst";
 import { colorForIndex } from "@/components/games/local-kit";
 import { armPartyBand, disarmPartyBand } from "@/lib/saved-players";
+import { setPartyMood } from "@/lib/party-mood";
 import { pick, useLang } from "@/lib/i18n";
 import { playCombo, playSfx, preloadSfx } from "@/lib/sfx";
 import { GAME_KIND, getZGame } from "../catalog";
@@ -30,18 +31,18 @@ export function SoireeRun({ onHome, onNew, toast }: { onHome: () => void; onNew:
   useEffect(() => {
     preloadSfx(["whoosh", "confirm", "pop", "coin", "coins", "tada", "applause", "drumroll", "cymbal", "select"]);
     // On ne laisse jamais la bande « armée » derrière soi
-    return () => disarmPartyBand();
+    return () => { disarmPartyBand(); setPartyMood(null); };
   }, []);
 
   if (!s) return null;
-  const pause = () => { disarmPartyBand(); onHome(); };
+  const pause = () => { disarmPartyBand(); setPartyMood(null); onHome(); };
 
   if (s.phase === "playing") {
     return (
       <GameScreen
         key={`${s.index}-${s.playlist[s.index]}`}
         id={s.playlist[s.index]}
-        onExit={() => { disarmPartyBand(); playSfx("whoosh", { volume: 0.6 }); setPhase("winner"); }}
+        onExit={() => { disarmPartyBand(); setPartyMood(null); playSfx("whoosh", { volume: 0.6 }); setPhase("winner"); }}
       />
     );
   }
@@ -70,6 +71,7 @@ function Intro({ s, onPause }: { s: SoireeState; onPause: () => void }) {
     playSfx("confirm");
     // La bande est validée toute seule dans l'écran « Qui joue ? » du jeu
     armPartyBand(s.band);
+    setPartyMood(s.vibe); // les jeux règlent leurs packs 18+ / peines selon l'ambiance
     setPhase("playing");
   };
 
