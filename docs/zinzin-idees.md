@@ -1,6 +1,6 @@
 # Zinzin — idées de jeux mises de côté
 
-> 13/10/2026 : « Le Verre Invisible » (version Jenga liquide) et « Chut ! » (duel « ne ris pas » au micro) sont en cours de développement.
+> 13/10/2026 : « Le Verre Invisible » (version Jenga liquide) et « Chut ! » (duel « ne ris pas » au micro) sont développés (src/components/games/verre, src/components/games/chut). Reste en réserve : le Détecteur de mensonge (version bluff ci-dessous).
 
 Idées validées par le fondateur le 13/10/2026, à reprendre plus tard.
 

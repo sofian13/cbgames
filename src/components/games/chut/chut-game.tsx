@@ -48,7 +48,7 @@ interface Sentence { sips: number | null; dare: string }
 
 type Screen = "players" | "config" | "calib" | "pass" | "arena" | "result" | "bracket" | "table" | "tableWho" | "tableResult" | "end";
 
-const SFX: SfxName[] = ["buzzer", "crowd-cheer", "drumroll", "drumroll-end", "tada", "applause", "whistle", "pop", "card-flip", "whoosh", "select", "scratch", "pluck", "boom", "coin", "twotone", "glass", "thump", "bell", "pep", "rise", "pop2", "crowd-aww", "firecracker", "gong"];
+const SFX: SfxName[] = ["buzzer", "crowd-cheer", "laugh", "drumroll", "drumroll-end", "tada", "applause", "whistle", "pop", "card-flip", "whoosh", "select", "scratch", "pluck", "boom", "coin", "twotone", "glass", "thump", "bell", "pep", "rise", "pop2", "crowd-aww", "firecracker", "gong"];
 
 // ── Petits utilitaires (appelés uniquement dans des gestionnaires d'événements) ──
 function shuffle<T>(a: T[]): T[] {
@@ -257,6 +257,7 @@ export default function ChutGame({ onReturnToLobby }: GameProps) {
       setSentence(newSentence());
       playSfx("buzzer", { volume: 0.9 });
       playSfx("crowd-cheer", { volume: 0.7, delay: 0.35 });
+    playSfx("laugh", { volume: 0.8, delay: 0.25 });
       vibrate([70, 50, 260]);
     } else {
       setSentence(null);
@@ -310,6 +311,7 @@ export default function ChutGame({ onReturnToLobby }: GameProps) {
     setTableElapsed(elapsed);
     playSfx("buzzer", { volume: 0.9 });
     playSfx("crowd-cheer", { volume: 0.7, delay: 0.35 });
+    playSfx("laugh", { volume: 0.8, delay: 0.25 });
     vibrate([70, 50, 260]);
     setScreen("tableWho");
   };

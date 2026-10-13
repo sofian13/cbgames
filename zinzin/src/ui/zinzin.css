@@ -92,6 +92,8 @@
 .zc-wave { animation: zc-wave 1.6s ease-in-out infinite; }
 .zc-wave-2 { animation-delay: 0.3s; }
 @keyframes zc-wave { 0%, 100% { opacity: 0.15; } 50% { opacity: 1; } }
+.zc-tray { animation: zc-tray 2.4s ease-in-out infinite; }
+@keyframes zc-tray { 0%, 100% { transform: rotate(-5deg); } 50% { transform: rotate(6deg); } }
 
 /* ── Grammaire « sticker » : contour épais + ombre dure décalée ── */
 .zz-stk { border: 3px solid var(--zz-ink); box-shadow: 0 5px 0 var(--zz-ink); }
@@ -176,7 +178,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .zb-follow { transform: none !important; }
-  .zc-nose, .zc-tick, .zc-wave { animation: none !important; }
+  .zc-nose, .zc-tick, .zc-wave, .zc-tray { animation: none !important; }
   .zb-wob, .zb-rofl, .zb-face, .zb-blink, .zb-pupil-a, .zb-pupil-b, .zb-heart, .zb-flame, .zb-drop, .zb-zz { animation: none !important; }
   .zz-rise, .zz-pop, .zz-logo-in, .zz-sheet, .zz-screen-in { animation-duration: 1ms !important; animation-delay: 0ms !important; }
 }

@@ -9,7 +9,7 @@ import type { ReactNode } from "react";
 export type ZCostume =
   | "wolf" | "groucho" | "pinocchio" | "ten" | "stopwatch" | "potato" | "fuse"
   | "spy" | "angeldevil" | "antenna" | "mime" | "card" | "hourglass" | "split"
-  | "duo" | "hearts" | "beer" | "train" | "blindfold";
+  | "duo" | "hearts" | "beer" | "train" | "blindfold" | "waiter" | "shush";
 
 /** Palette « pomme de terre » (le costume patate recolore le blob). */
 export const POTATO = { body: "#D9A066", deep: "#A8692F", hi: "#F4D3A0", ink: "#2A1A00" };
@@ -353,5 +353,66 @@ export function costumeLayers(kind: ZCostume | undefined, ctx: Ctx): CostumeLaye
           </g>
         ),
       };
+
+    // Le Verre Invisible : serveur (nœud papillon) qui tient un plateau en équilibre, un verre dessus
+    case "waiter":
+      return {
+        back: (
+          // Bras levé côté gauche, derrière le corps
+          <g fill="none" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M24 78 C6 72 2 48 12 24" stroke={INK} strokeWidth={12} />
+            <path d="M24 78 C6 72 2 48 12 24" stroke={c.body} strokeWidth={6.4} />
+          </g>
+        ),
+        face: (
+          <g>
+            <path d="M60 102 L42 93 Q38 102 42 111Z" fill={INK} stroke={INK} strokeWidth={2.4} strokeLinejoin="round" />
+            <path d="M60 102 L78 93 Q82 102 78 111Z" fill={INK} stroke={INK} strokeWidth={2.4} strokeLinejoin="round" />
+            <path d="M45 98 L53 101" stroke="#fff" strokeWidth={2} strokeLinecap="round" opacity={0.5} />
+            <rect x={54.5} y={97} width={11} height={10} rx={3.5} fill="#FF3EA5" stroke={INK} strokeWidth={2.4} />
+          </g>
+        ),
+        top: (
+          <g className="zc-tray" style={{ transformOrigin: "12px 24px" }}>
+            {/* Main sous le plateau */}
+            <circle cx={12} cy={24} r={6.5} fill={c.body} stroke={INK} strokeWidth={2.6} />
+            {/* Plateau */}
+            <ellipse cx={18} cy={17} rx={27} ry={6.5} fill="#E3E8F4" stroke={INK} strokeWidth={SW} />
+            <ellipse cx={18} cy={15.4} rx={18} ry={3.2} fill="#fff" opacity={0.75} />
+            {/* Verre : liquide orange, paille, reflet */}
+            <path d="M25 -18 L31 -27" stroke="#FF3EA5" strokeWidth={3.4} strokeLinecap="round" />
+            <path d="M5 -16 L31 -16 L27 15 L9 15Z" fill="#DFF6FF" />
+            <path d="M6.6 -3 L29.4 -3 L27 15 L9 15Z" fill="#FF8A3D" />
+            <path d="M6.6 -3 L29.4 -3" stroke="#FFD23F" strokeWidth={2.6} />
+            <path d="M5 -16 L31 -16 L27 15 L9 15Z" fill="none" stroke={INK} strokeWidth={SW} strokeLinejoin="round" />
+            <path d="M11 -12 L12.5 10" stroke="#fff" strokeWidth={2.6} strokeLinecap="round" opacity={0.85} />
+          </g>
+        ),
+      };
+
+    // Chut ! : bouche scotchée (deux bandes de scotch en croix), joues gonflées roses.
+    // (Un index levé de face se lisait comme un doigt d'honneur : écarté.)
+    case "shush": {
+      const strip = (rot: number) => (
+        <g transform={`rotate(${rot} 60 86)`}>
+          <path d="M37 79 L83 79 L81 82 L84 86 L81 90 L83 93 L37 93 L39 90 L36 86 L39 82Z"
+                fill="#F6F0DC" stroke={INK} strokeWidth={2.8} strokeLinejoin="round" />
+          <path d="M43 83 H77" stroke="#fff" strokeWidth={2.2} strokeLinecap="round" opacity={0.8} />
+          <path d="M43 89.5 H77" stroke="#D9CFAE" strokeWidth={1.8} strokeLinecap="round" />
+        </g>
+      );
+      return {
+        face: (
+          <g>
+            <ellipse cx={28} cy={80} rx={12} ry={9} fill="#FF4F8B" opacity={0.6} />
+            <ellipse cx={93} cy={78} rx={12} ry={9} fill="#FF4F8B" opacity={0.6} />
+            <ellipse cx={24} cy={77} rx={3.4} ry={2} fill="#fff" opacity={0.6} />
+            <ellipse cx={89} cy={75} rx={3.4} ry={2} fill="#fff" opacity={0.6} />
+            {strip(-16)}
+            {strip(16)}
+          </g>
+        ),
+      };
+    }
   }
 }

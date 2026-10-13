@@ -1,5 +1,6 @@
 import type { I18n } from "@/lib/i18n";
 import type { MascotColor } from "@/components/Mascot";
+import { VERRE_TEXT } from "@/components/games/verre/i18n";
 
 /**
  * Textes des jeux de l'app, dans les 3 langues (FR / EN / ES).
@@ -1571,6 +1572,93 @@ export const GAME_TEXT = {
         { who: "Léa", text: "¡27!" },
         { who: "Malik", text: "27, fácil." },
         { who: "Tom", text: "Eh… ¿27 también?" },
+      ],
+    },
+  },
+  /* ───────── Le Verre Invisible (textes dans verre/i18n.ts) ───────── */
+  verre: VERRE_TEXT,
+
+  /* ───────── Chut ! ───────── */
+  chut: {
+    fr: {
+      name: "Chut !",
+      tagline: "Ne ris pas : le micro t'entend !",
+      pitch: "Un duel « ne ris pas » : le Clown a 30 secondes pour faire craquer le Sérieux, et c'est le micro qui entend le moindre pouffement.",
+      example: "Léa est le Clown. Elle maintient « À moi ! » et lit « Dis “les chaussettes de l'archiduchesse” avec la voix d'un pirate qui a le mal de mer ». Elle relâche : 3 secondes de silence qui tue… Hugo pouffe, l'aiguille passe dans le rouge, BUZZ ! Hugo prend 2 gorgées de zinzin ou un gage.",
+      rules: [
+        "Duel : deux joueurs face à face, le téléphone posé entre eux.",
+        "Le Sérieux doit garder son calme : pas un rire, pas un pouffement.",
+        "Le Clown a 30 secondes pour le faire craquer, avec les munitions proposées par l'app.",
+        "Le Clown ne parle QUE en maintenant « À moi ! » : pendant ce temps, le micro est en pause.",
+        "Il relâche : 3 secondes de silence qui tue. Le moindre bruit = BUZZ, le Sérieux a craqué.",
+        "Toute la table : tout le monde se tait pendant que le téléphone affiche des trucs absurdes et fait des bruits ridicules. Le premier bruit perd.",
+        "Pas de micro ? Un arbitre humain appuie sur « Il a ri ! ».",
+      ],
+      steps: [
+        "Calibrez le micro (3 s de silence)",
+        "Le Clown attaque avec les munitions de l'app",
+        "Il parle en maintenant « À moi ! », puis silence qui tue",
+        "Le premier bruit du Sérieux = BUZZ et une peine",
+      ],
+      story: [
+        { who: "Léa", text: "(en pirate) Les chaussettes de l'archi… *hic*" },
+        { text: "Léa relâche. Silence qui tue… 3… 2…" },
+        { who: "Hugo", text: "Pfff… pfrrt !" },
+        { text: "BUZZ ! L'aiguille est dans le rouge : Hugo a craqué." },
+      ],
+    },
+    en: {
+      name: "Shh!",
+      tagline: "Don't laugh: the mic can hear you!",
+      pitch: "A don't-laugh duel: the Clown has 30 seconds to crack the Straight Face, and the mic hears the tiniest snort.",
+      example: "Léa is the Clown. She holds \"My turn!\" and does a tongue twister in a seasick pirate voice. She lets go: 3 seconds of killer silence… Hugo snorts, the needle hits red, BUZZ! Hugo takes 2 zinzin sips or a dare.",
+      rules: [
+        "Duel: two players face each other, the phone lying between them.",
+        "The Straight Face must keep it together: no laugh, no snort.",
+        "The Clown has 30 seconds to make them crack, using the ammo the app suggests.",
+        "The Clown ONLY talks while holding “My turn!”: meanwhile, the mic is paused.",
+        "Let go: 3 seconds of killer silence. The slightest sound = BUZZ, the Straight Face cracked.",
+        "Whole table: everyone stays silent while the phone shows absurd scenes and makes silly noises. First sound loses.",
+        "No mic? A human referee taps “They laughed!”.",
+      ],
+      steps: [
+        "Calibrate the mic (3 s of silence)",
+        "The Clown attacks with the app's ammo",
+        "Talk only while holding \"My turn!\", then killer silence",
+        "First sound from the Straight Face = BUZZ and a penalty",
+      ],
+      story: [
+        { who: "Léa", text: "(as a pirate) She sells seashells by the… *hic*" },
+        { text: "Léa lets go. Killer silence… 3… 2…" },
+        { who: "Hugo", text: "Pfff… pfrrt!" },
+        { text: "BUZZ! The needle hits red: Hugo cracked." },
+      ],
+    },
+    es: {
+      name: "¡Chis!",
+      tagline: "No te rías: ¡el micro te oye!",
+      pitch: "Un duelo de «no te rías»: el Payaso tiene 30 segundos para hacer reír al Serio, y el micro oye hasta el menor resoplido.",
+      example: "Léa es el Payaso. Mantiene «¡Me toca!» y suelta un trabalenguas con voz de pirata mareado. Suelta: 3 segundos de silencio mortal… Hugo resopla, la aguja llega al rojo, ¡BUZZ! Hugo se lleva 2 tragos de zinzin o un reto.",
+      rules: [
+        "Duelo: dos jugadores cara a cara, con el teléfono entre ellos.",
+        "El Serio debe mantener la calma: ni una risa, ni un resoplido.",
+        "El Payaso tiene 30 segundos para hacerle reír, con la munición que propone la app.",
+        "El Payaso SOLO habla mientras mantiene «¡Me toca!»: mientras tanto, el micro está en pausa.",
+        "Al soltar: 3 segundos de silencio mortal. El menor ruido = ¡BUZZ!, el Serio se ha reído.",
+        "Toda la mesa: todos en silencio mientras el teléfono muestra escenas absurdas y hace ruidos ridículos. El primer ruido pierde.",
+        "¿Sin micro? Un árbitro humano pulsa «¡Se rió!».",
+      ],
+      steps: [
+        "Calibra el micro (3 s de silencio)",
+        "El Payaso ataca con la munición de la app",
+        "Habla solo manteniendo «¡Me toca!», luego silencio mortal",
+        "El primer ruido del Serio = BUZZ y castigo",
+      ],
+      story: [
+        { who: "Léa", text: "(de pirata) Tres tristes tigres tragaban… *hip*" },
+        { text: "Léa suelta. Silencio mortal… 3… 2…" },
+        { who: "Hugo", text: "Pfff… ¡pfrrt!" },
+        { text: "¡BUZZ! La aguja llega al rojo: Hugo se ha reído." },
       ],
     },
   },

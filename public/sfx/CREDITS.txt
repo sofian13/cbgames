@@ -43,3 +43,10 @@ coin               | Wikimedia Commons « Coin dropped on wooden floor.ogg » (e
 coins              | Wikimedia Commons « Coins dropped in metallic moneybox 0.ogg » (ezwa)  | Dom. public  | https://commons.wikimedia.org/wiki/File:Coins_dropped_in_metallic_moneybox_0.ogg
 card-place, card-slide, card-shuffle, card-fan, card-flip, dice-shake, dice-throw | Kenney « Casino Audio » | CC0 | https://kenney.nl/assets/casino-audio
 thump, plate, clink, glass | Kenney « Impact Sounds »                                       | CC0          | https://kenney.nl/assets/impact-sounds
+pour (boucle)      | Wikimedia Commons « Pouring wine.ogg » (cori, pdsounds.org)           | Dom. public  | https://commons.wikimedia.org/wiki/File:Pouring_wine.ogg
+glug               | Wikimedia Commons « Pouring water bottles.ogg » (stephan, pdsounds.org) | Dom. public  | https://commons.wikimedia.org/wiki/File:Pouring_water_bottles.ogg
+splash             | OpenGameArt « 40 CC0 water / splash / slime SFX » (rubberduck), splash_08 + splash_01 | CC0 | https://opengameart.org/content/40-cc0-water-splash-slime-sfx
+fizz (boucle)      | Wikimedia Commons « Zzrrrp sizzle.ogg » (stephan, pdsounds.org)       | Dom. public  | https://commons.wikimedia.org/wiki/File:Zzrrrp_sizzle.ogg
+fizz (boucle)      | + Wikimedia Commons « Water vaporizing on hot stones.ogg » (natalie, pdsounds.org) | Dom. public | https://commons.wikimedia.org/wiki/File:Water_vaporizing_on_hot_stones.ogg
+laugh              | OpenGameArt « Group giggling » (Nocturnal_Vanguard / AuraVoice)       | CC0          | https://opengameart.org/content/group-giggling
+laugh              | + Wikimedia Commons « Laughter(s).ogg » (sagetyrtle)                  | CC0          | https://commons.wikimedia.org/wiki/File:Laughter(s).ogg

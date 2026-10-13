@@ -22,7 +22,9 @@ export type SfxName =
   | "bomb-tick" | "bomb-tock" | "fuse" | "detonator-beep" | "explosion" | "firecracker"
   // ambiance soirée / plateau télé
   | "applause" | "crowd-cheer" | "crowd-aww" | "drumroll" | "drumroll-end" | "tada" | "cymbal"
-  | "buzzer" | "correct" | "heartbeat" | "whistle" | "chime";
+  | "buzzer" | "correct" | "heartbeat" | "whistle" | "chime" | "laugh"
+  // liquides (pour et fizz bouclables : playLoop)
+  | "pour" | "glug" | "splash" | "fizz";
 
 /** Sons composés (plusieurs samples superposés / enchaînés). */
 export type SfxCombo = "explosion" | "fanfare" | "drumroll" | "fail" | "reveal" | "countdown";

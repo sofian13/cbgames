@@ -26,6 +26,8 @@ export const GAME_NAMES: Record<string, I18n<string>> = {
   "code-names": { fr: "Mots Espions", en: "Spy Words", es: "Palabras Espía" },
   purete: { fr: "Test de pureté", en: "Purity Test", es: "Test de Pureza" },
   "faux-temoin": { fr: "Le Faux Témoin", en: "The Fake Witness", es: "El Falso Testigo" },
+  verre: { fr: "Le Verre Invisible", en: "The Invisible Glass", es: "El Vaso Invisible" },
+  chut: { fr: "Chut !", en: "Shh!", es: "¡Chis!" },
 };
 
 /** Clé de comparaison : sans emoji, accents, ponctuation ni casse. */
