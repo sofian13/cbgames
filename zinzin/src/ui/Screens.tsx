@@ -1,6 +1,7 @@
 import { Suspense, lazy, useState, type ComponentType, type LazyExoticComponent, type ReactNode } from "react";
 import type { GameProps } from "@/lib/games/types";
-import { ChevronLeft, CreditCard, Mail, RotateCcw, Sparkles, X } from "lucide-react";
+import { Bell, ChevronLeft, CreditCard, Mail, RotateCcw, Share2, Sparkles, Star, X } from "lucide-react";
+import { LANGS, notificationsOn, rateApp, setLang, setNotifications, shareApp, useLang } from "../settings";
 import { getZGame } from "../catalog";
 import { isTestMode, resetPremiumForTests, restore } from "../premium";
 import { IDEAS_EMAIL, LEGAL_DOCS, LEGAL_UPDATED_AT, type LegalDocId } from "@/lib/legal/zinzin";
@@ -102,6 +103,21 @@ export function SettingsSheet({
             <Tile bg="#FF6B5B" tilt={-1} icon={<Mail size={26} strokeWidth={2.6} />} label="Nous écrire" sub="Un bug ? Une question ?" href={`mailto:${IDEAS_EMAIL}`} wide />
           </div>
 
+          {/* Partager / évaluer */}
+          <div className="mt-3.5 grid grid-cols-2 gap-3.5">
+            <Tile bg="#FFD23F" tilt={-1.5} icon={<Share2 size={26} strokeWidth={2.6} />} label="Partager Zinzin" onClick={async () => {
+              haptic();
+              if (await shareApp()) toast("Merci de faire tourner 💛");
+            }} />
+            <Tile bg="#A98BFF" tilt={1.5} icon={<Star size={26} strokeWidth={2.6} />} label="Évaluer l'app" sub="5 étoiles = 1 blob heureux" onClick={() => { haptic(); void rateApp(); }} />
+          </div>
+
+          {/* Rappels de soirée */}
+          <NotifToggle toast={toast} />
+
+          {/* Langue */}
+          <LangPicker />
+
           <div className="mt-5 flex justify-center">
             <IdeaButton game="Zinzin (nouveau jeu)" kind="idée de jeu" />
           </div>
@@ -131,6 +147,62 @@ export function SettingsSheet({
         </div>
       )}
     </Sheet>
+  );
+}
+
+function NotifToggle({ toast }: { toast: (m: string) => void }) {
+  const [on, setOn] = useState(notificationsOn);
+  const [busy, setBusy] = useState(false);
+  return (
+    <button
+      type="button"
+      disabled={busy}
+      onClick={async () => {
+        haptic();
+        setBusy(true);
+        const res = await setNotifications(!on);
+        setBusy(false);
+        setOn(res);
+        if (!on && !res) toast("Autorise les notifications dans les Réglages de l'iPhone");
+        else toast(res ? "Rappels activés : vendredi et samedi soir" : "Rappels désactivés");
+      }}
+      className="zz-push zz-stk mt-3.5 flex w-full items-center gap-3 rounded-[22px] px-4 py-3.5 text-left"
+      style={{ background: "#FFF6E5", color: "var(--zz-ink)" }}
+      aria-pressed={on}
+    >
+      <Bell size={26} strokeWidth={2.6} />
+      <span className="flex-1">
+        <span className="zz-title block text-[19px]">Rappels de soirée</span>
+        <span className="block text-[13px] font-semibold opacity-75">Une notif le vendredi et le samedi soir</span>
+      </span>
+      <span className="relative h-8 w-14 shrink-0 rounded-full" style={{ background: on ? "#3DDC97" : "#CFC6E3", border: "2.5px solid var(--zz-ink)" }}>
+        <span className="absolute top-1/2 h-6 w-6 -translate-y-1/2 rounded-full bg-white transition-[left]" style={{ left: on ? 26 : 2, border: "2.5px solid var(--zz-ink)" }} />
+      </span>
+    </button>
+  );
+}
+
+function LangPicker() {
+  const lang = useLang();
+  return (
+    <div className="mt-5">
+      <div className="zz-title mb-2 text-[20px] text-white">Langue</div>
+      <div className="grid grid-cols-3 gap-2.5">
+        {LANGS.map((l) => (
+          <button
+            key={l.id}
+            type="button"
+            onClick={() => { haptic(); setLang(l.id); }}
+            aria-pressed={lang === l.id}
+            className="zz-push zz-stk-sm flex min-h-12 flex-col items-center justify-center rounded-[18px] py-2 text-[14px] font-extrabold"
+            style={{ background: lang === l.id ? "#FFD23F" : "#fff", color: "var(--zz-ink)", rotate: lang === l.id ? "-2deg" : undefined }}
+          >
+            <span className="text-[20px] leading-none">{l.flag}</span>
+            {l.label}
+          </button>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -172,7 +244,10 @@ export function LegalScreen({ page, onClose }: { page: LegalPage; onClose: () =>
             ))}
           </section>
         ))}
-        <p className="mt-8 text-[13px]" style={{ color: "var(--zz-mute)" }}>Dernière mise à jour : {LEGAL_UPDATED_AT}</p>
+        {/* Pas de doublon si le texte donne déjà la date (CGU, confidentialité) */}
+        {!doc.sections.some((sec) => sec.paragraphs.some((para) => para.includes(LEGAL_UPDATED_AT))) && (
+          <p className="mt-8 text-[13px]" style={{ color: "var(--zz-mute)" }}>Dernière mise à jour : {LEGAL_UPDATED_AT}</p>
+        )}
       </div>
     </div>
   );
@@ -192,7 +267,7 @@ function EraseData() {
       className="zz-tap mx-auto mt-1 block min-h-11 px-3 text-[14px] font-semibold underline decoration-2 underline-offset-4"
       style={{ color: armed ? "#FF6B5B" : "var(--zz-mute)" }}
     >
-      {armed ? "Sûr ? Prénoms, réglages… tout part. Re-tape pour confirmer" : "Effacer mes données de ce téléphone"}
+      {armed ? "Sûr ? Touche encore pour tout effacer" : "Effacer mes données de ce téléphone"}
     </button>
   );
 }

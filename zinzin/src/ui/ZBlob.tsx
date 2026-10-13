@@ -257,6 +257,8 @@ export function ZBlob({
   };
 
   const cos = costumeLayers(costume, { c, L, R, clip });
+  // Lunettes noires (humeur « cool » ou costume d'espion) : yeux cachés
+  const hideEyes = mood === "cool" || costume === "spy";
   const blush = mood === "love" || mood === "kiss" || mood === "happy" || mood === "laughing" || mood === "wink";
 
   return (
@@ -304,14 +306,15 @@ export function ZBlob({
               <ellipse cx={91} cy={74} rx={7} ry={4} />
             </g>
           )}
-          {eye(L, look[0], 0)}
-          {eye(R, look[1], 1)}
+          {/* Lunettes de soleil : les yeux sont cachés (sinon ils débordent des verres) */}
+          {!hideEyes && eye(L, look[0], 0)}
+          {!hideEyes && eye(R, look[1], 1)}
           {brows()}
           {mood === "cool" && (
             <g>
               <path d={`M${L.x - 15} ${L.y - 6} H${R.x + 17}`} stroke={INK} strokeWidth={4} strokeLinecap="round" />
-              <path d={`M${L.x - 14} ${L.y - 6} H${L.x + 13} V${L.y + 2} C${L.x + 13} ${L.y + 10} ${L.x - 14} ${L.y + 10} ${L.x - 14} ${L.y + 2}Z`} fill={INK} />
-              <path d={`M${R.x - 14} ${L.y - 6} H${R.x + 16} V${L.y + 2} C${R.x + 16} ${L.y + 11} ${R.x - 14} ${L.y + 11} ${R.x - 14} ${L.y + 2}Z`} fill={INK} />
+              <path d={`M${L.x - 15} ${L.y - 7} H${L.x + 14} V${L.y + 2} C${L.x + 14} ${L.y + 12} ${L.x - 15} ${L.y + 12} ${L.x - 15} ${L.y + 2}Z`} fill={INK} />
+              <path d={`M${R.x - 15} ${L.y - 7} H${R.x + 17} V${L.y + 2} C${R.x + 17} ${L.y + 12} ${R.x - 15} ${L.y + 12} ${R.x - 15} ${L.y + 2}Z`} fill={INK} />
               <path d={`M${L.x - 8} ${L.y - 2} l6 0`} stroke="#fff" strokeWidth={2.4} strokeLinecap="round" opacity={0.7} />
               <path d={`M${R.x - 8} ${L.y - 2} l6 0`} stroke="#fff" strokeWidth={2.4} strokeLinecap="round" opacity={0.7} />
             </g>
