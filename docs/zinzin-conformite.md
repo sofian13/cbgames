@@ -44,7 +44,7 @@ Version provisoire du 12/10/2026, à relire par un pro avant la sortie. Les text
 ## 4. Ce qu'il te reste à faire (obligatoire avant de vendre)
 1. **Statut juridique :** EI immatriculée au RCS de Marseille (n° 109 518 910, nom commercial Safiri), déjà renseignée dans `EDITOR`. Activités déclarées : vente de prêt-à-porter et prestations de services/conseil IT. **Ajouter l'activité « édition et commercialisation d'applications mobiles et de jeux »** via le guichet unique (formalites.entreprises.gouv.fr, gratuit). Confirmer avec l'URSSAF ou un comptable le régime fiscal et social de ces recettes, ainsi que la franchise de TVA (« art. 293 B » supposée).
 2. **Médiateur de la consommation :** obligatoire pour la vente aux particuliers (art. L612-1), reporté pour l'instant. Dès qu'il est choisi, renseigner `EDITOR.mediator` : la clause apparaît alors automatiquement dans les conditions.
-3. **Adresse e-mail de contact :** créer `contact@…` sur ton domaine (remplacer `contact@zinzin.app` si tu n'as pas ce domaine).
+3. **Adresse e-mail de contact :** créer `contact@…` sur ton domaine (remplacer `contact@zinzin-app.com` si tu n'as pas ce domaine).
 4. **RevenueCat :** accepter leur DPA (accord de sous-traitance RGPD) dans le dashboard et créer un ID utilisateur anonyme (c'est le comportement par défaut).
 5. **Marque :** vérifier « Zinzin » sur data.inpi.fr (classes 9 et 41), puis déposer.
 6. **Relecture juridique :** faire relire les 3 textes par un juriste ou un avocat avant la sortie.

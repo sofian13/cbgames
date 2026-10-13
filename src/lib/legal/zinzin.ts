@@ -17,7 +17,7 @@ export const EDITOR = {
   siret: "SIRET 109 518 910 00012",
   // Hypothèse : micro-entreprise en franchise en base de TVA (à confirmer)
   vat: "TVA non applicable, art. 293 B du CGI",
-  email: "contact@zinzin.app",
+  email: "contact@zinzin-app.com",
   director: "Sofian Zerkouni",
   /** Médiateur de la consommation : vide tant qu'aucun n'est désigné (la clause s'adapte). */
   mediator: "",
