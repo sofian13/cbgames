@@ -4,15 +4,16 @@
  * TU PRÉFÈRES ? — dilemmes party sur un seul téléphone (pass-and-play).
  * On choisit une ambiance, on lit le dilemme à voix haute, tout le monde
  * lève la main pour son choix, on compte les mains sur l'écran, puis on
- * révèle le résultat du groupe + une petite punchline. 100% local.
+ * révèle le résultat du groupe + une petite punchline. Le camp minoritaire
+ * prend la peine (gage, ou 1 à 2 gorgées de zinzin selon le réglage). 100% local.
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { GameProps } from "@/lib/games/types";
 import { DISPLAY, ZButton, ZCard, ZChip, ZLink, ZScreen, ZTitle, inkOn, useScrollTopOn } from "@/components/games/local-kit";
 import { Mascot } from "@/components/Mascot";
 import { ConfettiBurst } from "@/components/ConfettiBurst";
-import { ArrowLeft, Dices, Flame, Hand, Heart, Laugh, Minus, type LucideIcon } from "lucide-react";
+import { ArrowLeft, CupSoda, Dices, Flame, Hand, Heart, Laugh, Minus, Sparkles, type LucideIcon } from "lucide-react";
 import { GameIconButton, GameIconBadge, GameInlineIcon, GAME_INK } from "@/components/games/game-icon-button";
 import { IdeaButton, RerollButton } from "@/components/games/idea-button";
 import { playCombo, playSfx, preloadSfx } from "@/lib/sfx";
@@ -22,9 +23,10 @@ import * as DIL_ES from "@/components/games/tu-prefere/dilemmas.es";
 import type { DilemmaTuple } from "@/components/games/tu-prefere/dilemmas";
 import { getLang, useT, type I18n, type Lang } from "@/lib/i18n";
 import { TP_STR } from "@/components/games/tu-prefere/i18n";
-import { adultDefault } from "@/lib/party-mood";
+import { adultDefault, sipsAllowed } from "@/lib/party-mood";
 
 type Cat = "classique" | "hot" | "absurde" | "couple";
+type Penalty = "dares" | "sips";
 interface Dilemma { a: string; b: string; quip: string }
 
 const toDilemmas = (list: DilemmaTuple[]): Dilemma[] => list.map(([a, b, quip]) => ({ a, b, quip }));
@@ -50,20 +52,29 @@ function shuffle<T>(arr: T[]): T[] {
 
 // Carte d'une option : tap = +1 main levée, bouton − pour corriger. Après révélation : % du groupe.
 function OptionCard({
-  side, text, count, total, revealed, winner, color, tilt, onInc, onDec,
+  side, text, count, total, revealed, winner, loser, color, tilt, onInc, onDec,
 }: {
   side: "a" | "b"; text: string; count: number; total: number; revealed: boolean; winner: boolean;
+  /** Camp minoritaire : c'est lui qui prend la peine */
+  loser: boolean;
   color: string; tilt: number; onInc: () => void; onDec: () => void;
 }) {
   const t = useT(TP_STR);
   const pct = total > 0 ? Math.round((count / total) * 100) : 0;
-  const dim = revealed && !winner;
+  // Le camp minoritaire n'est pas grisé : c'est lui qui prend la peine
+  const dim = revealed && !winner && !loser;
   const bg = revealed ? (winner ? color : "#fff") : side === "a" ? "#fff" : "#FFF6E5";
   return (
     <div
       className="relative flex flex-1 flex-col rounded-[26px] transition-opacity"
       style={{ background: bg, color: inkOn(bg), border: `3px solid ${GAME_INK}`, boxShadow: `0 6px 0 ${GAME_INK}`, rotate: `${tilt}deg`, opacity: dim ? 0.6 : 1, minHeight: 132 }}
     >
+      {loser && (
+        <span className="absolute -top-3 right-4 z-[2] rounded-full px-3 py-1 text-[13px] font-bold uppercase tracking-wide"
+          style={{ background: "#FF3EA5", color: "#fff", border: `2.5px solid ${GAME_INK}`, rotate: "4deg" }}>
+          {t.minorityBadge}
+        </span>
+      )}
       <button
         type="button"
         onClick={onInc}
@@ -105,9 +116,20 @@ export default function TuPrefereGame({ onReturnToLobby }: GameProps) {
   const [idx, setIdx] = useState(0);
   const [votes, setVotes] = useState<{ a: number; b: number }>({ a: 0, b: 0 });
   const [revealed, setRevealed] = useState(false);
+  // Peine du camp minoritaire. Soirée « Chill » : gages uniquement (pas de gorgées).
+  const [sipsOk] = useState(() => sipsAllowed(true));
+  const [penalty, setPenalty] = useState<Penalty>(() => (sipsOk ? "sips" : "dares"));
+  const [dare, setDare] = useState("");
+  const penaltyRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => { preloadSfx(["pop", "pop2", "whoosh", "gong", "card-slide", "card-flip", "select", "ding", "win"]); }, []);
   useScrollTopOn(`${cat}-${idx}`);
+  // À la révélation, on fait défiler jusqu'à la peine pour que tout le monde la voie
+  useEffect(() => {
+    if (!revealed) return;
+    const id = window.setTimeout(() => penaltyRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 450);
+    return () => window.clearTimeout(id);
+  }, [revealed]);
 
   const startPack = (c: Cat) => {
     playSfx("card-flip", { volume: 0.7 });
@@ -135,6 +157,7 @@ export default function TuPrefereGame({ onReturnToLobby }: GameProps) {
   const reveal = () => {
     const tie = votes.a === votes.b;
     playCombo("reveal");
+    setDare(t.dares[Math.floor(Math.random() * t.dares.length)]);
     if (!tie && Math.max(votes.a, votes.b) === total) playSfx("win", { volume: 0.6, delay: 0.35 }); // unanimité
     setRevealed(true);
   };
@@ -150,7 +173,28 @@ export default function TuPrefereGame({ onReturnToLobby }: GameProps) {
         <p className="mt-3 text-[16px] font-semibold leading-snug" style={{ color: "rgba(255,255,255,0.88)" }}>
           {t.intro}
         </p>
-        <ZTitle size={28} className="mt-7">{t.vibe}</ZTitle>
+        <ZTitle size={22} className="mt-6">{t.penaltyTitle}</ZTitle>
+        {sipsOk ? (
+          <div className="mt-3 grid grid-cols-2 gap-3" role="radiogroup" aria-label={t.penaltyTitle}>
+            {([["dares", Sparkles, t.penaltyDares], ["sips", CupSoda, t.penaltySips]] as const).map(([p, Icon, txt]) => {
+              const on = penalty === p;
+              return (
+                <button key={p} type="button" role="radio" aria-checked={on} onClick={() => { playSfx("select", { volume: 0.5 }); setPenalty(p); }}
+                  className="flex min-h-[64px] items-center gap-2.5 rounded-[18px] px-3 py-2 text-left"
+                  style={{ background: on ? "#FFD23F" : "rgba(255,255,255,0.08)", color: on ? GAME_INK : "#fff", border: `3px solid ${on ? GAME_INK : "rgba(255,255,255,0.25)"}` }}>
+                  <Icon size={22} strokeWidth={2.6} aria-hidden className="shrink-0" />
+                  <span className="min-w-0">
+                    <span className="block text-[16px] leading-tight" style={DISPLAY}>{txt.title}</span>
+                    <span className="block text-[13px] font-semibold leading-tight opacity-80">{txt.sub}</span>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        ) : (
+          <p className="mt-2 text-[15px] font-semibold" style={{ color: "rgba(255,255,255,0.88)" }}>{t.penaltyChill}</p>
+        )}
+        <ZTitle size={28} className="mt-6">{t.vibe}</ZTitle>
         <div className="mt-3 grid grid-cols-2 gap-3">
           {(Object.keys(PACKS) as Cat[]).map((c, i) => {
             const pk = PACKS[c];
@@ -173,6 +217,11 @@ export default function TuPrefereGame({ onReturnToLobby }: GameProps) {
   }
 
   const winner: "a" | "b" | "tie" | null = !revealed || total === 0 ? null : votes.a === votes.b ? "tie" : votes.a > votes.b ? "a" : "b";
+  // Camp minoritaire = l'autre camp, s'il a au moins une main (sinon unanimité : personne ne prend)
+  const loser: "a" | "b" | null = winner === "a" && votes.b > 0 ? "b" : winner === "b" && votes.a > 0 ? "a" : null;
+  const loserCount = loser ? votes[loser] : 0;
+  // Seul(e) contre tous : 2 gorgées ; sinon 1 chacun (jamais plus de 3)
+  const sips = loserCount === 1 ? 2 : 1;
 
   return (
     <ZScreen tools={<IdeaButton game={t.gameName} kind="dilemme" compact bg="#fff" />}>
@@ -188,7 +237,7 @@ export default function TuPrefereGame({ onReturnToLobby }: GameProps) {
       <div className="mt-4 flex flex-1 flex-col gap-2">
         {current && (
           <OptionCard side="a" text={current.a} count={votes.a} total={total} revealed={revealed} tilt={-1}
-            winner={winner === "a" || winner === "tie"} color={color} onInc={() => bump("a", 1)} onDec={() => bump("a", -1)} />
+            winner={winner === "a" || winner === "tie"} loser={loser === "a"} color={color} onInc={() => bump("a", 1)} onDec={() => bump("a", -1)} />
         )}
         <div className="relative z-[1] -my-4 self-center">
           <span className="grid h-14 w-14 place-items-center rounded-full text-[22px]"
@@ -196,7 +245,7 @@ export default function TuPrefereGame({ onReturnToLobby }: GameProps) {
         </div>
         {current && (
           <OptionCard side="b" text={current.b} count={votes.b} total={total} revealed={revealed} tilt={1}
-            winner={winner === "b" || winner === "tie"} color={color} onInc={() => bump("b", 1)} onDec={() => bump("b", -1)} />
+            winner={winner === "b" || winner === "tie"} loser={loser === "b"} color={color} onInc={() => bump("b", 1)} onDec={() => bump("b", -1)} />
         )}
       </div>
 
@@ -209,6 +258,29 @@ export default function TuPrefereGame({ onReturnToLobby }: GameProps) {
               </p>
               {current?.quip && <p className="mt-1 text-[15px] font-semibold leading-snug">{current.quip}</p>}
             </ZCard>
+            {/* Peine : explicite, qui prend quoi */}
+            <div ref={penaltyRef}>
+            <ZCard bg="#fff" tilt={1} shadow={4} radius={20} className="mt-3 px-4 py-3">
+              {loser ? (
+                <>
+                  <p className="text-[18px] leading-tight" style={{ ...DISPLAY, color: "#E0218A" }}>{t.loserHead(loser === "a" ? "A" : "B", loserCount)}</p>
+                  {penalty === "sips" ? (
+                    <>
+                      <p className="mt-1.5 text-[17px] font-bold leading-snug">
+                        <GameInlineIcon icon={CupSoda} /> {loserCount === 1 ? t.sipsSolo(sips) : t.sipsEach(sips)}
+                      </p>
+                      <p className="mt-0.5 text-[15px] font-semibold leading-snug">{t.orDare} {dare}</p>
+                      <p className="mt-1 text-[13px] font-semibold opacity-80">{t.waterOk}</p>
+                    </>
+                  ) : (
+                    <p className="mt-1.5 text-[16px] font-bold leading-snug">{t.dareOnly} {dare}</p>
+                  )}
+                </>
+              ) : (
+                <p className="text-[17px] leading-tight" style={DISPLAY}>{winner === "tie" ? t.noPenaltyTie : t.noPenaltyUnanimous}</p>
+              )}
+            </ZCard>
+            </div>
             <ZButton bg={color} className="mt-5" onClick={next}>{t.nextDilemma}</ZButton>
           </>
         ) : (
