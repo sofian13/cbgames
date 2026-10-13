@@ -1,0 +1,2 @@
+"NSMicrophoneUsageDescription" = "Zinzin uses the microphone only during the game \"Shh!\" to measure the noise level live. Nothing is recorded or sent.";
+"NSMotionUsageDescription" = "Zinzin uses the motion sensors for games like The Invisible Glass or Hot Potato. Nothing is recorded.";

@@ -10,7 +10,8 @@ Version provisoire du 12/10/2026, à relire par un pro avant la sortie. Les text
 | Prénoms saisis, dernière bande, prénoms récents | localStorage du téléphone | Non |
 | Réglages, confirmation 18+, état premium | localStorage | Non |
 | Achats / abonnement | Apple ou Google + RevenueCat (SDK natif) | Oui : id anonyme, historique d'achat, pays, infos appareil |
-| Capteur de mouvement (La Patate) | traité en direct | Non (jamais stocké) |
+| Capteur de mouvement (La Patate, Le Verre Invisible) | traité en direct | Non (jamais stocké) |
+| Micro (Chut !, avec autorisation) | niveau sonore en direct | Non (aucun enregistrement) |
 | Voix du narrateur (Loup-Garou) | synthèse vocale iOS | Non |
 
 - **Aucune connexion réseau depuis l'interface :** le build de l'app contient une CSP `connect-src 'self'` (`zinzin/vite.config.ts`). Même par erreur, aucun jeu ne peut appeler un serveur.

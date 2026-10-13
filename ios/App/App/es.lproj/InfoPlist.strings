@@ -1,0 +1,2 @@
+"NSMicrophoneUsageDescription" = "Zinzin usa el micrófono solo durante el juego «¡Chis!» para medir el nivel de ruido en directo. No se graba ni se envía nada.";
+"NSMotionUsageDescription" = "Zinzin usa los sensores de movimiento para juegos como El Vaso Invisible o La Patata Caliente. No se graba nada.";
