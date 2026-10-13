@@ -662,11 +662,18 @@ function RoundPlay({
       let rx: number;
       let rz: number;
       if (live) {
-        if (r.sub === "calib") {
-          // le zéro suit la façon dont le joueur tient le tél (borné : pas de triche)
-          const k = Math.min(1, dt * 6);
-          r.refG += (clamp(input.gamma, -20, 20) - r.refG) * k;
-          r.refB += (clamp(input.beta, -20, 20) - r.refB) * k;
+        // Le « à plat » suit la façon dont le joueur tient le tél : vite au calibrage, puis
+        // doucement tout le temps (~1,3 s). Tél tenu immobile → l'eau se remet droite et stable ;
+        // ce sont les MOUVEMENTS (à-coups, inclinaisons rapides) qui font tanguer et déborder.
+        {
+          // quand on revient vers l'horizontale, le zéro suit vite : pas de vague dans l'autre sens
+          const slow = 1 - Math.exp(-dt / 1.3);
+          const fast = 1 - Math.exp(-dt / 0.18);
+          const kOf = (v: number, ref: number) => (r.sub === "calib" ? Math.min(1, dt * 6) : Math.abs(v) < Math.abs(ref) ? fast : slow);
+          const g = clamp(input.gamma, -35, 35);
+          const b = clamp(input.beta, -35, 35);
+          r.refG += (g - r.refG) * kOf(g, r.refG);
+          r.refB += (b - r.refB) * kOf(b, r.refB);
         }
         // zone morte : le léger tremblement des mains ne compte pas, un vrai geste oui
         rx = soft(input.gamma - r.refG);
