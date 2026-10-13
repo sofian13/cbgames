@@ -18,24 +18,27 @@ import { GameIconButton, GameInlineIcon, GameTopRight } from "@/components/games
 import { IdeaButton, RerollButton } from "@/components/games/idea-button";
 import { isSfxMuted, playCombo, playSfx, preloadSfx, setSfxMuted, subscribeSfxMuted } from "@/lib/sfx";
 import { ConfettiBurst } from "@/components/ConfettiBurst";
-import { QPACKS, type Q } from "./questions";
+import type { Q } from "./questions";
+import { getLang, pick, useT, type Lang } from "@/lib/i18n";
+import { STR, packsFor } from "./i18n";
 import { getSavedDuo, saveDuo } from "@/lib/saved-players";
 
 const ACCENT = "#FF6BAE";
 
-function verdictFor(pct: number) {
-  return pct >= 85 ? { t: "Âmes sœurs !", c: "#3DDC97" }
-    : pct >= 65 ? { t: "Sacrée complicité", c: "#FFD23F" }
-    : pct >= 45 ? { t: "Encore des choses à découvrir", c: "#FF8A3D" }
-    : { t: "Premier rendez-vous ?", c: "#FF6B5B" };
+function verdictFor(pct: number, v: [string, string, string, string]) {
+  return pct >= 85 ? { t: v[0], c: "#3DDC97" }
+    : pct >= 65 ? { t: v[1], c: "#FFD23F" }
+    : pct >= 45 ? { t: v[2], c: "#FF8A3D" }
+    : { t: v[3], c: "#FF6B5B" };
 }
 
 // ── WRAPPER : choix local / en ligne ──
 export default function CoupleQuizGame(props: GameProps) {
   const [mode, setMode] = useState<GameMode | null>(null);
+  const t = useT(STR);
   if (mode === null) {
-    return <ModeSelect emoji="❤️" name="Tu me connais ?"
-      tagline="Quiz de couple : l'un répond sur lui, l'autre devine. Ensemble sur un tél, ou chacun le sien à distance."
+    return <ModeSelect emoji="❤️" name={t.name}
+      tagline={t.tagline}
       onPick={setMode} />;
   }
   if (mode === "local") return <CoupleQuizLocal onReturnToLobby={props.onReturnToLobby} />;
@@ -87,13 +90,14 @@ function useSfxMuted() {
 // Conteneur plein écran : rien sous la barre d'état ni sous la croix « quitter » de l'app
 function Screen({ children, center, footer }: { children: ReactNode; center?: boolean; footer?: ReactNode }) {
   const muted = useSfxMuted();
+  const t = useT(STR);
   return (
     <div
       className="relative flex min-h-[100dvh] shrink-0 flex-col px-5 text-white"
       style={{ background: NIGHT, backgroundImage: DOTS, backgroundSize: "22px 22px", paddingTop: TOP_SAFE, paddingBottom: BOTTOM_SAFE }}
     >
       <GameTopRight>
-        <GameIconButton icon={muted ? VolumeX : Volume2} label={muted ? "Activer le son" : "Couper le son"} active={muted} onClick={() => setSfxMuted(!muted)} />
+        <GameIconButton icon={muted ? VolumeX : Volume2} label={muted ? t.soundOn : t.soundOff} active={muted} onClick={() => setSfxMuted(!muted)} />
       </GameTopRight>
       <div className={`mx-auto flex w-full max-w-md flex-col ${center ? "my-auto items-center" : ""}`}>{children}</div>
       {footer && (
@@ -146,6 +150,10 @@ function Who({ i, children }: { i: number; children: ReactNode }) {
 }
 
 function CoupleQuizLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) {
+  const t = useT(STR);
+  // Langue figée pour la partie : packs de questions de cette langue (mêmes ids partout)
+  const [lang] = useState<Lang>(getLang);
+  const QPACKS = packsFor(lang);
   const [phase, setPhase] = useState<Phase>("names");
   const [names, setNames] = useState<[string, string]>(() => getSavedDuo());
   const [packs, setPacks] = useState<string[]>(() => QPACKS.filter((p) => p.defaultOn).map((p) => p.id));
@@ -220,17 +228,17 @@ function CoupleQuizLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) 
       <Screen
         footer={
           <BigBtn bg={PINK} disabled={!ok} onClick={() => { const clean: [string, string] = [cleanName(names[0]), cleanName(names[1])]; saveDuo(clean); setNames(clean); setPhase("config"); playSfx("confirm", { volume: 0.6 }); }}>
-            {ok ? "Continuer" : "Vos deux prénoms"}
+            {ok ? t.continue : t.bothNames}
           </BigBtn>
         }
       >
         <h1 style={{ ...DISPLAY, fontSize: "clamp(42px, 12.5vw, 60px)", lineHeight: 0.92 }}>
-          Tu me
+          {t.title[0]}
           <br />
-          <span style={{ color: PINK }}>connais&nbsp;?</span>
+          <span style={{ color: PINK }}>{t.title[1]}</span>
         </h1>
         <p className="mt-3 text-[16px] font-semibold leading-snug text-white/85">
-          À deux sur un seul tél. L&apos;un répond en secret sur lui-même, l&apos;autre doit deviner sa réponse. On alterne à chaque question.
+          {t.intro}
         </p>
         <div className="mt-6 grid grid-cols-2 gap-4">
           {[0, 1].map((i) => {
@@ -244,8 +252,8 @@ function CoupleQuizLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) 
                 <input
                   value={names[i]}
                   onChange={(e) => { const v = e.target.value.slice(0, 16); setNames((n) => (i === 0 ? [v, n[1]] : [n[0], v])); }}
-                  placeholder={i === 0 ? "Toi" : "Ta moitié"}
-                  aria-label={`Prénom ${i + 1}`}
+                  placeholder={i === 0 ? t.you : t.partner}
+                  aria-label={t.nameAria(i + 1)}
                   autoComplete="off" autoCorrect="off" autoCapitalize="words" spellCheck={false} enterKeyHint={i === 0 ? "next" : "done"}
                   className="cq-name w-full min-w-0 rounded-[20px] px-2 pb-3 pt-7 text-center outline-none"
                   style={{ ...sticker(bg), ...DISPLAY, letterSpacing: "-0.01em", color: ink, fontSize: names[i] ? 22 : 17, ["--ph" as string]: ink === "#fff" ? "rgba(255,255,255,0.75)" : "rgba(21,8,46,0.55)" }}
@@ -266,10 +274,10 @@ function CoupleQuizLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) 
         footer={
           <>
             <BigBtn bg={PINK} disabled={pool.length < 2} onClick={begin}>
-              {pool.length < 2 ? "Choisis au moins un thème" : "C'est parti !"}
+              {pool.length < 2 ? t.pickOne : t.go}
             </BigBtn>
             <div className="mt-1 flex justify-center">
-              <SubBtn onClick={() => setPhase("names")}><GameInlineIcon icon={ArrowLeft} /> Changer les prénoms</SubBtn>
+              <SubBtn onClick={() => setPhase("names")}><GameInlineIcon icon={ArrowLeft} /> {t.changeNames}</SubBtn>
             </div>
           </>
         }
@@ -288,8 +296,8 @@ function CoupleQuizLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) 
           ))}
         </div>
 
-        <SectionTitle>Les thèmes</SectionTitle>
-        <p className="mt-0.5 text-[14px] font-semibold text-white/70">{pool.length} questions dans la pioche</p>
+        <SectionTitle>{t.themes}</SectionTitle>
+        <p className="mt-0.5 text-[14px] font-semibold text-white/70">{t.inDeck(pool.length)}</p>
         <div className="mt-3 grid grid-cols-2 gap-3">
           {QPACKS.map((p, i) => {
             const on = packs.includes(p.id);
@@ -306,7 +314,7 @@ function CoupleQuizLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) 
                 {(() => { const Ic = PACK_ICON[p.id] ?? Sparkles; return <Ic size={20} strokeWidth={2.6} className="shrink-0" aria-hidden />; })()}
                 <span className="min-w-0 flex-1 text-[14.5px] font-bold leading-tight">
                   {p.name}
-                  {p.adult && <span className="block text-[13px] font-semibold" style={{ opacity: 0.8 }}>18+, coquin</span>}
+                  {p.adult && <span className="block text-[13px] font-semibold" style={{ opacity: 0.8 }}>{t.adultTag}</span>}
                 </span>
                 <span
                   className="grid h-6 w-6 shrink-0 place-items-center rounded-full"
@@ -320,7 +328,7 @@ function CoupleQuizLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) 
           })}
         </div>
 
-        <SectionTitle>Combien de questions&nbsp;?</SectionTitle>
+        <SectionTitle>{t.howMany}</SectionTitle>
         <div className="mt-3 grid grid-cols-4 gap-2.5">
           {[6, 10, 16, 20].map((n) => {
             const on = rounds === n;
@@ -355,12 +363,12 @@ function CoupleQuizLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) 
         center
         footer={
           <BigBtn bg="#fff" onClick={() => { playSfx("whoosh", { volume: 0.5 }); setPhase(phase === "pass-answer" ? "answer" : "guess"); }}>
-            {phase === "pass-answer" ? "C'est moi, je réponds" : "C'est moi, je devine"}
+            {phase === "pass-answer" ? t.meAnswer : t.meGuess}
           </BigBtn>
         }
       >
         <QuestionChip round={round} total={deck.length} />
-        <p className="mt-6 text-[18px] font-semibold text-white/85">Passe le tél à…</p>
+        <p className="mt-6 text-[18px] font-semibold text-white/85">{t.passTo}</p>
         <div className="relative z-[1] -mb-6 mt-2">
           <Mascot size={124} color={colorForIndex(to)} mood="wink" arms shadow={false} />
         </div>
@@ -372,8 +380,8 @@ function CoupleQuizLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) 
         </h1>
         <p className="mt-5 max-w-sm text-center text-[16px] font-semibold leading-snug text-white/85">
           {phase === "pass-answer"
-            ? <>Réponds sur toi, sans montrer l&apos;écran. <Who i={guesser}>{names[guesser]}</Who> devra deviner.</>
-            : <>Devine ce que <Who i={answerer}>{names[answerer]}</Who> a répondu sur soi.</>}
+            ? <>{t.passAnswer[0]}<Who i={guesser}>{names[guesser]}</Who>{t.passAnswer[1]}</>
+            : <>{t.passGuess[0]}<Who i={answerer}>{names[answerer]}</Who>{t.passGuess[1]}</>}
         </p>
       </Screen>
     );
@@ -386,18 +394,18 @@ function CoupleQuizLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) 
       <Screen
         footer={answering && fresh.length > 0 ? (
           <div className="flex justify-center pb-1">
-            <RerollButton onClick={reroll} label="Pas fou ? Une autre" />
+            <RerollButton onClick={reroll} label={t.reroll} />
           </div>
         ) : undefined}
       >
         <div className="flex justify-center"><QuestionChip round={round} total={deck.length} /></div>
         <h2 className="mt-5 text-center" style={{ ...DISPLAY, fontSize: "clamp(30px, 9vw, 40px)", lineHeight: 1.02 }}>
           {answering
-            ? <><Who i={answerer}>{names[answerer]}</Who>, toi tu es plutôt…</>
-            : <><Who i={answerer}>{names[answerer]}</Who> est plutôt…</>}
+            ? <><Who i={answerer}>{names[answerer]}</Who>{t.youAre}</>
+            : <><Who i={answerer}>{names[answerer]}</Who>{t.isRather}</>}
         </h2>
         <p className="mt-2 text-center text-[16px] font-semibold text-white/80">
-          {answering ? "Réponds honnêtement, et ne montre pas !" : <>À ton avis, qu&apos;a répondu <Who i={answerer}>{names[answerer]}</Who>&nbsp;?</>}
+          {answering ? t.honest : <>{t.yourGuess[0]}<Who i={answerer}>{names[answerer]}</Who>{t.yourGuess[1]}</>}
         </p>
         <StickerChoice key={`${round}-${q.a}`} a={q.a} b={q.b} onPick={answering ? onAnswer : onGuess} />
       </Screen>
@@ -413,28 +421,28 @@ function CoupleQuizLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) 
     return (
       <Screen
         center
-        footer={<BigBtn bg="#FFD23F" onClick={nextRound}>{last ? "Voir le résultat" : "Question suivante"}</BigBtn>}
+        footer={<BigBtn bg="#FFD23F" onClick={nextRound}>{last ? t.seeResult : t.nextQuestion}</BigBtn>}
       >
         <div className="flex items-end justify-center gap-1">
           <Mascot size={78} color={colorForIndex(0)} mood={correct ? "love" : "shocked"} shadow={false} />
           <Mascot size={78} color={colorForIndex(1)} mood={correct ? "kiss" : "sad"} shadow={false} delay={0.3} />
         </div>
         <h1 className="mt-2 text-center" style={{ ...DISPLAY, fontSize: "clamp(40px, 12vw, 56px)", lineHeight: 0.95, color: correct ? "#3DDC97" : "#FF6B5B" }}>
-          {correct ? "Dans le mille !" : "Raté !"}
+          {correct ? t.bull : t.missed}
         </h1>
         <div className="mt-5 grid w-full gap-3">
           <div className="rounded-[22px] px-4 py-3 text-center" style={{ ...sticker("#FFF6E5", 4), color: INK, transform: "rotate(-1.5deg)" }}>
-            <p className="text-[15px] font-semibold" style={{ color: "#4A3A66" }}>{names[answerer]} est plutôt</p>
+            <p className="text-[15px] font-semibold" style={{ color: "#4A3A66" }}>{t.answererIs(names[answerer])}</p>
             <p className="mt-0.5" style={{ ...DISPLAY, fontSize: 26, lineHeight: 1.05, overflowWrap: "anywhere" }}>{truthText}</p>
           </div>
           <div className="rounded-[22px] px-4 py-3 text-center" style={{ ...sticker(correct ? "#3DDC97" : "#FF6B5B", 4), color: INK, transform: "rotate(1.5deg)" }}>
-            <p className="text-[15px] font-semibold">{names[guesser]} avait deviné</p>
+            <p className="text-[15px] font-semibold">{t.guesserSaid(names[guesser])}</p>
             <p className="mt-0.5" style={{ ...DISPLAY, fontSize: 26, lineHeight: 1.05, overflowWrap: "anywhere" }}>{guessText}</p>
           </div>
         </div>
         {!correct && (
           <p className="mt-4 text-center text-[16px] font-semibold text-white/85">
-            <GameInlineIcon icon={MessageCircle} /> {names[answerer]}, explique-toi&nbsp;!
+            <GameInlineIcon icon={MessageCircle} /> {t.explain(names[answerer])}
           </p>
         )}
         <div className={`mt-5 grid w-full gap-3 ${longDuo ? "grid-cols-1" : "grid-cols-2"}`}>
@@ -449,22 +457,22 @@ function CoupleQuizLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) 
   if (phase === "over") {
     const total = scores[0] + scores[1];
     const pct = deck.length ? Math.round((total / deck.length) * 100) : 0;
-    const verdict = verdictFor(pct);
+    const verdict = verdictFor(pct, t.verdicts);
     return (
       <Screen
         footer={
           <>
-            <BigBtn bg={PINK} onClick={begin}><RotateCcw size={22} strokeWidth={3} aria-hidden /> Rejouer</BigBtn>
+            <BigBtn bg={PINK} onClick={begin}><RotateCcw size={22} strokeWidth={3} aria-hidden /> {t.playAgain}</BigBtn>
             <div className="mt-1 flex justify-center gap-2">
-              <SubBtn onClick={() => setPhase("config")}>Changer les thèmes</SubBtn>
-              {onReturnToLobby && <SubBtn onClick={onReturnToLobby}>Quitter</SubBtn>}
+              <SubBtn onClick={() => setPhase("config")}>{t.changeThemes}</SubBtn>
+              {onReturnToLobby && <SubBtn onClick={onReturnToLobby}>{t.quit}</SubBtn>}
             </div>
           </>
         }
       >
         {pct >= 65 && <ConfettiBurst count={60} />}
         <div className="flex flex-col items-center">
-          <p className="text-[18px] font-semibold text-white/85">Votre taux de complicité</p>
+          <p className="text-[18px] font-semibold text-white/85">{t.rate}</p>
           <div className="mt-3 flex items-end justify-center gap-1">
             <Mascot size={60} color={colorForIndex(0)} mood={pct >= 45 ? "love" : "sad"} shadow={false} />
             <div
@@ -477,7 +485,7 @@ function CoupleQuizLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) 
           </div>
           <h1 className="mt-5 text-center" style={{ ...DISPLAY, fontSize: 34, lineHeight: 1 }}>{verdict.t}</h1>
           <p className="mt-2 text-[16px] font-semibold text-white/80">
-            {total} bonne{total > 1 ? "s" : ""} réponse{total > 1 ? "s" : ""} sur {deck.length}
+            {t.goodAnswers(total, deck.length)}
           </p>
           <div className={`mt-5 grid w-full gap-3 ${longDuo ? "grid-cols-1" : "grid-cols-2"}`}>
             <DuoScore name={names[0]} score={scores[0]} idx={0} big />
@@ -495,22 +503,24 @@ function CoupleQuizLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) 
 }
 
 function QuestionChip({ round, total }: { round: number; total: number }) {
+  const t = useT(STR);
   return (
     <span className="inline-flex min-h-9 items-center rounded-full px-3.5 text-[15px] font-bold" style={{ ...sticker("#fff", 3), color: INK, transform: "rotate(-2deg)" }}>
-      Question {round + 1} sur {total}
+      {t.questionOf(round + 1, total)}
     </span>
   );
 }
 
 /** Deux grosses cartes « plutôt A ou B ». */
 function StickerChoice({ a, b, onPick }: { a: string; b: string; onPick: (p: "a" | "b") => void }) {
+  const t = useT(STR);
   return (
     <div className="mt-6 flex w-full flex-col items-center">
       {(["a", "b"] as const).map((side, i) => (
         <div key={side} className="contents">
           {i === 1 && (
             <span className="z-[1] -my-3 grid h-12 w-12 place-items-center rounded-full text-[20px]" style={{ ...sticker("#fff", 3), ...DISPLAY, color: INK }}>
-              ou
+              {t.or}
             </span>
           )}
           <button
@@ -629,7 +639,7 @@ function CoupleQuizOnline({ roomCode, playerId, playerName, onReturnToLobby }: G
     const s1 = state.scores[players[1]?.id] ?? 0;
     const total = s0 + s1;
     const pct = state.total ? Math.round((total / state.total) * 100) : 0;
-    const v = verdictFor(pct);
+    const v = verdictFor(pct, pick(STR).verdicts);
     return (
       <LocalShell accent={ACCENT} center>
         <div className="af-eyebrow" style={{ color: "var(--text-dim)" }}>Taux de complicité</div>

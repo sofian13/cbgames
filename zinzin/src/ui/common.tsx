@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { X } from "lucide-react";
+import { useT } from "@/lib/i18n";
+import { UI } from "../strings";
 
 /** Bottom sheet avec animation d'entrée/sortie. `children` reçoit `close`. */
 export function Sheet({
@@ -49,8 +51,9 @@ export function RoundBtn({
 }
 
 export function CloseBtn({ onClick, style }: { onClick: () => void; style?: CSSProperties }) {
+  const t = useT(UI);
   return (
-    <RoundBtn onClick={onClick} label="Fermer" style={style}>
+    <RoundBtn onClick={onClick} label={t.close} style={style}>
       <X size={22} strokeWidth={3} />
     </RoundBtn>
   );

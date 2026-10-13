@@ -1,5 +1,9 @@
-// Banque de mots « Mots Espions » (mode un seul téléphone).
-// Copie de la liste du serveur (party/games/code-names.ts), non exportée là-bas.
+// Banque de mots « Mots Espions » (mode un seul téléphone), une liste par langue.
+// FR : copie de la liste du serveur (party/games/code-names.ts), non exportée là-bas.
+// EN / ES : listes propres, avec beaucoup de mots à double sens dans chaque langue
+// (EN : bat, bank, crane, pitch, seal… ; ES : gato, sierra, muñeca, lima, papa…).
+import type { I18n, Lang } from "@/lib/i18n";
+
 export const CN_LOCAL_RAW_WORDS: string[] = [
   "avocat", "glace", "carte", "pêche", "souris", "mousse", "botte",
   "bouchon", "lettre", "mine", "palais", "pièce", "poste", "page", "pompe",
@@ -104,7 +108,316 @@ export const CN_LOCAL_RAW_WORDS: string[] = [
   "ventilateur", "vitrail", "yaourt"
 ];
 
-/** Mots uniques, en majuscules. */
-export const CN_LOCAL_WORDS: string[] = Array.from(
-  new Set(CN_LOCAL_RAW_WORDS.map((w) => w.toLocaleUpperCase("fr-FR"))),
-);
+export const CN_LOCAL_RAW_WORDS_EN: string[] = [
+  "alien", "ambulance", "anchor", "angel", "ant", "apple", "apron", "arch",
+  "arm", "armour", "arrow", "atlas", "attic", "axe", "baby", "badge", "bag",
+  "bagel", "bait", "ball", "balloon", "bamboo", "band", "bandage", "banjo",
+  "bank", "bar", "bark", "barn", "barrel", "basket", "bass", "bat", "bath",
+  "battery", "beach", "beam", "bean", "bear", "beard", "bed", "bee",
+  "beetle", "bell", "belt", "bench", "berry", "bicycle", "bike", "bill",
+  "bird", "biscuit", "blade", "blanket", "blender", "blimp", "blizzard",
+  "block", "board", "boat", "bolt", "bomb", "bone", "bonnet", "book", "boot",
+  "bottle", "boulder", "bow", "bowl", "bowler", "box", "boxer", "bracelet",
+  "brain", "branch", "brass", "bread", "brick", "bride", "bridge", "bronze",
+  "broom", "brush", "bubble", "bucket", "buckle", "buffalo", "bug", "bulb",
+  "bull", "bullet", "bunker", "bus", "butter", "button", "cabin", "cable",
+  "cactus", "cage", "cake", "camel", "camera", "camp", "camping", "canal",
+  "candle", "candy", "cannon", "canoe", "canyon", "cap", "cape", "captain",
+  "car", "caramel", "card", "cargo", "carpet", "carriage", "carrot",
+  "cartoon", "cashier", "cast", "castle", "cat", "cathedral", "cave", "cell",
+  "cellar", "cent", "cereal", "chain", "chair", "chalk", "chalkboard",
+  "champion", "chandelier", "chapter", "charm", "cheese", "cheetah", "chef",
+  "cherry", "cherub", "chess", "chest", "chicken", "chili", "chimney",
+  "chip", "chips", "chocolate", "chopstick", "church", "cinema", "circle",
+  "circus", "city", "clam", "claw", "clay", "cliff", "cloak", "clock",
+  "cloud", "clover", "clown", "club", "coach", "coat", "cobra", "cocktail",
+  "coconut", "cocoon", "coffee", "coffin", "coin", "cold", "collar", "comb",
+  "comet", "compass", "computer", "cone", "cook", "cookie", "copper",
+  "coral", "corn", "cottage", "cotton", "couch", "cow", "cowboy", "coyote",
+  "crab", "crane", "crash", "crayfish", "crayon", "crib", "cricket",
+  "crisps", "crocodile", "cross", "crow", "crown", "crystal", "cube", "cup",
+  "cupcake", "curtain", "cushion", "cycle", "cyclone", "daisy", "dancer",
+  "dart", "date", "debt", "deck", "denim", "dentist", "desert", "desk",
+  "detective", "diamond", "diary", "dice", "dime", "dinner", "dinosaur",
+  "diver", "dock", "doctor", "dog", "doll", "dollar", "dolphin", "dome",
+  "donkey", "door", "doughnut", "dove", "draft", "dragon", "dragonfly",
+  "drawer", "dream", "dress", "drill", "drop", "drum", "dryer", "duck",
+  "dune", "dust", "dwarf", "eagle", "earth", "eel", "egg", "elbow",
+  "elephant", "emerald", "empire", "engine", "envelope", "eraser", "eye",
+  "face", "fairy", "fall", "fan", "fang", "farm", "feather", "feed", "fence",
+  "fencing", "ferry", "festival", "fiddle", "field", "file", "finger",
+  "fire", "fireman", "fish", "flag", "flame", "flamingo", "flashlight",
+  "flat", "fleet", "flood", "flower", "flute", "fly", "fog", "foot",
+  "forest", "fork", "fortress", "fossil", "fountain", "fox", "fridge",
+  "fringe", "frog", "fruit", "galaxy", "game", "garage", "garden",
+  "gargoyle", "garlic", "gate", "gem", "geyser", "ghost", "giant", "gift",
+  "glacier", "glass", "glasses", "globe", "glove", "glue", "goat", "goblin",
+  "gold", "golf", "gondola", "goose", "gorge", "gorilla", "gown", "granite",
+  "grape", "grass", "gravity", "grenade", "grill", "ground", "guard",
+  "guitar", "gum", "gutter", "hair", "hammer", "hamster", "hand", "harbour",
+  "harp", "harvest", "hat", "hawk", "head", "heart", "hedge", "helicopter",
+  "helmet", "hero", "hide", "hill", "hippo", "hive", "hockey", "honey",
+  "hood", "hoodie", "hook", "horizon", "horn", "horse", "hose", "hospital",
+  "hotel", "house", "hurricane", "ice", "icicle", "igloo", "ink", "insect",
+  "iron", "island", "ivory", "jack", "jacket", "jaguar", "jail", "jam",
+  "jar", "jeans", "jelly", "jellyfish", "jester", "jet", "jewel", "jigsaw",
+  "jockey", "journal", "judge", "judo", "juice", "jumper", "jungle",
+  "kangaroo", "karate", "kayak", "kennel", "kernel", "kettle", "key", "kick",
+  "kid", "king", "kitchen", "kite", "kiwi", "knee", "knife", "knight",
+  "koala", "lab", "ladder", "lagoon", "lake", "lamp", "lantern", "lap",
+  "laser", "lasso", "lava", "lawyer", "lead", "leaf", "lemon", "leopard",
+  "letter", "lettuce", "library", "lift", "light", "lighthouse", "lily",
+  "limo", "line", "lion", "lizard", "llama", "lobster", "lock", "locket",
+  "locust", "log", "lollipop", "lotus", "luggage", "lunch", "lynx", "magnet",
+  "mammoth", "mango", "mansion", "map", "marathon", "marble", "march",
+  "marsh", "mascot", "mask", "mass", "match", "mattress", "maze", "meadow",
+  "medal", "mercury", "mermaid", "metal", "meteor", "microphone",
+  "microscope", "milk", "mill", "mine", "mint", "mirror", "mitten", "moat",
+  "model", "mole", "monk", "monkey", "monster", "moon", "moose", "mosquito",
+  "moss", "moth", "motor", "mount", "mountain", "mouse", "moustache", "mud",
+  "muffin", "mug", "mule", "mummy", "museum", "mushroom", "music", "mussel",
+  "nacho", "nail", "napkin", "narwhal", "necklace", "needle", "nest", "net",
+  "nickel", "ninja", "noodle", "nose", "note", "nurse", "nut", "oak", "oar",
+  "oasis", "ocean", "octopus", "oil", "olive", "onion", "opera", "orange",
+  "orbit", "orchestra", "organ", "ostrich", "otter", "oven", "owl", "oyster",
+  "paddle", "padlock", "painter", "palace", "palette", "palm", "pan",
+  "pancake", "panda", "panther", "pants", "paper", "parachute", "parcel",
+  "park", "parrot", "party", "pass", "passport", "pasta", "pea", "peach",
+  "peanut", "pear", "pearl", "pebble", "pedal", "pelican", "pen", "pencil",
+  "penguin", "penny", "pepper", "perfume", "piano", "pickle", "pie", "pier",
+  "pig", "pigeon", "pillar", "pillow", "pilot", "pin", "pinball",
+  "pineapple", "pipe", "pirate", "pistachio", "pitch", "pitcher", "pizza",
+  "plane", "planet", "plant", "plate", "plot", "plum", "pocket", "poet",
+  "point", "polar", "pole", "pony", "pool", "pop", "popcorn", "porcupine",
+  "port", "post", "poster", "potato", "pottery", "pound", "prawn", "press",
+  "pretzel", "prince", "princess", "prison", "puddle", "puma", "pumpkin",
+  "punch", "pupil", "puppet", "puzzle", "pyramid", "quarter", "queen",
+  "quilt", "rabbit", "raccoon", "race", "racket", "racquet", "radio", "raft",
+  "rain", "rainbow", "ram", "rat", "rattle", "raven", "ray", "razor",
+  "recipe", "reef", "reindeer", "rest", "rhino", "ribbon", "rifle", "ring",
+  "river", "robe", "robot", "rock", "rocket", "rodeo", "roll", "roof",
+  "root", "rope", "rose", "round", "row", "rubber", "rug", "ruler", "runway",
+  "saddle", "sail", "salt", "sand", "sandal", "sardine", "satellite",
+  "saturn", "saucer", "sauna", "sausage", "saw", "scale", "scarecrow",
+  "scarf", "school", "scissors", "scooter", "score", "scorpion", "screen",
+  "scroll", "sea", "seagull", "seahorse", "seal", "seed", "shadow",
+  "shampoo", "shark", "sheep", "sheet", "shell", "sheriff", "shield", "ship",
+  "shipwreck", "shoe", "shot", "show", "shower", "shrimp", "sign", "silk",
+  "sink", "skate", "skeleton", "skull", "skunk", "sky", "sled", "sleep",
+  "slip", "slipper", "slug", "smoke", "smoothie", "snail", "snake",
+  "snorkel", "snow", "soap", "sofa", "soldier", "sole", "sombrero", "soul",
+  "soup", "space", "spaghetti", "spam", "spell", "sphinx", "spider", "spike",
+  "spine", "sponge", "spoon", "spot", "spring", "sprout", "spy", "square",
+  "squirrel", "stadium", "staff", "stage", "stairs", "stamp", "stand",
+  "stapler", "star", "starfish", "statue", "steel", "stew", "stick", "sting",
+  "stock", "stone", "stool", "storm", "story", "stove", "straw", "stream",
+  "strike", "string", "sub", "submarine", "sugar", "suit", "suitcase", "sun",
+  "sunflower", "surfboard", "swamp", "swan", "sweater", "swing", "sword",
+  "syrup", "tab", "table", "tablet", "taco", "tadpole", "tag", "tambourine",
+  "tank", "tap", "tattoo", "taxi", "tea", "teacher", "teapot", "tear",
+  "teddy", "telescope", "temple", "tennis", "tent", "theatre", "thistle",
+  "thorn", "thumb", "thunder", "tiara", "tick", "ticket", "tide", "tie",
+  "tiger", "time", "tip", "toad", "toast", "toaster", "toboggan", "toffee",
+  "toilet", "tomato", "tongue", "tooth", "top", "torch", "tornado",
+  "tortoise", "totem", "towel", "tower", "toy", "track", "tractor", "train",
+  "trainer", "trampoline", "treadmill", "treasure", "tree", "trench",
+  "triangle", "trip", "trolley", "trophy", "truck", "trumpet", "trunk",
+  "tube", "tulip", "tunnel", "turkey", "turtle", "tuxedo", "tweet", "twig",
+  "typhoon", "tyre", "ukulele", "umbrella", "unicorn", "uniform", "vacuum",
+  "valley", "vampire", "van", "vase", "vault", "velvet", "vest", "vet",
+  "viking", "vine", "vinegar", "violin", "virus", "volcano", "vulture",
+  "waffle", "wagon", "waiter", "wall", "wallet", "walnut", "walrus", "wand",
+  "war", "wardrobe", "washer", "wasp", "watch", "water", "waterfall", "wave",
+  "weasel", "web", "well", "whale", "wheat", "wheel", "whip", "whistle",
+  "wig", "wind", "windmill", "window", "wing", "witch", "wizard", "wolf",
+  "wood", "worm", "wreath", "yacht", "yard", "yeti", "yoga", "yolk", "yoyo",
+  "zebra", "zero", "zip", "zoo"
+];
+
+export const CN_LOCAL_RAW_WORDS_ES: string[] = [
+  "abanico", "abeja", "abrigo", "aceite", "aceituna", "acordeón", "acuario",
+  "aduana", "aeropuerto", "agua", "águila", "aguja", "ala", "alambre",
+  "albóndiga", "alcantarilla", "aldea", "alfombra", "alga", "algodón",
+  "alicate", "almacén", "almendra", "almohada", "altavoz", "ambulancia",
+  "ancho", "ancla", "andamio", "ángel", "anguila", "anillo", "antena",
+  "antorcha", "anzuelo", "araña", "arandela", "árbol", "arbusto", "arco",
+  "ardilla", "arena", "armadura", "armario", "arpa", "arpón", "arrecife",
+  "arroz", "asa", "ascensor", "asiento", "aspiradora", "astilla",
+  "astronauta", "ataúd", "ático", "atlas", "atún", "aula", "autobús",
+  "avellana", "avestruz", "avión", "azada", "azúcar", "azulejo", "bahía",
+  "bailarín", "bala", "balanza", "balcón", "ballena", "balón", "balsa",
+  "bambú", "banco", "banda", "bandeja", "bandera", "bañera", "barandilla",
+  "barba", "barco", "barra", "barriga", "barril", "base", "bastón", "basura",
+  "bata", "batería", "baúl", "bebé", "bebida", "bellota", "berenjena",
+  "biberón", "biblioteca", "bicicleta", "bigote", "billete", "bisagra",
+  "bisonte", "bizcocho", "bloque", "boca", "bocadillo", "bocina", "bolera",
+  "bolígrafo", "bolo", "bolsa", "bomba", "bombero", "bombilla", "boquilla",
+  "borrador", "bosque", "bota", "botella", "botiquín", "botón", "boxeo",
+  "brazo", "bruja", "brújula", "bufanda", "búho", "burbuja", "burro",
+  "buzón", "caballero", "caballo", "cabaña", "cabeza", "cabo", "cabra",
+  "cacao", "cactus", "cadena", "cadera", "café", "cafetera", "caimán",
+  "caja", "cajón", "calabaza", "calamar", "calavera", "calcetín", "caldo",
+  "calendario", "calle", "calzón", "cama", "cámara", "camarero", "camello",
+  "camilla", "camino", "camión", "camisa", "campana", "campanario", "campo",
+  "caña", "canal", "canasta", "candado", "candelabro", "cangrejo", "canguro",
+  "canica", "canoa", "cañón", "cantimplora", "capa", "capital", "capucha",
+  "cara", "caracol", "caramelo", "caravana", "carbón", "cárcel", "cardo",
+  "carne", "carpa", "carrera", "carretilla", "carro", "carroza", "carta",
+  "cartera", "casa", "cascada", "cáscara", "casco", "castaña", "castillo",
+  "catedral", "cazo", "cazuela", "cebo", "cebolla", "cebra", "cerdo",
+  "cerebro", "cereza", "cerilla", "cerradura", "cesta", "cesto", "chaleco",
+  "champiñón", "chancla", "chapa", "chaqueta", "charco", "chicle",
+  "chimenea", "chispa", "chocolate", "chorizo", "chupete", "cielo", "ciervo",
+  "cigarra", "cigüeña", "cine", "cinta", "cinturón", "circo", "cisne",
+  "ciudad", "clave", "clavo", "cobre", "coche", "cocina", "cocodrilo",
+  "codo", "cofre", "cohete", "cojín", "cola", "colador", "colchón", "collar",
+  "colmena", "colmillo", "columna", "cometa", "comida", "compás", "concha",
+  "conejo", "copa", "copo", "corazón", "corbata", "corcho", "cordel",
+  "cordero", "corona", "corral", "corte", "cortina", "cosecha", "cosmos",
+  "cráneo", "cráter", "crema", "cremallera", "cresta", "cruz", "cuadro",
+  "cuchara", "cuchillo", "cuerda", "cuerno", "cuerpo", "cueva", "cuna",
+  "cúpula", "cura", "dado", "dardo", "dátil", "dedal", "delantal", "delfín",
+  "dentista", "desierto", "detective", "diadema", "diamante", "diana",
+  "diccionario", "diente", "dinosaurio", "disco", "disfraz", "doctor",
+  "domingo", "dominó", "dragón", "ducha", "duende", "duna", "edificio",
+  "elástico", "elefante", "embudo", "enano", "enchufe", "engranaje", "erizo",
+  "escala", "escalera", "escalón", "escoba", "escorpión", "escudo", "esfera",
+  "esmeralda", "espada", "espejo", "espiga", "espina", "esponja",
+  "esqueleto", "esquí", "estanque", "estatua", "estrecho", "estrella",
+  "estuche", "estufa", "fábrica", "faisán", "falda", "fantasma", "faraón",
+  "faro", "farol", "farola", "feria", "ficha", "fiesta", "flamenco",
+  "flauta", "flecha", "flor", "foca", "foco", "foso", "frasco", "frente",
+  "fresa", "frigorífico", "fruta", "fuego", "fuelle", "fuente", "funda",
+  "gafas", "galaxia", "galleta", "gallina", "gallinero", "gallo", "ganso",
+  "garaje", "garra", "gato", "gaviota", "gema", "gemelo", "geranio",
+  "germen", "gigante", "girasol", "glaciar", "globo", "golondrina", "golpe",
+  "gorila", "gorra", "gorrión", "gota", "granada", "granero", "granizo",
+  "grano", "grapadora", "grifo", "grillo", "grúa", "guante", "guepardo",
+  "guijarro", "guisante", "guitarra", "gusano", "hacha", "hada", "hamaca",
+  "hámster", "harina", "hebilla", "helado", "helecho", "helicóptero",
+  "herradura", "hiedra", "hielo", "hipopótamo", "hoguera", "hoja", "hongo",
+  "hormiga", "hormiguero", "horno", "hospital", "hotel", "hucha", "huerto",
+  "hueso", "huevo", "humo", "huracán", "iglú", "imán", "incienso", "insecto",
+  "isla", "jabalí", "jabón", "jamón", "jardín", "jarra", "jarrón", "jaula",
+  "jinete", "jirafa", "joroba", "joya", "juguete", "junco", "koala",
+  "laberinto", "labio", "ladrillo", "lago", "laguna", "lámpara", "langosta",
+  "lanza", "lápiz", "látigo", "laurel", "lavadora", "lazo", "leche",
+  "lechuga", "leña", "lengua", "lente", "león", "leopardo", "letra", "libra",
+  "libro", "lienzo", "lima", "limón", "lince", "línea", "linterna", "lirio",
+  "llama", "llanura", "llave", "lobo", "lombriz", "loro", "lucero",
+  "luciérnaga", "luna", "lupa", "maceta", "madera", "madriguera", "maíz",
+  "maleta", "mamut", "mandarina", "mango", "manguera", "mano", "mansión",
+  "manta", "mantel", "manzana", "mapa", "maqueta", "máquina", "mar",
+  "maratón", "marcha", "marco", "margarita", "marioneta", "mariposa",
+  "mariquita", "martillo", "masa", "máscara", "mástil", "mazo", "mechero",
+  "medalla", "medialuna", "médico", "medusa", "mejillón", "melena", "melón",
+  "mercado", "mermelada", "mesa", "meteorito", "metro", "micrófono", "miel",
+  "mimo", "mina", "mochila", "moda", "molino", "momia", "moneda", "mono",
+  "montaña", "mosaico", "mosca", "mosquito", "mostaza", "motor", "muela",
+  "muleta", "muñeca", "muñeco", "murciélago", "museo", "música", "nabo",
+  "naipe", "naranja", "nariz", "narval", "navaja", "nave", "nenúfar",
+  "nevera", "nido", "niebla", "nieve", "ninja", "noche", "nota", "nube",
+  "nudo", "nuez", "oasis", "oboe", "oca", "océano", "oficina", "ojo", "olla",
+  "onda", "orca", "oreja", "órgano", "oro", "orquesta", "orquídea", "oso",
+  "ostra", "oveja", "pájaro", "pala", "palacio", "palanca", "palillo",
+  "palma", "palmera", "paloma", "pan", "panal", "pancarta", "panda",
+  "pandereta", "pantalla", "pantalón", "pantano", "pañuelo", "papa",
+  "papagayo", "papel", "papelera", "paquete", "paracaídas", "paraguas",
+  "parche", "pared", "parque", "pase", "pasillo", "pasta", "pastel",
+  "pastor", "pata", "patata", "patín", "patinete", "pato", "pavo", "payaso",
+  "pecera", "pedal", "peine", "pelícano", "pelo", "pelota", "peluca",
+  "peluche", "pepino", "pera", "percha", "perfume", "periódico", "perla",
+  "perro", "pescado", "pétalo", "petróleo", "pez", "pezuña", "piano", "pico",
+  "pie", "piedra", "pijama", "pila", "pimienta", "pimiento", "piña",
+  "pincel", "pingüino", "pino", "pintor", "pinza", "piragua", "pirámide",
+  "pirata", "piruleta", "piscina", "pista", "pistacho", "pizarra", "pizza",
+  "placa", "plancha", "planta", "plátano", "plato", "playa", "pluma",
+  "plumero", "pócima", "podio", "pollo", "polo", "pomelo", "pomo", "poncho",
+  "portero", "postre", "potro", "pozo", "prensa", "princesa", "prisión",
+  "prisma", "probeta", "pueblo", "puente", "puerta", "puerto", "pulga",
+  "pulpo", "puma", "punto", "pupitre", "queso", "rábano", "radio", "rama",
+  "rampa", "rana", "raqueta", "rastrillo", "rata", "ratón", "rayo", "red",
+  "regadera", "regla", "reina", "reloj", "remo", "reno", "retrato", "rey",
+  "rinoceronte", "río", "rizo", "roble", "robot", "roca", "rodaja",
+  "rodilla", "rompecabezas", "ropa", "rosa", "rubí", "rueda", "sable",
+  "sacacorchos", "sal", "salchicha", "salmón", "saltamontes", "sandalia",
+  "sandía", "sapo", "sardina", "sartén", "satélite", "sauce", "sello",
+  "selva", "semilla", "serpiente", "seta", "sierra", "silla", "sillín",
+  "sirena", "sobre", "sofá", "sol", "soldado", "sombra", "sombrero",
+  "sombrilla", "sonajero", "sopa", "sótano", "submarino", "suela", "surco",
+  "tabla", "taco", "talón", "tambor", "tanque", "tapa", "tarta", "tatuaje",
+  "taxi", "taza", "teatro", "tejado", "tejón", "tela", "telaraña",
+  "telescopio", "templo", "tenedor", "tenis", "termo", "tesoro", "tiara",
+  "tiburón", "tiempo", "tienda", "tierra", "tigre", "tijeras", "tinta",
+  "tirachinas", "tiza", "toalla", "tobogán", "tomate", "toque", "tormenta",
+  "tornado", "toro", "torre", "tortuga", "tostada", "tractor", "traje",
+  "trama", "trampolín", "trébol", "tren", "tridente", "trineo", "trofeo",
+  "trompeta", "trompo", "tronco", "tubo", "tuerca", "tulipán", "turrón",
+  "uña", "unicornio", "uva", "vaca", "vagón", "valle", "vampiro", "vapor",
+  "varita", "vaso", "vela", "velero", "veleta", "vendaje", "veneno",
+  "ventana", "ventilador", "ventisca", "vestido", "vía", "vidrio", "vikingo",
+  "vino", "violín", "volante", "volcán", "vuelo", "yate", "yema", "yeti",
+  "yogur", "yunque", "zafiro", "zanahoria", "zanco", "zapatilla", "zapato",
+  "zarza", "zoo", "zorro"
+];
+
+const LOCALE: Record<Lang, string> = { fr: "fr-FR", en: "en-GB", es: "es-ES" };
+const upper = (list: string[], lang: Lang) => Array.from(new Set(list.map((w) => w.toLocaleUpperCase(LOCALE[lang]))));
+
+/** Mots uniques, en majuscules (français, conservé pour compatibilité). */
+export const CN_LOCAL_WORDS: string[] = upper(CN_LOCAL_RAW_WORDS, "fr");
+
+/** Banque de mots par langue (choisie au début de la partie). */
+export const CN_WORDS: I18n<string[]> = {
+  fr: CN_LOCAL_WORDS,
+  en: upper(CN_LOCAL_RAW_WORDS_EN, "en"),
+  es: upper(CN_LOCAL_RAW_WORDS_ES, "es"),
+};
+
+/** Normalise un mot pour comparer l'indice aux mots de la grille (casse, accents, ligatures, ñ → n). */
+export function normalizeWord(w: string): string {
+  return w
+    .toLowerCase()
+    .replace(/œ/g, "oe")
+    .replace(/æ/g, "ae")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z]/g, "");
+}
+
+/** Formes comparables d'un mot (singulier / pluriel simples) selon la langue. */
+export function wordForms(w: string, lang: Lang): string[] {
+  const n = normalizeWord(w);
+  const forms = new Set([n]);
+  if (!n) return [];
+  if (lang === "fr") {
+    if (n.length > 3 && /[sx]$/.test(n)) forms.add(n.slice(0, -1));
+    if (n.length > 4 && n.endsWith("aux")) forms.add(n.slice(0, -3) + "al");
+    if (n.length > 3 && n.endsWith("al")) forms.add(n.slice(0, -2) + "aux");
+    forms.add(n + "s");
+    forms.add(n + "x");
+  } else if (lang === "en") {
+    if (n.length > 3 && n.endsWith("s")) forms.add(n.slice(0, -1));
+    if (n.length > 4 && n.endsWith("es")) forms.add(n.slice(0, -2));
+    if (n.length > 4 && n.endsWith("ies")) forms.add(n.slice(0, -3) + "y");
+    if (n.length > 3 && n.endsWith("y")) forms.add(n.slice(0, -1) + "ies");
+    if (n.length > 3 && n.endsWith("f")) forms.add(n.slice(0, -1) + "ves");
+    if (n.length > 4 && n.endsWith("ves")) forms.add(n.slice(0, -3) + "f");
+    forms.add(n + "s");
+    forms.add(n + "es");
+  } else {
+    if (n.length > 3 && n.endsWith("s")) forms.add(n.slice(0, -1));
+    if (n.length > 4 && n.endsWith("es")) forms.add(n.slice(0, -2));
+    if (n.length > 4 && n.endsWith("ces")) forms.add(n.slice(0, -3) + "z");
+    if (n.length > 2 && n.endsWith("z")) forms.add(n.slice(0, -1) + "ces");
+    forms.add(n + "s");
+    forms.add(n + "es");
+  }
+  return Array.from(forms);
+}
+
+/** Vrai si l'indice est (une forme d')un mot encore caché de la grille. */
+export function isGridWord(clue: string, grid: string[], lang: Lang): boolean {
+  const clueForms = new Set(wordForms(clue, lang));
+  return grid.some((g) => wordForms(g, lang).some((f) => clueForms.has(f)));
+}

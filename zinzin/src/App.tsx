@@ -10,6 +10,9 @@ import { AgeGate, GameScreen, LegalScreen, SettingsSheet, type LegalPage } from 
 import { Splash } from "./ui/Splash";
 import { installLookAtFinger } from "./ui/ZBlob";
 import { isAgeOk } from "./ui/util";
+import { SoireeSetup } from "./ui/SoireeSetup";
+import { SoireeRun } from "./ui/SoireeRun";
+import { clearSoiree, getSoiree, resumeSoiree, startSoiree } from "./soiree";
 
 type Phase = "splash" | "age" | "app";
 
@@ -21,11 +24,13 @@ export function App() {
   const premium = usePremium();
   const toast = useToast();
   const [phase, setPhase] = useState<Phase>("splash");
-  const [paywall, setPaywall] = useState<{ thenOpen?: string } | null>(null);
+  const [paywall, setPaywall] = useState<{ thenOpen?: string; thenSoiree?: boolean } | null>(null);
   const [sheet, setSheet] = useState<string | null>(null);
   const [settings, setSettings] = useState(false);
   const [legal, setLegal] = useState<LegalPage | null>(null);
   const [playing, setPlaying] = useState<string | null>(null);
+  // Soirée Zinzin : préparation (3 écrans) ou déroulé (transitions + jeux + podium)
+  const [soiree, setSoiree] = useState<"setup" | "run" | null>(null);
 
   // Les yeux des blobs suivent le doigt
   useEffect(() => installLookAtFinger(), []);
@@ -42,16 +47,28 @@ export function App() {
   }, [premium]);
 
   const openGame = (id: string) => setSheet(id);
+  const newSoiree = () => {
+    if (!premium) { setPaywall({ thenSoiree: true }); return; }
+    clearSoiree();
+    setSoiree("setup");
+  };
+  const leaveSoiree = () => {
+    // Soirée terminée : on l'oublie ; sinon elle reste à reprendre depuis l'accueil
+    if (getSoiree()?.phase === "end") clearSoiree();
+    setSoiree(null);
+  };
 
   return (
     <>
       {phase !== "splash" && phase !== "age" && (
-        <div style={{ display: playing ? "none" : undefined }}>
+        <div style={{ display: playing || soiree ? "none" : undefined }}>
           <Home
             premium={premium}
             onOpenGame={openGame}
             onSettings={() => setSettings(true)}
             onUnlock={() => setPaywall({})}
+            onSoiree={newSoiree}
+            onResumeSoiree={() => { resumeSoiree(); setSoiree("run"); }}
           />
         </div>
       )}
@@ -78,12 +95,26 @@ export function App() {
         />
       )}
 
+      {soiree === "setup" && (
+        <SoireeSetup
+          onClose={() => setSoiree(null)}
+          onLaunch={(band, vibe, length, list) => { startSoiree(band, vibe, length, list); setSoiree("run"); }}
+        />
+      )}
+      {soiree === "run" && <SoireeRun onHome={leaveSoiree} onNew={() => { clearSoiree(); setSoiree("setup"); }} toast={toast.show} />}
+
       {playing && <GameScreen key={playing} id={playing} onExit={() => setPlaying(null)} />}
 
       {paywall && (
         <Paywall
           onClose={() => setPaywall(null)}
-          onUnlocked={() => { const next = paywall.thenOpen; setPaywall(null); if (next) setTimeout(() => setSheet(next), 80); }}
+          onUnlocked={() => {
+            const next = paywall.thenOpen;
+            const toSoiree = paywall.thenSoiree;
+            setPaywall(null);
+            if (next) setTimeout(() => setSheet(next), 80);
+            if (toSoiree) setTimeout(() => { clearSoiree(); setSoiree("setup"); }, 80);
+          }}
           onLegal={setLegal}
           toast={toast.show}
         />

@@ -18,12 +18,14 @@ import { Lock, Pencil } from "lucide-react";
 import { GameInlineIcon, GAME_INK } from "@/components/games/game-icon-button";
 import { IdeaButton, RerollButton } from "@/components/games/idea-button";
 import { playCombo, playSfx, preloadSfx } from "@/lib/sfx";
+import { getLang, pick, useT } from "@/lib/i18n";
+import { STR, TUTO } from "@/components/games/longueur-onde/i18n";
 
 // Un indice sans aucune lettre (ex. « 73 ») donnerait directement la cible
 function clueProblem(clue: string): string | null {
   const c = clue.trim();
   if (!c) return null;
-  if (!/\p{L}/u.test(c)) return "Pas de chiffres seuls : donne un mot ou un exemple !";
+  if (!/\p{L}/u.test(c)) return pick(STR).noDigits;
   return null;
 }
 /** Cible tirée au sort, jamais collée aux bords (la part entière reste visible). */
@@ -32,10 +34,11 @@ const randomTarget = () => 10 + Math.floor(Math.random() * 81);
 // ── WRAPPER : le joueur choisit local ou online ───────────
 export default function LongueurOndeGame(props: GameProps) {
   const [mode, setMode] = useState<GameMode | null>(null);
+  const t = useT(STR);
   if (mode === null) {
     return (
-      <ModeSelect emoji="📡" name="Le Curseur"
-        tagline="Un Médium voit en secret où est la cible sur une échelle (froid ↔ chaud…), dit UN indice, et les autres placent le curseur."
+      <ModeSelect emoji="📡" name={t.name}
+        tagline={t.tagline}
         onPick={setMode} />
     );
   }
@@ -70,9 +73,6 @@ function Step({ n, bg, tilt = 0, title, children }: { n: number; bg: string; til
   );
 }
 
-/** « de Léa » / « d'Inès » (élision devant une voyelle). */
-const deOf = (name: string) => (/^[aeiouyàâäéèêëîïôöùûü]/i.test(name) ? `d'${name}` : `de ${name}`);
-
 /** Sticker de la catégorie de la manche (« Une destination »), en gros au-dessus du cadran. */
 function CategorySticker({ pair, small = false, className }: { pair: CursorPair; small?: boolean; className?: string }) {
   const label = categoryLabel(pair);
@@ -95,19 +95,19 @@ function CategorySticker({ pair, small = false, className }: { pair: CursorPair;
 }
 
 /** « Trouve UNE destination qui se place là » (ou « UN truc » pour une paire simple). */
-function findTitle(pair: CursorPair): ReactNode {
-  if (!pair.category) return "Trouve UN truc qui se place là";
-  return <>Trouve {(pair.art ?? "un").toUpperCase()} {pair.category} qui se place là</>;
+function findTitle(pair: CursorPair, t: (typeof STR)["fr"]): ReactNode {
+  if (!pair.category) return t.findThing;
+  return t.findCat(pair.art ?? "un", pair.category);
 }
 
 /** Mini-tuto : 3 vignettes avec un exemple complet (Une destination : Nulle ↔ Géniale). */
-const TUTO_PAIR: CursorPair = { art: "une", category: "destination", left: "Nulle", right: "Géniale", ex: ["", "", "Bali"] };
-
 function HowTo({ onGo }: { onGo: () => void }) {
+  const t = useT(STR);
+  const TUTO_PAIR: CursorPair = { ...useT(TUTO), ex: ["", "", "Bali"] };
   return (
     <ZScreen bg={WAVE_COLOR}>
-      <ZTitle size={40}>Le Curseur</ZTitle>
-      <p className="mt-1 text-[17px] font-bold leading-snug">Comment on joue, en 3 images :</p>
+      <ZTitle size={40}>{t.name}</ZTitle>
+      <p className="mt-1 text-[17px] font-bold leading-snug">{t.howHow}</p>
 
       <div className="mt-4 flex flex-col gap-3.5">
         <ZCard bg="#fff" tilt={-1.2} shadow={4} radius={22} className="flex items-center gap-3 px-3 py-3">
@@ -117,7 +117,7 @@ function HowTo({ onGo }: { onGo: () => void }) {
           </div>
           <div className="min-w-0">
             <StepNum n={1} />
-            <p className="mt-1.5 text-[15px] font-bold leading-snug">Léa voit en secret la cible : <b style={{ color: "#E0218A" }}>tout à droite</b>, côté génial.</p>
+            <p className="mt-1.5 text-[15px] font-bold leading-snug">{t.tuto1[0]}<b style={{ color: "#E0218A" }}>{t.tuto1[1]}</b>{t.tuto1[2]}</p>
           </div>
         </ZCard>
 
@@ -125,13 +125,13 @@ function HowTo({ onGo }: { onGo: () => void }) {
           <div className="flex w-[44%] shrink-0 flex-col items-center">
             <span className="rounded-[14px] px-2.5 py-1.5 text-center text-[16px] leading-tight"
               style={{ ...DISPLAY, background: "#fff", border: `2.5px solid ${GAME_INK}`, boxShadow: `0 3px 0 ${GAME_INK}`, rotate: "-3deg" }}>
-              {"«\u00A0Bali\u00A0!\u00A0»"}
+              {t.tutoClue}
             </span>
             <Mascot size={46} color="pink" mood="wink" shadow={false} bob={false} />
           </div>
           <div className="min-w-0">
             <StepNum n={2} />
-            <p className="mt-1.5 text-[15px] font-bold leading-snug">Elle dit à voix haute UNE destination qui se place là.</p>
+            <p className="mt-1.5 text-[15px] font-bold leading-snug">{t.tuto2}</p>
           </div>
         </ZCard>
 
@@ -144,25 +144,26 @@ function HowTo({ onGo }: { onGo: () => void }) {
               <StepNum n={3} />
               <span className="rounded-full px-2.5 text-[20px]" style={{ ...DISPLAY, background: "#FF3EA5", border: `2.5px solid ${GAME_INK}`, rotate: "4deg" }}>+4</span>
             </div>
-            <p className="mt-1.5 text-[15px] font-bold leading-snug">Les autres placent le curseur. Pile dans la cible : +4 !</p>
+            <p className="mt-1.5 text-[15px] font-bold leading-snug">{t.tuto3}</p>
           </div>
         </ZCard>
       </div>
 
       <div className="min-h-6 flex-1" />
-      <ZButton bg={GAME_INK} className="mt-5" onClick={() => { playSfx("confirm", { volume: 0.6 }); onGo(); }}>Compris, on joue !</ZButton>
+      <ZButton bg={GAME_INK} className="mt-5" onClick={() => { playSfx("confirm", { volume: 0.6 }); onGo(); }}>{t.gotIt}</ZButton>
     </ZScreen>
   );
 }
 
 function LongueurOndeLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) {
+  const t = useT(STR);
   type Phase = "howto" | "setup" | "pass" | "clue" | "guess" | "reveal" | "over";
   const [phase, setPhase] = useState<Phase>("howto");
   const [players, setPlayers] = useState<string[]>([]);
   const [scores, setScores] = useState<number[]>([]);
   const [round, setRound] = useState(0);
   const [psychic, setPsychic] = useState(0);
-  const [pairs, setPairs] = useState<CursorPair[]>(buildDeck);
+  const [pairs, setPairs] = useState<CursorPair[]>(() => buildDeck(getLang()));
   const [target, setTarget] = useState(50);
   const [clue, setClue] = useState("");
   const [guess, setGuess] = useState(50);
@@ -187,7 +188,8 @@ function LongueurOndeLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }
   };
   const begin = (names: string[]) => {
     setPlayers(names); setScores(names.map(() => 0));
-    setPairs(buildDeck());
+    // Langue figée au début de la partie
+    setPairs(buildDeck(getLang()));
     startRound(1, 0);
   };
   // « Une autre paire » : la paire est retirée → une paire jamais vue prend sa place
@@ -202,18 +204,18 @@ function LongueurOndeLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }
   if (phase === "howto") return <HowTo onGo={() => setPhase("setup")} />;
 
   if (phase === "setup") {
-    return <PlayersSetup emoji="📡" name="Le Curseur" min={2} max={8} accent={WAVE_COLOR} onStart={begin} onBack={onReturnToLobby}
+    return <PlayersSetup emoji="📡" name={t.name} min={2} max={8} accent={WAVE_COLOR} onStart={begin} onBack={onReturnToLobby}
       footer={
         <div className="flex flex-wrap items-center justify-center gap-3">
           <IdeaButton game="Le Curseur" kind="paire" />
-          <ZLink onClick={() => setPhase("howto")} className="!mx-0">Revoir l&apos;exemple</ZLink>
+          <ZLink onClick={() => setPhase("howto")} className="!mx-0">{t.reviewExample}</ZLink>
         </div>
       } />;
   }
 
   if (phase === "pass") {
     return <PassScreen toName={players[psychic]} colorIndex={psychic} accent={WAVE_COLOR}
-      hint="Tu es le Médium : toi seul vas voir où est la cible. Cache bien l'écran !"
+      hint={t.passHint}
       onReady={() => { playCombo("reveal"); setPhase("clue"); }} />;
   }
 
@@ -228,28 +230,28 @@ function LongueurOndeLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }
     return (
       <ZScreen bg={WAVE_COLOR}>
         <div className="flex items-center justify-between gap-2">
-          <ZChip bg="#fff" tilt={-2}>Manche {round}/{total}</ZChip>
-          <RerollButton label="Une autre paire" onClick={rerollPair} className="shrink-0" />
+          <ZChip bg="#fff" tilt={-2}>{t.round(round, total)}</ZChip>
+          <RerollButton label={t.otherPair} onClick={rerollPair} className="shrink-0" />
         </div>
 
         <div className="mt-4 flex flex-col gap-3">
-          <Step n={1} bg="#fff" title={<>{name}, regarde où est la cible <span style={{ color: "#E0218A" }}>(cache l&apos;écran !)</span></>}>
+          <Step n={1} bg="#fff" title={<>{t.lookTarget(name)}<span style={{ color: "#E0218A" }}>{t.hideScreen}</span></>}>
             <CategorySticker pair={pair} className="mt-3" />
             <CursorGauge left={pair.left} right={pair.right} target={target} className={`mx-auto max-w-[300px] ${pair.category ? "mt-3" : "mt-2"}`} />
           </Step>
 
-          <Step n={2} bg="#FFD23F" tilt={-0.8} title={findTitle(pair)}>
-            <p className="mt-1.5 pl-[42px] text-[15px] font-semibold leading-tight">Ex. : <span className="text-[21px]" style={DISPLAY}>{exampleFor(pair, target)}</span>
-              <span className="text-[13px]" style={{ color: "#4A3A66" }}> (ou mieux, le tien !)</span></p>
+          <Step n={2} bg="#FFD23F" tilt={-0.8} title={findTitle(pair, t)}>
+            <p className="mt-1.5 pl-[42px] text-[15px] font-semibold leading-tight">{t.exPrefix}<span className="text-[21px]" style={DISPLAY}>{exampleFor(pair, target)}</span>
+              <span className="text-[13px]" style={{ color: "#4A3A66" }}>{t.orYours}</span></p>
           </Step>
 
-          <Step n={3} bg="#3DDC97" tilt={0.8} title="Dis-le à voix haute et passe le tél" />
+          <Step n={3} bg="#3DDC97" tilt={0.8} title={t.sayItPass} />
         </div>
 
         {writing && (
           <div className="mt-4">
             <ZCard bg="#fff" shadow={4} radius={20} className="px-4 pb-2.5 pt-2">
-              <label className="text-[14px] font-bold" htmlFor="cur-clue">Ton indice (pour s&apos;en souvenir)</label>
+              <label className="text-[14px] font-bold" htmlFor="cur-clue">{t.yourClueLabel}</label>
               <input id="cur-clue" value={clueInput} onChange={(e) => setClueInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && go()}
                 autoFocus maxLength={40} autoComplete="off" autoCorrect="off" spellCheck={false} enterKeyHint="done"
                 placeholder={exampleFor(pair, target)}
@@ -262,13 +264,13 @@ function LongueurOndeLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }
 
         {!writing && (
           <ZLink color={GAME_INK} className="mt-2" onClick={() => setWriting(true)}>
-            <Pencil size={15} strokeWidth={3} aria-hidden /> Écrire l&apos;indice pour s&apos;en souvenir
+            <Pencil size={15} strokeWidth={3} aria-hidden /> {t.writeClue}
           </ZLink>
         )}
         <div className="min-h-2 flex-1" />
         <ZButton bg={GAME_INK} className="mt-3 flex-col !gap-0 py-2" onClick={go} disabled={!!err}>
-          <span>J&apos;ai donné mon indice</span>
-          <span className="text-[15px]" style={{ fontFamily: "inherit", opacity: 0.85 }}>→ les autres jouent</span>
+          <span>{t.gaveClue}</span>
+          <span className="text-[15px]" style={{ fontFamily: "inherit", opacity: 0.85 }}>{t.othersPlay}</span>
         </ZButton>
       </ZScreen>
     );
@@ -278,25 +280,25 @@ function LongueurOndeLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }
     const name = players[psychic];
     return (
       <ZScreen bg={WAVE_COLOR}>
-        <ZTitle size={32}>À vous de jouer !</ZTitle>
+        <ZTitle size={32}>{t.yourTurn}</ZTitle>
 
         <ZCard bg="#FFD23F" tilt={-1.5} shadow={5} radius={22} className="mt-3 flex items-center gap-3 px-4 py-2.5">
           <Mascot size={44} color={colorForIndex(psychic)} mood="wink" shadow={false} bob={false} />
           {clue ? (
             <div className="min-w-0">
-              <p className="text-[15px] font-bold">L&apos;indice {deOf(name)} :</p>
+              <p className="text-[15px] font-bold">{t.clueOf(name)}</p>
               <p className="break-words text-[28px] leading-none" style={DISPLAY}>{clue}</p>
             </div>
           ) : (
-            <p className="text-[16px] font-bold leading-snug">{name} vous a dit son indice à voix haute.</p>
+            <p className="text-[16px] font-bold leading-snug">{t.saidAloud(name)}</p>
           )}
         </ZCard>
 
-        <p className="mt-4 text-[16px] font-extrabold leading-snug">Faites glisser le curseur là où vous pensez que l&apos;indice se place.</p>
+        <p className="mt-4 text-[16px] font-extrabold leading-snug">{t.dragHint}</p>
         <CategorySticker pair={pair} className="mt-3" />
         <CursorGauge left={pair.left} right={pair.right} needle={guess} onChange={setGuess} className="mx-auto mt-3 max-w-[340px]" />
         <p className="mt-3 text-[14px] font-semibold leading-snug" style={{ color: "#2A1A55" }}>
-          Un seul curseur pour toute la table : <span className="whitespace-nowrap">mettez-vous</span> d&apos;accord !
+          {t.oneCursor[0]}<span className="whitespace-nowrap">{t.oneCursor[1]}</span>{t.oneCursor[2]}
         </p>
 
         <div className="min-h-2 flex-1" />
@@ -310,7 +312,7 @@ function LongueurOndeLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }
           if (revealTimer.current) clearTimeout(revealTimer.current);
           revealTimer.current = setTimeout(() => setShown(true), 1050);
         }}>
-          Valider
+          {t.validate}
         </ZButton>
       </ZScreen>
     );
@@ -319,14 +321,14 @@ function LongueurOndeLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }
   if (phase === "reveal") {
     const name = players[psychic];
     const bull = pts >= 4;
-    const verdict = !shown ? "Alors… ?" : bull ? "Dans le mille !" : pts === 3 ? "Tout près !" : pts === 2 ? "Pas loin !" : "Raté !";
+    const verdict = !shown ? t.verdictWait : bull ? t.bull : pts === 3 ? t.close : pts === 2 ? t.notFar : t.missed;
     const next = (psychic + 1) % total;
     return (
       <ZScreen bg={shown && bull ? "#3DDC97" : WAVE_COLOR}>
         {shown && bull && <ConfettiBurst count={40} />}
-        <ZChip bg="#fff" tilt={-2}>Manche {round}/{total}</ZChip>
+        <ZChip bg="#fff" tilt={-2}>{t.round(round, total)}</ZChip>
         <ZTitle size={38} className="mt-3">{verdict}</ZTitle>
-        {clue && <p className="mt-1 text-[16px] font-bold">Indice {deOf(name)} : « {clue} »</p>}
+        {clue && <p className="mt-1 text-[16px] font-bold">{t.clueQuote(name, clue)}</p>}
 
         <CategorySticker pair={pair} className="mt-4" />
         <CursorGauge left={pair.left} right={pair.right} target={shown ? target : null} needle={guess} reveal className={pair.category ? "mt-3" : "mt-5"} />
@@ -337,8 +339,8 @@ function LongueurOndeLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }
               style={{ animation: "cur-pop .45s cubic-bezier(.2,1.6,.4,1) both" }}>
               <Mascot size={52} color={colorForIndex(psychic)} mood={bull ? "laughing" : pts ? "happy" : "sad"} shadow={false} bob={false} />
               <div>
-                <p className="text-[44px] leading-none" style={DISPLAY}>{pts > 0 ? `+${pts}` : "0 point"}</p>
-                <p className="text-[15px] font-bold">{pts > 0 ? `points pour ${name}` : "Dommage, ça arrive !"}</p>
+                <p className="text-[44px] leading-none" style={DISPLAY}>{pts > 0 ? `+${pts}` : t.zeroPoint}</p>
+                <p className="text-[15px] font-bold">{pts > 0 ? t.pointsFor(name) : t.tooBad}</p>
               </div>
             </ZCard>
           )}
@@ -350,7 +352,7 @@ function LongueurOndeLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }
             const ns = [...scores]; ns[psychic] += pts; setScores(ns);
             if (round >= total) { playCombo("fanfare"); setPhase("over"); } else startRound(round + 1, next);
           }}>
-            {round >= total ? "Voir les scores" : `Médium suivant : ${players[next]}`}
+            {round >= total ? t.seeScores : t.nextPsychic(players[next])}
           </ZButton>
         )}
         <style>{`@keyframes cur-pop{from{transform:scale(.3);opacity:0}to{transform:none;opacity:1}}`}</style>
@@ -365,17 +367,17 @@ function LongueurOndeLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }
       <ConfettiBurst count={50} />
       <ZTitle size={(ranking[0]?.name.length ?? 0) > 9 ? 32 : 40} className="text-center">
         {/* prénom composé jamais coupé au trait d'union */}
-        <span className="whitespace-nowrap">{ranking[0]?.name},</span> meilleur Médium !
+        <span className="whitespace-nowrap">{ranking[0]?.name},</span>{t.bestPsychic}
       </ZTitle>
-      <p className="mt-2 text-center text-[15px] font-bold" style={{ textWrap: "balance" }}>Chacun marque les points trouvés grâce à son indice.</p>
+      <p className="mt-2 text-center text-[15px] font-bold" style={{ textWrap: "balance" }}>{t.scoreNote}</p>
       <div className="mt-6"><ZRanking rows={ranking} /></div>
       <div className="min-h-8 flex-1" />
-      <ZButton bg={GAME_INK} className="mt-6" onClick={() => begin(players)}>Rejouer</ZButton>
+      <ZButton bg={GAME_INK} className="mt-6" onClick={() => begin(players)}>{t.playAgain}</ZButton>
       <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
-        <ZButton size="sm" bg="#fff" style={{ width: "auto" }} onClick={() => setPhase("setup")}>Changer les joueurs</ZButton>
+        <ZButton size="sm" bg="#fff" style={{ width: "auto" }} onClick={() => setPhase("setup")}>{t.changePlayers}</ZButton>
         <IdeaButton game="Le Curseur" kind="paire" bg="#fff" />
       </div>
-      {onReturnToLobby && <ZLink onClick={onReturnToLobby} color={GAME_INK} className="mt-2">Retour à l&apos;accueil</ZLink>}
+      {onReturnToLobby && <ZLink onClick={onReturnToLobby} color={GAME_INK} className="mt-2">{t.backHome}</ZLink>}
     </ZScreen>
   );
 }

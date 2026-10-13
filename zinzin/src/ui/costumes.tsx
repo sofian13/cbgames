@@ -9,7 +9,7 @@ import type { ReactNode } from "react";
 export type ZCostume =
   | "wolf" | "groucho" | "pinocchio" | "ten" | "stopwatch" | "potato" | "fuse"
   | "spy" | "angeldevil" | "antenna" | "mime" | "card" | "hourglass" | "split"
-  | "duo" | "hearts" | "beer" | "train";
+  | "duo" | "hearts" | "beer" | "train" | "blindfold";
 
 /** Palette « pomme de terre » (le costume patate recolore le blob). */
 export const POTATO = { body: "#D9A066", deep: "#A8692F", hi: "#F4D3A0", ink: "#2A1A00" };
@@ -186,6 +186,30 @@ export function costumeLayers(kind: ZCostume | undefined, ctx: Ctx): CostumeLaye
           </g>
         ),
       };
+
+    // Le Faux Témoin : bandeau noir sur les yeux, nœud sur le côté (les yeux sont cachés : voir ZBlob)
+    case "blindfold": {
+      const y = (L.y + R.y) / 2;
+      return {
+        face: (
+          <g>
+            {clipped(
+              <g>
+                <path d={`M-4 ${y - 12} Q60 ${y - 20} 124 ${y - 13} L124 ${y + 9} Q60 ${y + 3} -4 ${y + 11}Z`} fill="#24203A" stroke={INK} strokeWidth={SW} strokeLinejoin="round" />
+                <path d={`M14 ${y - 8} Q60 ${y - 14} 106 ${y - 9}`} fill="none" stroke="#fff" strokeWidth={2.4} strokeLinecap="round" opacity={0.28} />
+              </g>,
+            )}
+            {/* Nœud qui dépasse sur le côté, avec deux pans */}
+            <g transform={`translate(108 ${y - 2})`}>
+              <path d="M0 0 C10 -10 22 -12 20 -2 C19 4 8 4 0 0Z" fill="#24203A" stroke={INK} strokeWidth={2.6} strokeLinejoin="round" />
+              <path d="M0 0 C6 8 10 20 4 24 C0 22 -2 12 0 0Z" fill="#24203A" stroke={INK} strokeWidth={2.6} strokeLinejoin="round" />
+              <path d="M0 0 C10 6 18 14 14 20 C10 20 4 10 0 0Z" fill="#24203A" stroke={INK} strokeWidth={2.6} strokeLinejoin="round" />
+              <circle cx={0} cy={0} r={5} fill="#33304A" stroke={INK} strokeWidth={2.6} />
+            </g>
+          </g>
+        ),
+      };
+    }
 
     // Test de pureté : moitié auréole d'ange, moitié corne de diable
     case "angeldevil":

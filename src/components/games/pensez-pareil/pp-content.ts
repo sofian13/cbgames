@@ -1,5 +1,10 @@
 // Contenu + matching de Pensez Pareil, partagés entre le client (mode local)
 // et le serveur PartyKit (party/games/pensez-pareil.ts). Module pur : aucun import.
+// Matching multilingue (FR par défaut ; EN / ES pour l'app Zinzin). Les thèmes
+// EN / ES sont dans pp-content.en.ts / pp-content.es.ts (côté client seulement).
+
+/** Langue du matching (même valeurs que Lang de src/lib/i18n, sans import). */
+export type MatchLang = "fr" | "en" | "es";
 
 export type Tier = "soft" | "couple" | "spicy";
 export interface Prompt {
@@ -79,7 +84,63 @@ function numberToWords(n: number): string | null {
 
 const ARTICLES = new Set(["le", "la", "les", "un", "une", "des", "du", "de", "l", "d"]);
 
-export function normalizeAnswer(s: string): string {
+// ── Anglais ──
+const EN_UNITS = [
+  "zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten",
+  "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen", "seventeen", "eighteen", "nineteen",
+];
+const EN_TENS = ["", "", "twenty", "thirty", "forty", "fifty", "sixty", "seventy", "eighty", "ninety"];
+/** 0-100 en anglais, collé (« twenty-one » → « twentyone »). */
+function numberToWordsEn(n: number): string | null {
+  if (n < 0 || n > 100) return null;
+  if (n < 20) return EN_UNITS[n];
+  if (n === 100) return "onehundred";
+  const t = Math.floor(n / 10);
+  const u = n % 10;
+  return EN_TENS[t] + (u ? EN_UNITS[u] : "");
+}
+const EN_ARTICLES = new Set(["the", "a", "an", "some"]);
+/** Pluriels anglais réguliers (cherries → cherry, boxes → box, cats → cat). */
+function singularEn(w: string): string {
+  if (w.length < 4) return w;
+  if (/ies$/.test(w) && w.length > 4) return w.slice(0, -3) + "y";
+  if (/(ches|shes|xes|sses|zes|oes)$/.test(w)) return w.slice(0, -2);
+  if (/s$/.test(w) && !/(ss|us|is)$/.test(w)) return w.slice(0, -1);
+  return w;
+}
+
+// ── Espagnol ──
+const ES_UNITS = [
+  "cero", "uno", "dos", "tres", "cuatro", "cinco", "seis", "siete", "ocho", "nueve", "diez",
+  "once", "doce", "trece", "catorce", "quince", "dieciseis", "diecisiete", "dieciocho", "diecinueve", "veinte",
+  "veintiuno", "veintidos", "veintitres", "veinticuatro", "veinticinco", "veintiseis", "veintisiete", "veintiocho", "veintinueve",
+];
+const ES_TENS = ["", "", "", "treinta", "cuarenta", "cincuenta", "sesenta", "setenta", "ochenta", "noventa"];
+/** 0-100 en espagnol, collé (« treinta y uno » → « treintayuno »). */
+function numberToWordsEs(n: number): string | null {
+  if (n < 0 || n > 100) return null;
+  if (n < 30) return ES_UNITS[n];
+  if (n === 100) return "cien";
+  const t = Math.floor(n / 10);
+  const u = n % 10;
+  return ES_TENS[t] + (u ? "y" + ES_UNITS[u] : "");
+}
+const ES_ARTICLES = new Set(["el", "la", "los", "las", "un", "una", "unos", "unas", "lo"]);
+/** Pluriels espagnols (flores → flor, tomates → tomate, luces → luz) : même racine des deux côtés. */
+function singularEs(w: string): string {
+  if (w.length >= 4 && /s$/.test(w)) w = w.slice(0, -1);
+  if (w.length >= 4 && /[^aeiou]e$/.test(w)) w = w.slice(0, -1);
+  return w.replace(/z$/, "c");
+}
+
+const LANG_RULES: Record<MatchLang, { articles: Set<string>; num: (n: number) => string | null; sing: (w: string) => string }> = {
+  fr: { articles: ARTICLES, num: numberToWords, sing: (w) => (w.length >= 4 && /[sx]$/.test(w) ? w.slice(0, -1) : w) },
+  en: { articles: EN_ARTICLES, num: numberToWordsEn, sing: singularEn },
+  es: { articles: ES_ARTICLES, num: numberToWordsEs, sing: singularEs },
+};
+
+export function normalizeAnswer(s: string, lang: MatchLang = "fr"): string {
+  const rules = LANG_RULES[lang] ?? LANG_RULES.fr;
   const words = s
     .toLowerCase()
     .normalize("NFD")
@@ -91,18 +152,21 @@ export function normalizeAnswer(s: string): string {
     .replace(/[^a-z0-9 ]/g, " ")
     .split(/\s+/)
     .filter(Boolean);
-  // Articles en tête (« la plage », « l'été », « des fraises »)
-  while (words.length > 1 && ARTICLES.has(words[0])) words.shift();
+  // Articles en tête (« la plage », « l'été », « des fraises » / « the beach » / « las fresas »)
+  while (words.length > 1 && rules.articles.has(words[0])) words.shift();
+  // « a hundred » / « one hundred » = « 100 » ; « una » / « un » seul = « uno »
+  if (lang === "en" && words.length === 1 && words[0] === "hundred") words[0] = "onehundred";
+  if (lang === "es" && words.length === 1 && (words[0] === "un" || words[0] === "una")) words[0] = "uno";
   const out = words.map((w) => {
-    // Chiffres → lettres (« 7 » = « sept »)
+    // Chiffres → lettres (« 7 » = « sept » / « seven » / « siete »)
     if (/^\d+$/.test(w)) {
-      const asWords = numberToWords(parseInt(w, 10));
+      const asWords = rules.num(parseInt(w, 10));
       if (asWords) w = asWords;
     }
-    // Pluriel : s / x final (« fraises » = « fraise », « gâteaux » = « gâteau »)
-    if (w.length >= 4 && /[sx]$/.test(w)) w = w.slice(0, -1);
-    return w;
+    // Pluriel → singulier (« fraises » = « fraise », « gâteaux » = « gâteau », « cherries » = « cherry », « flores » = « flor »)
+    return rules.sing(w);
   });
+  // Nombres en plusieurs mots : « twenty one », « treinta y uno » → collés comme les chiffres
   return out.join("");
 }
 
@@ -127,10 +191,10 @@ function lev(a: string, b: string): number {
  * Même réponse ? Égalité après normalisation (accents, casse, articles, pluriel,
  * chiffres → lettres) OU une seule faute de frappe pour les mots de 5 lettres et plus.
  */
-export function isMatch(a: string | null, b: string | null): boolean {
+export function isMatch(a: string | null, b: string | null, lang: MatchLang = "fr"): boolean {
   if (!a || !b) return false;
-  const x = normalizeAnswer(a);
-  const y = normalizeAnswer(b);
+  const x = normalizeAnswer(a, lang);
+  const y = normalizeAnswer(b, lang);
   if (!x || !y) return false;
   if (x === y) return true;
   return Math.min(x.length, y.length) >= 5 && lev(x, y) <= 1;

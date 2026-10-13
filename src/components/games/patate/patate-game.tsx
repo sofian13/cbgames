@@ -5,7 +5,9 @@ import type { GameProps } from "@/lib/games/types";
 import { PlayersSetup, colorForIndex } from "@/components/games/local-kit";
 import { Mascot, MascotAvatar } from "@/components/Mascot";
 import { ConfettiBurst } from "@/components/ConfettiBurst";
-import { CATEGORIES_CLASSIC, CATEGORIES_SPICY, DARES, DARES_SPICY, pick, shuffle } from "./categories";
+import { patateContent, pick, shuffle } from "./categories";
+import { PATATE_STR, decimal } from "./i18n";
+import { getLang, useT } from "@/lib/i18n";
 import { buzz, fuseHeat, preloadObjectSfx, sfxBoom, sfxDetonator, sfxIgnite, sfxPass, sfxTick, startFuse, unlockAudio } from "./fx";
 import { ScrollReset, TopRightControls } from "./rules-sheet";
 import { C, DISPLAY, INK, NameTag, OptionCard, PotatoBlob, SectionTitle, SoftLink, StickerBtn, StickerCard, StickerScreen, KitStyles, TOP_PAD, BOTTOM_PAD, dotted, sticker } from "./sticker-kit";
@@ -24,13 +26,6 @@ import { MASCOT_PALETTE } from "@/components/Mascot";
 
 const ACCENT = "#FF8A3D";
 
-const RULES = [
-  "Asseyez-vous en cercle, dans l'ordre des prénoms.",
-  "Une catégorie s'affiche : dis UNE réponse à voix haute.",
-  "Tape « J'ai répondu » et passe le tél au voisin. Pas de répétition !",
-  "La mèche est cachée et le tic\u2011tac accélère. BOUM = celui qui tient le tél a perdu.",
-  "Le perdant fait un gage (ou 1\u00a0à\u00a03\u00a0gorgées, eau\u00a0OK).",
-];
 
 type Phase = "setup" | "config" | "ready" | "play" | "boom" | "end";
 type Penalty = "dares" | "sips";
@@ -79,7 +74,11 @@ export default function PatateGame({ onReturnToLobby }: GameProps) {
   const [heat, setHeat] = useState(0); // 0→1, pilote l'ambiance visuelle
   const [stress, setStress] = useState(0); // 0→100
   const [jolt, setJolt] = useState(0); // incrémenté à chaque secousse (anim)
-  const [boom, setBoom] = useState<{ loser: number; reason: "time" | "shake"; penalty: string; alt: string | null; secs: number } | null>(null);
+  // sips = null : gage seul ; sinon « n gorgées ou le gage »
+  const [boom, setBoom] = useState<{ loser: number; reason: "time" | "shake"; sips: number | null; dare: string; secs: number } | null>(null);
+  const t = useT(PATATE_STR);
+  // Contenu figé dans la langue du début de partie
+  const [content] = useState(() => patateContent(getLang()));
 
   const deck = useRef<string[]>([]);
   const run = useRef<Run | null>(null);
@@ -88,10 +87,10 @@ export default function PatateGame({ onReturnToLobby }: GameProps) {
 
   const nextCategory = useCallback(() => {
     if (deck.current.length === 0) {
-      deck.current = shuffle(spicy ? [...CATEGORIES_CLASSIC, ...CATEGORIES_SPICY] : CATEGORIES_CLASSIC);
+      deck.current = shuffle(spicy ? [...content.classic, ...content.spicy] : content.classic);
     }
     return deck.current.pop()!;
-  }, [spicy]);
+  }, [spicy, content]);
 
   // ── Explosion ──
   const explode = useCallback(
@@ -105,21 +104,13 @@ export default function PatateGame({ onReturnToLobby }: GameProps) {
       sfxBoom();
       buzz("boom");
       const loser = holderRef.current;
-      const dares = spicy ? [...DARES, ...DARES_SPICY] : DARES;
-      let pen: string;
-      let alt: string | null = null;
-      if (penalty === "dares") {
-        pen = pick(dares);
-      } else {
-        const n = 1 + Math.floor(Math.random() * 3);
-        pen = `${n} gorgée${n > 1 ? "s" : ""}`;
-        alt = pick(dares);
-      }
+      const dares = spicy ? [...content.dares, ...content.daresSpicy] : content.dares;
+      const sips = penalty === "dares" ? null : 1 + Math.floor(Math.random() * 3);
       setLosses((l) => l.map((v, i) => (i === loser ? v + 1 : v)));
-      setBoom({ loser, reason, penalty: pen, alt, secs: (performance.now() - r.start) / 1000 });
+      setBoom({ loser, reason, sips, dare: pick(dares), secs: (performance.now() - r.start) / 1000 });
       setPhase("boom");
     },
-    [penalty, spicy],
+    [penalty, spicy, content],
   );
 
   // ── Boucle de jeu : tic-tac qui accélère + mèche cachée ──
@@ -231,16 +222,16 @@ export default function PatateGame({ onReturnToLobby }: GameProps) {
         .then((res) => {
           if (res !== "granted") {
             setShakeMode(false);
-            setNotice("Capteur refusé : on joue en mode classique (la patate ne craint pas les secousses).");
+            setNotice(t.noticeDenied);
           }
         })
         .catch(() => {
           setShakeMode(false);
-          setNotice("Capteur indisponible : mode classique.");
+          setNotice(t.noticeUnavailable);
         });
     } else if (shakeMode && !DM) {
       setShakeMode(false);
-      setNotice("Pas d'accéléromètre ici : mode classique.");
+      setNotice(t.noticeNoSensor);
     }
     deck.current = [];
     setPhase("ready");
@@ -291,9 +282,8 @@ export default function PatateGame({ onReturnToLobby }: GameProps) {
   // Autre gage (le perdant n'a encore rien fait : aucun impact sur le score)
   const rerollDare = () => {
     if (!boom) return;
-    const dares = (spicy ? [...DARES, ...DARES_SPICY] : DARES).filter((d) => d !== boom.alt && d !== boom.penalty);
-    const d = pick(dares);
-    setBoom(boom.alt ? { ...boom, alt: d } : { ...boom, penalty: d });
+    const dares = (spicy ? [...content.dares, ...content.daresSpicy] : content.dares).filter((d) => d !== boom.dare);
+    setBoom({ ...boom, dare: pick(dares) });
   };
 
   const finish = () => {
@@ -317,7 +307,7 @@ export default function PatateGame({ onReturnToLobby }: GameProps) {
   const n = players.length;
   const controls = (
     <>
-      <TopRightControls title="La Patate" rules={RULES} accent={ACCENT} />
+      <TopRightControls title={t.name} rules={t.rules} accent={ACCENT} />
       <ScrollReset dep={phase} />
     </>
   );
@@ -328,7 +318,7 @@ export default function PatateGame({ onReturnToLobby }: GameProps) {
     return (
       <>
         {controls}
-        <PlayersSetup emoji="" name="La Patate" min={3} max={10} accent={ACCENT} onStart={startGame} />
+        <PlayersSetup emoji="" name={t.name} min={3} max={10} accent={ACCENT} onStart={startGame} />
       </>
     );
   }
@@ -341,31 +331,31 @@ export default function PatateGame({ onReturnToLobby }: GameProps) {
           <PotatoBlob size={118} face="smug" />
         </div>
         <h1 className="mt-1 text-center text-[clamp(40px,12vw,56px)] leading-[0.95]" style={{ ...DISPLAY, textShadow: `4px 4px 0 ${INK}` }}>
-          Avant de lancer
+          {t.beforeStart}
         </h1>
 
         {/* Ordre de passage : important avant la 1re manche */}
         <StickerCard bg={C.sky} tilt={-1.5} radius={20} shadow={4} className="mt-5 flex items-center gap-3 px-4 py-3">
           <RotateCw size={26} strokeWidth={3} aria-hidden className="shrink-0" />
           <p className="text-[15px] font-bold leading-snug">
-            La patate tourne dans l&apos;ordre des prénoms : asseyez-vous en cercle dans cet ordre.
+            {t.order}
           </p>
         </StickerCard>
 
         <div className="mt-6 w-full space-y-2.5">
-          <SectionTitle>Le perdant prend…</SectionTitle>
-          <OptionCard on={penalty === "dares"} onClick={() => setPenalty("dares")} icon={Drama} title="Un gage" sub="Que des gages, zéro gorgée" onBg={ACCENT} />
-          <OptionCard on={penalty === "sips"} onClick={() => setPenalty("sips")} icon={CupSoda} title="Gorgées ou gage" sub="1 à 3 gorgées de zinzin" onBg={ACCENT} />
+          <SectionTitle>{t.loserTakes}</SectionTitle>
+          <OptionCard on={penalty === "dares"} onClick={() => setPenalty("dares")} icon={Drama} title={t.dareTitle} sub={t.dareSub} onBg={ACCENT} />
+          <OptionCard on={penalty === "sips"} onClick={() => setPenalty("sips")} icon={CupSoda} title={t.sipsTitle} sub={t.sipsSub} onBg={ACCENT} />
         </div>
 
         <div className="mt-6 w-full space-y-2.5">
-          <SectionTitle>Les modes</SectionTitle>
-          <OptionCard kind="switch" on={shakeMode} onClick={() => setShakeMode((s) => !s)} icon={Vibrate} title="Ne la secoue pas !" sub="Trop secouée, elle explose plus tôt" onBg={C.yellow} />
-          <OptionCard kind="switch" on={spicy} onClick={() => setSpicy((s) => !s)} icon={Flame} title="Pack 18+" sub="Catégories coquines, rien d'explicite" onBg={C.pink} />
+          <SectionTitle>{t.modes}</SectionTitle>
+          <OptionCard kind="switch" on={shakeMode} onClick={() => setShakeMode((s) => !s)} icon={Vibrate} title={t.shakeTitle} sub={t.shakeSub} onBg={C.yellow} />
+          <OptionCard kind="switch" on={spicy} onClick={() => setSpicy((s) => !s)} icon={Flame} title={t.spicyTitle} sub={t.spicySub} onBg={C.pink} />
         </div>
 
         <div className="mt-auto w-full pt-7">
-          <StickerBtn big bg={ACCENT} onClick={confirmConfig}>C&apos;est parti !</StickerBtn>
+          <StickerBtn big bg={ACCENT} onClick={confirmConfig}>{t.go}</StickerBtn>
           <div className="mt-4 flex justify-center">
             <IdeaButton game="La Patate" kind="catégorie" bg={C.cream} />
           </div>
@@ -380,7 +370,7 @@ export default function PatateGame({ onReturnToLobby }: GameProps) {
       <StickerScreen bg={ACCENT} light>
         {controls}
         <span className="text-[17px]" style={{ ...sticker("#fff", { radius: 999, shadow: 3, border: 2.5 }), ...DISPLAY, letterSpacing: "-0.01em", padding: "4px 14px", transform: "rotate(-3deg)" }}>
-          Manche {round}
+          {t.round(round)}
         </span>
         <div className="relative z-[1] mt-3 -mb-6">
           <Mascot size={92} color={colorForIndex(holder)} mood="shifty" arms shadow={false} />
@@ -391,14 +381,14 @@ export default function PatateGame({ onReturnToLobby }: GameProps) {
         >
           {players[holder]}
         </h1>
-        <p className="mt-4 text-center text-[19px] leading-tight" style={DISPLAY}>prend le tél et commence</p>
+        <p className="mt-4 text-center text-[19px] leading-tight" style={DISPLAY}>{t.takesPhone}</p>
         {notice && (
           <StickerCard bg={C.cream} radius={18} shadow={3} className="mt-4 px-4 py-2.5 text-center text-[14px] font-bold">
             {notice}
           </StickerCard>
         )}
         <p className="mt-3 max-w-xs text-center text-[16px] font-semibold leading-snug">
-          La catégorie s&apos;affiche et la mèche s&apos;allume : réponds, puis passe vite à {players[(holder + 1) % n]}&nbsp;!
+          {t.readyHint(players[(holder + 1) % n])}
         </p>
 
         <button
@@ -408,11 +398,11 @@ export default function PatateGame({ onReturnToLobby }: GameProps) {
           style={{ ...sticker(C.yellow, { radius: 999, shadow: 7, border: 3.5 }), ...DISPLAY, width: "max(132px, min(160px, 21dvh))", height: "max(132px, min(160px, 21dvh))", animation: "patate-pulse 1.4s ease-in-out infinite" }}
         >
           <Flame size={44} strokeWidth={2.6} aria-hidden />
-          <span className="mt-1 text-[21px] leading-[1.05]">Allumer<br />la mèche</span>
+          <span className="mt-1 text-[21px] leading-[1.05]">{t.light[0]}<br />{t.light[1]}</span>
         </button>
         {losses.some((l) => l > 0) && (
           <div className="mt-5">
-            <SoftLink light onClick={finish}>Terminer la partie</SoftLink>
+            <SoftLink light onClick={finish}>{t.endGame}</SoftLink>
           </div>
         )}
         <style>{KEYFRAMES}</style>
@@ -462,13 +452,13 @@ export default function PatateGame({ onReturnToLobby }: GameProps) {
                 <div className="h-full transition-[width] duration-150" style={{ width: `${Math.min(100, stress)}%`, background: stress > 60 ? C.coral : C.yellow }} />
               </div>
               <p className="mt-1.5 text-center text-[15px] font-bold">
-                <GameInlineIcon icon={Vibrate} /> {shakeOk && stress > 50 ? "Doucement !!" : "Ne la secoue pas !"}
+                <GameInlineIcon icon={Vibrate} /> {shakeOk && stress > 50 ? t.gentle : t.shakeTitle}
               </p>
             </div>
           )}
           <p className="mt-3 flex items-center gap-2 text-[24px] leading-none" style={DISPLAY}>
             <NameTag bg={pal.body} style={{ color: pal.body === "#7A4EE8" ? "#fff" : INK, maxWidth: "calc(100vw - 130px)" }}>{players[holder]}</NameTag>
-            <span>l&apos;a !</span>
+            <span>{t.holds}</span>
           </p>
         </div>
 
@@ -480,9 +470,9 @@ export default function PatateGame({ onReturnToLobby }: GameProps) {
             className="zk-push flex w-full flex-col items-center justify-center"
             style={{ ...sticker(C.yellow, { radius: 32, shadow: 7, border: 3.5 }), ...DISPLAY, height: "27dvh", minHeight: 160, maxHeight: 240 }}
           >
-            <span className="text-[38px] leading-none">J&apos;ai répondu</span>
+            <span className="text-[38px] leading-none">{t.answered}</span>
             <span className="mt-2.5 max-w-[90%] truncate text-[21px] leading-tight" style={{ letterSpacing: "-0.01em" }}>
-              Passe à {players[next]}
+              {t.passTo(players[next])}
             </span>
           </button>
         </div>
@@ -504,10 +494,10 @@ export default function PatateGame({ onReturnToLobby }: GameProps) {
         <div className="pointer-events-none fixed inset-0 z-30" style={{ animation: "patate-flash 0.9s ease-out forwards" }} />
         <div className="flex w-full max-w-md flex-1 flex-col items-center">
           <p className="zk-pop text-[78px] leading-none" style={{ ...DISPLAY, color: C.yellow, textShadow: `5px 5px 0 ${INK}`, WebkitTextStroke: `2.5px ${INK}`, ["--zk-r" as string]: "-4deg" }}>
-            BOUM !
+            {t.boom}
           </p>
           <p className="mt-2 text-center text-[16px] font-bold" style={{ color: INK }}>
-            {boom.reason === "shake" ? "Trop secouée : elle a explosé !" : `La mèche a tenu ${boom.secs.toFixed(1).replace(".", ",")}\u00a0s`}
+            {boom.reason === "shake" ? t.tooShaken : t.fuseLasted(decimal(boom.secs, 1, t.dec))}
           </p>
           <div className="relative z-[1] mt-3 -mb-5">
             <Mascot size={92} color={colorForIndex(boom.loser)} mood="dead" shadow={false} />
@@ -518,29 +508,29 @@ export default function PatateGame({ onReturnToLobby }: GameProps) {
           >
             <p className="leading-none" style={{ ...DISPLAY, fontSize: fitName(players[boom.loser], "clamp(32px,10vw,46px)", 78), overflowWrap: "anywhere" }}>{players[boom.loser]}</p>
           </div>
-          <p className="mt-3 text-[20px]" style={{ ...DISPLAY, color: INK }}>tenait la patate !</p>
+          <p className="mt-3 text-[20px]" style={{ ...DISPLAY, color: INK }}>{t.heldPotato}</p>
 
           <StickerCard bg={C.cream} radius={24} shadow={5} className="mt-4 p-4 text-center">
-            {boom.alt ? (
+            {boom.sips != null ? (
               <>
-                <p className="text-[26px] leading-tight" style={DISPLAY}><GameInlineIcon icon={CupSoda} /> {boom.penalty} de zinzin</p>
-                <p className="mt-1 text-[15px] font-bold" style={{ color: "#4A3A66" }}>ou le gage :</p>
-                <p className="mt-1 text-[18px] font-semibold leading-snug">{boom.alt}</p>
+                <p className="text-[26px] leading-tight" style={DISPLAY}><GameInlineIcon icon={CupSoda} /> {t.sips(boom.sips)}</p>
+                <p className="mt-1 text-[15px] font-bold" style={{ color: "#4A3A66" }}>{t.orDare}</p>
+                <p className="mt-1 text-[18px] font-semibold leading-snug">{boom.dare}</p>
               </>
             ) : (
               <>
-                <p className="text-[22px] leading-tight" style={DISPLAY}>Ton gage</p>
-                <p className="mt-1 text-[18px] font-semibold leading-snug">{boom.penalty}</p>
+                <p className="text-[22px] leading-tight" style={DISPLAY}>{t.yourDare}</p>
+                <p className="mt-1 text-[18px] font-semibold leading-snug">{boom.dare}</p>
               </>
             )}
             <div className="mt-3 flex justify-center">
-              <RerollButton onClick={rerollDare} label="Pas fou ? Un autre gage" bg={C.yellow} />
+              <RerollButton onClick={rerollDare} label={t.rerollDare} bg={C.yellow} />
             </div>
           </StickerCard>
 
           {/* Score des perdants */}
           <div className="mt-5 w-full">
-            <p className="mb-2 text-center text-[20px]" style={{ ...DISPLAY, color: INK }}>Patates reçues</p>
+            <p className="mb-2 text-center text-[20px]" style={{ ...DISPLAY, color: INK }}>{t.scoreTitle}</p>
             <div className="flex flex-wrap justify-center gap-2">
               {ranking.map((r) => (
                 <span
@@ -557,8 +547,8 @@ export default function PatateGame({ onReturnToLobby }: GameProps) {
           </div>
 
           <div className="mt-auto flex w-full flex-col items-center gap-1 pt-6">
-            <StickerBtn big bg={C.yellow} onClick={nextRound}>Manche suivante</StickerBtn>
-            <SoftLink light onClick={finish}>Fin de la partie</SoftLink>
+            <StickerBtn big bg={C.yellow} onClick={nextRound}>{t.nextRound}</StickerBtn>
+            <SoftLink light onClick={finish}>{t.finish}</SoftLink>
           </div>
         </div>
         <style>{KEYFRAMES}</style>
@@ -574,17 +564,17 @@ export default function PatateGame({ onReturnToLobby }: GameProps) {
       <ConfettiBurst count={50} />
       <ScrollReset dep={phase} />
       <span className="text-[17px]" style={{ ...sticker(C.yellow, { radius: 999, shadow: 3, border: 2.5 }), ...DISPLAY, letterSpacing: "-0.01em", padding: "4px 14px", transform: "rotate(-3deg)" }}>
-        {round} manche{round > 1 ? "s" : ""} jouée{round > 1 ? "s" : ""}
+        {t.roundsPlayed(round)}
       </span>
       <div className="mt-4 flex items-end">
         <Mascot size={110} color={colorForIndex(worst?.i ?? 0)} mood={hasLoser ? "rofl" : "cool"} crown />
         <PotatoBlob size={70} face="smug" style={{ marginLeft: -18 }} />
       </div>
-      <h1 className="mt-2 max-w-full text-center leading-[0.95]" style={{ ...DISPLAY, fontSize: fitName(hasLoser ? worst.name : "Personne", "clamp(40px,12vw,56px)", 88), textShadow: `4px 4px 0 ${INK}`, overflowWrap: "anywhere" }}>
-        {hasLoser ? worst.name : "Personne"}
+      <h1 className="mt-2 max-w-full text-center leading-[0.95]" style={{ ...DISPLAY, fontSize: fitName(hasLoser ? worst.name : t.nobody, "clamp(40px,12vw,56px)", 88), textShadow: `4px 4px 0 ${INK}`, overflowWrap: "anywhere" }}>
+        {hasLoser ? worst.name : t.nobody}
       </h1>
       <p className="mt-2 text-center text-[19px] leading-tight" style={{ ...DISPLAY, color: C.yellow }}>
-        {hasLoser ? `remporte la Patate d'or avec ${worst.l} explosion${worst.l > 1 ? "s" : ""}` : "n'a explosé. Bizarre."}
+        {hasLoser ? t.goldWin(worst.l) : t.nobodyBlew}
       </p>
       <div className="mt-5 w-full space-y-2">
         {ranking.map((r, k) => (
@@ -593,16 +583,16 @@ export default function PatateGame({ onReturnToLobby }: GameProps) {
             <MascotAvatar color={colorForIndex(r.i)} size={34} mood={r.l > 0 ? "dead" : "happy"} border={false} />
             {/* Prénom long : passe à la ligne (au tiret) plutôt que d'être tronqué */}
             <span className="min-w-0 flex-1 text-[18px] leading-tight" style={{ ...DISPLAY, overflowWrap: "anywhere" }}>{r.name}</span>
-            <span className="shrink-0 whitespace-nowrap text-[18px]" style={DISPLAY}>{r.l} boum{r.l > 1 ? "s" : ""}</span>
+            <span className="shrink-0 whitespace-nowrap text-[18px]" style={DISPLAY}>{t.booms(r.l)}</span>
           </div>
         ))}
       </div>
       <div className="mt-auto flex w-full flex-col items-center gap-1 pt-7">
-        <StickerBtn big bg={ACCENT} onClick={replay}>Rejouer</StickerBtn>
+        <StickerBtn big bg={ACCENT} onClick={replay}>{t.replay}</StickerBtn>
         <div className="mt-2 grid w-full grid-cols-2 gap-3">
-          <StickerBtn bg={C.cream} onClick={() => setPhase("setup")}>Les joueurs</StickerBtn>
+          <StickerBtn bg={C.cream} onClick={() => setPhase("setup")}>{t.players}</StickerBtn>
           {onReturnToLobby ? (
-            <StickerBtn bg={INK} color="#fff" onClick={onReturnToLobby}>Quitter</StickerBtn>
+            <StickerBtn bg={INK} color="#fff" onClick={onReturnToLobby}>{t.quit}</StickerBtn>
           ) : <span />}
         </div>
         <div className="mt-4">

@@ -4,7 +4,9 @@ import { Bell, ChevronLeft, CreditCard, Mail, RotateCcw, Share2, Sparkles, Star,
 import { LANGS, notificationsOn, rateApp, setLang, setNotifications, shareApp, useLang } from "../settings";
 import { getZGame } from "../catalog";
 import { isTestMode, resetPremiumForTests, restore } from "../premium";
-import { IDEAS_EMAIL, LEGAL_DOCS, LEGAL_UPDATED_AT, type LegalDocId } from "@/lib/legal/zinzin";
+import { IDEAS_EMAIL, getLegalDocs, getLegalUpdatedAt, type LegalDocId } from "@/lib/legal/zinzin";
+import { pick, useT } from "@/lib/i18n";
+import { UI } from "../strings";
 import { IdeaButton } from "@/components/games/idea-button";
 import { ZBlob, ZPALETTE } from "./ZBlob";
 import { BigBtn, CloseBtn, RoundBtn, Sheet } from "./common";
@@ -18,6 +20,7 @@ const LEGAL_ID: Record<LegalPage, LegalDocId> = { cgu: "conditions", confidentia
 /* ───────── Vérification d'âge (premier lancement) ───────── */
 export function AgeGate({ onOk }: { onOk: () => void }) {
   const [out, setOut] = useState(false);
+  const t = useT(UI);
   return (
     <div
       className="zz-page fixed inset-0 flex flex-col px-6"
@@ -29,15 +32,15 @@ export function AgeGate({ onOk }: { onOk: () => void }) {
         <span className="zz-stk zz-title absolute -right-8 -top-2 grid h-[72px] w-[72px] place-items-center rounded-full text-[26px]" style={{ background: "#FFD23F", color: "var(--zz-ink)", rotate: "14deg" }}>18+</span>
       </div>
       <h1 className="zz-title zz-rise mt-8 text-white" style={{ fontSize: 42, ["--d" as string]: "100ms" }}>
-        Ici, c’est entre adultes.
+        {t.ageTitle}
       </h1>
       <p className="zz-rise mt-3 text-[17px] font-medium leading-relaxed" style={{ color: "var(--zz-dim)", ["--d" as string]: "180ms" }}>
-        Zinzin est réservé aux 18 ans et plus. Dans les jeux à boire, une « gorgée de zinzin », c’est de ce que tu veux : eau, soft, jus… Avec modération.
+        {t.ageText}
       </p>
       <div className="flex-1" />
       <div className="zz-rise" style={{ ["--d" as string]: "260ms" }}>
         <BigBtn onClick={() => { haptic("medium"); setAgeOk(); setOut(true); setTimeout(onOk, 240); }} bg="#FFD23F">
-          J’ai 18 ans ou plus
+          {t.ageOk}
         </BigBtn>
       </div>
     </div>
@@ -55,13 +58,14 @@ export function SettingsSheet({
   toast: (m: string) => void;
 }) {
   const test = isTestMode();
+  const t = useT(UI);
   return (
-    <Sheet onClose={onClose} label="Réglages" maxHeight="90dvh" bg="var(--zz-bg)">
+    <Sheet onClose={onClose} label={t.settings} maxHeight="90dvh" bg="var(--zz-bg)">
       {(close) => (
         <div className="zz-scroll px-5 pt-3" style={{ paddingBottom: "calc(var(--sab) + 14px)" }}>
           <div className="mx-auto mb-2 h-1.5 w-10 rounded-full bg-white/25" />
           <div className="flex items-center justify-between">
-            <h2 className="zz-title text-white" style={{ fontSize: 40 }}>Réglages</h2>
+            <h2 className="zz-title text-white" style={{ fontSize: 40 }}>{t.settings}</h2>
             <CloseBtn onClick={close} />
           </div>
 
@@ -74,10 +78,10 @@ export function SettingsSheet({
               <ZBlob size={96} color={premium ? "pink" : "yellow"} mood={premium ? "cool" : "happy"} seed={2} shadow={false} outline crown />
             </div>
             <div className="pr-24">
-              <div className="text-[14px] font-bold" style={{ opacity: 0.85 }}>{premium ? "Ton statut" : "Version gratuite"}</div>
-              <div className="zz-title mt-1 text-[30px]">{premium ? "Zinzin Premium" : "3 jeux offerts"}</div>
+              <div className="text-[14px] font-bold" style={{ opacity: 0.85 }}>{premium ? t.yourStatus : t.freeVersion}</div>
+              <div className="zz-title mt-1 text-[30px]">{premium ? "Zinzin Premium" : t.freeGames}</div>
               <p className="mt-1.5 text-[15px] font-semibold leading-snug" style={{ opacity: 0.88 }}>
-                {premium ? "Tout est débloqué. Les nouveaux jeux arrivent tout seuls." : "Le reste t'attend : tous les jeux, et du nouveau chaque mois."}
+                {premium ? t.premiumText : t.freeText}
               </p>
             </div>
             {!premium && (
@@ -87,29 +91,29 @@ export function SettingsSheet({
                 className="zz-push zz-stk-sm zz-title mt-4 h-12 w-full rounded-full text-[19px]"
                 style={{ background: "#FFD23F", color: "var(--zz-ink)" }}
               >
-                Tout débloquer
+                {t.unlockEverything}
               </button>
             )}
           </div>
 
           {/* Tuiles */}
           <div className="mt-6 grid grid-cols-2 gap-3.5">
-            <Tile bg="#3DDC97" tilt={1.5} icon={<RotateCcw size={26} strokeWidth={2.6} />} label="Restaurer mes achats" onClick={async () => {
+            <Tile bg="#3DDC97" tilt={1.5} icon={<RotateCcw size={26} strokeWidth={2.6} />} label={t.restore} onClick={async () => {
               haptic();
               const ok = await restore();
-              toast(ok ? "Achats restaurés" : "Aucun achat à restaurer");
+              toast(ok ? t.restored : t.nothingToRestore);
             }} />
-            <Tile bg="#4ECDC4" tilt={-1.5} icon={<CreditCard size={26} strokeWidth={2.6} />} label="Gérer mon abonnement" href="https://apps.apple.com/account/subscriptions" />
-            <Tile bg="#FF6B5B" tilt={-1} icon={<Mail size={26} strokeWidth={2.6} />} label="Nous écrire" sub="Un bug ? Une question ?" href={`mailto:${IDEAS_EMAIL}`} wide />
+            <Tile bg="#4ECDC4" tilt={-1.5} icon={<CreditCard size={26} strokeWidth={2.6} />} label={t.manageSub} href="https://apps.apple.com/account/subscriptions" />
+            <Tile bg="#FF6B5B" tilt={-1} icon={<Mail size={26} strokeWidth={2.6} />} label={t.contactUs} sub={t.contactSub} href={`mailto:${IDEAS_EMAIL}`} wide />
           </div>
 
           {/* Partager / évaluer */}
           <div className="mt-3.5 grid grid-cols-2 gap-3.5">
-            <Tile bg="#FFD23F" tilt={-1.5} icon={<Share2 size={26} strokeWidth={2.6} />} label="Partager Zinzin" onClick={async () => {
+            <Tile bg="#FFD23F" tilt={-1.5} icon={<Share2 size={26} strokeWidth={2.6} />} label={t.share} onClick={async () => {
               haptic();
-              if (await shareApp()) toast("Merci de faire tourner 💛");
+              if (await shareApp()) toast(t.thanksShare);
             }} />
-            <Tile bg="#A98BFF" tilt={1.5} icon={<Star size={26} strokeWidth={2.6} />} label="Évaluer l'app" sub="5 étoiles = 1 blob heureux" onClick={() => { haptic(); void rateApp(); }} />
+            <Tile bg="#A98BFF" tilt={1.5} icon={<Star size={26} strokeWidth={2.6} />} label={t.rate} sub={t.rateSub} onClick={() => { haptic(); void rateApp(); }} />
           </div>
 
           {/* Rappels de soirée */}
@@ -125,24 +129,24 @@ export function SettingsSheet({
           {test && (
             <button
               type="button"
-              onClick={() => { resetPremiumForTests(); haptic(); toast("Retour en gratuit (test)"); }}
+              onClick={() => { resetPremiumForTests(); haptic(); toast(t.backToFreeToast); }}
               className="zz-push mt-5 flex min-h-11 w-full items-center justify-center gap-2 rounded-[18px] text-[14px] font-bold"
               style={{ color: "#FFD23F", border: "2.5px dashed rgba(255,210,63,0.55)" }}
             >
-              <Sparkles size={16} /> Revenir en gratuit (test)
+              <Sparkles size={16} /> {t.backToFree}
             </button>
           )}
 
           {/* Liens légaux, discrets */}
           {/* Liens soulignés espacés, sans « · » qui resterait seul en fin de ligne sur petit écran */}
           <div className="mt-6 flex flex-wrap items-center justify-center gap-x-1 text-[14px] font-semibold" style={{ color: "var(--zz-dim)" }}>
-            <button type="button" className="zz-tap min-h-11 px-2 underline decoration-2 underline-offset-4" onClick={() => onLegal("cgu")}>Conditions</button>
-            <button type="button" className="zz-tap min-h-11 px-2 underline decoration-2 underline-offset-4" onClick={() => onLegal("confidentialite")}>Confidentialité</button>
-            <button type="button" className="zz-tap min-h-11 px-2 underline decoration-2 underline-offset-4" onClick={() => onLegal("mentions")}>Mentions légales</button>
+            <button type="button" className="zz-tap min-h-11 px-2 underline decoration-2 underline-offset-4" onClick={() => onLegal("cgu")}>{t.terms}</button>
+            <button type="button" className="zz-tap min-h-11 px-2 underline decoration-2 underline-offset-4" onClick={() => onLegal("confidentialite")}>{t.privacy}</button>
+            <button type="button" className="zz-tap min-h-11 px-2 underline decoration-2 underline-offset-4" onClick={() => onLegal("mentions")}>{t.legalNotice}</button>
           </div>
           <EraseData />
           <p className="text-center text-[13px]" style={{ color: "var(--zz-mute)" }}>
-            Zinzin, version {APP_VERSION}. Fait avec amour et beaucoup de blobs.
+            {t.version(APP_VERSION)}
           </p>
         </div>
       )}
@@ -153,6 +157,7 @@ export function SettingsSheet({
 function NotifToggle({ toast }: { toast: (m: string) => void }) {
   const [on, setOn] = useState(notificationsOn);
   const [busy, setBusy] = useState(false);
+  const t = useT(UI);
   return (
     <button
       type="button"
@@ -163,8 +168,8 @@ function NotifToggle({ toast }: { toast: (m: string) => void }) {
         const res = await setNotifications(!on);
         setBusy(false);
         setOn(res);
-        if (!on && !res) toast("Autorise les notifications dans les Réglages de l'iPhone");
-        else toast(res ? "Rappels activés : vendredi et samedi soir" : "Rappels désactivés");
+        if (!on && !res) toast(t.notifDenied);
+        else toast(res ? t.notifOn : t.notifOff);
       }}
       className="zz-push zz-stk mt-3.5 flex w-full items-center gap-3 rounded-[22px] px-4 py-3.5 text-left"
       style={{ background: "#FFF6E5", color: "var(--zz-ink)" }}
@@ -172,8 +177,8 @@ function NotifToggle({ toast }: { toast: (m: string) => void }) {
     >
       <Bell size={26} strokeWidth={2.6} />
       <span className="flex-1">
-        <span className="zz-title block text-[19px]">Rappels de soirée</span>
-        <span className="block text-[13px] font-semibold opacity-75">Une notif le vendredi et le samedi soir</span>
+        <span className="zz-title block text-[19px]">{t.notifTitle}</span>
+        <span className="block text-[13px] font-semibold opacity-75">{t.notifSub}</span>
       </span>
       <span className="relative h-8 w-14 shrink-0 rounded-full" style={{ background: on ? "#3DDC97" : "#CFC6E3", border: "2.5px solid var(--zz-ink)" }}>
         <span className="absolute top-1/2 h-6 w-6 -translate-y-1/2 rounded-full bg-white transition-[left]" style={{ left: on ? 26 : 2, border: "2.5px solid var(--zz-ink)" }} />
@@ -184,9 +189,10 @@ function NotifToggle({ toast }: { toast: (m: string) => void }) {
 
 function LangPicker() {
   const lang = useLang();
+  const t = pick(UI, lang);
   return (
     <div className="mt-5">
-      <div className="zz-title mb-2 text-[20px] text-white">Langue</div>
+      <div className="zz-title mb-2 text-[20px] text-white">{t.language}</div>
       <div className="grid grid-cols-3 gap-2.5">
         {LANGS.map((l) => (
           <button
@@ -226,11 +232,14 @@ function Tile({
 
 /* ───────── Pages légales (textes : src/lib/legal/zinzin.ts) ───────── */
 export function LegalScreen({ page, onClose }: { page: LegalPage; onClose: () => void }) {
-  const doc = LEGAL_DOCS[LEGAL_ID[page]];
+  const lang = useLang();
+  const t = pick(UI, lang);
+  const doc = getLegalDocs(lang)[LEGAL_ID[page]];
+  const updatedAt = getLegalUpdatedAt(lang);
   return (
     <div className="zz-screen-in zz-scroll zz-page fixed inset-0" style={{ zIndex: 70 }} role="dialog" aria-modal aria-label={doc.title}>
       <div className="mx-auto max-w-lg px-5" style={{ paddingTop: "calc(var(--sat) + 8px)", paddingBottom: "calc(var(--sab) + 24px)" }}>
-        <RoundBtn onClick={onClose} label="Retour"><ChevronLeft size={24} strokeWidth={3} /></RoundBtn>
+        <RoundBtn onClick={onClose} label={t.back}><ChevronLeft size={24} strokeWidth={3} /></RoundBtn>
         <div className="relative mt-6">
           <h1 className="zz-title pr-20 text-white" style={{ fontSize: 36 }}>{doc.title}</h1>
           <div className="absolute -top-4 right-0"><ZBlob size={70} color="sky" mood="thinking" seed={3} outline shadow={false} /></div>
@@ -245,8 +254,8 @@ export function LegalScreen({ page, onClose }: { page: LegalPage; onClose: () =>
           </section>
         ))}
         {/* Pas de doublon si le texte donne déjà la date (CGU, confidentialité) */}
-        {!doc.sections.some((sec) => sec.paragraphs.some((para) => para.includes(LEGAL_UPDATED_AT))) && (
-          <p className="mt-8 text-[13px]" style={{ color: "var(--zz-mute)" }}>Dernière mise à jour : {LEGAL_UPDATED_AT}</p>
+        {!doc.sections.some((sec) => sec.paragraphs.some((para) => para.includes(updatedAt))) && (
+          <p className="mt-8 text-[13px]" style={{ color: "var(--zz-mute)" }}>{t.lastUpdate(updatedAt)}</p>
         )}
       </div>
     </div>
@@ -256,6 +265,7 @@ export function LegalScreen({ page, onClose }: { page: LegalPage; onClose: () =>
 /** RGPD : tout ce que l'app garde est local → on peut tout effacer d'un geste. */
 function EraseData() {
   const [armed, setArmed] = useState(false);
+  const t = useT(UI);
   return (
     <button
       type="button"
@@ -267,7 +277,7 @@ function EraseData() {
       className="zz-tap mx-auto mt-1 block min-h-11 px-3 text-[14px] font-semibold underline decoration-2 underline-offset-4"
       style={{ color: armed ? "#FF6B5B" : "var(--zz-mute)" }}
     >
-      {armed ? "Sûr ? Touche encore pour tout effacer" : "Effacer mes données de ce téléphone"}
+      {armed ? t.eraseArmed : t.erase}
     </button>
   );
 }
@@ -288,12 +298,13 @@ export function GameScreen({ id, onExit }: { id: string; onExit: () => void }) {
   const game = getZGame(id)!;
   const [Comp] = useState(() => lazyGame(id));
   const [confirm, setConfirm] = useState(false);
+  const t = useT(UI);
 
   return (
     <div className="zz-screen-in fixed inset-0 flex flex-col overflow-y-auto" style={{ background: "#0A0420", zIndex: 30 }}>
-      <ErrorBoundary onBack={onExit} backLabel="Retour à l’accueil">
+      <ErrorBoundary onBack={onExit} backLabel={t.backHome}>
         <Suspense fallback={<Loading />}>
-          <Comp roomCode="LOCAL" playerId="local" playerName="Joueur" onReturnToLobby={onExit} />
+          <Comp roomCode="LOCAL" playerId="local" playerName={t.player} onReturnToLobby={onExit} />
         </Suspense>
       </ErrorBoundary>
 
@@ -301,7 +312,7 @@ export function GameScreen({ id, onExit }: { id: string; onExit: () => void }) {
       <button
         type="button"
         onClick={() => { haptic(); setConfirm(true); }}
-        aria-label="Quitter la partie"
+        aria-label={t.quitAria}
         className="zz-press fixed left-3 grid h-11 w-11 place-items-center rounded-full"
         // Même ligne et même marge que les boutons d'outils des jeux (GameTopRight : right-3, +10px)
         style={{ top: "calc(var(--sat) + 10px)", zIndex: 60, background: "var(--zz-ink)", color: "#fff", border: "2.5px solid rgba(255,255,255,0.85)" }}
@@ -310,17 +321,17 @@ export function GameScreen({ id, onExit }: { id: string; onExit: () => void }) {
       </button>
 
       {confirm && (
-        <div className="fixed inset-0 grid place-items-center px-8" style={{ zIndex: 70 }} role="alertdialog" aria-modal aria-label="Quitter la partie ?">
+        <div className="fixed inset-0 grid place-items-center px-8" style={{ zIndex: 70 }} role="alertdialog" aria-modal aria-label={t.quitTitle}>
           <div className="zz-backdrop" onClick={() => setConfirm(false)} />
           <div className="zz-pop zz-stk relative w-full max-w-[330px] rounded-[30px] px-5 pb-5 pt-4 text-center" style={{ background: "#fff", color: "var(--zz-ink)", rotate: "-1.5deg" }}>
             <div className="-mt-16 flex justify-center"><ZBlob size={104} color={game.color} mood="shocked" seed={3} outline shadow={false} costume={game.costume} /></div>
-            <h2 className="zz-title mt-2" style={{ fontSize: 32 }}>On arrête déjà&nbsp;?</h2>
-            <p className="mt-2 text-[15px] font-semibold" style={{ opacity: 0.7 }}>La partie en cours sera perdue.</p>
+            <h2 className="zz-title mt-2" style={{ fontSize: 32 }}>{t.quitTitle}</h2>
+            <p className="mt-2 text-[15px] font-semibold" style={{ opacity: 0.7 }}>{t.quitText}</p>
             <BigBtn onClick={() => setConfirm(false)} bg={ZPALETTE[game.color].body} color={ZPALETTE[game.color].ink} className="mt-5">
-              Je continue
+              {t.keepPlaying}
             </BigBtn>
             <button type="button" onClick={() => { haptic("medium"); onExit(); }} className="zz-tap mt-2 h-12 w-full rounded-full text-[16px] font-bold underline decoration-2 underline-offset-4">
-              Quitter la partie
+              {t.quit}
             </button>
           </div>
         </div>
@@ -330,10 +341,11 @@ export function GameScreen({ id, onExit }: { id: string; onExit: () => void }) {
 }
 
 function Loading() {
+  const t = useT(UI);
   return (
     <div className="m-auto flex flex-col items-center gap-3">
       <ZBlob size={72} color="lavender" mood="thinking" seed={2} outline shadow={false} />
-      <p className="text-[14px] font-semibold" style={{ color: "var(--zz-mute)" }}>Chargement…</p>
+      <p className="text-[14px] font-semibold" style={{ color: "var(--zz-mute)" }}>{t.loading}</p>
     </div>
   );
 }

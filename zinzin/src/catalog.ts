@@ -1,15 +1,19 @@
 import type { ComponentType } from "react";
 import type { GameProps } from "@/lib/games/types";
 import type { MascotColor, MascotMood } from "@/components/Mascot";
+import type { I18n } from "@/lib/i18n";
 import type { ZCostume } from "./ui/costumes";
+import type { ZGameId } from "./catalog-text";
+
+export { GAME_TEXT, type ZGameText, type ZLine } from "./catalog-text";
 
 /**
  * Catalogue de l'app Zinzin : uniquement des jeux sur UN SEUL téléphone.
- * Les textes (nom, accroche, exemple, règles) viennent du registry du site
- * (`getGameById`) sauf si on les surcharge ici (`meta`).
+ * Les textes (nom, accroche, exemple, règles, étapes, mini BD) sont dans
+ * catalog-text.ts, en FR / EN / ES (le registry du site n'est plus lu).
  */
 export interface ZGame {
-  id: string;
+  id: ZGameId;
   color: MascotColor;
   mood: MascotMood;
   /** Jouable sans payer */
@@ -18,377 +22,88 @@ export interface ZGame {
   adult?: boolean;
   /** Nouveau dans l'app */
   isNew?: boolean;
+  /** « 3-12 », « 2+ », « 2 » (libellé traduit par playersLabel) */
   players: string;
-  /** Accroche courte des cartes de l'accueil (2 lignes max) ; sinon le pitch */
-  tagline?: string;
   /** Déguisement du blob (reconnaître le jeu au premier coup d'œil) */
   costume?: ZCostume;
   load: () => Promise<{ default: ComponentType<GameProps> }>;
-  /**
-   * Mini BD affichée dans la fiche (« Ça donne quoi ? ») : quelques répliques
-   * courtes qui font comprendre le jeu en 5 s. Sans `who` = narrateur / le tél.
-   * Absent → la fiche affiche `example` dans une seule grosse bulle.
-   */
-  story?: ZLine[];
-  /** Les règles en 3 à 5 étapes courtes (sinon : règles du registry) */
-  steps?: string[];
-  /** Surcharge des textes du registry (jeux propres à l'app) */
-  meta?: { name: string; icon: string; pitch: string; example: string; rules: string[]; minPlayers: number; maxPlayers: number };
 }
 
-/** Une réplique de la mini BD. `color` facultatif : sinon couleur attitrée du prénom. */
-export interface ZLine {
-  who?: string;
-  text: string;
-  color?: MascotColor;
-}
-
-/** Couleur attitrée des personnages récurrents des mini BD. */
+/** Couleur attitrée des personnages récurrents des mini BD (mêmes prénoms dans toutes les langues). */
 export const CAST: Record<string, MascotColor> = {
   Léa: "pink", Malik: "sky", Inès: "yellow", Tom: "coral", Sarah: "mint", Hugo: "purple", Max: "lavender",
 };
 
 export interface ZSection {
   id: string;
-  title: string;
-  subtitle: string;
+  title: I18n<string>;
+  subtitle: I18n<string>;
   ids: string[];
 }
 
 export const GAMES: ZGame[] = [
-  { id: "undercover", tagline: "Un mot secret. Un intrus parmi vous.", costume: "groucho", color: "pink", mood: "sus", free: true, players: "3-12",
-    story: [
-      { who: "Léa", text: "Mon indice : italien." },
-      { who: "Malik", text: "Fromage qui file !" },
-      { who: "Inès", text: "Euh… ça se mange vite ?" },
-      { text: "Tout le monde vote Inès. Elle avait « burger » : l'Intrus est grillé !" },
-    ],
-    steps: [
-      "Chacun reçoit un mot secret. L'Intrus a un mot presque pareil… sans le savoir",
-      "Chacun donne un indice sur son mot, sans le dire",
-      "On vote pour éliminer le plus louche",
-      "Les civils gagnent s'ils sortent tous les intrus",
-    ],
+  { id: "undercover", costume: "groucho", color: "pink", mood: "sus", free: true, players: "3-12",
     load: () => import("@/components/games/undercover/undercover-game") },
-  { id: "top-ten", tagline: "Un thème, un chiffre secret de 1 à 10.", costume: "ten", color: "coral", mood: "laughing", free: true, players: "2-10",
-    story: [
-      { text: "Thème : une excuse pour rater un date" },
-      { who: "Tom", text: "J'ai le 2… « j'ai un peu mal à la tête »." },
-      { who: "Sarah", text: "J'ai le 9 : « mon poisson rouge est en deuil »." },
-      { text: "Maintenant, rangez tout le monde de 1 à 10 !" },
-    ],
-    steps: [
-      "Chacun reçoit un numéro secret de 1 à 10",
-      "Un thème tombe : réponds selon ton numéro (1 = tout doux, 10 = énorme)",
-      "Ensemble, rangez les réponses de la plus petite à la plus grande",
-      "Plus le classement est juste, plus vous marquez",
-    ],
+  { id: "top-ten", costume: "ten", color: "coral", mood: "laughing", free: true, players: "2-10",
     load: () => import("@/components/games/top-ten/top-ten-game") },
-  { id: "tu-prefere", tagline: "Des dilemmes impossibles. On vote, on débat.", costume: "split", color: "sky", mood: "thinking", free: true, players: "2+",
-    story: [
-      { text: "Tu préfères ne plus jamais manger de fromage… ou ne plus jamais boire de café ?" },
-      { who: "Léa", text: "Le café, sans hésiter." },
-      { who: "Malik", text: "Tu rigoles ? Le fromage c'est la vie." },
-      { text: "Le tél révèle ce qu'ont choisi les gens. Débat !" },
-    ],
-    steps: [
-      "Lisez le dilemme à voix haute",
-      "À 3, tout le monde vote avec la main",
-      "Tapez pour voir ce qu'ont choisi les gens",
-      "Débattez… puis question suivante",
-    ],
+  { id: "tu-prefere", costume: "split", color: "sky", mood: "thinking", free: true, players: "2+",
     load: () => import("@/components/games/tu-prefere/tu-prefere-game") },
-  { id: "patate", tagline: "Passe le tél avant le BOUM !", costume: "potato", color: "yellow", mood: "shocked", isNew: true, players: "3-10",
-    story: [
-      { text: "Catégorie : un truc dans une salle de bain" },
-      { who: "Léa", text: "Brosse à dents !" },
-      { who: "Malik", text: "Peignoir !" },
-      { who: "Inès", text: "Euh… euh…" },
-      { text: "BOUM ! Inès : 2 gorgées ou un gage." },
-    ],
-    steps: [
-      "Asseyez-vous en cercle, prénoms dans l'ordre",
-      "Une catégorie s'affiche : dis une réponse et passe le tél",
-      "La mèche est cachée et le tic-tac accélère",
-      "Celui qui tient le tél au BOUM fait un gage (ou 1 à 3 gorgées)",
-    ],
-    load: () => import("@/components/games/patate/patate-game"),
-    meta: {
-      name: "La Patate", icon: "🥔", minPlayers: 3, maxPlayers: 10,
-      pitch: "Le téléphone est une patate chaude : réponds à la catégorie et passe-le avant qu'il explose !",
-      example: "Catégorie « Un truc qu'on trouve dans une salle de bain ». Léa dit « brosse à dents » et passe à Malik, qui crie « peignoir ! » et passe à Inès. Le tic-tac s'emballe, Inès bloque… BOUM ! Elle a 2 gorgées ou un gage.",
-      rules: [
-        "Mettez-vous en cercle et entrez les prénoms dans l'ordre où vous êtes assis",
-        "Une catégorie s'affiche : celui qui tient le tél dit UNE réponse à voix haute (pas de répétition)",
-        "Il tape « J'ai répondu » et passe le tél à son voisin, vite !",
-        "La mèche est cachée (15 à 60 s) et le tic-tac accélère : celui qui tient le tél au BOUM a perdu",
-        "Mode « Ne la secoue pas ! » : trop secouée, la patate explose plus tôt",
-        "Le perdant fait un gage (ou 1 à 3 gorgées, eau acceptée) et lance la manche suivante",
-      ],
-    } },
-  { id: "purete", tagline: "Ange ou démon ? Le tél tranche.", costume: "angeldevil", color: "lavender", mood: "wink", isNew: true, players: "1-12",
-    story: [
-      { text: "As-tu déjà écrit à ton ex en pleine nuit ?" },
-      { who: "Léa", text: "Jamais. Je suis une sainte." },
-      { who: "Tom", text: "…Oui. Deux fois. Cette semaine." },
-      { text: "Tom : 12 % de pureté. Casier bien rempli, cornes sur la tête." },
-    ],
-    steps: [
-      "Une question « As-tu déjà… ? » à la fois",
-      "« Oui » = tu perds de la pureté, « Jamais » = tu restes un ange",
-      "Réponds en secret (on se passe le tél) ou main levée, tous ensemble",
-      "Score final en % de pureté, de l'ange au démon certifié",
-    ],
-    load: () => import("@/components/games/purete/purete-game"),
-    meta: {
-      name: "Test de pureté", icon: "😇", minPlayers: 1, maxPlayers: 12,
-      pitch: "« As-tu déjà… ? » : plus tu dis oui, moins tu es pur. Qui est l'ange de la table, et qui est le démon ?",
-      example: "« As-tu déjà écrit à ton ex en pleine nuit ? » Léa tape « Jamais » en secret, Tom tape « Oui »… À la fin, le compteur de Tom dégringole jusqu'à 12 % : « Casier bien rempli », cornes sur la tête. Et l'appli balance : « 3 personnes sur 4 ont déjà dormi dans une voiture après une soirée ».",
-      rules: [
-        "Une question « As-tu déjà… ? » à la fois. « Oui » = tu perds de la pureté, « Jamais » = tu restes un ange",
-        "Chacun son tour : on se passe le tél et chacun répond en secret, puis grande révélation du classement",
-        "Solo : réponds seul et découvre ton score… et tes aveux",
-        "Tous ensemble : on lit à voix haute, ceux qui l'ont fait lèvent la main, on compte sur l'écran",
-        "Score final en % de pureté avec un titre, de « Ange tombé du ciel » à « Démon certifié »",
-        "Option peines : le moins pur prend un gage ou 1 à 3 gorgées de zinzin. Pack Coquin 18+ facultatif",
-      ],
-    } },
-  { id: "lache-pas", tagline: "Un doigt sur l'écran. Tiens bon !", costume: "fuse", color: "coral", mood: "sus", isNew: true, players: "2-10",
-    story: [
-      { text: "4 doigts sur l'écran. La bombe s'arme…" },
-      { who: "Tom", text: "J'ai entendu un clic, je lâche !" },
-      { who: "Inès", text: "Je tiens… je tiens… je lâche !" },
-      { text: "BOUM ! Léa et Malik sont grillés, Inès prend la couronne." },
-    ],
-    steps: [
-      "Chacun pose un doigt sur l'écran",
-      "La bombe explose entre 4 et 22 s, personne ne sait quand",
-      "Lâche quand tu veux… mais pas le premier !",
-      "Au BOUM, les doigts encore posés ont perdu",
-    ],
-    load: () => import("@/components/games/lache-pas/lache-pas-game"),
-    meta: {
-      name: "Lâche pas !", icon: "💣", minPlayers: 2, maxPlayers: 10,
-      pitch: "Tout le monde pose un doigt sur l'écran, une bombe s'arme : lâche avant le boum… mais pas le premier !",
-      example: "On pose 4 doigts, la bombe s'arme. Un pétard claque, Tom lâche de peur. On tient… Inès lâche à 9 s, et BOUM à 10 s : Léa et Malik sont grillés, Inès gagne la couronne.",
-      rules: [
-        "Chacun pose UN doigt sur l'écran (2 à 5 doigts par manche ; à plus, on tourne)",
-        "Une bombe s'arme et explose entre 4 et 22 s, personne ne sait quand",
-        "Tu peux lâcher quand tu veux, mais un doigt levé ne revient pas",
-        "Au BOUM, tous les doigts encore posés ont perdu",
-        "Si tout le monde a lâché avant, c'est le premier à avoir lâché (le trouillard) qui perd",
-        "Le dernier à lâcher avant le boum gagne la couronne 👑 et choisit qui fait un gage",
-      ],
-    } },
-  { id: "pile-poil", tagline: "Compte dans ta tête, stoppe pile.", costume: "stopwatch", color: "mint", mood: "mindblown", players: "2-10",
-    story: [
-      { text: "Cible : 7 secondes. GO !" },
-      { who: "Hugo", text: "…5, 6, 7. STOP !" },
-      { text: "6,82 s. Pas mal du tout." },
-      { who: "Sarah", text: "9,10 s ?! J'ai compté comme une tortue." },
-      { text: "Sarah est la plus loin : elle prend une peine." },
-    ],
-    steps: [
-      "Une cible s'affiche, par exemple 7 secondes",
-      "GO, compte dans ta tête, STOP : le chrono est caché",
-      "Chacun son tour sur le même tél",
-      "Le plus loin prend une peine. À 0,15 s près : PILE POIL !",
-    ],
+  { id: "patate", costume: "potato", color: "yellow", mood: "shocked", isNew: true, players: "3-10",
+    load: () => import("@/components/games/patate/patate-game") },
+  { id: "purete", costume: "angeldevil", color: "lavender", mood: "wink", isNew: true, players: "1-12",
+    load: () => import("@/components/games/purete/purete-game") },
+  { id: "lache-pas", costume: "fuse", color: "coral", mood: "sus", isNew: true, players: "2-10",
+    load: () => import("@/components/games/lache-pas/lache-pas-game") },
+  { id: "pile-poil", costume: "stopwatch", color: "mint", mood: "mindblown", players: "2-10",
     load: () => import("@/components/games/pile-poil/pile-poil-game") },
-  { id: "loup-garou", tagline: "Le grand classique, sans meneur.", costume: "wolf", color: "purple", mood: "shifty", isNew: true, players: "5-16",
-    story: [
-      { text: "La nuit tombe. Les loups ouvrent les yeux…" },
-      { who: "Hugo", text: "Je suis mort ?! J'étais la Voyante !" },
-      { who: "Sarah", text: "C'est Tom, il a rien dit de la partie." },
-      { who: "Tom", text: "Moi ? Simple villageois, promis." },
-      { text: "Le village élimine Sarah… simple villageoise. Les loups rigolent." },
-    ],
-    steps: [
-      "Entrez les prénoms : le tél distribue les rôles",
-      "Chacun découvre son rôle en secret",
-      "La nuit, le tél raconte et appelle chaque rôle",
-      "Le jour : débat, vote, un suspect est éliminé",
-      "Le village doit éliminer tous les loups",
-    ],
-    load: () => import("@/components/games/loup-garou/loup-garou-local"),
-    meta: {
-      name: "Loup-Garou", icon: "🐺", minPlayers: 5, maxPlayers: 16,
-      pitch: "Le grand classique, avec le téléphone en maître du jeu : il distribue les rôles et raconte la nuit.",
-      example: "Le tél annonce « Les loups ouvrent les yeux… ». Ils choisissent Hugo. Au réveil, Hugo est mort : c'était la Voyante ! Le village débat 2 minutes et élimine Sarah… une simple villageoise. Les loups rigolent.",
-      rules: [
-        "Entrez les prénoms : le tél propose une répartition des rôles (Loups, Voyante, Sorcière, Chasseur…)",
-        "Passez-vous le tél : chacun maintient le doigt pour voir son rôle en secret",
-        "La nuit, posez le tél au centre : il appelle chaque rôle à voix haute, qui vient jouer sur l'écran",
-        "Le jour : on découvre les morts, on débat (minuteur) puis on vote pour éliminer un suspect",
-        "Le village gagne s'il élimine tous les loups · les loups gagnent dès qu'ils sont aussi nombreux que les villageois",
-      ],
-    } },
-  { id: "le-bluffeur", tagline: "Invente la fausse réponse parfaite.", costume: "pinocchio", color: "yellow", mood: "wink", players: "2-8",
-    story: [
-      { text: "Quel est le métier le plus bizarre qui existe ?" },
-      { who: "Tom", text: "Testeur de toboggans. Crédible, non ?" },
-      { who: "Léa", text: "J'y crois à fond, je vote ça." },
-      { text: "Bluff réussi pour Tom ! La vraie réponse : renifleur de déodorant." },
-    ],
-    steps: [
-      "Une question improbable s'affiche",
-      "Chacun invente une fausse réponse crédible",
-      "Tout est mélangé avec la vraie : votez pour la bonne",
-      "Trouver la vérité ou piéger les autres rapporte des points",
-    ],
+  { id: "loup-garou", costume: "wolf", color: "purple", mood: "shifty", isNew: true, players: "5-16",
+    load: () => import("@/components/games/loup-garou/loup-garou-local") },
+  { id: "faux-temoin", costume: "blindfold", color: "sky", mood: "sus", isNew: true, players: "3-10",
+    load: () => import("@/components/games/faux-temoin/faux-temoin-game") },
+  { id: "le-bluffeur", costume: "pinocchio", color: "yellow", mood: "wink", players: "2-8",
     load: () => import("@/components/games/le-bluffeur/le-bluffeur-game") },
-  { id: "longueur-onde", tagline: "Froid ↔ chaud : un indice, visez juste.", costume: "antenna", color: "lavender", mood: "mindblown", players: "2-8",
-    story: [
-      { text: "Échelle : froid ↔ chaud. Seule Léa voit la cible : tout à gauche." },
-      { who: "Léa", text: "La banquise !" },
-      { who: "Malik", text: "Facile, on met le curseur tout à gauche !" },
-      { text: "Pile dans la cible : +4 pour Léa." },
-    ],
-    steps: [
-      "Le Médium voit en secret où est la cible sur l'échelle (froid ↔ chaud…)",
-      "Il dit à voix haute UN truc qui se place là",
-      "Les autres placent le curseur au doigt",
-      "Pile dedans : +4, tout près : 3, pas loin : 2",
-    ],
+  { id: "longueur-onde", costume: "antenna", color: "lavender", mood: "mindblown", players: "2-8",
     load: () => import("@/components/games/longueur-onde/longueur-onde-game") },
-  { id: "make-guess", tagline: "Fais deviner le mot sans le dire.", costume: "mime", color: "mint", mood: "laughing", players: "4+",
-    story: [
-      { text: "Le mot est « girafe »." },
-      { who: "Léa", text: "Animal, très grand cou, Afrique !" },
-      { who: "Malik", text: "GIRAFE !" },
-      { text: "+1 ! Mot suivant, le chrono tourne." },
-    ],
-    steps: [
-      "Formez des équipes de 2 ou plus",
-      "Celui qui fait deviner tient le tél, l'autre ne regarde pas",
-      "Tap à gauche : trouvé. Tap à droite : on passe",
-      "L'équipe qui trouve le plus de mots gagne",
-    ],
+  { id: "make-guess", costume: "mime", color: "mint", mood: "laughing", players: "4+",
     load: () => import("@/components/games/make-guess/make-guess-game") },
-  { id: "guess-word", tagline: "Le tél sur le front, devine le mot.", costume: "card", color: "sky", mood: "shocked", players: "2+",
-    story: [
-      { text: "Le tél est sur le front d'Inès. Le mot : « girafe »." },
-      { who: "Tom", text: "C'est un animal !" },
-      { who: "Léa", text: "Avec un cou immense !" },
-      { who: "Inès", text: "GIRAFE !" },
-    ],
-    steps: [
-      "Mets le tél sur ton front, écran vers les autres",
-      "Les autres te donnent des indices ou miment",
-      "Trouvé : tape à gauche. On passe : à droite",
-      "Le plus de mots dans le temps gagne",
-    ],
+  { id: "guess-word", costume: "card", color: "sky", mood: "shocked", players: "2+",
     load: () => import("@/components/games/guess-word/guess-word-game") },
-  { id: "category-chrono", tagline: "Une catégorie, un chrono qui fond.", costume: "hourglass", color: "coral", mood: "shocked", players: "2+",
-    story: [
-      { text: "Catégorie : un fruit" },
-      { who: "Léa", text: "Pomme !" },
-      { who: "Malik", text: "Banane !" },
-      { who: "Tom", text: "Kiwi… non attends, euh…" },
-      { text: "Temps écoulé : Tom perd une vie." },
-    ],
-    steps: [
-      "Une catégorie s'affiche",
-      "Chacun son tour, dis un mot avant la fin du chrono",
-      "Pas de répétition, et le chrono raccourcit",
-      "Tu bloques ? Une vie en moins. Le dernier debout gagne",
-    ],
+  { id: "category-chrono", costume: "hourglass", color: "coral", mood: "shocked", players: "2+",
     load: () => import("@/components/games/category-chrono/category-chrono-game") },
-  { id: "code-names", tagline: "Deux équipes, un seul mot-indice.", costume: "spy", color: "sky", mood: "thinking", isNew: true, players: "4+",
-    story: [
-      { who: "Inès", text: "Espace, 2." },
-      { who: "Malik", text: "Lune, c'est sûr." },
-      { text: "Lune : rouge ! Bien joué." },
-      { who: "Malik", text: "Et… Étoile ?" },
-      { text: "Raté, c'était neutre. Au tour des bleus." },
-    ],
-    steps: [
-      "Deux équipes, chacune son chef",
-      "Seuls les chefs regardent la carte secrète",
-      "Le chef dit un mot et un nombre",
-      "Son équipe touche les mots. Gare à la Bombe !",
-    ],
-    load: () => import("@/components/games/code-names/code-names-local"),
-    meta: {
-      name: "Mots Espions", icon: "🕵️", minPlayers: 4, maxPlayers: 20,
-      pitch: "Deux équipes, une grille de 25 mots : fais deviner les tiens avec un seul mot-indice.",
-      example: "Tu es chef des Rouges, tes mots sont « Lune » et « Fusée ». Tu dis « Espace, 2 ». Ton équipe touche Lune ✅, puis Étoile… raté, c'était neutre : le tour passe.",
-      rules: [
-        "Formez 2 équipes, chacune choisit un chef",
-        "Seuls les chefs regardent la carte secrète (appui long) : elle montre quels mots sont à quelle équipe",
-        "Le chef dit à voix haute 1 mot + un nombre de mots liés",
-        "Son équipe touche les mots sur le tél (2 taps pour valider) — tant qu'elle trouve, elle continue",
-        "La Bombe = défaite immédiate. Première équipe à trouver tous ses mots gagne !",
-      ],
-    } },
-  { id: "pensez-pareil", tagline: "À deux, trouvez la même réponse.", costume: "duo", color: "pink", mood: "love", players: "2",
-    story: [
-      { text: "Thème : un plat pour un dimanche soir" },
-      { who: "Léa", text: "J'écris… pâtes." },
-      { who: "Tom", text: "Pâtes." },
-      { text: "SYNC ! Le combo monte." },
-    ],
-    steps: [
-      "À deux : un thème s'affiche",
-      "Chacun écrit sa réponse en secret",
-      "Même réponse ? SYNC, vous marquez ensemble",
-      "Enchaînez les syncs pour faire grimper le combo",
-    ],
+  { id: "code-names", costume: "spy", color: "sky", mood: "thinking", isNew: true, players: "4+",
+    load: () => import("@/components/games/code-names/code-names-local") },
+  { id: "pensez-pareil", costume: "duo", color: "pink", mood: "love", players: "2",
     load: () => import("@/components/games/pensez-pareil/pensez-pareil-game") },
-  { id: "couple-quiz", tagline: "Devine ce que l'autre a répondu.", costume: "hearts", color: "pink", mood: "kiss", players: "2",
-    story: [
-      { text: "Plutôt plage ou montagne ?" },
-      { who: "Léa", text: "(en secret) Montagne." },
-      { who: "Tom", text: "Plage, évidemment !" },
-      { who: "Léa", text: "Raté. Tu me connais vraiment ?" },
-    ],
-    steps: [
-      "L'un répond en secret à une question sur lui",
-      "L'autre devine sa réponse",
-      "Bonne réponse = 1 point, puis on inverse",
-      "À la fin : votre taux de complicité",
-    ],
+  { id: "couple-quiz", costume: "hearts", color: "pink", mood: "kiss", players: "2",
     load: () => import("@/components/games/couple-quiz/couple-quiz-game") },
-  { id: "picolette", tagline: "Le tél lit la carte, le groupe joue.", costume: "beer", color: "yellow", mood: "rofl", adult: true, players: "2-10",
-    story: [
-      { text: "Votez : qui finirait en garde à vue en premier ?" },
-      { who: "Léa", text: "Max. Évidemment Max." },
-      { who: "Malik", text: "Désolé Max…" },
-      { who: "Max", text: "Bon. Je fais tourner la roulette." },
-      { text: "2 gorgées ou un gage. Carte suivante !" },
-    ],
-    steps: [
-      "Choisissez vos packs de cartes",
-      "Lisez la carte à voix haute et jouez-la",
-      "Le perdant fait tourner la roulette : 1 à 3 gorgées ou un gage",
-      "Une gorgée de zinzin, c'est de ce que tu veux : eau et soft comptent, personne n'est obligé",
-    ],
+  { id: "picolette", costume: "beer", color: "yellow", mood: "rofl", adult: true, players: "2-10",
     load: () => import("@/components/games/picolette/picolette-game") },
-  { id: "tgv", tagline: "Plus ou moins ? Enchaîne les wagons.", costume: "train", color: "purple", mood: "rofl", adult: true, players: "2-8",
-    story: [
-      { text: "Carte posée : un 8." },
-      { who: "Hugo", text: "Plus !" },
-      { text: "Un roi. Wagon suivant !" },
-      { who: "Hugo", text: "Une dame… je dis moins." },
-      { text: "Un as. Raté : 2 gorgées ou un gage, retour au wagon 1." },
-    ],
-    steps: [
-      "À ton tour : plus, moins ou égal sur la carte suivante",
-      "Bon pari : wagon suivant",
-      "Raté : 1 à 3 gorgées ou un gage, et retour au début",
-      "Tous les wagons passés : c'est toi qui distribues",
-    ],
+  { id: "tgv", costume: "train", color: "purple", mood: "rofl", adult: true, players: "2-8",
     load: () => import("@/components/games/tgv/tgv-game") },
 ];
 
 export const SECTIONS: ZSection[] = [
-  { id: "top", title: "Les incontournables", subtitle: "Pour lancer la soirée", ids: ["undercover", "purete", "patate", "top-ten", "lache-pas", "tu-prefere"] },
-  { id: "zinzin", title: "Que sur Zinzin", subtitle: "Le téléphone devient le jeu", ids: ["patate", "lache-pas", "pile-poil"] },
-  { id: "bluff", title: "Qui ment ?", subtitle: "Bluff et rôles secrets", ids: ["loup-garou", "undercover", "le-bluffeur"] },
-  { id: "devine", title: "Fais deviner", subtitle: "Mimes, mots et chrono", ids: ["code-names", "make-guess", "guess-word", "category-chrono"] },
-  { id: "ambiance", title: "Ambiance", subtitle: "Débats, flair et réflexes", ids: ["purete", "top-ten", "longueur-onde", "tu-prefere", "pile-poil"] },
-  { id: "duo", title: "À deux", subtitle: "Couples et meilleurs potes", ids: ["pensez-pareil", "couple-quiz"] },
-  { id: "after", title: "After 🔞", subtitle: "Jeux à boire — avec modération", ids: ["picolette", "tgv"] },
+  { id: "top", ids: ["undercover", "faux-temoin", "purete", "patate", "top-ten", "lache-pas", "tu-prefere"],
+    title: { fr: "Les incontournables", en: "Must-plays", es: "Imprescindibles" },
+    subtitle: { fr: "Pour lancer la soirée", en: "To get the night started", es: "Para arrancar la noche" } },
+  { id: "zinzin", ids: ["patate", "lache-pas", "pile-poil"],
+    title: { fr: "Que sur Zinzin", en: "Only on Zinzin", es: "Solo en Zinzin" },
+    subtitle: { fr: "Le téléphone devient le jeu", en: "The phone becomes the game", es: "El móvil se convierte en el juego" } },
+  { id: "bluff", ids: ["faux-temoin", "loup-garou", "undercover", "le-bluffeur"],
+    title: { fr: "Qui ment ?", en: "Who's lying?", es: "¿Quién miente?" },
+    subtitle: { fr: "Bluff et rôles secrets", en: "Bluffing and secret roles", es: "Faroles y roles secretos" } },
+  { id: "devine", ids: ["code-names", "make-guess", "guess-word", "category-chrono"],
+    title: { fr: "Fais deviner", en: "Guessing games", es: "A adivinar" },
+    subtitle: { fr: "Mimes, mots et chrono", en: "Charades, words and timers", es: "Mímica, palabras y contrarreloj" } },
+  { id: "ambiance", ids: ["purete", "top-ten", "longueur-onde", "tu-prefere", "pile-poil"],
+    title: { fr: "Ambiance", en: "Party vibes", es: "Ambiente" },
+    subtitle: { fr: "Débats, flair et réflexes", en: "Debates, instinct and reflexes", es: "Debates, olfato y reflejos" } },
+  { id: "duo", ids: ["pensez-pareil", "couple-quiz"],
+    title: { fr: "À deux", en: "For two", es: "En pareja" },
+    subtitle: { fr: "Couples et meilleurs potes", en: "Couples and best friends", es: "Parejas y mejores amigos" } },
+  { id: "after", ids: ["picolette", "tgv"],
+    title: { fr: "After 🔞", en: "After party 🔞", es: "After 🔞" },
+    subtitle: { fr: "Jeux à boire — avec modération", en: "Drinking games, in moderation", es: "Juegos para beber, con moderación" } },
 ];
 
 /**
@@ -403,9 +118,9 @@ export const SECTIONS: ZSection[] = [
 export interface ZFeatured {
   id: string;
   gameId?: string;
-  kicker: string;
-  title: string;
-  subtitle: string;
+  kicker: I18n<string>;
+  title: I18n<string>;
+  subtitle: I18n<string>;
   bg: string;
   ink: string;
   blob: MascotColor;
@@ -416,18 +131,69 @@ export interface ZFeatured {
 }
 
 export const FEATURED: ZFeatured[] = [
-  { id: "hero", kicker: "Ce soir", title: "On joue à quoi ce soir ?", subtitle: "Un seul téléphone, tout le monde joue.",
+  { id: "hero",
+    kicker: { fr: "Ce soir", en: "Tonight", es: "Esta noche" },
+    title: { fr: "On joue à quoi ce soir ?", en: "What are we playing tonight?", es: "¿A qué jugamos esta noche?" },
+    subtitle: { fr: "Un seul téléphone, tout le monde joue.", en: "One phone, everyone plays.", es: "Un solo móvil y juega todo el mundo." },
     bg: "linear-gradient(135deg,#7A4EE8 0%,#B743D8 55%,#FF3EA5 100%)", ink: "#fff",
     blob: "yellow", mood: "laughing", buddy: { color: "mint", mood: "shocked" } },
-  { id: "purete", gameId: "purete", kicker: "Tout nouveau", title: "Test de pureté", subtitle: "Ange ou démon ? Le tél tranche.",
+  { id: "purete", gameId: "purete",
+    kicker: { fr: "Tout nouveau", en: "Brand new", es: "Novedad" },
+    title: { fr: "Test de pureté", en: "Purity Test", es: "Test de Pureza" },
+    subtitle: { fr: "Ange ou démon ? Le tél tranche.", en: "Angel or devil? The phone decides.", es: "¿Ángel o demonio? El móvil decide." },
     bg: "#A98BFF", ink: "#15082E", blob: "white", mood: "wink", costume: "angeldevil", buddy: { color: "pink", mood: "kiss" } },
-  { id: "patate", costume: "potato", gameId: "patate", kicker: "Le tél va exploser", title: "La Patate", subtitle: "Passe-le avant le BOUM !",
+  { id: "patate", costume: "potato", gameId: "patate",
+    kicker: { fr: "Le tél va exploser", en: "The phone's gonna blow", es: "El móvil va a explotar" },
+    title: { fr: "La Patate", en: "Hot Potato", es: "La Patata Caliente" },
+    subtitle: { fr: "Passe-le avant le BOUM !", en: "Pass it on before the BOOM!", es: "¡Pásalo antes del BUM!" },
     bg: "#FFD23F", ink: "#15082E", blob: "coral", mood: "shocked" },
-  { id: "loup-garou", costume: "wolf", gameId: "loup-garou", kicker: "Plus besoin de meneur", title: "Loup-Garou", subtitle: "Le tél raconte la nuit pour vous.",
+  { id: "loup-garou", costume: "wolf", gameId: "loup-garou",
+    kicker: { fr: "Plus besoin de meneur", en: "No game master needed", es: "Sin necesidad de narrador" },
+    title: { fr: "Loup-Garou", en: "Werewolf", es: "El Hombre Lobo" },
+    subtitle: { fr: "Le tél raconte la nuit pour vous.", en: "The phone narrates the night for you.", es: "El móvil narra la noche por ti." },
     bg: "#7A4EE8", ink: "#fff", blob: "lavender", mood: "shifty", buddy: { color: "yellow", mood: "shocked" } },
-  { id: "lache-pas", costume: "fuse", gameId: "lache-pas", kicker: "Nouveau", title: "Lâche pas !", subtitle: "Un doigt sur l'écran. Tiens bon !",
+  { id: "lache-pas", costume: "fuse", gameId: "lache-pas",
+    kicker: { fr: "Nouveau", en: "New", es: "Nuevo" },
+    title: { fr: "Lâche pas !", en: "Don't Let Go!", es: "¡No Sueltes!" },
+    subtitle: { fr: "Un doigt sur l'écran. Tiens bon !", en: "One finger on the screen. Hold on!", es: "Un dedo en la pantalla. ¡Aguanta!" },
     bg: "#FF6B5B", ink: "#15082E", blob: "yellow", mood: "sus" },
 ];
+
+/**
+ * Type de chaque jeu, pour la Soirée Zinzin (alterner les ambiances).
+ * Typé sur ZGameId : un nouveau jeu dans catalog-text.ts doit avoir son type ici.
+ * bluff · tel (le téléphone est le jeu) · devine · rapide · ambiance · boire (18+) · duo (2 joueurs)
+ */
+export type ZKind = "bluff" | "tel" | "devine" | "rapide" | "ambiance" | "boire" | "duo";
+export const GAME_KIND: Record<ZGameId, ZKind> = {
+  undercover: "bluff",
+  "faux-temoin": "bluff",
+  "loup-garou": "bluff",
+  "le-bluffeur": "bluff",
+  patate: "tel",
+  "lache-pas": "tel",
+  "pile-poil": "tel",
+  "make-guess": "devine",
+  "guess-word": "devine",
+  "code-names": "devine",
+  "longueur-onde": "devine",
+  "category-chrono": "rapide",
+  "top-ten": "ambiance",
+  "tu-prefere": "ambiance",
+  purete: "ambiance",
+  picolette: "boire",
+  tgv: "boire",
+  "pensez-pareil": "duo",
+  "couple-quiz": "duo",
+};
+
+/** « 3-12 » → [3, 12] ; « 2+ » → [2, ∞] ; « 2 » → [2, 2]. */
+export function playerRange(g: ZGame): [number, number] {
+  const m = g.players.match(/^(\d+)\s*(?:-\s*(\d+)|(\+))?$/);
+  if (!m) return [2, Infinity];
+  const min = Number(m[1]);
+  return [min, m[2] ? Number(m[2]) : m[3] ? Infinity : min];
+}
 
 export function getZGame(id: string): ZGame | undefined {
   return GAMES.find((g) => g.id === id);

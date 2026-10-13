@@ -5,6 +5,9 @@
  * 3 exemples d'indice (gauche / milieu / droite) montrés au Médium pour l'aider.
  */
 
+import { CURSOR_PAIRS_EN, CATEGORY_PAIRS_EN } from "./pairs.en";
+import { CURSOR_PAIRS_ES, CATEGORY_PAIRS_ES } from "./pairs.es";
+
 export interface CursorPair {
   left: string;
   right: string;
@@ -15,8 +18,9 @@ export interface CursorPair {
    * (ex. « destination ») qui se place à l'endroit de la cible. Sans article.
    */
   category?: string;
-  /** Article de la catégorie, pour accorder « Une destination » / « Trouve UN plat ». */
-  art?: "un" | "une";
+  /** Article de la catégorie, pour accorder « Une destination » / « Trouve UN plat ».
+   *  FR un/une, EN a/an, ES un/una. */
+  art?: "un" | "une" | "a" | "an" | "una";
 }
 
 export const CURSOR_PAIRS: CursorPair[] = [
@@ -231,6 +235,13 @@ export const CATEGORY_PAIRS: CursorPair[] = [
   k("une", "habitude", "Saine", "Pas saine", ["boire de l'eau", "le café du matin", "scroller jusqu'à 4 h"]),
 ];
 
+/** Paires de la langue de la partie (FR par défaut). */
+function pairsFor(lang: "fr" | "en" | "es"): { simple: CursorPair[]; cats: CursorPair[] } {
+  if (lang === "en") return { simple: CURSOR_PAIRS_EN, cats: CATEGORY_PAIRS_EN };
+  if (lang === "es") return { simple: CURSOR_PAIRS_ES, cats: CATEGORY_PAIRS_ES };
+  return { simple: CURSOR_PAIRS, cats: CATEGORY_PAIRS };
+}
+
 /** « Une destination » (sticker de la manche). */
 export function categoryLabel(pair: CursorPair): string | null {
   if (!pair.category) return null;
@@ -242,14 +253,15 @@ export function categoryLabel(pair: CursorPair): string | null {
  * Pioche d'une partie : 2 manches « catégorie » pour 1 paire simple, mélangées,
  * jamais deux fois la même (chaque paire n'apparaît qu'une fois dans la pioche).
  */
-export function buildDeck(): CursorPair[] {
+export function buildDeck(lang: "fr" | "en" | "es" = "fr"): CursorPair[] {
+  const src = pairsFor(lang);
   const shuffle = <T,>(a: T[]): T[] => {
     const r = [...a];
     for (let i = r.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [r[i], r[j]] = [r[j], r[i]]; }
     return r;
   };
-  const cats = shuffle(CATEGORY_PAIRS);
-  const simple = shuffle(CURSOR_PAIRS);
+  const cats = shuffle(src.cats);
+  const simple = shuffle(src.simple);
   // une partie sur deux commence par une paire simple → le rythme varie
   const offset = Math.random() < 0.5 ? 0 : 2;
   const deck: CursorPair[] = [];

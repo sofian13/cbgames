@@ -6,7 +6,9 @@ import { PlayersSetup, colorForIndex, useScrollTopOn } from "@/components/games/
 import { Mascot, MascotAvatar, MASCOT_PALETTE } from "@/components/Mascot";
 import { ConfettiBurst } from "@/components/ConfettiBurst";
 import { isSfxMuted, playCombo, playSfx, preloadSfx, setSfxMuted, subscribeSfxMuted } from "@/lib/sfx";
-import { PACKS, type Category } from "./categories";
+import { PACKS_BY_LANG, type Category } from "./categories";
+import { useLang, useT } from "@/lib/i18n";
+import { STR } from "./i18n";
 import { ArrowLeft, BookOpen, Check, Clapperboard, Flame, Heart, PartyPopper, RotateCcw, Skull, Volume2, VolumeX, X, type LucideIcon } from "lucide-react";
 import { GameIconButton, GameInlineIcon, GameTopRight } from "@/components/games/game-icon-button";
 import { IdeaButton, RerollButton } from "@/components/games/idea-button";
@@ -65,6 +67,10 @@ function useSfxMuted() {
 
 export default function CategoryChronoGame({ onReturnToLobby }: GameProps) {
   const muted = useSfxMuted();
+  // Langue courante : interface + catégories (mêmes packs dans toutes les langues)
+  const lang = useLang();
+  const t = STR[lang];
+  const PACKS = PACKS_BY_LANG[lang];
 
   const [phase, setPhase] = useState<Phase>("setup");
   // Chaque écran repart du haut (sinon la catégorie s'ouvre défilée si on a scrollé les réglages)
@@ -83,7 +89,7 @@ export default function CategoryChronoGame({ onReturnToLobby }: GameProps) {
   const [lostIdx, setLostIdx] = useState(0);
   const endAt = useRef(0);
 
-  const pool = useMemo(() => PACKS.filter((p) => packs.includes(p.id)).flatMap((p) => p.items), [packs]);
+  const pool = useMemo(() => PACKS.filter((p) => packs.includes(p.id)).flatMap((p) => p.items), [packs, PACKS]);
   const category = queue[catIdx];
   const turnTime = (n: number) => Math.max(MIN_TIME, timerBase - n * 0.5);
 
@@ -187,7 +193,7 @@ export default function CategoryChronoGame({ onReturnToLobby }: GameProps) {
     <GameTopRight>
       <GameIconButton
         icon={muted ? VolumeX : Volume2}
-        label={muted ? "Activer le son" : "Couper le son"}
+        label={muted ? t.soundOn : t.soundOff}
         active={muted}
         onClick={() => setSfxMuted(!muted)}
       />
@@ -199,7 +205,7 @@ export default function CategoryChronoGame({ onReturnToLobby }: GameProps) {
     return (
       <PlayersSetup
         emoji="⏱️"
-        name="Catégorie Chrono"
+        name={t.title}
         min={2}
         max={12}
         accent={ACCENT}
@@ -217,17 +223,17 @@ export default function CategoryChronoGame({ onReturnToLobby }: GameProps) {
         {soundBtn}
         <div className="mx-auto w-full max-w-md">
           <h1 style={{ ...DISPLAY, fontSize: "clamp(40px, 12vw, 58px)", lineHeight: 0.92 }}>
-            Catégorie
+            {t.titleTop}
             <br />
-            <span style={{ color: ACCENT }}>Chrono</span>
+            <span style={{ color: ACCENT }}>{t.titleBottom}</span>
           </h1>
 
           {/* Les règles en 3 stickers */}
           <div className="mt-5 grid gap-3">
             {[
-              { bg: "#FFD23F", t: <>Une <b>catégorie</b> tombe (ex. « Fruits »).</> },
-              { bg: "#FFF6E5", t: <>Chacun son tour, dis <b>un mot</b> de la catégorie avant la fin du chrono, puis passe le tél.</> },
-              { bg: "#3DDC97", t: <>Le chrono <b>raccourcit</b> à chaque mot. Pas de mot, répétition ou hors sujet&nbsp;: <b>une vie en moins</b>.</> },
+              { bg: "#FFD23F", t: <>{t.rule1[0]}<b>{t.rule1[1]}</b>{t.rule1[2]}</> },
+              { bg: "#FFF6E5", t: <>{t.rule2[0]}<b>{t.rule2[1]}</b>{t.rule2[2]}</> },
+              { bg: "#3DDC97", t: <>{t.rule3[0]}<b>{t.rule3[1]}</b>{t.rule3[2]}<b>{t.rule3[3]}</b>{t.rule3[4]}</> },
             ].map((r, i) => (
               <div key={i} className="flex items-center gap-3 rounded-[20px] px-3.5 py-3" style={{ ...sticker(r.bg), color: INK, transform: `rotate(${i === 1 ? 1 : -1}deg)` }}>
                 <span className="grid h-10 w-10 shrink-0 place-items-center rounded-[12px] text-[22px]" style={{ ...DISPLAY, ...sticker("#fff", 2), color: INK }}>
@@ -238,8 +244,8 @@ export default function CategoryChronoGame({ onReturnToLobby }: GameProps) {
             ))}
           </div>
 
-          <SectionTitle>Les thèmes</SectionTitle>
-          <p className="mt-0.5 text-[14px] font-semibold text-white/70">{pool.length} catégories dans la pioche</p>
+          <SectionTitle>{t.themes}</SectionTitle>
+          <p className="mt-0.5 text-[14px] font-semibold text-white/70">{t.poolCount(pool.length)}</p>
           <div className="mt-3 grid grid-cols-2 gap-3">
             {PACKS.map((p, i) => {
               const on = packs.includes(p.id);
@@ -273,7 +279,7 @@ export default function CategoryChronoGame({ onReturnToLobby }: GameProps) {
             })}
           </div>
 
-          <SectionTitle>Le chrono de départ</SectionTitle>
+          <SectionTitle>{t.startTimer}</SectionTitle>
           <div className="mt-3 grid grid-cols-4 gap-2.5">
             {[6, 8, 10, 15].map((d) => (
               <Pill key={d} on={timerBase === d} onClick={() => setTimerBase(d)}>
@@ -282,11 +288,11 @@ export default function CategoryChronoGame({ onReturnToLobby }: GameProps) {
             ))}
           </div>
 
-          <SectionTitle>Les vies</SectionTitle>
+          <SectionTitle>{t.lives}</SectionTitle>
           <div className="mt-3 grid grid-cols-3 gap-2.5">
             {[1, 2, 3].map((n) => (
               <Pill key={n} on={startLives === n} onClick={() => setStartLives(n)}>
-                <LifeHearts n={n} size={18} />
+                <LifeHearts n={n} size={18} label={t.livesAria(n)} />
               </Pill>
             ))}
           </div>
@@ -298,10 +304,10 @@ export default function CategoryChronoGame({ onReturnToLobby }: GameProps) {
 
         <BottomBar>
           <BigBtn bg={ACCENT} disabled={!pool.length} onClick={() => startGame(names)}>
-            {pool.length ? "C'est parti !" : "Choisis au moins un thème"}
+            {pool.length ? t.letsGo : t.pickTheme}
           </BigBtn>
           <button type="button" onClick={() => setPhase("setup")} className="mx-auto mt-1 block min-h-11 px-4 text-[15px] font-semibold text-white/80">
-            <GameInlineIcon icon={ArrowLeft} /> Modifier les joueurs
+            <GameInlineIcon icon={ArrowLeft} /> {t.editPlayers}
           </button>
         </BottomBar>
       </Page>
@@ -317,7 +323,7 @@ export default function CategoryChronoGame({ onReturnToLobby }: GameProps) {
         <Lives players={players} cur={cur} />
         <div className={`flex flex-1 flex-col items-center justify-center ${players.length > 6 ? "py-3" : "py-6"}`}>
           {/* beaucoup de joueurs : on gagne de la place pour que « Une autre » reste visible */}
-          {players.length <= 6 && <p className="text-[17px] font-semibold text-white/80">La catégorie&nbsp;:</p>}
+          {players.length <= 6 && <p className="text-[17px] font-semibold text-white/80">{t.theCategory}</p>}
           <div
             key={category.name}
             className="mt-3 w-full max-w-sm rounded-[28px] px-5 pb-6 pt-5 text-center"
@@ -325,7 +331,7 @@ export default function CategoryChronoGame({ onReturnToLobby }: GameProps) {
           >
             <h2 style={{ ...DISPLAY, fontSize: category.name.length > 22 ? 34 : 42, lineHeight: 0.98, overflowWrap: "anywhere" }}>{category.name}</h2>
             <p className="mt-3 text-[15px] font-semibold" style={{ color: "#4A3A66" }}>
-              Par exemple&nbsp;: {category.examples}
+              {t.forExample} {category.examples}
             </p>
           </div>
           <div className={players.length > 6 ? "mt-4" : "mt-6"}>
@@ -335,9 +341,9 @@ export default function CategoryChronoGame({ onReturnToLobby }: GameProps) {
         <BottomBar>
           <p className="mb-3 text-center text-[16px] font-semibold text-white/85">
             <span className="rounded-full px-2.5 py-0.5 font-bold" style={{ ...sticker(MASCOT_PALETTE[colorForIndex(cur)].body, 2), color: inkOn(MASCOT_PALETTE[colorForIndex(cur)].body) }}>{starter?.name}</span>{" "}
-            commence, {timerBase}&nbsp;secondes
+            {t.starts(timerBase)}
           </p>
-          <BigBtn bg={ACCENT} onClick={go}>Go&nbsp;!</BigBtn>
+          <BigBtn bg={ACCENT} onClick={go}>{t.go}</BigBtn>
         </BottomBar>
       </Page>
     );
@@ -368,14 +374,14 @@ export default function CategoryChronoGame({ onReturnToLobby }: GameProps) {
                 className="w-[74px] text-right tabular-nums"
                 style={{ ...DISPLAY, fontSize: 34, lineHeight: 1, color: urgent ? "#E2332B" : INK, animation: urgent ? "cc-throb .5s ease-in-out infinite" : undefined }}
               >
-                {timeLeft.toFixed(1).replace(".", ",")}
+                {timeLeft.toFixed(1).replace(".", t.decimal)}
               </span>
             </div>
           </div>
         </div>
 
         <div className="flex flex-1 flex-col items-center justify-center px-5 text-center">
-          <p className="text-[18px] font-semibold text-white/85">C&apos;est à</p>
+          <p className="text-[18px] font-semibold text-white/85">{t.itsTurn}</p>
           <div key={`${cur}-${streak}`} style={{ animation: "cc-pop .25s ease-out" }} className="flex flex-col items-center">
             <div className="relative z-[1] -mb-5">
               <Mascot size={104} color={col} mood={urgent ? "shocked" : "happy"} arms shadow={false} sweat={urgent} />
@@ -387,17 +393,17 @@ export default function CategoryChronoGame({ onReturnToLobby }: GameProps) {
               {players[cur]?.name}
             </h2>
           </div>
-          <p className="mt-5 text-[17px] font-semibold text-white/85">Dis un mot, puis passe le tél&nbsp;!</p>
+          <p className="mt-5 text-[17px] font-semibold text-white/85">{t.sayWord}</p>
           {streak > 0 && (
             <span className="mt-2 rounded-full px-3 py-1 text-[15px] font-bold" style={{ ...sticker("#FFD23F", 3), color: INK, transform: "rotate(-2deg)" }}>
-              {streak} mot{streak > 1 ? "s" : ""} déjà dit{streak > 1 ? "s" : ""}
+              {t.wordsSaid(streak)}
             </span>
           )}
         </div>
 
         <div className="mx-auto flex w-full max-w-md gap-3 px-5">
-          <PlayBtn bg="#3DDC97" onClick={valid} icon={<Check size={30} strokeWidth={3.5} />} label="Validé" />
-          <PlayBtn bg="#FF6B5B" onClick={lose} icon={<X size={30} strokeWidth={3.5} />} label="Raté" />
+          <PlayBtn bg="#3DDC97" onClick={valid} icon={<Check size={30} strokeWidth={3.5} />} label={t.valid} />
+          <PlayBtn bg="#FF6B5B" onClick={lose} icon={<X size={30} strokeWidth={3.5} />} label={t.failed} />
         </div>
       </div>
     );
@@ -419,17 +425,17 @@ export default function CategoryChronoGame({ onReturnToLobby }: GameProps) {
             <h2 style={{ ...DISPLAY, fontSize: nameSize(p.name, 50), lineHeight: 1, overflowWrap: "anywhere" }}>{p.name}</h2>
           </div>
           <p className="mt-5 text-center" style={{ ...DISPLAY, fontSize: 28, lineHeight: 1.05, color: out ? "#FF8A7E" : "#fff" }}>
-            {out ? "est éliminé·e !" : "perd une vie !"}
+            {out ? t.eliminated : t.losesLife}
           </p>
           <div className="mt-2 flex items-center gap-2 text-[16px] font-semibold text-white/85">
-            {out ? <><GameInlineIcon icon={Skull} /> Plus de vie</> : <>Il reste <LifeHearts n={p.lives} size={18} /></>}
+            {out ? <><GameInlineIcon icon={Skull} /> {t.noLifeLeft}</> : <>{t.livesLeft} <LifeHearts n={p.lives} size={18} label={t.livesAria(p.lives)} /></>}
           </div>
           <div className="mt-6">
             <Lives players={players} cur={-1} />
           </div>
         </div>
         <BottomBar>
-          <BigBtn bg="#FFD23F" onClick={continueGame}>Catégorie suivante</BigBtn>
+          <BigBtn bg="#FFD23F" onClick={continueGame}>{t.nextCategory}</BigBtn>
         </BottomBar>
       </Page>
     );
@@ -444,15 +450,15 @@ export default function CategoryChronoGame({ onReturnToLobby }: GameProps) {
       <ConfettiBurst />
       {soundBtn}
       <div className="mx-auto flex w-full max-w-md flex-col items-center">
-        <p className="text-[18px] font-semibold text-white/85">Dernier·e en vie</p>
+        <p className="text-[18px] font-semibold text-white/85">{t.lastStanding}</p>
         <div className="relative z-[1] -mb-5 mt-2">
           <Mascot size={118} color={wcol} mood="cool" arms crown cheering shadow={false} />
         </div>
         <div className="rounded-[26px] px-7 pb-4 pt-7 text-center" style={{ ...sticker(MASCOT_PALETTE[wcol].body, 6), color: inkOn(MASCOT_PALETTE[wcol].body), transform: "rotate(-2deg)", maxWidth: "100%" }}>
-          <h2 style={{ ...DISPLAY, fontSize: nameSize(winner?.name ?? "Personne", 58), lineHeight: 1, overflowWrap: "anywhere" }}>{winner?.name ?? "Personne"}</h2>
+          <h2 style={{ ...DISPLAY, fontSize: nameSize(winner?.name ?? t.nobody, 58), lineHeight: 1, overflowWrap: "anywhere" }}>{winner?.name ?? t.nobody}</h2>
         </div>
 
-        <SectionTitle>Le classement</SectionTitle>
+        <SectionTitle>{t.ranking}</SectionTitle>
         <div className="mt-3 w-full space-y-2.5">
           {ranking.map((p, k) => (
             <div
@@ -461,11 +467,11 @@ export default function CategoryChronoGame({ onReturnToLobby }: GameProps) {
               style={{ ...sticker(k === 0 ? "#FFD23F" : p.lives > 0 ? "#FFF6E5" : "#B9B0D6", 3), color: INK, minHeight: 56, transform: `rotate(${k % 2 ? 0.8 : -0.8}deg)` }}
             >
               <span className="w-7 text-center" style={{ ...DISPLAY, fontSize: 22 }}>
-                {p.lives > 0 ? k + 1 : <Skull size={20} strokeWidth={2.8} className="mx-auto" aria-label="Éliminé" />}
+                {p.lives > 0 ? k + 1 : <Skull size={20} strokeWidth={2.8} className="mx-auto" aria-label={t.eliminatedAria} />}
               </span>
               <MascotAvatar color={colorForIndex(p.i)} size={34} mood={k === 0 ? "cool" : p.lives > 0 ? "happy" : "dead"} />
               <span className="min-w-0 flex-1 truncate text-[17px] font-bold">{p.name}</span>
-              {p.lives > 0 && <LifeHearts n={p.lives} size={16} />}
+              {p.lives > 0 && <LifeHearts n={p.lives} size={16} label={t.livesAria(p.lives)} />}
             </div>
           ))}
         </div>
@@ -477,15 +483,15 @@ export default function CategoryChronoGame({ onReturnToLobby }: GameProps) {
 
       <BottomBar>
         <BigBtn bg={ACCENT} onClick={() => startGame(names)}>
-          <RotateCcw size={22} strokeWidth={3} aria-hidden /> Rejouer
+          <RotateCcw size={22} strokeWidth={3} aria-hidden /> {t.playAgain}
         </BigBtn>
         <div className="mt-1 flex justify-center gap-2">
           <button type="button" onClick={() => setPhase("config")} className="min-h-11 px-3 text-[15px] font-semibold text-white/85">
-            Changer les réglages
+            {t.changeSettings}
           </button>
           {onReturnToLobby && (
             <button type="button" onClick={onReturnToLobby} className="min-h-11 px-3 text-[15px] font-semibold text-white/85">
-              Quitter
+              {t.quit}
             </button>
           )}
         </div>
@@ -585,6 +591,7 @@ function Pill({ on, onClick, children }: { on: boolean; onClick: () => void; chi
 }
 
 function Lives({ players, cur }: { players: P[]; cur: number }) {
+  const livesAria = useT(STR).livesAria;
   // beaucoup de joueurs → pastilles plus compactes (la catégorie reste visible sur petit écran)
   const many = players.length > 6;
   return (
@@ -598,7 +605,7 @@ function Lives({ players, cur }: { players: P[]; cur: number }) {
             className={`inline-flex items-center gap-1.5 rounded-full font-bold ${many ? "min-h-7 px-2.5 text-[13px]" : "min-h-9 px-3 text-[14px]"}`}
             style={{ ...sticker(on ? MASCOT_PALETTE[colorForIndex(i)].body : alive ? "#FFF6E5" : "#8F86AD", on ? 3 : 2), color: on ? inkOn(MASCOT_PALETTE[colorForIndex(i)].body) : INK, opacity: alive ? 1 : 0.75, transform: on ? "rotate(-3deg)" : undefined }}
           >
-            {p.name} {alive ? <LifeHearts n={p.lives} size={many ? 11 : 13} /> : <GameInlineIcon icon={Skull} />}
+            {p.name} {alive ? <LifeHearts n={p.lives} size={many ? 11 : 13} label={livesAria(p.lives)} /> : <GameInlineIcon icon={Skull} />}
           </span>
         );
       })}
@@ -607,9 +614,9 @@ function Lives({ players, cur }: { players: P[]; cur: number }) {
 }
 
 /** Vies restantes : petits cœurs pleins (icônes, pas d'emoji). */
-function LifeHearts({ n, size = 16 }: { n: number; size?: number }) {
+function LifeHearts({ n, size = 16, label }: { n: number; size?: number; label: string }) {
   return (
-    <span className="inline-flex items-center gap-0.5 align-middle" aria-label={`${n} vie${n > 1 ? "s" : ""}`}>
+    <span className="inline-flex items-center gap-0.5 align-middle" aria-label={label}>
       {Array.from({ length: n }, (_, k) => (
         <Heart key={k} size={size} strokeWidth={2.6} fill="#FF3E6C" color={INK} aria-hidden />
       ))}

@@ -25,6 +25,8 @@ import { GameIconBadge, GameIconButton, GameInlineIcon, GameTopRight } from "@/c
 import {
   BigButton, Confirm, CORAL, DISPLAY, INK, MINT, Modal, PickList, PlayerRow, RoleCard, RulesContent, Screen, SectionTitle, SkyBadge, Tag, Title, YELLOW, stk, type Tone,
 } from "./lg-local-ui";
+import { useT, pick, getLang } from "@/lib/i18n";
+import { CAUSE_LABEL, ROLE_TEXT, STR, WIN_TEXT, type LgStrings } from "./lg-local-i18n";
 
 // ── Réglages persistants ──────────────────────────────────
 interface Settings {
@@ -87,6 +89,8 @@ function dedupe(names: string[]): string[] {
 }
 
 export default function LoupGarouLocal({ onReturnToLobby }: GameProps) {
+  const t = useT(STR);
+  const roleText = useT(ROLE_TEXT);
   const [names, setNames] = useState<string[]>([]);
   const [comp, setComp] = useState<Composition>(() => recommended(8));
   const [settings, setSettings] = useState<Settings>(() => (typeof window === "undefined" ? DEFAULT_SETTINGS : loadSettings()));
@@ -150,16 +154,16 @@ export default function LoupGarouLocal({ onReturnToLobby }: GameProps) {
   const kill = (g: GameState, kills: Death[], context: "dawn" | "vote" | "hunter", after: After, extraLog?: string) => {
     const { players, deaths } = applyDeaths(g.players, kills, g.lovers);
     const hunters = deaths.filter((d) => players[d.id].role === "chasseur").map((d) => d.id);
-    const lines = deaths.map((d) => `${CAUSE_EMOJI[d.cause]} ${players[d.id].name} meurt (${ROLES[players[d.id].role].name}).`);
+    const lines = deaths.map((d) => `${CAUSE_EMOJI[d.cause]} ${t.logDies(players[d.id].name, roleText[players[d.id].role].name)}`);
     const history = [...g.history];
     if (context !== "dawn") {
       history.push({
-        title: context === "vote" ? `Jour ${g.night} · vote` : `Jour ${g.night} · Chasseur`,
-        lines: [...(extraLog ? [extraLog] : []), ...(lines.length ? lines : ["Personne n'est éliminé."])],
+        title: context === "vote" ? t.histVote(g.night) : t.histHunter(g.night),
+        lines: [...(extraLog ? [extraLog] : []), ...(lines.length ? lines : [t.nobodyOut])],
       });
     } else if (history.length) {
       const last = history[history.length - 1];
-      history[history.length - 1] = { ...last, lines: [...last.lines, ...(lines.length ? lines : ["Personne ne meurt."])] };
+      history[history.length - 1] = { ...last, lines: [...last.lines, ...(lines.length ? lines : [t.nobodyDies])] };
     }
     setGame({ ...g, players, history, pendingHunters: [...g.pendingHunters, ...hunters] });
     setPhase({ k: "deaths", deaths, context, after });
@@ -185,7 +189,7 @@ export default function LoupGarouLocal({ onReturnToLobby }: GameProps) {
       lovers: a.lovers ?? game.lovers,
       potions: { life: game.potions.life && !a.saved, death: game.potions.death && a.poison === null },
       lastProtected: a.protect,
-      history: [...game.history, { title: `Nuit ${game.night}`, lines: r.log }],
+      history: [...game.history, { title: t.nightN(game.night), lines: r.log }],
     };
     kill(g, nightKills(a), "dawn", "debate");
   };
@@ -215,7 +219,7 @@ export default function LoupGarouLocal({ onReturnToLobby }: GameProps) {
     content = (
       <PlayersSetup
         emoji="🐺"
-        name="Loup-Garou"
+        name={t.gameName}
         min={MIN_PLAYERS}
         max={MAX_PLAYERS}
         accent={ACCENT}
@@ -258,8 +262,8 @@ export default function LoupGarouLocal({ onReturnToLobby }: GameProps) {
         toName={p.name}
         colorIndex={p.id}
         accent={ACCENT}
-        hint="Les autres, regardez ailleurs."
-        buttonLabel="C'est moi — voir ma carte"
+        hint={t.dealHint}
+        buttonLabel={t.dealBtn}
         onReady={() => setPhase({ k: "deal", i: phase.i, reveal: true })}
       />
     );
@@ -269,13 +273,13 @@ export default function LoupGarouLocal({ onReturnToLobby }: GameProps) {
       <Screen tone="night" center>
         <div className="text-center">
           <SkyBadge tone="night" size={96} />
-          <div className="mt-7"><Tag bg="#2A1866" color="#fff" tilt={-2}>{first ? "Tout le monde a sa carte" : `Fin du jour ${game.night}`}</Tag></div>
-          <Title size={40} className="mt-3">Posez le téléphone au centre</Title>
+          <div className="mt-7"><Tag bg="#2A1866" color="#fff" tilt={-2}>{first ? t.everyoneHasCard : t.endOfDay(game.night)}</Tag></div>
+          <Title size={40} className="mt-3">{t.putPhone}</Title>
           <p className="mx-auto mt-4 max-w-xs text-[17px] font-semibold" style={{ color: "rgba(255,255,255,0.78)" }}>
-            Écran vers le haut, son allumé {settings.voice && speechAvailable() ? ": il va tout raconter." : "— quelqu'un lira les textes à voix haute."}
+            {settings.voice && speechAvailable() ? t.faceUpVoice : t.faceUpNoVoice}
           </p>
           <div className="mt-10">
-            <BigButton onClick={first ? goNight : nextNight}><GameInlineIcon icon={Moon} /> Que la nuit tombe</BigButton>
+            <BigButton onClick={first ? goNight : nextNight}><GameInlineIcon icon={Moon} /> {t.letNightFall}</BigButton>
           </div>
         </div>
       </Screen>
@@ -313,7 +317,7 @@ export default function LoupGarouLocal({ onReturnToLobby }: GameProps) {
         hunterId={phase.id}
         say={say}
         onShoot={(target) => kill(game, [{ id: target, cause: "chasseur" }], "hunter", phase.after,
-          `🎯 Le Chasseur ${game.players[phase.id].name} emporte ${game.players[target].name}.`)}
+          t.logHunter(game.players[phase.id].name, game.players[target].name))}
       />
     );
   } else if (game && phase.k === "debate") {
@@ -357,8 +361,8 @@ export default function LoupGarouLocal({ onReturnToLobby }: GameProps) {
         toName={voter.name}
         colorIndex={voter.id}
         accent="#FFB347"
-        hint="Vote secret : personne d'autre ne regarde."
-        buttonLabel="C'est moi — voter"
+        hint={t.secretHint}
+        buttonLabel={t.secretBtn}
         onReady={() => setPhase({ ...phase, reveal: true })}
       />
     );
@@ -377,21 +381,21 @@ export default function LoupGarouLocal({ onReturnToLobby }: GameProps) {
       <Screen tone="day" center>
         <div className="text-center">
           <div className="flex justify-center"><Mascot size={110} color="yellow" mood="thinking" shadow={false} /></div>
-          <Title size={48} className="mt-4">Égalité&nbsp;!</Title>
+          <Title size={48} className="mt-4">{t.tieTitle}</Title>
           {phase.tied && (
             <div className="mt-4 flex flex-wrap justify-center gap-2">
               {phase.tied.map((id, k) => <Tag key={id} bg={YELLOW} tilt={k % 2 ? 2 : -2}>{game.players[id].name}</Tag>)}
             </div>
           )}
-          <p className="mt-4 text-[18px] font-semibold">Qu&apos;est-ce qu&apos;on fait&nbsp;?</p>
+          <p className="mt-4 text-[18px] font-semibold">{t.tieWhat}</p>
           <div className="mt-8 grid gap-3">
             <BigButton onClick={() => setPhase(settings.voteMode === "secret"
               ? secretStart(game, phase.tied)
               : { k: "vote", candidates: phase.tied })}>
-              <GameInlineIcon icon={RotateCcw} /> Revoter{phase.tied ? " entre les ex æquo" : ""}
+              <GameInlineIcon icon={RotateCcw} /> {t.revote(!!phase.tied)}
             </BigButton>
-            <BigButton variant="ghost" onClick={() => kill(game, [], "vote", "night", "🤝 Égalité : personne n'est éliminé.")}>
-              Personne n&apos;est éliminé
+            <BigButton variant="ghost" onClick={() => kill(game, [], "vote", "night", t.logTie)}>
+              {t.nobodyOutBtn}
             </BigButton>
           </div>
         </div>
@@ -420,17 +424,17 @@ export default function LoupGarouLocal({ onReturnToLobby }: GameProps) {
       {/* Contrôles en haut à droite (le coin haut-gauche est réservé à l'app) */}
       <GameTopRight className="z-50" >
         <div className="flex gap-2.5" style={{ opacity: nightNow ? 0.55 : 1 }}>
-          <GameIconButton icon={Info} label="Règles" onClick={() => setModal("rules")} />
-          {game && <GameIconButton icon={ScrollText} label="Historique" onClick={() => setModal("history")} />}
-          <GameIconButton icon={settings.voice || !sfxMuted ? Volume2 : VolumeX} label="Son" onClick={() => setModal("sound")} />
+          <GameIconButton icon={Info} label={t.rules} onClick={() => setModal("rules")} />
+          {game && <GameIconButton icon={ScrollText} label={t.history} onClick={() => setModal("history")} />}
+          <GameIconButton icon={settings.voice || !sfxMuted ? Volume2 : VolumeX} label={t.sound} onClick={() => setModal("sound")} />
         </div>
       </GameTopRight>
 
       {modal === "rules" && (
-        <Modal title="Règles du jeu" onClose={() => setModal(null)}><RulesContent /></Modal>
+        <Modal title={t.rulesTitle} onClose={() => setModal(null)}><RulesContent /></Modal>
       )}
       {modal === "sound" && (
-        <Modal title="Son" onClose={() => setModal(null)}>
+        <Modal title={t.sound} onClose={() => setModal(null)}>
           <SoundOptions settings={settings} setSettings={setSettings} sfxMuted={sfxMuted} />
         </Modal>
       )}
@@ -497,19 +501,20 @@ function Chips<T extends string | number>({ value, options, onPick }: { value: T
 
 function SoundOptions({ settings, setSettings, sfxMuted }: { settings: Settings; setSettings: (s: Settings) => void; sfxMuted: boolean }) {
   const canSpeak = speechAvailable();
+  const t = useT(STR);
   return (
     <div className="grid gap-3">
       <Toggle
         on={settings.voice && canSpeak}
         onClick={() => { if (canSpeak) setSettings({ ...settings, voice: !settings.voice }); }}
-        label={<><GameInlineIcon icon={Speech} /> Narration vocale</>}
-        sub={canSpeak ? "Le téléphone lit la nuit à voix haute" : "Indisponible sur cet appareil : lisez les textes à voix haute"}
+        label={<><GameInlineIcon icon={Speech} /> {t.voiceLabel}</>}
+        sub={canSpeak ? t.voiceSub : t.voiceNo}
       />
       <Toggle
         on={!sfxMuted}
         onClick={() => setSfxMuted(!sfxMuted)}
-        label={<><GameInlineIcon icon={Music} /> Bruitages et ambiance</>}
-        sub="Horloge la nuit, cloche, révélations"
+        label={<><GameInlineIcon icon={Music} /> {t.sfxLabel}</>}
+        sub={t.sfxSub}
       />
     </div>
   );
@@ -522,7 +527,10 @@ function RolesSetup({
   settings: Settings; setSettings: (s: Settings) => void; sfxMuted: boolean;
   onBack: () => void; onStart: () => void;
 }) {
-  const problem = compositionProblem(comp, n);
+  const t = useT(STR);
+  const roleText = useT(ROLE_TEXT);
+  const problemCode = compositionProblem(comp, n);
+  const problem = problemCode === "noWolf" ? t.problemNoWolf : problemCode === "tooManyRoles" ? t.problemTooManyRoles : problemCode ? t.problemTooManyWolves : null;
   const villagers = villagersCount(comp, n);
   const rec = recommended(n);
   const isRec = JSON.stringify(rec) === JSON.stringify(comp);
@@ -530,20 +538,20 @@ function RolesSetup({
 
   return (
     <Screen tone="dusk">
-      <Title size={48}>Les rôles</Title>
+      <Title size={48}>{t.rolesTitle}</Title>
       <div className="mt-3 flex flex-wrap gap-2">
-        <Tag bg={YELLOW} tilt={-2}>{n} joueurs</Tag>
-        <Tag bg={CORAL} tilt={2}>{comp.loup} loup{comp.loup > 1 ? "s" : ""} contre {n - comp.loup}</Tag>
+        <Tag bg={YELLOW} tilt={-2}>{t.nPlayers(n)}</Tag>
+        <Tag bg={CORAL} tilt={2}>{t.wolvesVs(comp.loup, n - comp.loup)}</Tag>
       </div>
 
       <div className="mt-6 grid grid-cols-[minmax(0,1fr)] gap-3">
         {/* Loups : compteur (gap réduit : tient en 375 px sans déborder) */}
         <div className="flex items-center gap-2 rounded-[22px] px-3 py-2" style={{ ...stk(ROLES.loup.accent, 4, 3), color: INK, minHeight: 66, transform: "rotate(-1deg)" }}>
           <MascotAvatar color="coral" mood="angry" size={42} border={false} />
-          <span className="ml-1 min-w-0 flex-1 truncate" style={{ ...DISPLAY, fontSize: 20, letterSpacing: "-0.01em" }}>Les loups</span>
-          <GameIconButton icon={Minus} label="Moins de loups" onClick={() => setComp({ ...comp, loup: Math.max(1, comp.loup - 1) })} />
+          <span className="ml-1 min-w-0 flex-1 truncate" style={{ ...DISPLAY, fontSize: 20, letterSpacing: "-0.01em" }}>{t.theWolves}</span>
+          <GameIconButton icon={Minus} label={t.fewerWolves} onClick={() => setComp({ ...comp, loup: Math.max(1, comp.loup - 1) })} />
           <span className="w-7 text-center" style={{ ...DISPLAY, fontSize: 30 }}>{comp.loup}</span>
-          <GameIconButton icon={Plus} label="Plus de loups" bg={INK} color="#fff" onClick={() => setComp({ ...comp, loup: Math.min(maxWolves, comp.loup + 1) })} />
+          <GameIconButton icon={Plus} label={t.moreWolves} bg={INK} color="#fff" onClick={() => setComp({ ...comp, loup: Math.min(maxWolves, comp.loup + 1) })} />
         </div>
 
         {SPECIALS.map((id) => {
@@ -560,8 +568,8 @@ function RolesSetup({
             >
               <MascotAvatar color={r.color} mood={r.mood} size={42} border={false} />
               <span className="flex-1">
-                <span className="block" style={{ ...DISPLAY, fontSize: 21, letterSpacing: "-0.01em" }}>{r.name}</span>
-                <span className="block text-[14px] font-medium leading-snug" style={{ opacity: on ? 0.85 : 0.75 }}>{r.power}</span>
+                <span className="block" style={{ ...DISPLAY, fontSize: 21, letterSpacing: "-0.01em" }}>{roleText[id].name}</span>
+                <span className="block text-[14px] font-medium leading-snug" style={{ opacity: on ? 0.85 : 0.75 }}>{roleText[id].power}</span>
               </span>
               <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full" style={{ ...stk(on ? "#fff" : "#fff", 2, 2.5), color: INK }}>
                 {on ? <Check size={19} strokeWidth={3.2} aria-hidden /> : <Plus size={19} strokeWidth={3.2} aria-hidden />}
@@ -572,26 +580,26 @@ function RolesSetup({
 
         <div className="flex items-center gap-3 rounded-[22px] px-3 py-2" style={{ ...stk(MINT, 4, 3), color: INK, minHeight: 62, transform: "rotate(1deg)" }}>
           <MascotAvatar color="mint" mood="happy" size={42} border={false} />
-          <span className="flex-1" style={{ ...DISPLAY, fontSize: 21, letterSpacing: "-0.01em" }}>Villageois</span>
+          <span className="flex-1" style={{ ...DISPLAY, fontSize: 21, letterSpacing: "-0.01em" }}>{roleText.villageois.name}</span>
           <span className="w-10 text-center" style={{ ...DISPLAY, fontSize: 30 }}>{Math.max(0, villagers)}</span>
         </div>
       </div>
 
       {!isRec && (
         <button type="button" onClick={() => setComp(rec)} className="mt-4 self-center rounded-full px-4 text-[16px] font-bold active:translate-y-[2px]" style={{ ...stk(YELLOW, 3), color: INK, minHeight: 46 }}>
-          <GameInlineIcon icon={Sparkles} /> Répartition recommandée
+          <GameInlineIcon icon={Sparkles} /> {t.recommended}
         </button>
       )}
 
-      <SectionTitle className="mt-8 mb-3">Temps de débat</SectionTitle>
+      <SectionTitle className="mt-8 mb-3">{t.debateTime}</SectionTitle>
       <Chips value={settings.debateSec} onPick={(v) => setSettings({ ...settings, debateSec: v })}
-        options={[{ v: 60, label: "1 min" }, { v: 120, label: "2 min" }, { v: 180, label: "3 min" }, { v: 300, label: "5 min" }]} />
+        options={[60, 120, 180, 300].map((v) => ({ v, label: t.min(v / 60) }))} />
 
-      <SectionTitle className="mt-7 mb-3">Le vote</SectionTitle>
+      <SectionTitle className="mt-7 mb-3">{t.voteTitle}</SectionTitle>
       <Chips value={settings.voteMode} onPick={(v) => setSettings({ ...settings, voteMode: v })}
-        options={[{ v: "hands", label: <><GameInlineIcon icon={Hand} /> À main levée</> }, { v: "secret", label: <><GameInlineIcon icon={EyeOff} /> Secret</> }]} />
+        options={[{ v: "hands", label: <><GameInlineIcon icon={Hand} /> {t.hands}</> }, { v: "secret", label: <><GameInlineIcon icon={EyeOff} /> {t.secret}</> }]} />
 
-      <SectionTitle className="mt-7 mb-3">Le son</SectionTitle>
+      <SectionTitle className="mt-7 mb-3">{t.soundTitle}</SectionTitle>
       <SoundOptions settings={settings} setSettings={setSettings} sfxMuted={sfxMuted} />
 
       <div className="mt-6 flex justify-center">
@@ -600,15 +608,16 @@ function RolesSetup({
 
       <div className="sticky bottom-[calc(env(safe-area-inset-bottom,0px)+10px)] mt-8 grid gap-1 pt-2">
         {problem && <p className="mb-2 rounded-full px-4 py-2 text-center text-[15px] font-bold" style={{ ...stk(CORAL, 3), color: INK }}>{problem}</p>}
-        <BigButton onClick={onStart} disabled={!!problem}><GameInlineIcon icon={Shuffle} /> Distribuer les rôles</BigButton>
+        <BigButton onClick={onStart} disabled={!!problem}><GameInlineIcon icon={Shuffle} /> {t.dealRoles}</BigButton>
       </div>
-      <button type="button" onClick={onBack} className="mt-2 text-[15px] font-semibold" style={{ minHeight: 44, color: "rgba(255,255,255,0.8)" }}><GameInlineIcon icon={ArrowLeft} /> Modifier les joueurs</button>
+      <button type="button" onClick={onBack} className="mt-2 text-[15px] font-semibold" style={{ minHeight: 44, color: "rgba(255,255,255,0.8)" }}><GameInlineIcon icon={ArrowLeft} /> {t.editPlayers}</button>
     </Screen>
   );
 }
 
 // ── Distribution : appui long pour voir sa carte ─────────
 function HoldReveal({ player, last, onDone }: { player: Player; last: boolean; onDone: () => void }) {
+  const t = useT(STR);
   const [holding, setHolding] = useState(false);
   const [seen, setSeen] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -626,7 +635,7 @@ function HoldReveal({ player, last, onDone }: { player: Player; last: boolean; o
 
   return (
     <Screen tone="dusk">
-      <p className="text-center text-[17px] font-semibold" style={{ color: "rgba(255,255,255,0.8)" }}>La carte secrète de</p>
+      <p className="text-center text-[17px] font-semibold" style={{ color: "rgba(255,255,255,0.8)" }}>{t.secretCardOf}</p>
       <Title size={player.name.length > 10 ? 38 : 48} className="mt-1 text-center">{player.name}</Title>
 
       <div
@@ -640,7 +649,7 @@ function HoldReveal({ player, last, onDone }: { player: Player; last: boolean; o
         data-testid="hold-card"
       >
         {holding ? (
-          <RoleCard role={player.role} subtitle="Tu es" />
+          <RoleCard role={player.role} subtitle={t.youAre} />
         ) : (
           <div
             className="flex flex-col items-center justify-center rounded-[28px] text-center"
@@ -655,20 +664,20 @@ function HoldReveal({ player, last, onDone }: { player: Player; last: boolean; o
               <Fingerprint size={54} strokeWidth={2.2} aria-hidden />
             </span>
             <p className="mt-5 px-6" style={{ ...DISPLAY, fontSize: 28, lineHeight: 1.05 }}>
-              Maintiens le doigt ici pour voir ton rôle
+              {t.holdHere}
             </p>
-            <p className="mt-2 text-[16px] font-semibold" style={{ color: "rgba(255,255,255,0.85)" }}>Relâche pour le cacher</p>
+            <p className="mt-2 text-[16px] font-semibold" style={{ color: "rgba(255,255,255,0.85)" }}>{t.releaseHide}</p>
           </div>
         )}
       </div>
 
       {player.role === "loup" && holding && (
-        <p className="mt-5 text-center text-[16px] font-bold" style={{ color: "#FFB3AA" }}>Ta meute se découvrira la première nuit.</p>
+        <p className="mt-5 text-center text-[16px] font-bold" style={{ color: "#FFB3AA" }}>{t.packNote}</p>
       )}
 
       <div className="mt-auto pt-8">
         <BigButton onClick={onDone} disabled={!seen}>
-          {seen ? (last ? "J'ai vu, on lance la partie" : "J'ai vu, je cache et je passe") : "Regarde d'abord ta carte"}
+          {seen ? (last ? t.seenLast : t.seenNext) : t.lookFirst}
         </BigButton>
       </div>
     </Screen>
@@ -676,13 +685,13 @@ function HoldReveal({ player, last, onDone }: { player: Player; last: boolean; o
 }
 
 // ── Annonce des morts ─────────────────────────────────────
-function deathSentence(p: Player, cause: Death["cause"]): string {
-  const role = ROLES[p.role].name;
+function deathSentence(t: LgStrings, p: Player, cause: Death["cause"]): string {
+  const role = pick(ROLE_TEXT, getLang())[p.role].name;
   switch (cause) {
-    case "vote": return `Le village élimine ${p.name}. Son rôle : ${role}.`;
-    case "chasseur": return `Dans un dernier souffle, le Chasseur emporte ${p.name}. Son rôle : ${role}.`;
-    case "chagrin": return `${p.name} ne survit pas à la perte de son amour. Son rôle : ${role}.`;
-    default: return `${p.name} ne se réveillera pas. Son rôle : ${role}.`;
+    case "vote": return t.sentVote(p.name, role);
+    case "chasseur": return t.sentHunter(p.name, role);
+    case "chagrin": return t.sentGrief(p.name, role);
+    default: return t.sentNight(p.name, role);
   }
 }
 
@@ -691,9 +700,12 @@ function DeathsScreen({
 }: {
   game: GameState; deaths: Death[]; context: "dawn" | "vote" | "hunter"; say: (t: string) => void; onNext: () => void;
 }) {
-  const intro = context === "dawn" ? "Le soleil se lève. Tout le monde ouvre les yeux !" : "";
-  const none = context === "dawn" ? "Bonne nouvelle : personne n'est mort cette nuit." : "Personne n'est éliminé aujourd'hui.";
-  const lines = deaths.length ? deaths.map((d) => deathSentence(game.players[d.id], d.cause)) : [none];
+  const t = useT(STR);
+  const roleText = useT(ROLE_TEXT);
+  const causeLabel = useT(CAUSE_LABEL);
+  const intro = context === "dawn" ? t.dawnIntro : "";
+  const none = context === "dawn" ? t.noneDawn : t.noneVote;
+  const lines = deaths.length ? deaths.map((d) => deathSentence(t, game.players[d.id], d.cause)) : [none];
 
   useEffect(() => {
     say([intro, ...lines].filter(Boolean).join(" "));
@@ -709,10 +721,10 @@ function DeathsScreen({
       <div className="text-center">
         {context === "dawn" && <SkyBadge tone="day" size={72} />}
         <div className="mt-5">
-          <Tag bg="#fff" tilt={-2}>{context === "dawn" ? `Jour ${game.night}` : context === "vote" ? "Verdict du village" : "Le coup du Chasseur"}</Tag>
+          <Tag bg="#fff" tilt={-2}>{context === "dawn" ? t.dayN(game.night) : context === "vote" ? t.tagVerdict : t.tagHunter}</Tag>
         </div>
         <Title size={40} className="mt-3">
-          {context === "dawn" ? "Le village se réveille" : deaths.length ? "Sentence exécutée" : "Tout le monde est épargné"}
+          {context === "dawn" ? t.titleDawn : deaths.length ? t.titleExecuted : t.titleSpared}
         </Title>
       </div>
 
@@ -730,8 +742,8 @@ function DeathsScreen({
               <Mascot size={74} color={colorForIndex(p.id)} mood="dead" bob={false} shadow={false} />
               <div className="min-w-0 flex-1">
                 <p className="truncate" style={{ ...DISPLAY, fontSize: 30, lineHeight: 1 }}>{p.name}</p>
-                <p className="mt-0.5 text-[15px] font-semibold" style={{ color: "#4A3A66" }}>{CAUSE_LABEL[d.cause]}</p>
-                <span className="mt-2 inline-flex rounded-full px-3 py-1 text-[16px] font-bold" style={{ ...stk(r.accent, 2, 2) }}>{r.name}</span>
+                <p className="mt-0.5 text-[15px] font-semibold" style={{ color: "#4A3A66" }}>{causeLabel[d.cause]}</p>
+                <span className="mt-2 inline-flex rounded-full px-3 py-1 text-[16px] font-bold" style={{ ...stk(r.accent, 2, 2) }}>{roleText[p.role].name}</span>
               </div>
             </div>
           );
@@ -739,27 +751,21 @@ function DeathsScreen({
       </div>
 
       <div className="mt-auto pt-8">
-        <BigButton onClick={onNext}>Continuer</BigButton>
+        <BigButton onClick={onNext}>{t.continue}</BigButton>
       </div>
     </Screen>
   );
 }
 
-const CAUSE_LABEL: Record<Death["cause"], string> = {
-  loups: "Dévoré·e cette nuit",
-  poison: "Retrouvé·e sans vie cette nuit",
-  vote: "Éliminé·e par le village",
-  chasseur: "Abattu·e par le Chasseur",
-  chagrin: "Mort·e de chagrin",
-};
 
 // ── Chasseur ──────────────────────────────────────────────
 function HunterScreen({ game, hunterId, say, onShoot }: { game: GameState; hunterId: number; say: (t: string) => void; onShoot: (id: number) => void }) {
+  const t = useT(STR);
   const hunter = game.players[hunterId];
   const [sel, setSel] = useState<number | null>(null);
   const [confirm, setConfirm] = useState(false);
   useEffect(() => {
-    say(`${hunter.name} était le Chasseur ! Avant de mourir, il emporte quelqu'un avec lui. Prends le téléphone et choisis.`);
+    say(t.hunterSay(hunter.name));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const alive = game.players.filter((p) => p.alive);
@@ -768,19 +774,19 @@ function HunterScreen({ game, hunterId, say, onShoot }: { game: GameState; hunte
     <Screen tone="day">
       <div className="text-center">
         <div className="flex justify-center"><GameIconBadge icon={Crosshair} bg={YELLOW} size={64} /></div>
-        <Title size={38} className="mt-3">{hunter.name}, dernier tir&nbsp;!</Title>
-        <p className="mt-2 text-[17px] font-semibold" style={{ color: "rgba(255,255,255,0.9)" }}>Tu étais le Chasseur : choisis qui tu emportes avec toi.</p>
+        <Title size={38} className="mt-3">{t.hunterTitle(hunter.name)}</Title>
+        <p className="mt-2 text-[17px] font-semibold" style={{ color: "rgba(255,255,255,0.9)" }}>{t.hunterSub}</p>
       </div>
       <div className="mt-6">
         <PickList players={alive} selected={sel === null ? [] : [sel]} onPick={setSel} />
       </div>
       <div className="sticky bottom-[calc(env(safe-area-inset-bottom,0px)+10px)] mt-auto pt-5">
         <BigButton variant="danger" disabled={!target} onClick={() => setConfirm(true)}>
-          {target ? `Tirer sur ${target.name}` : "Choisis ta cible"}
+          {target ? t.shootAt(target.name) : t.pickTarget}
         </BigButton>
       </div>
       {confirm && target && (
-        <Confirm text={`Emporter ${target.name} avec toi ?`} yes="Oui, tirer" danger onYes={() => onShoot(target.id)} onNo={() => setConfirm(false)} />
+        <Confirm text={t.takeWith(target.name)} yes={t.yesShoot} danger onYes={() => onShoot(target.id)} onNo={() => setConfirm(false)} />
       )}
     </Screen>
   );
@@ -792,13 +798,14 @@ function fmt(s: number) {
 }
 
 function DebateScreen({ game, seconds, say, onBell, onVote }: { game: GameState; seconds: number; say: (t: string) => void; onBell: () => void; onVote: () => void }) {
+  const t = useT(STR);
   const [left, setLeft] = useState(seconds);
   const [running, setRunning] = useState(true);
   const rang = useRef(false);
 
   useEffect(() => {
     const m = Math.round(seconds / 60);
-    say(`Place au débat ! Vous avez ${m} minute${m > 1 ? "s" : ""} pour démasquer les loups.`);
+    say(t.debateSay(m));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -812,9 +819,9 @@ function DebateScreen({ game, seconds, say, onBell, onVote }: { game: GameState;
     if (left === 0 && !rang.current) {
       rang.current = true;
       onBell();
-      say("Le temps est écoulé. Passons au vote !");
+      say(t.timeUpSay);
     }
-  }, [left, onBell, say]);
+  }, [left, onBell, say, t]);
 
   const alive = game.players.filter((p) => p.alive);
   const pct = Math.max(0, left / seconds);
@@ -823,9 +830,9 @@ function DebateScreen({ game, seconds, say, onBell, onVote }: { game: GameState;
 
   return (
     <Screen tone="day">
-      <div className="text-center"><Tag bg="#fff" tilt={-2}>Jour {game.night} · débat</Tag></div>
+      <div className="text-center"><Tag bg="#fff" tilt={-2}>{t.tagDebate(game.night)}</Tag></div>
       <Title size={40} className="mt-3 text-center">
-        {over ? "Temps écoulé\u00A0!" : "Qui sont les loups\u00A0?"}
+        {over ? t.timeUp : t.whoWolves}
       </Title>
 
       <div className="relative mx-auto mt-6 flex items-center justify-center rounded-full" style={{ width: 220, height: 220, ...stk("#fff", 6, 3) }}>
@@ -839,12 +846,12 @@ function DebateScreen({ game, seconds, say, onBell, onVote }: { game: GameState;
 
       {!over && (
         <div className="mt-7 grid grid-cols-2 gap-3">
-          <BigButton variant="ghost" onClick={() => setRunning((r) => !r)}>{running ? <><GameInlineIcon icon={Pause} /> Pause</> : <><GameInlineIcon icon={Play} /> Reprendre</>}</BigButton>
-          <BigButton variant="ghost" onClick={() => setLeft((l) => l + 30)}>+30 s</BigButton>
+          <BigButton variant="ghost" onClick={() => setRunning((r) => !r)}>{running ? <><GameInlineIcon icon={Pause} /> {t.pause}</> : <><GameInlineIcon icon={Play} /> {t.resume}</>}</BigButton>
+          <BigButton variant="ghost" onClick={() => setLeft((l) => l + 30)}>{t.plus30}</BigButton>
         </div>
       )}
 
-      <SectionTitle className="mt-8 mb-3 text-center">Encore en vie : {alive.length}</SectionTitle>
+      <SectionTitle className="mt-8 mb-3 text-center">{t.stillAlive(alive.length)}</SectionTitle>
       <div className="flex flex-wrap justify-center gap-2.5">
         {alive.map((p, k) => (
           <span key={p.id} className="flex items-center gap-1.5 rounded-full py-1 pl-1 pr-3 text-[16px] font-bold" style={{ ...stk("#fff", 2, 2), color: INK, transform: `rotate(${k % 2 ? 1.5 : -1.5}deg)` }}>
@@ -854,7 +861,7 @@ function DebateScreen({ game, seconds, say, onBell, onVote }: { game: GameState;
       </div>
 
       <div className="mt-auto pt-8">
-        <BigButton variant={over ? "primary" : "ghost"} onClick={onVote}>{over ? <><GameInlineIcon icon={Vote} /> Passer au vote</> : <>Passer au vote <GameInlineIcon icon={SkipForward} /></>}</BigButton>
+        <BigButton variant={over ? "primary" : "ghost"} onClick={onVote}>{over ? <><GameInlineIcon icon={Vote} /> {t.goVote}</> : <>{t.goVote} <GameInlineIcon icon={SkipForward} /></>}</BigButton>
       </div>
     </Screen>
   );
@@ -866,30 +873,31 @@ function HandsVote({
 }: {
   game: GameState; candidates: number[] | null; say: (t: string) => void; onEliminate: (id: number) => void; onTie: () => void;
 }) {
+  const t = useT(STR);
   const [sel, setSel] = useState<number | null>(null);
   const [confirm, setConfirm] = useState(false);
   useEffect(() => {
-    say(candidates ? "On revote entre les ex æquo. À trois, pointez du doigt !" : "À trois, tout le monde pointe du doigt le joueur à éliminer. Un, deux, trois !");
+    say(candidates ? t.revoteSay : t.voteSay);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const list = game.players.filter((p) => p.alive && (!candidates || candidates.includes(p.id)));
   const target = list.find((p) => p.id === sel);
   return (
     <Screen tone="day">
-      <div className="text-center"><Tag bg="#fff" tilt={-2}>Jour {game.night} · vote</Tag></div>
-      <Title size={36} className="mt-3 text-center">Qui le village élimine-t-il&nbsp;?</Title>
-      <p className="mt-2 text-center text-[16px] font-semibold" style={{ color: "rgba(255,255,255,0.9)" }}>Votez à main levée, puis touchez le joueur qui a le plus de voix.</p>
+      <div className="text-center"><Tag bg="#fff" tilt={-2}>{t.tagVote(game.night)}</Tag></div>
+      <Title size={36} className="mt-3 text-center">{t.whoOut}</Title>
+      <p className="mt-2 text-center text-[16px] font-semibold" style={{ color: "rgba(255,255,255,0.9)" }}>{t.handsHint}</p>
       <div className="mt-6">
         <PickList players={list} selected={sel === null ? [] : [sel]} onPick={setSel} />
       </div>
       <div className="sticky bottom-[calc(env(safe-area-inset-bottom,0px)+10px)] mt-auto grid gap-3 pt-5">
         <BigButton variant="danger" disabled={!target} onClick={() => setConfirm(true)}>
-          {target ? `Éliminer ${target.name}` : "Touchez le joueur désigné"}
+          {target ? t.eliminate(target.name) : t.touchDesignated}
         </BigButton>
-        <BigButton variant="ghost" onClick={onTie}><GameInlineIcon icon={Scale} /> Égalité</BigButton>
+        <BigButton variant="ghost" onClick={onTie}><GameInlineIcon icon={Scale} /> {t.tie}</BigButton>
       </div>
       {confirm && target && (
-        <Confirm text={`Le village élimine ${target.name} ? Son rôle sera révélé.`} yes="Oui, éliminer" danger onYes={() => onEliminate(target.id)} onNo={() => setConfirm(false)} />
+        <Confirm text={t.confirmEliminate(target.name)} yes={t.yesEliminate} danger onYes={() => onEliminate(target.id)} onNo={() => setConfirm(false)} />
       )}
     </Screen>
   );
@@ -897,20 +905,21 @@ function HandsVote({
 
 // ── Vote secret ───────────────────────────────────────────
 function SecretBallot({ game, voter, candidates, onVote }: { game: GameState; voter: Player; candidates: number[] | null; onVote: (id: number) => void }) {
+  const t = useT(STR);
   const [sel, setSel] = useState<number | null>(null);
   const list = game.players.filter((p) => p.alive && p.id !== voter.id && (!candidates || candidates.includes(p.id)));
   const target = list.find((p) => p.id === sel);
   return (
     <Screen tone="dusk">
-      <p className="text-center text-[17px] font-semibold" style={{ color: "rgba(255,255,255,0.8)" }}>Le vote secret de</p>
+      <p className="text-center text-[17px] font-semibold" style={{ color: "rgba(255,255,255,0.8)" }}>{t.secretOf}</p>
       <Title size={46} className="mt-1 text-center">{voter.name}</Title>
-      <p className="mt-2 text-center text-[17px] font-semibold" style={{ color: "rgba(255,255,255,0.85)" }}>Contre qui votes-tu&nbsp;?</p>
+      <p className="mt-2 text-center text-[17px] font-semibold" style={{ color: "rgba(255,255,255,0.85)" }}>{t.againstWho}</p>
       <div className="mt-6">
         <PickList players={list} selected={sel === null ? [] : [sel]} onPick={setSel} />
       </div>
       <div className="sticky bottom-[calc(env(safe-area-inset-bottom,0px)+10px)] mt-auto pt-5">
         <BigButton disabled={!target} onClick={() => target && onVote(target.id)}>
-          {target ? `Voter contre ${target.name}` : "Choisis un joueur"}
+          {target ? t.voteAgainst(target.name) : t.pickPlayer}
         </BigButton>
       </div>
     </Screen>
@@ -922,6 +931,7 @@ function TallyScreen({
 }: {
   game: GameState; votes: Record<number, number>; say: (t: string) => void; onEliminate: (id: number) => void; onTie: (tied: number[]) => void;
 }) {
+  const t = useT(STR);
   const counts = new Map<number, number>();
   Object.values(votes).forEach((t) => counts.set(t, (counts.get(t) ?? 0) + 1));
   const rows = [...counts.entries()].sort((a, b) => b[1] - a[1]);
@@ -930,14 +940,14 @@ function TallyScreen({
   const winner = top.length === 1 ? game.players[top[0]] : null;
 
   useEffect(() => {
-    say(winner ? `Les votes sont comptés. Le village désigne ${winner.name}.` : "Les votes sont comptés… et c'est l'égalité !");
+    say(t.tallySay(winner ? winner.name : null));
     lgSfx.card();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
     <Screen tone="day">
-      <Title size={42} className="text-center">Dépouillement</Title>
+      <Title size={42} className="text-center">{t.tallyTitle}</Title>
       <div className="mt-6 grid gap-3">
         {rows.map(([id, c], k) => (
           <div key={id} className="flex items-center gap-3 rounded-[20px] px-3 py-2" style={{ ...stk(top.includes(id) ? CORAL : "#fff", top.includes(id) ? 4 : 3), color: INK, minHeight: 60, transform: top.includes(id) ? `rotate(${k % 2 ? 1 : -1}deg)` : undefined }}>
@@ -949,19 +959,19 @@ function TallyScreen({
       </div>
       <div className="mt-auto pt-8">
         {winner
-          ? <BigButton variant="danger" onClick={() => onEliminate(winner.id)}>Éliminer {winner.name}</BigButton>
-          : <BigButton onClick={() => onTie(top)}><GameInlineIcon icon={Scale} /> Égalité : que faire&nbsp;?</BigButton>}
+          ? <BigButton variant="danger" onClick={() => onEliminate(winner.id)}>{t.eliminate(winner.name)}</BigButton>
+          : <BigButton onClick={() => onTie(top)}><GameInlineIcon icon={Scale} /> {t.tieWhatNow}</BigButton>}
       </div>
     </Screen>
   );
 }
 
 // ── Fin ───────────────────────────────────────────────────
-const WIN_TEXT: Record<Winner, { title: string; sub: string; bg: string; mood: "cool" | "angry" | "love" | "sad"; mascot: "mint" | "coral" | "pink" | "white" }> = {
-  village: { title: "Le village gagne !", sub: "Tous les loups ont été démasqués.", bg: MINT, mood: "cool", mascot: "mint" },
-  loups: { title: "Les loups gagnent !", sub: "La meute a dévoré le village.", bg: CORAL, mood: "angry", mascot: "coral" },
-  amoureux: { title: "L'amour gagne !", sub: "Les deux amoureux sont les derniers debout.", bg: "#FF3EA5", mood: "love", mascot: "pink" },
-  personne: { title: "Personne ne survit…", sub: "Le village est désert. Tout le monde a perdu.", bg: "#B5A1FF", mood: "sad", mascot: "white" },
+const WIN_STYLE: Record<Winner, { bg: string; mood: "cool" | "angry" | "love" | "sad"; mascot: "mint" | "coral" | "pink" | "white" }> = {
+  village: { bg: MINT, mood: "cool", mascot: "mint" },
+  loups: { bg: CORAL, mood: "angry", mascot: "coral" },
+  amoureux: { bg: "#FF3EA5", mood: "love", mascot: "pink" },
+  personne: { bg: "#B5A1FF", mood: "sad", mascot: "white" },
 };
 
 function EndScreen({
@@ -970,7 +980,8 @@ function EndScreen({
   game: GameState; winner: Winner; say: (t: string) => void;
   onReplay: () => void; onNewPlayers: () => void; onQuit: () => void; onHistory: () => void;
 }) {
-  const w = WIN_TEXT[winner];
+  const t = useT(STR);
+  const w = { ...WIN_STYLE[winner], ...useT(WIN_TEXT)[winner] };
   useEffect(() => {
     say(`${w.title} ${w.sub}`);
     if (winner === "personne") lgSfx.allDead();
@@ -988,20 +999,20 @@ function EndScreen({
         <Title size={42}>{w.title}</Title>
         <p className="mt-2 text-[17px] font-semibold">{w.sub}</p>
       </div>
-      <SectionTitle className="mt-8 mb-3">Qui était qui</SectionTitle>
+      <SectionTitle className="mt-8 mb-3">{t.whoWasWho}</SectionTitle>
       <div className="grid gap-2.5">
         {sorted.map((p) => <PlayerRow key={p.id} p={p} lover={!!game.lovers?.includes(p.id)} />)}
       </div>
       <button type="button" onClick={onHistory} className="mt-4 self-center rounded-full px-4 text-[16px] font-bold active:translate-y-[2px]" style={{ ...stk("#fff", 3), color: INK, minHeight: 46 }}>
-        <GameInlineIcon icon={ScrollText} /> Revoir l&apos;historique des nuits
+        <GameInlineIcon icon={ScrollText} /> {t.seeHistory}
       </button>
       <div className="mt-8 grid gap-3">
-        <BigButton onClick={onReplay}><GameInlineIcon icon={RotateCcw} /> Rejouer (mêmes joueurs)</BigButton>
-        <BigButton variant="ghost" onClick={onNewPlayers}>Changer les joueurs</BigButton>
+        <BigButton onClick={onReplay}><GameInlineIcon icon={RotateCcw} /> {t.replaySame}</BigButton>
+        <BigButton variant="ghost" onClick={onNewPlayers}>{t.changePlayers}</BigButton>
         <div className="flex justify-center pt-1">
           <IdeaButton game="Loup-Garou" kind="idée de rôle" bg={YELLOW} />
         </div>
-        <button type="button" onClick={onQuit} className="text-[16px] font-bold underline decoration-2 underline-offset-4" style={{ minHeight: 48 }}>Quitter</button>
+        <button type="button" onClick={onQuit} className="text-[16px] font-bold underline decoration-2 underline-offset-4" style={{ minHeight: 48 }}>{t.quit}</button>
       </div>
     </Screen>
   );
@@ -1030,21 +1041,22 @@ function HistoryLine({ line }: { line: string }) {
 }
 
 function HistoryModal({ game, spoilerFree, onClose }: { game: GameState; spoilerFree: boolean; onClose: () => void }) {
+  const t = useT(STR);
   const [unlocked, setUnlocked] = useState(spoilerFree);
   return (
-    <Modal title="Historique" onClose={onClose}>
+    <Modal title={t.historyTitle} onClose={onClose}>
       {!unlocked ? (
         <div className="text-center">
           <div className="flex justify-center"><GameIconBadge icon={EyeOff} bg="#B5A1FF" size={60} /></div>
           <p className="mt-3 text-[17px] font-semibold leading-snug">
-            L&apos;historique dévoile qui a fait quoi la nuit. À ouvrir seulement si tout le monde est d&apos;accord (ou en fin de partie).
+            {t.spoilerWarn}
           </p>
           <div className="mt-5 grid gap-2">
-            <BigButton variant="ghost" onClick={() => setUnlocked(true)}>Afficher quand même</BigButton>
+            <BigButton variant="ghost" onClick={() => setUnlocked(true)}>{t.showAnyway}</BigButton>
           </div>
         </div>
       ) : game.history.length === 0 ? (
-        <p className="text-[16px] font-semibold">Rien pour l&apos;instant : la première nuit n&apos;a pas encore eu lieu.</p>
+        <p className="text-[16px] font-semibold">{t.historyEmpty}</p>
       ) : (
         <div className="space-y-5">
           {game.history.map((h, i) => (

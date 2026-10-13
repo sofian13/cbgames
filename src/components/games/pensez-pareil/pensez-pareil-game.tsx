@@ -25,8 +25,9 @@ import {
   PP_BADGES,
   type RecordResult,
 } from "@/lib/games/pensez-pareil-progress";
+import { getLang, useT, type Lang } from "@/lib/i18n";
+import { STR, promptsFor } from "@/components/games/pensez-pareil/i18n";
 import {
-  PROMPTS,
   ANSWER_TIME,
   isMatch,
   shuffle,
@@ -44,18 +45,17 @@ const PP_COLOR = "#FF3EA5";
 // ── Prompts (partagés avec le serveur) ────────────────────
 type Tier = PPTier;
 type Prompt = PPPrompt;
-const LOCAL_PROMPTS = PROMPTS;
 
 type Pack = "soft" | "mix" | "hot";
-const PACKS: { id: Pack; label: string; icon: LucideIcon; tiers: Tier[]; sub: string }[] = [
-  { id: "soft", label: "Soft", icon: Flower2, tiers: ["soft"], sub: "Tout public, on s'échauffe" },
-  { id: "mix", label: "Couple", icon: Heart, tiers: ["soft", "couple"], sub: "Notre vie à deux" },
-  { id: "hot", label: "Hot 18+", icon: Flame, tiers: ["soft", "couple", "spicy"], sub: "Ça monte en température" },
+const PACKS: { id: Pack; icon: LucideIcon; tiers: Tier[] }[] = [
+  { id: "soft", icon: Flower2, tiers: ["soft"] },
+  { id: "mix", icon: Heart, tiers: ["soft", "couple"] },
+  { id: "hot", icon: Flame, tiers: ["soft", "couple", "spicy"] },
 ];
 
-function buildDeck(pack: Pack): Prompt[] {
+function buildDeck(pack: Pack, lang: Lang): Prompt[] {
   const tiers = PACKS.find((p) => p.id === pack)!.tiers;
-  const pool = shuffle(LOCAL_PROMPTS.filter((p) => tiers.includes(p.tier)));
+  const pool = shuffle(promptsFor(lang).filter((p) => tiers.includes(p.tier)));
   const out: Prompt[] = [];
   let i = 0;
   while (out.length < TOTAL_ROUNDS) {
@@ -70,12 +70,13 @@ function buildDeck(pack: Pack): Prompt[] {
 // ══════════════════════════════════════════════════════════
 export default function PensezPareilGame(props: GameProps) {
   const [mode, setMode] = useState<GameMode | null>(null);
+  const t = useT(STR);
   if (mode === null) {
     return (
       <ModeSelect
         emoji="💞"
-        name="Pensez Pareil"
-        tagline="Un thème, 35 secondes, 1 ou 2 mots : répondez chacun en secret et tombez sur la MÊME réponse. Plus vous êtes synchro, plus votre complicité monte."
+        name={t.name}
+        tagline={t.tagline}
         onPick={setMode}
       />
     );
@@ -89,7 +90,10 @@ export default function PensezPareilGame(props: GameProps) {
 // ══════════════════════════════════════════════════════════
 function PensezPareilLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) {
   type Phase = "setup" | "passA" | "typeA" | "passB" | "typeB" | "reveal" | "over";
+  const t = useT(STR);
   const [phase, setPhase] = useState<Phase>("setup");
+  // Langue figée au début de la partie (thèmes + règles de comparaison des réponses)
+  const [lang, setLang] = useState<Lang>(getLang);
   const [names, setNames] = useState<[string, string]>(["", ""]);
   const [pack, setPack] = useState<Pack>("mix");
   const [deck, setDeck] = useState<Prompt[]>([]);
@@ -109,11 +113,13 @@ function PensezPareilLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }
   useScrollTopOn(`${phase}-${round}`);
 
   const prompt = deck[round] ?? null;
-  const nameA = names[0] || "Joueur 1";
-  const nameB = names[1] || "Joueur 2";
+  const nameA = names[0] || t.player(1);
+  const nameB = names[1] || t.player(2);
 
   const begin = (n: [string, string], p: Pack) => {
-    setNames(n); setPack(p); setDeck(buildDeck(p));
+    const l = getLang();
+    setLang(l);
+    setNames(n); setPack(p); setDeck(buildDeck(p, l));
     setRound(0); setSyncs(0); setStreak(0); setBestStreak(0); setTeamScore(0);
     setPhase("passA");
   };
@@ -122,7 +128,7 @@ function PensezPareilLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }
   const rerollPrompt = () => {
     const tiers = PACKS.find((x) => x.id === pack)!.tiers;
     const used = new Set(deck.map((d) => d.text));
-    const pool = LOCAL_PROMPTS.filter((x) => tiers.includes(x.tier) && !used.has(x.text));
+    const pool = promptsFor(lang).filter((x) => tiers.includes(x.tier) && !used.has(x.text));
     if (!pool.length) return;
     const pick = pool[Math.floor(Math.random() * pool.length)];
     playSfx("card-flip", { volume: 0.6, delay: 0.1 });
@@ -130,7 +136,7 @@ function PensezPareilLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }
   };
 
   const resolveReveal = (bAns: string) => {
-    const m = isMatch(ansA, bAns);
+    const m = isMatch(ansA, bAns, lang);
     const pts = m ? SYNC_BASE + streak * COMBO_STEP : 0;
     const nStreak = m ? streak + 1 : 0;
     const nSyncs = syncs + (m ? 1 : 0);
@@ -154,7 +160,7 @@ function PensezPareilLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }
   }
   if (phase === "passA") {
     return <PassScreen toName={nameA} colorIndex={0} accent={PP_COLOR}
-      hint="Toi seul regardes : écris ta réponse sans la montrer."
+      hint={t.passA}
       onReady={() => setPhase("typeA")} />;
   }
   if (phase === "typeA") {
@@ -164,7 +170,7 @@ function PensezPareilLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }
   }
   if (phase === "passB") {
     return <PassScreen toName={nameB} colorIndex={1} accent={PP_COLOR}
-      hint={`À ton tour : même thème, réponds en secret. ${nameA} a déjà répondu !`}
+      hint={t.passB(nameA)}
       onReady={() => setPhase("typeB")} />;
   }
   if (phase === "typeB") {
@@ -207,6 +213,7 @@ function CoupleSetup({ pack, onStart, onBack }: {
   const [a, setA] = useState(() => getSavedDuo()[0]);
   const [b, setB] = useState(() => getSavedDuo()[1]);
   const [sel, setSel] = useState<Pack>(pack);
+  const t = useT(STR);
   const lvl = levelFor(getProgress().xp);
   const can = !!(a.trim() && b.trim());
   const COLORS: Record<Pack, string> = { soft: "#3DDC97", mix: "#FFD23F", hot: "#FF3EA5" };
@@ -214,22 +221,22 @@ function CoupleSetup({ pack, onStart, onBack }: {
   return (
     <ZScreen>
       <div className="flex items-end gap-3">
-        <ZTitle as="h1" size={48} style={{ lineHeight: 0.92 }}>Pensez Pareil</ZTitle>
+        <ZTitle as="h1" size={48} style={{ lineHeight: 0.92 }}>{t.name}</ZTitle>
         <div className="-mb-1 shrink-0"><Mascot size={66} color="pink" mood="love" shadow={false} /></div>
       </div>
       <p className="mt-3 text-[16px] font-semibold leading-snug" style={{ color: "rgba(255,255,255,0.88)" }}>
-        Un thème, chacun écrit 1 ou 2 mots en secret… et vous comparez. Même réponse = sync !
+        {t.intro}
       </p>
-      <ZChip bg="#FFD23F" tilt={-2} className="mt-3">Votre complicité : {lvl.name}</ZChip>
+      <ZChip bg="#FFD23F" tilt={-2} className="mt-3">{t.yourLevel(t.levels[lvl.index] ?? lvl.name)}</ZChip>
 
-      <ZTitle size={28} className="mt-7">Vous deux</ZTitle>
+      <ZTitle size={28} className="mt-7">{t.youTwo}</ZTitle>
       <div className="mt-3 flex flex-col gap-3">
         {[{ v: a, set: setA, i: 0 }, { v: b, set: setB, i: 1 }].map(({ v, set, i }) => (
           <div key={i} className="flex items-center gap-3 rounded-[20px] py-1.5 pl-2 pr-3"
             style={{ background: "#fff", border: `3px solid ${GAME_INK}`, boxShadow: `0 4px 0 ${GAME_INK}`, rotate: `${i ? 1 : -1}deg` }}>
             <Mascot size={42} color={colorForIndex(i)} mood="happy" shadow={false} bob={false} />
             <input value={v} onChange={(e) => set(e.target.value.slice(0, 16))}
-              placeholder={i === 0 ? "Ton prénom" : "Son prénom"} aria-label={i === 0 ? "Ton prénom" : "Prénom de ton/ta partenaire"}
+              placeholder={i === 0 ? t.yourName : t.theirName} aria-label={i === 0 ? t.yourName : t.partnerAria}
               autoCorrect="off" autoCapitalize="words" spellCheck={false}
               className="min-w-0 flex-1 bg-transparent py-2 outline-none"
               style={{ ...DISPLAY, fontSize: 22, color: GAME_INK, letterSpacing: "-0.01em" }} />
@@ -237,14 +244,14 @@ function CoupleSetup({ pack, onStart, onBack }: {
         ))}
       </div>
 
-      <ZTitle size={28} className="mt-7">L&apos;ambiance</ZTitle>
+      <ZTitle size={28} className="mt-7">{t.vibe}</ZTitle>
       <div className="mt-3 grid grid-cols-3 gap-2.5">
         {PACKS.map((pk, i) => (
           <ZChoice key={pk.id} active={sel === pk.id} color={COLORS[pk.id]} onClick={() => setSel(pk.id)} tilt={i === 1 ? 1.5 : -1.5} className="px-2.5 text-center">
             <pk.icon size={24} strokeWidth={2.6} className="mx-auto" aria-hidden />
             {/* Centré comme l'icône (ZChoice force text-left sur le bouton) */}
-            <p className="mt-1 text-center text-[17px] leading-none" style={DISPLAY}>{pk.label}</p>
-            <p className="mt-1 text-center text-[13px] font-semibold leading-tight" style={{ textWrap: "balance" }}>{pk.sub}</p>
+            <p className="mt-1 text-center text-[17px] leading-none" style={DISPLAY}>{t.packs[pk.id].label}</p>
+            <p className="mt-1 text-center text-[13px] font-semibold leading-tight" style={{ textWrap: "balance" }}>{t.packs[pk.id].sub}</p>
           </ZChoice>
         ))}
       </div>
@@ -252,7 +259,7 @@ function CoupleSetup({ pack, onStart, onBack }: {
       <div className="mt-6 flex justify-center"><IdeaButton game="Pensez Pareil" kind="thème" /></div>
       <div className="min-h-6 flex-1" />
       <ZButton bg={PP_COLOR} disabled={!can} onClick={() => { if (!can) return; const n: [string, string] = [cleanName(a), cleanName(b)]; saveDuo(n); onStart(n, sel); }}>
-        {can ? "C'est parti !" : "Vos deux prénoms !"}
+        {can ? t.go : t.bothNames}
       </ZButton>
       {onBack && !isOfflineApp() && <ZLink onClick={onBack} className="mt-2"><GameInlineIcon icon={ArrowLeft} /> Retour</ZLink>}
     </ZScreen>
@@ -423,8 +430,9 @@ function PensezPareilOnline({ roomCode, playerId, playerName, onReturnToLobby }:
 // COMPOSANTS PARTAGÉS
 // ══════════════════════════════════════════════════════════
 function PromptCard({ prompt, timed = true }: { prompt: Prompt | null; timed?: boolean }) {
+  const t = useT(STR);
   if (!prompt) return null;
-  const tierLabel = prompt.tier === "spicy" ? "Coquin" : prompt.tier === "couple" ? "Nous deux" : "Soft";
+  const tierLabel = prompt.tier === "spicy" ? t.tierSpicy : prompt.tier === "couple" ? t.tierCouple : t.tierSoft;
   const tierColor = prompt.tier === "spicy" ? "#FF3EA5" : prompt.tier === "couple" ? "#FFD23F" : "#3DDC97";
   return (
     <div className="mt-6 w-full">
@@ -433,7 +441,7 @@ function PromptCard({ prompt, timed = true }: { prompt: Prompt | null; timed?: b
         <span className="absolute -top-4 left-1/2 inline-flex min-h-8 -translate-x-1/2 items-center rounded-full px-3 text-[14px] font-bold"
           style={{ background: tierColor, border: `2.5px solid ${GAME_INK}`, rotate: "-3deg" }}>{tierLabel}</span>
         <p style={{ ...DISPLAY, fontSize: prompt.text.length > 40 ? 28 : 34, lineHeight: 1.02, textWrap: "balance" }}>{prompt.text}</p>
-        <p className="mt-2 text-[14px] font-semibold" style={{ color: "#4A3A66" }}>1 ou 2 mots{timed ? " · 35 s" : ""}, sans vous concerter !</p>
+        <p className="mt-2 text-[14px] font-semibold" style={{ color: "#4A3A66" }}>{t.wordsHint(timed)}</p>
       </div>
     </div>
   );
@@ -442,20 +450,21 @@ function PromptCard({ prompt, timed = true }: { prompt: Prompt | null; timed?: b
 function AnswerInput({ value, onChange, onSubmit }: {
   value: string; onChange: (v: string) => void; onSubmit: () => void;
 }) {
+  const t = useT(STR);
   return (
     <div className="mt-6 w-full">
       <input
         autoFocus value={value} maxLength={40}
         onChange={(e) => onChange(e.target.value)}
         onKeyDown={(e) => { if (e.key === "Enter") onSubmit(); }}
-        placeholder="Ta réponse secrète…"
-        aria-label="Ta réponse secrète"
+        placeholder={t.placeholder}
+        aria-label={t.placeholder.replace(/…$/, "")}
         autoCorrect="off" autoCapitalize="off" spellCheck={false} autoComplete="off"
         className="w-full rounded-[20px] px-5 py-4 text-center outline-none"
         style={{ ...DISPLAY, fontSize: 24, background: "#FFF6E5", color: GAME_INK, border: `3px solid ${GAME_INK}`, boxShadow: `0 4px 0 ${GAME_INK}` }}
       />
       <ZButton bg="#FFD23F" className="mt-5" onClick={onSubmit} disabled={!value.trim()}>
-        <Lock size={20} strokeWidth={2.8} aria-hidden /> Verrouiller ma réponse
+        <Lock size={20} strokeWidth={2.8} aria-hidden /> {t.lock}
       </ZButton>
     </div>
   );
@@ -464,11 +473,12 @@ function AnswerInput({ value, onChange, onSubmit }: {
 function RoundBar({ round, total, timeLeft, streak }: {
   round: number; total: number; timeLeft?: number; streak: number;
 }) {
+  const t = useT(STR);
   return (
     <div className="w-full">
       <div className="flex flex-wrap items-center gap-2">
-        <ZChip bg="#fff" tilt={-2}>Manche {round}/{total}</ZChip>
-        {streak > 0 && <ZChip bg="#FFD23F" tilt={2}><Flame size={15} strokeWidth={3} aria-hidden /> Série ×{streak}</ZChip>}
+        <ZChip bg="#fff" tilt={-2}>{t.round(round, total)}</ZChip>
+        {streak > 0 && <ZChip bg="#FFD23F" tilt={2}><Flame size={15} strokeWidth={3} aria-hidden /> {t.streak(streak)}</ZChip>}
       </div>
       {timeLeft != null && (
         <div className="mt-3 h-4 w-full overflow-hidden rounded-full" style={{ background: "#fff", border: `2.5px solid ${GAME_INK}` }}>
@@ -489,16 +499,17 @@ function RevealScreen({
   round: number; total: number; syncs: number;
   onNext?: () => void; auto?: boolean;
 }) {
+  const t = useT(STR);
   return (
     <ZScreen bg={matched ? PP_COLOR : undefined}>
       {matched && <ConfettiBurst count={50} />}
       <div className="flex flex-wrap items-center gap-2">
-        <ZChip bg="#fff" tilt={-2}>Manche {round}/{total}</ZChip>
-        <ZChip bg="#FFD23F" tilt={2}>{syncs} sync{syncs > 1 ? "s" : ""}</ZChip>
+        <ZChip bg="#fff" tilt={-2}>{t.round(round, total)}</ZChip>
+        <ZChip bg="#FFD23F" tilt={2}>{t.syncs(syncs)}</ZChip>
       </div>
-      <ZTitle size={56} className="mt-4">{matched ? "Sync !" : "Presque…"}</ZTitle>
+      <ZTitle size={56} className="mt-4">{matched ? t.sync : t.almost}</ZTitle>
       <p className="mt-1 text-[17px] font-bold">
-        {matched ? `+${points} pts${streak >= 2 ? ` · série ×${streak}` : ""}` : "Pas la même réponse. La série repart à zéro."}
+        {matched ? t.ptsLine(points, streak) : t.noMatch}
       </p>
       {prompt && <p className="mt-4 text-[16px] font-semibold" style={{ opacity: 0.9 }}>{prompt.text}</p>}
 
@@ -516,10 +527,10 @@ function RevealScreen({
 
       <div className="min-h-8 flex-1" />
       {auto ? (
-        <p className="mt-6 animate-pulse text-center text-[15px] font-bold">Manche suivante…</p>
+        <p className="mt-6 animate-pulse text-center text-[15px] font-bold">{t.nextRound}…</p>
       ) : (
         <ZButton bg={matched ? "#FFD23F" : PP_COLOR} onClick={onNext}>
-          {round >= total ? "Voir notre complicité" : "Manche suivante"}
+          {round >= total ? t.seeBond : t.nextRound}
         </ZButton>
       )}
     </ZScreen>
@@ -533,6 +544,7 @@ function GameOverScreen({
   teamScore: number; syncs: number; total: number; bestStreak: number;
   onReplay?: () => void; onReturnToLobby?: () => void;
 }) {
+  const t = useT(STR);
   const recordedRef = useRef(false);
   const [result, setResult] = useState<RecordResult | null>(null);
 
@@ -553,27 +565,27 @@ function GameOverScreen({
   return (
     <ZScreen bg={PP_COLOR}>
       <ConfettiBurst count={50} />
-      <ZTitle size={48} className="text-center">{syncs}/{total} syncs</ZTitle>
-      <p className="mt-1 text-center text-[17px] font-bold">{syncs >= total * 0.75 ? "Vous êtes connectés !" : syncs >= total / 2 ? "Belle complicité !" : "On s'entraîne encore un peu ?"}</p>
+      <ZTitle size={48} className="text-center">{t.totalSyncs(syncs, total)}</ZTitle>
+      <p className="mt-1 text-center text-[17px] font-bold">{syncs >= total * 0.75 ? t.great : syncs >= total / 2 ? t.good : t.practice}</p>
 
       <div className="mt-5 grid grid-cols-3 gap-2.5 text-center">
-        <Stat label="Score" value={teamScore} />
-        <Stat label="Syncs" value={`${syncs}/${total}`} />
-        <Stat label="Série max" value={`×${bestStreak}`} />
+        <Stat label={t.score} value={teamScore} />
+        <Stat label={t.syncsLabel} value={`${syncs}/${total}`} />
+        <Stat label={t.bestStreak} value={`×${bestStreak}`} />
       </div>
 
       {/* Carte complicité */}
       <ZCard bg="#fff" tilt={-1.5} shadow={6} radius={24} className="mt-6 px-4 pb-4 pt-3">
-        {result?.leveledUp && <ZChip bg="#FFD23F" tilt={-3} className="mb-2">Nouveau niveau débloqué !</ZChip>}
+        {result?.leveledUp && <ZChip bg="#FFD23F" tilt={-3} className="mb-2">{t.levelUp}</ZChip>}
         <div className="flex items-center gap-3">
           <Mascot size={52} color="pink" mood="love" shadow={false} bob={false} />
           <div className="min-w-0 flex-1">
-            <p className="text-[14px] font-bold">Votre complicité</p>
-            <p className="text-[22px] leading-tight" style={{ ...DISPLAY, textWrap: "balance" }}>{lvl.name}</p>
+            <p className="text-[14px] font-bold">{t.ourBond}</p>
+            <p className="text-[22px] leading-tight" style={{ ...DISPLAY, textWrap: "balance" }}>{t.levels[lvl.index] ?? lvl.name}</p>
           </div>
           <div className="text-right">
             <p className="whitespace-nowrap text-[20px]" style={DISPLAY}>{xp} XP</p>
-            {lvl.next !== Infinity && <p className="whitespace-nowrap text-[13px] font-semibold">encore {lvl.next - xp} XP</p>}
+            {lvl.next !== Infinity && <p className="whitespace-nowrap text-[13px] font-semibold">{t.xpLeft(lvl.next - xp)}</p>}
           </div>
         </div>
         <div className="mt-3 h-4 w-full overflow-hidden rounded-full" style={{ background: "#F1ECFF", border: `2.5px solid ${GAME_INK}` }}>
@@ -582,16 +594,16 @@ function GameOverScreen({
         {result && result.newBadges.length > 0 && (
           <div className="mt-3 flex flex-wrap gap-2">
             {result.newBadges.map((bd) => (
-              <ZChip key={bd} bg="#FFD23F" tilt={0}>{PP_BADGES[bd]?.label}</ZChip>
+              <ZChip key={bd} bg="#FFD23F" tilt={0}>{t.badges[bd] ?? PP_BADGES[bd]?.label}</ZChip>
             ))}
           </div>
         )}
       </ZCard>
 
       <div className="min-h-8 flex-1" />
-      {onReplay && <ZButton bg="#FFD23F" onClick={onReplay}>Rejouer</ZButton>}
+      {onReplay && <ZButton bg="#FFD23F" onClick={onReplay}>{t.playAgain}</ZButton>}
       <div className="mt-4 flex justify-center"><IdeaButton game="Pensez Pareil" kind="thème" bg="#fff" /></div>
-      {onReturnToLobby && <ZLink onClick={onReturnToLobby} color={GAME_INK} className="mt-2">Retour à l&apos;accueil</ZLink>}
+      {onReturnToLobby && <ZLink onClick={onReturnToLobby} color={GAME_INK} className="mt-2">{t.backHome}</ZLink>}
     </ZScreen>
   );
 }
@@ -610,15 +622,16 @@ function TypeScreen({ prompt, player, idx, round, value, onChange, onSubmit, onR
   prompt: Prompt | null; player: string; idx: number; round: number;
   value: string; onChange: (v: string) => void; onSubmit: () => void; onReroll?: () => void;
 }) {
+  const t = useT(STR);
   return (
     <ZScreen>
       <div className="flex flex-wrap items-center gap-2">
-        <ZChip bg="#fff" tilt={-2}>Manche {round}/{TOTAL_ROUNDS}</ZChip>
-        <ZChip bg={idx ? "#FF3EA5" : "#7A4EE8"} tilt={2}>{player} répond</ZChip>
+        <ZChip bg="#fff" tilt={-2}>{t.round(round, TOTAL_ROUNDS)}</ZChip>
+        <ZChip bg={idx ? "#FF3EA5" : "#7A4EE8"} tilt={2}>{t.answers(player)}</ZChip>
       </div>
       <PromptCard prompt={prompt} timed={false} />
       {onReroll && !value.trim() && (
-        <div className="mt-5 flex justify-center"><RerollButton label="Pas fou ? Un autre thème" onClick={onReroll} /></div>
+        <div className="mt-5 flex justify-center"><RerollButton label={t.reroll} onClick={onReroll} /></div>
       )}
       <AnswerInput value={value} onChange={onChange} onSubmit={() => value.trim() && onSubmit()} />
     </ZScreen>

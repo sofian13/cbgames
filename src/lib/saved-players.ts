@@ -107,3 +107,31 @@ export function saveDuo(names: [string, string]): void {
     /* stockage indisponible */
   }
 }
+
+/* ── Soirée Zinzin (app) : la bande enchaîne les jeux sans retaper les prénoms ──
+ * Avant de lancer chaque jeu de la soirée, l'app « arme » la bande : le prochain
+ * PlayersSetup monté la valide tout seul (une seule fois), si le nombre de joueurs
+ * convient au jeu. En mémoire seulement : rien ne change hors soirée ni sur le site. */
+let partyBand: string[] | null = null;
+
+/** Arme le départ auto pour le prochain écran de joueurs (et mémorise la bande). */
+export function armPartyBand(names: string[]): void {
+  const band = uniq(clean(names));
+  if (!band.length) return;
+  savePlayers(band);
+  if (band.length === 2) saveDuo([band[0], band[1]]);
+  partyBand = band;
+}
+
+/** Désarme (fin du jeu, pause…). */
+export function disarmPartyBand(): void {
+  partyBand = null;
+}
+
+/** Appelé par PlayersSetup au montage : la bande à valider tout de suite, ou null. Consomme l'armement. */
+export function takePartyBand(min: number, max: number): string[] | null {
+  const band = partyBand;
+  partyBand = null;
+  if (!band || band.length < min || band.length > max) return null;
+  return band;
+}

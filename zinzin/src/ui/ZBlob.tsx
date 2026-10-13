@@ -258,7 +258,7 @@ export function ZBlob({
 
   const cos = costumeLayers(costume, { c, L, R, clip });
   // Lunettes noires (humeur « cool » ou costume d'espion) : yeux cachés
-  const hideEyes = mood === "cool" || costume === "spy";
+  const hideEyes = mood === "cool" || costume === "spy" || costume === "blindfold";
   const blush = mood === "love" || mood === "kiss" || mood === "happy" || mood === "laughing" || mood === "wink";
 
   return (

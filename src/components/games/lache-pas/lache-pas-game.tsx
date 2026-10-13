@@ -7,7 +7,10 @@ import { Mascot, MascotAvatar, MASCOT_PALETTE } from "@/components/Mascot";
 import { ConfettiBurst } from "@/components/ConfettiBurst";
 import { buzz, preloadObjectSfx, sfxBoom, sfxCount, sfxHeart, sfxLift, sfxPop, startFuse, unlockAudio } from "@/components/games/patate/fx";
 import { ScrollReset, TopRightControls } from "@/components/games/patate/rules-sheet";
-import { DARES, pick } from "@/components/games/patate/categories";
+import { patateContent, pick } from "@/components/games/patate/categories";
+import { decimal } from "@/components/games/patate/i18n";
+import { getLang, pick as pickLang, useT } from "@/lib/i18n";
+import { LACHE_PAS_STR } from "./i18n";
 import { BombBlob, C, DISPLAY, INK, KitStyles, OptionCard, SectionTitle, SoftLink, StickerBtn, StickerCard, StickerScreen, TOP_PAD, BOTTOM_PAD, dotted, sticker } from "@/components/games/patate/sticker-kit";
 import { IdeaButton, RerollButton } from "@/components/games/idea-button";
 import { playCombo, playSfx, type LoopHandle } from "@/lib/sfx";
@@ -24,16 +27,6 @@ import { GameInlineIcon } from "@/components/games/game-icon-button";
 
 const ACCENT = "#FF3E6C";
 const MAX_FINGERS = 5; // limite multi-touch d'un iPhone
-
-const RULES = [
-  "Chacun pose UN doigt sur l'écran (5 max).",
-  "Une bombe s'arme. Personne ne sait quand elle explose.",
-  "Lâche quand tu veux. Encore posé au BOUM = perdu.",
-  "Tout le monde a lâché ? Le premier à avoir lâché perd.",
-  "Le dernier à lâcher gagne la couronne.",
-];
-
-const TAUNTS = ["Tu trembles ?", "Encore un peu…", "Elle chauffe…", "Lâche pas !", "Qui craque en premier ?", "T'es sûr ?", "Ça sent le roussi", "Respire…"];
 
 type Phase = "intro" | "lobby" | "count" | "live" | "result" | "end";
 type Penalty = "dares" | "sips";
@@ -52,8 +45,9 @@ interface Outcome {
   coward: number | null; // slot du trouillard (personne pris)
   winner: number | null; // slot couronné
   fingers: Finger[];
-  penalty: string;
-  alt: string | null;
+  /** null : gage seul ; sinon « n gorgées ou le gage » */
+  sips: number | null;
+  dare: string;
 }
 
 export default function LachePasGame({ onReturnToLobby }: GameProps) {
@@ -66,6 +60,9 @@ export default function LachePasGame({ onReturnToLobby }: GameProps) {
   const [elapsed, setElapsed] = useState(0);
   const [outcome, setOutcome] = useState<Outcome | null>(null);
   const [stats, setStats] = useState({ rounds: 0, boomed: 0, cowards: 0 });
+  const t = useT(LACHE_PAS_STR);
+  // Gages + provocations figés dans la langue du début de partie
+  const [content] = useState(() => ({ dares: patateContent(getLang()).dares, taunts: pickLang(LACHE_PAS_STR).taunts }));
 
   const fingersRef = useRef<Finger[]>([]);
   const phaseRef = useRef<Phase>("intro");
@@ -114,14 +111,7 @@ export default function LachePasGame({ onReturnToLobby }: GameProps) {
       // Le plus courageux : dernier à lâcher avant le boum (s'il n'est pas le trouillard)
       const bravest = lifted.length > 0 ? lifted[lifted.length - 1].slot : null;
       const winner = bravest != null && bravest !== coward ? bravest : null;
-      let pen: string;
-      let alt: string | null = null;
-      if (penalty === "dares") pen = pick(DARES);
-      else {
-        const n = 1 + Math.floor(Math.random() * 3);
-        pen = `${n} gorgée${n > 1 ? "s" : ""}`;
-        alt = pick(DARES);
-      }
+      const sips = penalty === "dares" ? null : 1 + Math.floor(Math.random() * 3);
       if (boomed) {
         sfxBoom();
         buzz("boom");
@@ -129,11 +119,11 @@ export default function LachePasGame({ onReturnToLobby }: GameProps) {
         playCombo("fail");
         buzz("warn");
       }
-      setOutcome({ fuse, losers, coward, winner, fingers: fs, penalty: pen, alt });
+      setOutcome({ fuse, losers, coward, winner, fingers: fs, sips, dare: pick(content.dares) });
       setStats((s) => ({ rounds: s.rounds + 1, boomed: s.boomed + (still.length > 0 ? still.length : 0), cowards: s.cowards + (coward != null ? 1 : 0) }));
       go("result");
     },
-    [penalty],
+    [penalty, content],
   );
 
   // ── Lancement de la bombe ──
@@ -173,7 +163,7 @@ export default function LachePasGame({ onReturnToLobby }: GameProps) {
       sfxHeart(1 + (1000 - gap) / 900);
       buzz("tick");
       beat++;
-      if (beat % 4 === 0) setTaunt(pick(TAUNTS));
+      if (beat % 4 === 0) setTaunt(pick(content.taunts));
       timers.current.push(window.setTimeout(heart, gap));
     };
     timers.current.push(window.setTimeout(heart, 400));
@@ -183,7 +173,7 @@ export default function LachePasGame({ onReturnToLobby }: GameProps) {
       rafRef.current = requestAnimationFrame(frame);
     };
     rafRef.current = requestAnimationFrame(frame);
-  }, [resolve]);
+  }, [resolve, content]);
 
   // ── Compte à rebours une fois les doigts posés ──
   const startCountdown = useCallback(() => {
@@ -271,14 +261,13 @@ export default function LachePasGame({ onReturnToLobby }: GameProps) {
 
   const controls = (
     <>
-      <TopRightControls title="Lâche pas !" rules={RULES} accent={ACCENT} />
+      <TopRightControls title={t.name} rules={t.rules} accent={ACCENT} />
       <ScrollReset dep={phase} />
     </>
   );
   const rerollGage = () => {
     if (!outcome) return;
-    const d = pick(DARES.filter((x) => x !== outcome.alt && x !== outcome.penalty));
-    setOutcome(outcome.alt ? { ...outcome, alt: d } : { ...outcome, penalty: d });
+    setOutcome({ ...outcome, dare: pick(content.dares.filter((x) => x !== outcome.dare)) });
   };
 
   // ══ Intro ══
@@ -294,16 +283,16 @@ export default function LachePasGame({ onReturnToLobby }: GameProps) {
           <Mascot size={66} color="mint" mood="sus" delay={0.4} shadow={false} />
         </div>
         <h1 className="mt-2 text-center text-[clamp(48px,14vw,66px)] leading-[0.92]" style={{ ...DISPLAY, textShadow: `4px 4px 0 ${INK}` }}>
-          Lâche pas !
+          {t.name}
         </h1>
         <p className="mt-3 max-w-xs text-center text-[17px] font-semibold leading-snug">
-          Tout le monde pose un doigt, une bombe s&apos;arme. Lâche avant le boum… mais pas le premier !
+          {t.intro}
         </p>
 
         <div className="mt-6 w-full space-y-2.5">
-          <SectionTitle>Le perdant prend…</SectionTitle>
-          <OptionCard on={penalty === "dares"} onClick={() => setPenalty("dares")} icon={Drama} title="Un gage" sub="Que des gages, zéro gorgée" onBg={ACCENT} />
-          <OptionCard on={penalty === "sips"} onClick={() => setPenalty("sips")} icon={CupSoda} title="Gorgées ou gage" sub="1 à 3 gorgées de zinzin" onBg={ACCENT} />
+          <SectionTitle>{t.loserTakes}</SectionTitle>
+          <OptionCard on={penalty === "dares"} onClick={() => setPenalty("dares")} icon={Drama} title={t.dareTitle} sub={t.dareSub} onBg={ACCENT} />
+          <OptionCard on={penalty === "sips"} onClick={() => setPenalty("sips")} icon={CupSoda} title={t.sipsTitle} sub={t.sipsSub} onBg={ACCENT} />
         </div>
 
         <div className="mt-auto w-full pt-7">
@@ -316,9 +305,9 @@ export default function LachePasGame({ onReturnToLobby }: GameProps) {
               newRound();
             }}
           >
-            Posez vos doigts
+            {t.placeFingers}
           </StickerBtn>
-          <p className="mt-3 text-center text-[14px] font-semibold" style={{ color: "rgba(255,255,255,0.8)" }}>2 à 5 doigts par manche · posez le tél à plat</p>
+          <p className="mt-3 text-center text-[14px] font-semibold" style={{ color: "rgba(255,255,255,0.8)" }}>{t.introHint}</p>
           <div className="mt-3 flex justify-center">
             <IdeaButton game="Lâche pas !" kind="gage" bg={C.cream} />
           </div>
@@ -338,13 +327,13 @@ export default function LachePasGame({ onReturnToLobby }: GameProps) {
           <BombBlob size={64} face="dead" lit={false} style={{ marginLeft: -14 }} />
         </div>
         <h1 className="mt-3 text-center text-[clamp(38px,11vw,52px)] leading-[0.95]" style={{ ...DISPLAY, textShadow: `4px 4px 0 ${INK}` }}>
-          Bien joué, les têtes brûlées
+          {t.endTitle}
         </h1>
         <div className="mt-6 grid w-full grid-cols-3 gap-2.5">
           {[
-            { v: stats.rounds, l: stats.rounds > 1 ? "manches" : "manche", bg: C.yellow, r: -2 },
-            { v: stats.boomed, l: stats.boomed > 1 ? "doigts grillés" : "doigt grillé", bg: C.coral, r: 1.5 },
-            { v: stats.cowards, l: stats.cowards > 1 ? "trouillards" : "trouillard", bg: C.sky, r: -1 },
+            { v: stats.rounds, l: t.rounds(stats.rounds), bg: C.yellow, r: -2 },
+            { v: stats.boomed, l: t.burnt(stats.boomed), bg: C.coral, r: 1.5 },
+            { v: stats.cowards, l: t.cowards(stats.cowards), bg: C.sky, r: -1 },
           ].map((st) => (
             <div key={st.l} className="px-2 py-3 text-center" style={{ ...sticker(st.bg, { radius: 20, shadow: 4 }), transform: `rotate(${st.r}deg)` }}>
               <p className="text-[40px] leading-none" style={DISPLAY}>{st.v}</p>
@@ -362,9 +351,9 @@ export default function LachePasGame({ onReturnToLobby }: GameProps) {
               newRound();
             }}
           >
-            Rejouer
+            {t.replay}
           </StickerBtn>
-          {onReturnToLobby && <SoftLink onClick={onReturnToLobby}>Quitter</SoftLink>}
+          {onReturnToLobby && <SoftLink onClick={onReturnToLobby}>{t.quit}</SoftLink>}
           <div className="mt-2">
             <IdeaButton game="Lâche pas !" kind="gage" bg={C.cream} />
           </div>
@@ -388,12 +377,12 @@ export default function LachePasGame({ onReturnToLobby }: GameProps) {
         {caught && <div className="pointer-events-none fixed inset-0 z-30" style={{ animation: "lp-flash 0.9s ease-out forwards" }} />}
         <div className="relative z-10 px-5 text-center" style={{ paddingTop: TOP_PAD }}>
           <p className="zk-pop leading-none" style={{ ...DISPLAY, fontSize: caught ? 72 : 52, color: caught ? C.yellow : "#fff", textShadow: `5px 5px 0 ${INK}`, WebkitTextStroke: `2.5px ${INK}`, ["--zk-r" as string]: "-3deg" }}>
-            {caught ? "BOUM !" : "Trouillard !"}
+            {caught ? t.boom : t.coward}
           </p>
           <p className="mt-2 text-[16px] font-bold">
             {caught
-              ? `La bombe était réglée sur ${(outcome.fuse / 1000).toFixed(1).replace(".", ",")}\u00a0s`
-              : `Tout le monde a lâché… elle était réglée sur ${(outcome.fuse / 1000).toFixed(1).replace(".", ",")}\u00a0s`}
+              ? t.setTo(decimal(outcome.fuse / 1000, 1, t.dec))
+              : t.allLetGo(decimal(outcome.fuse / 1000, 1, t.dec))}
           </p>
         </div>
         {/* Les blobs de la manche, dans l'ordre de la table (chacun retrouve sa couleur) :
@@ -406,7 +395,7 @@ export default function LachePasGame({ onReturnToLobby }: GameProps) {
               <div key={f.id} className="flex flex-col items-center" style={{ opacity: lost || won ? 1 : 0.6 }}>
                 <Mascot size={lost || won ? (crowd ? 58 : 68) : crowd ? 44 : 54} color={colorForIndex(f.slot)} mood={lost ? (caught ? "dead" : "sad") : won ? "cool" : "happy"} crown={won} bob={false} shadow={false} />
                 <span className="mt-1 whitespace-nowrap px-2 py-0.5 text-[13px] font-bold" style={{ ...sticker(lost ? INK : "#fff", { radius: 999, shadow: 0, border: 2, color: lost ? "#fff" : INK }) }}>
-                  {f.liftedAt == null ? "pris !" : `${(f.liftedAt / 1000).toFixed(1).replace(".", ",")}\u00a0s`}
+                  {f.liftedAt == null ? t.caught : `${decimal(f.liftedAt / 1000, 1, t.dec)}\u00a0s`}
                 </span>
               </div>
             );
@@ -421,27 +410,27 @@ export default function LachePasGame({ onReturnToLobby }: GameProps) {
               ))}
               {/* Plus de 2 perdants : le titre passe sous la rangée de blobs */}
               <span className={`text-[20px] leading-tight ${outcome.losers.length > 2 ? "basis-full" : "ml-1"}`} style={DISPLAY}>
-                {caught ? (outcome.losers.length > 1 ? "Ces blobs ont perdu" : "Ce blob a perdu") : "Premier à lâcher = perdu"}
+                {caught ? (outcome.losers.length > 1 ? t.theseLost : t.thisLost) : t.firstLost}
               </span>
             </div>
-            {outcome.alt ? (
+            {outcome.sips != null ? (
               <p className="mt-2 text-[16px] font-semibold leading-snug">
-                <b style={DISPLAY}><GameInlineIcon icon={CupSoda} /> {outcome.penalty} de zinzin</b>, ou le gage : {outcome.alt}
+                <b style={DISPLAY}><GameInlineIcon icon={CupSoda} /> {t.sips(outcome.sips)}</b>, {t.orDare} {outcome.dare}
               </p>
             ) : (
-              <p className="mt-2 text-[16px] font-semibold leading-snug"><GameInlineIcon icon={Drama} /> {outcome.penalty}</p>
+              <p className="mt-2 text-[16px] font-semibold leading-snug"><GameInlineIcon icon={Drama} /> {outcome.dare}</p>
             )}
             <div className="mt-3 flex justify-center">
-              <RerollButton onClick={rerollGage} label="Pas fou ? Un autre gage" bg={C.yellow} />
+              <RerollButton onClick={rerollGage} label={t.rerollDare} bg={C.yellow} />
             </div>
             {outcome.winner != null && (
               <p className="mt-3 text-[14px] font-bold leading-snug" style={{ color: "#4A3A66" }}>
-                <GameInlineIcon icon={Crown} /> Le blob {colorName(colorForIndex(outcome.winner))} a lâché en dernier : il choisit qui fait un gage en plus !
+                <GameInlineIcon icon={Crown} /> {t.winner(t.colors[colorForIndex(outcome.winner)] ?? colorForIndex(outcome.winner))}
               </p>
             )}
             <div className="mt-4 flex gap-2.5">
-              <StickerBtn bg="#fff" className="flex-1 px-3" style={{ fontSize: 16 }} onClick={() => { playCombo("fanfare"); go("end"); }}>Terminer</StickerBtn>
-              <StickerBtn bg={ACCENT} color="#fff" className="flex-[2] whitespace-nowrap px-3" style={{ fontSize: 16 }} onClick={newRound}>Manche suivante</StickerBtn>
+              <StickerBtn bg="#fff" className="flex-1 px-3" style={{ fontSize: 16 }} onClick={() => { playCombo("fanfare"); go("end"); }}>{t.finish}</StickerBtn>
+              <StickerBtn bg={ACCENT} color="#fff" className="flex-[2] whitespace-nowrap px-3" style={{ fontSize: 16 }} onClick={newRound}>{t.nextRound}</StickerBtn>
             </div>
           </StickerCard>
         </div>
@@ -453,9 +442,9 @@ export default function LachePasGame({ onReturnToLobby }: GameProps) {
   // ══ Plateau tactile (lobby / compte à rebours / bombe) ══
   const live = phase === "live";
   const holding = fingers.filter((f) => f.liftedAt == null).length;
-  const t = elapsed / 1000;
+  const secs = elapsed / 1000;
   // L'ambiance monte avec le temps écoulé (jamais avec la mèche réelle)
-  const heat = Math.min(1, t / 18);
+  const heat = Math.min(1, secs / 18);
   const boardBg = !live ? C.night : heat < 0.45 ? "#3A1450" : heat < 0.8 ? "#5E1640" : "#7E1A2E";
   return (
     <>
@@ -487,10 +476,10 @@ export default function LachePasGame({ onReturnToLobby }: GameProps) {
               <Fingerprint size={54} strokeWidth={2.4} aria-hidden />
             </div>
             <p className="mt-4 text-[34px] leading-none" style={{ ...DISPLAY, textShadow: `3px 3px 0 ${INK}` }}>
-              {fingers.length === 0 ? "Posez tous un doigt" : fingers.length === 1 ? "Encore un doigt…" : `${fingers.length} doigts, on attend…`}
+              {fingers.length === 0 ? t.lobby0 : fingers.length === 1 ? t.lobby1 : t.lobbyN(fingers.length)}
             </p>
             <p className="mt-3 text-[16px] font-semibold" style={{ color: "rgba(255,255,255,0.85)" }}>
-              {fingers.length >= MAX_FINGERS ? "5 doigts max ! Les autres : à la prochaine." : "Ne bougez plus, ça démarre tout seul"}
+              {fingers.length >= MAX_FINGERS ? t.maxFingers : t.autoStart}
             </p>
           </>
         )}
@@ -504,8 +493,8 @@ export default function LachePasGame({ onReturnToLobby }: GameProps) {
             <div style={{ animation: `zk-throb ${Math.max(0.35, 0.9 - heat * 0.5)}s ease-in-out infinite` }}>
               <BombBlob size={96} heat={heat} />
             </div>
-            <p className="mt-2 text-[30px] leading-none" style={{ ...DISPLAY, minHeight: 32, textShadow: `3px 3px 0 ${INK}` }}>{taunt ?? "Lâche pas !"}</p>
-            <p className="mt-2 text-[16px] font-semibold" style={{ color: "rgba(255,255,255,0.85)" }}>{holding} doigt{holding > 1 ? "s" : ""} encore posé{holding > 1 ? "s" : ""}</p>
+            <p className="mt-2 text-[30px] leading-none" style={{ ...DISPLAY, minHeight: 32, textShadow: `3px 3px 0 ${INK}` }}>{taunt ?? t.name}</p>
+            <p className="mt-2 text-[16px] font-semibold" style={{ color: "rgba(255,255,255,0.85)" }}>{t.holding(holding)}</p>
           </>
         )}
       </div>
@@ -531,7 +520,7 @@ export default function LachePasGame({ onReturnToLobby }: GameProps) {
             />
             <div className="absolute flex flex-col items-center" style={{ left: -32, top: -128, width: 64, opacity: lifted ? 0.55 : 1 }}>
               <Mascot size={64} color={c} mood={lifted ? "cool" : live ? (heat > 0.5 ? "shocked" : "sus") : "happy"} sweat={live && !lifted} bob={false} shadow={false} />
-              {lifted && <span className="mt-0.5 whitespace-nowrap rounded-full bg-white px-2 text-[13px] font-bold" style={{ color: INK, border: `2px solid ${INK}` }}>{(f.liftedAt! / 1000).toFixed(1).replace(".", ",")}&nbsp;s</span>}
+              {lifted && <span className="mt-0.5 whitespace-nowrap rounded-full bg-white px-2 text-[13px] font-bold" style={{ color: INK, border: `2px solid ${INK}` }}>{decimal(f.liftedAt! / 1000, 1, t.dec)}&nbsp;s</span>}
             </div>
           </div>
         );
@@ -540,11 +529,6 @@ export default function LachePasGame({ onReturnToLobby }: GameProps) {
     </div>
     </>
   );
-}
-
-function colorName(c: string): string {
-  const map: Record<string, string> = { purple: "violet", pink: "rose", yellow: "jaune", mint: "vert", sky: "turquoise", coral: "corail", lavender: "lavande", white: "blanc" };
-  return map[c] ?? c;
 }
 
 const KEYFRAMES = `

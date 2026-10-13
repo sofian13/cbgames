@@ -17,6 +17,8 @@ import { ConfettiBurst } from "@/components/ConfettiBurst";
 import { PlayersSetup, PassScreen, colorForIndex } from "@/components/games/local-kit";
 import { GameIconButton, GameInlineIcon, GameTopRight } from "@/components/games/game-icon-button";
 import { IdeaButton, RerollButton } from "@/components/games/idea-button";
+import { getLang, pick, useT } from "@/lib/i18n";
+import { GAGES, RANK_LABEL, RANK_NAME, STR } from "./i18n";
 import { isSfxMuted, playCombo, playSfx, preloadSfx, setSfxMuted, subscribeSfxMuted } from "@/lib/sfx";
 import {
   ArrowDown, ArrowLeft, ArrowUp, Check, CupSoda, Dices, Equal, Flame, Home, RotateCcw, Siren, TrainFront,
@@ -101,9 +103,10 @@ function TextLink({ onClick, children }: { onClick: () => void; children: ReactN
 /** Bouton son (coupure globale partagée par toute l'app). */
 function SoundToggle() {
   const muted = useSyncExternalStore(subscribeSfxMuted, isSfxMuted, () => false);
+  const t = useT(STR);
   return (
     <GameTopRight>
-      <GameIconButton icon={muted ? VolumeX : Volume2} label={muted ? "Activer le son" : "Couper le son"} active={muted} onClick={() => setSfxMuted(!muted)} />
+      <GameIconButton icon={muted ? VolumeX : Volume2} label={muted ? t.muteOn : t.muteOff} active={muted} onClick={() => setSfxMuted(!muted)} />
     </GameTopRight>
   );
 }
@@ -121,7 +124,6 @@ function ScrollTop({ dep }: { dep: string }) {
 }
 
 const RANKS = ["2", "3", "4", "5", "6", "7", "8", "9", "10", "V", "D", "R", "A"]; // valeur = index + 2
-const RANK_NAMES: Record<string, string> = { V: "Valet", D: "Dame", R: "Roi", A: "As" };
 const SUITS = [
   { s: "♠", red: false },
   { s: "♥", red: true },
@@ -149,30 +151,14 @@ const PILE_OPTIONS = [3, 4, 5, 6] as const;
 
 // ── Peines : gorgées (max 3, toujours « ou un gage ») ou gages ──
 type PenaltyMode = "mix" | "sips" | "gages";
-const GAGES = [
-  "Imite un animal choisi par la table",
-  "Parle avec un accent jusqu'à ton prochain tour",
-  "Fais 10 squats",
-  "Fais un compliment à chaque joueur",
-  "Chante un refrain choisi par la table",
-  "Garde une grimace pendant un tour complet",
-  "Danse 10 secondes sans musique",
-  "Raconte ta pire honte en 20 secondes",
-  "Parle à la 3e personne jusqu'à ton prochain tour",
-  "Fais le présentateur météo de la soirée",
-  "Tiens la planche 20 secondes",
-  "Mime ton métier de rêve",
-  "Fais un beatbox de 10 secondes",
-  "Laisse la table choisir ton fond d'écran pour la soirée",
-  "Fais une déclaration d'amour à un objet",
-];
 interface Penalty {
   kind: "sips" | "gage";
   sips: number;
   gage: string;
 }
 const pickGage = (exclude?: string) => {
-  const pool = GAGES.filter((g) => g !== exclude);
+  // Gages dans la langue de l'app (fixée pour la partie)
+  const pool = pick(GAGES, getLang()).filter((g) => g !== exclude);
   return pool[Math.floor(Math.random() * pool.length)];
 };
 function drawPenalty(mode: PenaltyMode, sips: number): Penalty {
@@ -200,6 +186,7 @@ const vib = (p: number | number[]) => {
 
 // ──────────────────────────────────────────────────────────
 export default function TgvGame({ onReturnToLobby }: GameProps) {
+  const t = useT(STR);
   type Phase = "setup" | "config" | "pass" | "play" | "win" | "over";
   const [phase, setPhase] = useState<Phase>("setup");
   const [players, setPlayers] = useState<string[]>([]);
@@ -355,7 +342,7 @@ export default function TgvGame({ onReturnToLobby }: GameProps) {
       <>
         <PlayersSetup
           emoji="🚄"
-          name="Le Train Fou"
+          name={t.gameName}
           min={2}
           max={10}
           accent={ACCENT}
@@ -373,15 +360,15 @@ export default function TgvGame({ onReturnToLobby }: GameProps) {
 
   if (phase === "config") {
     const steps: { icon: LucideIcon; text: ReactNode }[] = [
-      { icon: ArrowUp, text: <>Une carte est retournée : la suivante sera plus haute, plus basse ou égale&nbsp;?</> },
-      { icon: TrainFront, text: <>Enchaîne tous les wagons sans te tromper pour arriver en gare.</> },
-      { icon: CupSoda, text: <>Raté = une peine et retour au wagon 1. Plus tu tombes loin, plus elle grimpe (3 gorgées max, ou un gage).</> },
+      { icon: ArrowUp, text: t.step1 },
+      { icon: TrainFront, text: t.step2 },
+      { icon: CupSoda, text: t.step3 },
     ];
     return (
       <Page>
         {chrome}
         <div className="flex items-end justify-between gap-3">
-          <h1 className="min-w-0" style={{ ...DISPLAY, fontSize: 56, lineHeight: 0.9 }}>Le Train<br />Fou</h1>
+          <h1 className="min-w-0" style={{ ...DISPLAY, fontSize: 56, lineHeight: 0.9 }}>{t.titleTop}<br />{t.titleBottom}</h1>
           <Mascot size={70} color="coral" mood="cool" arms shadow={false} />
         </div>
         <ol className="mt-4 space-y-2.5 rounded-[24px] p-4" style={{ ...stk("#FFF6E5", 5), color: INK, transform: "rotate(-1deg)" }}>
@@ -395,7 +382,7 @@ export default function TgvGame({ onReturnToLobby }: GameProps) {
           ))}
         </ol>
 
-        <h2 className="mt-7" style={{ ...DISPLAY, fontSize: 28, lineHeight: 1 }}>Les wagons</h2>
+        <h2 className="mt-7" style={{ ...DISPLAY, fontSize: 28, lineHeight: 1 }}>{t.wagons}</h2>
         <div className="mt-3 grid grid-cols-4 gap-2.5">
           {PILE_OPTIONS.map((n) => {
             const on = n === numPiles;
@@ -409,19 +396,19 @@ export default function TgvGame({ onReturnToLobby }: GameProps) {
                 style={{ ...stk(on ? ACCENT : "#2B1B6E", on ? 4 : 0), color: on ? INK : "#fff" }}
               >
                 <span style={{ ...DISPLAY, fontSize: 30, lineHeight: 1 }}>{n}</span>
-                <span className="mt-0.5 text-[13px] font-bold">{n === 3 ? "express" : n === 4 ? "classique" : n === 5 ? "long" : "marathon"}</span>
+                <span className="mt-0.5 text-[13px] font-bold">{t.pileLabel(n)}</span>
               </button>
             );
           })}
         </div>
 
-        <h2 className="mt-7" style={{ ...DISPLAY, fontSize: 28, lineHeight: 1 }}>La peine</h2>
+        <h2 className="mt-7" style={{ ...DISPLAY, fontSize: 28, lineHeight: 1 }}>{t.penalty}</h2>
         <div className="mt-3 grid grid-cols-3 gap-2.5">
           {(
             [
-              { v: "mix", icons: [CupSoda, Dices], label: "Mixte" },
-              { v: "sips", icons: [CupSoda], label: "Gorgées" },
-              { v: "gages", icons: [Dices], label: "Gages" },
+              { v: "mix", icons: [CupSoda, Dices], label: t.mix },
+              { v: "sips", icons: [CupSoda], label: t.sips },
+              { v: "gages", icons: [Dices], label: t.gages },
             ] as { v: PenaltyMode; icons: LucideIcon[]; label: string }[]
           ).map((o) => {
             const on = o.v === penaltyMode;
@@ -441,7 +428,7 @@ export default function TgvGame({ onReturnToLobby }: GameProps) {
           })}
         </div>
         <p className="mt-3 text-[15px] font-semibold leading-snug" style={{ color: "rgba(255,255,255,0.8)" }}>
-          Une gorgée, c&apos;est de ce que tu bois, eau et soft compris. On peut toujours prendre un gage à la place. 18+, avec modération, et jamais si tu conduis.
+          {t.sipNote}
         </p>
 
         <div className="mt-5 flex justify-center"><IdeaButton game="Le Train Fou" kind="gage" /></div>
@@ -449,9 +436,9 @@ export default function TgvGame({ onReturnToLobby }: GameProps) {
         <div className="min-h-6 flex-1" />
         <div className="sticky bottom-0 -mx-5 mt-4 px-5 pt-4" style={{ paddingBottom: BOTTOM, background: "linear-gradient(180deg, transparent, #1E1250 35%)" }}>
           <Push big bg={ACCENT} onClick={() => { playSfx("whoosh", { volume: 0.6 }); setCurrentIdx(0); setPhase("pass"); }} className="w-full">
-            Lancer le train <TrainFront size={22} strokeWidth={3} aria-hidden />
+            {t.launch} <TrainFront size={22} strokeWidth={3} aria-hidden />
           </Push>
-          <TextLink onClick={() => setPhase("setup")}><ArrowLeft size={17} strokeWidth={3} aria-hidden /> Modifier les joueurs</TextLink>
+          <TextLink onClick={() => setPhase("setup")}><ArrowLeft size={17} strokeWidth={3} aria-hidden /> {t.editPlayers}</TextLink>
         </div>
       </Page>
     );
@@ -464,8 +451,8 @@ export default function TgvGame({ onReturnToLobby }: GameProps) {
           toName={currentName}
           colorIndex={currentIdx}
           accent={ACCENT}
-          hint={`À toi de monter dans le Train Fou : ${numPiles}\u00a0wagons à enchaîner sans erreur.`}
-          buttonLabel={<>Embarquer <GameInlineIcon icon={TrainFront} /></>}
+          hint={t.passHint(numPiles)}
+          buttonLabel={<>{t.board} <GameInlineIcon icon={TrainFront} /></>}
           onReady={startRun}
         />
         {chrome}
@@ -488,9 +475,9 @@ export default function TgvGame({ onReturnToLobby }: GameProps) {
           </div>
           <Train total={numPiles} pileIdx={pileIdx} cleared={verdict === "win" && revealed ? pileIdx + 1 : pileIdx} />
           <p className="mt-3 text-center text-[15px] font-bold" style={{ color: isLast ? "#FFD23F" : "rgba(255,255,255,0.85)" }}>
-            {isLast ? <><GameInlineIcon icon={Siren} /> Dernier wagon !</> : `Wagon ${pileIdx + 1} sur ${numPiles}`}
+            {isLast ? <><GameInlineIcon icon={Siren} /> {t.lastWagon}</> : t.wagonOf(pileIdx + 1, numPiles)}
             {/* « en jeu… » reste d'un bloc : pas de « un gage » orphelin à la ligne */}
-            {isLast ? <br /> : " · "}<span className="whitespace-nowrap">en jeu : {sipsAtStake} gorgée{sipsAtStake > 1 ? "s" : ""} ou un gage</span>
+            {isLast ? <br /> : " · "}<span className="whitespace-nowrap">{t.atStake(sipsAtStake)}</span>
           </p>
 
           <div className="flex flex-1 items-center justify-center gap-4 py-4" style={{ perspective: 800 }}>
@@ -501,35 +488,35 @@ export default function TgvGame({ onReturnToLobby }: GameProps) {
           <div className="flex min-h-[204px] w-full flex-col justify-end">
             {suspense ? (
               <div className="text-center">
-                <p style={{ ...DISPLAY, fontSize: 34, color: "#FFD23F", animation: "tgv-wobble .3s ease-in-out infinite" }}>Dernière carte…</p>
+                <p style={{ ...DISPLAY, fontSize: 34, color: "#FFD23F", animation: "tgv-wobble .3s ease-in-out infinite" }}>{t.lastCard}</p>
               </div>
             ) : !verdict ? (
               <div className="flex flex-col gap-2.5">
-                <p className="text-center text-[16px] font-bold" style={{ color: "rgba(255,255,255,0.85)" }}>La prochaine carte sera…</p>
-                <BetButton label="Plus haute" icon={ArrowUp} bg="#FF6B5B" onClick={() => makeBet("plus")} />
-                <BetButton label="Égale" icon={Equal} bg="#FFD23F" onClick={() => makeBet("egal")} />
-                <BetButton label="Plus basse" icon={ArrowDown} bg="#4ECDC4" onClick={() => makeBet("moins")} />
+                <p className="text-center text-[16px] font-bold" style={{ color: "rgba(255,255,255,0.85)" }}>{t.nextWill}</p>
+                <BetButton label={t.higher} icon={ArrowUp} bg="#FF6B5B" onClick={() => makeBet("plus")} />
+                <BetButton label={t.equal} icon={Equal} bg="#FFD23F" onClick={() => makeBet("egal")} />
+                <BetButton label={t.lower} icon={ArrowDown} bg="#4ECDC4" onClick={() => makeBet("moins")} />
               </div>
             ) : verdict === "win" ? (
               <div className="text-center" style={{ animation: "tgv-pop .35s ease-out" }}>
                 <p className="mx-auto inline-flex items-center gap-2 rounded-full px-5 py-1.5" style={{ ...stk("#3DDC97", 4), color: INK, transform: "rotate(-2deg)", ...DISPLAY, fontSize: 30 }}>
-                  <Check size={28} strokeWidth={3.4} aria-hidden /> Bien vu !
+                  <Check size={28} strokeWidth={3.4} aria-hidden /> {t.nice}
                 </p>
                 <Push big bg="#FFD23F" onClick={advanceAfterWin} className="mt-5 w-full">
-                  {isLast ? <>Arriver en gare <TrainFront size={22} strokeWidth={3} aria-hidden /></> : "Wagon suivant"}
+                  {isLast ? <>{t.arrive} <TrainFront size={22} strokeWidth={3} aria-hidden /></> : t.nextWagon}
                 </Push>
               </div>
             ) : (
               <div className="pb-4 text-center" style={{ animation: "tgv-shake .45s ease-out" }}>
                 <p className="mx-auto inline-flex items-center gap-2 rounded-full px-5 py-1.5" style={{ ...stk(verdict === "tie" ? "#FFD23F" : ACCENT, 4), color: INK, transform: "rotate(2deg)", ...DISPLAY, fontSize: 30 }}>
-                  {verdict === "tie" ? <><Equal size={28} strokeWidth={3.4} aria-hidden /> Égalité !</> : <><X size={28} strokeWidth={3.4} aria-hidden /> Raté !</>}
+                  {verdict === "tie" ? <><Equal size={28} strokeWidth={3.4} aria-hidden /> {t.tie}</> : <><X size={28} strokeWidth={3.4} aria-hidden /> {t.miss}</>}
                 </p>
-                <p className="mt-3 text-[16px] font-semibold" style={{ color: "rgba(255,255,255,0.85)" }}>{verdict === "tie" ? "Petite peine, mais tu restes sur ce wagon." : "Retour au wagon 1… après la peine."}</p>
+                <p className="mt-3 text-[16px] font-semibold" style={{ color: "rgba(255,255,255,0.85)" }}>{verdict === "tie" ? t.tieNote : t.missNote}</p>
               </div>
             )}
           </div>
 
-          <TextLink onClick={endGame}>Terminer la partie</TextLink>
+          <TextLink onClick={endGame}>{t.endGame}</TextLink>
         </div>
 
         {(spin || penalty) && <PenaltyOverlay name={currentName} colorIndex={currentIdx} spin={spin} penalty={penalty} onReroll={rerollGage} onDone={afterPenalty} />}
@@ -543,17 +530,17 @@ export default function TgvGame({ onReturnToLobby }: GameProps) {
         {chrome}
         <style>{KEYFRAMES}</style>
         <ConfettiBurst count={80} />
-        <h1 className="text-center" style={{ ...DISPLAY, fontSize: 46, lineHeight: 0.95 }}>Arrivé en gare&nbsp;!</h1>
+        <h1 className="text-center" style={{ ...DISPLAY, fontSize: 46, lineHeight: 0.95 }}>{t.arrived}</h1>
         <div className="relative mt-16 rounded-[26px] px-5 pb-5 pt-[72px] text-center" style={{ ...stk("#FFD23F", 6), color: INK, transform: "rotate(-2deg)", animation: "tgv-pop .5s ease-out" }}>
           <div className="absolute -top-16 left-1/2 -translate-x-1/2"><Mascot size={96} color={colorForIndex(currentIdx)} mood="laughing" cheering crown shadow={false} /></div>
           <p style={{ ...DISPLAY, fontSize: nameSize(currentName, 40), lineHeight: 1, overflowWrap: "anywhere" }}>{currentName}</p>
-          <p className="mt-2 text-[16px] font-semibold leading-snug">Tous les wagons d&apos;un coup&nbsp;! Tu distribues 2 gorgées (ou un gage) à qui tu veux.</p>
+          <p className="mt-2 text-[16px] font-semibold leading-snug">{t.winNote}</p>
         </div>
         <div className="min-h-8 flex-1" />
         <Push big bg={ACCENT} onClick={nextPlayer} className="mt-8 w-full">
-          Au tour de {players[(currentIdx + 1) % players.length]}
+          {t.turnOf(players[(currentIdx + 1) % players.length] ?? "")}
         </Push>
-        <div className="mt-1"><TextLink onClick={endGame}>Terminer la partie</TextLink></div>
+        <div className="mt-1"><TextLink onClick={endGame}>{t.endGame}</TextLink></div>
       </Page>
     );
   }
@@ -564,14 +551,14 @@ export default function TgvGame({ onReturnToLobby }: GameProps) {
   return (
     <Page>
       {chrome}
-      <h1 style={{ ...DISPLAY, fontSize: 48, lineHeight: 0.95 }}>Terminus&nbsp;!</h1>
-      <p className="mt-2 text-[16px] font-semibold" style={{ color: "rgba(255,255,255,0.82)" }}>Le bilan du voyage : le moins de peines gagne.</p>
+      <h1 style={{ ...DISPLAY, fontSize: 48, lineHeight: 0.95 }}>{t.terminus}</h1>
+      <p className="mt-2 text-[16px] font-semibold" style={{ color: "rgba(255,255,255,0.82)" }}>{t.summary}</p>
       {top && (
         <div className="relative mt-16 rounded-[26px] px-5 pb-4 pt-[52px] text-center" style={{ ...stk("#3DDC97", 6), color: INK, transform: "rotate(-2deg)" }}>
           <div className="absolute -top-[62px] left-1/2 -translate-x-1/2"><Mascot size={76} color={colorForIndex(top.i)} mood="cool" crown arms shadow={false} /></div>
-          <p className="text-[15px] font-bold">Meilleur conducteur</p>
+          <p className="text-[15px] font-bold">{t.bestDriver}</p>
           <p style={{ ...DISPLAY, fontSize: nameSize(top.name, 40), lineHeight: 1, overflowWrap: "anywhere" }}>{top.name}</p>
-          <p className="mt-1 text-[15px] font-bold">{top.losses} peine{top.losses > 1 ? "s" : ""}</p>
+          <p className="mt-1 text-[15px] font-bold">{t.penalties(top.losses)}</p>
         </div>
       )}
       <div className="mt-5 space-y-2.5">
@@ -580,7 +567,7 @@ export default function TgvGame({ onReturnToLobby }: GameProps) {
             <span className="w-7 text-[18px]" style={DISPLAY}>{k + 2}</span>
             <MascotAvatar color={colorForIndex(p.i)} size={32} mood="happy" />
             <span className="min-w-0 flex-1 truncate text-[17px] font-bold">{p.name}</span>
-            <span className="text-[15px] font-bold">{p.losses} peine{p.losses > 1 ? "s" : ""}</span>
+            <span className="text-[15px] font-bold">{t.penalties(p.losses)}</span>
           </div>
         ))}
       </div>
@@ -600,11 +587,11 @@ export default function TgvGame({ onReturnToLobby }: GameProps) {
           }}
           className="w-full"
         >
-          <RotateCcw size={22} strokeWidth={3} aria-hidden /> Rejouer
+          <RotateCcw size={22} strokeWidth={3} aria-hidden /> {t.replay}
         </Push>
         <div className="grid grid-cols-2 gap-3">
-          <Push bg="#fff" onClick={() => setPhase("config")}>Réglages</Push>
-          {onReturnToLobby && <Push bg="#fff" onClick={onReturnToLobby}><Home size={18} strokeWidth={3} aria-hidden /> Accueil</Push>}
+          <Push bg="#fff" onClick={() => setPhase("config")}>{t.settings}</Push>
+          {onReturnToLobby && <Push bg="#fff" onClick={onReturnToLobby}><Home size={18} strokeWidth={3} aria-hidden /> {t.home}</Push>}
         </div>
       </div>
     </Page>
@@ -653,11 +640,14 @@ function Train({ total, pileIdx, cleared }: { total: number; pileIdx: number; cl
 
 // Carte dessinée en CSS : coin + gros symbole, lisible de loin
 function PlayingCard({ card, dim, ring }: { card: Card; dim?: boolean; ring?: string }) {
+  const rankLabel = useT(RANK_LABEL);
+  const rankName = useT(RANK_NAME);
+  const corner = rankLabel[card.r] ?? card.r;
   const color = card.red ? "#E0263D" : INK;
   return (
     <div
       className="relative flex flex-col rounded-[20px]"
-      aria-label={`${RANK_NAMES[card.r] ?? card.r} ${card.s}`}
+      aria-label={`${rankName[card.r] ?? card.r} ${card.s}`}
       style={{
         ...stk("#fff", 6),
         height: CARD_H,
@@ -673,15 +663,15 @@ function PlayingCard({ card, dim, ring }: { card: Card; dim?: boolean; ring?: st
       }}
     >
       <div className="absolute left-2.5 top-2 flex flex-col items-center leading-none">
-        <span className="text-[24px] font-bold">{card.r}</span>
+        <span className="text-[24px] font-bold">{corner}</span>
         <span className="text-[18px]">{card.s}</span>
       </div>
       <div className="absolute bottom-2 right-2.5 flex rotate-180 flex-col items-center leading-none">
-        <span className="text-[24px] font-bold">{card.r}</span>
+        <span className="text-[24px] font-bold">{corner}</span>
         <span className="text-[18px]">{card.s}</span>
       </div>
       {FACE_FILE[card.r] ? (
-        // Vraies figures (Valet / Dame / Roi), coins en français
+        // Vraies figures (Valet / Dame / Roi), lettres des coins selon la langue
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={`/cards/faces/${FACE_FILE[card.r]}${SUIT_FILE[card.s]}.jpg`}
@@ -723,10 +713,11 @@ function BetButton({ label, icon: Icon, bg, onClick }: { label: string; icon: Lu
 function PenaltyOverlay({
   name, colorIndex, spin, penalty, onReroll, onDone,
 }: { name: string; colorIndex: number; spin: SpinFace | null; penalty: Penalty | null; onReroll: () => void; onDone: () => void }) {
+  const t = useT(STR);
   return (
     <div className="fixed inset-0 z-50 flex flex-col overflow-y-auto px-5 text-white" style={{ ...PAGE, paddingTop: TOP, paddingBottom: BOTTOM }}>
       <div className="mx-auto flex w-full max-w-md flex-1 flex-col items-center justify-center text-center">
-        <p className="text-[17px] font-bold" style={{ color: "rgba(255,255,255,0.85)" }}>Une peine pour</p>
+        <p className="text-[17px] font-bold" style={{ color: "rgba(255,255,255,0.85)" }}>{t.penaltyFor}</p>
         <div className="mt-2 flex items-center gap-2.5 rounded-full py-1.5 pl-1.5 pr-5" style={{ ...stk("#fff", 4), color: INK, transform: "rotate(-2deg)" }}>
           <MascotAvatar color={colorForIndex(colorIndex)} size={40} mood="shocked" />
           <span style={{ ...DISPLAY, fontSize: nameSize(name, 30, 96), lineHeight: 1, overflowWrap: "anywhere" }}>{name}</span>
@@ -741,18 +732,18 @@ function PenaltyOverlay({
             <div className="mt-2 rounded-[24px] px-5 py-4" style={{ ...stk("#FFF6E5", 5), color: INK, transform: "rotate(1deg)" }}>
               {penalty.kind === "sips" ? (
                 <>
-                  <p style={{ ...DISPLAY, fontSize: 36, lineHeight: 1.05 }}>{penalty.sips} gorgée{penalty.sips > 1 ? "s" : ""}</p>
-                  <p className="mt-2 text-[15px] font-semibold" style={{ opacity: 0.8 }}>Ou le gage, au choix : « {penalty.gage} »</p>
+                  <p style={{ ...DISPLAY, fontSize: 36, lineHeight: 1.05 }}>{t.sipsN(penalty.sips)}</p>
+                  <p className="mt-2 text-[15px] font-semibold" style={{ opacity: 0.8 }}>{t.orDare(penalty.gage)}</p>
                 </>
               ) : (
                 <>
                   <p style={{ ...DISPLAY, fontSize: 26, lineHeight: 1.1 }}>{penalty.gage}</p>
-                  <p className="mt-2 text-[15px] font-semibold" style={{ opacity: 0.8 }}>Ou {penalty.sips} gorgée{penalty.sips > 1 ? "s" : ""} de zinzin, au choix.</p>
+                  <p className="mt-2 text-[15px] font-semibold" style={{ opacity: 0.8 }}>{t.orSips(penalty.sips)}</p>
                 </>
               )}
             </div>
             <div className="mt-5 flex justify-center">
-              <RerollButton onClick={onReroll} label="Pas fou ? Un autre gage" />
+              <RerollButton onClick={onReroll} label={t.reroll} />
             </div>
           </div>
         ) : null}
@@ -760,7 +751,7 @@ function PenaltyOverlay({
       {penalty && !spin && (
         <div className="mx-auto mt-6 w-full max-w-md">
           <Push big bg="#FFD23F" onClick={onDone} className="w-full">
-            <Check size={22} strokeWidth={3.2} aria-hidden /> C&apos;est fait
+            <Check size={22} strokeWidth={3.2} aria-hidden /> {t.done}
           </Push>
         </div>
       )}

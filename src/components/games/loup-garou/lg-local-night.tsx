@@ -10,52 +10,14 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Mascot } from "@/components/Mascot";
 import {
-  EMPTY_NIGHT, ROLES, type Composition, type NightActions, type Player, type RoleId,
+  EMPTY_NIGHT, type Composition, type NightActions, type Player, type RoleId,
 } from "./lg-local-data";
 import { speak, speechMs, type Ambience } from "./lg-local-audio";
 import { BigButton, Confirm, DISPLAY, INK, MINT, PickList, RoleCard, Screen, SkyBadge, Tag, Title, stk } from "./lg-local-ui";
 import { Check, HeartPulse, Skull, X } from "lucide-react";
 import { GameInlineIcon } from "@/components/games/game-icon-button";
-
-type StepId = "intro" | "cupidon" | "amoureux" | "gardien" | "loups" | "voyante" | "sorciere";
-
-const TEXT: Record<StepId, { title: string; wake: string; sleep: string }> = {
-  intro: {
-    title: "La nuit tombe",
-    wake: "La nuit tombe sur le village. Tout le monde ferme les yeux… et baisse la tête.",
-    sleep: "",
-  },
-  cupidon: {
-    title: "Cupidon",
-    wake: "Cupidon, réveille-toi. Prends le téléphone et choisis les deux joueurs qui vont tomber amoureux.",
-    sleep: "Cupidon repose le téléphone, touche discrètement l'épaule des deux amoureux, puis se rendort.",
-  },
-  amoureux: {
-    title: "Les amoureux",
-    wake: "Les deux amoureux, ouvrez les yeux et regardez-vous. Désormais, si l'un meurt, l'autre le suit.",
-    sleep: "Les amoureux referment les yeux.",
-  },
-  gardien: {
-    title: "Le Gardien",
-    wake: "Le Gardien se réveille. Prends le téléphone et choisis qui tu protèges cette nuit.",
-    sleep: "Le Gardien se rendort.",
-  },
-  loups: {
-    title: "Les Loups-garous",
-    wake: "Les loups-garous ouvrent les yeux. Prenez le téléphone et choisissez ensemble votre victime.",
-    sleep: "Les loups-garous, repus, referment les yeux.",
-  },
-  voyante: {
-    title: "La Voyante",
-    wake: "La Voyante se réveille. Prends le téléphone et choisis un joueur : sa vraie nature te sera révélée.",
-    sleep: "La Voyante se rendort.",
-  },
-  sorciere: {
-    title: "La Sorcière",
-    wake: "La Sorcière se réveille. Prends le téléphone : il va te montrer la victime de la nuit.",
-    sleep: "La Sorcière range ses potions et se rendort.",
-  },
-};
+import { useT } from "@/lib/i18n";
+import { NIGHT_TEXT, ROLE_TEXT, STR, type StepId } from "./lg-local-i18n";
 
 const STEP_ROLE: Partial<Record<StepId, RoleId>> = {
   cupidon: "cupidon", gardien: "gardien", loups: "loup", voyante: "voyante", sorciere: "sorciere",
@@ -89,6 +51,9 @@ export function NightRunner({
   ambience: Ambience;
   onDone: (r: NightResult) => void;
 }) {
+  const t = useT(STR);
+  const TEXT = useT(NIGHT_TEXT);
+  const roleText = useT(ROLE_TEXT);
   const steps = useMemo<StepId[]>(() => {
     const s: StepId[] = ["intro"];
     if (night === 1 && comp.cupidon) s.push("cupidon", "amoureux");
@@ -164,18 +129,18 @@ export function NightRunner({
     if (step === "cupidon") {
       body = <CupidonPanel players={alive} onDone={(a, b) => {
         actions.current.lovers = [a, b];
-        log.current.push(`💘 Cupidon unit ${name(a)} et ${name(b)}.`);
+        log.current.push(t.logCupid(name(a), name(b)));
         finish();
       }} />;
     } else if (step === "gardien") {
       body = <SinglePick
         players={alive}
-        hint="Qui protèges-tu des loups cette nuit ?"
-        cta="Protéger"
-        note={(p) => (p.id === lastProtected ? "protégé hier" : null)}
+        hint={t.guardHint}
+        cta={t.guardCta}
+        note={(p) => (p.id === lastProtected ? t.protectedYesterday : null)}
         onDone={(id) => {
           actions.current.protect = id;
-          log.current.push(`🛡️ Le Gardien (${actor.name}) protège ${name(id)}.`);
+          log.current.push(t.logGuard(actor.name, name(id)));
           finish();
         }}
       />;
@@ -183,20 +148,20 @@ export function NightRunner({
       const pack = alive.filter((p) => p.role === "loup");
       body = <SinglePick
         players={alive.filter((p) => p.role !== "loup")}
-        hint={<>La meute : {pack.map((p) => p.name).join(", ")}. <span className="whitespace-nowrap">Mettez-vous</span> d&apos;accord en silence.</>}
-        cta="Dévorer"
+        hint={<>{t.packHint(pack.map((p) => p.name).join(", "))} <span className="whitespace-nowrap">{t.packAgree[0]}</span>{t.packAgree[1]}</>}
+        cta={t.devour}
         danger
         onDone={(id) => {
           actions.current.wolfTarget = id;
           setWolfTarget(id);
-          log.current.push(`🐺 Les loups attaquent ${name(id)}.`);
+          log.current.push(t.logWolves(name(id)));
           finish();
         }}
       />;
     } else if (step === "voyante") {
       body = <SeerPanel players={alive.filter((p) => p.id !== actor.id)} onDone={(id) => {
         actions.current.seer = id;
-        log.current.push(`🔮 La Voyante (${actor.name}) sonde ${name(id)} : ${ROLES[players[id].role].name}.`);
+        log.current.push(t.logSeer(actor.name, name(id), roleText[players[id].role].name));
         finish();
       }} />;
     } else if (step === "sorciere") {
@@ -209,9 +174,9 @@ export function NightRunner({
         onDone={(saved, poison) => {
           actions.current.saved = saved;
           actions.current.poison = poison;
-          if (saved && victim !== null) log.current.push(`🧪 La Sorcière (${actor.name}) sauve ${name(victim)}.`);
-          if (poison !== null) log.current.push(`☠️ La Sorcière (${actor.name}) empoisonne ${name(poison)}.`);
-          if (!saved && poison === null) log.current.push(`🧪 La Sorcière (${actor.name}) ne fait rien.`);
+          if (saved && victim !== null) log.current.push(t.logWitchSave(actor.name, name(victim)));
+          if (poison !== null) log.current.push(t.logWitchPoison(actor.name, name(poison)));
+          if (!saved && poison === null) log.current.push(t.logWitchNothing(actor.name));
           finish();
         }}
       />;
@@ -224,7 +189,7 @@ export function NightRunner({
     <Screen tone="night" center={!body}>
       {body ? (
         <>
-          <div className="text-center"><Tag bg="#2A1866" color="#fff" tilt={-2}>Nuit {night}</Tag></div>
+          <div className="text-center"><Tag bg="#2A1866" color="#fff" tilt={-2}>{t.nightN(night)}</Tag></div>
           <Title size={38} className="mt-2 text-center">{TEXT[step].title}</Title>
           <div className="mt-4 flex flex-1 flex-col">{body}</div>
         </>
@@ -232,18 +197,18 @@ export function NightRunner({
         <div className="text-center">
           <div className="flex justify-center"><Mascot size={110} color="lavender" mood="asleep" shadow={false} /></div>
           <Title size={32} className="mt-6" style={{ lineHeight: 1.05 }}>
-            Repose le téléphone au centre et ferme les yeux.
+            {t.restPhone}
           </Title>
         </div>
       ) : (
         <div className="text-center">
           <SkyBadge tone="night" />
-          <div className="mt-6"><Tag bg="#2A1866" color="#fff" tilt={-2}>Nuit {night} · {TEXT[step].title}</Tag></div>
+          <div className="mt-6"><Tag bg="#2A1866" color="#fff" tilt={-2}>{t.nightN(night)} · {TEXT[step].title}</Tag></div>
           <p className="mt-4" style={{ ...DISPLAY, fontSize: 30, lineHeight: 1.1 }}>
             {headline.replace(/ ([!?:;])/g, "\u00A0$1")}
           </p>
           <p className="mt-8 text-[16px] font-semibold" style={{ color: "rgba(255,255,255,0.62)" }}>
-            Les autres gardent les yeux fermés.
+            {t.othersClosed}
           </p>
         </div>
       )}
@@ -256,9 +221,10 @@ export function NightRunner({
 function SinglePick({
   players, hint, cta, onDone, note, danger = false,
 }: {
-  players: Player[]; hint: React.ReactNode; cta: string; onDone: (id: number) => void;
+  players: Player[]; hint: React.ReactNode; cta: (name: string) => string; onDone: (id: number) => void;
   note?: (p: Player) => string | null; danger?: boolean;
 }) {
+  const t = useT(STR);
   const [sel, setSel] = useState<number | null>(null);
   const target = players.find((p) => p.id === sel);
   return (
@@ -267,7 +233,7 @@ function SinglePick({
       <PickList players={players} selected={sel === null ? [] : [sel]} onPick={setSel} note={note} />
       <div className="sticky bottom-[calc(env(safe-area-inset-bottom,0px)+10px)] mt-4 pb-1 pt-2">
         <BigButton onClick={() => sel !== null && onDone(sel)} disabled={sel === null} variant={danger ? "danger" : "primary"}>
-          {target ? `${cta} ${target.name}` : "Choisis un joueur"}
+          {target ? cta(target.name) : t.pickPlayer}
         </BigButton>
       </div>
     </>
@@ -275,18 +241,19 @@ function SinglePick({
 }
 
 function CupidonPanel({ players, onDone }: { players: Player[]; onDone: (a: number, b: number) => void }) {
+  const t = useT(STR);
   const [sel, setSel] = useState<number[]>([]);
   const toggle = (id: number) =>
     setSel((s) => (s.includes(id) ? s.filter((x) => x !== id) : s.length < 2 ? [...s, id] : [s[1], id]));
   return (
     <>
       <p className="mb-4 text-center text-[17px] font-semibold" style={{ color: "rgba(255,255,255,0.85)" }}>
-        Choisis deux joueurs (tu peux te choisir toi-même).
+        {t.cupidHint}
       </p>
       <PickList players={players} selected={sel} onPick={toggle} />
       <div className="sticky bottom-[calc(env(safe-area-inset-bottom,0px)+10px)] mt-4 pb-1 pt-2">
         <BigButton variant="pink" disabled={sel.length !== 2} onClick={() => onDone(sel[0], sel[1])}>
-          {sel.length === 2 ? "Unir ces deux-là" : `Encore ${2 - sel.length} à choisir`}
+          {sel.length === 2 ? t.unite : t.moreToPick(2 - sel.length)}
         </BigButton>
       </div>
     </>
@@ -294,21 +261,22 @@ function CupidonPanel({ players, onDone }: { players: Player[]; onDone: (a: numb
 }
 
 function SeerPanel({ players, onDone }: { players: Player[]; onDone: (id: number) => void }) {
+  const t = useT(STR);
   const [seen, setSeen] = useState<Player | null>(null);
   if (seen) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-5">
-        <Title size={30} className="text-center">{seen.name} est…</Title>
+        <Title size={30} className="text-center">{t.seerIs(seen.name)}</Title>
         <RoleCard role={seen.role} compact />
-        <BigButton onClick={() => onDone(seen.id)}>J&apos;ai vu — cacher</BigButton>
+        <BigButton onClick={() => onDone(seen.id)}>{t.seerDone}</BigButton>
       </div>
     );
   }
   return (
     <SinglePick
       players={players}
-      hint="Qui veux-tu démasquer ?"
-      cta="Voir le rôle de"
+      hint={t.seerHint}
+      cta={t.seerCta}
       onDone={(id) => setSeen(players.find((p) => p.id === id) ?? null)}
     />
   );
@@ -323,6 +291,7 @@ function WitchPanel({
   potions: { life: boolean; death: boolean };
   onDone: (saved: boolean, poison: number | null) => void;
 }) {
+  const t = useT(STR);
   const [stage, setStage] = useState<"save" | "poison" | "pick">(potions.life && victim !== null ? "save" : "poison");
   const [saved, setSaved] = useState(false);
   const [confirmSave, setConfirmSave] = useState(false);
@@ -338,16 +307,16 @@ function WitchPanel({
 
   const victimBox = (
     <div className="mb-4 rounded-[24px] p-4 text-center" style={{ ...stk(saved ? MINT : "#FF6B5B", 5, 3), color: INK, transform: "rotate(-1.5deg)" }}>
-      <p className="text-[16px] font-bold">Les loups ont attaqué</p>
-      <p style={{ ...DISPLAY, fontSize: 36, lineHeight: 1 }}>{victimName ?? "personne"}</p>
-      {saved && <p className="mt-1 text-[16px] font-bold">Sauvé·e par ta potion</p>}
+      <p className="text-[16px] font-bold">{t.wolvesAttacked}</p>
+      <p style={{ ...DISPLAY, fontSize: 36, lineHeight: 1 }}>{victimName ?? t.nobody}</p>
+      {saved && <p className="mt-1 text-[16px] font-bold">{t.savedByPotion}</p>}
     </div>
   );
 
   const flasks = (
     <div className="mb-4 flex flex-wrap justify-center gap-2">
-      <Tag bg={potions.life && !saved ? MINT : "#3A2C6B"} color={potions.life && !saved ? INK : "#fff"} tilt={-2}>Potion de vie <Flask on={potions.life && !saved} /></Tag>
-      <Tag bg={potions.death ? "#FF6B5B" : "#3A2C6B"} color={potions.death ? INK : "#fff"} tilt={2}>Potion de mort <Flask on={potions.death} /></Tag>
+      <Tag bg={potions.life && !saved ? MINT : "#3A2C6B"} color={potions.life && !saved ? INK : "#fff"} tilt={-2}>{t.lifePotion} <Flask on={potions.life && !saved} /></Tag>
+      <Tag bg={potions.death ? "#FF6B5B" : "#3A2C6B"} color={potions.death ? INK : "#fff"} tilt={2}>{t.deathPotion} <Flask on={potions.death} /></Tag>
     </div>
   );
 
@@ -355,8 +324,8 @@ function WitchPanel({
     return (
       <div className="flex flex-1 flex-col">
         {victimBox}
-        <p className="mb-6 text-center text-[18px] font-semibold">Tes fioles sont vides. Tu ne peux plus rien faire.</p>
-        <BigButton onClick={() => onDone(false, null)}>OK</BigButton>
+        <p className="mb-6 text-center text-[18px] font-semibold">{t.flasksEmpty}</p>
+        <BigButton onClick={() => onDone(false, null)}>{t.ok}</BigButton>
       </div>
     );
   }
@@ -367,13 +336,13 @@ function WitchPanel({
         {victimBox}
         {flasks}
         <div className="grid gap-3">
-          <BigButton variant="pink" onClick={() => setConfirmSave(true)}><GameInlineIcon icon={HeartPulse} /> Sauver {victimName}</BigButton>
-          <BigButton variant="ghost" onClick={() => goPoison(false)}>Ne pas sauver</BigButton>
+          <BigButton variant="pink" onClick={() => setConfirmSave(true)}><GameInlineIcon icon={HeartPulse} /> {t.save(victimName ?? "")}</BigButton>
+          <BigButton variant="ghost" onClick={() => goPoison(false)}>{t.dontSave}</BigButton>
         </div>
         {confirmSave && (
           <Confirm
-            text={`Utiliser ta potion de vie pour sauver ${victimName} ? Tu ne pourras plus jamais le faire.`}
-            yes="Oui, sauver"
+            text={t.confirmSave(victimName ?? "")}
+            yes={t.yesSave}
             onYes={() => { setConfirmSave(false); goPoison(true); }}
             onNo={() => setConfirmSave(false)}
           />
@@ -387,10 +356,10 @@ function WitchPanel({
       <div className="flex flex-1 flex-col">
         {victimBox}
         {flasks}
-        <p className="mb-4 text-center text-[18px] font-semibold">Veux-tu utiliser ta potion de mort ?</p>
+        <p className="mb-4 text-center text-[18px] font-semibold">{t.usePoison}</p>
         <div className="grid gap-3">
-          <BigButton variant="danger" onClick={() => setStage("pick")}><GameInlineIcon icon={Skull} /> Empoisonner quelqu&apos;un</BigButton>
-          <BigButton variant="ghost" onClick={() => onDone(saved, null)}>Non, rien de plus</BigButton>
+          <BigButton variant="danger" onClick={() => setStage("pick")}><GameInlineIcon icon={Skull} /> {t.poisonSomeone}</BigButton>
+          <BigButton variant="ghost" onClick={() => onDone(saved, null)}>{t.nothingMore}</BigButton>
         </div>
       </div>
     );
@@ -399,18 +368,18 @@ function WitchPanel({
   const target = players.find((p) => p.id === poisonSel);
   return (
     <>
-      <p className="mb-4 text-center text-[17px] font-semibold" style={{ color: "rgba(255,255,255,0.85)" }}>Qui empoisonnes-tu ?</p>
+      <p className="mb-4 text-center text-[17px] font-semibold" style={{ color: "rgba(255,255,255,0.85)" }}>{t.whoPoison}</p>
       <PickList players={players.filter((p) => p.id !== selfId)} selected={poisonSel === null ? [] : [poisonSel]} onPick={setPoisonSel} />
       <div className="sticky bottom-[calc(env(safe-area-inset-bottom,0px)+10px)] mt-4 grid gap-3 pb-1 pt-2">
         <BigButton variant="danger" disabled={!target} onClick={() => setConfirmPoison(true)}>
-          {target ? `Empoisonner ${target.name}` : "Choisis un joueur"}
+          {target ? t.poison(target.name) : t.pickPlayer}
         </BigButton>
-        <BigButton variant="ghost" onClick={() => { setPoisonSel(null); setStage("poison"); }}>Retour</BigButton>
+        <BigButton variant="ghost" onClick={() => { setPoisonSel(null); setStage("poison"); }}>{t.back}</BigButton>
       </div>
       {target && confirmPoison && (
         <Confirm
-          text={`Empoisonner ${target.name} ? Ta potion de mort sera utilisée pour de bon.`}
-          yes="Oui, empoisonner"
+          text={t.confirmPoison(target.name)}
+          yes={t.yesPoison}
           danger
           onYes={() => onDone(saved, target.id)}
           onNo={() => setConfirmPoison(false)}

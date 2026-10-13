@@ -2,12 +2,27 @@
  * Textes légaux de l'app Zinzin (mentions légales, confidentialité, conditions).
  * Source unique : affichés dans l'app (zinzin/) ET sur le site (/zinzin/<doc>),
  * dont les URL publiques sont à renseigner dans App Store Connect / Play Console.
+ * Le site affiche toujours LEGAL_DOCS (français) ; l'app affiche getLegalDocs(langue).
+ * Les versions EN / ES sont des traductions de confort : la version française fait foi.
  *
  * ⚠️ Version provisoire : à faire relire par un professionnel avant la publication.
  * Reste à faire : désigner un médiateur de la consommation (EDITOR.mediator).
  */
 
+import type { I18n, Lang } from "@/lib/i18n";
+
 export const LEGAL_UPDATED_AT = "12 octobre 2026";
+
+/** Date de mise à jour, écrite dans chaque langue. */
+export const LEGAL_UPDATED_AT_I18N: I18n<string> = {
+  fr: LEGAL_UPDATED_AT,
+  en: "October 12, 2026",
+  es: "12 de octubre de 2026",
+};
+
+export function getLegalUpdatedAt(lang: Lang): string {
+  return LEGAL_UPDATED_AT_I18N[lang] ?? LEGAL_UPDATED_AT;
+}
 
 /** Infos éditeur : à compléter une fois le statut juridique créé. */
 export const EDITOR = {
@@ -218,3 +233,386 @@ export const LEGAL_DOCS: Record<LegalDocId, LegalDoc> = {
     ],
   },
 };
+
+/* ───────── Traductions (confort) : la version française fait foi ───────── */
+
+/** Mentions éditeur traduites (le reste d'EDITOR ne dépend pas de la langue). */
+const EDITOR_TR: Record<"en" | "es", { status: string; vat: string }> = {
+  en: {
+    status: "sole trader (trade name: Safiri), registered with the Marseille Trade and Companies Register (RCS) under no. 109 518 910",
+    vat: "VAT not applicable, article 293 B of the French General Tax Code (CGI)",
+  },
+  es: {
+    status: "empresario individual (nombre comercial: Safiri), inscrito en el Registro Mercantil (RCS) de Marsella con el n.º 109 518 910",
+    vat: "IVA no aplicable, artículo 293 B del Código General de Impuestos francés (CGI)",
+  },
+};
+
+const PREVAILS: I18n<string> = {
+  fr: "",
+  en: "This translation is provided for convenience; the French version prevails.",
+  es: "Esta traducción se ofrece a título informativo; prevalece la versión francesa.",
+};
+
+const DOCS_EN: Record<LegalDocId, LegalDoc> = {
+  "mentions-legales": {
+    id: "mentions-legales",
+    title: "Legal notice",
+    intro: PREVAILS.en,
+    sections: [
+      {
+        title: "Publisher",
+        paragraphs: [
+          `The Zinzin app is published by ${E.name}, ${EDITOR_TR.en.status}.`,
+          `Address: ${E.address}. Registration: ${E.siret}. ${EDITOR_TR.en.vat}.`,
+          `Contact: ${E.email}.`,
+          `Publication director: ${E.director}.`,
+        ],
+      },
+      {
+        title: "Distribution and hosting",
+        paragraphs: [
+          "The app is distributed through Apple's App Store (Apple Distribution International Ltd., Hollyhill Industrial Estate, Hollyhill, Cork, Ireland) and Google Play (Google Ireland Ltd., Gordon House, Barrow Street, Dublin 4, Ireland).",
+          "The app's content is built into the app itself: it is not hosted on a server.",
+          "The informational web pages (including this document) are hosted by Vercel Inc., 440 N Barranca Ave #4133, Covina, CA 91723, United States.",
+        ],
+      },
+      {
+        title: "Intellectual property",
+        paragraphs: [
+          "The app, its name, its characters (the \"blobs\"), its texts, questions, cards, visuals, sounds and code are protected by intellectual property law. Any reproduction or reuse without written permission is prohibited.",
+          "The mechanics of some games are inspired by traditional public-domain party games. The app's names and content are original; any resemblance to third-party trademarks is coincidental. For any claim: " + E.email + ".",
+        ],
+      },
+      {
+        title: "Health",
+        paragraphs: [
+          "Alcohol abuse is dangerous for your health: drink in moderation. The sale of alcohol to minors is prohibited. Never drive after drinking.",
+        ],
+      },
+    ],
+  },
+
+  confidentialite: {
+    id: "confidentialite",
+    title: "Privacy policy",
+    intro:
+      PREVAILS.en + " Zinzin is designed to collect as little data as possible: no account, no ads, no trackers. The games run entirely on your phone, without connecting to our servers.",
+    sections: [
+      {
+        title: "Data controller",
+        paragraphs: [`${E.name}, ${E.address}. Contact: ${E.email}.`],
+      },
+      {
+        title: "What stays on your phone (never sent)",
+        paragraphs: [
+          "The names you enter to play, your last \"crew\" of players and recent names (so we can suggest them again), your settings (sounds, chosen packs, language…), the confirmation that you are 18 or older and your subscription status.",
+          "This information is stored only in the app's local storage, on your device. We have no access to it and it is not sent anywhere. Please don't enter anything other than first names or nicknames.",
+          "You can erase it at any time by deleting the app (or from the app's settings when the option is available).",
+        ],
+      },
+      {
+        title: "Purchases and subscription",
+        paragraphs: [
+          "Payments are handled exclusively by Apple (App Store) or Google (Google Play): we never receive your bank details, your name or your email address.",
+          "To check whether your subscription is active on all your devices and to allow purchases to be restored, we use the RevenueCat service (RevenueCat, Inc., United States), a processor within the meaning of the GDPR. It receives: an anonymous identifier generated by the app, your Zinzin purchase history (product, date, price, country, renewal status) and technical information about the device (model, operating system and app version).",
+          "Legal basis: performance of the subscription contract (art. 6.1.b GDPR). Retention: for the duration of the subscription and then up to 3 years, plus any periods required by accounting and tax obligations.",
+          "RevenueCat is located in the United States: the transfer is governed by the European Commission's standard contractual clauses and/or the EU–US Data Privacy Framework.",
+        ],
+      },
+      {
+        title: "What we don't do",
+        paragraphs: [
+          "No advertising, no audience measurement, no tracking across apps or websites (no \"App Tracking Transparency\" request), no selling of data, no cookies in the app.",
+          "If you suggest an idea (\"Suggest an idea\" button) or write to us, the message is sent from your email app: we then receive your email address and your message, used only to read and reply to you, and deleted no later than 3 years after our last exchange. Legal basis: our legitimate interest in improving the app. Ideas we keep may be added to the game, without mentioning your name.",
+          "The app does not access your contacts, location, microphone or camera. Some games may use the phone's motion sensor (e.g. \"Don't shake the potato\"): the reading is processed instantly on the device and is never stored or sent. The narrator's voice is generated by your phone's system.",
+        ],
+      },
+      {
+        title: "Minors",
+        paragraphs: [
+          "Zinzin is intended for people aged 18 and over. We do not knowingly collect any data about minors.",
+        ],
+      },
+      {
+        title: "Your rights",
+        paragraphs: [
+          "Under the GDPR and the French Data Protection Act, you have the right to access, rectify, erase, restrict, object to and port your data, as well as the right to set instructions for what happens to your data after your death.",
+          `To exercise them: ${E.email}. As we don't know your identity, please give us the identifier shown in the app's settings (if available) or the date and type of your purchase.`,
+          "You can also lodge a complaint with the CNIL, the French data protection authority (www.cnil.fr), or with your local data protection authority.",
+        ],
+      },
+      {
+        title: "Changes",
+        paragraphs: [
+          `This policy may change (new features, legal obligations). The update date is shown below. Last updated: ${LEGAL_UPDATED_AT_I18N.en}.`,
+        ],
+      },
+    ],
+  },
+
+  conditions: {
+    id: "conditions",
+    title: "Terms of use and sale",
+    intro: PREVAILS.en,
+    sections: [
+      {
+        title: "1. Purpose",
+        paragraphs: [
+          `These terms govern the use of the Zinzin app, published by ${E.name} ("we"), and the purchase of the Zinzin Premium subscription. By using the app, you accept them. They supplement the terms of the App Store or Google Play (for Apple: the standard end user licence agreement, "EULA").`,
+        ],
+      },
+      {
+        title: "2. Adults only",
+        paragraphs: [
+          "Zinzin is reserved for adults (18 and over). Some games contain references to alcohol and naughty (non-explicit) content, labelled \"18+\". By confirming your age when you open the app, you certify that you are an adult.",
+        ],
+      },
+      {
+        title: "3. The service",
+        paragraphs: [
+          "Zinzin offers party games played together on a single phone, with no connection. Some games are free; the others, the 18+ content and new releases are available with the Zinzin Premium subscription. The catalogue may change (games added, modified or removed).",
+        ],
+      },
+      {
+        title: "4. Zinzin Premium subscription",
+        paragraphs: [
+          "Plans offered (prices including tax shown in the app at the time of purchase, which may vary by country): Party Pass (7 days), Monthly, Yearly.",
+          "Payment is charged to your Apple or Google account when the purchase is confirmed. The subscription renews automatically for the same period unless cancelled at least 24 hours before the end of the current period.",
+          "You can manage or cancel your subscription at any time from your Apple account settings (Settings › your name › Subscriptions) or Google Play (Payments & subscriptions). Cancellation takes effect at the end of the current period; the period already started is not refunded, unless Apple or Google decides otherwise.",
+          "Refunds are handled by Apple (reportaproblem.apple.com) or Google according to their own rules.",
+        ],
+      },
+      {
+        title: "5. Right of withdrawal",
+        paragraphs: [
+          "The subscription gives immediate access to digital content. By confirming the purchase, you request immediate performance of the service and acknowledge that you waive your 14-day right of withdrawal, in accordance with article L221-28 13° of the French Consumer Code.",
+        ],
+      },
+      {
+        title: "6. Play responsibly",
+        paragraphs: [
+          "The \"sips\" suggested by some games are always optional: they can be replaced by a dare, and played with water or a non-alcoholic drink. Nobody has to drink. Alcohol abuse is dangerous for your health: drink in moderation. Never drive after drinking.",
+          "Challenges and dares must respect everyone: any participant can refuse a dare. Never do a dare that is dangerous, illegal or makes someone uncomfortable. Each player remains responsible for their own actions and consumption.",
+          "Some games (e.g. \"Hot Potato\") involve passing the phone around: do it carefully. We cannot be held responsible for a broken device.",
+        ],
+      },
+      {
+        title: "7. Liability",
+        paragraphs: [
+          "The app is provided as is. We do our best to make it work properly but cannot guarantee it is bug-free. We cannot be held liable for damage resulting from use that does not comply with these terms, or for the behaviour of players.",
+          "These terms do not limit the rights you have under mandatory consumer protection laws, in particular the legal guarantee of conformity for digital content (articles L224-25-1 et seq. of the French Consumer Code).",
+        ],
+      },
+      {
+        title: "8. Intellectual property",
+        paragraphs: [
+          "We grant you a personal, non-exclusive and non-transferable licence to use the app for private, non-commercial purposes. Copying, extracting or reselling its content (questions, cards, characters, sounds, code) is prohibited.",
+        ],
+      },
+      {
+        title: "9. Personal data",
+        paragraphs: ["See our privacy policy, available in the app and on our website."],
+      },
+      {
+        title: "10. Disputes and mediation",
+        paragraphs: [
+          "Purchases are collected by Apple (App Store) or Google (Google Play): any request about payment or refunds must first be made to them (reportaproblem.apple.com, or Google Play › Payments & subscriptions).",
+          `For any other question or complaint about the app: ${E.email}. We undertake to reply within 15 days and to seek an amicable solution.`,
+          ...(E.mediator
+            ? [`If a dispute remains unresolved, you can use the consumer mediator free of charge: ${E.mediator}.`]
+            : []),
+          "These terms are governed by French law. Failing an amicable agreement, the competent courts are those provided for by law.",
+        ],
+      },
+      {
+        title: "11. Changes",
+        paragraphs: [`We may update these terms; the version in force is the one shown in the app. Last updated: ${LEGAL_UPDATED_AT_I18N.en}.`],
+      },
+    ],
+  },
+};
+
+const DOCS_ES: Record<LegalDocId, LegalDoc> = {
+  "mentions-legales": {
+    id: "mentions-legales",
+    title: "Aviso legal",
+    intro: PREVAILS.es,
+    sections: [
+      {
+        title: "Editor",
+        paragraphs: [
+          `La aplicación Zinzin es editada por ${E.name}, ${EDITOR_TR.es.status}.`,
+          `Dirección: ${E.address}. Registro: ${E.siret}. ${EDITOR_TR.es.vat}.`,
+          `Contacto: ${E.email}.`,
+          `Director de la publicación: ${E.director}.`,
+        ],
+      },
+      {
+        title: "Distribución y alojamiento",
+        paragraphs: [
+          "La aplicación se distribuye a través del App Store de Apple (Apple Distribution International Ltd., Hollyhill Industrial Estate, Hollyhill, Cork, Irlanda) y de Google Play (Google Ireland Ltd., Gordon House, Barrow Street, Dublín 4, Irlanda).",
+          "El contenido de la aplicación está integrado en la propia aplicación: no está alojado en ningún servidor.",
+          "Las páginas web informativas (incluido este documento) están alojadas por Vercel Inc., 440 N Barranca Ave #4133, Covina, CA 91723, Estados Unidos.",
+        ],
+      },
+      {
+        title: "Propiedad intelectual",
+        paragraphs: [
+          "La aplicación, su nombre, sus personajes (los «blobs»), sus textos, preguntas, cartas, imágenes, sonidos y código están protegidos por el derecho de propiedad intelectual. Queda prohibida cualquier reproducción o reutilización sin autorización por escrito.",
+          "Las mecánicas de algunos juegos se inspiran en juegos de mesa tradicionales de dominio público. Los nombres y contenidos de la aplicación son originales; cualquier parecido con marcas de terceros sería fortuito. Para cualquier reclamación: " + E.email + ".",
+        ],
+      },
+      {
+        title: "Salud",
+        paragraphs: [
+          "El abuso de alcohol es peligroso para la salud: consúmelo con moderación. Está prohibida la venta de alcohol a menores. No conduzcas nunca después de haber bebido.",
+        ],
+      },
+    ],
+  },
+
+  confidentialite: {
+    id: "confidentialite",
+    title: "Política de privacidad",
+    intro:
+      PREVAILS.es + " Zinzin está diseñada para recoger los menos datos posibles: sin cuenta, sin publicidad, sin rastreadores. Los juegos funcionan íntegramente en tu móvil, sin conexión a nuestros servidores.",
+    sections: [
+      {
+        title: "Responsable del tratamiento",
+        paragraphs: [`${E.name}, ${E.address}. Contacto: ${E.email}.`],
+      },
+      {
+        title: "Lo que se queda en tu móvil (nunca se envía)",
+        paragraphs: [
+          "Los nombres que escribes para jugar, tu último «grupo» de jugadores y los nombres recientes (para volver a proponértelos), tus ajustes (sonidos, packs elegidos, idioma…), la confirmación de que tienes 18 años o más y el estado de tu suscripción.",
+          "Esta información se guarda únicamente en el almacenamiento local de la aplicación, en tu dispositivo. No tenemos acceso a ella y no se envía a ningún sitio. Evita escribir algo que no sean nombres o apodos.",
+          "Puedes borrarla en cualquier momento eliminando la aplicación (o desde los ajustes de la app cuando la opción esté disponible).",
+        ],
+      },
+      {
+        title: "Compras y suscripción",
+        paragraphs: [
+          "Los pagos los gestionan exclusivamente Apple (App Store) o Google (Google Play): nunca recibimos tus datos bancarios, ni tu nombre, ni tu dirección de correo electrónico.",
+          "Para saber si tu suscripción está activa en todos tus dispositivos y permitir la restauración de compras, utilizamos el servicio RevenueCat (RevenueCat, Inc., Estados Unidos), encargado del tratamiento en el sentido del RGPD. Recibe: un identificador anónimo generado por la aplicación, el historial de compras de Zinzin (producto, fecha, precio, país, estado de renovación) e información técnica sobre el dispositivo (modelo, versión del sistema y de la app).",
+          "Base jurídica: la ejecución del contrato de suscripción (art. 6.1.b del RGPD). Plazo de conservación: mientras dure la suscripción y después hasta 3 años, además de los plazos impuestos por las obligaciones contables y fiscales.",
+          "RevenueCat está situado en Estados Unidos: la transferencia se rige por las cláusulas contractuales tipo de la Comisión Europea y/o el Marco de Privacidad de Datos UE–EE. UU. (Data Privacy Framework).",
+        ],
+      },
+      {
+        title: "Lo que no hacemos",
+        paragraphs: [
+          "Sin publicidad, sin medición de audiencia, sin rastreo entre apps o sitios web (ninguna solicitud de «App Tracking Transparency»), sin venta de datos, sin cookies en la aplicación.",
+          "Si nos propones una idea (botón «Propón una idea») o nos escribes, el mensaje sale desde tu aplicación de correo: entonces recibimos tu dirección de correo y tu mensaje, que solo usamos para leerte y responderte, y que se eliminan como máximo 3 años después del último intercambio. Base jurídica: nuestro interés legítimo en mejorar la app. Las ideas seleccionadas pueden incorporarse al juego, sin mencionar tu nombre.",
+          "La aplicación no accede a tus contactos, ni a tu ubicación, ni a tu micrófono, ni a tu cámara. Algunos juegos pueden usar el sensor de movimiento del móvil (p. ej. «No agites la patata»): la medición se procesa al instante en el dispositivo y nunca se guarda ni se envía. La voz del narrador la genera el sistema de tu móvil.",
+        ],
+      },
+      {
+        title: "Menores",
+        paragraphs: [
+          "Zinzin está reservada a personas de 18 años o más. No recogemos conscientemente ningún dato de menores.",
+        ],
+      },
+      {
+        title: "Tus derechos",
+        paragraphs: [
+          "De conformidad con el RGPD y la ley francesa de Informática y Libertades, tienes derecho de acceso, rectificación, supresión, limitación, oposición y portabilidad, así como derecho a definir instrucciones sobre el destino de tus datos después de tu fallecimiento.",
+          `Para ejercerlos: ${E.email}. Como no conocemos tu identidad, indícanos el identificador que aparece en los ajustes de la app (si está disponible) o la fecha y el tipo de tu compra.`,
+          "También puedes presentar una reclamación ante la CNIL, la autoridad francesa de protección de datos (www.cnil.fr), o ante la autoridad de protección de datos de tu país.",
+        ],
+      },
+      {
+        title: "Cambios",
+        paragraphs: [
+          `Esta política puede cambiar (nuevas funciones, obligaciones legales). La fecha de actualización figura a continuación. Última actualización: ${LEGAL_UPDATED_AT_I18N.es}.`,
+        ],
+      },
+    ],
+  },
+
+  conditions: {
+    id: "conditions",
+    title: "Condiciones generales de uso y de venta",
+    intro: PREVAILS.es,
+    sections: [
+      {
+        title: "1. Objeto",
+        paragraphs: [
+          `Estas condiciones regulan el uso de la aplicación Zinzin, editada por ${E.name} («nosotros»), y la compra de la suscripción Zinzin Premium. Al usar la aplicación, las aceptas. Completan las condiciones del App Store o de Google Play (en el caso de Apple: el contrato de licencia estándar para el usuario final, «EULA»).`,
+        ],
+      },
+      {
+        title: "2. Acceso reservado a adultos",
+        paragraphs: [
+          "Zinzin está reservada a personas mayores de edad (18 años o más). Algunos juegos contienen referencias al alcohol y contenidos pícaros (no explícitos), señalados como «18+». Al confirmar tu edad al abrir la app, certificas que eres mayor de edad.",
+        ],
+      },
+      {
+        title: "3. El servicio",
+        paragraphs: [
+          "Zinzin ofrece juegos de fiesta que se juegan en grupo con un solo móvil, sin conexión. Algunos juegos son gratuitos; los demás, los contenidos 18+ y las novedades están disponibles con la suscripción Zinzin Premium. El catálogo puede cambiar (juegos añadidos, modificados o retirados).",
+        ],
+      },
+      {
+        title: "4. Suscripción Zinzin Premium",
+        paragraphs: [
+          "Planes disponibles (precios con impuestos incluidos mostrados en la aplicación en el momento de la compra, que pueden variar según el país): Pase fiesta (7 días), Mensual, Anual.",
+          "El pago se carga en tu cuenta de Apple o Google al confirmar la compra. La suscripción se renueva automáticamente por el mismo periodo, salvo que la canceles al menos 24 horas antes del final del periodo en curso.",
+          "Puedes gestionar o cancelar tu suscripción en cualquier momento desde los ajustes de tu cuenta de Apple (Ajustes › tu nombre › Suscripciones) o de Google Play (Pagos y suscripciones). La cancelación surte efecto al final del periodo en curso; el periodo iniciado no se reembolsa, salvo decisión de Apple o Google.",
+          "Los reembolsos los gestiona Apple (reportaproblem.apple.com) o Google según sus propias normas.",
+        ],
+      },
+      {
+        title: "5. Derecho de desistimiento",
+        paragraphs: [
+          "La suscripción da acceso inmediato a un contenido digital. Al confirmar la compra, solicitas la ejecución inmediata del servicio y reconoces que renuncias a tu derecho de desistimiento de 14 días, de conformidad con el artículo L221-28 13° del Código de Consumo francés.",
+        ],
+      },
+      {
+        title: "6. Jugar de forma responsable",
+        paragraphs: [
+          "Los «tragos» que proponen algunos juegos son siempre opcionales: pueden sustituirse por un reto y jugarse con agua o una bebida sin alcohol. Nadie está obligado a beber. El abuso de alcohol es peligroso para la salud: consúmelo con moderación. No conduzcas nunca después de haber bebido.",
+          "Los desafíos y retos deben respetar a todo el mundo: cualquier participante puede negarse a hacer un reto. No hagas nunca un reto peligroso, ilegal o que incomode a alguien. Cada jugador es responsable de sus actos y de su consumo.",
+          "Algunos juegos (p. ej. «La Patata Caliente») consisten en pasarse el móvil: hazlo con cuidado. No nos hacemos responsables de la rotura de un dispositivo.",
+        ],
+      },
+      {
+        title: "7. Responsabilidad",
+        paragraphs: [
+          "La aplicación se ofrece tal cual. Hacemos todo lo posible para que funcione correctamente, pero no garantizamos la ausencia de errores. No seremos responsables de los daños derivados de un uso no conforme a estas condiciones, ni del comportamiento de los jugadores.",
+          "Estas condiciones no limitan los derechos que te otorgan las disposiciones legales imperativas aplicables a los consumidores, en particular la garantía legal de conformidad de los contenidos digitales (artículos L224-25-1 y siguientes del Código de Consumo francés).",
+        ],
+      },
+      {
+        title: "8. Propiedad intelectual",
+        paragraphs: [
+          "Te concedemos una licencia personal, no exclusiva e intransferible para usar la aplicación con fines privados y no comerciales. Queda prohibido copiar, extraer o revender sus contenidos (preguntas, cartas, personajes, sonidos, código).",
+        ],
+      },
+      {
+        title: "9. Datos personales",
+        paragraphs: ["Consulta nuestra política de privacidad, disponible en la aplicación y en nuestra web."],
+      },
+      {
+        title: "10. Litigios y mediación",
+        paragraphs: [
+          "Las compras las cobra Apple (App Store) o Google (Google Play): cualquier solicitud relacionada con el pago o el reembolso debe hacerse primero ante ellos (reportaproblem.apple.com, o Google Play › Pagos y suscripciones).",
+          `Para cualquier otra pregunta o reclamación sobre la aplicación: ${E.email}. Nos comprometemos a responder en un plazo de 15 días y a buscar una solución amistosa.`,
+          ...(E.mediator
+            ? [`En caso de litigio no resuelto, puedes recurrir gratuitamente al mediador de consumo: ${E.mediator}.`]
+            : []),
+          "Estas condiciones se rigen por el derecho francés. A falta de acuerdo amistoso, serán competentes los tribunales previstos por la ley.",
+        ],
+      },
+      {
+        title: "11. Cambios",
+        paragraphs: [`Podemos modificar estas condiciones; la versión vigente es la que se muestra en la aplicación. Última actualización: ${LEGAL_UPDATED_AT_I18N.es}.`],
+      },
+    ],
+  },
+};
+
+/** Textes légaux dans la langue de l'app (le français fait foi ; le site garde LEGAL_DOCS). */
+export function getLegalDocs(lang: Lang): Record<LegalDocId, LegalDoc> {
+  return lang === "en" ? DOCS_EN : lang === "es" ? DOCS_ES : LEGAL_DOCS;
+}

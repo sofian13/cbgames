@@ -8,6 +8,7 @@ import { App } from "./App";
 import { ErrorBoundary } from "./ui/ErrorBoundary";
 import { initPremium } from "./premium";
 import { installFrenchTypo } from "./ui/typo";
+import { getLang } from "@/lib/i18n";
 
 // navigator.vibrate n'existe pas dans la webview iOS : on le branche sur Haptics
 // pour que toutes les vibrations des jeux marchent sur iPhone.
@@ -25,12 +26,14 @@ if (cap?.isNativePlatform?.()) {
 }
 
 initPremium();
-// Espaces insécables devant « ? ! : ; » partout (aucun « ? » orphelin en début de ligne)
+// Langue du document (lecteurs d'écran, césure) : mise à jour ensuite par setLang()
+document.documentElement.lang = getLang();
+// Espaces insécables devant « ? ! : ; » partout en français (aucun « ? » orphelin en début de ligne)
 installFrenchTypo();
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <ErrorBoundary onBack={() => location.reload()} backLabel="Relancer Zinzin">
+    <ErrorBoundary onBack={() => location.reload()}>
       <App />
     </ErrorBoundary>
   </StrictMode>,

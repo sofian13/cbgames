@@ -4,12 +4,16 @@
  * insécable, pour qu'un « ? » ne se retrouve jamais seul en début de ligne.
  * Agit sur les nœuds texte (pas sur les champs de saisie), y compris ceux
  * que React met à jour ensuite.
+ * Uniquement en français : en anglais / espagnol il n'y a pas d'espace avant « ? ! : ; ».
  */
+import { getLang } from "@/lib/i18n";
+
 const RE = /[ \t]+([?!:;»=])|(«)[ \t]+/g;
 const fix = (s: string) => s.replace(RE, (_m, p: string | undefined, q: string | undefined) => (p ? " " + p : q + " "));
 const SKIP = new Set(["SCRIPT", "STYLE", "TEXTAREA", "INPUT", "CODE", "PRE"]);
 
 function fixNode(n: Node) {
+  if (getLang() !== "fr") return;
   if (n.nodeType === Node.TEXT_NODE) {
     const v = n.nodeValue;
     if (v && RE.test(v)) {

@@ -16,7 +16,8 @@ import { TheatreScreen, QuestionBillboard, RecWave, BLUFF_COLOR } from "@/compon
 import { GAME_INK } from "@/components/games/game-icon-button";
 import { IdeaButton, RerollButton } from "@/components/games/idea-button";
 import { playCombo, playSfx, preloadSfx } from "@/lib/sfx";
-import { BLUFF_QUESTIONS } from "@/components/games/le-bluffeur/questions";
+import { getLang, useT } from "@/lib/i18n";
+import { STR, questionsFor } from "@/components/games/le-bluffeur/i18n";
 import { Smartphone, Target } from "lucide-react";
 import { GameInlineIcon } from "@/components/games/game-icon-button";
 
@@ -75,10 +76,11 @@ interface LocalOption { id: number; text: string; authors: number[]; isTruth: bo
 // ── WRAPPER : le joueur choisit local ou online ───────────
 export default function LeBluffeurGame(props: GameProps) {
   const [mode, setMode] = useState<GameMode | null>(null);
+  const t = useT(STR);
   if (mode === null) {
     return (
-      <ModeSelect emoji="🎭" name="Le Bluffeur"
-        tagline="Invente une fausse réponse crédible, puis démasque la vraie parmi les bluffs."
+      <ModeSelect emoji="🎭" name={t.name}
+        tagline={t.tagline}
         onPick={setMode} />
     );
   }
@@ -92,12 +94,13 @@ export default function LeBluffeurGame(props: GameProps) {
 const TOTAL_LOCAL_ROUNDS = 5;
 
 function LeBluffeurLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) {
+  const t = useT(STR);
   type Phase = "setup" | "question" | "pass-write" | "write" | "pass-vote" | "vote" | "reveal" | "over";
   const [phase, setPhase] = useState<Phase>("setup");
   const [players, setPlayers] = useState<string[]>([]);
   const [scores, setScores] = useState<number[]>([]);
   const [round, setRound] = useState(0);
-  const [questions, setQuestions] = useState(() => [...BLUFF_QUESTIONS].sort(() => Math.random() - 0.5));
+  const [questions, setQuestions] = useState(() => [...questionsFor(getLang())].sort(() => Math.random() - 0.5));
   const [fakes, setFakes] = useState<string[]>([]);
   const [wroteTruth, setWroteTruth] = useState<boolean[]>([]);
   const [turnIdx, setTurnIdx] = useState(0);
@@ -123,7 +126,8 @@ function LeBluffeurLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) 
   const begin = (names: string[]) => {
     setPlayers(names); setScores(names.map(() => 0));
     // Nouvelle pioche à chaque partie (sinon « Nouvelle partie » rejouerait les mêmes questions)
-    setQuestions([...BLUFF_QUESTIONS].sort(() => Math.random() - 0.5));
+    // … dans la langue choisie, figée pour la partie
+    setQuestions([...questionsFor(getLang())].sort(() => Math.random() - 0.5));
     startRound(1, names);
   };
   const startRound = (r: number, names = players) => {
@@ -184,7 +188,7 @@ function LeBluffeurLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) 
   };
 
   if (phase === "setup") {
-    return <PlayersSetup emoji="🎭" name="Le Bluffeur" min={3} max={8} accent={BLUFF_COLOR} onStart={begin} onBack={onReturnToLobby}
+    return <PlayersSetup emoji="🎭" name={t.name} min={3} max={8} accent={BLUFF_COLOR} onStart={begin} onBack={onReturnToLobby}
       footer={<IdeaButton game="Le Bluffeur" kind="question" />} />;
   }
   if (phase === "question") {
@@ -192,21 +196,21 @@ function LeBluffeurLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) 
       <TheatreScreen round={round} total={totalRounds}>
         <QuestionBillboard question={q?.question ?? null} />
         <p className="mt-6 text-[16px] font-semibold leading-snug">
-          Chacun invente en secret une fausse réponse crédible. Ensuite, trouvez la vraie parmi les bluffs !
+          {t.intro}
         </p>
         <div className="mt-5 flex justify-center">
-          <RerollButton label="Pas fou ? Une autre question" onClick={rerollQuestion} />
+          <RerollButton label={t.rerollQ} onClick={rerollQuestion} />
         </div>
         <div className="min-h-8 flex-1" />
         <ZButton bg={GAME_INK} onClick={() => { setTurnIdx(0); setDraft(""); setPhase("pass-write"); }}>
-          Action ! On invente
+          {t.action}
         </ZButton>
       </TheatreScreen>
     );
   }
   if (phase === "pass-write") {
     return <PassScreen toName={players[turnIdx]} colorIndex={turnIdx} accent={BLUFF_COLOR}
-      hint="Toi seul : invente une fausse réponse crédible, sans la montrer aux autres." onReady={() => { setDraft(""); setPhase("write"); }} />;
+      hint={t.passWrite} onReady={() => { setDraft(""); setPhase("write"); }} />;
   }
   if (phase === "write") {
     return (
@@ -227,20 +231,20 @@ function LeBluffeurLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) 
             if (first < 0) resolve(players.map(() => -1), built.opts, built.wt);
             else { setTurnIdx(first); setPhase("pass-vote"); }
           }
-        }}>Valider mon bluff</ZButton>
+        }}>{t.validateBluff}</ZButton>
       </TheatreScreen>
     );
   }
   if (phase === "pass-vote") {
     return <PassScreen toName={players[turnIdx]} colorIndex={turnIdx} accent={BLUFF_COLOR}
-      buttonLabel="C'est moi, je vote" hint="Trouve la VRAIE réponse parmi les propositions." onReady={() => setPhase("vote")} />;
+      buttonLabel={t.meVote} hint={t.passVote} onReady={() => setPhase("vote")} />;
   }
   if (phase === "vote") {
     const voter = turnIdx;
     return (
       <ZScreen>
-        <ZChip bg={BLUFF_COLOR} tilt={-2}>{players[voter]} vote</ZChip>
-        <ZTitle size={34} className="mt-3">Laquelle est la vraie&nbsp;?</ZTitle>
+        <ZChip bg={BLUFF_COLOR} tilt={-2}>{t.votes(players[voter])}</ZChip>
+        <ZTitle size={34} className="mt-3">{t.whichTrue}</ZTitle>
         <p className="mt-2 text-[16px] font-semibold leading-snug" style={{ color: "rgba(255,255,255,0.88)" }}>{q?.question?.replace(/\s*_{2,}\.?/g, "…")}</p>
         <div className="mt-5 flex flex-col gap-3">
           {options.map((o, i) => {
@@ -261,7 +265,7 @@ function LeBluffeurLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) 
                   border: own ? "2.5px dashed rgba(255,255,255,0.5)" : `3px solid ${GAME_INK}`,
                   rotate: own ? undefined : `${i % 2 ? 0.8 : -0.8}deg`,
                 }}>
-                {o.text}{own && <span className="mt-1 block text-[14px] font-semibold" style={{ fontFamily: "'DM Sans', system-ui, sans-serif", letterSpacing: 0 }}>C&apos;est ton bluff</span>}
+                {o.text}{own && <span className="mt-1 block text-[14px] font-semibold" style={{ fontFamily: "'DM Sans', system-ui, sans-serif", letterSpacing: 0 }}>{t.yourBluff}</span>}
               </button>
             );
           })}
@@ -276,17 +280,17 @@ function LeBluffeurLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) 
     return (
       <ZScreen>
         <ConfettiBurst count={30} />
-        <ZChip bg="#fff" tilt={-2}>Manche {round}/{totalRounds}</ZChip>
-        <ZTitle size={38} className="mt-3">La vraie réponse</ZTitle>
+        <ZChip bg="#fff" tilt={-2}>{t.round(round, totalRounds)}</ZChip>
+        <ZTitle size={38} className="mt-3">{t.trueAnswer}</ZTitle>
         <ZCard bg={BLUFF_COLOR} tilt={-1.5} shadow={6} radius={26} className="mt-4 px-5 pb-5 pt-4">
           <p className="text-[15px] font-semibold leading-snug">{q?.question?.replace(/\s*_{2,}\.?/g, "…")}</p>
           <p className="mt-2 break-words" style={{ ...DISPLAY, fontSize: 34, lineHeight: 1 }}>{q?.answer}</p>
-          {finders.length > 0 && <p className="mt-3 text-[15px] font-bold">Trouvée par <NameList names={finders as string[]} /> · +30</p>}
+          {finders.length > 0 && <p className="mt-3 text-[15px] font-bold">{t.foundBy}<NameList names={finders as string[]} /> · +30</p>}
           {wroteTruth.some(Boolean) && (
-            <p className="mt-1 text-[15px] font-bold"><GameInlineIcon icon={Target} /> Écrite pile par <NameList names={players.filter((_, i) => wroteTruth[i])} /> · +15</p>
+            <p className="mt-1 text-[15px] font-bold"><GameInlineIcon icon={Target} />{t.writtenBy}<NameList names={players.filter((_, i) => wroteTruth[i])} /> · +15</p>
           )}
         </ZCard>
-        {bluffs.length > 0 && <ZTitle size={28} className="mt-8">Les bluffs</ZTitle>}
+        {bluffs.length > 0 && <ZTitle size={28} className="mt-8">{t.theBluffs}</ZTitle>}
         <div className="mt-3 flex flex-col gap-3">
           {bluffs.map((o, i) => {
             const voters = votes.map((v, k) => (v === o.id ? players[k] : null)).filter(Boolean);
@@ -297,8 +301,8 @@ function LeBluffeurLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) 
                   {voters.length > 0 && <span className="shrink-0 text-[20px]" style={DISPLAY}>+{voters.length * 20}</span>}
                 </div>
                 <p className="mt-1 text-[14px] font-semibold">
-                  De <NameList names={o.authors.map((a) => players[a])} />{o.authors.length > 1 && voters.length ? " (chacun)" : ""}
-                  {voters.length ? <> · a piégé <NameList names={voters as string[]} /></> : " · personne n'est tombé dedans"}
+                  {t.by}<NameList names={o.authors.map((a) => players[a])} />{o.authors.length > 1 && voters.length ? t.each : ""}
+                  {voters.length ? <>{t.fooled}<NameList names={voters as string[]} /></> : t.nobodyFell}
                 </p>
               </ZCard>
             );
@@ -306,7 +310,7 @@ function LeBluffeurLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) 
         </div>
         <ZButton bg={BLUFF_COLOR} className="mt-8" onClick={() => {
           if (round >= totalRounds) { playCombo("fanfare"); setPhase("over"); } else startRound(round + 1);
-        }}>{round >= totalRounds ? "Voir les scores" : "Manche suivante"}</ZButton>
+        }}>{round >= totalRounds ? t.seeScores : t.nextRound}</ZButton>
       </ZScreen>
     );
   }
@@ -315,15 +319,15 @@ function LeBluffeurLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) 
   return (
     <ZScreen bg={BLUFF_COLOR}>
       <ConfettiBurst count={50} />
-      <ZTitle size={(ranking[0]?.name.length ?? 0) > 9 ? 30 : 40} className="text-center"><span className="whitespace-nowrap">{ranking[0]?.name},</span> as du bluff</ZTitle>
+      <ZTitle size={(ranking[0]?.name.length ?? 0) > 9 ? 30 : 40} className="text-center"><span className="whitespace-nowrap">{ranking[0]?.name},</span>{t.bluffAce}</ZTitle>
       <div className="mt-6"><ZRanking rows={ranking} /></div>
       <div className="min-h-8 flex-1" />
-      <ZButton bg={GAME_INK} onClick={() => begin(players)}>Rejouer</ZButton>
+      <ZButton bg={GAME_INK} onClick={() => begin(players)}>{t.playAgain}</ZButton>
       <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
-        <ZButton size="sm" bg="#fff" style={{ width: "auto" }} onClick={() => setPhase("setup")}>Changer les joueurs</ZButton>
+        <ZButton size="sm" bg="#fff" style={{ width: "auto" }} onClick={() => setPhase("setup")}>{t.changePlayers}</ZButton>
         <IdeaButton game="Le Bluffeur" kind="question" bg="#fff" />
       </div>
-      {onReturnToLobby && <ZLink onClick={onReturnToLobby} color={GAME_INK} className="mt-2">Retour à l&apos;accueil</ZLink>}
+      {onReturnToLobby && <ZLink onClick={onReturnToLobby} color={GAME_INK} className="mt-2">{t.backHome}</ZLink>}
     </ZScreen>
   );
 }
@@ -338,10 +342,11 @@ function BluffInput({ value, onChange, onSubmit, autoFocus, inputRef }: {
   value: string; onChange: (v: string) => void; onSubmit: () => void; autoFocus?: boolean;
   inputRef?: React.Ref<HTMLTextAreaElement>;
 }) {
+  const t = useT(STR);
   return (
     <div className="rounded-[20px] px-4 pb-3 pt-2.5" style={{ background: "#fff", color: GAME_INK, border: `3px solid ${GAME_INK}`, boxShadow: `0 4px 0 ${GAME_INK}` }}>
       <div className="flex items-center justify-between text-[14px] font-bold">
-        <span>Ton bluff</span>
+        <span>{t.inputLabel}</span>
         <span style={{ color: "#6B5C88" }}>{value.length}/80</span>
       </div>
       {/* Zone multi-ligne : un bluff long reste lisible en entier (pas de défilement horizontal) */}
@@ -349,7 +354,7 @@ function BluffInput({ value, onChange, onSubmit, autoFocus, inputRef }: {
         ref={inputRef}
         value={value} onChange={(e) => onChange(e.target.value.replace(/\n/g, " "))}
         onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); onSubmit(); } }}
-        placeholder="Une fausse réponse crédible…" maxLength={80} autoComplete="off" autoFocus={autoFocus}
+        placeholder={t.placeholder} maxLength={80} autoComplete="off" autoFocus={autoFocus}
         rows={value.length > 22 ? 3 : 2} enterKeyHint="done"
         className="mt-1 w-full resize-none bg-transparent leading-tight outline-none"
         style={{ ...DISPLAY, fontSize: value.length > 40 ? 19 : 22, color: GAME_INK, letterSpacing: "-0.01em" }}

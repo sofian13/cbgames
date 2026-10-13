@@ -1,6 +1,8 @@
 import { Fragment, useState } from "react";
 import { ChevronDown, Lock, Play } from "lucide-react";
-import { CAST, getZGame, type ZGame, type ZLine } from "../catalog";
+import { CAST, getZGame, type ZLine } from "../catalog";
+import { pick, useLang } from "@/lib/i18n";
+import { UI } from "../strings";
 import { ZBlob, ZPALETTE, type ZColor } from "./ZBlob";
 import { BigBtn, CloseBtn, Sheet, Tag } from "./common";
 import { gameInfo, haptic, playersLabel } from "./util";
@@ -18,12 +20,14 @@ export function GameSheet({
 }) {
   const game = getZGame(id);
   const [allRules, setAllRules] = useState(false);
+  const lang = useLang();
+  const t = pick(UI, lang);
   if (!game) return null;
-  const info = gameInfo(game);
+  const info = gameInfo(game, lang);
   const c = ZPALETTE[game.color] ?? ZPALETTE.pink;
-  const steps = (game.steps?.length ? game.steps : info.rules).slice(0, 5);
+  const steps = (info.steps.length ? info.steps : info.rules).slice(0, 5);
   const longest = Math.max(...info.name.split(" ").map((w) => w.length));
-  const moreRules = game.steps?.length ? info.rules : info.rules.slice(5);
+  const moreRules = info.steps.length ? info.rules : info.rules.slice(5);
 
   return (
     <Sheet onClose={onClose} label={info.name} bg="var(--zz-bg)">
@@ -38,10 +42,10 @@ export function GameSheet({
                 <CloseBtn onClick={close} />
               </div>
               <div className="flex flex-wrap gap-1.5 pr-14 pt-2">
-                {game.isNew && <Tag bg="#fff" tilt={-4}>Nouveau</Tag>}
+                {game.isNew && <Tag bg="#fff" tilt={-4}>{t.tagNew}</Tag>}
                 {game.adult && <Tag bg="var(--zz-ink)" color="#fff" tilt={3}>18+</Tag>}
-                {game.free && !premium && <Tag bg="#fff" tilt={2}>Gratuit</Tag>}
-                {locked && <Tag bg="#FFD23F" tilt={-2}><Lock size={12} strokeWidth={3} className="mr-1" />Premium</Tag>}
+                {game.free && !premium && <Tag bg="#fff" tilt={2}>{t.tagFree}</Tag>}
+                {locked && <Tag bg="#FFD23F" tilt={-2}><Lock size={12} strokeWidth={3} className="mr-1" />{t.premium}</Tag>}
               </div>
               <h2 className="zz-title relative z-[1] mt-3 pr-[30%]" style={{ fontSize: `min(${info.name.length > 12 ? 44 : 54}px, ${(96 / longest).toFixed(1)}vw)`, lineHeight: 0.9 }}>
                 {/* Mots insécables : « Loup-Garou » ne se coupe pas au tiret */}
@@ -53,7 +57,7 @@ export function GameSheet({
                 className="zz-stk-sm relative z-[1] mt-4 inline-flex h-9 items-center rounded-full px-3.5 text-[15px] font-bold"
                 style={{ background: "#fff", color: "var(--zz-ink)", rotate: "-3deg" }}
               >
-                {playersLabel(game.players)}
+                {playersLabel(game.players, lang)}
               </span>
               {/* Blob géant qui déborde sous l'en-tête */}
               {/* Calé contre le bord sans couper le costume (le nez de Pinocchio s'allonge vers la droite) */}
@@ -69,13 +73,13 @@ export function GameSheet({
               )}
 
               {/* Mini BD */}
-              <h3 className="zz-title mt-8 text-white" style={{ fontSize: 28 }}>Ça donne quoi&nbsp;?</h3>
-              <Story game={game} example={info.example} />
+              <h3 className="zz-title mt-8 text-white" style={{ fontSize: 28 }}>{t.howItLooks}</h3>
+              <Story story={info.story} example={info.example} />
 
               {/* Étapes */}
               {steps.length > 0 && (
                 <>
-                  <h3 className="zz-title mt-9 text-white" style={{ fontSize: 28 }}>Comment on joue</h3>
+                  <h3 className="zz-title mt-9 text-white" style={{ fontSize: 28 }}>{t.howToPlay}</h3>
                   <ol className="mt-4 grid gap-4">
                     {steps.map((r, i) => (
                       <li key={i} className="flex items-center gap-4">
@@ -102,7 +106,7 @@ export function GameSheet({
                     // Violet foncé illisible sur le fond nuit → version claire
                     style={{ color: game.color === "purple" ? "#B59CFF" : c.body }}
                   >
-                    {allRules ? "Masquer les règles détaillées" : "Les règles en détail"}
+                    {allRules ? t.rulesHide : t.rulesShow}
                     <ChevronDown size={18} strokeWidth={3} style={{ rotate: allRules ? "180deg" : "0deg", transition: "rotate 200ms" }} />
                   </button>
                   {allRules && (
@@ -120,7 +124,7 @@ export function GameSheet({
 
               {game.adult && (
                 <p className="mt-6 text-[14px] leading-relaxed" style={{ color: "var(--zz-mute)" }}>
-                  Une gorgée de zinzin, c’est de ce que tu veux : eau, soft, jus… ou un gage. Avec modération.
+                  {t.adultNote}
                 </p>
               )}
             </div>
@@ -130,11 +134,11 @@ export function GameSheet({
           <div className="px-5 pt-3" style={{ paddingBottom: "calc(var(--sab) + 16px)", background: "linear-gradient(180deg, transparent, var(--zz-bg) 35%)" }}>
             {locked ? (
               <BigBtn onClick={() => { haptic("medium"); onUnlock(); }} bg="#FFD23F">
-                <Lock size={20} strokeWidth={3} /> Débloquer ce jeu
+                <Lock size={20} strokeWidth={3} /> {t.unlockGame}
               </BigBtn>
             ) : (
               <BigBtn onClick={() => { haptic("medium"); onPlay(id); }} bg={c.body} color={c.ink}>
-                <Play size={20} strokeWidth={3} fill="currentColor" /> Jouer
+                <Play size={20} strokeWidth={3} fill="currentColor" /> {t.play}
               </BigBtn>
             )}
           </div>
@@ -147,10 +151,10 @@ export function GameSheet({
 /* ───────── Mini BD : bulles qui sortent de petits blobs ───────── */
 const MOODS = ["happy", "laughing", "shocked", "wink", "sus", "cool"] as const;
 
-function Story({ game, example }: { game: ZGame; example?: string }) {
-  const lines: ZLine[] = game.story?.length ? game.story : example ? [{ text: example }] : [];
+function Story({ story, example }: { story: ZLine[]; example?: string }) {
+  const lines: ZLine[] = story.length ? story : example ? [{ text: example }] : [];
   if (!lines.length) return null;
-  const single = !game.story?.length;
+  const single = !story.length;
   // Chaque personnage parle toujours du même côté
   const sides = new Map<string, "l" | "r">();
   let lastNarr = -1;

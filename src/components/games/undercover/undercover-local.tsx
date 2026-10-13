@@ -3,13 +3,16 @@
 import { useMemo, useState, useEffect, type CSSProperties, type ReactNode } from "react";
 import { Mascot, MASCOT_COLORS, MASCOT_PALETTE, type MascotColor, type MascotMood } from "@/components/Mascot";
 import { registerSoftReplay } from "@/lib/game-replay";
-import { ArrowLeft, ArrowRight, BookOpen, Check, ChevronDown, ChevronUp, Dices, Eye, Lock, Mic, Minus, Plus, RotateCcw, Scale, Shuffle, Target, TriangleAlert } from "lucide-react";
+import { ArrowLeft, ArrowRight, BookOpen, Check, ChevronDown, ChevronUp, Dices, Eye, Lock, Minus, Plus, RotateCcw, Scale, Shuffle, Target, TriangleAlert } from "lucide-react";
 import { GameIconButton, GameInlineIcon, GameTopRight } from "@/components/games/game-icon-button";
 import { DISPLAY, PlayersSetup, SoundButton, ZButton, ZChip, ZZ, zBackground, useScrollTopOn } from "@/components/games/local-kit";
 import { IdeaButton, RerollButton } from "@/components/games/idea-button";
 import { playCombo, playSfx, preloadSfx } from "@/lib/sfx";
 import { isOfflineApp } from "@/lib/offline-app";
 import { requestPaywall, useUnlocked } from "@/lib/entitlements";
+import { getLang, useT, type Lang } from "@/lib/i18n";
+import { FREE_CAT_IDS, allWordPairs, freePairs, wordCategories, type WordCategory } from "@/components/games/undercover/words";
+import { UC_STR } from "@/components/games/undercover/i18n";
 
 /* ─────────────────────────────────────────────────────────────
    L'INTRUS LOCAL — Pass-and-play (un seul téléphone)
@@ -53,161 +56,13 @@ type LocalPhase =
 type EndReason = "civils-win" | "undercover-wins" | "mrwhite-wins" | "jester-wins";
 
 // ═════════════════════════════════════════════════════════════
-//  Banque de mots (même contenu que le serveur)
+//  Banque de mots : voir words.ts (une version par langue)
 // ═════════════════════════════════════════════════════════════
-// Grosse liste de mots, classée par catégorie. Chaque paire = (mot A, mot voisin B) ;
-// au tirage, on choisit au hasard lequel va aux civils et lequel va à l'Intrus.
-// Paires originales, sans marques. La catégorie « +18 » n'est jamais cochée par défaut.
-const WORD_CATEGORIES: { id: string; label: string; emoji: string; adult?: boolean; pairs: [string, string][] }[] = [
-  { id: "food", label: "Nourriture", emoji: "🍔", pairs: [
-    ["Lasagnes", "Gratin dauphinois"], ["Croque-monsieur", "Panini"], ["Crêpe", "Gaufre"], ["Couscous", "Paella"],
-    ["Quiche", "Tarte salée"], ["Omelette", "Œuf au plat"], ["Ratatouille", "Tian de légumes"], ["Hot-dog", "Burger"],
-    ["Nems", "Samoussas"], ["Taboulé", "Salade de riz"], ["Purée", "Frites"], ["Pain au chocolat", "Croissant"],
-    ["Éclair", "Religieuse"], ["Macaron", "Meringue"], ["Muffin", "Cupcake"], ["Yaourt", "Fromage blanc"],
-    ["Camembert", "Brie"], ["Steak haché", "Boulette"], ["Saucisson", "Jambon"], ["Popcorn", "Chips"],
-    ["Barbe à papa", "Guimauve"], ["Pizza", "Calzone"],
-  ] },
-  { id: "drinks", label: "Boissons", emoji: "🥤", pairs: [
-    ["Soda au cola", "Soda à l'orange"], ["Jus de pomme", "Jus de raisin"], ["Limonade", "Eau pétillante"], ["Thé glacé", "Citronnade"],
-    ["Chocolat chaud", "Café au lait"], ["Expresso", "Cappuccino"], ["Tisane", "Bouillon"], ["Milkshake", "Smoothie"],
-    ["Sirop de menthe", "Sirop de grenadine"], ["Bière", "Cidre"], ["Vin rouge", "Vin rosé"], ["Champagne", "Crémant"],
-    ["Mojito", "Piña colada"], ["Sangria", "Punch"], ["Rhum", "Whisky"], ["Kombucha", "Ginger beer"],
-    ["Boisson énergisante", "Café serré"], ["Eau de coco", "Jus d'ananas"], ["Diabolo", "Panaché"],
-  ] },
-  { id: "places", label: "Lieux", emoji: "🌍", pairs: [
-    ["Bibliothèque", "Médiathèque"], ["Boulangerie", "Pâtisserie"], ["Camping", "Gîte"], ["Zoo", "Aquarium"],
-    ["Fête foraine", "Parc d'attractions"], ["Patinoire", "Piscine"], ["Mairie", "Préfecture"], ["Phare", "Château d'eau"],
-    ["Grotte", "Tunnel"], ["Port", "Marina"], ["Ferme", "Ranch"], ["Laverie", "Pressing"],
-    ["Cimetière", "Chapelle"], ["Escape game", "Salle d'arcade"], ["Salle de sport", "Dojo"], ["Plage", "Crique"],
-    ["Refuge", "Chalet"], ["Office du tourisme", "Agence de voyage"], ["Planétarium", "Observatoire"], ["Péage", "Station-service"],
-  ] },
-  { id: "sport", label: "Sport", emoji: "⚽", pairs: [
-    ["Football", "Futsal"], ["Tennis", "Squash"], ["Ping-pong", "Badminton"], ["Ski de fond", "Biathlon"],
-    ["Escrime", "Kendo"], ["Aviron", "Canoë"], ["Water-polo", "Natation synchronisée"], ["Parapente", "Parachute"],
-    ["Marathon", "Triathlon"], ["Boxe", "Kick-boxing"], ["Bowling", "Pétanque"], ["Saut en hauteur", "Saut à la perche"],
-    ["Haltérophilie", "Musculation"], ["Tir à l'arc", "Fléchettes"], ["Roller", "Patin à glace"], ["Gymnastique", "Trampoline"],
-    ["Rugby", "Football américain"], ["Kitesurf", "Planche à voile"], ["Golf", "Croquet"], ["Yoga", "Pilates"],
-    ["Handball", "Volley"],
-  ] },
-  { id: "animals", label: "Animaux", emoji: "🐾", pairs: [
-    ["Hérisson", "Porc-épic"], ["Koala", "Paresseux"], ["Panda", "Raton laveur"], ["Pieuvre", "Calamar"],
-    ["Méduse", "Étoile de mer"], ["Chameau", "Dromadaire"], ["Zèbre", "Girafe"], ["Kangourou", "Wallaby"],
-    ["Flamant rose", "Cigogne"], ["Perroquet", "Toucan"], ["Mouton", "Lama"], ["Cochon", "Sanglier"],
-    ["Chauve-souris", "Hibou"], ["Fourmi", "Termite"], ["Coccinelle", "Luciole"], ["Phoque", "Otarie"],
-    ["Moustique", "Mouche"], ["Écureuil", "Marmotte"], ["Poisson rouge", "Tortue d'eau"], ["Lynx", "Guépard"],
-  ] },
-  { id: "fiction", label: "Fiction", emoji: "🎬", pairs: [
-    ["Vampire", "Loup-garou"], ["Sorcière", "Fée"], ["Zombie", "Momie"], ["Pirate", "Corsaire"],
-    ["Chevalier", "Samouraï"], ["Ninja", "Espion"], ["Dragon", "Licorne"], ["Robot", "Cyborg"],
-    ["Extraterrestre", "Astronaute"], ["Super-héros", "Super-vilain"], ["Princesse", "Reine"], ["Sirène", "Nymphe"],
-    ["Ogre", "Troll"], ["Magicien", "Alchimiste"], ["Cow-boy", "Shérif"], ["Détective", "Inspecteur"],
-    ["Dinosaure", "Mammouth"], ["Génie", "Elfe"], ["Gladiateur", "Viking"], ["Sitcom", "Téléréalité"],
-    ["Western", "Film de cape et d'épée"],
-  ] },
-  { id: "transport", label: "Transport", emoji: "🚗", pairs: [
-    ["Voiture", "Camionnette"], ["TGV", "Train de nuit"], ["Trottinette", "Skateboard"], ["Hélicoptère", "Montgolfière"],
-    ["Kayak", "Pédalo"], ["Tracteur", "Moissonneuse"], ["Ambulance", "Camion de pompiers"], ["Taxi", "VTC"],
-    ["Bus scolaire", "Car de tourisme"], ["Téléphérique", "Télésiège"], ["Jet-ski", "Hors-bord"], ["Monocycle", "Tandem"],
-    ["Calèche", "Charrette"], ["Péniche", "Chalutier"], ["Scooter", "Mobylette"], ["Planeur", "ULM"],
-    ["Paquebot", "Ferry"], ["Tramway", "Funiculaire"], ["Dépanneuse", "Camion-benne"], ["Fusée", "Satellite"],
-  ] },
-  { id: "objects", label: "Objets", emoji: "📦", pairs: [
-    ["Agrafeuse", "Trombone"], ["Ciseaux", "Cutter"], ["Gomme", "Correcteur"], ["Bougie", "Lampe torche"],
-    ["Réveil", "Minuteur"], ["Peigne", "Brosse à cheveux"], ["Brosse à dents", "Fil dentaire"], ["Coussin", "Oreiller"],
-    ["Couette", "Plaid"], ["Tire-bouchon", "Décapsuleur"], ["Parapluie", "Imperméable"], ["Portefeuille", "Sac banane"],
-    ["Jumelles", "Télescope"], ["Boussole", "Carte"], ["Cadenas", "Coffre-fort"], ["Sifflet", "Klaxon"],
-    ["Ballon", "Frisbee"], ["Puzzle", "Casse-tête"], ["Dé", "Carte à jouer"], ["Marteau", "Maillet"],
-    ["Tournevis", "Clé à molette"],
-  ] },
-  { id: "nature", label: "Nature", emoji: "🌦️", pairs: [
-    ["Arc-en-ciel", "Aurore boréale"], ["Grêle", "Verglas"], ["Tsunami", "Tremblement de terre"], ["Avalanche", "Glissement de terrain"],
-    ["Dune", "Falaise"], ["Marais", "Étang"], ["Récif", "Lagon"], ["Cactus", "Palmier"],
-    ["Sapin", "Chêne"], ["Rose", "Tulipe"], ["Tournesol", "Marguerite"], ["Champignon", "Mousse"],
-    ["Coquillage", "Galet"], ["Comète", "Météorite"], ["Éclipse", "Pleine lune"], ["Brise", "Rafale"],
-    ["Glacier", "Iceberg"], ["Canyon", "Vallée"], ["Geyser", "Source chaude"], ["Cascade", "Rapides"],
-  ] },
-  { id: "events", label: "Événements", emoji: "🎉", pairs: [
-    ["Mariage", "Fiançailles"], ["Anniversaire surprise", "Pendaison de crémaillère"], ["Enterrement de vie de jeune fille", "Baby shower"], ["Remise de diplômes", "Bal de promo"],
-    ["Brocante", "Vide-grenier"], ["Feu d'artifice", "Lâcher de lanternes"], ["Saint-Valentin", "Fête des mères"], ["Réveillon de Noël", "Jour de l'An"],
-    ["Chandeleur", "Mardi gras"], ["Carnaval", "Bal masqué"], ["Kermesse", "Fête de village"], ["Salon", "Foire"],
-    ["Pique-nique", "Barbecue"], ["Rentrée scolaire", "Vacances d'été"], ["Déménagement", "Rénovation"], ["Entretien d'embauche", "Premier jour de travail"],
-    ["Match", "Tournoi"], ["Défilé", "Parade"], ["Spectacle de fin d'année", "Remise des prix"], ["Halloween", "Soirée déguisée"],
-  ] },
-  { id: "jobs", label: "Métiers", emoji: "💼", pairs: [
-    ["Facteur", "Livreur"], ["Boucher", "Poissonnier"], ["Chirurgien", "Anesthésiste"], ["Hôtesse de l'air", "Guide touristique"],
-    ["Kinésithérapeute", "Ostéopathe"], ["Maçon", "Charpentier"], ["Mécanicien", "Carrossier"], ["DJ", "Animateur radio"],
-    ["Photographe", "Cameraman"], ["Bibliothécaire", "Archiviste"], ["Sage-femme", "Pédiatre"], ["Notaire", "Comptable"],
-    ["Vigile", "Garde du corps"], ["Chauffeur de bus", "Conducteur de train"], ["Agriculteur", "Viticulteur"], ["Pharmacien", "Opticien"],
-    ["Maître-nageur", "Sauveteur en mer"], ["Styliste", "Couturier"], ["Prêtre", "Moine"], ["Clown", "Mime"],
-  ] },
-  { id: "tech", label: "Écrans & tech", emoji: "📱", pairs: [
-    ["Smartphone", "Tablette"], ["Ordinateur portable", "Ordinateur fixe"], ["Console de salon", "Console portable"], ["Réseau social", "Messagerie"],
-    ["Série", "Film"], ["Podcast", "Livre audio"], ["Selfie", "Photo de groupe"], ["Emoji", "GIF"],
-    ["Clé USB", "Disque dur"], ["Wi-Fi", "Bluetooth"], ["Télécommande", "Manette"], ["Écouteurs sans fil", "Casque audio"],
-    ["Montre connectée", "Podomètre"], ["Imprimante", "Scanner"], ["Mot de passe", "Code PIN"], ["Appel vidéo", "Message vocal"],
-    ["Streaming", "Replay"], ["Jeu de tir", "Jeu de course"], ["Moteur de recherche", "Encyclopédie"], ["Drone", "Voiture télécommandée"],
-    ["Plateforme vidéo", "Chaîne de télé"],
-  ] },
-  { id: "music", label: "Musique", emoji: "🎵", pairs: [
-    ["Guitare", "Ukulélé"], ["Piano", "Orgue"], ["Violon", "Contrebasse"], ["Flûte", "Clarinette"],
-    ["Trompette", "Cor de chasse"], ["Batterie", "Tambourin"], ["Accordéon", "Harmonica"], ["Harpe", "Lyre"],
-    ["Rap", "Slam"], ["Rock", "Métal"], ["Reggae", "Ska"], ["Jazz", "Blues"],
-    ["Chorale", "Fanfare"], ["Karaoké", "Blind test"], ["Opéra", "Comédie musicale"], ["Disque vinyle", "Cassette"],
-    ["Chef d'orchestre", "Soliste"], ["Berceuse", "Comptine"], ["Tube de l'été", "Hymne national"], ["Platine", "Table de mixage"],
-  ] },
-  { id: "home", label: "Maison", emoji: "🏠", pairs: [
-    ["Canapé", "Fauteuil"], ["Lit superposé", "Hamac"], ["Baignoire", "Jacuzzi"], ["Douche", "Sauna"],
-    ["Cave", "Grenier"], ["Balcon", "Terrasse"], ["Volet", "Rideau"], ["Lave-vaisselle", "Lave-linge"],
-    ["Micro-ondes", "Four"], ["Grille-pain", "Gaufrier"], ["Bouilloire", "Cafetière"], ["Poêle", "Casserole"],
-    ["Tapis", "Paillasson"], ["Étagère", "Commode"], ["Lustre", "Lampadaire"], ["Serrure", "Interphone"],
-    ["Cheminée", "Radiateur"], ["Aspirateur", "Serpillière"], ["Escalier", "Ascenseur"], ["Garage", "Abri de jardin"],
-  ] },
-  { id: "fashion", label: "Mode", emoji: "👕", pairs: [
-    ["Jean", "Jogging"], ["Pull", "Sweat à capuche"], ["Basket", "Mocassin"], ["Bottes de pluie", "Après-ski"],
-    ["Écharpe", "Foulard"], ["Bonnet", "Casquette"], ["Robe", "Jupe"], ["Chemise", "Polo"],
-    ["Pyjama", "Peignoir"], ["Short", "Maillot de bain"], ["Cravate", "Nœud papillon"], ["Gants", "Moufles"],
-    ["Manteau", "Doudoune"], ["Lunettes de soleil", "Masque de ski"], ["Collier", "Boucles d'oreilles"], ["Ceinture", "Bretelles"],
-    ["Tongs", "Chaussons"], ["Costume", "Smoking"], ["Tablier", "Blouse"], ["Sac à main", "Cartable"],
-  ] },
-  { id: "anime", label: "Anime", emoji: "🎌", pairs: [
-    ["Naruto", "Sasuke"], ["Goku", "Vegeta"], ["Luffy", "Zoro"], ["Itachi", "Madara"],
-    ["Gojo", "Sukuna"], ["Tanjiro", "Zenitsu"], ["Levi", "Eren"], ["Mikasa", "Historia"],
-    ["Nami", "Robin"], ["One Piece", "Bleach"], ["Konoha", "Akatsuki"], ["Sharingan", "Byakugan"],
-    ["Bankai", "Zanpakuto"], ["Manga", "Comics"], ["Shinigami", "Hollow"], ["Titan", "Géant"],
-  ] },
-  { id: "adult", label: "+18", emoji: "🔞", adult: true, pairs: [
-    ["Suçon", "Morsure"], ["Lingerie", "Nuisette"], ["String", "Tanga"],
-    ["Porte-jarretelles", "Bas résille"], ["Strip-tease", "Effeuillage"], ["Lap dance", "Pole dance"],
-    ["Menottes", "Bandeau sur les yeux"], ["Plume", "Glaçon"], ["Jeu de rôle", "Déguisement coquin"],
-    ["Coup d'un soir", "Ex de passage"], ["Plan cul", "Sex friend"], ["Préservatif", "Lubrifiant"],
-    ["Capote XL", "Capote parfumée"], ["Love room", "Love hotel"], ["Sexto", "Nude"],
-    ["Photo osée", "Selfie miroir"], ["Préliminaires", "Câlin crapuleux"], ["Jacuzzi à deux", "Douche à deux"],
-    ["Talons aiguilles", "Cuissardes"], ["Strip-poker", "Action ou vérité"], ["Dirty talk", "Mots doux à l'oreille"],
-    ["Body", "Guêpière"], ["Déshabillé", "Pyjama sexy"], ["Huile de massage", "Bougie de massage"],
-    ["Bain de minuit", "Baignade nue"], ["Cabine d'essayage", "Ascenseur"], ["Toilettes de boîte", "Siège arrière"],
-    ["Fessée", "Fouet"], ["Gémissement", "Soupir"], ["Tatouage caché", "Piercing caché"],
-    ["Sous-vêtement oublié", "Chaussette oubliée"], ["Gage coquin", "Défi osé"], ["Spectacle de strip-teaseurs", "Enterrement de vie de jeune fille"],
-    ["Kamasutra", "Position acrobatique"], ["Nuit blanche", "Grasse mat' à deux"], ["Bisou dans le cou", "Souffle dans l'oreille"],
-    ["Main aux fesses", "Main sur la cuisse"], ["Lit qui grince", "Voisin qui tape au mur"], ["Bain moussant", "Pétales de rose"],
-    ["Regard qui en dit long", "Clin d'œil"],
-  ] },
-];
-// Sans sélection : tout sauf le +18.
-const ALL_WORD_PAIRS: [string, string][] = WORD_CATEGORIES.filter((c) => !c.adult).flatMap((c) => c.pairs);
-
-// Version gratuite de l'app : toujours les mêmes 50 paires (4 par thème du quotidien).
-// Anime, +18 et les autres thèmes sont réservés à Premium.
-const FREE_CAT_IDS = ["food", "drinks", "places", "sport", "animals", "transport", "objects", "nature", "jobs", "home", "fashion", "music", "events"];
-const FREE_PAIRS: [string, string][] = FREE_CAT_IDS
-  .flatMap((id) => (WORD_CATEGORIES.find((c) => c.id === id)?.pairs ?? []).slice(0, 4))
-  .slice(0, 50);
 
 // ═════════════════════════════════════════════════════════════
 //  Tokens (mirror online)
 // ═════════════════════════════════════════════════════════════
 const ROLE_COLOR: Record<Role, string> = { civil: "#3DDC97", undercover: "#FF3EA5", mrwhite: "#FFD23F", jester: "#C58CFF" };
-const ROLE_LABEL: Record<Role, string> = { civil: "Civil", undercover: "Intrus", mrwhite: "Fantôme", jester: "Bouffon" };
-const ROLE_ARTICLE: Record<Role, string> = { civil: "un civil", undercover: "l'Intrus", mrwhite: "le Fantôme", jester: "le Bouffon" };
 
 /** Taille du mot secret adaptée à sa longueur (le mot le plus long décide). */
 const wordFontSize = (word: string | null, max = 56) => {
@@ -228,7 +83,11 @@ export default function UndercoverLocal({ onReturnToLobby }: { onReturnToLobby?:
   const [round, setRound]           = useState(1);
   const [endReason, setEndReason]   = useState<EndReason | null>(null);
   // Catégories de mots sélectionnées (toutes par défaut, sauf le +18).
-  const [selectedCats, setSelectedCats] = useState<Set<string>>(() => new Set(WORD_CATEGORIES.filter((c) => !c.adult).map((c) => c.id)));
+  // Langue figée pour la partie (on ne change pas de banque de mots en cours de jeu).
+  const [lang] = useState<Lang>(() => getLang());
+  const t = useT(UC_STR);
+  const cats = wordCategories(lang);
+  const [selectedCats, setSelectedCats] = useState<Set<string>>(() => new Set(cats.filter((c) => !c.adult).map((c) => c.id)));
 
   // Pair de mots tirée pour la partie
   const [civilWord, setCivilWord]   = useState("");
@@ -296,11 +155,11 @@ export default function UndercoverLocal({ onReturnToLobby }: { onReturnToLobby?:
   const distributeRoles = () => {
     // Pioche dans les catégories choisies (toutes si aucune sélection).
     const pool = !unlocked
-      ? FREE_PAIRS
+      ? freePairs(lang)
       : selectedCats.size === 0
-        ? ALL_WORD_PAIRS
-        : WORD_CATEGORIES.filter((c) => selectedCats.has(c.id)).flatMap((c) => c.pairs);
-    const src0 = pool.length > 0 ? pool : ALL_WORD_PAIRS;
+        ? allWordPairs(lang)
+        : cats.filter((c) => selectedCats.has(c.id)).flatMap((c) => c.pairs);
+    const src0 = pool.length > 0 ? pool : allWordPairs(lang);
     // Jamais deux fois la même paire d'affilée (bouton « Changer de mot »)
     const src = src0.length > 1 ? src0.filter((pp) => !pp.includes(civilWord)) : src0;
     const pair = src[Math.floor(Math.random() * src.length)];
@@ -500,8 +359,8 @@ export default function UndercoverLocal({ onReturnToLobby }: { onReturnToLobby?:
   // 1. Setup joueurs
   if (phase === "setup-players") {
     return (
-      <PlayersSetup emoji="🕶️" name="L'Intrus" min={3} max={12} accent="#FF3EA5" onStart={handleStartNames} onBack={onReturnToLobby}
-        footer={<IdeaButton game="L'Intrus" kind="mot" />} />
+      <PlayersSetup emoji="🕶️" name={t.gameName} min={3} max={12} accent="#FF3EA5" onStart={handleStartNames} onBack={onReturnToLobby}
+        footer={<IdeaButton game={t.gameName} kind="mot" />} />
     );
   }
 
@@ -517,6 +376,8 @@ export default function UndercoverLocal({ onReturnToLobby }: { onReturnToLobby?:
         jester={jester}
         setJester={setJester}
         selectedCats={selectedCats}
+        cats={cats}
+        lang={lang}
         unlocked={unlocked}
         setSelectedCats={setSelectedCats}
         onStart={distributeRoles}
@@ -532,11 +393,11 @@ export default function UndercoverLocal({ onReturnToLobby }: { onReturnToLobby?:
       <PassScreenUC
         toName={p.name}
         colorIdx={p.idx}
-        label={`${revealIdx + 1} / ${players.length} · Distribution`}
-        tag={rerollNotice ? "Nouveau mot ! On refait la distribution" : undefined}
+        label={t.distribution(revealIdx + 1, players.length)}
+        tag={rerollNotice ? t.rerollNotice : undefined}
         players={players}
         currentIdx={p.idx}
-        buttonLabel={<><GameInlineIcon icon={Eye} /> Voir mon rôle</>}
+        buttonLabel={<><GameInlineIcon icon={Eye} /> {t.seeMyRole}</>}
         onReady={() => { setRerollNotice(false); playSfx("card-flip", { volume: 0.8 }); setPhase("reveal"); }}
       />
     );
@@ -548,6 +409,7 @@ export default function UndercoverLocal({ onReturnToLobby }: { onReturnToLobby?:
     return (
       <RevealScreen
         player={p}
+        lang={lang}
         round={round}
         position={revealIdx + 1}
         total={players.length}
@@ -586,9 +448,9 @@ export default function UndercoverLocal({ onReturnToLobby }: { onReturnToLobby?:
       <PassScreenUC
         toName={p.name}
         colorIdx={p.idx}
-        label="Revoir le mot"
-        tag="Privé"
-        buttonLabel={<><GameInlineIcon icon={Eye} /> Voir mon rôle</>}
+        label={t.reviewLabel}
+        tag={t.privateTag}
+        buttonLabel={<><GameInlineIcon icon={Eye} /> {t.seeMyRole}</>}
         onReady={() => setPhase("review-show")}
       />
     );
@@ -598,6 +460,7 @@ export default function UndercoverLocal({ onReturnToLobby }: { onReturnToLobby?:
     return (
       <RevealScreen
         player={p}
+        lang={lang}
         round={round}
         position={null}
         total={players.length}
@@ -640,9 +503,9 @@ export default function UndercoverLocal({ onReturnToLobby }: { onReturnToLobby?:
       <PassScreenUC
         toName={p.name}
         colorIdx={p.idx}
-        label="Fantôme · dernière chance"
-        tag="Bonus"
-        buttonLabel={<><GameInlineIcon icon={Target} /> Tenter ma chance</>}
+        label={t.ghostLastChanceLabel}
+        tag={t.bonus}
+        buttonLabel={<><GameInlineIcon icon={Target} /> {t.tryMyLuck}</>}
         onReady={() => setPhase("mrwhite-guess")}
       />
     );
@@ -692,16 +555,18 @@ export default function UndercoverLocal({ onReturnToLobby }: { onReturnToLobby?:
 
 // — SETUP ROLES (composition)
 function SetupRoles({
-  players, ucCount, setUcCount, mrWhite, setMrWhite, jester, setJester, selectedCats, setSelectedCats, unlocked, onStart, onBack,
+  players, ucCount, setUcCount, mrWhite, setMrWhite, jester, setJester, selectedCats, setSelectedCats, cats, lang, unlocked, onStart, onBack,
 }: {
   players: LocalPlayer[];
   ucCount: number; setUcCount: (v: number) => void;
   mrWhite: boolean; setMrWhite: (v: boolean) => void;
   jester: boolean; setJester: (v: boolean) => void;
   selectedCats: Set<string>; setSelectedCats: (v: Set<string>) => void;
+  cats: WordCategory[]; lang: Lang;
   unlocked: boolean;
   onStart: () => void; onBack: () => void;
 }) {
+  const t = useT(UC_STR);
   const toggleCat = (id: string) => {
     const next = new Set(selectedCats);
     if (next.has(id)) next.delete(id); else next.add(id);
@@ -709,11 +574,11 @@ function SetupRoles({
     setSelectedCats(next);
   };
   // « Tout » = toutes les catégories tout public ; le +18 se coche à part.
-  const safeIds = WORD_CATEGORIES.filter((c) => !c.adult).map((c) => c.id);
+  const safeIds = cats.filter((c) => !c.adult).map((c) => c.id);
   const allSafe = safeIds.every((id) => selectedCats.has(id));
   const toggleAll = () => {
     const next = new Set(allSafe ? [safeIds[0]] : safeIds);
-    for (const c of WORD_CATEGORIES) if (c.adult && selectedCats.has(c.id)) next.add(c.id);
+    for (const c of cats) if (c.adult && selectedCats.has(c.id)) next.add(c.id);
     setSelectedCats(next);
   };
   const total = players.length;
@@ -741,10 +606,10 @@ function SetupRoles({
 
   return (
     <LocalShell tone="noir">
-      <NavBar sub={`Étape 2 · ${total} joueurs`} title="Composition" onBack={onBack} right={<Tag color="#FF3EA5">Rôles</Tag>} />
+      <NavBar sub={t.setupSub(total)} title={t.setupTitle} onBack={onBack} right={<Tag color="#FF3EA5">{t.rolesTag}</Tag>} />
 
       <FileCard accent="#FF3EA5" style={{ marginBottom: 14 }}>
-        <div style={{ ...DISPLAY, fontSize: 24, marginBottom: 10 }}>Qui est qui</div>
+        <div style={{ ...DISPLAY, fontSize: 24, marginBottom: 10 }}>{t.whoIsWho}</div>
 
         {/* Visualisation : un blob par rôle */}
         <div style={{
@@ -764,19 +629,19 @@ function SetupRoles({
         </div>
 
         <div style={{ display: "grid", gridTemplateColumns: jSlots > 0 ? "repeat(4,1fr)" : "repeat(3,1fr)", gap: 6, marginBottom: 14 }}>
-          <Stat n={civils} label="Civils" color="#3DDC97" sub="même mot" />
-          <Stat n={ucEff} label="Intrus" color="#FF3EA5" sub="mot voisin" />
-          <Stat n={mwSlots} label="Fantôme" color="#FFD23F" sub="sans mot" />
-          {jSlots > 0 && <Stat n={jSlots} label="Bouffon" color="#C58CFF" sub="à éliminer" />}
+          <Stat n={civils} label={t.statCivils} color="#3DDC97" sub={t.statCivilsSub} />
+          <Stat n={ucEff} label={t.statImpostor} color="#FF3EA5" sub={t.statImpostorSub} />
+          <Stat n={mwSlots} label={t.statGhost} color="#FFD23F" sub={t.statGhostSub} />
+          {jSlots > 0 && <Stat n={jSlots} label={t.statJester} color="#C58CFF" sub={t.statJesterSub} />}
         </div>
 
-        <Row label="Intrus" hint={maxUC > 1 ? `1 à ${maxUC}` : "1 maximum"}>
+        <Row label={t.role.undercover} hint={maxUC > 1 ? t.ucRange(maxUC) : t.ucMaxOne}>
           <Stepper value={ucEff} min={1} max={maxUC} onChange={setUcCount} />
         </Row>
-        <Row label="Fantôme" hint={canMrWhite ? "aucun mot · devine s'il sort" : "5 joueurs min"}>
+        <Row label={t.role.mrwhite} hint={canMrWhite ? t.ghostHint : t.ghostMin}>
           <Toggle value={mwSlots > 0} onChange={toggleMrWhite} disabled={!canMrWhite} />
         </Row>
-        <Row label="Bouffon" hint={canJester ? "gagne seul s'il se fait éliminer par le vote" : "pas assez de civils"}>
+        <Row label={t.role.jester} hint={canJester ? t.jesterHint : t.jesterNotEnough}>
           <Toggle value={jSlots > 0} onChange={toggleJester} disabled={!canJester} />
         </Row>
       </FileCard>
@@ -785,11 +650,11 @@ function SetupRoles({
       {unlocked ? (
         <>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", margin: "14px 0 10px" }}>
-          <div style={{ ...DISPLAY, fontSize: 28 }}>Les mots</div>
-          <ZButton size="sm" bg={allSafe ? ZZ.yellow : "#fff"} onClick={toggleAll} style={{ width: "auto" }}>{allSafe ? "Tout est coché" : "Tout cocher"}</ZButton>
+          <div style={{ ...DISPLAY, fontSize: 28 }}>{t.theWords}</div>
+          <ZButton size="sm" bg={allSafe ? ZZ.yellow : "#fff"} onClick={toggleAll} style={{ width: "auto" }}>{allSafe ? t.allChecked : t.checkAll}</ZButton>
         </div>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 18 }}>
-          {WORD_CATEGORIES.map((c, i) => {
+          {cats.map((c, i) => {
             const on = selectedCats.has(c.id);
             return (
               <button key={c.id} type="button" onClick={() => { playSfx("toggle", { volume: 0.45 }); toggleCat(c.id); }} aria-pressed={on}
@@ -801,7 +666,7 @@ function SetupRoles({
                   background: on ? (c.adult ? ZZ.pink : ZZ.yellow) : "#fff",
                   border: `2.5px solid ${ZZ.ink}`, rotate: on ? `${i % 2 ? 1.5 : -1.5}deg` : undefined,
                 }}>
-                {on ? <Check size={15} strokeWidth={3.2} aria-hidden /> : <Plus size={15} strokeWidth={3.2} aria-hidden />}{c.adult ? "Coquin 18+" : c.label}
+                {on ? <Check size={15} strokeWidth={3.2} aria-hidden /> : <Plus size={15} strokeWidth={3.2} aria-hidden />}{c.adult ? t.naughty : c.label}
               </button>
             );
           })}
@@ -809,24 +674,24 @@ function SetupRoles({
         </>
       ) : (
         <>
-          <div style={{ ...DISPLAY, fontSize: 28, margin: "14px 0 10px" }}>Les mots</div>
+          <div style={{ ...DISPLAY, fontSize: 28, margin: "14px 0 10px" }}>{t.theWords}</div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
             <span style={{
               display: "flex", alignItems: "center", gap: 6, padding: "0 14px", minHeight: 44, borderRadius: 999,
               fontSize: 15, fontWeight: 800, color: ZZ.ink, background: ZZ.yellow, border: `2.5px solid ${ZZ.ink}`,
               boxShadow: `0 3px 0 ${ZZ.ink}`, rotate: "-1.5deg",
             }}>
-              <Check size={15} strokeWidth={3.2} aria-hidden /> {FREE_PAIRS.length} paires gratuites
+              <Check size={15} strokeWidth={3.2} aria-hidden /> {t.freePairs(freePairs(lang).length)}
             </span>
-            {WORD_CATEGORIES.filter((c) => !FREE_CAT_IDS.includes(c.id)).map((c) => (
+            {cats.filter((c) => !FREE_CAT_IDS.includes(c.id)).map((c) => (
               <button key={c.id} type="button" onClick={() => { playSfx("tap", { volume: 0.5 }); requestPaywall(); }}
-                aria-label={`${c.label} : réservé à Premium`}
+                aria-label={t.premiumOnly(c.adult ? t.naughty : c.label)}
                 className="transition-[translate,box-shadow] shadow-[0_3px_0_#15082E] active:translate-y-[2px] active:shadow-[0_1px_0_#15082E]"
                 style={{
                   display: "flex", alignItems: "center", gap: 6, padding: "0 14px", minHeight: 44, borderRadius: 999,
                   fontSize: 15, fontWeight: 800, color: ZZ.ink, background: "#fff", border: `2.5px solid ${ZZ.ink}`,
                 }}>
-                <Lock size={14} strokeWidth={3} aria-hidden /> {c.adult ? "Coquin 18+" : c.label}
+                <Lock size={14} strokeWidth={3} aria-hidden /> {c.adult ? t.naughty : c.label}
               </button>
             ))}
           </div>
@@ -836,8 +701,8 @@ function SetupRoles({
               width: "100%", textAlign: "left", padding: "14px 16px", marginBottom: 18, borderRadius: 22,
               background: ZZ.pink, color: ZZ.ink, border: `2.5px solid ${ZZ.ink}`,
             }}>
-            <div style={{ ...DISPLAY, fontSize: 21 }}>Débloque tous les mots</div>
-            <div style={{ fontSize: 14, fontWeight: 700 }}>+{ALL_WORD_PAIRS.length - FREE_PAIRS.length} paires, l&apos;Anime, le +18 et tous les thèmes avec Premium.</div>
+            <div style={{ ...DISPLAY, fontSize: 21 }}>{t.unlockAll}</div>
+            <div style={{ fontSize: 14, fontWeight: 700 }}>{t.unlockAllSub(allWordPairs(lang).length - freePairs(lang).length)}</div>
           </button>
         </>
       )}
@@ -846,9 +711,9 @@ function SetupRoles({
 
       <div style={{ marginTop: "auto", paddingTop: 8 }}>
         <Btn tone="gold" disabled={!valid} onClick={onStart} icon={<Shuffle size={20} strokeWidth={2.6} aria-hidden />}>
-          Distribuer les rôles
+          {t.dealRoles}
         </Btn>
-        <p style={{ textAlign: "center", fontSize: 14, fontWeight: 600, color: "rgba(255,255,255,0.85)", marginTop: 10 }}>Rôles au hasard. Chacun verra son mot à son tour.</p>
+        <p style={{ textAlign: "center", fontSize: 14, fontWeight: 600, color: "rgba(255,255,255,0.85)", marginTop: 10 }}>{t.dealHint}</p>
       </div>
     </LocalShell>
   );
@@ -856,9 +721,10 @@ function SetupRoles({
 
 // — REVEAL (carte dossier)
 function RevealScreen({
-  player, round, position, total, review = false, onAck, onReroll,
+  player, lang, round, position, total, review = false, onAck, onReroll,
 }: {
   player: LocalPlayer;
+  lang: Lang;
   round: number;
   position: number | null;
   total: number;
@@ -870,16 +736,13 @@ function RevealScreen({
   // L'Intrus NE SAIT PAS qu'il l'est : civils et Intrus voient juste leur mot
   // (aucune mention « Civil »). Le Fantôme et le Bouffon connaissent leur rôle
   // (ils ont un objectif spécial).
+  const t = useT(UC_STR);
   const isMrWhite = player.role === "mrwhite";
   const isJester = player.role === "jester";
   const displayRole: Role = isMrWhite ? "mrwhite" : isJester ? "jester" : "civil";
   const color = isMrWhite || isJester ? ROLE_COLOR[displayRole] : "#FFD23F";
-  const label = isMrWhite || isJester ? ROLE_LABEL[displayRole] : "Top secret";
-  const hint = isMrWhite
-    ? "Tu es le Fantôme : tu n'as pas de mot. Écoute, bluffe… Si tu es éliminé, devine le mot des civils pour gagner seul."
-    : isJester
-    ? "Tu es le Bouffon. Tu as le mot des civils, mais ton but est de te faire éliminer par le vote ! Sois louche… mais pas trop vite."
-    : "Mémorise ton mot. Attention : tu ne sais pas si tu es civil… ou l'Intrus ! Donne un indice ni trop vague, ni trop évident.";
+  const label = isMrWhite || isJester ? t.role[displayRole] : t.topSecret;
+  const hint = isMrWhite ? t.hintGhost : isJester ? t.hintJester : t.hintCivil;
 
   const blobColor: MascotColor = isMrWhite ? "white" : isJester ? "lavender" : "mint";
   const blobMood: MascotMood = isMrWhite ? "thinking" : isJester ? "laughing" : "happy";
@@ -887,8 +750,8 @@ function RevealScreen({
   return (
     <LocalShell tone={isMrWhite ? "gold" : "civ"}>
       <NavBar
-        sub={review ? "Rappel · ne pas montrer" : `Joueur · ${player.name}`}
-        title="Mot secret"
+        sub={review ? t.reminderSub : t.playerSub(player.name)}
+        title={t.secretWordTitle}
         right={<Tag color={color}>{label}</Tag>}
       />
 
@@ -896,7 +759,7 @@ function RevealScreen({
         <Mascot color={blobColor} size={64} mood={blobMood} arms shadow={false} />
       </div>
 
-      <DossierCard word={player.word} role={displayRole} hint={hint} round={round} />
+      <DossierCard word={player.word} role={displayRole} hint={hint} round={round} lang={lang} />
 
       {position !== null && (
         <div style={{
@@ -906,7 +769,7 @@ function RevealScreen({
         }}>
           <Lock size={18} strokeWidth={2.8} aria-hidden />
           <div style={{ fontSize: 15, fontWeight: 700, flex: 1, minWidth: 0, textWrap: "balance" }}>
-            Personne d&apos;autre ne doit voir l&apos;écran.
+            {t.nobodyElse}
           </div>
           {/* Compteur à part : jamais seul sur une ligne */}
           <span style={{ ...DISPLAY, fontSize: 17, whiteSpace: "nowrap", flexShrink: 0 }}>{position}/{total}</span>
@@ -915,11 +778,11 @@ function RevealScreen({
 
       <div style={{ marginTop: "auto" }}>
         <Btn tone="gold" onClick={onAck}>
-          {review ? "Cacher et revenir" : <>J’ai mémorisé, suivant <GameInlineIcon icon={ArrowRight} /></>}
+          {review ? t.hideAndBack : <>{t.memorizedNext} <GameInlineIcon icon={ArrowRight} /></>}
         </Btn>
         {onReroll && (
           <div style={{ display: "flex", justifyContent: "center", marginTop: 14 }}>
-            <RerollButton label="Mot nul ? Changer de mot" onClick={onReroll} />
+            <RerollButton label={t.rerollWord} onClick={onReroll} />
           </div>
         )}
       </div>
@@ -937,6 +800,7 @@ function TableScreen({
   onReviewWord: () => void;
   onForceVote: () => void;
 }) {
+  const t = useT(UC_STR);
   const alive = players.filter((p) => !p.isEliminated);
   const dead = players.filter((p) => p.isEliminated);
   const orderedAlive = order.map((idx) => players[idx]).filter(Boolean) as LocalPlayer[];
@@ -947,8 +811,8 @@ function TableScreen({
 
   return (
     <LocalShell tone="noir">
-      <NavBar sub={`Manche ${round}`} title="Tour de table" right={<Tag color="#3DDC97">{alive.length} en vie</Tag>} />
-      <Mono style={{ marginBottom: 14 }}>Dans l&apos;ordre, chacun dit UN mot-indice à voix haute. Puis on vote.</Mono>
+      <NavBar sub={t.roundN(round)} title={t.tableTitle} right={<Tag color="#3DDC97">{t.aliveN(alive.length)}</Tag>} />
+      <Mono style={{ marginBottom: 14 }}>{t.tableHelp}</Mono>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
         {rows.map(({ p, n, dead: d }) => (
@@ -966,83 +830,16 @@ function TableScreen({
             }}>{d ? "✕" : n}</span>
             <Mascot size={40} color={colorByIdx(p.idx)} mood={d ? "dead" : "happy"} bob={false} shadow={false} />
             <span style={{ flex: 1, ...DISPLAY, fontSize: 20, textDecoration: d ? "line-through" : "none" }}>{p.name}</span>
-            {n === 1 && <span style={{ fontSize: 13, fontWeight: 800 }}>commence</span>}
+            {n === 1 && <span style={{ fontSize: 13, fontWeight: 800 }}>{t.starts}</span>}
           </div>
         ))}
       </div>
 
       <div style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: 10, paddingTop: 18 }}>
-        <Btn tone="ghost" icon={<Eye size={19} strokeWidth={2.6} aria-hidden />} onClick={onReviewWord}>Revoir mon mot</Btn>
-        <Btn tone="danger" icon={<Scale size={19} strokeWidth={2.6} aria-hidden />} onClick={onForceVote}>Passer au vote</Btn>
+        <Btn tone="ghost" icon={<Eye size={19} strokeWidth={2.6} aria-hidden />} onClick={onReviewWord}>{t.reviewMyWord}</Btn>
+        <Btn tone="danger" icon={<Scale size={19} strokeWidth={2.6} aria-hidden />} onClick={onForceVote}>{t.goVote}</Btn>
       </div>
     </LocalShell>
-  );
-}
-
-function PlayerRow({
-  player, n, isCurrent, hasSpoken, isDead, right,
-}: {
-  player: LocalPlayer;
-  n: number | null;
-  isCurrent: boolean;
-  hasSpoken: boolean;
-  isDead: boolean;
-  right?: ReactNode;
-}) {
-  return (
-    <div style={{
-      display: "flex", alignItems: "center", gap: 12,
-      padding: "10px 12px 10px 8px", borderRadius: 12,
-      background: isCurrent ? "linear-gradient(90deg, rgba(255,210,63,0.20) 0%, rgba(255,210,63,0.04) 100%)" : "transparent",
-      border: isCurrent ? "1.5px solid #FFD23F" : "1px solid transparent",
-      opacity: isDead ? 0.4 : 1,
-      boxShadow: isCurrent ? "0 8px 20px rgba(255,210,63,0.20)" : "none",
-    }}>
-      <div style={{
-        width: 28, height: 28, borderRadius: 9, flexShrink: 0,
-        background: isCurrent ? "#FFD23F" : isDead ? "transparent" : "rgba(255,255,255,0.06)",
-        border: isDead ? "1px dashed rgba(255,255,255,0.25)" : "none",
-        display: "flex", alignItems: "center", justifyContent: "center",
-        fontFamily: "var(--font-display, system-ui)", fontWeight: 900, fontSize: 13,
-        color: isCurrent ? "#1A0E2E" : isDead ? "rgba(255,255,255,0.4)" : "white",
-      }}>{isDead ? "✕" : n}</div>
-
-      <div style={{ position: "relative", flexShrink: 0 }}>
-        {isCurrent && [0, 1].map((i) => (
-          <div key={i} style={{
-            position: "absolute", inset: -6, borderRadius: "50%",
-            border: "2px solid #FFD23F",
-            animation: "uc-pulse 1.6s ease-out infinite",
-            animationDelay: `${i * 0.6}s`, opacity: 0.5,
-          }} />
-        ))}
-        <Mascot size={40} color={colorByIdx(player.idx)}
-          mood={isDead ? "dead" : isCurrent ? "happy" : hasSpoken ? "wink" : "neutral"}
-          bob={false} delay={player.idx * 0.1} />
-      </div>
-
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{
-          fontSize: 16, fontWeight: 800,
-          color: isDead ? "rgba(255,255,255,0.4)" : "white",
-          textDecoration: isDead ? "line-through" : "none",
-          lineHeight: 1, letterSpacing: -0.3,
-        }}>{player.name}</div>
-        <div style={{
-          fontSize: 11, marginTop: 4,
-          color: isCurrent ? "#FFD23F" : isDead ? "#FF3EA5" : hasSpoken ? "#3DDC97" : "rgba(255,255,255,0.5)",
-          fontWeight: isCurrent ? 700 : 500,
-        }}>
-          {isCurrent && <><GameInlineIcon icon={Mic} /> à toi · donne un indice à voix haute</>}
-          {hasSpoken && "✓ a parlé"}
-          {isDead && `éliminé · manche ${player.eliminatedRound ?? "?"}`}
-          {!isCurrent && !hasSpoken && !isDead && "en attente"}
-        </div>
-      </div>
-
-      {right}
-      {hasSpoken && <span style={{ color: "#3DDC97", fontSize: 14, fontWeight: 800 }}>✓</span>}
-    </div>
   );
 }
 
@@ -1054,10 +851,11 @@ function ReviewPick({
   onPick: (idx: number) => void;
   onCancel: () => void;
 }) {
+  const t = useT(UC_STR);
   const alive = players.filter((p) => !p.isEliminated);
   return (
     <LocalShell tone="noir">
-      <NavBar sub="Mémoire courte ?" title="Qui veut revoir ?" onBack={onCancel} right={<Tag color="#FF3EA5">Confidentiel</Tag>} />
+      <NavBar sub={t.shortMemory} title={t.whoReviews} onBack={onCancel} right={<Tag color="#FF3EA5">{t.confidential}</Tag>} />
 
       <div style={{
         padding: "10px 14px", borderRadius: 16, background: ZZ.pink, color: ZZ.ink,
@@ -1066,7 +864,7 @@ function ReviewPick({
         display: "flex", gap: 10, alignItems: "flex-start",
       }}>
         <TriangleAlert size={20} strokeWidth={2.8} style={{ flexShrink: 0 }} aria-hidden />
-        <div>Choisis ton blob, puis <strong>personne d&apos;autre ne doit voir l&apos;écran.</strong></div>
+        <div>{t.pickBlobThen} <strong>{t.nobodyElseStrong}</strong></div>
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14 }}>
@@ -1080,13 +878,13 @@ function ReviewPick({
           }}>
             <Mascot color={colorByIdx(p.idx)} size={56} mood="neutral" bob={false} />
             <div style={{ ...DISPLAY, fontSize: p.name.length > 13 ? 15 : p.name.length > 10 ? 17 : 20, lineHeight: 1.05, overflowWrap: "anywhere" }}>{p.name}</div>
-            <div style={{ fontSize: 13, fontWeight: 700, color: "#6B5C88" }}>Touche pour revoir</div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: "#6B5C88" }}>{t.tapToReview}</div>
           </button>
         ))}
       </div>
 
       <div style={{ marginTop: "auto" }}>
-        <Btn tone="ghost" onClick={onCancel} icon={<ArrowLeft size={19} strokeWidth={2.6} aria-hidden />}>Revenir au tour de table</Btn>
+        <Btn tone="ghost" onClick={onCancel} icon={<ArrowLeft size={19} strokeWidth={2.6} aria-hidden />}>{t.backToTable}</Btn>
       </div>
     </LocalShell>
   );
@@ -1101,19 +899,20 @@ function GroupVoteScreen({
   onEliminate: (id: number) => void;
   onCancel: () => void;
 }) {
+  const t = useT(UC_STR);
   const [picked, setPicked] = useState<number | null>(null);
   const alive = players.filter((p) => !p.isEliminated);
 
   return (
     <LocalShell tone="danger">
       <NavBar
-        sub={`Manche ${round} · le vote`}
-        title="Qui éliminer ?"
+        sub={t.voteSub(round)}
+        title={t.whoEliminate}
         onBack={onCancel}
-        right={<Tag color="#FF3EA5">{alive.length} en vie</Tag>}
+        right={<Tag color="#FF3EA5">{t.aliveN(alive.length)}</Tag>}
       />
 
-      <Mono style={{ marginBottom: 14 }}>Mettez-vous d&apos;accord, touchez le suspect, puis confirmez.</Mono>
+      <Mono style={{ marginBottom: 14 }}>{t.voteHelp}</Mono>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14 }}>
         {alive.map((p) => {
@@ -1132,7 +931,7 @@ function GroupVoteScreen({
               </div>
               <div style={{ ...DISPLAY, fontSize: p.name.length > 13 ? 15 : p.name.length > 10 ? 17 : 21, marginTop: 8, lineHeight: 1.05, overflowWrap: "anywhere", minHeight: 34, display: "flex", alignItems: "center", justifyContent: "center" }}>{p.name}</div>
               <div style={{ marginTop: 6, fontSize: 13, fontWeight: 800, color: isPicked ? ZZ.ink : "#6B5C88" }}>
-                {isPicked ? "Suspect choisi" : "Touche pour choisir"}
+                {isPicked ? t.suspectPicked : t.tapToPick}
               </div>
             </button>
           );
@@ -1142,7 +941,7 @@ function GroupVoteScreen({
       <div style={{ marginTop: "auto" }}>
         <Btn tone="danger" disabled={picked === null} onClick={() => picked !== null && onEliminate(picked)}
           sub={picked !== null ? players[picked]?.name : undefined}>
-          Éliminer ce joueur
+          {t.eliminatePlayer}
         </Btn>
       </div>
     </LocalShell>
@@ -1160,6 +959,7 @@ function EliminateScreen({
 }) {
     // On révèle le RÔLE à l'élimination, mais jamais le mot.
     void civilWord;
+    const t = useT(UC_STR);
     const role = eliminated?.role ?? null;
     const color = role ? ROLE_COLOR[role] : "#FFD23F";
     const isImpostor = role === "undercover" || role === "mrwhite";
@@ -1167,9 +967,9 @@ function EliminateScreen({
   return (
     <LocalShell tone="danger">
       <NavBar
-        sub={`Verdict · manche ${round}`}
-        title={eliminated ? (isImpostor ? "Démasqué !" : "Innocent…") : "Personne ne sort"}
-        right={<Tag color={color}>{role ? ROLE_LABEL[role] : "Vote"}</Tag>}
+        sub={t.verdictSub(round)}
+        title={eliminated ? (isImpostor ? t.unmasked : t.innocent) : t.nobodyOut}
+        right={<Tag color={color}>{role ? t.role[role] : t.vote}</Tag>}
       />
 
       {eliminated ? (
@@ -1178,7 +978,7 @@ function EliminateScreen({
             <div style={{ position: "relative", animation: "uc-die 1.1s cubic-bezier(0.34,1.45,0.64,1) both" }}>
               <SpyMascotById idx={eliminated.idx} size={160} tilt={-4} mood="dead" />
               <div style={{ position: "absolute", top: -34, right: -56, zIndex: 5, animation: "uc-die 0.5s ease-out 0.9s both" }}>
-                <Stamp text="Éliminé" color={color} rotate={-12} size={20} />
+                <Stamp text={t.stampEliminated} color={color} rotate={-12} size={20} />
               </div>
             </div>
             {/* Prénom long : la taille baisse pour rester sur une ligne */}
@@ -1190,19 +990,19 @@ function EliminateScreen({
             border: `3px solid ${ZZ.ink}`, boxShadow: `0 5px 0 ${ZZ.ink}`, rotate: "-1.5deg",
             textAlign: "center", marginBottom: 16,
           }}>
-            <div style={{ fontSize: 15, fontWeight: 700 }}>C&apos;était…</div>
-            <div style={{ ...DISPLAY, fontSize: 34, marginTop: 2 }}>{role ? ROLE_ARTICLE[role] : "—"}</div>
-            <div style={{ fontSize: 14, fontWeight: 600, marginTop: 4 }}>{role === "mrwhite" ? "Il n'avait pas de mot." : "Son mot reste secret."}</div>
+            <div style={{ fontSize: 15, fontWeight: 700 }}>{t.itWas}</div>
+            <div style={{ ...DISPLAY, fontSize: 34, marginTop: 2 }}>{role ? t.roleArticle[role] : "—"}</div>
+            <div style={{ fontSize: 14, fontWeight: 600, marginTop: 4 }}>{role === "mrwhite" ? t.hadNoWord : t.wordStaysSecret}</div>
           </div>
         </>
       ) : (
         <div style={{ textAlign: "center", padding: 60, color: "rgba(255,255,255,0.85)", fontWeight: 600 }}>
-          Pas de majorité — personne ne sort cette manche.
+          {t.noMajority}
         </div>
       )}
 
       <div style={{ marginTop: "auto" }}>
-        <Btn tone="primary" onClick={onNext}>Continuer →</Btn>
+        <Btn tone="primary" onClick={onNext}>{t.continueBtn}</Btn>
       </div>
     </LocalShell>
   );
@@ -1210,10 +1010,11 @@ function EliminateScreen({
 
 // — MR WHITE GUESS
 function MrWhiteGuess({ player, onSubmit }: { player: LocalPlayer; onSubmit: (g: string) => void }) {
+  const t = useT(UC_STR);
   const [text, setText] = useState("");
   return (
     <LocalShell tone="gold">
-      <NavBar sub="Coup du destin" title="Le Fantôme devine" right={<Tag color="#FFD23F">Dernière chance</Tag>} />
+      <NavBar sub={t.twistOfFate} title={t.ghostGuesses} right={<Tag color="#FFD23F">{t.lastChance}</Tag>} />
 
       <div style={{
         padding: 18, borderRadius: 24, background: ZZ.yellow, color: ZZ.ink,
@@ -1223,12 +1024,12 @@ function MrWhiteGuess({ player, onSubmit }: { player: LocalPlayer; onSubmit: (g:
         <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
           <Mascot color={colorByIdx(player.idx)} size={68} mood="thinking" arms />
           <div>
-            <div style={{ fontSize: 15, fontWeight: 700 }}>Fantôme éliminé</div>
+            <div style={{ fontSize: 15, fontWeight: 700 }}>{t.ghostEliminated}</div>
             <div style={{ ...DISPLAY, fontSize: player.name.length > 12 ? 21 : 28, marginTop: 2, lineHeight: 1.05, overflowWrap: "anywhere" }}>{player.name}</div>
           </div>
         </div>
         <div style={{ marginTop: 14, fontSize: 15, fontWeight: 600, lineHeight: 1.4 }}>
-          <GameInlineIcon icon={Target} /> Une dernière chance. Tape le mot des civils pour gagner seul.
+          <GameInlineIcon icon={Target} /> {t.ghostGuessHelp}
         </div>
       </div>
 
@@ -1240,7 +1041,7 @@ function MrWhiteGuess({ player, onSubmit }: { player: LocalPlayer; onSubmit: (g:
         <input autoFocus value={text}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && text.trim() && onSubmit(text.trim())}
-          placeholder="Ton pari…"
+          placeholder={t.guessPlaceholder}
           autoCorrect="off" autoCapitalize="off" spellCheck={false}
           style={{
             flex: 1, background: "transparent", border: "none", color: ZZ.ink,
@@ -1250,7 +1051,7 @@ function MrWhiteGuess({ player, onSubmit }: { player: LocalPlayer; onSubmit: (g:
 
       <div style={{ marginTop: "auto" }}>
         <Btn tone="gold" disabled={!text.trim()} onClick={() => text.trim() && onSubmit(text.trim())} icon={<Dices size={20} strokeWidth={2.6} aria-hidden />}>
-          Parier
+          {t.bet}
         </Btn>
       </div>
     </LocalShell>
@@ -1270,11 +1071,12 @@ function GameOverScreen({
   onReplay: () => void;
   onLobby?: () => void;
 }) {
+  const t = useT(UC_STR);
   const [titleTop, titleBottom] =
-    endReason === "civils-win" ? ["Civils", "victorieux"] :
-    endReason === "undercover-wins" ? [players.filter((p) => p.role === "undercover" || p.role === "mrwhite").length > 1 ? "Imposteurs" : "Imposteur", "victorieux"] :
-    endReason === "jester-wins" ? ["Le Bouffon", "gagne"] :
-    ["Le Fantôme", "triomphe"];
+    endReason === "civils-win" ? t.winTitle.civils :
+    endReason === "undercover-wins" ? (players.filter((p) => p.role === "undercover" || p.role === "mrwhite").length > 1 ? t.winTitle.impostors : t.winTitle.impostor) :
+    endReason === "jester-wins" ? t.winTitle.jester :
+    t.winTitle.ghost;
   const accent =
     endReason === "civils-win" ? "#3DDC97" :
     endReason === "undercover-wins" ? "#FF3EA5" :
@@ -1292,7 +1094,7 @@ function GameOverScreen({
     <LocalShell tone="civ">
       <Confetti accent={accent} count={50} />
 
-      <NavBar sub="Fin de partie" title="" right={<Tag color={accent}>Victoire</Tag>} />
+      <NavBar sub={t.endSub} title="" right={<Tag color={accent}>{t.victory}</Tag>} />
 
       <div style={{ textAlign: "center", marginBottom: 8 }}>
         <h1 style={{ ...DISPLAY, fontSize: "clamp(36px, 12vw, 50px)", margin: 0, lineHeight: 0.95 }}>
@@ -1309,11 +1111,11 @@ function GameOverScreen({
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14 }}>
         <div style={{ padding: "10px 12px", borderRadius: 20, background: ZZ.mint, color: ZZ.ink, border: `3px solid ${ZZ.ink}`, boxShadow: `0 4px 0 ${ZZ.ink}`, rotate: "-1.5deg" }}>
-          <div style={{ fontSize: 14, fontWeight: 700 }}>Mot des civils</div>
+          <div style={{ fontSize: 14, fontWeight: 700 }}>{t.civilWord}</div>
           <div style={{ ...DISPLAY, fontSize: 22, lineHeight: 1.05, textWrap: "balance", ...WORD_WRAP }}>{civilWord}</div>
         </div>
         <div style={{ padding: "10px 12px", borderRadius: 20, background: ZZ.pink, color: ZZ.ink, border: `3px solid ${ZZ.ink}`, boxShadow: `0 4px 0 ${ZZ.ink}`, rotate: "1.5deg", textAlign: "right" }}>
-          <div style={{ fontSize: 14, fontWeight: 700 }}>Mot de l&apos;Intrus</div>
+          <div style={{ fontSize: 14, fontWeight: 700 }}>{t.impostorWord}</div>
           <div style={{ ...DISPLAY, fontSize: 22, lineHeight: 1.05, textWrap: "balance", ...WORD_WRAP }}>{ucWord}</div>
         </div>
       </div>
@@ -1324,11 +1126,11 @@ function GameOverScreen({
           background: "#fff", color: ZZ.ink, border: `2.5px solid ${ZZ.ink}`,
           fontSize: 15, fontWeight: 600, marginBottom: 14, lineHeight: 1.4,
         }}>
-          Le Fantôme a tenté : <strong>{mrWhiteGuess}</strong> {mrWhiteRight ? "✓ pari réussi" : "✕ raté"}
+          {t.ghostTried} <strong>{mrWhiteGuess}</strong> {mrWhiteRight ? t.betWon : t.betLost}
         </div>
       )}
 
-      <div style={{ ...DISPLAY, fontSize: 28, marginBottom: 10 }}>Le classement</div>
+      <div style={{ ...DISPLAY, fontSize: 28, marginBottom: 10 }}>{t.ranking}</div>
       <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 18 }}>
         {sorted.map((p, i) => {
           const win = winners.includes(p);
@@ -1346,7 +1148,7 @@ function GameOverScreen({
               <span style={{
                 fontSize: 13, padding: "3px 9px", borderRadius: 99,
                 background: rc, color: ZZ.ink, border: `2px solid ${ZZ.ink}`, fontWeight: 800,
-              }}>{ROLE_LABEL[p.role]}</span>
+              }}>{t.role[p.role]}</span>
               <span style={{ ...DISPLAY, fontSize: 20, width: 40, textAlign: "right" }}>{p.score}</span>
             </div>
           );
@@ -1354,9 +1156,9 @@ function GameOverScreen({
       </div>
 
       <div style={{ marginTop: "auto" }}>
-        <Btn tone="gold" onClick={onReplay} icon={<RotateCcw size={20} strokeWidth={2.8} aria-hidden />} sub="Nouveau mot, même bande">Revanche !</Btn>
-        <div style={{ display: "flex", justifyContent: "center", marginTop: 16 }}><IdeaButton game="L'Intrus" kind="mot" bg="#fff" /></div>
-        {onLobby && <button type="button" onClick={onLobby} className="mx-auto mt-2 flex min-h-11 items-center px-4 text-[15px] font-bold underline decoration-2 underline-offset-4" style={{ color: "rgba(255,255,255,0.9)" }}>Retour à l&apos;accueil</button>}
+        <Btn tone="gold" onClick={onReplay} icon={<RotateCcw size={20} strokeWidth={2.8} aria-hidden />} sub={t.rematchSub}>{t.rematch}</Btn>
+        <div style={{ display: "flex", justifyContent: "center", marginTop: 16 }}><IdeaButton game={t.gameName} kind="mot" bg="#fff" /></div>
+        {onLobby && <button type="button" onClick={onLobby} className="mx-auto mt-2 flex min-h-11 items-center px-4 text-[15px] font-bold underline decoration-2 underline-offset-4" style={{ color: "rgba(255,255,255,0.9)" }}>{t.backHome}</button>}
       </div>
     </LocalShell>
   );
@@ -1404,6 +1206,7 @@ function Tag({ children, color = "#FFD23F", style }: { children: ReactNode; colo
 }
 
 function NavBar({ sub, title, right, onBack }: { sub?: string; title?: string; right?: ReactNode; onBack?: () => void }) {
+  const t = useT(UC_STR);
   return (
     // Sur le site, le coin haut-droit reste à l'engrenage du shell
     // Grille : le titre passe SOUS le tag de droite (pleine largeur) → plus de « Qui » seul sur sa ligne
@@ -1411,7 +1214,7 @@ function NavBar({ sub, title, right, onBack }: { sub?: string; title?: string; r
       display: "grid", gridTemplateColumns: onBack ? "auto minmax(0,1fr) auto" : "minmax(0,1fr) auto",
       columnGap: 12, alignItems: "center", marginBottom: 18, paddingRight: isOfflineApp() ? 0 : 52,
     }}>
-      {onBack && <div style={{ gridRow: title ? "1 / span 2" : "1" }}><GameIconButton icon={ArrowLeft} label="Retour" onClick={onBack} /></div>}
+      {onBack && <div style={{ gridRow: title ? "1 / span 2" : "1" }}><GameIconButton icon={ArrowLeft} label={t.back} onClick={onBack} /></div>}
       <div style={{ minWidth: 0 }}>
         {sub && <div style={{ fontSize: 15, color: "rgba(255,255,255,0.85)", fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{sub}</div>}
       </div>
@@ -1509,12 +1312,13 @@ function Row({ label, hint, children }: { label: string; hint?: string; children
 }
 
 function Stepper({ value, min, max, onChange, disabled }: { value: number; min: number; max: number; onChange: (v: number) => void; disabled?: boolean }) {
+  const t = useT(UC_STR);
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
-      <GameIconButton icon={Minus} label="Un de moins" bg="#fff" disabled={disabled || value <= min} onClick={() => onChange(value - 1)} />
+      <GameIconButton icon={Minus} label={t.lessOne} bg="#fff" disabled={disabled || value <= min} onClick={() => onChange(value - 1)} />
       <span style={{ width: 24, textAlign: "center", ...DISPLAY, fontSize: 24 }}>{value}</span>
       {/* Désactivé : blanc (le jaune à 50 % vire au marron sur le violet) */}
-      <GameIconButton icon={Plus} label="Un de plus" bg={disabled || value >= max ? "#fff" : ZZ.yellow} disabled={disabled || value >= max} onClick={() => onChange(value + 1)} />
+      <GameIconButton icon={Plus} label={t.moreOne} bg={disabled || value >= max ? "#fff" : ZZ.yellow} disabled={disabled || value >= max} onClick={() => onChange(value + 1)} />
     </div>
   );
 }
@@ -1533,11 +1337,12 @@ function Toggle({ value, onChange, disabled }: { value: boolean; onChange: (v: b
   );
 }
 
-function DossierCard({ word, role, hint, round }: { word: string | null; role: Role; hint: string; round: number }) {
+function DossierCard({ word, role, hint, round, lang }: { word: string | null; role: Role; hint: string; round: number; lang: Lang }) {
+  const t = useT(UC_STR);
   // Le tampon ne dit jamais « Civil » : l'Intrus ne doit pas savoir qui il est.
   const special = role === "mrwhite" || role === "jester";
   const color = special ? ROLE_COLOR[role] : "#FF3EA5";
-  const label = special ? ROLE_LABEL[role] : "Secret";
+  const label = special ? t.role[role] : t.stampSecret;
   return (
     <div style={{
       position: "relative", padding: "20px 20px 18px", borderRadius: 26,
@@ -1548,9 +1353,9 @@ function DossierCard({ word, role, hint, round }: { word: string | null; role: R
         <Stamp text={label} color={color} rotate={6} size={15} />
       </div>
       <div style={{ fontSize: 15, fontWeight: 800 }}>
-        {role === "mrwhite" ? "Tu n'as pas de mot" : "Ton mot secret"} <span style={{ fontWeight: 600, color: "#6B5C88" }}>· manche {round}</span>
+        {role === "mrwhite" ? t.noWord : t.yourSecretWord} <span style={{ fontWeight: 600, color: "#6B5C88" }}>{t.roundSuffix(round)}</span>
       </div>
-      <div lang="fr" style={{
+      <div lang={lang} style={{
         ...DISPLAY, fontSize: word ? wordFontSize(word) : 44, lineHeight: 1.02, margin: "8px 0 6px",
         textAlign: role === "mrwhite" ? "center" : "left", opacity: role === "mrwhite" ? 0.4 : 1, ...WORD_WRAP,
       }}>{word ?? "?????"}</div>
@@ -1586,25 +1391,26 @@ function Confetti({ count = 40, accent = "#FFD23F" }: { count?: number; accent?:
 }
 
 // ── Maquette 03 — "Qui joue ?" + grille LES SUSPECTS (remplace le PlayersSetup générique) ──
-function PassScreenUC({ toName, colorIdx, label, players, currentIdx, buttonLabel, buttonSub, tag = "Rôles prêts", onReady }: {
+function PassScreenUC({ toName, colorIdx, label, players, currentIdx, buttonLabel, buttonSub, tag, onReady }: {
   toName: string; colorIdx: number; label: string;
   players?: LocalPlayer[]; currentIdx?: number;
   buttonLabel: ReactNode; buttonSub?: string; tag?: string; onReady: () => void;
 }) {
+  const t = useT(UC_STR);
   return (
     <LocalShell tone="noir">
-      <NavBar sub={label} right={<Tag color="#3DDC97">{tag}</Tag>} />
+      <NavBar sub={label} right={<Tag color="#3DDC97">{tag ?? t.rolesReady}</Tag>} />
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12, marginTop: 8 }}>
         <div style={{ position: "relative" }}>
           <Mascot size={110} color={MASCOT_COLORS[colorIdx % MASCOT_COLORS.length]} mood="wink" arms shadow={false} />
         </div>
-        <div style={{ fontSize: 18, fontWeight: 700, color: "rgba(255,255,255,0.9)", marginTop: 4 }}>Passe le téléphone à</div>
+        <div style={{ fontSize: 18, fontWeight: 700, color: "rgba(255,255,255,0.9)", marginTop: 4 }}>{t.passPhoneTo}</div>
         <div style={{ ...DISPLAY, fontSize: `clamp(32px, ${Math.min(14, 110 / Math.max(1, toName.length)).toFixed(1)}vw, 54px)`, lineHeight: 1.05, textAlign: "center", overflowWrap: "anywhere", maxWidth: "100%", padding: "8px 22px 10px", borderRadius: 24, background: MASCOT_PALETTE[MASCOT_COLORS[colorIdx % MASCOT_COLORS.length]].body, color: ZZ.ink, border: `3px solid ${ZZ.ink}`, boxShadow: `0 6px 0 ${ZZ.ink}`, rotate: "-2deg" }}>{toName}</div>
       </div>
 
       {players && (
         <div style={{ marginTop: 22 }}>
-          <Mono style={{ marginBottom: 8, display: "block", textAlign: "center" }}>Qui a vu son mot</Mono>
+          <Mono style={{ marginBottom: 8, display: "block", textAlign: "center" }}>{t.whoSawWord}</Mono>
           <div style={{ display: "flex", justifyContent: "center", gap: 8, flexWrap: "wrap" }}>
             {players.map((p) => {
               const active = p.idx === currentIdx;
@@ -1634,26 +1440,21 @@ function PassScreenUC({ toName, colorIdx, label, players, currentIdx, buttonLabe
 
 // Règles visibles avant la distribution (repliables).
 function RulesCard({ jester }: { jester: boolean }) {
+  const t = useT(UC_STR);
   const [open, setOpen] = useState(false);
-  const items = [
-    "Chacun reçoit un mot secret. Les civils ont tous le même ; l'Intrus a un mot voisin… et ne sait pas qu'il est l'Intrus !",
-    "Le Fantôme (optionnel) n'a pas de mot, lui le sait : il écoute et bluffe. S'il est éliminé, il peut gagner seul en devinant le mot des civils.",
-    "À tour de rôle, chacun donne un indice à voix haute sur son mot, puis la table désigne ensemble un suspect à éliminer.",
-    "Les civils gagnent quand tous les imposteurs sont éliminés. Les imposteurs gagnent dès qu'ils sont aussi nombreux que les autres joueurs.",
-    ...(jester ? ["Le Bouffon a le mot des civils mais joue pour lui : il gagne seul s'il se fait éliminer par le vote."] : []),
-  ];
+  const items = [...t.rulesItems, ...(jester ? [t.ruleJester] : [])];
   return (
     <FileCard accent="#4ECDC4" style={{ marginBottom: 14 }}>
       <button onClick={() => setOpen(!open)} style={{
         width: "100%", minHeight: 44, display: "flex", justifyContent: "space-between", alignItems: "center",
         background: "transparent", border: "none", color: "white", padding: 0, cursor: "pointer", fontFamily: "inherit",
       }}>
-        <span style={{ ...DISPLAY, fontSize: 21 }}><GameInlineIcon icon={BookOpen} /> Les règles</span>
-        <span style={{ fontSize: 14, fontWeight: 700, color: "#fff" }}>{open ? "Masquer" : "Afficher"} <GameInlineIcon icon={open ? ChevronUp : ChevronDown} /></span>
+        <span style={{ ...DISPLAY, fontSize: 21 }}><GameInlineIcon icon={BookOpen} /> {t.rules}</span>
+        <span style={{ fontSize: 14, fontWeight: 700, color: "#fff" }}>{open ? t.hide : t.show} <GameInlineIcon icon={open ? ChevronUp : ChevronDown} /></span>
       </button>
       {open && (
         <ul style={{ margin: "10px 0 0", paddingLeft: 18, display: "flex", flexDirection: "column", gap: 8, fontSize: 15, fontWeight: 600, lineHeight: 1.4, color: "#fff" }}>
-          {items.map((t) => <li key={t}>{t}</li>)}
+          {items.map((it) => <li key={it}>{it}</li>)}
         </ul>
       )}
     </FileCard>

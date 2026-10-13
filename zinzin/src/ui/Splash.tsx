@@ -3,6 +3,8 @@ import type { MascotMood } from "@/components/Mascot";
 import { ZBlob, ZCOLORS, type ZColor } from "./ZBlob";
 import { reducedMotion } from "./util";
 import { ZLogo } from "./Logo";
+import { useT } from "@/lib/i18n";
+import { UI } from "../strings";
 
 /**
  * Écran de lancement : des blobs tombent, rebondissent (squash & stretch),
@@ -33,6 +35,7 @@ export function Splash({ onDone }: { onDone: () => void }) {
   const W = typeof window !== "undefined" ? window.innerWidth : 390;
   const H = typeof window !== "undefined" ? window.innerHeight : 844;
   const still = reducedMotion();
+  const t = useT(UI);
 
   // Blobs : tailles variées proportionnelles à la largeur
   const specs = useMemo(() => {
@@ -182,7 +185,7 @@ export function Splash({ onDone }: { onDone: () => void }) {
       style={{ background: "var(--zz-bg)", opacity: leaving ? 0 : 1, transition: "opacity 260ms ease", zIndex: 50 }}
       onPointerDown={finish}
       role="button"
-      aria-label="Passer l'introduction"
+      aria-label={t.skipIntro}
     >
       <div className="zz-glow" style={{ width: W * 0.9, height: W * 0.9, left: -W * 0.2, top: H * 0.12, background: "#5A2BE0", opacity: 0.35 }} />
       <div className="zz-glow" style={{ width: W * 0.8, height: W * 0.8, right: -W * 0.3, top: H * 0.3, background: "#FF3EA5", opacity: 0.2 }} />
@@ -191,7 +194,7 @@ export function Splash({ onDone }: { onDone: () => void }) {
         <div className="absolute inset-x-0 flex flex-col items-center" style={{ top: "28%" }}>
           <h1 className="zz-logo-in select-none" style={{ lineHeight: 1 }}><ZLogo size={Math.min(104, W * 0.26)} /></h1>
           <p className="zz-fade mt-3 text-[15px] font-semibold" style={{ color: "var(--zz-dim)", animationDelay: "250ms" }}>
-            Jeux de soirée · un seul téléphone
+            {t.splashTagline}
           </p>
         </div>
       )}

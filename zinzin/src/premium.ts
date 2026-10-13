@@ -1,5 +1,7 @@
 import { useSyncExternalStore } from "react";
 import { notifyPremiumChanged } from "@/lib/entitlements";
+import { type Lang, getLang, pick } from "@/lib/i18n";
+import { UI } from "./strings";
 
 /**
  * Abonnement « Zinzin Premium » (tout débloquer).
@@ -42,8 +44,12 @@ function apiKey(): string | undefined {
 
 export const isTestMode = () => !isNative() || !apiKey();
 
+export type PlanKind = "weekly" | "monthly" | "yearly";
+
 export interface Plan {
   id: string;
+  /** Formule connue : titre / période / badge traduits à l'affichage */
+  kind?: PlanKind;
   title: string;
   price: string;
   period: string;
@@ -52,12 +58,20 @@ export interface Plan {
   pkg?: unknown;
 }
 
+/** Prix par défaut (mode test ou avant chargement), au format de la langue. */
+const DEFAULT_PRICES: Record<PlanKind, Record<Lang, string>> = {
+  weekly: { fr: "1,99 €", en: "€1.99", es: "1,99 €" },
+  monthly: { fr: "2,99 €", en: "€2.99", es: "2,99 €" },
+  yearly: { fr: "14,99 €", en: "€14.99", es: "14,99 €" },
+};
+
 /** Offres affichées par défaut (mode test ou avant chargement). */
-export const DEFAULT_PLANS: Plan[] = [
-  { id: "weekly", title: "Pass soirée", price: "1,99 €", period: "7 jours" },
-  { id: "monthly", title: "Mensuel", price: "2,99 €", period: "par mois", badge: "Le + choisi" },
-  { id: "yearly", title: "Annuel", price: "14,99 €", period: "par an", badge: "-58 %" },
-];
+export function defaultPlans(lang: Lang = getLang()): Plan[] {
+  const t = pick(UI, lang).plans;
+  return (["weekly", "monthly", "yearly"] as const).map((k) => ({
+    id: k, kind: k, title: t[k].title, price: DEFAULT_PRICES[k][lang], period: t[k].period, badge: t[k].badge,
+  }));
+}
 
 let configured = false;
 
@@ -83,6 +97,7 @@ export async function initPremium() {
 }
 
 export async function loadPlans(): Promise<Plan[]> {
+  const DEFAULT_PLANS = defaultPlans();
   if (isTestMode()) return DEFAULT_PLANS;
   try {
     const Purchases = await rc();
@@ -90,9 +105,11 @@ export async function loadPlans(): Promise<Plan[]> {
     const pkgs = offerings.current?.availablePackages ?? [];
     if (!pkgs.length) return DEFAULT_PLANS;
     return pkgs.map((p) => {
-      const fallback = DEFAULT_PLANS.find((d) => p.identifier.toLowerCase().includes(d.id.slice(0, 4)));
+      const idf = p.identifier.toLowerCase();
+      const fallback = DEFAULT_PLANS.find((d) => idf.includes(d.id.slice(0, 4))) ?? (/annual/.test(idf) ? DEFAULT_PLANS[2] : undefined);
       return {
         id: p.identifier,
+        kind: fallback?.kind,
         title: fallback?.title ?? p.product.title,
         price: p.product.priceString,
         period: fallback?.period ?? "",

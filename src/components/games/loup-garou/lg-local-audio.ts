@@ -1,27 +1,39 @@
 /**
- * Loup-Garou local : narration vocale (Web Speech API, fr-FR) + bruitages et
+ * Loup-Garou local : narration vocale (Web Speech API, fr-FR / en-US / es-ES selon la langue) + bruitages et
  * ambiance en vrais samples (src/lib/sfx.ts, coupure son globale de l'app).
  * Tout est optionnel et échoue en silence.
  */
 
 import { playSfx, preloadSfx } from "@/lib/sfx";
+import { getLang, type Lang } from "@/lib/i18n";
+import { SPEECH_LANG } from "./lg-local-i18n";
 
 // ── Narration ─────────────────────────────────────────────
 export function speechAvailable(): boolean {
   return typeof window !== "undefined" && "speechSynthesis" in window && typeof SpeechSynthesisUtterance !== "undefined";
 }
 
-let cachedVoice: SpeechSynthesisVoice | null | undefined;
-function frenchVoice(): SpeechSynthesisVoice | null {
-  if (cachedVoice) return cachedVoice;
+// Voix préférées par langue (noms courants iOS / macOS / Android), sinon la 1re de la langue
+const PREFERRED: Record<Lang, RegExp> = {
+  fr: /thomas|amélie|amelie|audrey|marie/i,
+  en: /samantha|alex|daniel|karen|google us english/i,
+  es: /mónica|monica|jorge|paulina|google español/i,
+};
+
+const cachedVoice: Partial<Record<Lang, SpeechSynthesisVoice>> = {};
+function voiceFor(lang: Lang): SpeechSynthesisVoice | null {
+  if (cachedVoice[lang]) return cachedVoice[lang];
   const voices = window.speechSynthesis.getVoices();
   if (!voices.length) return null;
-  cachedVoice =
-    voices.find((v) => v.lang === "fr-FR" && /thomas|amélie|amelie|audrey|marie/i.test(v.name)) ??
-    voices.find((v) => v.lang === "fr-FR") ??
-    voices.find((v) => v.lang.toLowerCase().startsWith("fr")) ??
+  const tag = SPEECH_LANG[lang];
+  const norm = (v: SpeechSynthesisVoice) => v.lang.replace("_", "-");
+  const found =
+    voices.find((v) => norm(v) === tag && PREFERRED[lang].test(v.name)) ??
+    voices.find((v) => norm(v) === tag) ??
+    voices.find((v) => v.lang.toLowerCase().startsWith(lang)) ??
     null;
-  return cachedVoice;
+  if (found) cachedVoice[lang] = found;
+  return found;
 }
 
 const RATE = 0.95;
@@ -37,8 +49,9 @@ export function speak(text: string, enabled: boolean) {
     const synth = window.speechSynthesis;
     synth.cancel();
     const u = new SpeechSynthesisUtterance(text.replace(/·e/g, "e").replace(/[…]/g, "."));
-    u.lang = "fr-FR";
-    const v = frenchVoice();
+    const lang = getLang();
+    u.lang = SPEECH_LANG[lang];
+    const v = voiceFor(lang);
     if (v) u.voice = v;
     u.rate = RATE;
     u.pitch = 0.92;

@@ -11,7 +11,9 @@ import { IdeaButton, RerollButton } from "@/components/games/idea-button";
 import { TopRightControls } from "@/components/games/patate/rules-sheet";
 import { C, Chip, DISPLAY, INK, KitStyles, SectionTitle, SoftLink, StickerBtn, StickerCard, StickerScreen, TOP_PAD, BOTTOM_PAD, dotted, sticker } from "@/components/games/patate/sticker-kit";
 import { playCombo, playSfx, preloadSfx } from "@/lib/sfx";
-import { PACKS } from "./words";
+import { useLang } from "@/lib/i18n";
+import { PACKS_BY_LANG } from "./words";
+import { STR } from "./i18n";
 
 // ── Deviner le Mot ─────────────────────────────────────────
 // Un joueur met le tél sur son front (écran vers les autres), les autres le
@@ -20,13 +22,6 @@ import { PACKS } from "./words";
 
 const ACCENT = "#4ECDC4";
 const DURATIONS = [30, 60, 90] as const;
-
-const RULES = [
-  "Mets le tél sur ton front, écran vers les autres.",
-  "Ils te font deviner le mot sans le dire.",
-  "Tape à gauche si tu trouves, à droite pour passer.",
-  "Le plus de mots trouvés gagne.",
-];
 
 type Phase = "setup" | "config" | "pass" | "countdown" | "playing" | "turn-end" | "final";
 type WordResult = { word: string; ok: boolean };
@@ -54,6 +49,10 @@ const KEYFRAMES = `
 `;
 
 export default function GuessWordGame({ onReturnToLobby }: GameProps) {
+  // Langue courante : interface + paquets de mots (même ids dans toutes les langues)
+  const lang = useLang();
+  const t = STR[lang];
+  const PACKS = PACKS_BY_LANG[lang];
   // Coupure du son globale (sfx.ts) : on joue toujours, sfx.ts filtre
   const sound = true;
   useEffect(() => {
@@ -83,7 +82,7 @@ export default function GuessWordGame({ onReturnToLobby }: GameProps) {
     const set = new Set<string>();
     PACKS.filter((p) => packs.includes(p.id)).forEach((p) => p.words.forEach((w) => set.add(w)));
     return [...set];
-  }, [packs]);
+  }, [packs, PACKS]);
 
   // Compte à rebours 3-2-1 avant le tour
   useEffect(() => {
@@ -175,7 +174,7 @@ export default function GuessWordGame({ onReturnToLobby }: GameProps) {
   };
 
 
-  const controls = <TopRightControls title="Deviner le Mot" rules={RULES} accent={ACCENT} />;
+  const controls = <TopRightControls title={t.title} rules={t.rules} accent={ACCENT} />;
   const replay = () => {
     setScores(players.map(() => 0));
     setTurn(0);
@@ -191,7 +190,7 @@ export default function GuessWordGame({ onReturnToLobby }: GameProps) {
         {controls}
         <PlayersSetup
           emoji=""
-          name="Deviner le Mot"
+          name={t.title}
           min={2}
           max={12}
           accent={ACCENT}
@@ -211,18 +210,18 @@ export default function GuessWordGame({ onReturnToLobby }: GameProps) {
         {controls}
         <Mascot size={74} color="sky" mood="thinking" arms shadow={false} />
         <h1 className="mt-1 text-center text-[clamp(42px,12vw,58px)] leading-[0.92]" style={{ ...DISPLAY, textShadow: `4px 4px 0 ${INK}` }}>
-          Deviner le Mot
+          {t.title}
         </h1>
         <StickerCard bg={C.cream} radius={22} shadow={5} tilt={-1} className="mt-4 p-4">
           <ul className="space-y-1.5 text-[15px] font-semibold leading-snug">
-            <li><GameInlineIcon icon={Smartphone} /> Mets le tél <b>sur ton front</b>, écran vers les autres.</li>
-            <li><GameInlineIcon icon={Speech} /> Ils te font deviner le mot <b>sans le dire</b> (mime, indices, bruitages).</li>
-            <li><GameInlineIcon icon={ArrowLeft} /> Tape <b>à gauche</b> si tu trouves, <b>à droite</b> pour passer <GameInlineIcon icon={ArrowRight} /></li>
+            <li><GameInlineIcon icon={Smartphone} />{t.how1[0]}<b>{t.how1[1]}</b>{t.how1[2]}</li>
+            <li><GameInlineIcon icon={Speech} />{t.how2[0]}<b>{t.how2[1]}</b>{t.how2[2]}</li>
+            <li><GameInlineIcon icon={ArrowLeft} />{t.how3[0]}<b>{t.how3[1]}</b>{t.how3[2]}<b>{t.how3[3]}</b>{t.how3[4]}<GameInlineIcon icon={ArrowRight} /></li>
           </ul>
         </StickerCard>
 
         <div className="mt-6 w-full">
-          <SectionTitle>Les thèmes <span className="text-[17px]" style={{ color: "rgba(255,255,255,0.8)" }}>· {pool.length} mots</span></SectionTitle>
+          <SectionTitle>{t.themes} <span className="text-[17px]" style={{ color: "rgba(255,255,255,0.8)" }}>· {t.words(pool.length)}</span></SectionTitle>
           <div className="grid grid-cols-2 gap-2.5">
             {PACKS.map((p) => {
               const on = packs.includes(p.id);
@@ -251,7 +250,7 @@ export default function GuessWordGame({ onReturnToLobby }: GameProps) {
         </div>
 
         <div className="mt-6 w-full">
-          <SectionTitle>Temps par joueur</SectionTitle>
+          <SectionTitle>{t.timePerPlayer}</SectionTitle>
           <div className="grid grid-cols-3 gap-2.5">
             {DURATIONS.map((d) => (
               <Chip key={d} on={duration === d} onClick={() => setDuration(d)} onBg={ACCENT}>{d} s</Chip>
@@ -260,22 +259,22 @@ export default function GuessWordGame({ onReturnToLobby }: GameProps) {
         </div>
 
         <div className="mt-6 w-full">
-          <SectionTitle>Tours</SectionTitle>
+          <SectionTitle>{t.turns}</SectionTitle>
           <div className="grid grid-cols-3 gap-2.5">
-            {[1, 2, 3].map((t) => (
-              <Chip key={t} on={tours === t} onClick={() => setTours(t)} onBg={ACCENT}>{t}</Chip>
+            {[1, 2, 3].map((n) => (
+              <Chip key={n} on={tours === n} onClick={() => setTours(n)} onBg={ACCENT}>{n}</Chip>
             ))}
           </div>
           <p className="mt-2 text-[15px] font-semibold" style={{ color: "rgba(255,255,255,0.85)" }}>
-            Chaque joueur passe {tours} fois avec le tél sur le front.
+            {t.turnsHint(tours)}
           </p>
         </div>
 
         <div className="mt-auto flex w-full flex-col items-center pt-7">
           <StickerBtn big bg={ACCENT} disabled={!canStart} onClick={replay}>
-            {canStart ? "C'est parti !" : "Choisis un thème"}
+            {canStart ? t.letsGo : t.pickTheme}
           </StickerBtn>
-          <SoftLink onClick={() => setPhase("setup")}>Modifier les joueurs</SoftLink>
+          <SoftLink onClick={() => setPhase("setup")}>{t.editPlayers}</SoftLink>
           <div className="mt-2">
             <IdeaButton game="Deviner le Mot" kind="mot" bg={C.cream} />
           </div>
@@ -292,8 +291,8 @@ export default function GuessWordGame({ onReturnToLobby }: GameProps) {
           toName={players[current]}
           colorIndex={current}
           accent={ACCENT}
-          hint={`C'est toi qui devines ! Tour ${Math.floor(turn / players.length) + 1}/${tours} · ${duration} s. Prépare-toi à mettre le tél sur ton front.`}
-          buttonLabel="Prêt, on lance !"
+          hint={t.passHint(Math.floor(turn / players.length) + 1, tours, duration)}
+          buttonLabel={t.ready}
           onReady={startTurn}
         />
       </>
@@ -304,7 +303,7 @@ export default function GuessWordGame({ onReturnToLobby }: GameProps) {
     return (
       <StickerScreen bg={ACCENT} light center>
         <style>{KEYFRAMES}</style>
-        <p className="text-[24px]" style={DISPLAY}><GameInlineIcon icon={Smartphone} /> Tél sur le front !</p>
+        <p className="text-[24px]" style={DISPLAY}><GameInlineIcon icon={Smartphone} />{t.phoneOnForehead}</p>
         <p key={count} className="mt-4 leading-none" style={{ ...DISPLAY, fontSize: 170, color: "#fff", textShadow: `6px 6px 0 ${INK}`, WebkitTextStroke: `3px ${INK}`, animation: "gw-pop .5s ease-out" }}>
           {count > 0 ? count : "GO"}
         </p>
@@ -336,31 +335,31 @@ export default function GuessWordGame({ onReturnToLobby }: GameProps) {
             {timeLeft}
           </span>
           <span className="mt-2 text-[15px] font-bold">
-            {players[current]} · {found} trouvé{found > 1 ? "s" : ""}
+            {players[current]} · {t.found(found)}
           </span>
         </div>
 
         {results.length === 0 && (
           <div className="absolute inset-x-0 z-30 flex justify-center" style={{ top: "calc(env(safe-area-inset-top, 0px) + 112px)" }}>
-            <RerollButton onClick={rerollWord} label="Mot nul ? Changer de mot" />
+            <RerollButton onClick={rerollWord} label={t.reroll} />
           </div>
         )}
         {/* Deux grandes moitiés tactiles : à l'aveugle, le front collé au tél */}
         <div className="absolute inset-0 flex gap-0">
-          <button type="button" onClick={() => answer(true)} className="flex flex-1 flex-col items-center justify-end" style={{ background: "rgba(61,220,151,0.16)", borderRight: `3px solid ${INK}`, paddingBottom: BOTTOM_PAD }} aria-label="Trouvé">
+          <button type="button" onClick={() => answer(true)} className="flex flex-1 flex-col items-center justify-end" style={{ background: "rgba(61,220,151,0.16)", borderRight: `3px solid ${INK}`, paddingBottom: BOTTOM_PAD }} aria-label={t.got}>
             <GameIconBadge icon={Check} bg={C.mint} size={64} />
-            <span className="mt-1.5 text-[20px]" style={DISPLAY}>Trouvé</span>
+            <span className="mt-1.5 text-[20px]" style={DISPLAY}>{t.got}</span>
           </button>
-          <button type="button" onClick={() => answer(false)} className="flex flex-1 flex-col items-center justify-end" style={{ background: "rgba(255,107,91,0.16)", paddingBottom: BOTTOM_PAD }} aria-label="Passer">
+          <button type="button" onClick={() => answer(false)} className="flex flex-1 flex-col items-center justify-end" style={{ background: "rgba(255,107,91,0.16)", paddingBottom: BOTTOM_PAD }} aria-label={t.skip}>
             <GameIconBadge icon={X} bg={C.coral} size={64} />
-            <span className="mt-1.5 text-[20px]" style={DISPLAY}>Passer</span>
+            <span className="mt-1.5 text-[20px]" style={DISPLAY}>{t.skip}</span>
           </button>
         </div>
 
         <div className="pointer-events-none relative z-10 flex flex-1 items-center justify-center px-4" style={{ paddingTop: TOP_PAD }}>
           <div key={wordIdx + deck.length} className="max-w-full px-5 py-4 text-center" style={{ ...sticker(C.cream, { radius: 26, shadow: 6 }), transform: "rotate(-2deg)", animation: "gw-pop .25s ease-out" }}>
             <h2
-              lang="fr"
+              lang={lang}
               style={{ ...DISPLAY, fontSize: `min(${long ? "10vw, 3rem" : "14vw, 4.2rem"}, ${(130 / longestWord).toFixed(1)}vw)`, lineHeight: 1.02, overflowWrap: "anywhere", hyphens: "auto" }}
             >
               {word}
@@ -378,7 +377,7 @@ export default function GuessWordGame({ onReturnToLobby }: GameProps) {
       <StickerScreen bg={C.night}>
         {controls}
         <span className="px-3.5 py-1 text-[17px]" style={{ ...sticker(C.coral, { radius: 999, shadow: 3, border: 2.5 }), ...DISPLAY, transform: "rotate(-3deg)" }}>
-          Temps écoulé !
+          {t.timeUp}
         </span>
         <div className="mt-3">
           <MascotAvatar color={colorForIndex(current)} size={70} mood={found >= 8 ? "fire" : found >= 4 ? "happy" : "sad"} border={false} />
@@ -386,7 +385,7 @@ export default function GuessWordGame({ onReturnToLobby }: GameProps) {
         <h2 className="mt-1 max-w-full truncate text-center leading-none" style={{ ...DISPLAY, fontSize: `min(40px, ${(110 / Math.max(1, players[current]?.length ?? 1)).toFixed(1)}vw)`, textShadow: `3px 3px 0 ${INK}` }}>{players[current]}</h2>
         <div className="mt-3 px-6 py-1.5 text-center" style={{ ...sticker(ACCENT, { radius: 22, shadow: 5 }), transform: "rotate(-2deg)" }}>
           <p className="text-[56px] leading-none" style={DISPLAY}>{found}</p>
-          <p className="text-[16px] font-bold">mot{found > 1 ? "s" : ""} trouvé{found > 1 ? "s" : ""}</p>
+          <p className="text-[16px] font-bold">{t.wordsFound(found)}</p>
         </div>
         <div className="mt-5 flex w-full flex-wrap justify-center gap-2">
           {results.map((r, i) => (
@@ -394,12 +393,12 @@ export default function GuessWordGame({ onReturnToLobby }: GameProps) {
               {r.ok ? <Check size={14} strokeWidth={3.5} aria-hidden /> : <X size={14} strokeWidth={3.5} aria-hidden />} {r.word}
             </span>
           ))}
-          {results.length === 0 && <p className="text-[16px] font-semibold">Aucun mot… on se réveille !</p>}
+          {results.length === 0 && <p className="text-[16px] font-semibold">{t.noWords}</p>}
         </div>
         <Standings players={players} scores={scores} />
         <div className="mt-auto flex w-full flex-col items-center pt-7">
           <StickerBtn big bg={ACCENT} onClick={nextTurn}>
-            {last ? "Classement final" : `Au tour ${deOf(players[(turn + 1) % players.length])}`}
+            {last ? t.finalRanking : t.nextPlayer(players[(turn + 1) % players.length])}
           </StickerBtn>
           {!last && (
             <SoftLink
@@ -408,7 +407,7 @@ export default function GuessWordGame({ onReturnToLobby }: GameProps) {
                 setPhase("final");
               }}
             >
-              Terminer la partie
+              {t.endGame}
             </SoftLink>
           )}
         </div>
@@ -425,7 +424,7 @@ export default function GuessWordGame({ onReturnToLobby }: GameProps) {
       {controls}
       <ConfettiBurst count={60} />
       <span className="px-3.5 py-1 text-[17px]" style={{ ...sticker(C.yellow, { radius: 999, shadow: 3, border: 2.5 }), ...DISPLAY, transform: "rotate(-3deg)" }}>
-        {tie ? "Égalité au sommet !" : "Meilleur·e devin·e"}
+        {tie ? t.tieTop : t.bestGuesser}
       </span>
       <div className="mt-3">
         <Mascot size={100} color={colorForIndex(top?.i ?? 0)} mood="cool" arms crown shadow={false} />
@@ -437,10 +436,10 @@ export default function GuessWordGame({ onReturnToLobby }: GameProps) {
       </h2>
       <Standings players={players} scores={scores} big />
       <div className="mt-auto flex w-full flex-col items-center pt-7">
-        <StickerBtn big bg={ACCENT} onClick={replay}>Rejouer</StickerBtn>
+        <StickerBtn big bg={ACCENT} onClick={replay}>{t.playAgain}</StickerBtn>
         <div className="mt-3 grid w-full grid-cols-2 gap-3">
-          <StickerBtn bg={C.cream} onClick={() => setPhase("config")}>Les thèmes</StickerBtn>
-          {onReturnToLobby ? <StickerBtn bg={INK} color="#fff" onClick={onReturnToLobby}>Quitter</StickerBtn> : <span />}
+          <StickerBtn bg={C.cream} onClick={() => setPhase("config")}>{t.themesBtn}</StickerBtn>
+          {onReturnToLobby ? <StickerBtn bg={INK} color="#fff" onClick={onReturnToLobby}>{t.quit}</StickerBtn> : <span />}
         </div>
         <div className="mt-4">
           <IdeaButton game="Deviner le Mot" kind="mot" bg={C.cream} />
@@ -448,11 +447,6 @@ export default function GuessWordGame({ onReturnToLobby }: GameProps) {
       </div>
     </StickerScreen>
   );
-}
-
-/** « de Léa » / « d'Al » (élision devant une voyelle). */
-function deOf(name: string): string {
-  return /^[aeiouyàâäéèêëîïôöùûü]/i.test(name) ? `d'${name}` : `de ${name}`;
 }
 
 function Standings({ players, scores, big }: { players: string[]; scores: number[]; big?: boolean }) {

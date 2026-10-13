@@ -1,5 +1,5 @@
 /**
- * Loup-Garou « un seul téléphone » : rôles, répartition recommandée et règles pures
+ * Loup-Garou « un seul téléphone » : rôles (noms et pouvoirs traduits dans lg-local-i18n.ts), répartition recommandée et règles pures
  * (résolution de la nuit, morts en cascade, conditions de victoire).
  * Aucune dépendance React : tout est testable à la main.
  */
@@ -95,11 +95,13 @@ export function villagersCount(c: Composition, n: number): number {
   return n - c.loup - specialsCount(c);
 }
 
-/** null si la compo est jouable, sinon le problème en clair */
-export function compositionProblem(c: Composition, n: number): string | null {
-  if (c.loup < 1) return "Il faut au moins un loup.";
-  if (villagersCount(c, n) < 0) return "Trop de rôles pour le nombre de joueurs.";
-  if (c.loup * 2 >= n) return "Trop de loups : ils gagneraient d'entrée.";
+export type CompositionProblem = "noWolf" | "tooManyRoles" | "tooManyWolves";
+
+/** null si la compo est jouable, sinon le code du problème (texte dans lg-local-i18n) */
+export function compositionProblem(c: Composition, n: number): CompositionProblem | null {
+  if (c.loup < 1) return "noWolf";
+  if (villagersCount(c, n) < 0) return "tooManyRoles";
+  if (c.loup * 2 >= n) return "tooManyWolves";
   return null;
 }
 

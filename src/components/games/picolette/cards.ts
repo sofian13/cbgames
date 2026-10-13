@@ -2,6 +2,10 @@
 // Pensé pour la soirée sur le canapé : tout se joue à la voix.
 // Peine = 1 à 3 gorgées (de ce que tu veux : eau, soft…) OU un gage soft tiré au sort.
 
+import { getLang, type I18n, type Lang } from "@/lib/i18n";
+import { CARDS_EN, GAGES_EN, PACK_TEXT_EN, TYPE_LABEL_EN } from "./cards.en";
+import { CARDS_ES, GAGES_ES, PACK_TEXT_ES, TYPE_LABEL_ES } from "./cards.es";
+
 export type PicoletteType =
   | "vote"
   | "table"
@@ -680,6 +684,7 @@ const MORE_CARDS: PicoletteCard[] = [
   { type: "joker", pack: "pop", joker: "pick", text: "VENGEANCE — Celui qui a le plus de peines choisit qui prend la suivante.", hint: "Le compteur décide qui a le pouvoir." },
 ];
 
+/** Cartes françaises (référence : EN / ES suivent le même ordre et la même structure). */
 export const PICOLETTE_CARDS: PicoletteCard[] = [...BASE_CARDS, ...MORE_CARDS];
 
 /** Gages soft, drôles et sans danger, tirés au sort par la roulette. */
@@ -724,8 +729,23 @@ export const GAGES: string[] = [
   "Invente le nom de ton futur groupe de musique et chante son tube 10 secondes.",
 ];
 
-export function filterDeck(packs: Set<Pack>): PicoletteCard[] {
-  return PICOLETTE_CARDS.filter((c) => packs.has(c.pack));
+// ── Langues ─────────────────────────────────────────────────
+// La langue est lue au moment de construire le paquet (début de partie / rebattage).
+const CARDS: I18n<PicoletteCard[]> = { fr: PICOLETTE_CARDS, en: CARDS_EN, es: CARDS_ES };
+const GAGES_ALL: I18n<string[]> = { fr: GAGES, en: GAGES_EN, es: GAGES_ES };
+
+/** Toutes les cartes dans la langue demandée (par défaut : langue courante). */
+export function cardsFor(lang: Lang = getLang()): PicoletteCard[] {
+  return CARDS[lang] ?? PICOLETTE_CARDS;
+}
+
+/** Gages de la roulette dans la langue demandée. */
+export function gagesFor(lang: Lang = getLang()): string[] {
+  return GAGES_ALL[lang] ?? GAGES;
+}
+
+export function filterDeck(packs: Set<Pack>, lang: Lang = getLang()): PicoletteCard[] {
+  return cardsFor(lang).filter((c) => packs.has(c.pack));
 }
 
 export function shuffleDeck<T>(deck: T[]): T[] {
@@ -745,6 +765,14 @@ export const PACK_INFO: Record<Pack, { emoji: string; label: string; sub: string
   trash:   { emoji: "💀", label: "Trash",   sub: "18+ · gros aveux, questions piquantes",    tint: "#7A4EE8", adult: true },
 };
 
+const PACK_TEXT: I18n<Record<Pack, { label: string; sub: string }>> = { fr: PACK_INFO, en: PACK_TEXT_EN, es: PACK_TEXT_ES };
+
+/** Infos des packs (libellés traduits, couleurs et emoji communs). */
+export function packInfoFor(lang: Lang = getLang()): Record<Pack, { emoji: string; label: string; sub: string; tint: string; adult?: boolean }> {
+  const txt = PACK_TEXT[lang] ?? PACK_INFO;
+  return Object.fromEntries((Object.keys(PACK_INFO) as Pack[]).map((p) => [p, { ...PACK_INFO[p], ...txt[p] }])) as typeof PACK_INFO;
+}
+
 export const TYPE_INFO: Record<PicoletteType, { emoji: string; label: string; tint: string }> = {
   vote:    { emoji: "🗳️",  label: "Vote groupe",        tint: "#FF6B5B" },
   table:   { emoji: "🎤",  label: "Tour de table",      tint: "#3DDC97" },
@@ -761,3 +789,12 @@ export const TYPE_INFO: Record<PicoletteType, { emoji: string; label: string; ti
   chanson: { emoji: "🎵",  label: "Chanson",            tint: "#3DDC97" },
   avoue:   { emoji: "👀",  label: "Avoue…",             tint: "#FFF6E5" },
 };
+
+const TYPE_LABEL: I18n<Record<PicoletteType, string> | null> = { fr: null, en: TYPE_LABEL_EN, es: TYPE_LABEL_ES };
+
+/** Infos des types de carte (libellé traduit). */
+export function typeInfoFor(lang: Lang = getLang()): Record<PicoletteType, { emoji: string; label: string; tint: string }> {
+  const labels = TYPE_LABEL[lang];
+  if (!labels) return TYPE_INFO;
+  return Object.fromEntries((Object.keys(TYPE_INFO) as PicoletteType[]).map((t) => [t, { ...TYPE_INFO[t], label: labels[t] }])) as typeof TYPE_INFO;
+}

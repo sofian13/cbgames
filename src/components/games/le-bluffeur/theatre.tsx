@@ -9,6 +9,8 @@
 import type { ReactNode } from "react";
 import { DISPLAY, ZChip, ZScreen } from "@/components/games/local-kit";
 import { GAME_INK } from "@/components/games/game-icon-button";
+import { useT } from "@/lib/i18n";
+import { STR } from "@/components/games/le-bluffeur/i18n";
 
 export const BLUFF_COLOR = "#FFD23F";
 
@@ -17,11 +19,12 @@ export function TheatreScreen({
 }: {
   round: number; total: number; children: ReactNode; tools?: ReactNode;
 }) {
+  const t = useT(STR);
   return (
     <ZScreen bg={BLUFF_COLOR} tools={tools}>
       <div className="flex flex-wrap items-center gap-2">
-        <ZChip bg="#fff" tilt={-2}>Manche {round}/{total}</ZChip>
-        <ZChip bg={GAME_INK} tilt={2}>+20 par joueur piégé</ZChip>
+        <ZChip bg="#fff" tilt={-2}>{t.round(round, total)}</ZChip>
+        <ZChip bg={GAME_INK} tilt={2}>{t.perFooled}</ZChip>
       </div>
       {children}
     </ZScreen>
@@ -30,6 +33,7 @@ export function TheatreScreen({
 
 /** Carte question : le trou « ___ » devient une ligne à remplir. */
 export function QuestionBillboard({ question, take }: { question: string | null; take?: string }) {
+  const t = useT(STR);
   const parts = (question ?? "").split(/_{2,}/);
   const rest = parts.slice(1).join(" ");
   return (
@@ -42,7 +46,7 @@ export function QuestionBillboard({ question, take }: { question: string | null;
           className="absolute -top-4 left-4 inline-flex min-h-8 items-center rounded-full px-3 text-[14px] font-bold"
           style={{ background: "#FF3EA5", color: GAME_INK, border: `2.5px solid ${GAME_INK}`, rotate: "-3deg" }}
         >
-          {take ? `Le saviez-vous ? · ${take}` : "Le saviez-vous ?"}
+          {take ? `${t.didYouKnow} · ${take}` : t.didYouKnow}
         </span>
         <h2 style={{ ...DISPLAY, fontSize: (question ?? "").length > 90 ? 24 : 28, lineHeight: 1.12 }}>
           {parts[0]}

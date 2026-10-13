@@ -1,4 +1,9 @@
+import type { I18n } from "@/lib/i18n";
+import { PACKS_EN } from "./categories.en";
+import { PACKS_ES } from "./categories.es";
+
 // Catégories de « Catégorie Chrono » — contenu original, sans marques.
+// Une version par langue (mêmes ids de packs, mêmes packs cochés par défaut).
 // Le pack coquin reste suggestif (jamais explicite) et est décoché par défaut.
 
 export interface Category {
@@ -198,3 +203,5 @@ export const PACKS: CategoryPack[] = [
     ],
   },
 ];
+
+export const PACKS_BY_LANG: I18n<CategoryPack[]> = { fr: PACKS, en: PACKS_EN, es: PACKS_ES };

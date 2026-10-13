@@ -25,9 +25,11 @@ import {
 } from "lucide-react";
 import {
   type PicoletteCard, type Pack, type PicoletteType,
-  PICOLETTE_CARDS, PACK_INFO, TYPE_INFO, GAGES,
+  cardsFor, gagesFor, packInfoFor, typeInfoFor,
   filterDeck, shuffleDeck,
 } from "./cards";
+import { pick, useLang, useT } from "@/lib/i18n";
+import { STR } from "./i18n";
 
 // ── DA sticker ────────────────────────────────────────────
 const INK = "#15082E";
@@ -113,9 +115,10 @@ function TextLink({ onClick, children }: { onClick: () => void; children: ReactN
 /** Bouton son (coupure globale partagée par toute l'app). */
 function SoundToggle() {
   const muted = useSyncExternalStore(subscribeSfxMuted, isSfxMuted, () => false);
+  const t = useT(STR);
   return (
     <GameTopRight>
-      <GameIconButton icon={muted ? VolumeX : Volume2} label={muted ? "Activer le son" : "Couper le son"} active={muted} onClick={() => setSfxMuted(!muted)} />
+      <GameIconButton icon={muted ? VolumeX : Volume2} label={muted ? t.soundOn : t.soundOff} active={muted} onClick={() => setSfxMuted(!muted)} />
     </GameTopRight>
   );
 }
@@ -224,7 +227,7 @@ function dealDeck(packs: Set<Pack>, nPlayers: number): DealtCard[] {
 
 /** Remplace {p1} / {p2} par les prénoms. */
 function fill(text: string, who: number[], players: string[]): string {
-  return text.replace(/\{p([12])\}/g, (_, n: string) => players[who[Number(n) - 1]] ?? "quelqu'un");
+  return text.replace(/\{p([12])\}/g, (_, n: string) => players[who[Number(n) - 1]] ?? pick(STR).someone);
 }
 
 /** Texte de carte avec les prénoms mis en valeur (sticker). */
@@ -241,7 +244,7 @@ function RichText({ text, who, players, cardBg }: { text: string; who: number[];
             className="whitespace-nowrap rounded-[12px] px-[0.18em]"
             style={{ background: hl, color: INK, border: `2.5px solid ${INK}`, boxShadow: `0 2px 0 ${INK}`, WebkitBoxDecorationBreak: "clone", boxDecorationBreak: "clone" }}
           >
-            {players[who[Number(m[1]) - 1]] ?? "quelqu'un"}
+            {players[who[Number(m[1]) - 1]] ?? pick(STR).someone}
           </span>
         );
       })}
@@ -251,9 +254,10 @@ function RichText({ text, who, players, cardBg }: { text: string; who: number[];
 
 /** Durée affichée d'une carte règle. */
 function ruleDurationLabel(c: PicoletteCard): { icon: LucideIcon; label: string } {
-  if (c.ruleUntilNext) return { icon: InfinityIcon, label: "Jusqu'à la prochaine règle" };
-  if (c.ruleCards) return { icon: Layers, label: `Pendant ${c.ruleCards} cartes` };
-  return { icon: Timer, label: `Pendant ${Math.round((c.ruleSec ?? 240) / 60)} min` };
+  const t = pick(STR);
+  if (c.ruleUntilNext) return { icon: InfinityIcon, label: t.untilNextRule };
+  if (c.ruleCards) return { icon: Layers, label: t.forCards(c.ruleCards) };
+  return { icon: Timer, label: t.forMin(Math.round((c.ruleSec ?? 240) / 60)) };
 }
 
 const KEYFRAMES = `
@@ -263,11 +267,12 @@ const KEYFRAMES = `
 `;
 
 const pickGage = (exclude?: string) => {
-  const pool = GAGES.filter((g) => g !== exclude);
+  const pool = gagesFor().filter((g) => g !== exclude);
   return pool[Math.floor(Math.random() * pool.length)];
 };
 
 export default function PicoletteGame({ onReturnToLobby }: GameProps) {
+  const tr = useT(STR);
   type Phase = "setup" | "packs" | "intro" | "play" | "over";
   const [phase, setPhase] = useState<Phase>("setup");
   const [players, setPlayers] = useState<string[]>([]);
@@ -308,7 +313,7 @@ export default function PicoletteGame({ onReturnToLobby }: GameProps) {
       setNow(t);
       if (t >= activeRule.endsAt) {
         setActiveRule(null);
-        setRuleToast(`Fin de la règle : ${activeRule.text}`);
+        setRuleToast(pick(STR).ruleEnded(activeRule.text));
       }
     };
     const t = setInterval(tick, 250);
@@ -319,8 +324,8 @@ export default function PicoletteGame({ onReturnToLobby }: GameProps) {
     : activeRule.kind === "time"
       ? formatTime(Math.max(0, activeRule.endsAt - Math.max(now, activeRule.startedAt)))
       : activeRule.kind === "cards"
-        ? (() => { const n = Math.max(1, activeRule.endTurn - turn); return n > 1 ? `encore ${n} cartes` : "dernière carte"; })()
-        : "jusqu'à la prochaine règle";
+        ? (() => { const n = Math.max(1, activeRule.endTurn - turn); return n > 1 ? tr.cardsLeft(n) : tr.lastCard; })()
+        : tr.untilNextRuleShort;
 
   // Toast « Nouvelle règle »
   useEffect(() => {
@@ -362,7 +367,7 @@ export default function PicoletteGame({ onReturnToLobby }: GameProps) {
       setActiveRule(opts.rule);
     } else if (activeRule?.kind === "cards" && t >= activeRule.endTurn) {
       setActiveRule(null);
-      setRuleToast(`Fin de la règle : ${activeRule.text}`);
+      setRuleToast(tr.ruleEnded(activeRule.text));
     }
     const next = cardIdx + 1;
     if (next >= deck.length) {
@@ -404,7 +409,7 @@ export default function PicoletteGame({ onReturnToLobby }: GameProps) {
   // Joker Libération : lève la règle en cours
   const clearRule = () => {
     if (!activeRule) return;
-    setRuleToast(`Règle levée : ${activeRule.text}`);
+    setRuleToast(tr.ruleLifted(activeRule.text));
     setActiveRule(null);
     playSfx("powerup", { volume: 0.7 });
     nextCard();
@@ -493,7 +498,7 @@ export default function PicoletteGame({ onReturnToLobby }: GameProps) {
   if (phase === "setup") {
     return (
       <>
-        <PlayersSetup emoji="🍻" name="La Tournée" min={2} max={10} accent={ACCENT} onStart={begin} />
+        <PlayersSetup emoji="🍻" name={tr.gameName} min={2} max={10} accent={ACCENT} onStart={begin} />
         <SoundToggle />
         <ScrollTop dep={phase} />
       </>
@@ -520,20 +525,14 @@ export default function PicoletteGame({ onReturnToLobby }: GameProps) {
         <SoundToggle />
         <ScrollTop dep={phase} />
         <div className="mx-auto flex w-full max-w-md flex-1 flex-col">
-          <h1 style={{ ...DISPLAY, fontSize: 46, lineHeight: 0.95 }}>Avant de commencer</h1>
+          <h1 style={{ ...DISPLAY, fontSize: 46, lineHeight: 0.95 }}>{tr.introTitle}</h1>
           <p className="mt-2 text-[16px] font-semibold" style={{ color: "rgba(255,255,255,0.82)" }}>
-            Le tél lit les cartes et désigne le perdant. Tout le reste se joue à l&apos;oral.
+            {tr.introSub}
           </p>
           <div className="relative mt-10">
             <div className="absolute -top-14 right-2 z-[1]"><Mascot size={72} color="yellow" mood="laughing" arms shadow={false} /></div>
             <ul className="space-y-2.5 rounded-[26px] p-5 pt-10 text-[16px] font-semibold leading-snug" style={{ ...stk("#FFF6E5", 6), color: INK, transform: "rotate(-1.5deg)" }}>
-              {[
-                "18+. Personne ne prend le volant après la soirée.",
-                "La peine : 1 à 3 gorgées max… ou un gage.",
-                "Une gorgée de zinzin, c’est de ce que tu veux : eau, soft, jus… ça compte pareil.",
-                "Personne n'est obligé de boire : on peut toujours prendre le gage.",
-                "Les cartes sont des suggestions, adaptez-les.",
-              ].map((t, i) => (
+              {tr.introRules.map((t, i) => (
                 <li key={i} className="flex gap-2.5">
                   <Check size={20} strokeWidth={3.2} className="mt-0.5 shrink-0" style={{ color: "#E0218A" }} aria-hidden />
                   <span>{t}</span>
@@ -543,7 +542,7 @@ export default function PicoletteGame({ onReturnToLobby }: GameProps) {
           </div>
           <div className="min-h-8 flex-1" />
           <Push big bg={ACCENT} onClick={() => { playSfx("whoosh", { volume: 0.6 }); setPhase("play"); }} className="w-full">
-            OK, on lance
+            {tr.introGo}
           </Push>
         </div>
       </div>
@@ -552,7 +551,7 @@ export default function PicoletteGame({ onReturnToLobby }: GameProps) {
 
   if (phase === "play" && card) {
     const look = TYPE_LOOK[card.type];
-    const t = TYPE_INFO[card.type];
+    const t = typeInfoFor()[card.type];
     const ink = inkOn(look.bg);
     const isJoker = card.type === "joker";
     const TypeIcon = look.icon;
@@ -571,15 +570,15 @@ export default function PicoletteGame({ onReturnToLobby }: GameProps) {
           <div key={activeRule.text} className="mx-auto flex w-full max-w-md items-center gap-2 rounded-[20px] py-2 pl-3.5 pr-2" style={{ ...stk("#7A4EE8", 3, 2.5), color: "#fff", animation: "pt-pop .4s ease-out" }}>
             <div className="min-w-0 flex-1">
               <p className="text-[13px] font-bold" style={{ color: "rgba(255,255,255,0.85)" }}>
-                <GameInlineIcon icon={ScrollText} /> Règle en cours
+                <GameInlineIcon icon={ScrollText} /> {tr.ruleOngoing}
               </p>
               <p className="line-clamp-2 text-[15px] font-bold leading-tight">{activeRule.text}</p>
               <p className="mt-0.5 text-[13px] font-semibold" style={{ color: "rgba(255,255,255,0.85)" }}>
-                {activeRule.by ? `Par ${activeRule.by} · ` : ""}{ruleLeft}
+                {activeRule.by ? tr.ruleBy(activeRule.by) : ""}{ruleLeft}
               </p>
             </div>
             <button type="button" onClick={() => setPickMode("rule")} className="min-h-11 shrink-0 rounded-full px-3.5 py-1.5 text-center text-[14px] font-extrabold leading-tight" style={{ ...stk("#fff", 2, 2.5), color: INK }}>
-              Quelqu&apos;un<br />a craqué
+              {tr.someoneCracked[0]}<br />{tr.someoneCracked[1]}
             </button>
           </div>
         )}
@@ -606,9 +605,9 @@ export default function PicoletteGame({ onReturnToLobby }: GameProps) {
                 <TypeIcon size={17} strokeWidth={3} aria-hidden /> {t.label}
               </span>
               {readerName && (
-                <span className="flex min-w-0 items-center gap-1.5 text-[14px] font-bold" style={{ opacity: 0.9 }} aria-label={`${readerName} lit la carte`}>
+                <span className="flex min-w-0 items-center gap-1.5 text-[14px] font-bold" style={{ opacity: 0.9 }} aria-label={tr.readsCardAria(readerName)}>
                   <MascotAvatar color={colorForIndex(reader)} size={26} mood="happy" border={false} />
-                  <span className="max-w-[118px] truncate">{readerName} lit</span>
+                  <span className="max-w-[118px] truncate">{tr.reads(readerName)}</span>
                 </span>
               )}
             </div>
@@ -626,7 +625,7 @@ export default function PicoletteGame({ onReturnToLobby }: GameProps) {
               <div className="mt-3 flex justify-center">
                 {revealed ? (
                   <p className="rounded-[18px] px-4 py-2 text-center text-[17px] font-extrabold leading-snug" style={{ ...stk("#3DDC97", 3, 2.5), color: INK, transform: "rotate(-1.5deg)", animation: "pt-pop .35s ease-out" }}>
-                    Réponse : {card.answer}
+                    {tr.answer(card.answer)}
                   </p>
                 ) : (
                   <button
@@ -635,14 +634,14 @@ export default function PicoletteGame({ onReturnToLobby }: GameProps) {
                     className="inline-flex min-h-11 items-center gap-1.5 rounded-full px-4 text-[16px] font-extrabold active:translate-y-[2px]"
                     style={{ ...stk("#FFD23F", 3, 2.5), color: INK }}
                   >
-                    <Eye size={18} strokeWidth={3} aria-hidden /> Voir la réponse
+                    <Eye size={18} strokeWidth={3} aria-hidden /> {tr.showAnswer}
                   </button>
                 )}
               </div>
             )}
             {card.type === "prefere" && card.a && card.b && (
               <div className="mt-3 space-y-2">
-                {[{ icon: ArrowUp, label: "Main en haut", v: card.a, bg: "#fff" }, { icon: ArrowDown, label: "Main en bas", v: card.b, bg: "#FFF6E5" }].map((o, k) => (
+                {[{ icon: ArrowUp, label: tr.handUp, v: card.a, bg: "#fff" }, { icon: ArrowDown, label: tr.handDown, v: card.b, bg: "#FFF6E5" }].map((o, k) => (
                   <div key={k} className="flex items-center gap-3 rounded-[18px] px-3.5 py-2.5" style={{ ...stk(o.bg, 3, 2.5), color: INK }}>
                     <o.icon size={26} strokeWidth={3} className="shrink-0" aria-hidden />
                     <div className="min-w-0 flex-1">
@@ -666,7 +665,7 @@ export default function PicoletteGame({ onReturnToLobby }: GameProps) {
         <div className="mx-auto w-full max-w-md space-y-3">
           {card.type === "rule" ? (
             <Push big bg="#7A4EE8" onClick={activateRule} className="w-full">
-              <ScrollText size={22} strokeWidth={3} aria-hidden /> Activer la règle
+              <ScrollText size={22} strokeWidth={3} aria-hidden /> {tr.activateRule}
             </Push>
           ) : isJoker ? (
             <JokerAction
@@ -681,22 +680,22 @@ export default function PicoletteGame({ onReturnToLobby }: GameProps) {
             />
           ) : card.type === "duel" && card.who.length > 1 ? (
             <Push big bg="#FF3EA5" onClick={() => { playSfx("pop", { volume: 0.6 }); setPickMode("duel"); }} className="w-full">
-              <Swords size={22} strokeWidth={3} aria-hidden /> Qui perd le duel ?
+              <Swords size={22} strokeWidth={3} aria-hidden /> {tr.whoLosesDuel}
             </Push>
           ) : (
             <Push big bg="#FF3EA5" onClick={() => { playSfx("pop", { volume: 0.6 }); setPickMode("loss"); }} className="w-full">
-              <Dices size={22} strokeWidth={3} aria-hidden /> Désigner un perdant
+              <Dices size={22} strokeWidth={3} aria-hidden /> {tr.pickLoser}
             </Push>
           )}
           <Push bg="#fff" onClick={() => nextCard()} className="w-full">
-            {isJoker ? "Carte suivante" : card.type === "rule" ? "Passer cette règle" : "Personne ne perd, carte suivante"}
+            {isJoker ? tr.nextCard : card.type === "rule" ? tr.skipRule : tr.nobodyLoses}
           </Push>
         </div>
 
         {/* Undo dernière peine (si on s'est planté de joueur) */}
         {lastLoserIdx != null && (
           <button type="button" onClick={undoLastLoss} className="mx-auto mt-2 flex min-h-11 items-center gap-1.5 px-3 text-[15px] font-bold" style={{ color: "rgba(255,255,255,0.85)" }}>
-            <Undo2 size={17} strokeWidth={3} aria-hidden /> Annuler la peine de {players[lastLoserIdx]}
+            <Undo2 size={17} strokeWidth={3} aria-hidden /> {tr.undoPenalty(players[lastLoserIdx])}
           </button>
         )}
 
@@ -704,17 +703,17 @@ export default function PicoletteGame({ onReturnToLobby }: GameProps) {
         <LossRecap players={players} losses={losses} shields={shields} highlight={lastLoserIdx ?? -1} />
 
         <div className="mt-1">
-          <TextLink onClick={finishGame}>Terminer la partie</TextLink>
+          <TextLink onClick={finishGame}>{tr.endGame}</TextLink>
         </div>
 
         {pickMode && (
           <PickerOverlay
             title={
-              pickMode === "shield" ? "Qui reçoit le bouclier ?"
-                : pickMode === "rule" ? "Qui a craqué ?"
-                  : pickMode === "duel" ? "Qui perd le duel ?"
-                    : pickMode === "reader" ? "Qui lit la suite ?"
-                      : "Qui perd cette manche ?"
+              pickMode === "shield" ? tr.pickShield
+                : pickMode === "rule" ? tr.pickCracked
+                  : pickMode === "duel" ? tr.whoLosesDuel
+                    : pickMode === "reader" ? tr.pickReader
+                      : tr.pickRound
             }
             players={players}
             only={pickMode === "duel" ? card.who : undefined}
@@ -750,17 +749,17 @@ export default function PicoletteGame({ onReturnToLobby }: GameProps) {
       <ScrollTop dep={phase} />
       <ConfettiBurst count={60} />
       <div className="mx-auto flex w-full max-w-md flex-1 flex-col">
-        <h1 style={{ ...DISPLAY, fontSize: 48, lineHeight: 0.95 }}>Le palmarès</h1>
+        <h1 style={{ ...DISPLAY, fontSize: 48, lineHeight: 0.95 }}>{tr.overTitle}</h1>
         <p className="mt-2 text-[16px] font-semibold" style={{ color: "rgba(255,255,255,0.82)" }}>
-          Plus tu as ramassé de peines, plus t&apos;as fait le show.
+          {tr.overSub}
         </p>
 
         {top && (
           <div className="relative mt-16 rounded-[26px] px-5 pb-4 pt-[52px] text-center" style={{ ...stk(ACCENT, 6), color: INK, transform: "rotate(-2deg)" }}>
             <div className="absolute -top-[62px] left-1/2 -translate-x-1/2"><Mascot size={76} color={colorForIndex(top.i)} mood="rofl" crown arms shadow={false} /></div>
-            <p className="text-[15px] font-bold">La star de la soirée</p>
+            <p className="text-[15px] font-bold">{tr.overStar}</p>
             <p style={{ ...DISPLAY, fontSize: top.name.length > 11 ? 32 : 40, lineHeight: 1, overflowWrap: "anywhere" }}>{top.name}</p>
-            <p className="mt-1 text-[15px] font-bold">{top.losses} peine{top.losses > 1 ? "s" : ""}</p>
+            <p className="mt-1 text-[15px] font-bold">{tr.penalties(top.losses)}</p>
           </div>
         )}
 
@@ -771,22 +770,22 @@ export default function PicoletteGame({ onReturnToLobby }: GameProps) {
               <span className="w-7 text-[18px]" style={DISPLAY}>{1 + ranking.filter((x) => x.losses > p.losses).length}</span>
               <MascotAvatar color={colorForIndex(p.i)} size={32} mood="happy" />
               <span className="min-w-0 flex-1 truncate text-[17px] font-bold">{p.name}</span>
-              <span className="text-[15px] font-bold">{p.losses} peine{p.losses > 1 ? "s" : ""}</span>
+              <span className="text-[15px] font-bold">{tr.penalties(p.losses)}</span>
             </div>
           ))}
         </div>
 
-        <p className="mt-5 text-center text-[15px] font-semibold" style={{ color: "rgba(255,255,255,0.82)" }}>Un grand verre d&apos;eau, et personne ne conduit.</p>
-        <div className="mt-4 flex justify-center"><IdeaButton game="La Tournée" kind="idée de carte" /></div>
+        <p className="mt-5 text-center text-[15px] font-semibold" style={{ color: "rgba(255,255,255,0.82)" }}>{tr.overWater}</p>
+        <div className="mt-4 flex justify-center"><IdeaButton game={tr.gameName} kind={tr.ideaKind} /></div>
 
         <div className="min-h-6 flex-1" />
         <div className="space-y-3">
           <Push big bg={ACCENT} onClick={() => { playSfx("whoosh", { volume: 0.6 }); setPhase("setup"); }} className="w-full">
-            <RotateCcw size={22} strokeWidth={3} aria-hidden /> Rejouer
+            <RotateCcw size={22} strokeWidth={3} aria-hidden /> {tr.playAgain}
           </Push>
           {onReturnToLobby && (
             <Push bg="#fff" onClick={onReturnToLobby} className="w-full">
-              <Home size={19} strokeWidth={3} aria-hidden /> Retour à l&apos;accueil
+              <Home size={19} strokeWidth={3} aria-hidden /> {tr.backHome}
             </Push>
           )}
         </div>
@@ -808,20 +807,21 @@ function JokerAction({
   onClear: () => void;
   onReader: () => void;
 }) {
-  if (effect === "reader") return <Push big bg="#7A4EE8" onClick={onReader} className="w-full"><Smartphone size={22} strokeWidth={3} aria-hidden /> Qui lit la suite ?</Push>;
+  const t = useT(STR);
+  if (effect === "reader") return <Push big bg="#7A4EE8" onClick={onReader} className="w-full"><Smartphone size={22} strokeWidth={3} aria-hidden /> {t.pickReader}</Push>;
   if (effect === "clear") {
     return (
       <Push big bg="#7A4EE8" onClick={onClear} disabled={!hasRule} className="w-full">
-        {hasRule ? <><Eraser size={22} strokeWidth={3} aria-hidden /> Lever la règle</> : "Aucune règle en cours"}
+        {hasRule ? <><Eraser size={22} strokeWidth={3} aria-hidden /> {t.liftRule}</> : t.noRule}
       </Push>
     );
   }
-  if (effect === "pick") return <Push big bg="#7A4EE8" onClick={onPick} className="w-full"><Hand size={22} strokeWidth={3} aria-hidden /> Choisir qui prend la peine</Push>;
-  if (effect === "shield") return <Push big bg="#7A4EE8" onClick={onShield} className="w-full"><Shield size={22} strokeWidth={3} aria-hidden /> Donner le bouclier à…</Push>;
+  if (effect === "pick") return <Push big bg="#7A4EE8" onClick={onPick} className="w-full"><Hand size={22} strokeWidth={3} aria-hidden /> {t.choosePenalty}</Push>;
+  if (effect === "shield") return <Push big bg="#7A4EE8" onClick={onShield} className="w-full"><Shield size={22} strokeWidth={3} aria-hidden /> {t.giveShield}</Push>;
   if (effect === "amnesty") {
     return (
       <Push big bg="#7A4EE8" onClick={onAmnesty} disabled={!canUndo} className="w-full">
-        {canUndo ? <><Undo2 size={22} strokeWidth={3} aria-hidden /> Annuler la dernière peine</> : "Aucune peine à annuler"}
+        {canUndo ? <><Undo2 size={22} strokeWidth={3} aria-hidden /> {t.undoLast}</> : t.nothingToUndo}
       </Push>
     );
   }
@@ -845,20 +845,24 @@ function PacksScreen({
     playSfx("toggle", { volume: 0.5 });
     setPacks(next);
   };
-  const total = useMemo(() => filterDeck(packs).length, [packs]);
+  const t = useT(STR);
+  const lang = useLang();
+  const total = useMemo(() => filterDeck(packs, lang).length, [packs, lang]);
+  const packInfo = packInfoFor(lang);
+  const allCards = cardsFor(lang);
 
   return (
     <div className="flex min-h-[100svh] flex-col px-5 text-white" style={{ ...PAGE, paddingTop: TOP }}>
       <div className="mx-auto flex w-full max-w-md flex-1 flex-col">
-        <h1 style={{ ...DISPLAY, fontSize: 48, lineHeight: 0.95 }}>Les cartes</h1>
-        <p className="mt-2 text-[16px] font-semibold" style={{ color: "rgba(255,255,255,0.82)" }}>Choisis tes packs, on mélange tout.</p>
+        <h1 style={{ ...DISPLAY, fontSize: 48, lineHeight: 0.95 }}>{t.packsTitle}</h1>
+        <p className="mt-2 text-[16px] font-semibold" style={{ color: "rgba(255,255,255,0.82)" }}>{t.packsSub}</p>
 
         <div className="mt-5 grid grid-cols-1 gap-3">
-          {(Object.keys(PACK_INFO) as Pack[]).map((p, k) => {
-            const info = PACK_INFO[p];
+          {(Object.keys(packInfo) as Pack[]).map((p, k) => {
+            const info = packInfo[p];
             const look = PACK_LOOK[p];
             const active = packs.has(p);
-            const count = PICOLETTE_CARDS.filter((c) => c.pack === p).length;
+            const count = allCards.filter((c) => c.pack === p).length;
             const bg = active ? look.bg : "#2B1B6E";
             const ink = active ? inkOn(look.bg) : "#fff";
             const Icon = look.icon;
@@ -879,7 +883,7 @@ function PacksScreen({
                     {info.label}
                     {info.adult && <span className="rounded-full px-2 py-0.5 text-[13px]" style={{ background: INK, color: "#fff", fontFamily: "inherit", letterSpacing: 0 }}>18+</span>}
                   </span>
-                  <span className="mt-0.5 block text-[14px] font-semibold" style={{ opacity: 0.85 }}>{info.sub.replace(/^18\+ · (.)/, (_m, c: string) => c.toUpperCase())}{"\u00A0"}· {count}{"\u00A0"}cartes</span>
+                  <span className="mt-0.5 block text-[14px] font-semibold" style={{ opacity: 0.85 }}>{info.sub.replace(/^18\+ · (.)/, (_m, c: string) => c.toUpperCase())}{"\u00A0"}· {t.cardsCount(count)}</span>
                 </span>
                 <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full" style={{ background: active ? INK : "transparent", border: `2.5px solid ${active ? INK : "rgba(255,255,255,0.5)"}`, color: "#fff" }}>
                   {active && <Check size={18} strokeWidth={3.4} aria-hidden />}
@@ -889,11 +893,11 @@ function PacksScreen({
           })}
         </div>
 
-        <h2 className="mt-8" style={{ ...DISPLAY, fontSize: 30, lineHeight: 1 }}>La peine</h2>
+        <h2 className="mt-8" style={{ ...DISPLAY, fontSize: 30, lineHeight: 1 }}>{t.penaltyTitle}</h2>
         <div className="mt-3 grid grid-cols-2 gap-3">
           {([
-            { v: "mix", icons: [CupSoda, Drama], label: "1 à 3 gorgées ou un gage" },
-            { v: "gage", icons: [Drama], label: "Que des gages" },
+            { v: "mix", icons: [CupSoda, Drama], label: t.modeMix },
+            { v: "gage", icons: [Drama], label: t.modeDares },
           ] as { v: PenaltyMode; icons: LucideIcon[]; label: string }[]).map((o) => {
             const on = o.v === penaltyMode;
             return (
@@ -912,18 +916,18 @@ function PacksScreen({
           })}
         </div>
         <p className="mt-3 text-[15px] font-semibold leading-snug" style={{ color: "rgba(255,255,255,0.78)" }}>
-          La roulette tire au hasard. Une gorgée de zinzin, c&apos;est de ce que tu veux : eau, soft, jus…
+          {t.penaltyNote}
         </p>
 
-        <div className="mt-6 flex justify-center"><IdeaButton game="La Tournée" kind="idée de carte" /></div>
+        <div className="mt-6 flex justify-center"><IdeaButton game={t.gameName} kind={t.ideaKind} /></div>
 
         <div className="min-h-6 flex-1" />
         <div className="sticky bottom-0 -mx-5 mt-4 px-5 pt-4" style={{ paddingBottom: BOTTOM, background: "linear-gradient(180deg, transparent, #1E1250 35%)" }}>
           <Push big bg={ACCENT} onClick={() => { playSfx("whoosh", { volume: 0.6 }); onLaunch(); }} disabled={total === 0} className="w-full">
-            C&apos;est parti ! ({total} cartes)
+            {t.launch(total)}
           </Push>
           <button type="button" onClick={onBack} className="mx-auto mt-1 flex min-h-11 items-center gap-1.5 px-4 text-[15px] font-bold" style={{ color: "rgba(255,255,255,0.82)" }}>
-            <ArrowLeft size={17} strokeWidth={3} aria-hidden /> Modifier les joueurs
+            <ArrowLeft size={17} strokeWidth={3} aria-hidden /> {t.editPlayers}
           </button>
         </div>
       </div>
@@ -934,6 +938,7 @@ function PacksScreen({
 function PickerOverlay({
   title, players, shields, onPick, onCancel, only, mood = "sad",
 }: { title: string; players: string[]; shields: boolean[]; onPick: (i: number) => void; onCancel: () => void; only?: number[]; mood?: "sad" | "happy" }) {
+  const t = useT(STR);
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center" role="dialog" aria-modal aria-label={title}>
       <div className="absolute inset-0" style={{ background: "rgba(10,4,32,0.66)" }} onClick={onCancel} />
@@ -953,11 +958,11 @@ function PickerOverlay({
             >
               <MascotAvatar color={colorForIndex(i)} size={34} mood={mood} />
               <span className="line-clamp-2 min-w-0 flex-1 text-[16px] font-bold leading-tight" style={{ overflowWrap: "anywhere" }}>{name}</span>
-              {shields[i] && <Shield size={20} strokeWidth={2.8} aria-label="Bouclier" />}
+              {shields[i] && <Shield size={20} strokeWidth={2.8} aria-label={t.shieldAria} />}
             </button>
           )))}
         </div>
-        <button type="button" onClick={onCancel} className="mx-auto mt-3 block min-h-11 px-4 text-[16px] font-bold underline decoration-2 underline-offset-4">Annuler</button>
+        <button type="button" onClick={onCancel} className="mx-auto mt-3 block min-h-11 px-4 text-[16px] font-bold underline decoration-2 underline-offset-4">{t.cancel}</button>
       </div>
     </div>
   );
@@ -971,10 +976,11 @@ function RouletteOverlay({
   sym, playerName, colorIndex, result, onReroll, onDone,
 }: { sym: RouletteFace; playerName: string; colorIndex: number; result: PenaltyResult | null; onReroll: () => void; onDone: () => void }) {
   const Icon = ROULETTE_ICONS[sym];
+  const t = useT(STR);
   return (
     <div className="fixed inset-0 z-[60] flex flex-col overflow-y-auto px-5 text-white" style={{ ...PAGE, paddingTop: TOP, paddingBottom: BOTTOM }}>
       <div className="mx-auto flex w-full max-w-md flex-1 flex-col items-center justify-center text-center">
-        <p className="text-[17px] font-bold" style={{ color: "rgba(255,255,255,0.85)" }}>La peine tombe sur</p>
+        <p className="text-[17px] font-bold" style={{ color: "rgba(255,255,255,0.85)" }}>{t.penaltyFallsOn}</p>
         <div className="mt-2 flex items-center gap-2.5 rounded-full py-1.5 pl-1.5 pr-5" style={{ ...stk("#fff", 4), color: INK, transform: "rotate(-2deg)" }}>
           <MascotAvatar color={colorForIndex(colorIndex)} size={40} mood="shocked" />
           <span style={{ ...DISPLAY, fontSize: 30, lineHeight: 1, overflowWrap: "anywhere" }}>{playerName}</span>
@@ -992,33 +998,33 @@ function RouletteOverlay({
             <div className="rounded-[24px] px-5 py-4" style={{ ...stk("#FFF6E5", 5), color: INK, transform: "rotate(1deg)" }}>
               <p style={{ ...DISPLAY, fontSize: result.kind === "gage" ? 25 : 34, lineHeight: 1.1 }}>
                 {result.kind === "sips"
-                  ? `${result.n} gorgée${result.n > 1 ? "s" : ""}`
+                  ? t.sips(result.n)
                   : result.kind === "gage"
                     ? result.text
-                    : "Bouclier ! Peine annulée."}
+                    : t.shieldResult}
               </p>
               <p className="mt-2 text-[15px] font-semibold" style={{ opacity: 0.8 }}>
                 {result.kind === "sips"
-                  ? "Des gorgées de zinzin… ou un gage, au choix."
+                  ? t.sipsNote
                   : result.kind === "shield"
-                    ? "Le bouclier est cassé, profites-en."
-                    : "Le gage ne passe pas ? Tire-en un autre."}
+                    ? t.shieldNote
+                    : t.dareNote}
               </p>
             </div>
             {result.kind !== "shield" && (
               <div className="mt-5 flex justify-center">
-                <RerollButton onClick={onReroll} label={result.kind === "sips" ? "Plutôt un gage" : "Pas fou ? Un autre gage"} />
+                <RerollButton onClick={onReroll} label={result.kind === "sips" ? t.ratherDare : t.anotherDare} />
               </div>
             )}
           </div>
         ) : (
-          <p className="mt-6 text-[17px] font-bold" style={{ color: "rgba(255,255,255,0.85)" }}>La roulette tourne…</p>
+          <p className="mt-6 text-[17px] font-bold" style={{ color: "rgba(255,255,255,0.85)" }}>{t.spinning}</p>
         )}
       </div>
       {result && (
         <div className="mx-auto mt-6 w-full max-w-md">
           <Push big bg={ACCENT} onClick={onDone} className="w-full">
-            <Check size={22} strokeWidth={3.2} aria-hidden /> C&apos;est fait
+            <Check size={22} strokeWidth={3.2} aria-hidden /> {t.done}
           </Push>
         </div>
       )}
@@ -1029,6 +1035,7 @@ function RouletteOverlay({
 function LossRecap({
   players, losses, shields, highlight = -1,
 }: { players: string[]; losses: number[]; shields: boolean[]; highlight?: number }) {
+  const t = useT(STR);
   return (
     <div className="mx-auto mt-4 flex w-full max-w-md flex-wrap items-center justify-center gap-2">
       {players.map((name, i) => {
@@ -1041,7 +1048,7 @@ function LossRecap({
           >
             <MascotAvatar color={colorForIndex(i)} size={26} mood={hot ? "sad" : "happy"} border={false} />
             <span className="max-w-[110px] truncate text-[14px] font-bold">{name}</span>
-            {shields[i] && <Shield size={14} strokeWidth={3} aria-label="Bouclier" />}
+            {shields[i] && <Shield size={14} strokeWidth={3} aria-label={t.shieldAria} />}
             <span className="text-[14px] font-extrabold tabular-nums">{losses[i]}</span>
           </div>
         );

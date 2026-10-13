@@ -6,6 +6,8 @@ import { GameIconButton, GameTopRight } from "../game-icon-button";
 import { isSfxMuted, playSfx, setSfxMuted, subscribeSfxMuted } from "@/lib/sfx";
 import { DISPLAY, INK, StickerBtn, sticker } from "./sticker-kit";
 import { Mascot } from "@/components/Mascot";
+import { useT } from "@/lib/i18n";
+import { SHEET_STR } from "./i18n";
 
 /** État « son coupé » global (partagé par tous les jeux, persisté par sfx.ts). */
 export function useSfxMuted() {
@@ -15,10 +17,11 @@ export function useSfxMuted() {
 /** Bouton son seul (coupure globale). */
 export function SoundButton() {
   const mute = useSfxMuted();
+  const t = useT(SHEET_STR);
   return (
     <GameIconButton
       icon={mute ? VolumeX : Volume2}
-      label={mute ? "Activer le son" : "Couper le son"}
+      label={mute ? t.soundOn : t.soundOff}
       active={mute}
       onClick={() => {
         setSfxMuted(!mute);
@@ -31,6 +34,7 @@ export function SoundButton() {
 /** Boutons du coin haut-droit (son + règles) et feuille de règles. Coin haut-gauche laissé libre pour l'app. */
 export function TopRightControls({ title, rules, accent }: { title: string; rules: string[]; accent: string }) {
   const [open, setOpen] = useState(false);
+  const t = useT(SHEET_STR);
 
   return (
     <>
@@ -38,7 +42,7 @@ export function TopRightControls({ title, rules, accent }: { title: string; rule
         <SoundButton />
         <GameIconButton
           icon={Info}
-          label="Règles"
+          label={t.rules}
           bg={accent}
           onClick={() => {
             playSfx("open", { volume: 0.5 });
@@ -56,6 +60,7 @@ export function TopRightControls({ title, rules, accent }: { title: string; rule
 const STEP_COLORS = ["#FFD23F", "#FF3EA5", "#4ECDC4", "#3DDC97", "#FF6B5B", "#B5A1FF"];
 
 export function RulesSheet({ title, rules, accent, onClose }: { title: string; rules: string[]; accent: string; onClose: () => void }) {
+  const t = useT(SHEET_STR);
   return (
     <div
       className="fixed inset-0 z-50 flex items-end justify-center"
@@ -63,7 +68,7 @@ export function RulesSheet({ title, rules, accent, onClose }: { title: string; r
       onClick={onClose}
       role="dialog"
       aria-modal
-      aria-label={`Règles : ${title}`}
+      aria-label={t.rulesOf(title)}
     >
       <div
         className="relative max-h-[90dvh] w-full max-w-lg overflow-y-auto px-5 pt-6"
@@ -83,7 +88,7 @@ export function RulesSheet({ title, rules, accent, onClose }: { title: string; r
             <Mascot size={58} color={accent === "#FFD23F" ? "pink" : "yellow"} mood="happy" arms shadow={false} bob={false} />
           </div>
           <div className="min-w-0">
-            <p className="text-[15px] font-bold" style={{ color: "#4A3A66" }}>Comment on joue à</p>
+            <p className="text-[15px] font-bold" style={{ color: "#4A3A66" }}>{t.howTo}</p>
             <p className="truncate text-[34px] leading-none" style={DISPLAY}>{title}</p>
           </div>
         </div>
@@ -105,7 +110,7 @@ export function RulesSheet({ title, rules, accent, onClose }: { title: string; r
           ))}
         </ol>
         <StickerBtn big bg="#FFD23F" className="mt-6" onClick={onClose}>
-          Compris !
+          {t.gotIt}
         </StickerBtn>
       </div>
     </div>

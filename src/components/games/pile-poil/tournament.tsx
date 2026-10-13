@@ -9,6 +9,8 @@ import { GameIconBadge, GameInlineIcon } from "@/components/games/game-icon-butt
 import { IdeaButton, RerollButton } from "@/components/games/idea-button";
 import { TopRightControls } from "@/components/games/patate/rules-sheet";
 import { C, Chip as KitChip, DISPLAY, INK, KitStyles, NameTag, OptionCard, SectionTitle, SoftLink, StickerBtn, StickerCard, StickerScreen, TOP_PAD, BOTTOM_PAD, dotted, sticker } from "@/components/games/patate/sticker-kit";
+import { getLang, pick as pickLang, useT } from "@/lib/i18n";
+import { CHALLENGES as CHALLENGE_TEXT, CHALLENGE_IDS, GAGES as GAGES_I18N, PP_STR } from "./i18n";
 import { fxBad, fxDrum, fxGood, fxOver, fxPerfect, fxPreload, fxReveal, fxTap, fxTick, fxUnlock, vibrate } from "./pp-fx";
 
 // ── Pile Poil · mode Tournoi (tout sur un seul téléphone) ─────────────────
@@ -39,41 +41,12 @@ interface Challenge {
   desc: string;
 }
 
-// Défis spéciaux occasionnels (jamais deux manches d'affilée)
-const CHALLENGES: Challenge[] = [
-  { id: "eyes", emoji: "🙈", title: "Les yeux fermés", desc: "Appuie sur GO, ferme les yeux, et STOP sans les rouvrir." },
-  { id: "sing", emoji: "🎤", title: "En chantant", desc: "Chante un refrain à voix haute pendant tout le chrono. Pas le droit de t'arrêter." },
-  { id: "mystery", emoji: "❓", title: "Cible mystère", desc: "Personne ne connaît la cible ! Arrête-toi quand tu le sens : elle sera tirée au sort à la fin." },
-  { id: "noise", emoji: "🗣️", title: "Les perturbateurs", desc: "Les autres ont le droit de compter à voix haute des faux chiffres pour te déconcentrer." },
-  { id: "flamingo", emoji: "🦩", title: "Sur un pied", desc: "Tiens-toi sur un pied du GO jusqu'au STOP." },
-  { id: "hand", emoji: "🫲", title: "Mauvaise main", desc: "GO et STOP avec ta main non dominante." },
-  { id: "dance", emoji: "💃", title: "En dansant", desc: "Danse pendant tout le chrono. Les autres jugent l'engagement." },
-  { id: "stare", emoji: "👀", title: "Les yeux dans les yeux", desc: "Fixe un autre joueur dans les yeux pendant que tu comptes. Interdit de rire." },
-  { id: "calc", emoji: "🧮", title: "Calcul mental", desc: "La cible est un calcul. À toi de trouver combien de secondes ça fait !" },
-  { id: "spin", emoji: "🌀", title: "La toupie", desc: "Fais un tour complet sur toi-même pendant le chrono." },
-];
-
-// Gages doux (alternative à la gorgée — l'eau et les softs comptent aussi)
-const GAGES = [
-  "Imite le cri d'un animal choisi par la table",
-  "Parle avec un accent jusqu'à ton prochain tour",
-  "Fais 10 squats en comptant à voix haute",
-  "Raconte ta pire honte de soirée en 20 secondes",
-  "Fais un compliment sincère à chaque joueur",
-  "Chante le refrain que la table choisit",
-  "Montre la dernière photo de ta galerie (ou fais 15 pompes)",
-  "Garde une grimace jusqu'à la fin de la manche",
-  "Danse 10 secondes sans musique",
-  "Laisse la table choisir ton prochain défi",
-  "Parle à la 3e personne jusqu'à ton prochain tour",
-  "Fais une déclaration d'amour à un objet de la pièce",
-  "Fais le présentateur météo de la soirée",
-  "Mime ton métier de rêve, les autres devinent",
-  "Envoie un emoji au hasard au 3e contact de ton tél",
-  "Tiens la planche 20 secondes",
-  "Raconte une blague. Si personne ne rit, refais-en une",
-  "Fais un beatbox de 10 secondes",
-];
+// Défis spéciaux occasionnels (jamais deux manches d'affilée) et gages : voir ./i18n.ts
+/** Défis dans la langue voulue (figés au début de la partie). */
+function challengesFor(lang = getLang()): Challenge[] {
+  const txt = pickLang(CHALLENGE_TEXT, lang);
+  return CHALLENGE_IDS.map((id) => ({ id, ...txt[id] }));
+}
 
 const PERFECT_MS = 100; // ±0,10 s = PILE POIL
 const CLOSE_MS = 300;
@@ -81,21 +54,15 @@ const ACCENT = "#3DDC97";
 const GOLD = "#FFD23F";
 const RED = "#FF6B5B";
 
-const RULES = [
-  "Une cible s'affiche, par exemple 7\u00a0s.",
-  "GO, compte dans ta tête (le chrono est caché), puis STOP.",
-  "Le plus proche gagne la manche. À 0,10\u00a0s près : PILE POIL, +1\u00a0bonus.",
-  "Le plus loin prend un gage ou 1\u00a0gorgée (eau\u00a0OK).",
-];
 
 const rnd = <T,>(arr: T[]) => arr[Math.floor(Math.random() * arr.length)];
-// « Au tour d'Inès » (élision devant une voyelle ou un h muet probable)
-const auTourDe = (name: string) => (/^[aeiouyhàâäéèêëîïôöùûü]/i.test(name) ? `Au tour d'${name}` : `Au tour de ${name}`);
-const num = (s: number) => (Number.isInteger(s) ? String(s) : s.toFixed(2).replace(/0$/, "").replace(".", ","));
-export const fmtS = (ms: number) => `${(ms / 1000).toFixed(2).replace(".", ",")}\u00a0s`;
-export const fmtDelta = (ms: number, target: number) => {
+// Séparateur décimal de la langue (virgule FR/ES, point EN ; le site est toujours en FR)
+const sepOf = () => pickLang(PP_STR).dec;
+const num = (s: number, sep = sepOf()) => (Number.isInteger(s) ? String(s) : s.toFixed(2).replace(/0$/, "").replace(".", sep));
+export const fmtS = (ms: number, sep = sepOf()) => `${(ms / 1000).toFixed(2).replace(".", sep)}\u00a0s`;
+export const fmtDelta = (ms: number, target: number, sep = sepOf()) => {
   const d = ms - target * 1000;
-  return `${d >= 0 ? "+" : "−"}${(Math.abs(d) / 1000).toFixed(2).replace(".", ",")}\u00a0s`;
+  return `${d >= 0 ? "+" : "−"}${(Math.abs(d) / 1000).toFixed(2).replace(".", sep)}\u00a0s`;
 };
 
 // Cibles progressives : courtes au début, longues et « tordues » à la fin
@@ -113,7 +80,7 @@ function pickTarget(manche: number, total: number, prev: number | null): number 
 // Écrit la cible sous forme de calcul (défi « Calcul mental »)
 function calcLabel(t: number): string {
   const opts: string[] = [];
-  if (Number.isInteger(t * 2)) opts.push(`la moitié de ${num(t * 2)}`);
+  if (Number.isInteger(t * 2)) opts.push(pickLang(PP_STR).half(num(t * 2)));
   if (Number.isInteger(t) && t > 4) {
     const a = 2 + Math.floor(Math.random() * (t - 3));
     opts.push(`${a} + ${t - a}`);
@@ -170,6 +137,9 @@ export function Tournament({ net, onExit }: { net?: TournamentNet; onExit?: () =
     fxPreload();
   }, []);
 
+  const t = useT(PP_STR);
+  // Défis figés dans la langue du début de partie
+  const [CHALLENGES] = useState(() => challengesFor());
   const [phase, setPhase] = useState<Phase>("setup");
   const [players, setPlayers] = useState<string[]>([]);
   const [points, setPoints] = useState<number[]>([]);
@@ -317,14 +287,14 @@ export function Tournament({ net, onExit }: { net?: TournamentNet; onExit?: () =
     setRound({ ...round, target: t, label: round.challenge?.id === "calc" ? calcLabel(t) : null });
   };
 
-  const controls = <TopRightControls title="Pile Poil" rules={RULES} accent={ACCENT} />;
+  const controls = <TopRightControls title={t.name} rules={t.rules} accent={ACCENT} />;
 
   // ── Écrans ─────────────────────────────────────────────
   if (phase === "setup") {
     return (
       <>
         {controls}
-        <PlayersSetup emoji="" name="Pile Poil" min={2} max={10} accent={ACCENT} onStart={beginMatch} />
+        <PlayersSetup emoji="" name={t.name} min={2} max={10} accent={ACCENT} onStart={beginMatch} />
       </>
     );
   }
@@ -388,12 +358,12 @@ export function Tournament({ net, onExit }: { net?: TournamentNet; onExit?: () =
       <Screen>
         {controls}
         <GameIconBadge icon={Tv} bg={ACCENT} size={72} />
-        <h2 className="mt-3 text-center text-[40px] leading-none" style={DISPLAY}>L&apos;écran choisit…</h2>
+        <h2 className="mt-3 text-center text-[40px] leading-none" style={DISPLAY}>{t.screenPicks}</h2>
         <p className="mt-3 max-w-xs text-center text-[16px] font-semibold">
-          Saisis la cible sur le tél « Écran ». Dès qu&apos;elle est validée, la manche continue ici.
+          {t.screenPicksSub}
         </p>
         <div className="mt-8 w-full">
-          <StickerBtn big bg={C.cream} onClick={() => setPhase("intro")}>Choisir ici</StickerBtn>
+          <StickerBtn big bg={C.cream} onClick={() => setPhase("intro")}>{t.pickHere}</StickerBtn>
         </div>
       </Screen>
     );
@@ -410,12 +380,8 @@ export function Tournament({ net, onExit }: { net?: TournamentNet; onExit?: () =
           toName={players[pi]}
           colorIndex={pi}
           accent={ACCENT}
-          hint={
-            mystery
-              ? "Cible mystère : arrête-toi quand tu le sens !"
-              : `Cible : ${targetText}${round.challenge ? ` · ${round.challenge.title}` : ""}`
-          }
-          buttonLabel="C'est moi, prêt"
+          hint={mystery ? t.passMystery : t.passTarget(targetText, round.challenge?.title ?? null)}
+          buttonLabel={t.imReady}
           onReady={() => setPhase("ready")}
         />
       </>
@@ -434,19 +400,13 @@ export function Tournament({ net, onExit }: { net?: TournamentNet; onExit?: () =
         {controls}
         <p className="text-[20px] leading-tight" style={DISPLAY}>
           <NameTag bg={pal.body} style={{ color: pal.body === "#7A4EE8" ? "#fff" : INK, maxWidth: 200 }}>{players[pi]}</NameTag>
-          <span className="ml-2">manche {round.n}/{totalRounds}</span>
+          <span className="ml-2">{t.roundOf(round.n, totalRounds)}</span>
         </p>
         <div className="mt-4 px-6 py-2" style={{ ...sticker(C.cream, { radius: 24, shadow: 5 }), transform: "rotate(-2deg)" }}>
           <p className="leading-none" style={{ ...DISPLAY, fontSize: round.label ? 40 : 66 }}>{targetText}</p>
         </div>
         <p className="mt-4 text-[17px] font-bold">
-          {running
-            ? "Compte dans ta tête…"
-            : mystery
-              ? "Fie-toi à ton instinct !"
-              : mode === "no-over"
-                ? "Le plus proche SANS dépasser !"
-                : "Le plus proche possible !"}
+          {running ? t.countInHead : mystery ? t.trustGut : mode === "no-over" ? t.closestNoOver : t.closest}
         </p>
         {round.challenge && (
           <StickerCard bg={C.yellow} radius={20} shadow={4} tilt={1.5} className="mt-4 max-w-xs px-4 py-2.5">
@@ -461,14 +421,14 @@ export function Tournament({ net, onExit }: { net?: TournamentNet; onExit?: () =
             if (running) onStop();
             else onGo();
           }}
-          aria-label={running ? "Stop" : "Go"}
+          aria-label={running ? t.stop : t.go}
           className="zk-push mt-8 flex h-52 w-52 shrink-0 items-center justify-center rounded-full text-[56px]"
           style={{ ...sticker(running ? RED : ACCENT, { radius: 999, shadow: 8, border: 4, color: running ? "#fff" : INK }), ...DISPLAY, touchAction: "none" }}
         >
-          {running ? "STOP" : "GO"}
+          {running ? t.stop : t.go}
         </button>
         <p className="mt-6 text-[15px] font-semibold" style={{ color: "rgba(255,255,255,0.85)" }}>
-          {running ? "Le chrono est caché. Appuie quand tu penses y\u00A0être." : "Appuie sur GO et commence à compter."}
+          {running ? t.hiddenTimer : t.pressGo}
         </p>
       </div>
     );
@@ -487,7 +447,7 @@ export function Tournament({ net, onExit }: { net?: TournamentNet; onExit?: () =
           mode={mode}
           mystery={mystery}
           sound={sound}
-          nextLabel={turn + 1 < round.order.length ? auTourDe(players[round.order[turn + 1]]) : "Résultats de la manche"}
+          nextLabel={turn + 1 < round.order.length ? t.turnOf(players[round.order[turn + 1]]) : t.roundResults}
           onNext={nextTurn}
         />
       </>
@@ -546,27 +506,28 @@ function ConfigScreen(p: {
   onStart: () => void;
   onBack: () => void;
 }) {
+  const t = useT(PP_STR);
   return (
     <StickerScreen bg={C.night}>
       <Mascot size={74} color="mint" mood="thinking" arms shadow={false} />
       <h1 className="mt-1 text-center text-[clamp(44px,13vw,60px)] leading-[0.92]" style={{ ...DISPLAY, textShadow: `4px 4px 0 ${INK}` }}>
-        Pile Poil
+        {t.name}
       </h1>
 
       {/* Règle en 3 lignes : un nouveau joueur comprend en 10 s */}
       <StickerCard bg={C.cream} radius={22} shadow={5} tilt={-1} className="mt-4 p-4">
         <ol className="space-y-1.5 text-[15px] font-semibold leading-snug">
-          <li>1. Une <b>cible</b> s&apos;affiche (ex. 7 s).</li>
-          <li>2. GO, tu comptes <b>dans ta tête</b> : le chrono est caché.</li>
-          <li>3. STOP quand tu y es. Le plus proche gagne, <b>le plus loin prend une peine</b> (1 gorgée, eau OK, ou un gage).</li>
+          {[t.rule1, t.rule2, t.rule3].map(([a, b, c]) => (
+            <li key={a}>{a}<b>{b}</b>{c}</li>
+          ))}
         </ol>
         <p className="mt-2 text-[16px] leading-tight" style={DISPLAY}>
-          <GameInlineIcon icon={Target} /> À 0,10 s près : PILE POIL, +1 bonus.
+          <GameInlineIcon icon={Target} /> {t.perfectBonus}
         </p>
       </StickerCard>
 
       <div className="mt-6 w-full">
-        <SectionTitle>Nombre de manches</SectionTitle>
+        <SectionTitle>{t.roundsCount}</SectionTitle>
         <div className="grid grid-cols-4 gap-2.5">
           {[3, 5, 7, 10].map((n) => (
             <KitChip key={n} on={p.totalRounds === n} onClick={() => p.setTotalRounds(n)} onBg={ACCENT}>
@@ -577,21 +538,21 @@ function ConfigScreen(p: {
       </div>
 
       <div className="mt-6 w-full space-y-2.5">
-        <SectionTitle>La règle</SectionTitle>
-        <OptionCard on={p.mode === "closest"} onClick={() => p.setMode("closest")} icon={Target} title="Au plus proche" sub="Avant ou après, peu importe" onBg={ACCENT} />
-        <OptionCard on={p.mode === "no-over"} onClick={() => p.setMode("no-over")} icon={Ban} title="Sans dépasser" sub="Dépasser = dernier de la manche" onBg={ACCENT} />
+        <SectionTitle>{t.theRule}</SectionTitle>
+        <OptionCard on={p.mode === "closest"} onClick={() => p.setMode("closest")} icon={Target} title={t.closestTitle} sub={t.closestSub} onBg={ACCENT} />
+        <OptionCard on={p.mode === "no-over"} onClick={() => p.setMode("no-over")} icon={Ban} title={t.noOverTitle} sub={t.noOverSub} onBg={ACCENT} />
       </div>
 
       <div className="mt-6 w-full space-y-2.5">
-        <SectionTitle>Les cibles</SectionTitle>
-        <OptionCard on={p.autoTargets} onClick={() => p.setAutoTargets(true)} icon={Dices} title="Surprise" sub="De plus en plus dures" onBg={C.yellow} />
-        <OptionCard on={!p.autoTargets} onClick={() => p.setAutoTargets(false)} icon={PenLine} title="On choisit" sub="À chaque manche" onBg={C.yellow} />
-        <OptionCard kind="switch" on={p.specials} onClick={() => p.setSpecials(!p.specials)} icon={Zap} title="Défis spéciaux" sub="Yeux fermés, en chantant, cible mystère…" onBg={C.pink} />
+        <SectionTitle>{t.targets}</SectionTitle>
+        <OptionCard on={p.autoTargets} onClick={() => p.setAutoTargets(true)} icon={Dices} title={t.surprise} sub={t.surpriseSub} onBg={C.yellow} />
+        <OptionCard on={!p.autoTargets} onClick={() => p.setAutoTargets(false)} icon={PenLine} title={t.weChoose} sub={t.weChooseSub} onBg={C.yellow} />
+        <OptionCard kind="switch" on={p.specials} onClick={() => p.setSpecials(!p.specials)} icon={Zap} title={t.specials} sub={t.specialsSub} onBg={C.pink} />
       </div>
 
       <div className="mt-auto flex w-full flex-col items-center pt-7">
-        <StickerBtn big bg={ACCENT} onClick={p.onStart}>C&apos;est parti !</StickerBtn>
-        <SoftLink onClick={p.onBack}>Modifier les joueurs ({p.players.length})</SoftLink>
+        <StickerBtn big bg={ACCENT} onClick={p.onStart}>{t.letsGo}</StickerBtn>
+        <SoftLink onClick={p.onBack}>{t.editPlayers(p.players.length)}</SoftLink>
         <div className="mt-2">
           <IdeaButton game="Pile Poil" kind="défi" bg={C.cream} />
         </div>
@@ -626,42 +587,43 @@ function RoundIntro({
   onStart: () => void;
   onRemote?: () => void;
 }) {
+  const t = useT(PP_STR);
   const mystery = round.challenge?.id === "mystery";
   const final = round.n === totalRounds;
   return (
     <Screen bg={round.challenge ? "#2A1A5E" : C.night}>
       <span className="px-3.5 py-1 text-[18px]" style={{ ...sticker(final ? GOLD : "#fff", { radius: 999, shadow: 3, border: 2.5 }), ...DISPLAY, transform: "rotate(-3deg)" }}>
-        {final ? "Manche finale" : `Manche ${round.n}/${totalRounds}`}
+        {final ? t.finalRound : t.roundBadge(round.n, totalRounds)}
       </span>
       {!mystery && !manual && (
         <>
-          <p className="mt-5 text-[20px]" style={DISPLAY}>La cible</p>
+          <p className="mt-5 text-[20px]" style={DISPLAY}>{t.theTarget}</p>
           <div key={round.target} className="zk-pop mt-2 px-7 py-3" style={{ ...sticker(C.cream, { radius: 28, shadow: 6 }), ["--zk-r" as string]: "-2deg" }}>
             <p className="leading-none" style={{ ...DISPLAY, fontSize: round.label ? 44 : 92 }}>{round.label ?? `${num(round.target)}\u00a0s`}</p>
           </div>
           <div className="mt-4">
-            <RerollButton onClick={onRerollTarget} label="Pas fou ? Une autre cible" />
+            <RerollButton onClick={onRerollTarget} label={t.rerollTarget} />
           </div>
         </>
       )}
       {manual && !mystery && (
         <>
-          <p className="mt-5 text-[20px]" style={DISPLAY}>Choisissez la cible</p>
+          <p className="mt-5 text-[20px]" style={DISPLAY}>{t.chooseTarget}</p>
           <div className="mt-3 flex flex-wrap justify-center gap-2">
-            {[3, 5, 7, 10, 12, 15, 20].map((t) => (
-              <KitChip key={t} on={round.target === t} onClick={() => setTarget(t)} onBg={ACCENT}>
-                {t} s
+            {[3, 5, 7, 10, 12, 15, 20].map((n) => (
+              <KitChip key={n} on={round.target === n} onClick={() => setTarget(n)} onBg={ACCENT}>
+                {n} s
               </KitChip>
             ))}
           </div>
           <div className="mt-4 flex items-center gap-3">
-            <StickerBtn bg="#fff" className="!px-0" style={{ width: 52, minHeight: 52, fontSize: 28 }} label="Moins" onClick={() => setTarget(Math.max(1, Math.round((round.target - 0.5) * 2) / 2))}>−</StickerBtn>
+            <StickerBtn bg="#fff" className="!px-0" style={{ width: 52, minHeight: 52, fontSize: 28 }} label={t.less} onClick={() => setTarget(Math.max(1, Math.round((round.target - 0.5) * 2) / 2))}>−</StickerBtn>
             <span className="w-32 text-center text-[40px] leading-none" style={DISPLAY}>{num(round.target)}&nbsp;s</span>
-            <StickerBtn bg={C.yellow} className="!px-0" style={{ width: 52, minHeight: 52, fontSize: 28 }} label="Plus" onClick={() => setTarget(Math.min(60, Math.round((round.target + 0.5) * 2) / 2))}>+</StickerBtn>
+            <StickerBtn bg={C.yellow} className="!px-0" style={{ width: 52, minHeight: 52, fontSize: 28 }} label={t.more} onClick={() => setTarget(Math.min(60, Math.round((round.target + 0.5) * 2) / 2))}>+</StickerBtn>
           </div>
           {round.label && (
             <p className="mt-3 text-[16px] font-bold" style={{ color: GOLD }}>
-              Affichée en calcul : « {round.label} »
+              {t.shownAsCalc(round.label)}
             </p>
           )}
         </>
@@ -674,27 +636,27 @@ function RoundIntro({
 
       {round.challenge ? (
         <StickerCard bg={C.yellow} radius={24} shadow={5} tilt={1.5} className="zk-rise mt-6 p-4 text-center" style={{ animationDelay: ".15s" }}>
-          <p className="text-[16px] font-bold"><GameInlineIcon icon={Zap} /> Défi spécial</p>
+          <p className="text-[16px] font-bold"><GameInlineIcon icon={Zap} /> {t.special}</p>
           <p className="mt-1 text-[28px] leading-tight" style={DISPLAY}>{round.challenge.title}</p>
           <p className="mt-1 text-[16px] font-semibold leading-snug">{round.challenge.desc}</p>
           <div className="mt-3 flex justify-center">
-            <RerollButton onClick={onReroll} label="Pas fou ? Un autre défi" />
+            <RerollButton onClick={onReroll} label={t.rerollChallenge} />
           </div>
         </StickerCard>
       ) : (
         <p className="mt-5 text-[17px] font-bold">
-          {mode === "no-over" ? <><GameInlineIcon icon={Ban} /> Sans dépasser</> : <><GameInlineIcon icon={Target} /> Au plus proche</>}
+          {mode === "no-over" ? <><GameInlineIcon icon={Ban} /> {t.noOver}</> : <><GameInlineIcon icon={Target} /> {t.closestTitle}</>}
         </p>
       )}
 
-      <p className="mt-6 text-[20px]" style={DISPLAY}>{firstName} commence</p>
+      <p className="mt-6 text-[20px]" style={DISPLAY}>{t.starts(firstName)}</p>
       <div className="mt-3 w-full">
-        <StickerBtn big bg={ACCENT} onClick={onStart}>C&apos;est parti !</StickerBtn>
+        <StickerBtn big bg={ACCENT} onClick={onStart}>{t.letsGo}</StickerBtn>
       </div>
       {onRemote && (
         <div className="mt-3 w-full">
           <StickerBtn bg={C.cream} className="w-full" onClick={onRemote}>
-            <GameInlineIcon icon={Tv} /> L&apos;écran choisit la cible
+            <GameInlineIcon icon={Tv} /> {t.screenChooses}
           </StickerBtn>
         </div>
       )}
@@ -724,6 +686,7 @@ function Reveal({
   nextLabel: string;
   onNext: () => void;
 }) {
+  const t = useT(PP_STR);
   const final = attempt.elapsedMs;
   const targetMs = target * 1000;
   const [shown, setShown] = useState(0);
@@ -793,20 +756,20 @@ function Reveal({
   const scale = Math.max(targetMs * 1.5, final * 1.08, 1);
 
   const verdict = mystery
-    ? "Cible révélée à la fin de la manche"
+    ? t.revealedAtEnd
     : perfect
       ? ""
       : busted
-        ? "Dépassé ! Dernier de la manche"
+        ? t.busted
         : close
-          ? "Presque !"
+          ? t.almost
           : gap <= 700
-            ? "Pas mal du tout"
+            ? t.notBad
             : gap <= 1500
-              ? "Bof…"
+              ? t.meh
               : attempt.over
-                ? "Beaucoup trop long"
-                : "Beaucoup trop pressé";
+                ? t.tooLong
+                : t.tooRushed;
 
   return (
     <StickerScreen bg={bg} light={light} center>
@@ -825,10 +788,10 @@ function Reveal({
         shadow={false}
       />
       <p className="mt-2 text-[26px] leading-none" style={DISPLAY}>{attempt.name}</p>
-      {!mystery && <p className="mt-1.5 text-[16px] font-bold">Cible : {num(target)}&nbsp;s</p>}
+      {!mystery && <p className="mt-1.5 text-[16px] font-bold">{t.target(`${num(target, t.dec)}\u00a0s`)}</p>}
       <div className={`mt-3 px-6 py-2 ${!done && shown === 0 ? "pp-wait" : ""}`} style={{ ...sticker("#fff", { radius: 26, shadow: 6 }), transform: "rotate(-2deg)" }}>
         <p className="tabular-nums leading-none" style={{ ...DISPLAY, fontSize: "min(22vw, 6.5rem)", color: !done && overFlash && !mystery ? RED : INK }}>
-          {(shown / 1000).toFixed(2).replace(".", ",")}
+          {(shown / 1000).toFixed(2).replace(".", t.dec)}
         </p>
       </div>
 
@@ -843,12 +806,12 @@ function Reveal({
       <div className="mt-6 flex min-h-[110px] flex-col items-center text-center">
         {done && perfect && (
           <p className="leading-none" style={{ ...DISPLAY, fontSize: 60, color: "#fff", textShadow: `5px 5px 0 ${INK}`, WebkitTextStroke: `2.5px ${INK}`, animation: "pp-pop .45s ease-out, pp-shake .6s .45s" }}>
-            PILE POIL !
+            {t.pilePoil}
           </p>
         )}
         {done && !mystery && (
           <p className="zk-rise mt-2 text-[28px] leading-none" style={DISPLAY}>
-            {fmtDelta(final, target)}{perfect ? " · +1 point bonus" : ""}
+            {fmtDelta(final, target, t.dec)}{perfect ? t.bonus : ""}
           </p>
         )}
         {done && verdict && (
@@ -887,6 +850,7 @@ function Board({
   onNext: () => void;
   onFinish: () => void;
 }) {
+  const t = useT(PP_STR);
   const mystery = round.challenge?.id === "mystery";
   // Cible mystère : roulement avant de dévoiler la cible
   const [rolled, setRolled] = useState(!mystery);
@@ -907,7 +871,8 @@ function Board({
     };
   }, [mystery, sound]);
 
-  const [gage, setGage] = useState(() => rnd(GAGES));
+  const [gages] = useState(() => pickLang(GAGES_I18N));
+  const [gage, setGage] = useState(() => rnd(gages));
   const ranked = useMemo(() => rankAttempts(attempts, round.target, mode), [attempts, round.target, mode]);
   const loser = ranked.length > 1 ? ranked[ranked.length - 1] : null;
   const loserGap = loser ? Math.abs(loser.elapsedMs - round.target * 1000) : 0;
@@ -919,9 +884,9 @@ function Board({
     return (
       <Screen>
         <style>{KEYFRAMES}</style>
-        <p className="text-[24px]" style={DISPLAY}>La cible mystère était…</p>
+        <p className="text-[24px]" style={DISPLAY}>{t.mysteryWas}</p>
         <div className="mt-4 px-7 py-3" style={{ ...sticker(GOLD, { radius: 28, shadow: 6 }), transform: "rotate(-2deg)" }}>
-          <p className="tabular-nums leading-none" style={{ ...DISPLAY, fontSize: 92 }}>{rollShown.toFixed(1).replace(".", ",")}<span style={{ fontSize: "0.6em" }}>&nbsp;s</span></p>
+          <p className="tabular-nums leading-none" style={{ ...DISPLAY, fontSize: 92 }}>{rollShown.toFixed(1).replace(".", t.dec)}<span style={{ fontSize: "0.6em" }}>&nbsp;s</span></p>
         </div>
       </Screen>
     );
@@ -931,9 +896,9 @@ function Board({
     <StickerScreen bg={C.night}>
       <style>{KEYFRAMES}</style>
       <span className="px-3.5 py-1 text-[17px]" style={{ ...sticker("#fff", { radius: 999, shadow: 3, border: 2.5 }), ...DISPLAY, transform: "rotate(-3deg)" }}>
-        Manche {round.n}/{totalRounds} · {mystery ? "la cible était" : "cible"} {num(round.target)}&nbsp;s
+        {t.boardBadge(round.n, totalRounds, mystery, `${num(round.target, t.dec)}\u00a0s`)}
       </span>
-      <h2 className="mt-3 text-[48px] leading-none" style={{ ...DISPLAY, textShadow: `4px 4px 0 ${INK}` }}>Résultats</h2>
+      <h2 className="mt-3 text-[48px] leading-none" style={{ ...DISPLAY, textShadow: `4px 4px 0 ${INK}` }}>{t.results}</h2>
 
       <div className="mt-4 w-full space-y-2">
         {ranked.map((a, i) => {
@@ -954,12 +919,12 @@ function Board({
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-[18px] leading-tight" style={DISPLAY}>{a.name}</span>
                 <span className="block text-[14px] font-semibold">
-                  {fmtS(a.elapsedMs)}
-                  {busted ? " · dépassé" : ""}
-                  {perfect ? " · pile poil, +1" : ""}
+                  {fmtS(a.elapsedMs, t.dec)}
+                  {busted ? t.bustedTag : ""}
+                  {perfect ? t.perfectTag : ""}
                 </span>
               </span>
-              <span className="shrink-0 text-[18px] tabular-nums" style={DISPLAY}>{fmtDelta(a.elapsedMs, round.target)}</span>
+              <span className="shrink-0 text-[18px] tabular-nums" style={DISPLAY}>{fmtDelta(a.elapsedMs, round.target, t.dec)}</span>
             </div>
           );
         })}
@@ -967,22 +932,22 @@ function Board({
 
       {perfects.length > 0 && (
         <StickerCard bg={GOLD} radius={18} shadow={3} tilt={-1} className="mt-4 px-4 py-2.5 text-center text-[16px] font-bold">
-          PILE POIL pour {perfects.map((a) => a.name).join(", ")} : {perfects.length > 1 ? "chacun distribue" : "distribue"} 1 gorgée ou un gage !
+          {t.perfectFor(perfects.map((a) => a.name).join(", "), perfects.length > 1)}
         </StickerCard>
       )}
 
       {/* Le perdant, mis en avant */}
       {loser && (
         <StickerCard bg={RED} radius={24} shadow={5} tilt={1} className="mt-5 p-4 text-center" style={{ animation: `pp-pop .45s ${ranked.length * 0.08 + 0.1}s ease-out both` }}>
-          <p className="text-[26px] leading-tight" style={DISPLAY}>{loser.name} prend une peine</p>
+          <p className="text-[26px] leading-tight" style={DISPLAY}>{t.takesPenalty(loser.name)}</p>
           <p className="mt-1 text-[16px] font-bold">
-            {sips} gorgée{sips > 1 ? "s" : ""} de zinzin ou le gage :
+            {t.sipsOrDare(sips)}
           </p>
           <p className="mt-2 px-3 py-2 text-[17px] font-semibold leading-snug" style={sticker("#fff", { radius: 16, shadow: 0, border: 2.5 })}>
             {gage}
           </p>
           <div className="mt-3 flex justify-center">
-            <RerollButton onClick={() => setGage((g) => rnd(GAGES.filter((x) => x !== g)))} label="Pas fou ? Un autre gage" bg={C.yellow} />
+            <RerollButton onClick={() => setGage((g) => rnd(gages.filter((x) => x !== g)))} label={t.rerollDare} bg={C.yellow} />
           </div>
         </StickerCard>
       )}
@@ -994,14 +959,14 @@ function Board({
           .sort((a, b) => b.pts - a.pts)
           .map((s) => (
             <span key={s.i} className="px-3 py-1.5 text-[15px] font-bold" style={sticker("#fff", { radius: 999, shadow: 2, border: 2.5 })}>
-              {s.name} · {s.pts} pt{s.pts > 1 ? "s" : ""}
+              {s.name} · {t.pts(s.pts)}
             </span>
           ))}
       </div>
 
       <div className="mt-auto flex w-full flex-col items-center pt-7">
-        <StickerBtn big bg={ACCENT} onClick={onNext}>{last ? "Classement final" : `Manche ${round.n + 1}`}</StickerBtn>
-        {!last && <SoftLink onClick={onFinish}>Terminer la partie</SoftLink>}
+        <StickerBtn big bg={ACCENT} onClick={onNext}>{last ? t.finalStandings : t.nextRound(round.n + 1)}</StickerBtn>
+        {!last && <SoftLink onClick={onFinish}>{t.endGame}</SoftLink>}
       </div>
     </StickerScreen>
   );
@@ -1025,6 +990,7 @@ function FinalScreen({
   onNewPlayers: () => void;
   onExit?: () => void;
 }) {
+  const t = useT(PP_STR);
   // Fanfare à l'arrivée sur le podium
   useEffect(() => {
     fxPerfect();
@@ -1046,15 +1012,15 @@ function FinalScreen({
       <style>{KEYFRAMES}</style>
       <ConfettiBurst count={70} />
       <span className="px-3.5 py-1 text-[17px]" style={{ ...sticker(GOLD, { radius: 999, shadow: 3, border: 2.5 }), ...DISPLAY, transform: "rotate(-3deg)" }}>
-        Champion·ne du chrono
+        {t.champ}
       </span>
       <div className="mt-3" style={{ animation: "pp-pop .6s ease-out" }}>
         <Mascot size={104} color={colorForIndex(champ?.i ?? 0)} mood="cool" arms crown shadow={false} />
       </div>
       <h2 className="mt-1 max-w-full break-words text-center leading-[0.95]" style={{ ...DISPLAY, fontSize: `min(clamp(40px,12vw,56px), max(26px, ${(88 / (Math.max((champ?.name ?? "").length, 1) * 0.6)).toFixed(2)}vw))`, textShadow: `4px 4px 0 ${INK}` }}>{champ?.name ?? "—"}</h2>
       <p className="mt-2 text-center text-[16px] font-bold">
-        {champ?.pts ?? 0} point{(champ?.pts ?? 0) > 1 ? "s" : ""}
-        {standings[1] && standings[1].pts === champ?.pts ? " · départagé au plus petit écart cumulé" : ""}
+        {t.points(champ?.pts ?? 0)}
+        {standings[1] && standings[1].pts === champ?.pts ? t.tieBreak : ""}
       </p>
 
       <div className="mt-4 w-full space-y-2">
@@ -1063,7 +1029,7 @@ function FinalScreen({
             <span className="w-6 text-center text-[20px]" style={DISPLAY}>{i + 1}</span>
             <MascotAvatar color={colorForIndex(s.i)} size={32} mood={i === 0 ? "cool" : "happy"} border={false} />
             <span className="min-w-0 flex-1 text-[18px] leading-tight" style={{ ...DISPLAY, overflowWrap: "anywhere" }}>{s.name}</span>
-            <span className="shrink-0 whitespace-nowrap text-[18px]" style={DISPLAY}>{s.pts} pt{s.pts > 1 ? "s" : ""}</span>
+            <span className="shrink-0 whitespace-nowrap text-[18px]" style={DISPLAY}>{t.pts(s.pts)}</span>
           </div>
         ))}
       </div>
@@ -1071,23 +1037,23 @@ function FinalScreen({
       {best && worst && (
         <div className="mt-5 grid w-full grid-cols-2 gap-3 text-left">
           <div className="p-3" style={{ ...sticker(ACCENT, { radius: 18, shadow: 4 }), transform: "rotate(-1.5deg)" }}>
-            <p className="text-[14px] font-bold">Meilleur tir</p>
+            <p className="text-[14px] font-bold">{t.bestShot}</p>
             <p className="leading-tight" style={{ ...DISPLAY, fontSize: best.name.length > 10 ? 16 : 19, overflowWrap: "anywhere" }}>{best.name}</p>
-            <p className="text-[13px] font-semibold">à {fmtS(best.gap)} de {num(best.target)}&nbsp;s</p>
+            <p className="text-[13px] font-semibold">{t.bestDetail(fmtS(best.gap, t.dec), `${num(best.target, t.dec)}\u00a0s`)}</p>
           </div>
           <div className="p-3" style={{ ...sticker(RED, { radius: 18, shadow: 4 }), transform: "rotate(1.5deg)" }}>
-            <p className="text-[14px] font-bold">Le plus à côté</p>
+            <p className="text-[14px] font-bold">{t.worstShot}</p>
             <p className="leading-tight" style={{ ...DISPLAY, fontSize: worst.name.length > 10 ? 16 : 19, overflowWrap: "anywhere" }}>{worst.name}</p>
-            <p className="text-[13px] font-semibold">{fmtS(worst.elapsedMs)} pour {num(worst.target)}&nbsp;s</p>
+            <p className="text-[13px] font-semibold">{t.worstDetail(fmtS(worst.elapsedMs, t.dec), `${num(worst.target, t.dec)}\u00a0s`)}</p>
           </div>
         </div>
       )}
 
       <div className="mt-auto flex w-full flex-col items-center pt-7">
-        <StickerBtn big bg={ACCENT} onClick={onReplay}>Rejouer</StickerBtn>
+        <StickerBtn big bg={ACCENT} onClick={onReplay}>{t.replay}</StickerBtn>
         <div className="mt-3 grid w-full grid-cols-2 gap-3">
-          <StickerBtn bg={C.cream} onClick={onNewPlayers}>Les joueurs</StickerBtn>
-          {onExit ? <StickerBtn bg={INK} color="#fff" onClick={onExit}>Quitter</StickerBtn> : <span />}
+          <StickerBtn bg={C.cream} onClick={onNewPlayers}>{t.players}</StickerBtn>
+          {onExit ? <StickerBtn bg={INK} color="#fff" onClick={onExit}>{t.quit}</StickerBtn> : <span />}
         </div>
         <div className="mt-4">
           <IdeaButton game="Pile Poil" kind="défi" bg={C.cream} />

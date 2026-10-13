@@ -12,6 +12,8 @@ import { colorForIndex } from "@/components/games/local-kit";
 import { ROLES, SPECIALS, type Player, type RoleId } from "./lg-local-data";
 import { Check, X } from "lucide-react";
 import { GameIconButton } from "@/components/games/game-icon-button";
+import { useT } from "@/lib/i18n";
+import { ROLE_TEXT, STR } from "./lg-local-i18n";
 
 export type Tone = "night" | "day" | "dusk";
 
@@ -150,6 +152,8 @@ export function BigButton({
 /** Carte de rôle : bloc plein dans la couleur du rôle */
 export function RoleCard({ role, compact = false, subtitle }: { role: RoleId; compact?: boolean; subtitle?: string }) {
   const r = ROLES[role];
+  const t = useT(STR);
+  const rt = useT(ROLE_TEXT)[role];
   return (
     <div
       className="relative flex w-full flex-col items-center rounded-[28px] text-center"
@@ -157,13 +161,13 @@ export function RoleCard({ role, compact = false, subtitle }: { role: RoleId; co
     >
       <Mascot size={compact ? 92 : 128} color={r.color} mood={r.mood} shadow={false} sparkle={role === "voyante" || role === "sorciere"} arms={role === "chasseur" || role === "gardien"} look={role === "loup" ? "shifty" : "center"} />
       {subtitle && <p className="mt-2 text-[17px] font-bold">{subtitle}</p>}
-      <h2 className="mt-1" style={{ ...DISPLAY, fontSize: compact ? 36 : 48, lineHeight: 0.95 }}>{r.name}</h2>
+      <h2 className="mt-1" style={{ ...DISPLAY, fontSize: compact ? 36 : 48, lineHeight: 0.95 }}>{rt.name}</h2>
       <span className="mt-3">
         <Tag bg={r.camp === "loups" ? INK : "#fff"} color={r.camp === "loups" ? "#fff" : INK} tilt={2}>
-          {r.camp === "loups" ? "Camp des loups" : "Camp du village"}
+          {r.camp === "loups" ? t.campWolves : t.campVillage}
         </Tag>
       </span>
-      {!compact && <p className="mt-4 text-[17px] font-semibold leading-snug">{r.power}</p>}
+      {!compact && <p className="mt-4 text-[17px] font-semibold leading-snug">{rt.power}</p>}
     </div>
   );
 }
@@ -208,6 +212,7 @@ export function PickList({
 }
 
 export function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
+  const t = useT(STR);
   useEffect(() => {
     const k = (e: KeyboardEvent) => e.key === "Escape" && onClose();
     window.addEventListener("keydown", k);
@@ -236,7 +241,7 @@ export function Modal({ title, onClose, children }: { title: string; onClose: ()
       >
         <div className="mb-4 flex items-center justify-between gap-3">
           <h3 style={{ ...DISPLAY, fontSize: 30, lineHeight: 1 }}>{title}</h3>
-          <GameIconButton icon={X} label="Fermer" onClick={onClose} />
+          <GameIconButton icon={X} label={t.close} onClick={onClose} />
         </div>
         {children}
       </div>
@@ -247,12 +252,13 @@ export function Modal({ title, onClose, children }: { title: string; onClose: ()
 export function Confirm({
   text, yes, onYes, onNo, danger = false,
 }: { text: string; yes: string; onYes: () => void; onNo: () => void; danger?: boolean }) {
+  const t = useT(STR);
   return (
-    <Modal title="Sûr ?" onClose={onNo}>
+    <Modal title={t.sure} onClose={onNo}>
       <p className="mb-5 text-[18px] font-semibold leading-snug">{text}</p>
       <div className="grid gap-3">
         <BigButton onClick={onYes} variant={danger ? "danger" : "primary"}>{yes}</BigButton>
-        <BigButton onClick={onNo} variant="ghost">Annuler</BigButton>
+        <BigButton onClick={onNo} variant="ghost">{t.cancel}</BigButton>
       </div>
     </Modal>
   );
@@ -264,38 +270,41 @@ export function SectionTitle({ children, className = "", style }: { children: Re
 }
 
 export function RulesContent() {
+  const t = useT(STR);
+  const roles = useT(ROLE_TEXT);
+  const [g0, g1, g2, g3, g4] = t.rulesGoalText;
   return (
     <div className="space-y-5 text-[16px] leading-relaxed" style={{ color: INK }}>
       <section>
-        <SectionTitle className="mb-1">Le but</SectionTitle>
-        <p>Des loups se cachent parmi vous. <b>Le village</b> gagne s&apos;il élimine tous les loups. <b>Les loups</b> gagnent dès qu&apos;ils sont aussi nombreux que les autres.</p>
+        <SectionTitle className="mb-1">{t.rulesGoal}</SectionTitle>
+        <p>{g0}<b>{g1}</b>{g2}<b>{g3}</b>{g4}</p>
       </section>
       <section>
-        <SectionTitle className="mb-1">Le téléphone est le meneur</SectionTitle>
-        <p>Chacun découvre sa carte en secret. Ensuite, on pose le tél au centre : il raconte la nuit, appelle chaque rôle, et les rôles appelés le prennent pour agir. Tout le monde garde les yeux fermés quand ce n&apos;est pas son tour.</p>
-        <p className="mt-2">Même si un rôle est mort, le téléphone fait comme s&apos;il l&apos;appelait : impossible de deviner qui est encore en vie.</p>
+        <SectionTitle className="mb-1">{t.rulesPhone}</SectionTitle>
+        <p>{t.rulesPhoneText}</p>
+        <p className="mt-2">{t.rulesPhoneText2}</p>
       </section>
       <section>
-        <SectionTitle className="mb-1">Le jour</SectionTitle>
-        <p>On découvre qui est mort et son rôle. Puis débat chronométré, et vote : le joueur désigné est éliminé et révèle sa carte. En cas d&apos;égalité, on revote ou on épargne tout le monde.</p>
+        <SectionTitle className="mb-1">{t.rulesDay}</SectionTitle>
+        <p>{t.rulesDayText}</p>
       </section>
       <section>
-        <SectionTitle className="mb-2">Les rôles</SectionTitle>
+        <SectionTitle className="mb-2">{t.rulesRoles}</SectionTitle>
         <div className="space-y-2.5">
           {(["loup", "villageois", ...SPECIALS] as RoleId[]).map((id, i) => (
             <div key={id} className="flex items-center gap-3 rounded-[18px] p-3" style={{ ...stk(ROLES[id].accent, 3), transform: `rotate(${i % 2 ? 0.8 : -0.8}deg)` }}>
               <MascotAvatar color={ROLES[id].color} mood={ROLES[id].mood} size={40} border={false} />
               <div className="min-w-0">
-                <p style={{ ...DISPLAY, fontSize: 20, letterSpacing: "-0.01em" }}>{ROLES[id].name}</p>
-                <p className="text-[14px] font-semibold leading-snug">{ROLES[id].power}</p>
+                <p style={{ ...DISPLAY, fontSize: 20, letterSpacing: "-0.01em" }}>{roles[id].name}</p>
+                <p className="text-[14px] font-semibold leading-snug">{roles[id].power}</p>
               </div>
             </div>
           ))}
         </div>
       </section>
       <section>
-        <SectionTitle className="mb-1">Règles d&apos;or</SectionTitle>
-        <p>On ne montre jamais sa carte. Les morts se taisent (mais peuvent ricaner). Et on ment avec style.</p>
+        <SectionTitle className="mb-1">{t.rulesGold}</SectionTitle>
+        <p>{t.rulesGoldText}</p>
       </section>
     </div>
   );
@@ -304,13 +313,15 @@ export function RulesContent() {
 /** Ligne de joueur pour les récaps (rôle révélé) */
 export function PlayerRow({ p, lover = false, dim = false }: { p: Player; lover?: boolean; dim?: boolean }) {
   const r = ROLES[p.role];
+  const t = useT(STR);
+  const name = useT(ROLE_TEXT)[p.role].name;
   return (
     <div className="flex items-center gap-3 rounded-[18px] px-3 py-2" style={{ ...stk("#fff", 3), color: INK, opacity: dim ? 0.6 : 1, minHeight: 56 }}>
       <MascotAvatar color={colorForIndex(p.id)} size={38} mood={p.alive ? "happy" : "dead"} border={false} />
       <span className="min-w-0 flex-1 truncate text-[17px] font-bold" style={{ textDecoration: p.alive ? "none" : "line-through" }}>
-        {p.name}{lover && <span style={{ color: PINK }}> · amoureux</span>}
+        {p.name}{lover && <span style={{ color: PINK }}> · {t.lover}</span>}
       </span>
-      <span className="shrink-0 rounded-full px-2.5 py-1 text-[14px] font-bold" style={{ ...stk(r.accent, 0, 2) }}>{r.name}</span>
+      <span className="shrink-0 rounded-full px-2.5 py-1 text-[14px] font-bold" style={{ ...stk(r.accent, 0, 2) }}>{name}</span>
     </div>
   );
 }

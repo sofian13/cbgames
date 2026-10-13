@@ -1,5 +1,10 @@
 // Catégories de La Patate : on dit UNE réponse à voix haute, puis on passe le tél.
 // Pas de répétition dans une même manche (le groupe arbitre).
+// Versions EN / ES : categories.en.ts, categories.es.ts (même structure).
+
+import type { I18n, Lang } from "@/lib/i18n";
+import { CATEGORIES_CLASSIC_EN, CATEGORIES_SPICY_EN, DARES_EN, DARES_SPICY_EN } from "./categories.en";
+import { CATEGORIES_CLASSIC_ES, CATEGORIES_SPICY_ES, DARES_ES, DARES_SPICY_ES } from "./categories.es";
 
 export const CATEGORIES_CLASSIC: string[] = [
   // Bouffe
@@ -279,6 +284,17 @@ export const DARES_SPICY: string[] = [
   "Murmure un compliment à l'oreille de quelqu'un.",
   "Fais 10 secondes de danse langoureuse… avec la patate.",
 ];
+
+/** Contenu de La Patate (et gages partagés) dans la langue voulue. */
+export interface PatateContent { classic: string[]; spicy: string[]; dares: string[]; daresSpicy: string[] }
+const CONTENT: I18n<PatateContent> = {
+  fr: { classic: CATEGORIES_CLASSIC, spicy: CATEGORIES_SPICY, dares: DARES, daresSpicy: DARES_SPICY },
+  en: { classic: CATEGORIES_CLASSIC_EN, spicy: CATEGORIES_SPICY_EN, dares: DARES_EN, daresSpicy: DARES_SPICY_EN },
+  es: { classic: CATEGORIES_CLASSIC_ES, spicy: CATEGORIES_SPICY_ES, dares: DARES_ES, daresSpicy: DARES_SPICY_ES },
+};
+export function patateContent(lang: Lang): PatateContent {
+  return CONTENT[lang] ?? CONTENT.fr;
+}
 
 export function pick<T>(arr: T[]): T {
   return arr[Math.floor(Math.random() * arr.length)];

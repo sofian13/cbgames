@@ -7,12 +7,135 @@
  */
 
 import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type ReactNode } from "react";
-import { getRecentNames, getSavedPlayers, sameName, savePlayers } from "@/lib/saved-players";
+import { getRecentNames, getSavedPlayers, sameName, savePlayers, takePartyBand } from "@/lib/saved-players";
 import { isOfflineApp } from "@/lib/offline-app";
 import { Mascot, MASCOT_COLORS, MASCOT_PALETTE, type MascotColor } from "@/components/Mascot";
 import { ArrowLeft, Check, Crown, Smartphone, Volume2, VolumeX, Wifi, X } from "lucide-react";
 import { GameIconBadge, GameIconButton, GameInlineIcon, GameTopRight } from "@/components/games/game-icon-button";
 import { isSfxMuted, playSfx, setSfxMuted, subscribeSfxMuted } from "@/lib/sfx";
+import { type I18n, useLang, useT } from "@/lib/i18n";
+import { localizeGameName } from "@/lib/games/game-names-i18n";
+
+/** Textes du kit (FR / EN / ES) ; sur le site, toujours en français. */
+const STR: I18n<{
+  modeLocal: string;
+  modeLocalSub: string;
+  modeOnline: string;
+  modeOnlineSub: string;
+  whoPlays: string;
+  /** Fin du titre « {jeu} ? » (espace insécable en français) */
+  qEnd: string;
+  playersExact: (n: number) => string;
+  playersRange: (a: number, b: number) => string;
+  sameBand: string;
+  newBand: string;
+  remove: (n: string) => string;
+  removeThis: string;
+  nameAria: (i: number) => string;
+  addAria: string;
+  addFriend: string;
+  recent: string;
+  go: string;
+  missing: (n: number) => string;
+  changeMode: string;
+  passTo: string;
+  itsMe: string;
+  soundOn: string;
+  soundOff: string;
+  /** Placeholders drôles (à la place de « Joueur 1 ») */
+  funny: string[];
+}> = {
+  fr: {
+    modeLocal: "Sur ce téléphone",
+    modeLocalSub: "On se passe le tél à tour de rôle",
+    modeOnline: "Plusieurs téléphones",
+    modeOnlineSub: "Chacun sur son tél, en ligne dans la même salle",
+    whoPlays: "Qui joue à",
+    qEnd: "\u00a0?",
+    playersExact: (n) => `${n} joueurs`,
+    playersRange: (a, b) => `De ${a} à ${b} joueurs`,
+    sameBand: "La même bande que la dernière fois\u00a0?",
+    newBand: "Nouvelle bande",
+    remove: (n) => `Retirer ${n}`,
+    removeThis: "Retirer ce joueur",
+    nameAria: (i) => `Prénom du joueur ${i}`,
+    addAria: "Ajouter un joueur",
+    addFriend: "Ajouter un pote",
+    recent: "Ils ont déjà joué, un tap et c'est réglé :",
+    go: "C'est parti !",
+    missing: (n) => `Encore ${n} joueur${n > 1 ? "s" : ""} !`,
+    changeMode: "Changer de mode",
+    passTo: "Passe le téléphone à…",
+    itsMe: "C'est moi !",
+    soundOn: "Remettre le son",
+    soundOff: "Couper le son",
+    funny: [
+      "Le pote en retard", "Reine du karaoké", "Ramène rien", "Le roi du bluff", "Dort déjà", "Le DJ du soir",
+      "Mauvais perdant", "Le +1 surprise", "Rit trop fort", "Toujours au tél", "Le chef du barbeuc", "Triche un peu",
+      "Gagne tout le temps", "Arrivée en dernier", "Le coloc", "Celle qui organise",
+    ],
+  },
+  en: {
+    modeLocal: "On this phone",
+    modeLocalSub: "Pass the phone around, one at a time",
+    modeOnline: "Several phones",
+    modeOnlineSub: "Everyone on their own phone, online in the same room",
+    whoPlays: "Who's playing",
+    qEnd: "?",
+    playersExact: (n) => `${n} players`,
+    playersRange: (a, b) => `${a} to ${b} players`,
+    sameBand: "Same crew as last time?",
+    newBand: "New crew",
+    remove: (n) => `Remove ${n}`,
+    removeThis: "Remove this player",
+    nameAria: (i) => `Player ${i} name`,
+    addAria: "Add a player",
+    addFriend: "Add a friend",
+    recent: "They've played before, one tap and they're in:",
+    go: "Let's go!",
+    missing: (n) => `${n} more player${n > 1 ? "s" : ""}!`,
+    changeMode: "Change mode",
+    passTo: "Pass the phone to…",
+    itsMe: "It's me!",
+    soundOn: "Turn sound on",
+    soundOff: "Mute sound",
+    funny: [
+      "Always late", "Karaoke queen", "Brings nothing", "Bluff master", "Already asleep", "Tonight's DJ",
+      "Sore loser", "Surprise +1", "Laughs too loud", "Always on the phone", "BBQ boss", "Cheats a bit",
+      "Wins every time", "Last to arrive", "The roommate", "The organiser",
+    ],
+  },
+  es: {
+    modeLocal: "En este móvil",
+    modeLocalSub: "Os vais pasando el móvil por turnos",
+    modeOnline: "Varios móviles",
+    modeOnlineSub: "Cada uno en su móvil, en línea en la misma sala",
+    whoPlays: "¿Quién juega a",
+    qEnd: "?",
+    playersExact: (n) => `${n} jugadores`,
+    playersRange: (a, b) => `De ${a} a ${b} jugadores`,
+    sameBand: "¿El mismo grupo que la última vez?",
+    newBand: "Grupo nuevo",
+    remove: (n) => `Quitar a ${n}`,
+    removeThis: "Quitar a este jugador",
+    nameAria: (i) => `Nombre del jugador ${i}`,
+    addAria: "Añadir un jugador",
+    addFriend: "Añadir a alguien",
+    recent: "Ya han jugado, un toque y listo:",
+    go: "¡Vamos!",
+    missing: (n) => (n > 1 ? `¡Faltan ${n} jugadores!` : `¡Falta ${n} jugador!`),
+    changeMode: "Cambiar de modo",
+    passTo: "Pásale el móvil a…",
+    itsMe: "¡Soy yo!",
+    soundOn: "Activar el sonido",
+    soundOff: "Silenciar",
+    funny: [
+      "El que llega tarde", "Reina del karaoke", "No trae nada", "Rey del farol", "Ya está dormido", "El DJ de la noche",
+      "Mal perdedor", "El +1 sorpresa", "Se ríe muy alto", "Siempre con el móvil", "Jefe de la barbacoa", "Hace trampas",
+      "Siempre gana", "La última en llegar", "El compi de piso", "La que lo organiza",
+    ],
+  },
+};
 
 export type GameMode = "local" | "online";
 
@@ -46,6 +169,7 @@ export function ModeSelect({
   useLayoutEffect(() => {
     if (offline) onPick("local");
   }, [offline, onPick]);
+  const t = useT(STR);
   if (offline) return null;
   void emoji; // gardé pour l'API : un blob remplace l'emoji décoratif
 
@@ -57,8 +181,8 @@ export function ModeSelect({
 
       <div className="w-full max-w-md space-y-4 sm:max-w-xl">
         {([
-          { m: "local" as const, icon: Smartphone, bg: "#FF3EA5", title: "Sur ce téléphone", sub: "On se passe le tél à tour de rôle", tilt: -1.5 },
-          { m: "online" as const, icon: Wifi, bg: "#4ECDC4", title: "Plusieurs téléphones", sub: "Chacun sur son tél, en ligne dans la même salle", tilt: 1.5 },
+          { m: "local" as const, icon: Smartphone, bg: "#FF3EA5", title: t.modeLocal, sub: t.modeLocalSub, tilt: -1.5 },
+          { m: "online" as const, icon: Wifi, bg: "#4ECDC4", title: t.modeOnline, sub: t.modeOnlineSub, tilt: 1.5 },
         ]).map((o) => (
           <button
             key={o.m}
@@ -118,26 +242,6 @@ function hop(el: HTMLElement | null) {
   );
 }
 
-/** Placeholders drôles (à la place de « Joueur 1 »). */
-const FUNNY = [
-  "Le pote en retard",
-  "Reine du karaoké",
-  "Ramène rien",
-  "Le roi du bluff",
-  "Dort déjà",
-  "Le DJ du soir",
-  "Mauvais perdant",
-  "Le +1 surprise",
-  "Rit trop fort",
-  "Toujours au tél",
-  "Le chef du barbeuc",
-  "Triche un peu",
-  "Gagne tout le temps",
-  "Arrivée en dernier",
-  "Le coloc",
-  "Celle qui organise",
-];
-
 // ── Players setup (local) ─────────────────────────────────
 export function PlayersSetup({
   emoji,
@@ -160,6 +264,10 @@ export function PlayersSetup({
   footer?: ReactNode;
 }) {
   void emoji; // gardé pour l'API (le titre n'affiche plus d'emoji décoratif)
+  const lang = useLang();
+  const t = useT(STR);
+  // Les jeux passent leur nom français : affiché dans la langue de l'app
+  const title = localizeGameName(name, lang);
   const blank = () => Array.from({ length: Math.min(max, Math.max(min, 4)) }, () => "");
   const [names, setNames] = useState<string[]>(blank);
   const [sameBand, setSameBand] = useState(false);
@@ -170,6 +278,9 @@ export function PlayersSetup({
 
   // Dernière table + prénoms récents (avant le 1er paint, côté client uniquement)
   useLayoutEffect(() => {
+    // Soirée Zinzin en cours : la bande est déjà choisie → on valide directement
+    const band = takePartyBand(min, max);
+    if (band) { onStart(band); return; }
     const last = getSavedPlayers().slice(0, max);
     if (last.length) {
       while (last.length < min) last.push("");
@@ -230,19 +341,20 @@ export function PlayersSetup({
       <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col px-5">
         {/* Titre : le jeu en grand, en phrase normale */}
         <div className="flex items-center justify-between gap-3">
-          <p className="text-[17px] font-bold" style={{ color: "rgba(255,255,255,0.85)" }}>Qui joue à</p>
+          <p className="text-[17px] font-bold" style={{ color: "rgba(255,255,255,0.85)" }}>{t.whoPlays}</p>
           <span
             className="inline-block whitespace-nowrap rounded-full px-3 py-1 text-[14px] font-bold"
             style={{ ...stickerStyle(accent, 3), color: accentInk, transform: "rotate(3deg)" }}
           >
-            {min === max ? `${min} joueurs` : `De ${min} à ${max} joueurs`}
+            {min === max ? t.playersExact(min) : t.playersRange(min, max)}
           </span>
         </div>
         <h1
           className="mt-0.5"
           style={{ fontFamily: "var(--font-display), system-ui, sans-serif", wordSpacing: "0.12em", fontWeight: 700, fontSize: "clamp(38px, 11vw, 60px)", lineHeight: 0.92, letterSpacing: "-0.04em" }}
         >
-          {name}&nbsp;?
+          {/* Le « ? » de fin est déjà là si le nom en a un (« Tu préfères ? ») */}
+          {/[?!]$/.test(title) ? title : `${title}${t.qEnd}`}
         </h1>
 
         {/* Même bande que la dernière fois ? */}
@@ -251,14 +363,14 @@ export function PlayersSetup({
             className="mt-5 flex items-center gap-3 rounded-[20px] py-2.5 pl-4 pr-2.5"
             style={{ ...stickerStyle("#FFD23F"), color: INK, transform: "rotate(-1deg)" }}
           >
-            <p className="flex-1 text-[15px] font-bold leading-tight">La même bande que la dernière fois&nbsp;?</p>
+            <p className="flex-1 text-[15px] font-bold leading-tight">{t.sameBand}</p>
             <button
               type="button"
               onClick={newBand}
               className="min-h-11 shrink-0 rounded-full px-3.5 text-[14px] font-bold active:translate-y-[2px]"
               style={{ background: "#fff", border: `2.5px solid ${INK}`, color: INK }}
             >
-              Nouvelle bande
+              {t.newBand}
             </button>
           </div>
         )}
@@ -278,7 +390,7 @@ export function PlayersSetup({
                     <button
                       type="button"
                       onClick={() => remove(i)}
-                      aria-label={n.trim() ? `Retirer ${n.trim()}` : "Retirer ce joueur"}
+                      aria-label={n.trim() ? t.remove(n.trim()) : t.removeThis}
                       className="absolute -right-6 -top-3 grid h-11 w-11 place-items-center"
                     >
                       <span className="grid h-7 w-7 place-items-center rounded-full text-[17px] font-bold leading-none" style={{ background: "#fff", color: INK, border: `2.5px solid ${INK}` }}><X size={15} strokeWidth={3.2} aria-hidden /></span>
@@ -298,8 +410,8 @@ export function PlayersSetup({
                     else if (names.length < max) add();
                     else (e.target as HTMLInputElement).blur();
                   }}
-                  placeholder={FUNNY[i % FUNNY.length]}
-                  aria-label={`Prénom du joueur ${i + 1}`}
+                  placeholder={t.funny[i % t.funny.length]}
+                  aria-label={t.nameAria(i + 1)}
                   enterKeyHint="next"
                   autoCorrect="off" autoCapitalize="words" autoComplete="off" spellCheck={false}
                   className="zz-name w-full min-w-0 rounded-[18px] px-2 pb-2 pt-[22px] text-center outline-none"
@@ -327,10 +439,10 @@ export function PlayersSetup({
               onClick={add}
               className="flex min-h-[100px] flex-col items-center justify-center gap-2 rounded-[18px] active:translate-y-[2px]"
               style={{ border: "2.5px dashed rgba(255,255,255,0.35)", color: "#fff", scrollMarginBottom: 170 }}
-              aria-label="Ajouter un joueur"
+              aria-label={t.addAria}
             >
               <span className="grid h-14 w-14 place-items-center rounded-full text-[34px] font-bold leading-none" style={{ ...stickerStyle("#fff", 4), color: INK }}>+</span>
-              <span className="text-[14px] font-semibold" style={{ color: "rgba(255,255,255,0.8)" }}>Ajouter un pote</span>
+              <span className="text-[14px] font-semibold" style={{ color: "rgba(255,255,255,0.8)" }}>{t.addFriend}</span>
             </button>
           )}
         </div>
@@ -338,7 +450,7 @@ export function PlayersSetup({
         {/* Prénoms récents : un tap = le pote est ajouté */}
         {suggestions.length > 0 && !full && (
           <div className="mt-5">
-            <p className="text-[15px] font-semibold" style={{ color: "rgba(255,255,255,0.75)" }}>Ils ont déjà joué, un tap et c&apos;est réglé :</p>
+            <p className="text-[15px] font-semibold" style={{ color: "rgba(255,255,255,0.75)" }}>{t.recent}</p>
             <div className="mt-2.5 flex flex-wrap gap-2.5">
               {suggestions.map((r, k) => {
                 const pal = MASCOT_PALETTE[colorForIndex(k + 2)];
@@ -381,12 +493,12 @@ export function PlayersSetup({
               letterSpacing: "-0.01em",
             }}
           >
-            {canStart ? "C'est parti !" : `Encore ${missing} joueur${missing > 1 ? "s" : ""} !`}
+            {canStart ? t.go : t.missing(missing)}
           </button>
           {/* Dans l'app, la croix « quitter » fait déjà le retour */}
           {onBack && !isOfflineApp() && (
             <button type="button" onClick={onBack} className="mx-auto mt-1 block min-h-11 px-4 text-[14px] font-semibold" style={{ color: "rgba(255,255,255,0.75)" }}>
-              <GameInlineIcon icon={ArrowLeft} /> Changer de mode
+              <GameInlineIcon icon={ArrowLeft} /> {t.changeMode}
             </button>
           )}
         </div>
@@ -401,7 +513,7 @@ export function PassScreen({
   toName,
   colorIndex,
   hint,
-  buttonLabel = "C'est moi !",
+  buttonLabel,
   accent = "#5B36D6",
   onReady,
 }: {
@@ -416,6 +528,7 @@ export function PassScreen({
   const col = colorForIndex(colorIndex);
   const pal = MASCOT_PALETTE[col];
   const blob = useRef<HTMLDivElement | null>(null);
+  const t = useT(STR);
   // Le téléphone change de main : petit « whoosh »
   useEffect(() => { playSfx("whoosh", { volume: 0.45 }); }, [toName]);
   return (
@@ -427,7 +540,7 @@ export function PassScreen({
         padding: "calc(env(safe-area-inset-top, 0px) + 72px) 24px calc(env(safe-area-inset-bottom, 0px) + 24px)",
       }}
     >
-      <p className="mb-2 text-[18px] font-bold" style={{ color: "rgba(255,255,255,0.85)" }}>Passe le téléphone à…</p>
+      <p className="mb-2 text-[18px] font-bold" style={{ color: "rgba(255,255,255,0.85)" }}>{t.passTo}</p>
       <div ref={blob} onPointerDown={() => hop(blob.current)} className="relative z-[1] -mb-6">
         <Mascot size={130} color={col} mood="wink" arms shadow={false} />
       </div>
@@ -449,7 +562,7 @@ export function PassScreen({
       </h1>
       {hint && <p className="mt-6 max-w-sm text-center text-[16px] font-semibold leading-snug" style={{ color: "rgba(255,255,255,0.85)" }}>{hint}</p>}
       <ZButton onClick={onReady} bg="#fff" className="mt-8 max-w-sm">
-        {buttonLabel}
+        {buttonLabel ?? t.itsMe}
       </ZButton>
     </div>
   );
@@ -568,10 +681,11 @@ export function useSfxMuted(): [boolean, (v: boolean) => void] {
 /** Bouton rond son on/off (une seule coupure pour toute l'app). */
 export function SoundButton({ bg = "#fff" }: { bg?: string }) {
   const [muted, setMuted] = useSfxMuted();
+  const t = useT(STR);
   return (
     <GameIconButton
       icon={muted ? VolumeX : Volume2}
-      label={muted ? "Remettre le son" : "Couper le son"}
+      label={muted ? t.soundOn : t.soundOff}
       active={muted}
       bg={bg}
       onClick={() => {

@@ -1,41 +1,26 @@
-import { getGameById } from "@/lib/games/registry";
-import type { ZGame } from "../catalog";
+import { type Lang, pick } from "@/lib/i18n";
+import { GAME_TEXT, type ZGame, type ZGameText } from "../catalog";
+import { UI } from "../strings";
 
-/** Textes d'un jeu : surcharge `meta` du catalogue, sinon registry du site. */
-export interface GameInfo {
-  name: string;
-  pitch: string;
-  example?: string;
-  rules: string[];
-  minPlayers: number;
-  maxPlayers: number;
-}
+/** Textes d'un jeu dans la langue demandée (catalog-text.ts). */
+export type GameInfo = ZGameText;
 
-/** Retire les emojis (souvent en fin de nom dans le registry). */
+/** Retire les emojis (titres de section…). */
 export function stripEmoji(s: string): string {
   return s.replace(/[\p{Extended_Pictographic}\u{1F1E6}-\u{1F1FF}️‍⃣]/gu, "").replace(/\s{2,}/g, " ").trim();
 }
 
-export function gameInfo(g: ZGame): GameInfo {
-  const m = g.meta;
-  if (m) return { name: stripEmoji(m.name), pitch: m.pitch, example: m.example, rules: m.rules, minPlayers: m.minPlayers, maxPlayers: m.maxPlayers };
-  const r = getGameById(g.id);
-  return {
-    name: stripEmoji(r?.name ?? g.id),
-    pitch: r?.pitch ?? r?.description ?? "",
-    example: r?.example,
-    rules: r?.rules ?? [],
-    minPlayers: r?.minPlayers ?? 2,
-    maxPlayers: r?.maxPlayers ?? 10,
-  };
+export function gameInfo(g: ZGame, lang: Lang): GameInfo {
+  return pick(GAME_TEXT[g.id], lang);
 }
 
-/** Libellé joueurs : « 3-12 » → « 3 à 12 joueurs », « 2+ » → « 2 joueurs et + ». */
-export function playersLabel(p: string): string {
-  if (/^\d+\+$/.test(p)) return `${p.slice(0, -1)} joueurs et +`;
+/** Libellé joueurs : « 3-12 » → « 3 à 12 joueurs », « 2+ » → « 2 joueurs et + » (selon la langue). */
+export function playersLabel(p: string, lang: Lang): string {
+  const t = pick(UI, lang).players;
+  if (/^\d+\+$/.test(p)) return t.plus(p.slice(0, -1));
   const m = p.match(/^(\d+)\s*-\s*(\d+)$/);
-  if (m) return `${m[1]} à ${m[2]} joueurs`;
-  if (/^\d+$/.test(p)) return `${p} joueurs`;
+  if (m) return t.range(m[1], m[2]);
+  if (/^\d+$/.test(p)) return t.exact(p);
   return p;
 }
 

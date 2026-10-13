@@ -1,5 +1,10 @@
+import type { I18n } from "@/lib/i18n";
+import { PACKS_EN } from "./words.en";
+import { PACKS_ES } from "./words.es";
+
 // Mots de « Deviner le Mot » — packs thématiques, contenu original.
 // Le pack coquin reste suggestif mais jamais explicite, et décoché par défaut.
+// Une version par langue (mêmes ids, mêmes packs cochés par défaut).
 
 export interface WordPack {
   id: string;
@@ -174,3 +179,5 @@ export const PACKS: WordPack[] = [
     ],
   },
 ];
+
+export const PACKS_BY_LANG: I18n<WordPack[]> = { fr: PACKS, en: PACKS_EN, es: PACKS_ES };

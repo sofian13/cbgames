@@ -1,4 +1,4 @@
-import { useSyncExternalStore } from "react";
+import { getLang } from "@/lib/i18n";
 
 /**
  * Réglages de l'app : langue, rappels de soirée, évaluer, partager.
@@ -7,35 +7,9 @@ import { useSyncExternalStore } from "react";
 
 const SHARE_URL = "https://zinzin-app.com";
 
-/* ───────── Langue ───────── */
-export type Lang = "fr" | "en" | "es";
-export const LANGS: { id: Lang; label: string; flag: string }[] = [
-  { id: "fr", label: "Français", flag: "🇫🇷" },
-  { id: "en", label: "English", flag: "🇬🇧" },
-  { id: "es", label: "Español", flag: "🇪🇸" },
-];
-const LANG_KEY = "zz-lang";
-const listeners = new Set<() => void>();
-
-function initialLang(): Lang {
-  try {
-    const saved = localStorage.getItem(LANG_KEY);
-    if (saved === "fr" || saved === "en" || saved === "es") return saved;
-  } catch { /* indispo */ }
-  const nav = navigator.language?.toLowerCase() ?? "";
-  return nav.startsWith("fr") ? "fr" : nav.startsWith("es") ? "es" : "en";
-}
-let lang: Lang = typeof window !== "undefined" ? initialLang() : "fr";
-
-export function useLang(): Lang {
-  return useSyncExternalStore((l) => { listeners.add(l); return () => listeners.delete(l); }, () => lang, () => "fr");
-}
-export function setLang(v: Lang) {
-  lang = v;
-  try { localStorage.setItem(LANG_KEY, v); } catch { /* indispo */ }
-  document.documentElement.lang = v;
-  listeners.forEach((l) => l());
-}
+/* ───────── Langue (partagée avec les jeux : src/lib/i18n.ts) ───────── */
+export { LANGS, setLang, useLang } from "@/lib/i18n";
+export type { Lang } from "@/lib/i18n";
 
 /* ───────── Rappels de soirée (notifications locales) ───────── */
 const NOTIF_KEY = "zz-notif";
@@ -66,7 +40,7 @@ export async function setNotifications(on: boolean): Promise<boolean> {
       fr: ["C'est vendredi 🎉", "Soirée ce soir ? Lance un Zinzin avec ta bande.", "Samedi soir 🥳", "La Patate t'attend. Qui la tiendra au BOUM ?"],
       en: ["It's Friday 🎉", "Party tonight? Start a round of Zinzin with your crew.", "Saturday night 🥳", "The Potato is waiting. Who'll hold it at BOOM?"],
       es: ["¡Es viernes! 🎉", "¿Fiesta esta noche? Lanza un Zinzin con tu grupo.", "Sábado noche 🥳", "La Patata te espera. ¿Quién la tendrá en el BUM?"],
-    }[lang];
+    }[getLang()];
     await LocalNotifications.schedule({
       notifications: [
         {
@@ -100,17 +74,18 @@ export async function rateApp() {
   window.open(SHARE_URL, "_blank");
 }
 
-export async function shareApp(): Promise<boolean> {
-  const text = {
+/** Partage l'app ; `custom` remplace le texte par défaut (ex. classement de la Soirée Zinzin). */
+export async function shareApp(custom?: string): Promise<boolean> {
+  const text = custom ?? {
     fr: "Zinzin : les jeux de soirée sur un seul téléphone (L'Intrus, La Patate, Test de pureté…). Télécharge-le :",
     en: "Zinzin: party games on a single phone. Get it here:",
     es: "Zinzin: juegos de fiesta en un solo móvil. Descárgalo aquí:",
-  }[lang];
+  }[getLang()];
   const data = { title: "Zinzin", text, url: SHARE_URL };
   try {
     if (isNative()) {
       const { Share } = await import("@capacitor/share");
-      await Share.share({ ...data, dialogTitle: { fr: "Partager Zinzin", en: "Share Zinzin", es: "Compartir Zinzin" }[lang] });
+      await Share.share({ ...data, dialogTitle: { fr: "Partager Zinzin", en: "Share Zinzin", es: "Compartir Zinzin" }[getLang()] });
       return true;
     }
     if (navigator.share) { await navigator.share(data); return true; }
