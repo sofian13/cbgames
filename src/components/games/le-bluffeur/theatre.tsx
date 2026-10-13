@@ -31,6 +31,7 @@ export function TheatreScreen({
 /** Carte question : le trou « ___ » devient une ligne à remplir. */
 export function QuestionBillboard({ question, take }: { question: string | null; take?: string }) {
   const parts = (question ?? "").split(/_{2,}/);
+  const rest = parts.slice(1).join(" ");
   return (
     <div className="relative mt-6">
       <div
@@ -46,11 +47,15 @@ export function QuestionBillboard({ question, take }: { question: string | null;
         <h2 style={{ ...DISPLAY, fontSize: (question ?? "").length > 90 ? 24 : 28, lineHeight: 1.12 }}>
           {parts[0]}
           {parts.length > 1 && (
-            <span className="mx-1 inline-block align-baseline" style={{ minWidth: 86, borderBottom: `4px solid #FF3EA5`, color: "#FF3EA5" }}>
-              &nbsp;?&nbsp;
+            // Le trou et la ponctuation qui le suit restent collés (pas de « . » seul en début de ligne)
+            <span className="whitespace-nowrap">
+              <span className="inline-block text-center align-baseline" style={{ minWidth: 86, borderBottom: `4px solid #FF3EA5`, color: "#FF3EA5" }}>
+                ?
+              </span>
+              {rest.match(/^[.,!?;:…]+/)?.[0] ?? ""}
             </span>
           )}
-          {parts.slice(1).join(" ")}
+          {rest.replace(/^[.,!?;:…]+/, "")}
         </h2>
       </div>
     </div>

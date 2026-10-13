@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { Lightbulb, RefreshCw, Send, X } from "lucide-react";
 import { IDEAS_EMAIL } from "@/lib/legal/zinzin";
 import { playSfx } from "@/lib/sfx";
@@ -68,7 +69,8 @@ export function IdeaButton({ game, kind = "idée", bg = "#FFD23F", className = "
         <Lightbulb size={18} strokeWidth={3} aria-hidden />
         {!compact && <>Propose {poss(kind)}</>}
       </button>
-      {open && <IdeaSheet game={game} kind={kind} onClose={() => setOpen(false)} />}
+      {/* Portal sur <body> : la feuille passe au-dessus de tout (boutons collants, parents transformés…) */}
+      {open && typeof document !== "undefined" && createPortal(<IdeaSheet game={game} kind={kind} onClose={() => setOpen(false)} />, document.body)}
     </>
   );
 }
@@ -112,7 +114,7 @@ function IdeaSheet({ game, kind, onClose }: { game: string; kind: string; onClos
             <div className="pr-14 text-[28px] leading-[1.05]" style={{ fontFamily: "var(--font-display)", fontWeight: 700 }}>
               Propose {poss(kind)}
             </div>
-            <p className="mt-1.5 text-[15px] font-semibold" style={{ color: "#4A3A66" }}>
+            <p className="mt-1.5 pr-12 text-[15px] font-semibold" style={{ color: "#4A3A66" }}>
               Pour « {game} ». Les meilleures idées arrivent dans une prochaine mise à jour !
             </p>
             <textarea

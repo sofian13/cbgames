@@ -7,6 +7,7 @@ import "./app.css";
 import { App } from "./App";
 import { ErrorBoundary } from "./ui/ErrorBoundary";
 import { initPremium } from "./premium";
+import { installFrenchTypo } from "./ui/typo";
 
 // navigator.vibrate n'existe pas dans la webview iOS : on le branche sur Haptics
 // pour que toutes les vibrations des jeux marchent sur iPhone.
@@ -24,6 +25,8 @@ if (cap?.isNativePlatform?.()) {
 }
 
 initPremium();
+// Espaces insécables devant « ? ! : ; » partout (aucun « ? » orphelin en début de ligne)
+installFrenchTypo();
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

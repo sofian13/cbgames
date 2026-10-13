@@ -10,3 +10,7 @@
 html, body, #root { height: 100%; background: #0B0620; overscroll-behavior: none; }
 body { -webkit-tap-highlight-color: transparent; -webkit-user-select: none; user-select: none; }
 input, textarea { -webkit-user-select: text; user-select: text; }
+
+/* Typo : pas de mot seul sur la dernière ligne, titres équilibrés */
+p, li, dd, blockquote { text-wrap: pretty; }
+h1, h2, h3, h4, .zz-title, .cb-display-xl, .cb-display-lg, .cb-display-md { text-wrap: balance; }

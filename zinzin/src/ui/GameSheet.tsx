@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { ChevronDown, Lock, Play } from "lucide-react";
 import { CAST, getZGame, type ZGame, type ZLine } from "../catalog";
 import { ZBlob, ZPALETTE, type ZColor } from "./ZBlob";
@@ -22,6 +22,7 @@ export function GameSheet({
   const info = gameInfo(game);
   const c = ZPALETTE[game.color] ?? ZPALETTE.pink;
   const steps = (game.steps?.length ? game.steps : info.rules).slice(0, 5);
+  const longest = Math.max(...info.name.split(" ").map((w) => w.length));
   const moreRules = game.steps?.length ? info.rules : info.rules.slice(5);
 
   return (
@@ -30,7 +31,8 @@ export function GameSheet({
         <>
           <div className="zz-scroll min-h-0 flex-1">
             {/* En-tête plein, dans la couleur du jeu */}
-            <div className="relative px-6 pb-14 pt-5" style={{ background: c.body, color: c.ink, borderBottom: "3px solid var(--zz-ink)" }}>
+            {/* Hauteur mini : le blob (qui déborde en bas) ne remonte jamais sur un titre d'une ligne */}
+            <div className="relative px-6 pb-14 pt-5" style={{ minHeight: 236, background: c.body, color: c.ink, borderBottom: "3px solid var(--zz-ink)" }}>
               <div className="absolute left-1/2 top-2 h-1.5 w-10 -translate-x-1/2 rounded-full" style={{ background: "rgba(21,8,46,0.3)" }} />
               <div className="absolute right-4 top-4 z-[2]">
                 <CloseBtn onClick={close} />
@@ -41,8 +43,11 @@ export function GameSheet({
                 {game.free && !premium && <Tag bg="#fff" tilt={2}>Gratuit</Tag>}
                 {locked && <Tag bg="#FFD23F" tilt={-2}><Lock size={12} strokeWidth={3} className="mr-1" />Premium</Tag>}
               </div>
-              <h2 className="zz-title relative z-[1] mt-3 pr-[30%]" style={{ fontSize: info.name.length > 12 ? 44 : 54, lineHeight: 0.9, overflowWrap: "break-word" }}>
-                {info.name}
+              <h2 className="zz-title relative z-[1] mt-3 pr-[30%]" style={{ fontSize: `min(${info.name.length > 12 ? 44 : 54}px, ${(96 / longest).toFixed(1)}vw)`, lineHeight: 0.9 }}>
+                {/* Mots insécables : « Loup-Garou » ne se coupe pas au tiret */}
+                {info.name.split(" ").map((w, i) => (
+                  <Fragment key={i}>{i ? " " : ""}<span className="whitespace-nowrap">{w}</span></Fragment>
+                ))}
               </h2>
               <span
                 className="zz-stk-sm relative z-[1] mt-4 inline-flex h-9 items-center rounded-full px-3.5 text-[15px] font-bold"
@@ -57,7 +62,10 @@ export function GameSheet({
             </div>
 
             <div className="px-5 pb-8 pt-6">
-              {info.pitch && <p className="pr-24 text-[19px] font-bold leading-snug text-white">{info.pitch}</p>}
+              {info.pitch && (
+                // Commence sous le blob qui déborde de l'en-tête : jamais de texte caché dessous
+                <p className="mt-9 text-[19px] font-bold leading-snug text-white">{info.pitch}</p>
+              )}
 
               {/* Mini BD */}
               <h3 className="zz-title mt-8 text-white" style={{ fontSize: 28 }}>Ça donne quoi&nbsp;?</h3>

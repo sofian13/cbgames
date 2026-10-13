@@ -481,7 +481,7 @@ export default function PatateGame({ onReturnToLobby }: GameProps) {
             BOUM !
           </p>
           <p className="mt-2 text-center text-[16px] font-bold" style={{ color: INK }}>
-            {boom.reason === "shake" ? "Trop secouée : elle a explosé !" : `La mèche a tenu ${boom.secs.toFixed(1).replace(".", ",")} s`}
+            {boom.reason === "shake" ? "Trop secouée : elle a explosé !" : `La mèche a tenu ${boom.secs.toFixed(1).replace(".", ",")}\u00a0s`}
           </p>
           <div className="relative z-[1] mt-3 -mb-5">
             <Mascot size={92} color={colorForIndex(boom.loser)} mood="dead" shadow={false} />
@@ -565,8 +565,9 @@ export default function PatateGame({ onReturnToLobby }: GameProps) {
           <div key={r.i} className="zk-rise flex items-center gap-3 px-3 py-2" style={{ ...sticker(k === 0 && hasLoser ? C.yellow : C.cream, { radius: 18, shadow: 3 }), animationDelay: `${k * 0.06}s` }}>
             <span className="w-6 text-center text-[20px]" style={DISPLAY}>{k + 1}</span>
             <MascotAvatar color={colorForIndex(r.i)} size={34} mood={r.l > 0 ? "dead" : "happy"} border={false} />
-            <span className="min-w-0 flex-1 truncate text-[18px]" style={DISPLAY}>{r.name}</span>
-            <span className="text-[18px]" style={DISPLAY}>{r.l} boum{r.l > 1 ? "s" : ""}</span>
+            {/* Prénom long : passe à la ligne (au tiret) plutôt que d'être tronqué */}
+            <span className="min-w-0 flex-1 text-[18px] leading-tight" style={{ ...DISPLAY, overflowWrap: "anywhere" }}>{r.name}</span>
+            <span className="shrink-0 whitespace-nowrap text-[18px]" style={DISPLAY}>{r.l} boum{r.l > 1 ? "s" : ""}</span>
           </div>
         ))}
       </div>

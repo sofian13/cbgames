@@ -76,7 +76,7 @@ export function SettingsSheet({
               <div className="text-[14px] font-bold" style={{ opacity: 0.85 }}>{premium ? "Ton statut" : "Version gratuite"}</div>
               <div className="zz-title mt-1 text-[30px]">{premium ? "Zinzin Premium" : "3 jeux offerts"}</div>
               <p className="mt-1.5 text-[15px] font-semibold leading-snug" style={{ opacity: 0.88 }}>
-                {premium ? "Tout est débloqué. Les nouveaux jeux arrivent tout seuls." : "Le reste t'attend : tous les jeux, et du nouveau chaque mois."}
+                {premium ? "Tout est débloqué. Les nouveaux jeux arrivent tout seuls." : "Le reste t'attend : tous les jeux, et du nouveau chaque mois."}
               </p>
             </div>
             {!premium && (
@@ -118,16 +118,15 @@ export function SettingsSheet({
           )}
 
           {/* Liens légaux, discrets */}
-          <div className="mt-6 flex flex-wrap items-center justify-center text-[14px] font-semibold" style={{ color: "var(--zz-dim)" }}>
+          {/* Liens soulignés espacés, sans « · » qui resterait seul en fin de ligne sur petit écran */}
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-x-1 text-[14px] font-semibold" style={{ color: "var(--zz-dim)" }}>
             <button type="button" className="zz-tap min-h-11 px-2 underline decoration-2 underline-offset-4" onClick={() => onLegal("cgu")}>Conditions</button>
-            <span aria-hidden style={{ color: "var(--zz-mute)" }}>·</span>
             <button type="button" className="zz-tap min-h-11 px-2 underline decoration-2 underline-offset-4" onClick={() => onLegal("confidentialite")}>Confidentialité</button>
-            <span aria-hidden style={{ color: "var(--zz-mute)" }}>·</span>
             <button type="button" className="zz-tap min-h-11 px-2 underline decoration-2 underline-offset-4" onClick={() => onLegal("mentions")}>Mentions légales</button>
           </div>
           <EraseData />
           <p className="text-center text-[13px]" style={{ color: "var(--zz-mute)" }}>
-            Zinzin, version {APP_VERSION}. Fait avec amour et beaucoup de blobs.
+            Zinzin, version {APP_VERSION}. Fait avec amour et beaucoup de blobs.
           </p>
         </div>
       )}
@@ -228,8 +227,9 @@ export function GameScreen({ id, onExit }: { id: string; onExit: () => void }) {
         type="button"
         onClick={() => { haptic(); setConfirm(true); }}
         aria-label="Quitter la partie"
-        className="zz-press fixed left-2 grid h-11 w-11 place-items-center rounded-full"
-        style={{ top: "calc(var(--sat) + 6px)", zIndex: 60, background: "var(--zz-ink)", color: "#fff", border: "2.5px solid rgba(255,255,255,0.85)" }}
+        className="zz-press fixed left-3 grid h-11 w-11 place-items-center rounded-full"
+        // Même ligne et même marge que les boutons d'outils des jeux (GameTopRight : right-3, +10px)
+        style={{ top: "calc(var(--sat) + 10px)", zIndex: 60, background: "var(--zz-ink)", color: "#fff", border: "2.5px solid rgba(255,255,255,0.85)" }}
       >
         <X size={19} strokeWidth={2.6} />
       </button>

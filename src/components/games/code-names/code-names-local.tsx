@@ -938,7 +938,8 @@ function ClueSheet({
         style={{ fontSize: 17, background: "#fff", border: `2.5px solid ${INK}`, color: INK }}
       />
       <p className="mt-4 text-[15px] font-bold">Combien de mots&nbsp;?</p>
-      <div className="mt-2 flex flex-wrap gap-2">
+      {/* Les 7 choix sur une seule ligne (le « ∞ » ne part plus seul à la ligne) */}
+      <div className="mt-2 grid grid-cols-7 gap-1">
         {["1", "2", "3", "4", "5", "6", "∞"].map((n) => (
           <button
             key={n}
@@ -946,7 +947,7 @@ function ClueSheet({
             aria-label={`${n === "∞" ? "Illimité" : n} mot${n === "1" ? "" : "s"}`}
             aria-pressed={count === n}
             onClick={() => setCount(count === n ? "" : n)}
-            className="cn-push h-12 w-12 rounded-full text-[19px]"
+            className="cn-push aspect-square w-full max-w-12 justify-self-center rounded-full text-[19px]"
             style={{ ...stk(count === n ? t.main : "#fff", 3), color: count === n ? "#fff" : INK, ...DISPLAY, letterSpacing: 0 }}
           >
             {n}

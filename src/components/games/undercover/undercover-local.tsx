@@ -207,7 +207,7 @@ const FREE_PAIRS: [string, string][] = FREE_CAT_IDS
 // ═════════════════════════════════════════════════════════════
 const ROLE_COLOR: Record<Role, string> = { civil: "#3DDC97", undercover: "#FF3EA5", mrwhite: "#FFD23F", jester: "#C58CFF" };
 const ROLE_LABEL: Record<Role, string> = { civil: "Civil", undercover: "Intrus", mrwhite: "Fantôme", jester: "Bouffon" };
-const ROLE_ARTICLE: Record<Role, string> = { civil: "un Civil", undercover: "l'Intrus", mrwhite: "le Fantôme", jester: "le Bouffon" };
+const ROLE_ARTICLE: Record<Role, string> = { civil: "un civil", undercover: "l'Intrus", mrwhite: "le Fantôme", jester: "le Bouffon" };
 
 /** Taille du mot secret adaptée à sa longueur (le mot le plus long décide). */
 const wordFontSize = (word: string | null, max = 56) => {
@@ -797,10 +797,11 @@ function SetupRoles({
                 style={{
                   display: "flex", alignItems: "center", gap: 6, padding: "0 14px", minHeight: 44, borderRadius: 999,
                   fontSize: 15, fontWeight: 800, color: ZZ.ink,
-                  background: on ? (c.adult ? ZZ.pink : ZZ.yellow) : "rgba(255,255,255,0.55)",
+                  // Décoché : sticker blanc plein avec « + » (pas de gris translucide qui fait « désactivé »)
+                  background: on ? (c.adult ? ZZ.pink : ZZ.yellow) : "#fff",
                   border: `2.5px solid ${ZZ.ink}`, rotate: on ? `${i % 2 ? 1.5 : -1.5}deg` : undefined,
                 }}>
-                {on && <Check size={15} strokeWidth={3.2} aria-hidden />}{c.label}
+                {on ? <Check size={15} strokeWidth={3.2} aria-hidden /> : <Plus size={15} strokeWidth={3.2} aria-hidden />}{c.label}
               </button>
             );
           })}
@@ -823,7 +824,7 @@ function SetupRoles({
                 className="transition-[translate,box-shadow] shadow-[0_3px_0_#15082E] active:translate-y-[2px] active:shadow-[0_1px_0_#15082E]"
                 style={{
                   display: "flex", alignItems: "center", gap: 6, padding: "0 14px", minHeight: 44, borderRadius: 999,
-                  fontSize: 15, fontWeight: 800, color: ZZ.ink, background: "rgba(255,255,255,0.55)", border: `2.5px solid ${ZZ.ink}`,
+                  fontSize: 15, fontWeight: 800, color: ZZ.ink, background: "#fff", border: `2.5px solid ${ZZ.ink}`,
                 }}>
                 <Lock size={14} strokeWidth={3} aria-hidden /> {c.label}
               </button>
@@ -904,9 +905,11 @@ function RevealScreen({
           display: "flex", gap: 10, alignItems: "center", marginBottom: 14,
         }}>
           <Lock size={18} strokeWidth={2.8} aria-hidden />
-          <div style={{ fontSize: 15, fontWeight: 700 }}>
-            Personne d&apos;autre ne doit voir l&apos;écran. ({position}/{total})
+          <div style={{ fontSize: 15, fontWeight: 700, flex: 1, minWidth: 0 }}>
+            Personne d&apos;autre ne doit voir l&apos;écran.
           </div>
+          {/* Compteur à part : jamais seul sur une ligne */}
+          <span style={{ ...DISPLAY, fontSize: 17, whiteSpace: "nowrap", flexShrink: 0 }}>{position}/{total}</span>
         </div>
       )}
 
@@ -1076,8 +1079,8 @@ function ReviewPick({
             fontFamily: "inherit",
           }}>
             <Mascot color={colorByIdx(p.idx)} size={56} mood="neutral" bob={false} />
-            <div style={{ ...DISPLAY, fontSize: 20, lineHeight: 1 }}>{p.name}</div>
-            <div style={{ fontSize: 13, fontWeight: 700, color: "#6B5C88" }}>touche pour revoir</div>
+            <div style={{ ...DISPLAY, fontSize: p.name.length > 13 ? 15 : p.name.length > 10 ? 17 : 20, lineHeight: 1.05, overflowWrap: "anywhere" }}>{p.name}</div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: "#6B5C88" }}>Touche pour revoir</div>
           </button>
         ))}
       </div>
@@ -1104,7 +1107,7 @@ function GroupVoteScreen({
   return (
     <LocalShell tone="danger">
       <NavBar
-        sub={`Manche ${round} · vote du groupe`}
+        sub={`Manche ${round} · le vote`}
         title="Qui éliminer ?"
         onBack={onCancel}
         right={<Tag color="#FF3EA5">{alive.length} en vie</Tag>}
@@ -1127,9 +1130,9 @@ function GroupVoteScreen({
               <div style={{ display: "flex", justifyContent: "center", marginTop: 4 }}>
                 <Mascot color={colorByIdx(p.idx)} size={64} mood={isPicked ? "shocked" : "shifty"} arms bob={false} />
               </div>
-              <div style={{ ...DISPLAY, fontSize: 21, marginTop: 8, lineHeight: 1.05, overflowWrap: "anywhere" }}>{p.name}</div>
+              <div style={{ ...DISPLAY, fontSize: p.name.length > 13 ? 15 : p.name.length > 10 ? 17 : 21, marginTop: 8, lineHeight: 1.05, overflowWrap: "anywhere" }}>{p.name}</div>
               <div style={{ marginTop: 6, fontSize: 13, fontWeight: 800, color: isPicked ? ZZ.ink : "#6B5C88" }}>
-                {isPicked ? "Suspect choisi" : "touche pour choisir"}
+                {isPicked ? "Suspect choisi" : "Touche pour choisir"}
               </div>
             </button>
           );
@@ -1178,7 +1181,8 @@ function EliminateScreen({
                 <Stamp text="Éliminé" color={color} rotate={-12} size={20} />
               </div>
             </div>
-            <div style={{ ...DISPLAY, fontSize: "clamp(30px, 11vw, 46px)", marginTop: 14, textAlign: "center", overflowWrap: "anywhere" }}>{eliminated.name}</div>
+            {/* Prénom long : la taille baisse pour rester sur une ligne */}
+            <div style={{ ...DISPLAY, fontSize: `min(46px, 11vw, ${(120 / Math.max(1, eliminated.name.length)).toFixed(1)}vw)`, lineHeight: 1, marginTop: 14, textAlign: "center", overflowWrap: "anywhere" }}>{eliminated.name}</div>
           </div>
 
           <div style={{
@@ -1188,11 +1192,11 @@ function EliminateScreen({
           }}>
             <div style={{ fontSize: 15, fontWeight: 700 }}>C&apos;était…</div>
             <div style={{ ...DISPLAY, fontSize: 34, marginTop: 2 }}>{role ? ROLE_ARTICLE[role] : "—"}</div>
-            <div style={{ fontSize: 14, fontWeight: 600, marginTop: 4 }}>Son mot reste secret.</div>
+            <div style={{ fontSize: 14, fontWeight: 600, marginTop: 4 }}>{role === "mrwhite" ? "Il n'avait pas de mot." : "Son mot reste secret."}</div>
           </div>
         </>
       ) : (
-        <div style={{ textAlign: "center", padding: 60, color: "rgba(255,255,255,0.6)" }}>
+        <div style={{ textAlign: "center", padding: 60, color: "rgba(255,255,255,0.85)", fontWeight: 600 }}>
           Pas de majorité — personne ne sort cette manche.
         </div>
       )}
@@ -1220,7 +1224,7 @@ function MrWhiteGuess({ player, onSubmit }: { player: LocalPlayer; onSubmit: (g:
           <Mascot color={colorByIdx(player.idx)} size={68} mood="thinking" arms />
           <div>
             <div style={{ fontSize: 15, fontWeight: 700 }}>Fantôme éliminé</div>
-            <div style={{ ...DISPLAY, fontSize: 28, marginTop: 2 }}>{player.name}</div>
+            <div style={{ ...DISPLAY, fontSize: player.name.length > 12 ? 21 : 28, marginTop: 2, lineHeight: 1.05, overflowWrap: "anywhere" }}>{player.name}</div>
           </div>
         </div>
         <div style={{ marginTop: 14, fontSize: 15, fontWeight: 600, lineHeight: 1.4 }}>
@@ -1350,7 +1354,7 @@ function GameOverScreen({
       </div>
 
       <div style={{ marginTop: "auto" }}>
-        <Btn tone="gold" onClick={onReplay} icon={<RotateCcw size={20} strokeWidth={2.8} aria-hidden />}>Revanche, nouveau mot</Btn>
+        <Btn tone="gold" onClick={onReplay} icon={<RotateCcw size={20} strokeWidth={2.8} aria-hidden />} sub="Nouveau mot, même bande">Revanche !</Btn>
         <div style={{ display: "flex", justifyContent: "center", marginTop: 16 }}><IdeaButton game="L'Intrus" kind="mot" bg="#fff" /></div>
         {onLobby && <button type="button" onClick={onLobby} className="mx-auto mt-2 flex min-h-11 items-center px-4 text-[15px] font-bold underline decoration-2 underline-offset-4" style={{ color: "rgba(255,255,255,0.9)" }}>Retour à l&apos;accueil</button>}
       </div>
@@ -1405,7 +1409,7 @@ function NavBar({ sub, title, right, onBack }: { sub?: string; title?: string; r
     <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 18, paddingRight: isOfflineApp() ? 0 : 52 }}>
       {onBack && <GameIconButton icon={ArrowLeft} label="Retour" onClick={onBack} />}
       <div style={{ flex: 1, minWidth: 0 }}>
-        {sub && <div style={{ fontSize: 15, color: "rgba(255,255,255,0.85)", fontWeight: 700 }}>{sub}</div>}
+        {sub && <div style={{ fontSize: 15, color: "rgba(255,255,255,0.85)", fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{sub}</div>}
         {title && <div style={{ ...DISPLAY, fontSize: 34, color: "white", marginTop: 2, lineHeight: 0.98 }}>{title}</div>}
       </div>
       {right}
@@ -1424,7 +1428,7 @@ function Btn({ children, tone = "primary", disabled = false, onClick, full = tru
       {icon && <span style={{ display: "flex" }}>{icon}</span>}
       <span style={{ display: "flex", flexDirection: "column", alignItems: sub ? "flex-start" : "center" }}>
         <span>{children}</span>
-        {sub && <span style={{ fontFamily: "var(--font-body, 'DM Sans'), system-ui", fontSize: 13, fontWeight: 700, letterSpacing: 0, marginTop: 1 }}>{sub}</span>}
+        {sub && <span style={{ fontFamily: "var(--font-body, 'DM Sans'), system-ui", fontSize: 13, fontWeight: 700, letterSpacing: 0, wordSpacing: "normal", marginTop: 1 }}>{sub}</span>}
       </span>
     </ZButton>
   );
@@ -1493,7 +1497,7 @@ function Row({ label, hint, children }: { label: string; hint?: string; children
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, padding: "10px 0", borderTop: "2px dashed rgba(255,255,255,0.3)" }}>
       <div style={{ minWidth: 0 }}>
         <div style={{ ...DISPLAY, fontSize: 19, color: "white" }}>{label}</div>
-        {hint && <div style={{ fontSize: 13, color: "rgba(255,255,255,0.9)", marginTop: 2, fontWeight: 600 }}>{hint}</div>}
+        {hint && <div style={{ fontSize: 13, color: "rgba(255,255,255,0.9)", marginTop: 2, fontWeight: 600, textWrap: "pretty" }}>{hint}</div>}
       </div>
       {children}
     </div>
@@ -1505,7 +1509,8 @@ function Stepper({ value, min, max, onChange, disabled }: { value: number; min: 
     <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
       <GameIconButton icon={Minus} label="Un de moins" bg="#fff" disabled={disabled || value <= min} onClick={() => onChange(value - 1)} />
       <span style={{ width: 24, textAlign: "center", ...DISPLAY, fontSize: 24 }}>{value}</span>
-      <GameIconButton icon={Plus} label="Un de plus" bg={ZZ.yellow} disabled={disabled || value >= max} onClick={() => onChange(value + 1)} />
+      {/* Désactivé : blanc (le jaune à 50 % vire au marron sur le violet) */}
+      <GameIconButton icon={Plus} label="Un de plus" bg={disabled || value >= max ? "#fff" : ZZ.yellow} disabled={disabled || value >= max} onClick={() => onChange(value + 1)} />
     </div>
   );
 }

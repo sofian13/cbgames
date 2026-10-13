@@ -19,6 +19,8 @@ export interface ZGame {
   /** Nouveau dans l'app */
   isNew?: boolean;
   players: string;
+  /** Accroche courte des cartes de l'accueil (2 lignes max) ; sinon le pitch */
+  tagline?: string;
   /** Déguisement du blob (reconnaître le jeu au premier coup d'œil) */
   costume?: ZCostume;
   load: () => Promise<{ default: ComponentType<GameProps> }>;
@@ -54,7 +56,7 @@ export interface ZSection {
 }
 
 export const GAMES: ZGame[] = [
-  { id: "undercover", costume: "groucho", color: "pink", mood: "sus", free: true, players: "3-12",
+  { id: "undercover", tagline: "Un mot secret. Un intrus parmi vous.", costume: "groucho", color: "pink", mood: "sus", free: true, players: "3-12",
     story: [
       { who: "Léa", text: "Mon indice : italien." },
       { who: "Malik", text: "Fromage qui file !" },
@@ -68,7 +70,7 @@ export const GAMES: ZGame[] = [
       "Les civils gagnent s'ils sortent tous les intrus",
     ],
     load: () => import("@/components/games/undercover/undercover-game") },
-  { id: "top-ten", costume: "ten", color: "coral", mood: "laughing", free: true, players: "2-10",
+  { id: "top-ten", tagline: "Un thème, un chiffre secret de 1 à 10.", costume: "ten", color: "coral", mood: "laughing", free: true, players: "2-10",
     story: [
       { text: "Thème : une excuse pour rater un date" },
       { who: "Tom", text: "J'ai le 2… « j'ai un peu mal à la tête »." },
@@ -82,7 +84,7 @@ export const GAMES: ZGame[] = [
       "Plus le classement est juste, plus vous marquez",
     ],
     load: () => import("@/components/games/top-ten/top-ten-game") },
-  { id: "tu-prefere", costume: "split", color: "sky", mood: "thinking", free: true, players: "2+",
+  { id: "tu-prefere", tagline: "Des dilemmes impossibles. On vote, on débat.", costume: "split", color: "sky", mood: "thinking", free: true, players: "2+",
     story: [
       { text: "Tu préfères ne plus jamais manger de fromage… ou ne plus jamais boire de café ?" },
       { who: "Léa", text: "Le café, sans hésiter." },
@@ -96,7 +98,7 @@ export const GAMES: ZGame[] = [
       "Débattez… puis question suivante",
     ],
     load: () => import("@/components/games/tu-prefere/tu-prefere-game") },
-  { id: "patate", costume: "potato", color: "yellow", mood: "shocked", isNew: true, players: "3-10",
+  { id: "patate", tagline: "Passe le tél avant le BOUM !", costume: "potato", color: "yellow", mood: "shocked", isNew: true, players: "3-10",
     story: [
       { text: "Catégorie : un truc dans une salle de bain" },
       { who: "Léa", text: "Brosse à dents !" },
@@ -124,7 +126,7 @@ export const GAMES: ZGame[] = [
         "Le perdant fait un gage (ou 1 à 3 gorgées, eau acceptée) et lance la manche suivante",
       ],
     } },
-  { id: "purete", costume: "angeldevil", color: "lavender", mood: "wink", isNew: true, players: "1-12",
+  { id: "purete", tagline: "Ange ou démon ? Le tél tranche.", costume: "angeldevil", color: "lavender", mood: "wink", isNew: true, players: "1-12",
     story: [
       { text: "As-tu déjà écrit à ton ex en pleine nuit ?" },
       { who: "Léa", text: "Jamais. Je suis une sainte." },
@@ -133,7 +135,7 @@ export const GAMES: ZGame[] = [
     ],
     steps: [
       "Une question « As-tu déjà… ? » à la fois",
-      "Oui = tu perds de la pureté, Jamais = tu restes un ange",
+      "« Oui » = tu perds de la pureté, « Jamais » = tu restes un ange",
       "Réponds en secret (on se passe le tél) ou main levée, tous ensemble",
       "Score final en % de pureté, de l'ange au démon certifié",
     ],
@@ -143,7 +145,7 @@ export const GAMES: ZGame[] = [
       pitch: "« As-tu déjà… ? » : plus tu dis oui, moins tu es pur. Qui est l'ange de la table, et qui est le démon ?",
       example: "« As-tu déjà écrit à ton ex en pleine nuit ? » Léa tape « Jamais » en secret, Tom tape « Oui »… À la fin, le compteur de Tom dégringole jusqu'à 12 % : « Casier bien rempli », cornes sur la tête. Et l'appli balance : « 3 personnes sur 4 ont déjà dormi dans une voiture après une soirée ».",
       rules: [
-        "Une question « As-tu déjà… ? » à la fois : Oui = tu perds de la pureté, Jamais = tu restes un ange",
+        "Une question « As-tu déjà… ? » à la fois. « Oui » = tu perds de la pureté, « Jamais » = tu restes un ange",
         "Chacun son tour : on se passe le tél et chacun répond en secret, puis grande révélation du classement",
         "Solo : réponds seul et découvre ton score… et tes aveux",
         "Tous ensemble : on lit à voix haute, ceux qui l'ont fait lèvent la main, on compte sur l'écran",
@@ -151,7 +153,7 @@ export const GAMES: ZGame[] = [
         "Option peines : le moins pur prend un gage ou 1 à 3 gorgées de zinzin. Pack Coquin 18+ facultatif",
       ],
     } },
-  { id: "lache-pas", costume: "fuse", color: "coral", mood: "sus", isNew: true, players: "2-10",
+  { id: "lache-pas", tagline: "Un doigt sur l'écran. Tiens bon !", costume: "fuse", color: "coral", mood: "sus", isNew: true, players: "2-10",
     story: [
       { text: "4 doigts sur l'écran. La bombe s'arme…" },
       { who: "Tom", text: "J'ai entendu un clic, je lâche !" },
@@ -178,7 +180,7 @@ export const GAMES: ZGame[] = [
         "Le dernier à lâcher avant le boum gagne la couronne 👑 et choisit qui fait un gage",
       ],
     } },
-  { id: "pile-poil", costume: "stopwatch", color: "mint", mood: "mindblown", players: "2-10",
+  { id: "pile-poil", tagline: "Compte dans ta tête, stoppe pile.", costume: "stopwatch", color: "mint", mood: "mindblown", players: "2-10",
     story: [
       { text: "Cible : 7 secondes. GO !" },
       { who: "Hugo", text: "…5, 6, 7. STOP !" },
@@ -193,7 +195,7 @@ export const GAMES: ZGame[] = [
       "Le plus loin prend une peine. À 0,15 s près : PILE POIL !",
     ],
     load: () => import("@/components/games/pile-poil/pile-poil-game") },
-  { id: "loup-garou", costume: "wolf", color: "purple", mood: "shifty", isNew: true, players: "5-16",
+  { id: "loup-garou", tagline: "Le grand classique, sans meneur.", costume: "wolf", color: "purple", mood: "shifty", isNew: true, players: "5-16",
     story: [
       { text: "La nuit tombe. Les loups ouvrent les yeux…" },
       { who: "Hugo", text: "Je suis mort ?! J'étais la Voyante !" },
@@ -221,7 +223,7 @@ export const GAMES: ZGame[] = [
         "Le village gagne s'il élimine tous les loups · les loups gagnent dès qu'ils sont aussi nombreux que les villageois",
       ],
     } },
-  { id: "le-bluffeur", costume: "pinocchio", color: "yellow", mood: "wink", players: "2-8",
+  { id: "le-bluffeur", tagline: "Invente la fausse réponse parfaite.", costume: "pinocchio", color: "yellow", mood: "wink", players: "2-8",
     story: [
       { text: "Quel est le métier le plus bizarre qui existe ?" },
       { who: "Tom", text: "Testeur de toboggans. Crédible, non ?" },
@@ -235,21 +237,21 @@ export const GAMES: ZGame[] = [
       "Trouver la vérité ou piéger les autres rapporte des points",
     ],
     load: () => import("@/components/games/le-bluffeur/le-bluffeur-game") },
-  { id: "longueur-onde", costume: "antenna", color: "lavender", mood: "mindblown", players: "2-10",
+  { id: "longueur-onde", tagline: "Froid ↔ chaud : un indice, visez juste.", costume: "antenna", color: "lavender", mood: "mindblown", players: "2-8",
     story: [
-      { text: "Échelle : ringard ↔ stylé. La cible est presque tout à droite." },
-      { who: "Malik", text: "Des lunettes de soleil… la nuit." },
-      { who: "Inès", text: "Stylé ?! Non mais c'est ringard !" },
-      { text: "Curseur à deux crans de la cible : 4 points." },
+      { text: "Échelle : froid ↔ chaud. Seule Léa voit la cible : tout à gauche." },
+      { who: "Léa", text: "La banquise !" },
+      { who: "Malik", text: "Facile, on met le curseur tout à gauche !" },
+      { text: "Pile dans la cible : +4 pour Léa." },
     ],
     steps: [
-      "Le Médium voit une cible cachée sur une échelle",
-      "Il donne un indice pour la situer",
-      "Les autres placent le curseur",
-      "Plus vous êtes près, plus vous marquez",
+      "Le Médium voit en secret où est la cible sur l'échelle (froid ↔ chaud…)",
+      "Il dit à voix haute UN truc qui se place là",
+      "Les autres placent le curseur au doigt",
+      "Pile dedans : +4, tout près : 3, pas loin : 2",
     ],
     load: () => import("@/components/games/longueur-onde/longueur-onde-game") },
-  { id: "make-guess", costume: "mime", color: "mint", mood: "laughing", players: "4+",
+  { id: "make-guess", tagline: "Fais deviner le mot sans le dire.", costume: "mime", color: "mint", mood: "laughing", players: "4+",
     story: [
       { text: "Le mot est « girafe »." },
       { who: "Léa", text: "Animal, très grand cou, Afrique !" },
@@ -263,7 +265,7 @@ export const GAMES: ZGame[] = [
       "L'équipe qui trouve le plus de mots gagne",
     ],
     load: () => import("@/components/games/make-guess/make-guess-game") },
-  { id: "guess-word", costume: "card", color: "sky", mood: "shocked", players: "2+",
+  { id: "guess-word", tagline: "Le tél sur le front, devine le mot.", costume: "card", color: "sky", mood: "shocked", players: "2+",
     story: [
       { text: "Le tél est sur le front d'Inès. Le mot : « girafe »." },
       { who: "Tom", text: "C'est un animal !" },
@@ -277,7 +279,7 @@ export const GAMES: ZGame[] = [
       "Le plus de mots dans le temps gagne",
     ],
     load: () => import("@/components/games/guess-word/guess-word-game") },
-  { id: "category-chrono", costume: "hourglass", color: "coral", mood: "shocked", players: "2+",
+  { id: "category-chrono", tagline: "Une catégorie, un chrono qui fond.", costume: "hourglass", color: "coral", mood: "shocked", players: "2+",
     story: [
       { text: "Catégorie : un fruit" },
       { who: "Léa", text: "Pomme !" },
@@ -292,7 +294,7 @@ export const GAMES: ZGame[] = [
       "Tu bloques ? Une vie en moins. Le dernier debout gagne",
     ],
     load: () => import("@/components/games/category-chrono/category-chrono-game") },
-  { id: "code-names", costume: "spy", color: "sky", mood: "thinking", isNew: true, players: "4+",
+  { id: "code-names", tagline: "Deux équipes, un seul mot-indice.", costume: "spy", color: "sky", mood: "thinking", isNew: true, players: "4+",
     story: [
       { who: "Inès", text: "Espace, 2." },
       { who: "Malik", text: "Lune, c'est sûr." },
@@ -319,7 +321,7 @@ export const GAMES: ZGame[] = [
         "La Bombe = défaite immédiate. Première équipe à trouver tous ses mots gagne !",
       ],
     } },
-  { id: "pensez-pareil", costume: "duo", color: "pink", mood: "love", players: "2",
+  { id: "pensez-pareil", tagline: "À deux, trouvez la même réponse.", costume: "duo", color: "pink", mood: "love", players: "2",
     story: [
       { text: "Thème : un plat pour un dimanche soir" },
       { who: "Léa", text: "J'écris… pâtes." },
@@ -333,7 +335,7 @@ export const GAMES: ZGame[] = [
       "Enchaînez les syncs pour faire grimper le combo",
     ],
     load: () => import("@/components/games/pensez-pareil/pensez-pareil-game") },
-  { id: "couple-quiz", costume: "hearts", color: "pink", mood: "kiss", players: "2",
+  { id: "couple-quiz", tagline: "Devine ce que l'autre a répondu.", costume: "hearts", color: "pink", mood: "kiss", players: "2",
     story: [
       { text: "Plutôt plage ou montagne ?" },
       { who: "Léa", text: "(en secret) Montagne." },
@@ -347,7 +349,7 @@ export const GAMES: ZGame[] = [
       "À la fin : votre taux de complicité",
     ],
     load: () => import("@/components/games/couple-quiz/couple-quiz-game") },
-  { id: "picolette", costume: "beer", color: "yellow", mood: "rofl", adult: true, players: "2-10",
+  { id: "picolette", tagline: "Le tél lit la carte, le groupe joue.", costume: "beer", color: "yellow", mood: "rofl", adult: true, players: "2-10",
     story: [
       { text: "Votez : qui finirait en garde à vue en premier ?" },
       { who: "Léa", text: "Max. Évidemment Max." },
@@ -362,7 +364,7 @@ export const GAMES: ZGame[] = [
       "Une gorgée de zinzin, c'est de ce que tu veux : eau et soft comptent, personne n'est obligé",
     ],
     load: () => import("@/components/games/picolette/picolette-game") },
-  { id: "tgv", costume: "train", color: "purple", mood: "rofl", adult: true, players: "2-8",
+  { id: "tgv", tagline: "Plus ou moins ? Enchaîne les wagons.", costume: "train", color: "purple", mood: "rofl", adult: true, players: "2-8",
     story: [
       { text: "Carte posée : un 8." },
       { who: "Hugo", text: "Plus !" },
@@ -414,7 +416,7 @@ export interface ZFeatured {
 }
 
 export const FEATURED: ZFeatured[] = [
-  { id: "hero", kicker: "Ce soir", title: "On joue à quoi ce soir ?", subtitle: "Un seul téléphone, tout le monde joue.",
+  { id: "hero", kicker: "Ce soir", title: "On joue à quoi ce soir ?", subtitle: "Un seul téléphone, tout le monde joue.",
     bg: "linear-gradient(135deg,#7A4EE8 0%,#B743D8 55%,#FF3EA5 100%)", ink: "#fff",
     blob: "yellow", mood: "laughing", buddy: { color: "mint", mood: "shocked" } },
   { id: "purete", gameId: "purete", kicker: "Tout nouveau", title: "Test de pureté", subtitle: "Ange ou démon ? Le tél tranche.",

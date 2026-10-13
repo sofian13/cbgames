@@ -9,10 +9,10 @@ import { Mascot } from "@/components/Mascot";
 import { ConfettiBurst } from "@/components/ConfettiBurst";
 import {
   ModeSelect, PlayersSetup, PassScreen, colorForIndex, type GameMode,
-  DISPLAY, ZButton, ZCard, ZChip, ZChoice, ZLink, ZRanking, ZScreen, ZTitle, useScrollTopOn,
+  DISPLAY, SoundButton, ZButton, ZCard, ZChip, ZChoice, ZLink, ZRanking, ZScreen, ZTitle, useScrollTopOn,
 } from "@/components/games/local-kit";
 import { ArrowDown, ArrowLeft, ArrowUp, Check, Eye, Flame, GripVertical, RefreshCw, Timer, Trophy, type LucideIcon } from "lucide-react";
-import { GameIconBadge, GameIconButton, GameInlineIcon, GAME_INK } from "@/components/games/game-icon-button";
+import { GameIconBadge, GameIconButton, GameInlineIcon, GameTopRight, GAME_INK } from "@/components/games/game-icon-button";
 import { IdeaButton, RerollButton } from "@/components/games/idea-button";
 import { playCombo, playSfx, preloadSfx, type SfxName } from "@/lib/sfx";
 
@@ -75,8 +75,8 @@ function shuffle<T>(arr: T[]): T[] {
 // ── Thèmes 18+ (mode local) ───────────────────────────────
 const LOCAL_THEMES: ThemeState[] = [
   { theme: "Un endroit où tu ferais l'amour", low: "Dans ton lit, tranquille", high: "En public, avec le risque de se faire prendre" },
-  { theme: "Un message coquin à envoyer à ton crush", low: "« Tu me manques... »", high: "Un truc carrément explicite" },
-  { theme: "Une tenue pour une soirée", low: "Jean - t-shirt classique", high: "Quasi rien, tout est suggéré" },
+  { theme: "Un message coquin à envoyer à ton crush", low: "« Tu me manques… »", high: "Un truc carrément explicite" },
+  { theme: "Une tenue pour une soirée", low: "Jean, t-shirt classique", high: "Quasi rien, tout est suggéré" },
   { theme: "Un fantasme à avouer à voix haute", low: "Un câlin sous la couette", high: "Le truc que t'oserais jamais dire normalement" },
   { theme: "Ton niveau de dignité un samedi à 4h du mat", low: "Impeccable, je rentre en taxi", high: "Je fais des câlins aux videurs" },
   { theme: "Un truc qui t'excite", low: "Un regard appuyé", high: "Quelque chose de carrément chaud" },
@@ -164,7 +164,7 @@ const CULTURE_THEMES: ThemeState[] = [
   { theme: "Une marque de voiture, du low-cost au luxe", low: "Une Dacia", high: "Une Ferrari" },
   { theme: "Un animal, du plus inoffensif au plus dangereux", low: "Un lapin", high: "Un grand requin blanc" },
   { theme: "Un fast-food, du pire au meilleur", low: "Le pire endroit", high: "Ton resto préféré" },
-  { theme: "Un réseau social, par temps perdu dessus", low: "LinkedIn", high: "TikTok" },
+  { theme: "Un réseau social, par temps perdu dessus", low: "Le réseau pro", high: "L'appli de vidéos courtes" },
   { theme: "Une matière à l'école, de la plus cool à la plus chiante", low: "La plus cool", high: "La plus soûlante" },
   { theme: "Un métier, par salaire", low: "Stagiaire non payé", high: "PDG du CAC 40" },
   { theme: "Une console de jeu, par puissance", low: "Une vieille Game Boy", high: "Une PS5 / PC de gamer" },
@@ -175,7 +175,7 @@ const CULTURE_THEMES: ThemeState[] = [
   { theme: "Un perso de Disney, du plus gentil au plus méchant", low: "Le gentil tout mignon", high: "Le grand méchant" },
   { theme: "Un moyen de transport, du plus lent au plus rapide", low: "Une trottinette", high: "Un avion de chasse" },
   { theme: "Un méchant de film ou d'anime, du soft au terrifiant", low: "Un sbire de base", high: "Le boss final ultime" },
-  { theme: "Un téléphone, du plus pourri au plus haut de gamme", low: "Un vieux Nokia 3310", high: "Le dernier iPhone" },
+  { theme: "Un téléphone, du plus pourri au plus haut de gamme", low: "Un vieux téléphone à clapet", high: "Le dernier smartphone à 1 500 €" },
   { theme: "Une soirée, du flop au légendaire", low: "Seul devant la TV", high: "La soirée dont on parle encore" },
 ];
 
@@ -323,9 +323,10 @@ function TopTenLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) {
   }
   if (phase === "pass-number") {
     const idx = passOrder[stepIdx];
-    return <PassScreen toName={players[idx]} colorIndex={idx} accent={TT_COLOR}
-      hint={`Toi seul : tu vas voir ton numéro secret (1 = ${SCALE[pack].low.toLowerCase()}, ${numberRange} = ${SCALE[pack].high.toLowerCase()}).`}
-      onReady={() => { playSfx("card-flip", { volume: 0.8 }); setPhase("show-number"); }} />;
+    // Bouton son présent aussi sur les écrans « passe le tél » (comme partout dans le jeu)
+    return <><PassScreen toName={players[idx]} colorIndex={idx} accent={TT_COLOR}
+      hint={`Toi seul : tu vas voir ton numéro secret, de 1\u00A0(${SCALE[pack].low.toLowerCase()}) à ${numberRange}\u00A0(${SCALE[pack].high.toLowerCase()}).`}
+      onReady={() => { playSfx("card-flip", { volume: 0.8 }); setPhase("show-number"); }} /><GameTopRight><SoundButton /></GameTopRight></>;
   }
   if (phase === "show-number") {
     const idx = passOrder[stepIdx];
@@ -359,8 +360,8 @@ function TopTenLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) {
   }
   if (phase === "pass-rank") {
     const idx = passOrder[stepIdx];
-    return <PassScreen toName={players[idx]} colorIndex={idx} accent={TT_COLOR}
-      buttonLabel="C'est moi, je classe" hint={`Personne ne regarde ! Classe toute la table (toi compris) du ${SCALE[pack].lowFull} au ${SCALE[pack].highFull}.`} onReady={() => setPhase("rank")} />;
+    return <><PassScreen toName={players[idx]} colorIndex={idx} accent={TT_COLOR}
+      buttonLabel="C'est moi, je classe" hint={`Personne ne regarde ! Classe toute la table (toi compris) du ${SCALE[pack].lowFull} au ${SCALE[pack].highFull}.`} onReady={() => setPhase("rank")} /><GameTopRight><SoundButton /></GameTopRight></>;
   }
   if (phase === "rank") {
     const ranker = passOrder[stepIdx];
@@ -435,7 +436,7 @@ function TopTenLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) {
   return (
     <ZScreen bg={TT_COLOR}>
       <ConfettiBurst count={50} />
-      <ZTitle size={40} className="text-center">{ranking[0]?.name} a le meilleur flair</ZTitle>
+      <ZTitle size={(ranking[0]?.name.length ?? 0) > 10 ? 32 : 40} className="text-center">{ranking[0]?.name} a le meilleur flair</ZTitle>
       <div className="mt-6"><ZRanking rows={ranking} /></div>
       <div className="min-h-8 flex-1" />
       <ZButton bg="#FFD23F" onClick={() => { setPhase("target"); }}>Rejouer</ZButton>

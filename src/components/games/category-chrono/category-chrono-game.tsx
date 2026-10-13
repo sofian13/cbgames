@@ -2,12 +2,12 @@
 
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type CSSProperties, type ReactNode } from "react";
 import type { GameProps } from "@/lib/games/types";
-import { PlayersSetup, colorForIndex } from "@/components/games/local-kit";
+import { PlayersSetup, colorForIndex, useScrollTopOn } from "@/components/games/local-kit";
 import { Mascot, MascotAvatar, MASCOT_PALETTE } from "@/components/Mascot";
 import { ConfettiBurst } from "@/components/ConfettiBurst";
 import { isSfxMuted, playCombo, playSfx, preloadSfx, setSfxMuted, subscribeSfxMuted } from "@/lib/sfx";
 import { PACKS, type Category } from "./categories";
-import { ArrowLeft, Check, Heart, RotateCcw, Skull, Volume2, VolumeX, X } from "lucide-react";
+import { ArrowLeft, BookOpen, Check, Clapperboard, Flame, Heart, PartyPopper, RotateCcw, Skull, Volume2, VolumeX, X, type LucideIcon } from "lucide-react";
 import { GameIconButton, GameInlineIcon, GameTopRight } from "@/components/games/game-icon-button";
 import { IdeaButton, RerollButton } from "@/components/games/idea-button";
 
@@ -24,6 +24,9 @@ const BOTTOM_SAFE = "calc(env(safe-area-inset-bottom, 0px) + 20px)";
 const DOTS = "radial-gradient(rgba(255,255,255,0.06) 1.4px, transparent 1.6px)";
 const MIN_TIME = 3;
 const DISPLAY: CSSProperties = { fontFamily: "var(--font-display), system-ui, sans-serif", fontWeight: 700, letterSpacing: "-0.03em", wordSpacing: "0.12em" };
+
+/** Icône de chaque pack (pas d'emoji en visuel d'interface) */
+const PACK_ICON: Record<string, LucideIcon> = { classique: BookOpen, soiree: PartyPopper, culture: Clapperboard, coquin: Flame };
 
 interface P {
   name: string;
@@ -64,6 +67,8 @@ export default function CategoryChronoGame({ onReturnToLobby }: GameProps) {
   const muted = useSfxMuted();
 
   const [phase, setPhase] = useState<Phase>("setup");
+  // Chaque écran repart du haut (sinon la catégorie s'ouvre défilée si on a scrollé les réglages)
+  useScrollTopOn(phase);
   const [names, setNames] = useState<string[]>([]);
   const [packs, setPacks] = useState<string[]>(() => PACKS.filter((p) => p.defaultOn).map((p) => p.id));
   const [timerBase, setTimerBase] = useState(10);
@@ -251,10 +256,10 @@ export default function CategoryChronoGame({ onReturnToLobby }: GameProps) {
                   style={{ ...sticker(bg), color: on ? INK : "#fff", minHeight: 60, transform: `rotate(${i % 2 ? 1 : -1}deg)` }}
                   aria-pressed={on}
                 >
-                  <span className="text-[18px]" aria-hidden>{p.emoji}</span>
+                  {(() => { const Icon = PACK_ICON[p.id] ?? BookOpen; return <Icon size={20} strokeWidth={2.6} className="shrink-0" aria-hidden />; })()}
                   <span className="min-w-0 flex-1 text-[14.5px] font-bold leading-tight">
                     {p.name}
-                    {p.adult && <span className="block text-[13px] font-semibold" style={{ opacity: 0.8 }}>18+, coquin</span>}
+                    {p.adult && <span className="block text-[13px] font-semibold" style={{ opacity: 0.8 }}>18+</span>}
                   </span>
                   <span
                     className="grid h-6 w-6 shrink-0 place-items-center rounded-full"
@@ -376,7 +381,7 @@ export default function CategoryChronoGame({ onReturnToLobby }: GameProps) {
             </div>
             <h2
               className="max-w-full rounded-[22px] px-6 pb-2 pt-6"
-              style={{ ...DISPLAY, ...sticker(MASCOT_PALETTE[col].body, 5), color: inkOn(MASCOT_PALETTE[col].body), fontSize: "clamp(36px, 11vw, 54px)", lineHeight: 1, transform: "rotate(2deg)", overflowWrap: "anywhere" }}
+              style={{ ...DISPLAY, ...sticker(MASCOT_PALETTE[col].body, 5), color: inkOn(MASCOT_PALETTE[col].body), fontSize: nameSize(players[cur]?.name ?? "", 54), lineHeight: 1, transform: "rotate(2deg)", overflowWrap: "anywhere" }}
             >
               {players[cur]?.name}
             </h2>
@@ -410,7 +415,7 @@ export default function CategoryChronoGame({ onReturnToLobby }: GameProps) {
             <Mascot size={120} color={col} mood={out ? "dead" : "sad"} arms shadow={false} />
           </div>
           <div className="rounded-[24px] px-6 pb-4 pt-7 text-center" style={{ ...sticker(MASCOT_PALETTE[col].body, 6), color: inkOn(MASCOT_PALETTE[col].body), transform: "rotate(-2deg)", maxWidth: "100%" }}>
-            <h2 style={{ ...DISPLAY, fontSize: "clamp(34px, 10vw, 50px)", lineHeight: 1, overflowWrap: "anywhere" }}>{p.name}</h2>
+            <h2 style={{ ...DISPLAY, fontSize: nameSize(p.name, 50), lineHeight: 1, overflowWrap: "anywhere" }}>{p.name}</h2>
           </div>
           <p className="mt-5 text-center" style={{ ...DISPLAY, fontSize: 28, lineHeight: 1.05, color: out ? "#FF8A7E" : "#fff" }}>
             {out ? "est éliminé·e !" : "perd une vie !"}
@@ -443,7 +448,7 @@ export default function CategoryChronoGame({ onReturnToLobby }: GameProps) {
           <Mascot size={118} color={wcol} mood="cool" arms crown cheering shadow={false} />
         </div>
         <div className="rounded-[26px] px-7 pb-4 pt-7 text-center" style={{ ...sticker(MASCOT_PALETTE[wcol].body, 6), color: inkOn(MASCOT_PALETTE[wcol].body), transform: "rotate(-2deg)", maxWidth: "100%" }}>
-          <h2 style={{ ...DISPLAY, fontSize: "clamp(38px, 12vw, 58px)", lineHeight: 1, overflowWrap: "anywhere" }}>{winner?.name ?? "Personne"}</h2>
+          <h2 style={{ ...DISPLAY, fontSize: nameSize(winner?.name ?? "Personne", 58), lineHeight: 1, overflowWrap: "anywhere" }}>{winner?.name ?? "Personne"}</h2>
         </div>
 
         <SectionTitle>Le classement</SectionTitle>
@@ -489,6 +494,11 @@ export default function CategoryChronoGame({ onReturnToLobby }: GameProps) {
 }
 
 // ── Briques « sticker » ────────────────────────────────────
+/** Taille d'un prénom en gros : baisse avec la longueur pour tenir sur une ligne (16 car. max). */
+function nameSize(name: string, max: number): string {
+  return `min(${max}px, 11vw, ${(118 / Math.max(1, name.length)).toFixed(1)}vw)`;
+}
+
 /** Texte lisible sur une couleur pleine : encre foncée ou blanc. */
 function inkOn(hex: string): string {
   const m = hex.replace("#", "").match(/^([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})/i);

@@ -923,15 +923,17 @@ export default function MakeGuessGame({
       </span>
       {sortedFinal[0] && (
         <h2 className="mt-3 text-center text-[clamp(36px,10vw,48px)] leading-[0.95]" style={{ ...DISPLAY, textShadow: `4px 4px 0 ${INK}` }}>
-          {sortedFinal[0].name} l&apos;emporte !
+          {sortedFinal[1] && sortedFinal[1].score === sortedFinal[0].score ? "Égalité !" : <>{sortedFinal[0].name} l&apos;emporte !</>}
         </h2>
       )}
 
       {/* Podium */}
       {top3.length >= 2 && (
-        <div className="mt-7 grid w-full grid-cols-3 items-end gap-2.5">
+        // 2 équipes : podium à 2 marches, centré (pas une colonne vide à droite)
+        <div className={`mt-7 grid w-full items-end gap-2.5 ${top3.length === 3 ? "grid-cols-3" : "mx-auto max-w-[260px] grid-cols-2"}`}>
           {podiumOrder.map((t) => {
-            const place = sortedFinal.indexOf(t) + 1;
+            // Ex aequo = même marche
+            const place = sortedFinal.findIndex((x) => x.score === t.score) + 1;
             return (
               <div key={t.idx} className="flex flex-col items-center">
                 <Mascot size={place === 1 ? 72 : 54} color={TEAM_BLOB[t.idx % TEAM_BLOB.length]} mood="happy" arms cheering={place === 1} crown={place === 1} delay={place * 0.12} shadow={false} />
@@ -949,9 +951,9 @@ export default function MakeGuessGame({
       {/* Classement (4e et +) */}
       {sortedFinal.length > 3 && (
         <div className="mt-4 w-full space-y-2">
-          {sortedFinal.slice(3).map((t, i) => (
+          {sortedFinal.slice(3).map((t) => (
             <div key={t.idx} className="flex items-center justify-between px-4" style={{ ...sticker(C.cream, { radius: 16, shadow: 3 }), minHeight: 48 }}>
-              <span className="text-[16px] font-bold">{i + 4}ᵉ · {t.name}</span>
+              <span className="min-w-0 truncate text-[16px] font-bold">{((r) => (r === 1 ? "1er" : `${r}ᵉ`))(sortedFinal.findIndex((x) => x.score === t.score) + 1)} · {t.name}</span>
               <span className="text-[18px]" style={DISPLAY}>{t.score}</span>
             </div>
           ))}

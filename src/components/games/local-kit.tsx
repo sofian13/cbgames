@@ -186,7 +186,8 @@ export function PlayersSetup({
     focusNext.current = null;
   }, [names.length]);
 
-  const filled = names.map((n) => n.trim()).filter(Boolean);
+  // Prénom coupé à 16 caractères : pas de tiret / espace qui traîne à la fin (« Jean-Christophe- »)
+  const filled = names.map((n) => n.trim().replace(/[\s\-–'’.]+$/u, "")).filter(Boolean);
   const canStart = filled.length >= min;
   const missing = Math.max(0, min - filled.length);
 
@@ -289,6 +290,7 @@ export function PlayersSetup({
                   value={n}
                   onChange={(e) => update(i, e.target.value)}
                   onFocus={() => hop(blobs.current[i])}
+                  onBlur={() => { const c = n.replace(/[\s\-–'’.]+$/u, ""); if (c !== n) update(i, c); }}
                   onKeyDown={(e) => {
                     if (e.key !== "Enter") return;
                     e.preventDefault();
@@ -306,7 +308,8 @@ export function PlayersSetup({
                     color: ink,
                     fontFamily: "var(--font-display), system-ui, sans-serif", wordSpacing: "0.12em",
                     fontWeight: 700,
-                    fontSize: n ? 21 : 16,
+                    // Prénom long : police plus petite pour qu'il tienne en entier dans le sticker
+                    fontSize: !n ? 16 : n.length > 13 ? 15 : n.length > 10 ? 17 : 21,
                     letterSpacing: n ? "-0.01em" : 0,
                     ["--ph" as string]: ink === "#fff" ? "rgba(255,255,255,0.72)" : "rgba(21,8,46,0.55)",
                   }}
@@ -353,7 +356,6 @@ export function PlayersSetup({
           </div>
         )}
 
-        {footer && <div className="mt-6 flex justify-center">{footer}</div>}
 
         <div className="min-h-6 flex-1" />
 
@@ -362,6 +364,8 @@ export function PlayersSetup({
           className="sticky z-[2] -mx-5 px-5 pt-6"
           style={{ bottom: 0, paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 12px)", marginBottom: "calc(-1 * (env(safe-area-inset-bottom, 0px) + 16px))", background: `linear-gradient(180deg, transparent, ${NIGHT} 40%)` }}
         >
+          {/* « Propose ton idée » : toujours visible, juste au-dessus du bouton principal */}
+          {footer && <div className="mb-3.5 flex justify-center">{footer}</div>}
           <button
             type="button"
             onClick={start}
@@ -432,7 +436,8 @@ export function PassScreen({
           color: inkOn(pal.body),
           transform: "rotate(-2deg)",
           ...DISPLAY,
-          fontSize: "clamp(36px, 11vw, 56px)",
+          // Prénom long (16 car. max) : la taille baisse pour tenir sur une ligne
+          fontSize: `min(56px, 11vw, ${(118 / Math.max(1, toName.length)).toFixed(1)}vw)`,
           lineHeight: 1,
           maxWidth: "100%",
           overflowWrap: "anywhere",

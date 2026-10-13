@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { useGame } from "@/lib/party/use-game";
 import { useGameStore } from "@/lib/stores/game-store";
 import type { GameProps } from "@/lib/games/types";
@@ -12,89 +12,13 @@ import {
   DISPLAY, ZButton, ZCard, ZChip, ZLink, ZRanking, ZScreen, ZTitle, useScrollTopOn,
 } from "@/components/games/local-kit";
 import { SynthwaveScreen, NeonConsole, CassetteInput, SpectrumPair, WAVE_COLOR } from "@/components/games/longueur-onde/synthwave";
-import { Lock } from "lucide-react";
+import { CursorGauge } from "@/components/games/longueur-onde/gauge";
+import { CURSOR_PAIRS, cursorPoints, exampleFor, type CursorPair } from "@/components/games/longueur-onde/pairs";
+import { Lock, Pencil } from "lucide-react";
 import { GameInlineIcon, GAME_INK } from "@/components/games/game-icon-button";
 import { IdeaButton, RerollButton } from "@/components/games/idea-button";
 import { playCombo, playSfx, preloadSfx } from "@/lib/sfx";
 
-// ── Spectres pour le mode local (mêmes que le serveur) ────
-const LOCAL_SPECTRUMS: Spectrum[] = [
-  { left: "Ta mère approuverait", right: "Ta mère appellerait un prêtre" },
-  { left: "Dimanche soir déprime", right: "Vendredi soir 23h" },
-  { left: "Truc de boomer", right: "Truc de Gen Z" },
-  { left: "Red flag", right: "Green flag" },
-  { left: "Ça passe en story", right: "Ça reste en amis proches" },
-  { left: "Mon banquier est fier", right: "Mon banquier pleure" },
-  { left: "Message vu à 8h", right: "Message vu à 4h du mat" },
-  { left: "Ça sent le linge propre", right: "Ça sent le vestiaire" },
-  { left: "Réveil tout frais", right: "Réveil de zombie" },
-  { left: "Truc de daron", right: "Truc de gamin" },
-  { left: "Pote fiable", right: "Pote qui ghoste" },
-  { left: "Même pas de 2e date", right: "Présenté(e) aux parents" },
-  { left: "Faisable un lundi", right: "Seulement en vacances" },
-  { left: "Personne ne remarque", right: "Tout le bureau en parle" },
-  { left: "Phrase de drague gênante", right: "Phrase de drague qui marche" },
-  { left: "Gâteau de mamie", right: "Plat de chef étoilé" },
-  { left: "Ça se dit au repas de famille", right: "Surtout pas au repas de famille" },
-  { left: "Un 👍 suffit", right: "Ça mérite un vocal de 5 min" },
-  { left: "Normal à 30 ans", right: "Bizarre à 30 ans" },
-  { left: "Énergie de figurant", right: "Énergie de perso principal" },
-  { left: "Silence gênant", right: "Fou rire général" },
-  { left: "Lit défait toute la semaine", right: "Appart de catalogue" },
-  { left: "Moment de solitude", right: "Moment de gloire" },
-  { left: "Ça craque au premier lavage", right: "Indestructible" },
-  { left: "Ça se règle par SMS", right: "Ça se règle en face" },
-  { left: "Calme plat", right: "Drama de télé-réalité" },
-  { left: "Anecdote oubliée demain", right: "Histoire racontée à ton mariage" },
-  { left: "Talent de canapé", right: "Talent de scène" },
-  { left: "Fond de placard", right: "Repas de fête" },
-  { left: "Un peu fatigué(e)", right: "Je dors trois jours" },
-  { left: "Ça vaut un mot d'excuse", right: "Ça vaut une démission" },
-  { left: "Truc de collégien", right: "Truc d'adulte responsable" },
-  { left: "Pas besoin de tuto", right: "Faut un tuto de 2h" },
-  { left: "Spoiler pardonnable", right: "Spoiler impardonnable" },
-  { left: "Ça fait sourire", right: "Ça fait pleurer de rire" },
-  { left: "Vibe bibliothèque", right: "Vibe festival" },
-  { left: "Prénom de chien", right: "Prénom de bébé" },
-  { left: "Mérite un like", right: "Mérite d'être partagé partout" },
-  { left: "Tenue pour sortir les poubelles", right: "Tenue de mariage" },
-  { left: "Coloc de rêve", right: "Coloc de l'enfer" },
-  { left: "Hygiène de vie de moine", right: "Hygiène de vie de rockstar" },
-  { left: "Repas de régime", right: "Repas de lendemain de soirée" },
-  { left: "Discret comme un ninja", right: "Discret comme une fanfare" },
-  { left: "Je l'avoue au premier date", right: "Je l'emporte dans la tombe" },
-  { left: "Deux minutes de retard", right: "J'ai raté mon train" },
-  { left: "Sport de chill", right: "Sport de guerrier" },
-  { left: "Réaction de mamie", right: "Réaction d'ado" },
-  { left: "Zéro stress", right: "Stress d'entretien d'embauche" },
-  { left: "Musique d'ascenseur", right: "Son de fin de soirée" },
-  { left: "Plus vieux que tes parents", right: "Sorti la semaine dernière" },
-  { left: "Cringe", right: "Iconique" },
-  { left: "Idée de premier date", right: "Idée de dixième date" },
-  { left: "Ça se fait seul(e)", right: "Ça se fait à quinze" },
-  { left: "Snack de 16h", right: "Festin de Noël" },
-  { left: "Personnalité de chat", right: "Personnalité de chien" },
-  { left: "Mensonge pieux", right: "Mensonge d'État" },
-  { left: "Petit plaisir", right: "Bonheur absolu" },
-  { left: "Week-end sous la couette", right: "Week-end sans dormir" },
-  { left: "Effort minimum", right: "Effort olympique" },
-  { left: "Avis de tonton", right: "Avis d'expert" },
-  { left: "Swipe à gauche", right: "Swipe à droite" },
-  { left: "OK dès 8 ans", right: "Interdit aux moins de 18 ans" },
-  { left: "Énergie de lundi matin", right: "Énergie de samedi soir" },
-  { left: "Romantique comme un ticket de caisse", right: "Romantique comme un film de Noël" },
-  { left: "Truc qu'on assume", right: "Truc qu'on cache à ses potes" },
-  { left: "Sage comme une image", right: "Coquin(e) assumé(e)" },
-  { left: "Ça se pardonne", right: "On en reparlera dans 10 ans" },
-  { left: "Vibe camping", right: "Vibe palace" },
-];
-
-function localPoints(d: number): number {
-  if (d <= 5) return 5;
-  if (d <= 12) return 3;
-  if (d <= 22) return 2;
-  return 0;
-}
 // Un indice sans aucune lettre (ex. « 73 ») donnerait directement la cible
 function clueProblem(clue: string): string | null {
   const c = clue.trim();
@@ -107,6 +31,8 @@ function shuffleArr<T>(a: T[]): T[] {
   for (let i = r.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [r[i], r[j]] = [r[j], r[i]]; }
   return r;
 }
+/** Cible tirée au sort, jamais collée aux bords (la part entière reste visible). */
+const randomTarget = () => 10 + Math.floor(Math.random() * 81);
 
 // ── WRAPPER : le joueur choisit local ou online ───────────
 export default function LongueurOndeGame(props: GameProps) {
@@ -114,7 +40,7 @@ export default function LongueurOndeGame(props: GameProps) {
   if (mode === null) {
     return (
       <ModeSelect emoji="📡" name="Le Curseur"
-        tagline="Un Médium voit une cible secrète entre 0 et 100 et donne un indice (un mot, un exemple) : retrouvez-la sur le curseur."
+        tagline="Un Médium voit en secret où est la cible sur une échelle (froid ↔ chaud…), dit UN indice, et les autres placent le curseur."
         onPick={setMode} />
     );
   }
@@ -123,129 +49,295 @@ export default function LongueurOndeGame(props: GameProps) {
 }
 
 // ══════════════════════════════════════════════════════════
-// MODE LOCAL (pass-and-play, coopératif, Médium tournant)
+// MODE LOCAL (un seul téléphone, Médium tournant)
 // ══════════════════════════════════════════════════════════
+
+/** Pastille numérotée des étapes / vignettes. */
+function StepNum({ n, bg = GAME_INK }: { n: number; bg?: string }) {
+  return (
+    <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-[17px]"
+      style={{ ...DISPLAY, background: bg, color: bg === GAME_INK ? "#FFD23F" : GAME_INK, border: `2.5px solid ${GAME_INK}` }}>
+      {n}
+    </span>
+  );
+}
+
+/** Étape du Médium : pastille + phrase courte (+ contenu en dessous). */
+function Step({ n, bg, tilt = 0, title, children }: { n: number; bg: string; tilt?: number; title: ReactNode; children?: ReactNode }) {
+  return (
+    <ZCard bg={bg} tilt={tilt} shadow={4} radius={22} className="px-3.5 py-3">
+      <div className="flex items-center gap-2.5">
+        <StepNum n={n} />
+        <p className="text-[17px] font-extrabold leading-tight">{title}</p>
+      </div>
+      {children}
+    </ZCard>
+  );
+}
+
+/** Mini-tuto : 3 vignettes avec un exemple complet (Froid ↔ Chaud). */
+function HowTo({ onGo }: { onGo: () => void }) {
+  return (
+    <ZScreen bg={WAVE_COLOR}>
+      <ZTitle size={40}>Le Curseur</ZTitle>
+      <p className="mt-1 text-[17px] font-bold leading-snug">Comment on joue, en 3 images :</p>
+
+      <div className="mt-4 flex flex-col gap-3.5">
+        <ZCard bg="#fff" tilt={-1.2} shadow={4} radius={22} className="flex items-center gap-3 px-3 py-3">
+          <div className="w-[44%] shrink-0"><CursorGauge left="Froid" right="Chaud" target={12} small /></div>
+          <div className="min-w-0">
+            <StepNum n={1} />
+            <p className="mt-1.5 text-[15px] font-bold leading-snug">Léa voit en secret la cible : <b style={{ color: "#E0218A" }}>tout à gauche</b>, côté froid.</p>
+          </div>
+        </ZCard>
+
+        <ZCard bg="#FFD23F" tilt={1.2} shadow={4} radius={22} className="flex items-center gap-3 px-3 py-3">
+          <div className="flex w-[44%] shrink-0 flex-col items-center">
+            <span className="rounded-[14px] px-2.5 py-1.5 text-center text-[16px] leading-tight"
+              style={{ ...DISPLAY, background: "#fff", border: `2.5px solid ${GAME_INK}`, boxShadow: `0 3px 0 ${GAME_INK}`, rotate: "-3deg" }}>
+              « La banquise ! »
+            </span>
+            <Mascot size={46} color="pink" mood="wink" shadow={false} bob={false} />
+          </div>
+          <div className="min-w-0">
+            <StepNum n={2} />
+            <p className="mt-1.5 text-[15px] font-bold leading-snug">Elle dit à voix haute UN truc qui se place là.</p>
+          </div>
+        </ZCard>
+
+        <ZCard bg="#3DDC97" tilt={-1} shadow={4} radius={22} className="flex items-center gap-3 px-3 py-3">
+          <div className="relative w-[44%] shrink-0">
+            <CursorGauge left="Froid" right="Chaud" target={12} needle={10} small />
+          </div>
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <StepNum n={3} />
+              <span className="rounded-full px-2.5 text-[20px]" style={{ ...DISPLAY, background: "#FF3EA5", border: `2.5px solid ${GAME_INK}`, rotate: "4deg" }}>+4</span>
+            </div>
+            <p className="mt-1.5 text-[15px] font-bold leading-snug">Les autres placent le curseur. Pile dans la cible : +4 !</p>
+          </div>
+        </ZCard>
+      </div>
+
+      <div className="min-h-6 flex-1" />
+      <ZButton bg={GAME_INK} className="mt-5" onClick={() => { playSfx("confirm", { volume: 0.6 }); onGo(); }}>Compris, on joue !</ZButton>
+    </ZScreen>
+  );
+}
+
 function LongueurOndeLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) {
-  type Phase = "setup" | "pass" | "clue" | "guess" | "reveal" | "over";
-  const [phase, setPhase] = useState<Phase>("setup");
+  type Phase = "howto" | "setup" | "pass" | "clue" | "guess" | "reveal" | "over";
+  const [phase, setPhase] = useState<Phase>("howto");
   const [players, setPlayers] = useState<string[]>([]);
   const [scores, setScores] = useState<number[]>([]);
   const [round, setRound] = useState(0);
   const [psychic, setPsychic] = useState(0);
-  const [spectrums, setSpectrums] = useState(() => shuffleArr(LOCAL_SPECTRUMS));
+  const [pairs, setPairs] = useState<CursorPair[]>(() => shuffleArr(CURSOR_PAIRS));
   const [target, setTarget] = useState(50);
   const [clue, setClue] = useState("");
   const [guess, setGuess] = useState(50);
+  const [writing, setWriting] = useState(false);
   const [clueInput, setClueInput] = useKeyedState<string>(`${round}-localclue`, "");
+  const [shown, setShown] = useState(false);
+  const revealTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useEffect(() => { preloadSfx(["whoosh", "gong", "confirm", "tick", "tock", "win", "powerup", "ding", "success", "wrong", "lose", "coins", "card-flip"]); }, []);
+  useEffect(() => {
+    preloadSfx(["whoosh", "gong", "confirm", "tick", "tock", "win", "ding", "success", "wrong", "lose", "coins", "card-flip", "pop"]);
+    return () => { if (revealTimer.current) clearTimeout(revealTimer.current); };
+  }, []);
   useScrollTopOn(`${phase}-${round}`);
 
   const total = players.length;
-  const spectrum = spectrums[(round - 1) % spectrums.length] ?? null;
-  const lastPts = localPoints(Math.abs(guess - target));
+  const pair = pairs[(round - 1 + pairs.length) % pairs.length] ?? CURSOR_PAIRS[0];
+  const pts = cursorPoints(guess - target);
 
-  const begin = (names: string[]) => {
-    setPlayers(names); setScores(names.map(() => 0));
-    setSpectrums(shuffleArr(LOCAL_SPECTRUMS));
-    setPsychic(0); setRound(1);
-    setTarget(8 + Math.floor(Math.random() * 85)); setClue(""); setPhase("pass");
-  };
   const startRound = (r: number, p: number) => {
     setRound(r); setPsychic(p);
-    setTarget(8 + Math.floor(Math.random() * 85)); setClue(""); setPhase("pass");
+    setTarget(randomTarget()); setClue(""); setWriting(false); setShown(false); setPhase("pass");
   };
-  // « Pas fou ? » : la paire d'extrêmes est retirée → une paire jamais vue prend sa place
-  const rerollSpectrum = () => {
-    if (spectrums.length <= total + 1) return;
-    const at = (round - 1) % spectrums.length;
+  const begin = (names: string[]) => {
+    setPlayers(names); setScores(names.map(() => 0));
+    setPairs(shuffleArr(CURSOR_PAIRS));
+    startRound(1, 0);
+  };
+  // « Une autre paire » : la paire est retirée → une paire jamais vue prend sa place
+  const rerollPair = () => {
+    if (pairs.length <= total + 1) return;
+    const at = (round - 1) % pairs.length;
     playSfx("card-flip", { volume: 0.6, delay: 0.1 });
-    setSpectrums((sp) => sp.filter((_, i) => i !== at));
-    setTarget(8 + Math.floor(Math.random() * 85));
+    setPairs((sp) => sp.filter((_, i) => i !== at));
+    setTarget(randomTarget());
   };
+
+  if (phase === "howto") return <HowTo onGo={() => setPhase("setup")} />;
 
   if (phase === "setup") {
     return <PlayersSetup emoji="📡" name="Le Curseur" min={2} max={8} accent={WAVE_COLOR} onStart={begin} onBack={onReturnToLobby}
-      footer={<IdeaButton game="Le Curseur" kind="idée" />} />;
+      footer={
+        <div className="flex flex-wrap items-center justify-center gap-3">
+          <IdeaButton game="Le Curseur" kind="paire" />
+          <ZLink onClick={() => setPhase("howto")} className="!mx-0">Revoir l&apos;exemple</ZLink>
+        </div>
+      } />;
   }
+
   if (phase === "pass") {
     return <PassScreen toName={players[psychic]} colorIndex={psychic} accent={WAVE_COLOR}
-      hint="Toi seul regardes l'écran : tu vas voir la cible secrète." onReady={() => { playCombo("reveal"); setPhase("clue"); }} />;
+      hint="Tu es le Médium : toi seul vas voir où est la cible. Cache bien l'écran !"
+      onReady={() => { playCombo("reveal"); setPhase("clue"); }} />;
   }
+
   if (phase === "clue") {
+    const name = players[psychic];
+    const err = clueProblem(clueInput);
+    const go = () => {
+      if (err) return;
+      playSfx("whoosh", { volume: 0.6 });
+      setClue(writing ? clueInput.trim() : ""); setGuess(50); setPhase("guess");
+    };
     return (
-      <SynthwaveScreen round={round} total={total} spectrum={spectrum} title={`${players[psychic]}, la cible est là`}>
-        <NeonConsole readout="Toi seul la vois">
-          <SpectrumDial spectrum={spectrum} target={target} mode="psychic" bare />
-        </NeonConsole>
-        <div className="mt-4 flex justify-center">
-          <RerollButton label="Pas fou ? Une autre paire" onClick={rerollSpectrum} />
+      <ZScreen bg={WAVE_COLOR}>
+        <div className="flex items-center justify-between gap-2">
+          <ZChip bg="#fff" tilt={-2}>Manche {round}/{total}</ZChip>
+          <RerollButton label="Une autre paire" onClick={rerollPair} className="shrink-0" />
         </div>
-        <CassetteInput value={clueInput} onChange={setClueInput}
-          placeholder="Ex. : une raclette"
-          error={clueProblem(clueInput)}
-          onSubmit={() => {
-            if (clueProblem(clueInput)) return;
-            playSfx("whoosh", { volume: 0.6 });
-            setClue(clueInput.trim() || "(à l'oral)"); setGuess(50); setPhase("guess");
-          }} />
-      </SynthwaveScreen>
-    );
-  }
-  if (phase === "guess") {
-    return <GuessBoard key={`${round}-localguess`} spectrum={spectrum} clue={clue} round={round} total={total}
-      timeLeft={null} submitted={false} psychicName={players[psychic]} role="Toute la table"
-      note={`Discutez ensemble et placez UN seul curseur. Les points vont à ${players[psychic]}.`}
-      onSubmit={(g) => {
-        const pts = localPoints(Math.abs(g - target));
-        playCombo("drumroll");
-        if (pts >= 5) { playSfx("win", { volume: 0.9, delay: 1.05 }); playSfx("coins", { volume: 0.7, delay: 1.3 }); }
-        else if (pts > 0) playSfx("success", { volume: 0.8, delay: 1.05 });
-        else { playSfx("wrong", { volume: 0.8, delay: 1.05 }); playSfx("lose", { volume: 0.5, delay: 1.12 }); }
-        setGuess(g); setPhase("reveal");
-      }} />;
-  }
-  if (phase === "reveal") {
-    const markers = [{ value: guess, label: "La table", isMe: true, color: colorForIndex(psychic) }];
-    const bull = lastPts >= 5;
-    const verdict = bull ? "Dans le mille !" : lastPts >= 3 ? "Pas loin !" : lastPts > 0 ? "Ça chauffe…" : "Raté !";
-    return (
-      <ZScreen bg={bull ? "#3DDC97" : WAVE_COLOR}>
-        {bull && <ConfettiBurst count={40} />}
-        <ZChip bg="#fff" tilt={-2}>Manche {round}/{total}</ZChip>
-        <ZTitle size={40} className="mt-3">{verdict}</ZTitle>
-        <div className="mt-4"><SpectrumPair spectrum={spectrum} /></div>
-        <SpectrumDial spectrum={spectrum} target={target} markers={markers} mode="reveal" bare />
-        <ZCard bg="#FFD23F" tilt={-1.5} shadow={5} radius={22} className="mt-3 flex items-center gap-3 px-4 py-3">
-          <Mascot size={46} color={colorForIndex(psychic)} mood={bull ? "laughing" : lastPts ? "happy" : "sad"} shadow={false} bob={false} />
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-[19px] leading-tight" style={DISPLAY}>{players[psychic]}</p>
-            <p className="truncate text-[14px] font-semibold">Indice : {clue} · cible {target}</p>
+
+        <div className="mt-4 flex flex-col gap-3">
+          <Step n={1} bg="#fff" title={<>{name}, regarde où est la cible <span style={{ color: "#E0218A" }}>(cache l&apos;écran !)</span></>}>
+            <CursorGauge left={pair.left} right={pair.right} target={target} className="mx-auto mt-2 max-w-[300px]" />
+          </Step>
+
+          <Step n={2} bg="#FFD23F" tilt={-0.8} title="Trouve UN truc qui se place là">
+            <p className="mt-1.5 pl-[42px] text-[15px] font-semibold leading-tight">Ex. : <span className="text-[21px]" style={DISPLAY}>{exampleFor(pair, target)}</span>
+              <span className="text-[13px]" style={{ color: "#4A3A66" }}> (ou mieux, le tien !)</span></p>
+          </Step>
+
+          <Step n={3} bg="#3DDC97" tilt={0.8} title="Dis-le à voix haute et passe le tél" />
+        </div>
+
+        {writing && (
+          <div className="mt-4">
+            <ZCard bg="#fff" shadow={4} radius={20} className="px-4 pb-2.5 pt-2">
+              <label className="text-[14px] font-bold" htmlFor="cur-clue">Ton indice (pour s&apos;en souvenir)</label>
+              <input id="cur-clue" value={clueInput} onChange={(e) => setClueInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && go()}
+                autoFocus maxLength={40} autoComplete="off" autoCorrect="off" spellCheck={false} enterKeyHint="done"
+                placeholder={exampleFor(pair, target)}
+                className="mt-0.5 w-full bg-transparent outline-none placeholder:text-[#15082E]/35"
+                style={{ ...DISPLAY, fontSize: 22, color: GAME_INK }} />
+            </ZCard>
+            {err && <p role="alert" className="mt-2 text-center text-[15px] font-bold">{err}</p>}
           </div>
-          <span className="text-[30px]" style={DISPLAY}>+{lastPts}</span>
-        </ZCard>
-        <div className="min-h-8 flex-1" />
-        <ZButton bg={GAME_INK} onClick={() => {
-          const ns = [...scores]; ns[psychic] += lastPts; setScores(ns);
-          if (round >= total) { playCombo("fanfare"); setPhase("over"); } else startRound(round + 1, (psychic + 1) % total);
-        }}>
-          {round >= total ? "Voir les scores" : "Manche suivante"}
+        )}
+
+        {!writing && (
+          <ZLink color={GAME_INK} className="mt-2" onClick={() => setWriting(true)}>
+            <Pencil size={15} strokeWidth={3} aria-hidden /> Écrire l&apos;indice pour s&apos;en souvenir
+          </ZLink>
+        )}
+        <div className="min-h-2 flex-1" />
+        <ZButton bg={GAME_INK} className="mt-3 flex-col !gap-0 py-2" onClick={go} disabled={!!err}>
+          <span>J&apos;ai donné mon indice</span>
+          <span className="text-[15px]" style={{ fontFamily: "inherit", opacity: 0.85 }}>→ les autres jouent</span>
         </ZButton>
       </ZScreen>
     );
   }
+
+  if (phase === "guess") {
+    const name = players[psychic];
+    return (
+      <ZScreen bg={WAVE_COLOR}>
+        <ZTitle size={32}>À vous de jouer !</ZTitle>
+
+        <ZCard bg="#FFD23F" tilt={-1.5} shadow={5} radius={22} className="mt-3 flex items-center gap-3 px-4 py-2.5">
+          <Mascot size={44} color={colorForIndex(psychic)} mood="wink" shadow={false} bob={false} />
+          {clue ? (
+            <div className="min-w-0">
+              <p className="text-[15px] font-bold">L&apos;indice de {name} :</p>
+              <p className="break-words text-[28px] leading-none" style={DISPLAY}>{clue}</p>
+            </div>
+          ) : (
+            <p className="text-[16px] font-bold leading-snug">{name} vous a dit son indice à voix haute.</p>
+          )}
+        </ZCard>
+
+        <p className="mt-4 text-[16px] font-extrabold leading-snug">Faites glisser le curseur là où vous pensez que l&apos;indice se place.</p>
+        <CursorGauge left={pair.left} right={pair.right} needle={guess} onChange={setGuess} className="mx-auto mt-3 max-w-[340px]" />
+        <p className="mt-3 text-[14px] font-semibold leading-snug" style={{ color: "#2A1A55" }}>
+          Un seul curseur pour toute la table : mettez-vous d&apos;accord !
+        </p>
+
+        <div className="min-h-2 flex-1" />
+        <ZButton bg={GAME_INK} className="mt-3" onClick={() => {
+          const p = cursorPoints(guess - target);
+          playCombo("drumroll");
+          if (p >= 4) { playSfx("win", { volume: 0.9, delay: 1.05 }); playSfx("coins", { volume: 0.7, delay: 1.3 }); }
+          else if (p > 0) { playSfx("success", { volume: 0.8, delay: 1.05 }); playSfx("coin", { volume: 0.6, delay: 1.25 }); }
+          else { playSfx("wrong", { volume: 0.8, delay: 1.05 }); playSfx("lose", { volume: 0.5, delay: 1.12 }); }
+          setShown(false); setPhase("reveal");
+          if (revealTimer.current) clearTimeout(revealTimer.current);
+          revealTimer.current = setTimeout(() => setShown(true), 1050);
+        }}>
+          Valider
+        </ZButton>
+      </ZScreen>
+    );
+  }
+
+  if (phase === "reveal") {
+    const name = players[psychic];
+    const bull = pts >= 4;
+    const verdict = !shown ? "Alors… ?" : bull ? "Dans le mille !" : pts === 3 ? "Tout près !" : pts === 2 ? "Pas loin !" : "Raté !";
+    const next = (psychic + 1) % total;
+    return (
+      <ZScreen bg={shown && bull ? "#3DDC97" : WAVE_COLOR}>
+        {shown && bull && <ConfettiBurst count={40} />}
+        <ZChip bg="#fff" tilt={-2}>Manche {round}/{total}</ZChip>
+        <ZTitle size={38} className="mt-3">{verdict}</ZTitle>
+        {clue && <p className="mt-1 text-[16px] font-bold">Indice de {name} : « {clue} »</p>}
+
+        <CursorGauge left={pair.left} right={pair.right} target={shown ? target : null} needle={guess} reveal className="mt-5" />
+
+        <div className="mt-5 flex min-h-[92px] items-center justify-center">
+          {shown && (
+            <ZCard bg={pts > 0 ? "#FF3EA5" : "#fff"} tilt={-2} shadow={6} radius={24} className="flex items-center gap-3 px-5 py-3"
+              style={{ animation: "cur-pop .45s cubic-bezier(.2,1.6,.4,1) both" }}>
+              <Mascot size={52} color={colorForIndex(psychic)} mood={bull ? "laughing" : pts ? "happy" : "sad"} shadow={false} bob={false} />
+              <div>
+                <p className="text-[44px] leading-none" style={DISPLAY}>{pts > 0 ? `+${pts}` : "0 point"}</p>
+                <p className="text-[15px] font-bold">{pts > 0 ? `points pour ${name}` : "Dommage, ça arrive !"}</p>
+              </div>
+            </ZCard>
+          )}
+        </div>
+
+        <div className="min-h-6 flex-1" />
+        {shown && (
+          <ZButton bg={GAME_INK} className="mt-4" onClick={() => {
+            const ns = [...scores]; ns[psychic] += pts; setScores(ns);
+            if (round >= total) { playCombo("fanfare"); setPhase("over"); } else startRound(round + 1, next);
+          }}>
+            {round >= total ? "Voir les scores" : `Médium suivant : ${players[next]}`}
+          </ZButton>
+        )}
+        <style>{`@keyframes cur-pop{from{transform:scale(.3);opacity:0}to{transform:none;opacity:1}}`}</style>
+      </ZScreen>
+    );
+  }
+
   // over
   const ranking = players.map((name, i) => ({ name, score: scores[i], colorIndex: i })).sort((a, b) => b.score - a.score);
   return (
     <ZScreen bg={WAVE_COLOR}>
       <ConfettiBurst count={50} />
-      <ZTitle size={40} className="text-center">{ranking[0]?.name}, meilleur médium</ZTitle>
+      <ZTitle size={40} className="text-center">{ranking[0]?.name}, meilleur Médium !</ZTitle>
+      <p className="mt-2 text-center text-[15px] font-bold">Chacun marque les points trouvés grâce à son indice.</p>
       <div className="mt-6"><ZRanking rows={ranking} /></div>
       <div className="min-h-8 flex-1" />
-      <ZButton bg={GAME_INK} onClick={() => begin(players)}>Rejouer</ZButton>
+      <ZButton bg={GAME_INK} className="mt-6" onClick={() => begin(players)}>Rejouer</ZButton>
       <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
         <ZButton size="sm" bg="#fff" style={{ width: "auto" }} onClick={() => setPhase("setup")}>Changer les joueurs</ZButton>
-        <IdeaButton game="Le Curseur" kind="idée" bg="#fff" />
+        <IdeaButton game="Le Curseur" kind="paire" bg="#fff" />
       </div>
       {onReturnToLobby && <ZLink onClick={onReturnToLobby} color={GAME_INK} className="mt-2">Retour à l&apos;accueil</ZLink>}
     </ZScreen>

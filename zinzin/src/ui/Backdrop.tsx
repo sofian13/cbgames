@@ -11,7 +11,7 @@ import { reducedMotion } from "./util";
 
 const INK = "#15082E";
 
-type Doodle = { x: string; y: number; size: number; rot: number; color: string; kind: Kind; float: number; delay: number; twinkle?: boolean };
+type Doodle = { x: string; y: number; size: number; rot: number; color: string; kind: Kind; float: number; delay: number; twinkle?: boolean; mid?: boolean };
 type Kind = "star" | "sparkle" | "squiggle" | "ring" | "heart" | "dice" | "card" | "bolt" | "question" | "plus";
 
 // Décor généré une fois, de façon déterministe (même placement à chaque ouverture) :
@@ -36,6 +36,8 @@ const DOODLES: Doodle[] = Array.from({ length: 42 }, (_, i) => {
     float: 6 + rand(i + 9) * 6,
     delay: rand(i + 13) * 6,
     twinkle: kind === "sparkle" || kind === "star",
+    // Couloir du milieu : passe derrière les textes → plus discret
+    mid: i % 3 === 2,
   };
 });
 
@@ -68,7 +70,7 @@ export function Backdrop({ scrollRef }: { scrollRef: RefObject<HTMLElement | nul
           <div
             key={i}
             className={d.twinkle ? "zz-doodle zz-twinkle" : "zz-doodle"}
-            style={{ left: d.x, top: d.y, width: d.size, height: d.size, rotate: `${d.rot}deg`, animationDuration: `${d.float}s`, animationDelay: `${-d.delay}s` }}
+            style={{ left: d.x, top: d.y, width: d.size, height: d.size, rotate: `${d.rot}deg`, opacity: d.mid ? 0.3 : undefined, animationDuration: `${d.float}s`, animationDelay: `${-d.delay}s` }}
           >
             <DoodleSvg kind={d.kind} color={d.color} />
           </div>

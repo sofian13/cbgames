@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { GameProps } from "@/lib/games/types";
 import { PlayersSetup, PassScreen, colorForIndex } from "@/components/games/local-kit";
 import { Mascot, MascotAvatar } from "@/components/Mascot";
@@ -237,7 +237,7 @@ export default function GuessWordGame({ onReturnToLobby }: GameProps) {
                 >
                   <span className="min-w-0 flex-1 text-[17px] leading-tight" style={DISPLAY}>
                     {p.name}
-                    {p.adult && <span className="block text-[13px] font-bold" style={{ fontFamily: "inherit", letterSpacing: 0 }}>18+ · coquin</span>}
+                    {p.adult && <span className="block text-[13px] font-bold" style={{ fontFamily: "inherit", letterSpacing: 0 }}>18+</span>}
                   </span>
                   {on && (
                     <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full" style={{ background: INK, color: "#fff" }}>
@@ -381,7 +381,7 @@ export default function GuessWordGame({ onReturnToLobby }: GameProps) {
         <div className="mt-3">
           <MascotAvatar color={colorForIndex(current)} size={70} mood={found >= 8 ? "fire" : found >= 4 ? "happy" : "sad"} border={false} />
         </div>
-        <h2 className="mt-1 max-w-full truncate text-center text-[40px] leading-none" style={{ ...DISPLAY, textShadow: `3px 3px 0 ${INK}` }}>{players[current]}</h2>
+        <h2 className="mt-1 max-w-full truncate text-center leading-none" style={{ ...DISPLAY, fontSize: `min(40px, ${(110 / Math.max(1, players[current]?.length ?? 1)).toFixed(1)}vw)`, textShadow: `3px 3px 0 ${INK}` }}>{players[current]}</h2>
         <div className="mt-3 px-6 py-1.5 text-center" style={{ ...sticker(ACCENT, { radius: 22, shadow: 5 }), transform: "rotate(-2deg)" }}>
           <p className="text-[56px] leading-none" style={DISPLAY}>{found}</p>
           <p className="text-[16px] font-bold">mot{found > 1 ? "s" : ""} trouvé{found > 1 ? "s" : ""}</p>
@@ -428,8 +428,10 @@ export default function GuessWordGame({ onReturnToLobby }: GameProps) {
       <div className="mt-3">
         <Mascot size={100} color={colorForIndex(top?.i ?? 0)} mood="cool" arms crown shadow={false} />
       </div>
-      <h2 className="mt-1 max-w-full break-words text-center text-[clamp(38px,11vw,54px)] leading-[0.95]" style={{ ...DISPLAY, textShadow: `4px 4px 0 ${INK}` }}>
-        {tie ? ranking.filter((r) => r.s === top.s).map((r) => r.name).join(" & ") : top?.name}
+      <h2 className="mt-1 max-w-full break-words text-center leading-[0.95]" style={{ ...DISPLAY, fontSize: `min(54px, 11vw, ${(110 / Math.max(1, ...(tie ? ranking.filter((r) => r.s === top.s) : [top]).map((r) => r?.name.length ?? 1))).toFixed(1)}vw)`, textShadow: `4px 4px 0 ${INK}` }}>
+        {tie
+          ? ranking.filter((r) => r.s === top.s).map((r, k) => <Fragment key={r.i}>{k ? " & " : ""}<span className="whitespace-nowrap">{r.name}</span></Fragment>)
+          : top?.name}
       </h2>
       <Standings players={players} scores={scores} big />
       <div className="mt-auto flex w-full flex-col items-center pt-7">

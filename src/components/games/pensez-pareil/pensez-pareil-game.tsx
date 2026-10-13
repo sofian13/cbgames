@@ -194,6 +194,9 @@ function PensezPareilLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }
   );
 }
 
+/** Prénom coupé à 16 caractères : pas de tiret / espace qui traîne à la fin (« Jean-Christophe- »). */
+const cleanName = (n: string) => n.trim().replace(/[\s\-–'’.]+$/u, "");
+
 // ── Setup couple (2 joueurs + pack + niveau actuel) ───────
 function CoupleSetup({ pack, onStart, onBack }: {
   pack: Pack;
@@ -239,16 +242,17 @@ function CoupleSetup({ pack, onStart, onBack }: {
         {PACKS.map((pk, i) => (
           <ZChoice key={pk.id} active={sel === pk.id} color={COLORS[pk.id]} onClick={() => setSel(pk.id)} tilt={i === 1 ? 1.5 : -1.5} className="px-2.5 text-center">
             <pk.icon size={24} strokeWidth={2.6} className="mx-auto" aria-hidden />
-            <p className="mt-1 text-[17px] leading-none" style={DISPLAY}>{pk.label}</p>
-            <p className="mt-1 text-[13px] font-semibold leading-tight">{pk.sub}</p>
+            {/* Centré comme l'icône (ZChoice force text-left sur le bouton) */}
+            <p className="mt-1 text-center text-[17px] leading-none" style={DISPLAY}>{pk.label}</p>
+            <p className="mt-1 text-center text-[13px] font-semibold leading-tight" style={{ textWrap: "balance" }}>{pk.sub}</p>
           </ZChoice>
         ))}
       </div>
 
       <div className="mt-6 flex justify-center"><IdeaButton game="Pensez Pareil" kind="thème" /></div>
       <div className="min-h-6 flex-1" />
-      <ZButton bg={PP_COLOR} disabled={!can} onClick={() => { if (!can) return; saveDuo([a, b]); onStart([a.trim(), b.trim()], sel); }}>
-        {can ? "C'est parti !" : "Écrivez vos deux prénoms"}
+      <ZButton bg={PP_COLOR} disabled={!can} onClick={() => { if (!can) return; const n: [string, string] = [cleanName(a), cleanName(b)]; saveDuo(n); onStart(n, sel); }}>
+        {can ? "C'est parti !" : "Vos deux prénoms !"}
       </ZButton>
       {onBack && !isOfflineApp() && <ZLink onClick={onBack} className="mt-2"><GameInlineIcon icon={ArrowLeft} /> Retour</ZLink>}
     </ZScreen>
@@ -504,7 +508,8 @@ function RevealScreen({
             style={{ background: i ? "#FFF6E5" : "#fff", color: GAME_INK, border: `3px solid ${GAME_INK}`, boxShadow: `0 5px 0 ${GAME_INK}`, rotate: `${i ? 2 : -2}deg` }}>
             <div className="flex justify-center"><Mascot size={44} color={colorForIndex(i)} mood={matched ? "love" : "shocked"} shadow={false} bob={false} /></div>
             <p className="mt-1 truncate text-[14px] font-bold">{names[i]}</p>
-            <p className="mt-1 break-words hyphens-auto text-[24px] leading-tight" style={DISPLAY}>{answers[i] || "—"}</p>
+            {/* Réponse longue (40 car. max) : plus petite, sans césure au milieu des mots */}
+            <p className="mt-1 leading-tight" style={{ ...DISPLAY, fontSize: (answers[i] ?? "").length > 18 ? 18 : (answers[i] ?? "").length > 10 ? 21 : 24, overflowWrap: "anywhere" }}>{answers[i] || "—"}</p>
           </div>
         ))}
       </div>

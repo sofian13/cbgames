@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * TGV — le « plus ou moins » à enchaîner, sur un seul téléphone.
+ * Le Train Fou (id technique « tgv ») — le « plus ou moins » à enchaîner, sur un seul téléphone.
  * Le joueur voit une carte et parie sur la suivante : plus haute, plus basse
  * ou égale. Il doit passer tous les tas (wagons) d'affilée. Raté = une peine
  * (gorgée plafonnée à 3, ou un gage) et retour au premier wagon.
@@ -33,8 +33,14 @@ const PAGE: CSSProperties = {
 };
 const TOP = "calc(env(safe-area-inset-top, 0px) + 72px)";
 const BOTTOM = "calc(env(safe-area-inset-bottom, 0px) + 16px)";
+// Hauteur des cartes : 184 px sur grand écran, réduite sur les petits (iPhone SE) pour que
+// les 3 paris + « Terminer la partie » tiennent sans défilement
+const CARD_H = "clamp(118px, calc(100svh - 522px), 184px)";
 const DISPLAY: CSSProperties = { fontFamily: "var(--font-display), system-ui, sans-serif", fontWeight: 700, letterSpacing: "-0.03em", wordSpacing: "0.1em" };
 const stk = (bg: string, shadow = 4, border = 3): CSSProperties => ({ background: bg, border: `${border}px solid ${INK}`, boxShadow: `0 ${shadow}px 0 ${INK}` });
+
+/** Taille d'un prénom en gros : baisse avec la longueur pour tenir sur une ligne (16 car. max). */
+const nameSize = (name: string, max: number, k = 108) => `min(${max}px, ${(k / Math.max(1, name.length)).toFixed(1)}vw)`;
 
 /** Encre lisible sur un fond plein. */
 function inkOn(hex: string): string {
@@ -349,7 +355,7 @@ export default function TgvGame({ onReturnToLobby }: GameProps) {
       <>
         <PlayersSetup
           emoji="🚄"
-          name="TGV"
+          name="Le Train Fou"
           min={2}
           max={10}
           accent={ACCENT}
@@ -375,7 +381,7 @@ export default function TgvGame({ onReturnToLobby }: GameProps) {
       <Page>
         {chrome}
         <div className="flex items-end justify-between gap-3">
-          <h1 style={{ ...DISPLAY, fontSize: 64, lineHeight: 0.9 }}>TGV</h1>
+          <h1 className="min-w-0" style={{ ...DISPLAY, fontSize: 56, lineHeight: 0.9 }}>Le Train<br />Fou</h1>
           <Mascot size={70} color="coral" mood="cool" arms shadow={false} />
         </div>
         <ol className="mt-4 space-y-2.5 rounded-[24px] p-4" style={{ ...stk("#FFF6E5", 5), color: INK, transform: "rotate(-1deg)" }}>
@@ -438,7 +444,7 @@ export default function TgvGame({ onReturnToLobby }: GameProps) {
           Une gorgée, c&apos;est de ce que tu bois, eau et soft compris. On peut toujours prendre un gage à la place. 18+, avec modération, et jamais si tu conduis.
         </p>
 
-        <div className="mt-5 flex justify-center"><IdeaButton game="TGV" kind="gage" /></div>
+        <div className="mt-5 flex justify-center"><IdeaButton game="Le Train Fou" kind="gage" /></div>
 
         <div className="min-h-6 flex-1" />
         <div className="sticky bottom-0 -mx-5 mt-4 px-5 pt-4" style={{ paddingBottom: BOTTOM, background: "linear-gradient(180deg, transparent, #1E1250 35%)" }}>
@@ -458,7 +464,7 @@ export default function TgvGame({ onReturnToLobby }: GameProps) {
           toName={currentName}
           colorIndex={currentIdx}
           accent={ACCENT}
-          hint={`À toi de monter dans le TGV : ${numPiles} wagons à enchaîner sans erreur.`}
+          hint={`À toi de monter dans le Train Fou : ${numPiles}\u00a0wagons à enchaîner sans erreur.`}
           buttonLabel={<>Embarquer <GameInlineIcon icon={TrainFront} /></>}
           onReady={startRun}
         />
@@ -472,7 +478,7 @@ export default function TgvGame({ onReturnToLobby }: GameProps) {
     const revealed = verdict && !suspense;
     const sipsAtStake = Math.min(3, pileIdx + 1);
     return (
-      <div className="relative flex min-h-[100svh] flex-col overflow-hidden px-5 text-white" style={{ ...PAGE, paddingTop: TOP, paddingBottom: BOTTOM }}>
+      <div className="relative flex min-h-[100svh] flex-col overflow-x-hidden overflow-y-auto px-5 text-white" style={{ ...PAGE, paddingTop: TOP, paddingBottom: BOTTOM }}>
         <style>{KEYFRAMES}</style>
         {chrome}
         <div className="mx-auto flex w-full max-w-md flex-1 flex-col items-center">
@@ -485,18 +491,18 @@ export default function TgvGame({ onReturnToLobby }: GameProps) {
             {isLast ? <><GameInlineIcon icon={Siren} /> Dernier wagon !</> : `Wagon ${pileIdx + 1} sur ${numPiles}`} · en jeu : {sipsAtStake} gorgée{sipsAtStake > 1 ? "s" : ""} ou un gage
           </p>
 
-          <div className="flex flex-1 items-center justify-center gap-4 py-5" style={{ perspective: 800 }}>
+          <div className="flex flex-1 items-center justify-center gap-4 py-4" style={{ perspective: 800 }}>
             <PlayingCard card={card} dim={!!nextCard && !suspense} />
             {nextCard && (suspense ? <MysteryCard /> : <PlayingCard key={`${nextCard.r}${nextCard.s}`} card={nextCard} ring={verdict === "win" ? "#3DDC97" : verdict === "tie" ? "#FFD23F" : ACCENT} />)}
           </div>
 
-          <div className="flex min-h-[214px] w-full flex-col justify-end">
+          <div className="flex min-h-[204px] w-full flex-col justify-end">
             {suspense ? (
               <div className="text-center">
                 <p style={{ ...DISPLAY, fontSize: 34, color: "#FFD23F", animation: "tgv-wobble .3s ease-in-out infinite" }}>Dernière carte…</p>
               </div>
             ) : !verdict ? (
-              <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-2.5">
                 <p className="text-center text-[16px] font-bold" style={{ color: "rgba(255,255,255,0.85)" }}>La prochaine carte sera…</p>
                 <BetButton label="Plus haute" icon={ArrowUp} bg="#FF6B5B" onClick={() => makeBet("plus")} />
                 <BetButton label="Égale" icon={Equal} bg="#FFD23F" onClick={() => makeBet("egal")} />
@@ -536,9 +542,9 @@ export default function TgvGame({ onReturnToLobby }: GameProps) {
         <style>{KEYFRAMES}</style>
         <ConfettiBurst count={80} />
         <h1 className="text-center" style={{ ...DISPLAY, fontSize: 46, lineHeight: 0.95 }}>Arrivé en gare&nbsp;!</h1>
-        <div className="relative mt-16 rounded-[26px] px-5 pb-5 pt-12 text-center" style={{ ...stk("#FFD23F", 6), color: INK, transform: "rotate(-2deg)", animation: "tgv-pop .5s ease-out" }}>
+        <div className="relative mt-16 rounded-[26px] px-5 pb-5 pt-[60px] text-center" style={{ ...stk("#FFD23F", 6), color: INK, transform: "rotate(-2deg)", animation: "tgv-pop .5s ease-out" }}>
           <div className="absolute -top-16 left-1/2 -translate-x-1/2"><Mascot size={96} color={colorForIndex(currentIdx)} mood="laughing" cheering crown shadow={false} /></div>
-          <p style={{ ...DISPLAY, fontSize: 40, lineHeight: 1, overflowWrap: "anywhere" }}>{currentName}</p>
+          <p style={{ ...DISPLAY, fontSize: nameSize(currentName, 40), lineHeight: 1, overflowWrap: "anywhere" }}>{currentName}</p>
           <p className="mt-2 text-[16px] font-semibold leading-snug">Tous les wagons d&apos;un coup&nbsp;! Tu distribues 2 gorgées (ou un gage) à qui tu veux.</p>
         </div>
         <div className="min-h-8 flex-1" />
@@ -562,7 +568,7 @@ export default function TgvGame({ onReturnToLobby }: GameProps) {
         <div className="relative mt-16 rounded-[26px] px-5 pb-4 pt-[52px] text-center" style={{ ...stk("#3DDC97", 6), color: INK, transform: "rotate(-2deg)" }}>
           <div className="absolute -top-[62px] left-1/2 -translate-x-1/2"><Mascot size={76} color={colorForIndex(top.i)} mood="cool" crown arms shadow={false} /></div>
           <p className="text-[15px] font-bold">Meilleur conducteur</p>
-          <p style={{ ...DISPLAY, fontSize: 40, lineHeight: 1, overflowWrap: "anywhere" }}>{top.name}</p>
+          <p style={{ ...DISPLAY, fontSize: nameSize(top.name, 40), lineHeight: 1, overflowWrap: "anywhere" }}>{top.name}</p>
           <p className="mt-1 text-[15px] font-bold">{top.losses} peine{top.losses > 1 ? "s" : ""}</p>
         </div>
       )}
@@ -576,9 +582,10 @@ export default function TgvGame({ onReturnToLobby }: GameProps) {
           </div>
         ))}
       </div>
-      <div className="mt-5 flex justify-center"><IdeaButton game="TGV" kind="gage" /></div>
+      <div className="mt-5 flex justify-center"><IdeaButton game="Le Train Fou" kind="gage" /></div>
       <div className="min-h-6 flex-1" />
-      <div className="mt-6 space-y-3">
+      {/* Boutons collés en bas (le classement défile dessous avec beaucoup de joueurs) */}
+      <div className="sticky bottom-0 -mx-5 mt-4 space-y-3 px-5 pt-4" style={{ paddingBottom: BOTTOM, marginBottom: `calc(-1 * ${BOTTOM})`, background: "linear-gradient(180deg, transparent, #1E1250 30%)" }}>
         <Push
           big
           bg={ACCENT}
@@ -651,8 +658,8 @@ function PlayingCard({ card, dim, ring }: { card: Card; dim?: boolean; ring?: st
       aria-label={`${RANK_NAMES[card.r] ?? card.r} ${card.s}`}
       style={{
         ...stk("#fff", 6),
-        width: 132,
-        height: 184,
+        height: CARD_H,
+        aspectRatio: "132 / 184",
         color,
         opacity: dim ? 0.6 : 1,
         transform: dim ? "scale(0.9) rotate(-4deg)" : ring ? "rotate(3deg)" : undefined,
@@ -679,10 +686,10 @@ function PlayingCard({ card, dim, ring }: { card: Card; dim?: boolean; ring?: st
           alt=""
           draggable={false}
           className="m-auto block rounded-[8px] object-cover"
-          style={{ width: 86, height: 138, border: `2px solid ${INK}` }}
+          style={{ width: "65%", height: "75%", border: `2px solid ${INK}` }}
         />
       ) : (
-        <div className="m-auto text-[66px] leading-none">{card.s}</div>
+        <div className="m-auto leading-none" style={{ fontSize: "min(66px, 9svh)" }}>{card.s}</div>
       )}
     </div>
   );
@@ -696,7 +703,7 @@ function MysteryCard() {
   return (
     <div
       className="grid place-items-center rounded-[20px]"
-      style={{ ...stk("#7A4EE8", 6), width: 132, height: 184, color: "#fff", animation: "tgv-wobble .3s ease-in-out infinite", backgroundImage: "radial-gradient(rgba(255,255,255,0.18) 2px, transparent 2.4px)", backgroundSize: "16px 16px" }}
+      style={{ ...stk("#7A4EE8", 6), height: CARD_H, aspectRatio: "132 / 184", color: "#fff", animation: "tgv-wobble .3s ease-in-out infinite", backgroundImage: "radial-gradient(rgba(255,255,255,0.18) 2px, transparent 2.4px)", backgroundSize: "16px 16px" }}
     >
       <span style={{ ...DISPLAY, fontSize: 72, lineHeight: 1 }}>?</span>
     </div>
@@ -705,7 +712,7 @@ function MysteryCard() {
 
 function BetButton({ label, icon: Icon, bg, onClick }: { label: string; icon: LucideIcon; bg: string; onClick: () => void }) {
   return (
-    <Push big bg={bg} onClick={onClick} className="w-full">
+    <Push big bg={bg} onClick={onClick} className="w-full" style={{ minHeight: 54 }}>
       <Icon size={24} strokeWidth={3.2} aria-hidden /> {label}
     </Push>
   );
@@ -720,7 +727,7 @@ function PenaltyOverlay({
         <p className="text-[17px] font-bold" style={{ color: "rgba(255,255,255,0.85)" }}>Une peine pour</p>
         <div className="mt-2 flex items-center gap-2.5 rounded-full py-1.5 pl-1.5 pr-5" style={{ ...stk("#fff", 4), color: INK, transform: "rotate(-2deg)" }}>
           <MascotAvatar color={colorForIndex(colorIndex)} size={40} mood="shocked" />
-          <span style={{ ...DISPLAY, fontSize: 30, lineHeight: 1, overflowWrap: "anywhere" }}>{name}</span>
+          <span style={{ ...DISPLAY, fontSize: nameSize(name, 30, 96), lineHeight: 1, overflowWrap: "anywhere" }}>{name}</span>
         </div>
         {spin ? (
           <div className="mt-8 grid h-36 w-36 place-items-center rounded-[34px]" style={{ ...stk(ACCENT, 6), color: INK, animation: "tgv-wobble .25s linear infinite" }}>

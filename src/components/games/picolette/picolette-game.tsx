@@ -18,8 +18,9 @@ import { GameIconButton, GameInlineIcon, GameTopRight } from "@/components/games
 import { IdeaButton, RerollButton } from "@/components/games/idea-button";
 import { isSfxMuted, playCombo, playSfx, preloadSfx, setSfxMuted, subscribeSfxMuted } from "@/lib/sfx";
 import {
-  ArrowDown, ArrowLeft, ArrowUp, ArrowUpDown, Brain, Briefcase, Check, CupSoda, Dices, Drama, Ellipsis, Flame, Hand,
-  Heart, Home, Mic, RotateCcw, ScrollText, Shield, Skull, Smile, Sparkles, Undo2, Users, Volume2, VolumeX,
+  ArrowDown, ArrowLeft, ArrowUp, ArrowUpDown, Brain, Briefcase, Check, CircleHelp, Clapperboard, CupSoda, Dices, Drama,
+  Ellipsis, Eraser, Eye, Flame, Hand, Heart, Home, Infinity as InfinityIcon, Layers, Mic, Music, PersonStanding,
+  RotateCcw, ScrollText, Shield, Skull, Smartphone, Smile, Sparkles, Swords, Timer, Undo2, Users, Volume2, VolumeX, Zap,
   type LucideIcon,
 } from "lucide-react";
 import {
@@ -128,10 +129,18 @@ const TYPE_LOOK: Record<PicoletteType, { bg: string; icon: LucideIcon }> = {
   valise: { bg: "#4ECDC4", icon: Briefcase },
   coquin: { bg: "#FF3EA5", icon: Heart },
   joker: { bg: "#FFF6E5", icon: Sparkles },
+  quiz: { bg: "#FFFFFF", icon: CircleHelp },
+  duel: { bg: "#FF3EA5", icon: Swords },
+  jamais: { bg: "#FFD23F", icon: Hand },
+  defi: { bg: "#FF6B5B", icon: Zap },
+  mime: { bg: "#4ECDC4", icon: PersonStanding },
+  chanson: { bg: "#3DDC97", icon: Music },
+  avoue: { bg: "#FFF6E5", icon: Eye },
 };
 const PACK_LOOK: Record<Pack, { bg: string; icon: LucideIcon }> = {
   soft: { bg: "#4ECDC4", icon: Smile },
   quiz: { bg: "#3DDC97", icon: Brain },
+  pop: { bg: "#FF6B5B", icon: Clapperboard },
   coquin: { bg: "#FF3EA5", icon: Flame },
   trash: { bg: "#7A4EE8", icon: Skull },
 };
@@ -142,13 +151,110 @@ type PenaltyMode = "mix" | "gage";
 /** Résultat de la roulette. */
 type PenaltyResult = { kind: "sips"; n: number } | { kind: "gage"; text: string } | { kind: "shield" };
 
-interface ActiveRule {
-  text: string;
-  startedAt: number;
-  durationMs: number;
+/** Règle live en cours : durée en temps, en cartes, ou jusqu'à la prochaine règle. */
+type ActiveRule = { text: string; by: string } & (
+  | { kind: "time"; startedAt: number; endsAt: number }
+  | { kind: "cards"; endTurn: number }
+  | { kind: "next" }
+);
+
+type PickMode = "loss" | "rule" | "shield" | "duel" | "reader";
+
+/** Carte distribuée : les joueurs tirés pour {p1} / {p2} (indices). */
+type DealtCard = PicoletteCard & { who: number[] };
+
+/** Fréquence visée par type (les gros paquets ne noient pas les autres, les petits ne reviennent pas en boucle). */
+const TYPE_WEIGHT: Record<PicoletteType, number> = {
+  table: 16, vote: 14, rule: 8, prefere: 8, quiz: 9, duel: 7, jamais: 7, defi: 6, avoue: 6,
+  chanson: 5, mime: 5, coquin: 6, valise: 3, joker: 2,
+};
+
+/**
+ * Mélange « varié » : on tire d'abord un type (selon TYPE_WEIGHT, atténué quand le type s'épuise),
+ * jamais l'un des 2 derniers types sortis, puis une carte de ce type. Chaque carte sort une seule fois.
+ */
+function mixTypes<T extends { type: PicoletteType }>(cards: T[]): T[] {
+  const byType = new Map<PicoletteType, T[]>();
+  for (const c of shuffleDeck(cards)) {
+    const list = byType.get(c.type);
+    if (list) list.push(c); else byType.set(c.type, [c]);
+  }
+  const initial = new Map([...byType].map(([t, l]) => [t, l.length]));
+  const out: T[] = [];
+  const recent: PicoletteType[] = [];
+  while (out.length < cards.length) {
+    const left = [...byType.keys()].filter((t) => (byType.get(t)?.length ?? 0) > 0);
+    // Première carte : ni joker ni règle
+    const avoid: PicoletteType[] = out.length === 0 ? ["joker", "rule", ...recent] : recent;
+    const fresh = left.filter((t) => !avoid.includes(t));
+    const pool = fresh.length ? fresh : left;
+    const w = pool.map((t) => TYPE_WEIGHT[t] * Math.sqrt((byType.get(t)?.length ?? 0) / (initial.get(t) ?? 1)));
+    let r = Math.random() * w.reduce((a, b) => a + b, 0);
+    let k = 0;
+    while (k < pool.length - 1 && r >= w[k]) { r -= w[k]; k++; }
+    const t = pool[k];
+    const c = byType.get(t)?.shift();
+    if (!c) break;
+    out.push(c);
+    recent.push(t);
+    if (recent.length > 2) recent.shift();
+  }
+  return out;
 }
 
-type PickMode = "loss" | "rule" | "shield";
+/** Mélange le paquet et tire les prénoms des cartes ciblées, en répartissant équitablement. */
+function dealDeck(packs: Set<Pack>, nPlayers: number): DealtCard[] {
+  const count = new Array<number>(nPlayers).fill(0);
+  const pickLeast = (exclude: number[]) => {
+    const pool = Array.from({ length: nPlayers }, (_, i) => i).filter((i) => !exclude.includes(i));
+    const min = Math.min(...pool.map((i) => count[i]));
+    const best = pool.filter((i) => count[i] === min);
+    const p = best[Math.floor(Math.random() * best.length)];
+    count[p]++;
+    return p;
+  };
+  return mixTypes(filterDeck(packs)).map((c) => {
+    const all = `${c.text} ${c.hint ?? ""} ${c.a ?? ""} ${c.b ?? ""}`;
+    const who: number[] = [];
+    if (all.includes("{p1}") || all.includes("{p2}")) who.push(pickLeast([]));
+    if (all.includes("{p2}") && nPlayers > 1) who.push(pickLeast(who));
+    return { ...c, who };
+  });
+}
+
+/** Remplace {p1} / {p2} par les prénoms. */
+function fill(text: string, who: number[], players: string[]): string {
+  return text.replace(/\{p([12])\}/g, (_, n: string) => players[who[Number(n) - 1]] ?? "quelqu'un");
+}
+
+/** Texte de carte avec les prénoms mis en valeur (sticker). */
+function RichText({ text, who, players, cardBg }: { text: string; who: number[]; players: string[]; cardBg: string }) {
+  const hl = cardBg === "#FFD23F" ? "#fff" : ["#FFFFFF", "#FFF6E5", "#fff"].includes(cardBg) ? "#FFD23F" : "#fff";
+  return (
+    <>
+      {text.split(/(\{p[12]\})/).map((part, k) => {
+        const m = part.match(/^\{p([12])\}$/);
+        if (!m) return <span key={k}>{part}</span>;
+        return (
+          <span
+            key={k}
+            className="whitespace-nowrap rounded-[12px] px-[0.18em]"
+            style={{ background: hl, color: INK, border: `2.5px solid ${INK}`, boxShadow: `0 2px 0 ${INK}`, WebkitBoxDecorationBreak: "clone", boxDecorationBreak: "clone" }}
+          >
+            {players[who[Number(m[1]) - 1]] ?? "quelqu'un"}
+          </span>
+        );
+      })}
+    </>
+  );
+}
+
+/** Durée affichée d'une carte règle. */
+function ruleDurationLabel(c: PicoletteCard): { icon: LucideIcon; label: string } {
+  if (c.ruleUntilNext) return { icon: InfinityIcon, label: "Jusqu'à la prochaine règle" };
+  if (c.ruleCards) return { icon: Layers, label: `Pendant ${c.ruleCards} cartes` };
+  return { icon: Timer, label: `Pendant ${Math.round((c.ruleSec ?? 240) / 60)} min` };
+}
 
 const KEYFRAMES = `
 @keyframes pt-in { 0% { transform: rotateY(80deg) scale(.92); opacity: 0 } 100% { transform: none; opacity: 1 } }
@@ -168,10 +274,13 @@ export default function PicoletteGame({ onReturnToLobby }: GameProps) {
   const [losses, setLosses] = useState<number[]>([]);
   const [shields, setShields] = useState<boolean[]>([]);
   // Coquin / Trash (18+) ne sont PAS cochés par défaut
-  const [packs, setPacks] = useState<Set<Pack>>(new Set<Pack>(["soft", "quiz"]));
+  const [packs, setPacks] = useState<Set<Pack>>(new Set<Pack>(["soft", "quiz", "pop"]));
   const [penaltyMode, setPenaltyMode] = useState<PenaltyMode>("mix");
-  const [deck, setDeck] = useState<PicoletteCard[]>([]);
+  const [deck, setDeck] = useState<DealtCard[]>([]);
   const [cardIdx, setCardIdx] = useState(0);
+  const [turn, setTurn] = useState(0);       // nombre de cartes passées (durée des règles en cartes)
+  const [reader, setReader] = useState(0);   // qui lit la carte (tourne à chaque carte)
+  const [revealed, setRevealed] = useState(false); // réponse du quiz dévoilée
   const [activeRule, setActiveRule] = useState<ActiveRule | null>(null);
   const [ruleToast, setRuleToast] = useState<string | null>(null);
   const [pickMode, setPickMode] = useState<PickMode | null>(null); // overlay "qui perd"
@@ -190,26 +299,33 @@ export default function PicoletteGame({ onReturnToLobby }: GameProps) {
     return () => { if (spinRef.current) clearInterval(spinRef.current); };
   }, []);
 
-  // ── Timer pour la règle live (horloge mise à jour toutes les 250 ms) ──
+  // ── Timer pour les règles live chronométrées (horloge mise à jour toutes les 250 ms) ──
   const [now, setNow] = useState(0);
   useEffect(() => {
-    if (!activeRule) return;
+    if (!activeRule || activeRule.kind !== "time") return;
     const tick = () => {
       const t = Date.now();
       setNow(t);
-      if (t - activeRule.startedAt >= activeRule.durationMs) setActiveRule(null);
+      if (t >= activeRule.endsAt) {
+        setActiveRule(null);
+        setRuleToast(`Fin de la règle : ${activeRule.text}`);
+      }
     };
     const t = setInterval(tick, 250);
     return () => clearInterval(t);
   }, [activeRule]);
-  const ruleRemaining = activeRule
-    ? Math.max(0, activeRule.durationMs - (Math.max(now, activeRule.startedAt) - activeRule.startedAt))
-    : 0;
+  const ruleLeft = !activeRule
+    ? ""
+    : activeRule.kind === "time"
+      ? formatTime(Math.max(0, activeRule.endsAt - Math.max(now, activeRule.startedAt)))
+      : activeRule.kind === "cards"
+        ? (() => { const n = Math.max(1, activeRule.endTurn - turn); return n > 1 ? `encore ${n} cartes` : "dernière carte"; })()
+        : "jusqu'à la prochaine règle";
 
   // Toast « Nouvelle règle »
   useEffect(() => {
     if (!ruleToast) return;
-    const t = setTimeout(() => setRuleToast(null), 3500);
+    const t = setTimeout(() => setRuleToast(null), 3000);
     return () => clearTimeout(t);
   }, [ruleToast]);
 
@@ -223,21 +339,35 @@ export default function PicoletteGame({ onReturnToLobby }: GameProps) {
   };
 
   const launch = () => {
-    const d = shuffleDeck(filterDeck(packs));
+    const d = dealDeck(packs, players.length);
     if (d.length === 0) return;
     setDeck(d);
     setCardIdx(0);
+    setTurn(0);
+    setReader(0);
+    setRevealed(false);
     setActiveRule(null);
     setPhase("intro");
   };
 
   // ── Avancer dans le deck ──────────────────────────────────
-  const nextCard = () => {
+  // rule : règle lancée par la carte qu'on quitte ; readerTo : lecteur imposé (joker Passe-main)
+  const nextCard = (opts: { rule?: ActiveRule; readerTo?: number } = {}) => {
     playSfx("card-flip", { volume: 0.8 });
+    const t = turn + 1;
+    setTurn(t);
+    setReader(opts.readerTo ?? (reader + 1) % Math.max(1, players.length));
+    setRevealed(false);
+    if (opts.rule) {
+      setActiveRule(opts.rule);
+    } else if (activeRule?.kind === "cards" && t >= activeRule.endTurn) {
+      setActiveRule(null);
+      setRuleToast(`Fin de la règle : ${activeRule.text}`);
+    }
     const next = cardIdx + 1;
     if (next >= deck.length) {
-      // On rebat pour une partie infinie
-      setDeck(shuffleDeck(filterDeck(packs)));
+      // Paquet épuisé : on rebat pour une partie infinie
+      setDeck(dealDeck(packs, players.length));
       setCardIdx(0);
     } else {
       setCardIdx(next);
@@ -246,9 +376,10 @@ export default function PicoletteGame({ onReturnToLobby }: GameProps) {
 
   // « Pas fou ? Une autre » : la carte sort du paquet (jamais revue dans la partie)
   const rerollCard = () => {
+    setRevealed(false);
     const rest = deck.filter((_, i) => i !== cardIdx);
     if (cardIdx >= rest.length) {
-      setDeck(shuffleDeck(filterDeck(packs)));
+      setDeck(dealDeck(packs, players.length));
       setCardIdx(0);
     } else {
       setDeck(rest);
@@ -257,11 +388,25 @@ export default function PicoletteGame({ onReturnToLobby }: GameProps) {
 
   const activateRule = () => {
     if (!card || card.type !== "rule") return;
-    const sec = card.ruleSec ?? 240;
-    const replaced = activeRule && ruleRemaining > 0 ? activeRule.text : null;
-    setActiveRule({ text: card.text, startedAt: Date.now(), durationMs: sec * 1000 });
-    setRuleToast(replaced ? `Nouvelle règle : ${card.text} (remplace : ${replaced})` : `Nouvelle règle : ${card.text}`);
+    const text = fill(card.text, card.who, players);
+    const by = players[reader] ?? "";
+    const base = { text, by };
+    const t = Date.now();
+    const rule: ActiveRule = card.ruleUntilNext
+      ? { ...base, kind: "next" }
+      : card.ruleCards
+        ? { ...base, kind: "cards", endTurn: turn + 1 + card.ruleCards }
+        : { ...base, kind: "time", startedAt: t, endsAt: t + (card.ruleSec ?? 240) * 1000 };
     playSfx("bell", { volume: 0.7 });
+    nextCard({ rule });
+  };
+
+  // Joker Libération : lève la règle en cours
+  const clearRule = () => {
+    if (!activeRule) return;
+    setRuleToast(`Règle levée : ${activeRule.text}`);
+    setActiveRule(null);
+    playSfx("powerup", { volume: 0.7 });
     nextCard();
   };
 
@@ -273,6 +418,11 @@ export default function PicoletteGame({ onReturnToLobby }: GameProps) {
       setShields((prev) => prev.map((s, i) => (i === idx ? true : s)));
       playSfx("powerup", { volume: 0.7 });
       nextCard();
+      return;
+    }
+    if (mode === "reader") {
+      playSfx("whoosh", { volume: 0.6 });
+      nextCard({ readerTo: idx });
       return;
     }
     spinPenalty(idx, mode !== "rule");
@@ -406,6 +556,10 @@ export default function PicoletteGame({ onReturnToLobby }: GameProps) {
     const ink = inkOn(look.bg);
     const isJoker = card.type === "joker";
     const TypeIcon = look.icon;
+    const shown = fill(card.text, card.who, players);
+    const dur = card.type === "rule" ? ruleDurationLabel(card) : null;
+    const readerName = players[reader] ?? "";
+    const longName = Math.max(0, ...card.who.map((i) => (players[i] ?? "").length)); // prénom long = police réduite
     return (
       <div className="relative flex min-h-[100svh] flex-col px-4 text-white" style={{ ...PAGE, paddingTop: TOP, paddingBottom: BOTTOM }}>
         <style>{KEYFRAMES}</style>
@@ -414,10 +568,15 @@ export default function PicoletteGame({ onReturnToLobby }: GameProps) {
 
         {/* Règle live en cours */}
         {activeRule && (
-          <div className="mx-auto flex w-full max-w-md items-center gap-2 rounded-[20px] py-2 pl-3.5 pr-2" style={{ ...stk("#7A4EE8", 3, 2.5), color: "#fff" }}>
+          <div key={activeRule.text} className="mx-auto flex w-full max-w-md items-center gap-2 rounded-[20px] py-2 pl-3.5 pr-2" style={{ ...stk("#7A4EE8", 3, 2.5), color: "#fff", animation: "pt-pop .4s ease-out" }}>
             <div className="min-w-0 flex-1">
-              <p className="text-[13px] font-bold" style={{ color: "rgba(255,255,255,0.85)" }}><GameInlineIcon icon={ScrollText} /> Règle en cours · {formatTime(ruleRemaining)}</p>
-              <p className="truncate text-[14px] font-bold">{activeRule.text}</p>
+              <p className="text-[13px] font-bold" style={{ color: "rgba(255,255,255,0.85)" }}>
+                <GameInlineIcon icon={ScrollText} /> Règle en cours
+              </p>
+              <p className="line-clamp-2 text-[15px] font-bold leading-tight">{activeRule.text}</p>
+              <p className="mt-0.5 text-[13px] font-semibold" style={{ color: "rgba(255,255,255,0.85)" }}>
+                {activeRule.by ? `Par ${activeRule.by} · ` : ""}{ruleLeft}
+              </p>
             </div>
             <button type="button" onClick={() => setPickMode("rule")} className="min-h-11 shrink-0 rounded-full px-3 text-[14px] font-extrabold" style={{ ...stk("#fff", 2, 2.5), color: INK }}>
               Qqn a craqué
@@ -436,6 +595,7 @@ export default function PicoletteGame({ onReturnToLobby }: GameProps) {
 
         {/* Carte */}
         <div className="flex flex-1 flex-col items-center justify-center py-3">
+
           <div
             key={`${cardIdx}-${card.text}`}
             className="relative w-full max-w-md rounded-[28px] p-4 pb-5"
@@ -445,11 +605,41 @@ export default function PicoletteGame({ onReturnToLobby }: GameProps) {
               <span className="inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-[15px] font-extrabold" style={{ ...stk("#fff", 2, 2.5), color: INK, transform: "rotate(-3deg)" }}>
                 <TypeIcon size={17} strokeWidth={3} aria-hidden /> {t.label}
               </span>
-              <span className="text-[13px] font-bold tabular-nums" style={{ opacity: 0.7 }}>{cardIdx + 1} / {deck.length}</span>
+              {readerName && (
+                <span className="flex min-w-0 items-center gap-1.5 text-[14px] font-bold" style={{ opacity: 0.9 }} aria-label={`${readerName} lit la carte`}>
+                  <MascotAvatar color={colorForIndex(reader)} size={26} mood="happy" border={false} />
+                  <span className="max-w-[118px] truncate">{readerName} lit</span>
+                </span>
+              )}
             </div>
-            <p className="mt-4 text-center" style={{ ...DISPLAY, fontSize: card.text.length > 90 ? 25 : card.text.length > 55 ? 29 : 33, lineHeight: 1.08, overflowWrap: "break-word" }}>
-              {card.text}
+            <p className="mt-4 text-center" style={{ ...DISPLAY, fontSize: Math.min(shown.length > 90 ? 25 : shown.length > 55 ? 29 : 33, longName > 13 ? 25 : longName > 10 ? 29 : 33), lineHeight: 1.12, overflowWrap: "break-word" }}>
+              <RichText text={card.text} who={card.who} players={players} cardBg={look.bg} />
             </p>
+            {dur && (
+              <div className="mt-3 flex justify-center">
+                <span className="inline-flex min-h-9 items-center gap-1.5 rounded-full px-3 text-[15px] font-extrabold" style={{ ...stk("#FFD23F", 2, 2.5), color: INK, transform: "rotate(2deg)" }}>
+                  <dur.icon size={17} strokeWidth={3} aria-hidden /> {dur.label}
+                </span>
+              </div>
+            )}
+            {card.type === "quiz" && card.answer && (
+              <div className="mt-3 flex justify-center">
+                {revealed ? (
+                  <p className="rounded-[18px] px-4 py-2 text-center text-[17px] font-extrabold leading-snug" style={{ ...stk("#3DDC97", 3, 2.5), color: INK, transform: "rotate(-1.5deg)", animation: "pt-pop .35s ease-out" }}>
+                    Réponse : {card.answer}
+                  </p>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => { playSfx("ding", { volume: 0.6 }); setRevealed(true); }}
+                    className="inline-flex min-h-11 items-center gap-1.5 rounded-full px-4 text-[16px] font-extrabold active:translate-y-[2px]"
+                    style={{ ...stk("#FFD23F", 3, 2.5), color: INK }}
+                  >
+                    <Eye size={18} strokeWidth={3} aria-hidden /> Voir la réponse
+                  </button>
+                )}
+              </div>
+            )}
             {card.type === "prefere" && card.a && card.b && (
               <div className="mt-3 space-y-2">
                 {[{ icon: ArrowUp, label: "Main en haut", v: card.a, bg: "#fff" }, { icon: ArrowDown, label: "Main en bas", v: card.b, bg: "#FFF6E5" }].map((o, k) => (
@@ -457,14 +647,14 @@ export default function PicoletteGame({ onReturnToLobby }: GameProps) {
                     <o.icon size={26} strokeWidth={3} className="shrink-0" aria-hidden />
                     <div className="min-w-0 flex-1">
                       <p className="text-[13px] font-bold" style={{ opacity: 0.65 }}>{o.label}</p>
-                      <p className="text-[16px] font-bold leading-snug">{o.v}</p>
+                      <p className="text-[16px] font-bold leading-snug">{fill(o.v, card.who, players)}</p>
                     </div>
                   </div>
                 ))}
               </div>
             )}
             {card.hint && (
-              <p className="mt-3 text-center text-[14px] font-semibold leading-snug" style={{ opacity: 0.85 }}>{card.hint}</p>
+              <p className="mt-3 text-center text-[15px] font-semibold leading-snug" style={{ opacity: 0.88 }}>{fill(card.hint, card.who, players)}</p>
             )}
           </div>
           <div className="mt-4">
@@ -476,7 +666,7 @@ export default function PicoletteGame({ onReturnToLobby }: GameProps) {
         <div className="mx-auto w-full max-w-md space-y-3">
           {card.type === "rule" ? (
             <Push big bg="#7A4EE8" onClick={activateRule} className="w-full">
-              <ScrollText size={22} strokeWidth={3} aria-hidden /> Activer la règle ({Math.round((card.ruleSec ?? 240) / 60)} min)
+              <ScrollText size={22} strokeWidth={3} aria-hidden /> Activer la règle
             </Push>
           ) : isJoker ? (
             <JokerAction
@@ -485,14 +675,21 @@ export default function PicoletteGame({ onReturnToLobby }: GameProps) {
               onPick={() => setPickMode("loss")}
               onShield={() => setPickMode("shield")}
               onAmnesty={() => { undoLastLoss(); nextCard(); }}
+              hasRule={!!activeRule}
+              onClear={clearRule}
+              onReader={() => setPickMode("reader")}
             />
+          ) : card.type === "duel" && card.who.length > 1 ? (
+            <Push big bg="#FF3EA5" onClick={() => { playSfx("pop", { volume: 0.6 }); setPickMode("duel"); }} className="w-full">
+              <Swords size={22} strokeWidth={3} aria-hidden /> Qui perd le duel ?
+            </Push>
           ) : (
             <Push big bg="#FF3EA5" onClick={() => { playSfx("pop", { volume: 0.6 }); setPickMode("loss"); }} className="w-full">
               <Dices size={22} strokeWidth={3} aria-hidden /> Désigner un perdant
             </Push>
           )}
-          <Push bg="#fff" onClick={nextCard} className="w-full">
-            {isJoker ? "Carte suivante" : "Personne ne perd, carte suivante"}
+          <Push bg="#fff" onClick={() => nextCard()} className="w-full">
+            {isJoker ? "Carte suivante" : card.type === "rule" ? "Passer cette règle" : "Personne ne perd, carte suivante"}
           </Push>
         </div>
 
@@ -512,8 +709,16 @@ export default function PicoletteGame({ onReturnToLobby }: GameProps) {
 
         {pickMode && (
           <PickerOverlay
-            title={pickMode === "shield" ? "Qui reçoit le bouclier ?" : pickMode === "rule" ? "Qui a craqué ?" : "Qui perd cette manche ?"}
+            title={
+              pickMode === "shield" ? "Qui reçoit le bouclier ?"
+                : pickMode === "rule" ? "Qui a craqué ?"
+                  : pickMode === "duel" ? "Qui perd le duel ?"
+                    : pickMode === "reader" ? "Qui lit la suite ?"
+                      : "Qui perd cette manche ?"
+            }
             players={players}
+            only={pickMode === "duel" ? card.who : undefined}
+            mood={pickMode === "shield" || pickMode === "reader" ? "happy" : "sad"}
             shields={shields}
             onPick={onPick}
             onCancel={() => setPickMode(null)}
@@ -591,14 +796,25 @@ export default function PicoletteGame({ onReturnToLobby }: GameProps) {
 
 // ─────────────────────────────────────────────────────────────
 function JokerAction({
-  effect, canUndo, onPick, onShield, onAmnesty,
+  effect, canUndo, onPick, onShield, onAmnesty, hasRule, onClear, onReader,
 }: {
   effect: NonNullable<PicoletteCard["joker"]>;
   canUndo: boolean;
   onPick: () => void;
   onShield: () => void;
   onAmnesty: () => void;
+  hasRule: boolean;
+  onClear: () => void;
+  onReader: () => void;
 }) {
+  if (effect === "reader") return <Push big bg="#7A4EE8" onClick={onReader} className="w-full"><Smartphone size={22} strokeWidth={3} aria-hidden /> Qui lit la suite ?</Push>;
+  if (effect === "clear") {
+    return (
+      <Push big bg="#7A4EE8" onClick={onClear} disabled={!hasRule} className="w-full">
+        {hasRule ? <><Eraser size={22} strokeWidth={3} aria-hidden /> Lever la règle</> : "Aucune règle en cours"}
+      </Push>
+    );
+  }
   if (effect === "pick") return <Push big bg="#7A4EE8" onClick={onPick} className="w-full"><Hand size={22} strokeWidth={3} aria-hidden /> Choisir qui prend la peine</Push>;
   if (effect === "shield") return <Push big bg="#7A4EE8" onClick={onShield} className="w-full"><Shield size={22} strokeWidth={3} aria-hidden /> Donner le bouclier à…</Push>;
   if (effect === "amnesty") {
@@ -715,8 +931,8 @@ function PacksScreen({
 }
 
 function PickerOverlay({
-  title, players, shields, onPick, onCancel,
-}: { title: string; players: string[]; shields: boolean[]; onPick: (i: number) => void; onCancel: () => void }) {
+  title, players, shields, onPick, onCancel, only, mood = "sad",
+}: { title: string; players: string[]; shields: boolean[]; onPick: (i: number) => void; onCancel: () => void; only?: number[]; mood?: "sad" | "happy" }) {
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center" role="dialog" aria-modal aria-label={title}>
       <div className="absolute inset-0" style={{ background: "rgba(10,4,32,0.66)" }} onClick={onCancel} />
@@ -726,7 +942,7 @@ function PickerOverlay({
       >
         <h2 style={{ ...DISPLAY, fontSize: 32, lineHeight: 1 }}>{title}</h2>
         <div className="mt-4 grid grid-cols-2 gap-3">
-          {players.map((name, i) => (
+          {players.map((name, i) => (only && !only.includes(i) ? null : (
             <button
               key={i}
               type="button"
@@ -734,11 +950,11 @@ function PickerOverlay({
               className="flex min-h-[58px] items-center gap-2.5 rounded-[18px] px-3 text-left active:translate-y-[3px]"
               style={{ ...stk("#fff", 3, 2.5), color: INK }}
             >
-              <MascotAvatar color={colorForIndex(i)} size={34} mood="sad" />
+              <MascotAvatar color={colorForIndex(i)} size={34} mood={mood} />
               <span className="min-w-0 flex-1 truncate text-[17px] font-bold">{name}</span>
               {shields[i] && <Shield size={20} strokeWidth={2.8} aria-label="Bouclier" />}
             </button>
-          ))}
+          )))}
         </div>
         <button type="button" onClick={onCancel} className="mx-auto mt-3 block min-h-11 px-4 text-[16px] font-bold underline decoration-2 underline-offset-4">Annuler</button>
       </div>

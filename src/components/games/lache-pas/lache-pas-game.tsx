@@ -368,8 +368,8 @@ export default function LachePasGame({ onReturnToLobby }: GameProps) {
   // ══ Résultat ══
   if (phase === "result" && outcome) {
     const caught = outcome.coward == null && outcome.losers.length > 0;
-    // Blobs affichés là où ils étaient pendant la manche, sans passer sous la carte du bas
-    const viewH = typeof window !== "undefined" ? window.innerHeight : 800;
+    // 5 doigts : blobs un peu plus petits pour tenir sur une seule rangée
+    const crowd = outcome.fingers.length >= 5;
     return (
       <div
         className="relative flex min-h-dvh shrink-0 flex-col"
@@ -378,40 +378,41 @@ export default function LachePasGame({ onReturnToLobby }: GameProps) {
         <KitStyles />
         {controls}
         {caught && <div className="pointer-events-none fixed inset-0 z-30" style={{ animation: "lp-flash 0.9s ease-out forwards" }} />}
-        {/* Les blobs restent à l'endroit où étaient les doigts : chacun retrouve le sien */}
-        <div className="pointer-events-none absolute inset-0">
-          {outcome.fingers.map((f) => {
-            const lost = outcome.losers.includes(f.slot);
-            const won = outcome.winner === f.slot;
-            return (
-              <div key={f.id} className="absolute flex flex-col items-center" style={{ left: f.x, top: Math.min(f.y - 96, viewH - 380), transform: "translate(-50%,-50%)", opacity: lost || won ? 1 : 0.55 }}>
-                <Mascot size={lost || won ? 76 : 56} color={colorForIndex(f.slot)} mood={lost ? (caught ? "dead" : "sad") : won ? "cool" : "happy"} crown={won} bob={false} shadow={false} />
-                <span className="mt-1 whitespace-nowrap px-2 py-0.5 text-[13px] font-bold" style={{ ...sticker(lost ? INK : "#fff", { radius: 999, shadow: 0, border: 2, color: lost ? "#fff" : INK }) }}>
-                  {f.liftedAt == null ? "pris !" : `${(f.liftedAt / 1000).toFixed(1).replace(".", ",")} s`}
-                </span>
-              </div>
-            );
-          })}
-        </div>
-
         <div className="relative z-10 px-5 text-center" style={{ paddingTop: TOP_PAD }}>
           <p className="zk-pop leading-none" style={{ ...DISPLAY, fontSize: caught ? 72 : 52, color: caught ? C.yellow : "#fff", textShadow: `5px 5px 0 ${INK}`, WebkitTextStroke: `2.5px ${INK}`, ["--zk-r" as string]: "-3deg" }}>
             {caught ? "BOUM !" : "Trouillard !"}
           </p>
           <p className="mt-2 text-[16px] font-bold">
             {caught
-              ? `La bombe était réglée sur ${(outcome.fuse / 1000).toFixed(1).replace(".", ",")} s`
-              : `Tout le monde a lâché… elle était réglée sur ${(outcome.fuse / 1000).toFixed(1).replace(".", ",")} s`}
+              ? `La bombe était réglée sur ${(outcome.fuse / 1000).toFixed(1).replace(".", ",")}\u00a0s`
+              : `Tout le monde a lâché… elle était réglée sur ${(outcome.fuse / 1000).toFixed(1).replace(".", ",")}\u00a0s`}
           </p>
         </div>
+        {/* Les blobs de la manche, dans l'ordre de la table (chacun retrouve sa couleur) :
+            rangés proprement, jamais les uns sur les autres ni sous la carte du bas */}
+        <div className="relative z-10 mt-5 flex flex-wrap items-end justify-center gap-x-2.5 gap-y-3 px-4">
+          {[...outcome.fingers].sort((a, b) => a.slot - b.slot).map((f) => {
+            const lost = outcome.losers.includes(f.slot);
+            const won = outcome.winner === f.slot;
+            return (
+              <div key={f.id} className="flex flex-col items-center" style={{ opacity: lost || won ? 1 : 0.6 }}>
+                <Mascot size={lost || won ? (crowd ? 58 : 68) : crowd ? 44 : 54} color={colorForIndex(f.slot)} mood={lost ? (caught ? "dead" : "sad") : won ? "cool" : "happy"} crown={won} bob={false} shadow={false} />
+                <span className="mt-1 whitespace-nowrap px-2 py-0.5 text-[13px] font-bold" style={{ ...sticker(lost ? INK : "#fff", { radius: 999, shadow: 0, border: 2, color: lost ? "#fff" : INK }) }}>
+                  {f.liftedAt == null ? "pris !" : `${(f.liftedAt / 1000).toFixed(1).replace(".", ",")}\u00a0s`}
+                </span>
+              </div>
+            );
+          })}
+        </div>
 
-        <div className="relative z-10 mt-auto px-4" style={{ paddingBottom: BOTTOM_PAD }}>
+        <div className="relative z-10 mt-auto px-4 pt-6" style={{ paddingBottom: BOTTOM_PAD }}>
           <StickerCard bg={C.cream} radius={26} shadow={6} className="mx-auto max-w-md p-4 text-center">
-            <div className="flex items-center justify-center gap-1.5">
+            <div className="flex flex-wrap items-center justify-center gap-1.5">
               {outcome.losers.map((sl) => (
                 <MascotAvatar key={sl} color={colorForIndex(sl)} size={30} mood="dead" border={false} />
               ))}
-              <span className="ml-1 text-[20px] leading-tight" style={DISPLAY}>
+              {/* Plus de 2 perdants : le titre passe sous la rangée de blobs */}
+              <span className={`text-[20px] leading-tight ${outcome.losers.length > 2 ? "basis-full" : "ml-1"}`} style={DISPLAY}>
                 {caught ? (outcome.losers.length > 1 ? "Ces blobs ont perdu" : "Ce blob a perdu") : "Premier à lâcher = perdu"}
               </span>
             </div>
@@ -522,7 +523,7 @@ export default function LachePasGame({ onReturnToLobby }: GameProps) {
             />
             <div className="absolute flex flex-col items-center" style={{ left: -32, top: -128, width: 64, opacity: lifted ? 0.55 : 1 }}>
               <Mascot size={64} color={c} mood={lifted ? "cool" : live ? (heat > 0.5 ? "shocked" : "sus") : "happy"} sweat={live && !lifted} bob={false} shadow={false} />
-              {lifted && <span className="mt-0.5 whitespace-nowrap rounded-full bg-white px-2 text-[13px] font-bold" style={{ color: INK, border: `2px solid ${INK}` }}>{(f.liftedAt! / 1000).toFixed(1).replace(".", ",")} s</span>}
+              {lifted && <span className="mt-0.5 whitespace-nowrap rounded-full bg-white px-2 text-[13px] font-bold" style={{ color: INK, border: `2px solid ${INK}` }}>{(f.liftedAt! / 1000).toFixed(1).replace(".", ",")}&nbsp;s</span>}
             </div>
           </div>
         );

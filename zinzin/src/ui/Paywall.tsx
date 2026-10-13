@@ -141,7 +141,8 @@ export function Paywall({
                   </span>
                 )}
                 <span className="text-[13px] font-bold" style={{ opacity: on ? 0.75 : 0.7 }}>{p.title}</span>
-                <span className="zz-title mt-1 text-[24px]">{p.price}</span>
+                {/* Prix toujours sur une ligne (« 14,99 € » ne se coupe pas sur petit écran) */}
+                <span className="zz-title mt-1 whitespace-nowrap" style={{ fontSize: "min(24px, 5.4vw)" }}>{p.price}</span>
                 <span className="mt-1 text-[12px] font-semibold" style={{ opacity: 0.65 }}>{p.period}</span>
                 {pm && <span className="mt-1 whitespace-nowrap text-[12px] font-bold" style={{ color: on ? "#C41F78" : "#FFD23F" }}>{pm}/mois</span>}
               </button>

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import { ArrowRight, Lock, Settings, Users } from "lucide-react";
 import { FEATURED, SECTIONS, getZGame, type ZFeatured, type ZGame } from "../catalog";
 import { ZBlob, ZPALETTE } from "./ZBlob";
@@ -65,7 +65,7 @@ export function Home({
           return (
             <section key={sec.id} className="mt-6">
               <div className="px-5">
-                <h3 className="zz-title text-white" style={{ fontSize: big ? 34 : 28 }}>
+                <h3 className="zz-title text-white" style={{ fontSize: big ? "min(34px, 8.5vw)" : 28 }}>
                   {stripTitle(sec.title)}
                 </h3>
                 <p className="mt-1 text-[15px] font-medium" style={{ color: "var(--zz-dim)" }}>{sec.subtitle}</p>
@@ -251,6 +251,8 @@ function GameCard({
   const c = ZPALETTE[game.color] ?? ZPALETTE.pink;
   const w = big ? 214 : 172;
   const blob = big ? 112 : 88;
+  // Un mot très long (« Loup-Garou ») : titre un peu plus petit pour garder la marge de la carte
+  const longWord = Math.max(...info.name.split(" ").map((w) => w.length)) >= 10;
   return (
     <button
       type="button"
@@ -293,14 +295,17 @@ function GameCard({
             {showFree && <Tag bg="#fff" tilt={3}>Gratuit</Tag>}
           </div>
         )}
-        <div className="zz-title" style={{ fontSize: big ? 30 : 24, lineHeight: 0.95 }}>
-          {info.name}
+        <div className="zz-title" style={{ fontSize: big ? 30 : longWord ? 21 : 24, lineHeight: 0.95 }}>
+          {/* Un mot ne se coupe jamais (« Loup-Garou » ne passe pas à la ligne au tiret) */}
+          {info.name.split(" ").map((w, i) => (
+            <Fragment key={i}>{i ? " " : ""}<span className="whitespace-nowrap">{w}</span></Fragment>
+          ))}
         </div>
         <p
           className="mt-1.5 font-semibold"
           style={{ fontSize: big ? 14 : 13, lineHeight: 1.3, opacity: 0.8, display: "-webkit-box", WebkitLineClamp: big ? 3 : 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}
         >
-          {info.pitch}
+          {game.tagline ?? info.pitch}
         </p>
       </div>
     </button>

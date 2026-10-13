@@ -89,11 +89,13 @@ const RULES = [
 ];
 
 const rnd = <T,>(arr: T[]) => arr[Math.floor(Math.random() * arr.length)];
+// « Au tour d'Inès » (élision devant une voyelle ou un h muet probable)
+const auTourDe = (name: string) => (/^[aeiouyhàâäéèêëîïôöùûü]/i.test(name) ? `Au tour d'${name}` : `Au tour de ${name}`);
 const num = (s: number) => (Number.isInteger(s) ? String(s) : s.toFixed(2).replace(/0$/, "").replace(".", ","));
-export const fmtS = (ms: number) => `${(ms / 1000).toFixed(2).replace(".", ",")} s`;
+export const fmtS = (ms: number) => `${(ms / 1000).toFixed(2).replace(".", ",")}\u00a0s`;
 export const fmtDelta = (ms: number, target: number) => {
   const d = ms - target * 1000;
-  return `${d >= 0 ? "+" : "−"}${(Math.abs(d) / 1000).toFixed(2).replace(".", ",")} s`;
+  return `${d >= 0 ? "+" : "−"}${(Math.abs(d) / 1000).toFixed(2).replace(".", ",")}\u00a0s`;
 };
 
 // Cibles progressives : courtes au début, longues et « tordues » à la fin
@@ -398,7 +400,7 @@ export function Tournament({ net, onExit }: { net?: TournamentNet; onExit?: () =
   }
 
   const mystery = round.challenge?.id === "mystery";
-  const targetText = mystery ? "???" : round.label ? round.label : `${num(round.target)} s`;
+  const targetText = mystery ? "???" : round.label ? round.label : `${num(round.target)}\u00a0s`;
 
   if (phase === "pass") {
     return (
@@ -485,7 +487,7 @@ export function Tournament({ net, onExit }: { net?: TournamentNet; onExit?: () =
           mode={mode}
           mystery={mystery}
           sound={sound}
-          nextLabel={turn + 1 < round.order.length ? `Au tour de ${players[round.order[turn + 1]]}` : "Résultats de la manche"}
+          nextLabel={turn + 1 < round.order.length ? auTourDe(players[round.order[turn + 1]]) : "Résultats de la manche"}
           onNext={nextTurn}
         />
       </>
@@ -629,13 +631,13 @@ function RoundIntro({
   return (
     <Screen bg={round.challenge ? "#2A1A5E" : C.night}>
       <span className="px-3.5 py-1 text-[18px]" style={{ ...sticker(final ? GOLD : "#fff", { radius: 999, shadow: 3, border: 2.5 }), ...DISPLAY, transform: "rotate(-3deg)" }}>
-        {final ? "Manche finale" : `Manche ${round.n} / ${totalRounds}`}
+        {final ? "Manche finale" : `Manche ${round.n}/${totalRounds}`}
       </span>
       {!mystery && !manual && (
         <>
           <p className="mt-5 text-[20px]" style={DISPLAY}>La cible</p>
           <div key={round.target} className="zk-pop mt-2 px-7 py-3" style={{ ...sticker(C.cream, { radius: 28, shadow: 6 }), ["--zk-r" as string]: "-2deg" }}>
-            <p className="leading-none" style={{ ...DISPLAY, fontSize: round.label ? 44 : 92 }}>{round.label ?? `${num(round.target)} s`}</p>
+            <p className="leading-none" style={{ ...DISPLAY, fontSize: round.label ? 44 : 92 }}>{round.label ?? `${num(round.target)}\u00a0s`}</p>
           </div>
           <div className="mt-4">
             <RerollButton onClick={onRerollTarget} label="Pas fou ? Une autre cible" />
@@ -654,7 +656,7 @@ function RoundIntro({
           </div>
           <div className="mt-4 flex items-center gap-3">
             <StickerBtn bg="#fff" className="!px-0" style={{ width: 52, minHeight: 52, fontSize: 28 }} label="Moins" onClick={() => setTarget(Math.max(1, Math.round((round.target - 0.5) * 2) / 2))}>−</StickerBtn>
-            <span className="w-32 text-center text-[40px] leading-none" style={DISPLAY}>{num(round.target)} s</span>
+            <span className="w-32 text-center text-[40px] leading-none" style={DISPLAY}>{num(round.target)}&nbsp;s</span>
             <StickerBtn bg={C.yellow} className="!px-0" style={{ width: 52, minHeight: 52, fontSize: 28 }} label="Plus" onClick={() => setTarget(Math.min(60, Math.round((round.target + 0.5) * 2) / 2))}>+</StickerBtn>
           </div>
           {round.label && (
@@ -823,7 +825,7 @@ function Reveal({
         shadow={false}
       />
       <p className="mt-2 text-[26px] leading-none" style={DISPLAY}>{attempt.name}</p>
-      {!mystery && <p className="mt-1.5 text-[16px] font-bold">Cible : {num(target)} s</p>}
+      {!mystery && <p className="mt-1.5 text-[16px] font-bold">Cible : {num(target)}&nbsp;s</p>}
       <div className={`mt-3 px-6 py-2 ${!done && shown === 0 ? "pp-wait" : ""}`} style={{ ...sticker("#fff", { radius: 26, shadow: 6 }), transform: "rotate(-2deg)" }}>
         <p className="tabular-nums leading-none" style={{ ...DISPLAY, fontSize: "min(22vw, 6.5rem)", color: !done && overFlash && !mystery ? RED : INK }}>
           {(shown / 1000).toFixed(2).replace(".", ",")}
@@ -929,7 +931,7 @@ function Board({
     <StickerScreen bg={C.night}>
       <style>{KEYFRAMES}</style>
       <span className="px-3.5 py-1 text-[17px]" style={{ ...sticker("#fff", { radius: 999, shadow: 3, border: 2.5 }), ...DISPLAY, transform: "rotate(-3deg)" }}>
-        Manche {round.n}/{totalRounds} · {mystery ? "la cible était" : "cible"} {num(round.target)} s
+        Manche {round.n}/{totalRounds} · {mystery ? "la cible était" : "cible"} {num(round.target)}&nbsp;s
       </span>
       <h2 className="mt-3 text-[48px] leading-none" style={{ ...DISPLAY, textShadow: `4px 4px 0 ${INK}` }}>Résultats</h2>
 
@@ -1050,7 +1052,7 @@ function FinalScreen({
         <Mascot size={104} color={colorForIndex(champ?.i ?? 0)} mood="cool" arms crown shadow={false} />
       </div>
       <h2 className="mt-1 max-w-full break-words text-center text-[clamp(40px,12vw,56px)] leading-[0.95]" style={{ ...DISPLAY, textShadow: `4px 4px 0 ${INK}` }}>{champ?.name ?? "—"}</h2>
-      <p className="mt-2 text-[16px] font-bold">
+      <p className="mt-2 text-center text-[16px] font-bold">
         {champ?.pts ?? 0} point{(champ?.pts ?? 0) > 1 ? "s" : ""}
         {standings[1] && standings[1].pts === champ?.pts ? " · départagé au plus petit écart cumulé" : ""}
       </p>
@@ -1060,8 +1062,8 @@ function FinalScreen({
           <div key={s.i} className="flex items-center gap-3 px-3 py-2" style={{ ...sticker(i === 0 ? GOLD : C.cream, { radius: 18, shadow: 3 }), animation: `pp-rise .35s ${i * 0.07}s ease-out both` }}>
             <span className="w-6 text-center text-[20px]" style={DISPLAY}>{i + 1}</span>
             <MascotAvatar color={colorForIndex(s.i)} size={32} mood={i === 0 ? "cool" : "happy"} border={false} />
-            <span className="min-w-0 flex-1 truncate text-[18px]" style={DISPLAY}>{s.name}</span>
-            <span className="text-[18px]" style={DISPLAY}>{s.pts} pt{s.pts > 1 ? "s" : ""}</span>
+            <span className="min-w-0 flex-1 text-[18px] leading-tight" style={{ ...DISPLAY, overflowWrap: "anywhere" }}>{s.name}</span>
+            <span className="shrink-0 whitespace-nowrap text-[18px]" style={DISPLAY}>{s.pts} pt{s.pts > 1 ? "s" : ""}</span>
           </div>
         ))}
       </div>
@@ -1071,12 +1073,12 @@ function FinalScreen({
           <div className="p-3" style={{ ...sticker(ACCENT, { radius: 18, shadow: 4 }), transform: "rotate(-1.5deg)" }}>
             <p className="text-[14px] font-bold">Meilleur tir</p>
             <p className="truncate text-[19px] leading-tight" style={DISPLAY}>{best.name}</p>
-            <p className="text-[13px] font-semibold">à {(best.gap / 1000).toFixed(2).replace(".", ",")} s de {num(best.target)} s</p>
+            <p className="text-[13px] font-semibold">à {fmtS(best.gap)} de {num(best.target)}&nbsp;s</p>
           </div>
           <div className="p-3" style={{ ...sticker(RED, { radius: 18, shadow: 4 }), transform: "rotate(1.5deg)" }}>
             <p className="text-[14px] font-bold">Le plus à côté</p>
             <p className="truncate text-[19px] leading-tight" style={DISPLAY}>{worst.name}</p>
-            <p className="text-[13px] font-semibold">{fmtS(worst.elapsedMs)} pour {num(worst.target)} s</p>
+            <p className="text-[13px] font-semibold">{fmtS(worst.elapsedMs)} pour {num(worst.target)}&nbsp;s</p>
           </div>
         </div>
       )}
