@@ -109,7 +109,7 @@ export const UI: I18n<{
     ageOk: "J’ai 18 ans ou plus",
     premium: "Premium",
     unlockAllTitle: "Débloque tout Zinzin",
-    unlockAllSub: "Tous les jeux, et du nouveau chaque mois.",
+    unlockAllSub: "Tous les jeux, et toutes les nouveautés.",
     sipNote: "Une gorgée de zinzin, c’est de ce que tu veux : eau, soft… avec modération.",
     featuredLabel: "À la une",
     slideOf: (i, n) => `Slide ${i} sur ${n}`,
@@ -130,13 +130,13 @@ export const UI: I18n<{
       plus: (a) => `${a} joueurs et +`,
       exact: (a) => `${a} joueurs`,
     },
-    perks: ["Tous les jeux, sans limite", "De nouveaux jeux chaque mois", "Les packs 18+ débloqués", "Zéro pub, jamais"],
+    perks: ["Tous les jeux, sans limite", "Les nouveaux jeux inclus", "Les packs 18+ débloqués", "Zéro pub, jamais"],
     paywallTitle1: "Débloque toute",
     paywallTitle2: "la folie",
     plansLabel: "Offres",
     plans: {
       weekly: { title: "Pass soirée", period: "7 jours" },
-      monthly: { title: "Mensuel", period: "par mois", badge: "Le + choisi" },
+      monthly: { title: "Mensuel", period: "par mois" },
       yearly: { title: "Annuel", period: "par an", badge: "-50 %" },
     },
     perMonthSuffix: "/mois",
@@ -156,7 +156,7 @@ export const UI: I18n<{
     freeVersion: "Version gratuite",
     freeGames: "3 jeux offerts",
     premiumText: "Tout est débloqué. Les nouveaux jeux arrivent tout seuls.",
-    freeText: "Le reste t'attend : tous les jeux, et du nouveau chaque\u00a0mois.",
+    freeText: "Le reste t'attend : tous les jeux, et toutes les\u00a0nouveautés.",
     unlockEverything: "Tout débloquer",
     manageSub: "Gérer mon abonnement",
     contactUs: "Nous écrire",
@@ -200,7 +200,7 @@ export const UI: I18n<{
     ageOk: "I'm 18 or older",
     premium: "Premium",
     unlockAllTitle: "Unlock all of Zinzin",
-    unlockAllSub: "Every game, plus new ones every month.",
+    unlockAllSub: "Every game, plus every new one we release.",
     sipNote: "A zinzin sip is whatever you like: water, soft drinks… in moderation.",
     featuredLabel: "Featured",
     slideOf: (i, n) => `Slide ${i} of ${n}`,
@@ -221,13 +221,13 @@ export const UI: I18n<{
       plus: (a) => `${a}+ players`,
       exact: (a) => `${a} players`,
     },
-    perks: ["Every game, no limits", "New games every month", "18+ packs unlocked", "Zero ads, ever"],
+    perks: ["Every game, no limits", "New games included", "18+ packs unlocked", "Zero ads, ever"],
     paywallTitle1: "Unlock all",
     paywallTitle2: "the madness",
     plansLabel: "Plans",
     plans: {
       weekly: { title: "Party Pass", period: "7 days" },
-      monthly: { title: "Monthly", period: "per month", badge: "Most popular" },
+      monthly: { title: "Monthly", period: "per month" },
       yearly: { title: "Yearly", period: "per year", badge: "-50%" },
     },
     perMonthSuffix: "/mo",
@@ -247,7 +247,7 @@ export const UI: I18n<{
     freeVersion: "Free version",
     freeGames: "3 free games",
     premiumText: "Everything's unlocked. New games show up on their own.",
-    freeText: "The rest is waiting: every game, plus new ones every month.",
+    freeText: "The rest is waiting: every game, plus every new one we release.",
     unlockEverything: "Unlock everything",
     manageSub: "Manage my subscription",
     contactUs: "Contact us",
@@ -291,7 +291,7 @@ export const UI: I18n<{
     ageOk: "Tengo 18 años o más",
     premium: "Premium",
     unlockAllTitle: "Desbloquea todo Zinzin",
-    unlockAllSub: "Todos los juegos y novedades cada mes.",
+    unlockAllSub: "Todos los juegos y todas las novedades.",
     sipNote: "Un trago de zinzin es de lo que quieras: agua, refresco… con moderación.",
     featuredLabel: "Destacados",
     slideOf: (i, n) => `Diapositiva ${i} de ${n}`,
@@ -312,13 +312,13 @@ export const UI: I18n<{
       plus: (a) => `${a} jugadores o más`,
       exact: (a) => `${a} jugadores`,
     },
-    perks: ["Todos los juegos, sin límites", "Juegos nuevos cada mes", "Packs 18+ desbloqueados", "Cero anuncios, nunca"],
+    perks: ["Todos los juegos, sin límites", "Los juegos nuevos incluidos", "Packs 18+ desbloqueados", "Cero anuncios, nunca"],
     paywallTitle1: "Desbloquea toda",
     paywallTitle2: "la locura",
     plansLabel: "Planes",
     plans: {
       weekly: { title: "Pase fiesta", period: "7 días" },
-      monthly: { title: "Mensual", period: "al mes", badge: "El más elegido" },
+      monthly: { title: "Mensual", period: "al mes" },
       yearly: { title: "Anual", period: "al año", badge: "-50 %" },
     },
     perMonthSuffix: "/mes",
@@ -338,7 +338,7 @@ export const UI: I18n<{
     freeVersion: "Versión gratuita",
     freeGames: "3 juegos gratis",
     premiumText: "Todo está desbloqueado. Los juegos nuevos llegan solos.",
-    freeText: "El resto te espera: todos los juegos y novedades cada mes.",
+    freeText: "El resto te espera: todos los juegos y todas las novedades.",
     unlockEverything: "Desbloquearlo todo",
     manageSub: "Gestionar mi suscripción",
     contactUs: "Escríbenos",
@@ -587,5 +587,135 @@ export const SOIREE: I18n<{
     newSoiree: "Nueva noche",
     home: "Volver al inicio",
     kinds: { bluff: "Faroles", tel: "El móvil es el juego", devine: "Adivinar", rapide: "Rápido", ambiance: "Ambiente", boire: "Para beber", duo: "En pareja" },
+  },
+};
+
+/** Paywall : essai gratuit (offre de lancement sur l'annuel) et libellés associés, en FR / EN / ES. */
+export const TRIAL: I18n<{
+  badge: (n: number) => string;
+  cta: (n: number) => string;
+  ctaContinue: string;
+  /** Ligne légale obligatoire (Apple 3.1.2) sous le bouton */
+  legal: (n: number, price: string, android: boolean) => string;
+  today: string;
+  todayText: string;
+  remindDay: (d: number) => string;
+  remindText: string;
+  endDay: (d: number) => string;
+  endText: string;
+  timelineLabel: string;
+  started: (n: number) => string;
+  /** Notification locale la veille de la fin de l'essai */
+  reminderTitle: string;
+  reminderBody: (price: string, android: boolean) => string;
+}> = {
+  fr: {
+    badge: (n) => `${n} jours offerts`,
+    cta: (n) => `Essayer ${n} jours gratuits`,
+    ctaContinue: "Continuer",
+    legal: (n, price, android) =>
+      `${n} jours gratuits, puis ${price}/an. Résiliable à tout moment dans les réglages ${android ? "de Google Play" : "de l’App Store"}, au moins 24 h avant la fin de l’essai.`,
+    today: "Aujourd’hui",
+    todayText: "Tout est débloqué",
+    remindDay: (d) => `Jour ${d}`,
+    remindText: "On te prévient",
+    endDay: (d) => `Jour ${d}`,
+    endText: "Début de l’abonnement",
+    timelineLabel: "Déroulé de l’essai",
+    started: (n) => `C’est parti : ${n} jours offerts !`,
+    reminderTitle: "Ton essai Zinzin se termine demain",
+    reminderBody: (price, android) =>
+      `Ensuite, l’abonnement annuel démarre (${price}/an). Pour l’arrêter, résilie dans les réglages ${android ? "de Google Play" : "de l’App Store"}.`,
+  },
+  en: {
+    badge: (n) => `${n} days free`,
+    cta: (n) => `Try ${n} days free`,
+    ctaContinue: "Continue",
+    legal: (n, price, android) =>
+      `${n} days free, then ${price}/year. Cancel anytime in your ${android ? "Google Play" : "App Store"} settings, at least 24 hours before the trial ends.`,
+    today: "Today",
+    todayText: "Everything unlocked",
+    remindDay: (d) => `Day ${d}`,
+    remindText: "We remind you",
+    endDay: (d) => `Day ${d}`,
+    endText: "Subscription starts",
+    timelineLabel: "How the trial works",
+    started: (n) => `You're in: ${n} days free!`,
+    reminderTitle: "Your Zinzin trial ends tomorrow",
+    reminderBody: (price, android) =>
+      `After that, your yearly subscription starts (${price}/year). To stop it, cancel in your ${android ? "Google Play" : "App Store"} settings.`,
+  },
+  es: {
+    badge: (n) => `${n} días gratis`,
+    cta: (n) => `Probar ${n} días gratis`,
+    ctaContinue: "Continuar",
+    legal: (n, price, android) =>
+      `${n} días gratis y después ${price}/año. Cancela cuando quieras en los ajustes ${android ? "de Google Play" : "del App Store"}, al menos 24 h antes de que acabe la prueba.`,
+    today: "Hoy",
+    todayText: "Todo desbloqueado",
+    remindDay: (d) => `Día ${d}`,
+    remindText: "Te avisamos",
+    endDay: (d) => `Día ${d}`,
+    endText: "Empieza la suscripción",
+    timelineLabel: "Cómo funciona la prueba",
+    started: (n) => `¡Listo! ${n} días gratis`,
+    reminderTitle: "Tu prueba de Zinzin termina mañana",
+    reminderBody: (price, android) =>
+      `Después empieza la suscripción anual (${price}/año). Para pararla, cancela en los ajustes ${android ? "de Google Play" : "del App Store"}.`,
+  },
+};
+
+/** Tutoriel du premier lancement (3 écrans), en FR / EN / ES. */
+export const ONBOARDING: I18n<{
+  slides: { title: string; text: string }[];
+  adult: string;
+  skip: string;
+  next: string;
+  start: string;
+  pageOf: (i: number, n: number) => string;
+  label: string;
+  replay: string;
+}> = {
+  fr: {
+    slides: [
+      { title: "Un seul tél pour toute la bande", text: "Personne d’autre n’a besoin de l’app : on se passe le téléphone, chacun son tour." },
+      { title: "Choisis un jeu… ou lance une Soirée Zinzin", text: "Pas envie de choisir ? La Soirée Zinzin enchaîne les jeux pour vous, jusqu’au podium." },
+      { title: "Pas de compte, zéro réseau", text: "Tout marche hors ligne, même au fond d’une cave. Rien à créer, on joue direct." },
+    ],
+    adult: "18+ · Jouez responsable : une gorgée de zinzin, ça peut être de l’eau.",
+    skip: "Passer",
+    next: "Suivant",
+    start: "C’est parti !",
+    pageOf: (i, n) => `Écran ${i} sur ${n}`,
+    label: "Découvrir Zinzin",
+    replay: "Revoir le tuto",
+  },
+  en: {
+    slides: [
+      { title: "One phone for the whole crew", text: "Nobody else needs the app: just pass the phone around, one turn each." },
+      { title: "Pick a game… or start a Zinzin Night", text: "Can't decide? Zinzin Night lines up the games for you, all the way to the podium." },
+      { title: "No account, zero signal", text: "Everything works offline, even at the bottom of a cellar. Nothing to sign up for, just play." },
+    ],
+    adult: "18+ · Play responsibly: a zinzin sip can totally be water.",
+    skip: "Skip",
+    next: "Next",
+    start: "Let's go!",
+    pageOf: (i, n) => `Screen ${i} of ${n}`,
+    label: "Discover Zinzin",
+    replay: "Replay the tutorial",
+  },
+  es: {
+    slides: [
+      { title: "Un solo móvil para todo el grupo", text: "Nadie más necesita la app: pasa el móvil y cada uno juega en su turno." },
+      { title: "Elige un juego… o lanza una Noche Zinzin", text: "¿No sabes cuál elegir? La Noche Zinzin encadena los juegos por ti, hasta el podio." },
+      { title: "Sin cuenta, cero cobertura", text: "Todo funciona sin conexión, hasta en el fondo de un sótano. Nada que crear: a jugar." },
+    ],
+    adult: "18+ · Juega con cabeza: un trago de zinzin puede ser agua.",
+    skip: "Saltar",
+    next: "Siguiente",
+    start: "¡Vamos!",
+    pageOf: (i, n) => `Pantalla ${i} de ${n}`,
+    label: "Descubre Zinzin",
+    replay: "Ver el tutorial otra vez",
   },
 };

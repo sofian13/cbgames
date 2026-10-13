@@ -27,6 +27,7 @@ import {
 } from "./lg-local-ui";
 import { useT, pick, getLang } from "@/lib/i18n";
 import { CAUSE_LABEL, ROLE_TEXT, STR, WIN_TEXT, type LgStrings } from "./lg-local-i18n";
+import { useGameFinished } from "@/lib/game-finished";
 
 // ── Réglages persistants ──────────────────────────────────
 interface Settings {
@@ -96,6 +97,7 @@ export default function LoupGarouLocal({ onReturnToLobby }: GameProps) {
   const [settings, setSettings] = useState<Settings>(() => (typeof window === "undefined" ? DEFAULT_SETTINGS : loadSettings()));
   const [game, setGame] = useState<GameState | null>(null);
   const [phase, setPhase] = useState<Phase>({ k: "players" });
+  useGameFinished(phase.k === "end"); // fin de partie → demande de note éventuelle (app)
   const [modal, setModal] = useState<null | "rules" | "history" | "sound">(null);
   // Chaque nouvel écran s'ouvre en haut (l'app garde le défilement entre deux écrans)
   useScrollTopOn(`${phase.k}-${"i" in phase ? phase.i : ""}-${"reveal" in phase ? phase.reveal : ""}-${game?.history.length ?? 0}`);

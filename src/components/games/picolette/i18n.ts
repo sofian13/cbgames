@@ -22,6 +22,9 @@ type Str = {
   introTitle: string;
   introSub: string;
   introRules: string[];
+  /** Mode sans alcool / Soirée Chill : règles d'intro et note de peine, gages seulement */
+  introRulesNoSips: string[];
+  penaltyNoSips: string;
   introGo: string;
   ruleOngoing: string;
   ruleBy: (name: string) => string;
@@ -118,6 +121,12 @@ export const STR: I18n<Str> = {
       "Personne n'est obligé de boire : on peut toujours prendre le gage.",
       "Les cartes sont des suggestions, adaptez-les.",
     ],
+    introRulesNoSips: [
+      "18+ : certaines cartes sont coquines, rien d'explicite.",
+      "La peine : toujours un gage, tiré par la roulette.",
+      "Les cartes sont des suggestions, adaptez-les.",
+    ],
+    penaltyNoSips: "Que des gages : la roulette ne tire que des gages.",
     introGo: "OK, on lance",
     ruleOngoing: "Règle en cours",
     ruleBy: (n) => `Par ${n} · `,
@@ -211,6 +220,12 @@ export const STR: I18n<Str> = {
       "Nobody has to drink: you can always take the dare.",
       "The cards are suggestions, tweak them.",
     ],
+    introRulesNoSips: [
+      "18+: some cards are cheeky, nothing explicit.",
+      "The penalty: always a dare, picked by the wheel.",
+      "The cards are suggestions, tweak them.",
+    ],
+    penaltyNoSips: "Dares only: the wheel only picks dares.",
     introGo: "OK, let's go",
     ruleOngoing: "Rule in play",
     ruleBy: (n) => `By ${n} · `,
@@ -304,6 +319,12 @@ export const STR: I18n<Str> = {
       "Nadie está obligado a beber: siempre puedes elegir el reto.",
       "Las cartas son sugerencias, adaptadlas.",
     ],
+    introRulesNoSips: [
+      "18+: algunas cartas son pícaras, nada explícito.",
+      "El castigo: siempre un reto, elegido por la ruleta.",
+      "Las cartas son sugerencias, adaptadlas.",
+    ],
+    penaltyNoSips: "Solo retos: la ruleta solo elige retos.",
     introGo: "Vale, ¡empezamos!",
     ruleOngoing: "Regla activa",
     ruleBy: (n) => `De ${n} · `,

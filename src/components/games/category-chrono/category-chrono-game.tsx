@@ -13,6 +13,7 @@ import { STR } from "./i18n";
 import { ArrowLeft, BookOpen, Check, Clapperboard, Flame, Heart, PartyPopper, RotateCcw, Skull, Volume2, VolumeX, X, type LucideIcon } from "lucide-react";
 import { GameIconButton, GameInlineIcon, GameTopRight } from "@/components/games/game-icon-button";
 import { IdeaButton, RerollButton } from "@/components/games/idea-button";
+import { useGameFinished } from "@/lib/game-finished";
 
 // ── Catégorie Chrono ───────────────────────────────────────
 // Une catégorie s'affiche, le tél tourne : chacun doit donner un mot de la
@@ -74,6 +75,7 @@ export default function CategoryChronoGame({ onReturnToLobby }: GameProps) {
   const PACKS = PACKS_BY_LANG[lang];
 
   const [phase, setPhase] = useState<Phase>("setup");
+  useGameFinished(phase === "over"); // fin de partie → demande de note éventuelle (app)
   // Chaque écran repart du haut (sinon la catégorie s'ouvre défilée si on a scrollé les réglages)
   useScrollTopOn(phase);
   const [names, setNames] = useState<string[]>([]);

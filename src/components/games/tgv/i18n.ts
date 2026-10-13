@@ -82,6 +82,11 @@ interface TgvStrings {
   step2: string;
   step3: string;
   titleTop: string;
+  /** Mode sans alcool / Soirée Chill : variantes gages seulement */
+  step3NoSips: string;
+  noSipsNote: string;
+  atStakeDare: string;
+  winNoteNoSips: string;
   titleBottom: string;
   wagons: string;
   pileLabel: (n: number) => string;
@@ -137,6 +142,10 @@ export const STR: I18n<TgvStrings> = {
     step2: "Enchaîne tous les wagons sans te tromper pour arriver en gare.",
     step3: "Raté = une peine et retour au wagon 1. Plus tu tombes loin, plus elle grimpe (3 gorgées max, ou un gage).",
     titleTop: "Le Train",
+    step3NoSips: "Raté = un gage et retour au wagon 1.",
+    noSipsNote: "Que des gages : toutes les peines sont des gages.",
+    atStakeDare: "en jeu : un gage",
+    winNoteNoSips: "Tous les wagons d'un coup ! Tu donnes un gage à qui tu veux.",
     titleBottom: "Fou",
     wagons: "Les wagons",
     pileLabel: (n) => (n === 3 ? "express" : n === 4 ? "classique" : n === 5 ? "long" : "marathon"),
@@ -190,6 +199,10 @@ export const STR: I18n<TgvStrings> = {
     step2: "Clear every carriage without a single mistake to reach the station.",
     step3: "Wrong = a penalty and back to carriage 1. The further you fall, the bigger it gets (3 sips max, or a dare).",
     titleTop: "The Crazy",
+    step3NoSips: "Wrong = a dare and back to carriage 1.",
+    noSipsNote: "Dares only: every penalty is a dare.",
+    atStakeDare: "at stake: a dare",
+    winNoteNoSips: "Every carriage in one go! Give a dare to whoever you like.",
     titleBottom: "Train",
     wagons: "Carriages",
     pileLabel: (n) => (n === 3 ? "express" : n === 4 ? "classic" : n === 5 ? "long" : "marathon"),
@@ -243,6 +256,10 @@ export const STR: I18n<TgvStrings> = {
     step2: "Supera todos los vagones sin fallar para llegar a la estación.",
     step3: "Fallo = un castigo y vuelta al vagón 1. Cuanto más lejos caigas, más sube (3 tragos máx., o un reto).",
     titleTop: "El Tren",
+    step3NoSips: "Fallo = un reto y vuelta al vagón 1.",
+    noSipsNote: "Solo retos: todos los castigos son retos.",
+    atStakeDare: "en juego: un reto",
+    winNoteNoSips: "¡Todos los vagones de una! Dale un reto a quien quieras.",
     titleBottom: "Loco",
     wagons: "Los vagones",
     pileLabel: (n) => (n === 3 ? "exprés" : n === 4 ? "clásico" : n === 5 ? "largo" : "maratón"),

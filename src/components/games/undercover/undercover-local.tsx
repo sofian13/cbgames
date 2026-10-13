@@ -14,6 +14,7 @@ import { adultDefault } from "@/lib/party-mood";
 import { getLang, useT, type Lang } from "@/lib/i18n";
 import { FREE_CAT_IDS, allWordPairs, freePairs, wordCategories, type WordCategory } from "@/components/games/undercover/words";
 import { UC_STR } from "@/components/games/undercover/i18n";
+import { useGameFinished } from "@/lib/game-finished";
 
 /* ─────────────────────────────────────────────────────────────
    L'INTRUS LOCAL — Pass-and-play (un seul téléphone)
@@ -80,6 +81,7 @@ const colorByIdx = (idx: number): MascotColor => MASCOT_COLORS[idx % MASCOT_COLO
 export default function UndercoverLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) {
   // ── State global ────────────────────────────────────────
   const [phase, setPhase]           = useState<LocalPhase>("setup-players");
+  useGameFinished(phase === "over"); // fin de partie → demande de note éventuelle (app)
   const [players, setPlayers]       = useState<LocalPlayer[]>([]);
   const [round, setRound]           = useState(1);
   const [endReason, setEndReason]   = useState<EndReason | null>(null);

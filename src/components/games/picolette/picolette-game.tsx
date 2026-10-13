@@ -31,6 +31,9 @@ import {
 } from "./cards";
 import { pick, useLang, useT } from "@/lib/i18n";
 import { STR } from "./i18n";
+import { useGameFinished } from "@/lib/game-finished";
+import { ShareResultButton } from "@/components/games/share-result-button";
+import { tourneeCard } from "@/lib/share-cards";
 
 // ── DA sticker ────────────────────────────────────────────
 const INK = "#15082E";
@@ -282,6 +285,7 @@ export default function PicoletteGame({ onReturnToLobby }: GameProps) {
   const tr = useT(STR);
   type Phase = "setup" | "packs" | "intro" | "play" | "over";
   const [phase, setPhase] = useState<Phase>("setup");
+  useGameFinished(phase === "over"); // fin de partie → demande de note éventuelle (app)
   const [players, setPlayers] = useState<string[]>([]);
   const [losses, setLosses] = useState<number[]>([]);
   const [shields, setShields] = useState<boolean[]>([]);
@@ -550,7 +554,7 @@ export default function PicoletteGame({ onReturnToLobby }: GameProps) {
           <div className="relative mt-10">
             <div className="absolute -top-14 right-2 z-[1]"><Mascot size={72} color="yellow" mood="laughing" arms shadow={false} /></div>
             <ul className="space-y-2.5 rounded-[26px] p-5 pt-10 text-[16px] font-semibold leading-snug" style={{ ...stk("#FFF6E5", 6), color: INK, transform: "rotate(-1.5deg)" }}>
-              {tr.introRules.map((t, i) => (
+              {(sipsAllowed(true) ? tr.introRules : tr.introRulesNoSips).map((t, i) => (
                 <li key={i} className="flex gap-2.5">
                   <Check size={20} strokeWidth={3.2} className="mt-0.5 shrink-0" style={{ color: "#E0218A" }} aria-hidden />
                   <span>{t}</span>
@@ -834,7 +838,10 @@ export default function PicoletteGame({ onReturnToLobby }: GameProps) {
         </div>
 
         <p className="mt-5 text-center text-[15px] font-semibold" style={{ color: "rgba(255,255,255,0.82)" }}>{tr.overWater}</p>
-        <div className="mt-4 flex justify-center"><IdeaButton game={tr.gameName} kind={tr.ideaKind} /></div>
+        <div className="mt-4 flex flex-wrap justify-center gap-3">
+          <ShareResultButton card={() => tourneeCard(ranking.map((p) => ({ name: p.name, losses: p.losses, colorIndex: p.i })))} />
+          <IdeaButton game={tr.gameName} kind={tr.ideaKind} />
+        </div>
 
         <div className="min-h-6 flex-1" />
         <div className="space-y-3">
@@ -896,6 +903,7 @@ function PacksScreen({
   onLaunch: () => void;
   onBack: () => void;
 }) {
+  const [sipsOk] = useState(() => sipsAllowed(true));
   const togglePack = (p: Pack) => {
     const next = new Set(packs);
     if (next.has(p)) next.delete(p); else next.add(p);
@@ -952,7 +960,8 @@ function PacksScreen({
         </div>
 
         <h2 className="mt-8" style={{ ...DISPLAY, fontSize: 30, lineHeight: 1 }}>{t.penaltyTitle}</h2>
-        <div className="mt-3 grid grid-cols-2 gap-3">
+        {/* Mode sans alcool / Soirée Chill : pas de choix, gages seulement */}
+        {sipsOk && <div className="mt-3 grid grid-cols-2 gap-3">
           {([
             { v: "mix", icons: [CupSoda, Drama], label: t.modeMix },
             { v: "gage", icons: [Drama], label: t.modeDares },
@@ -972,9 +981,9 @@ function PacksScreen({
               </button>
             );
           })}
-        </div>
+        </div>}
         <p className="mt-3 text-[15px] font-semibold leading-snug" style={{ color: "rgba(255,255,255,0.78)" }}>
-          {t.penaltyNote}
+          {sipsOk ? t.penaltyNote : t.penaltyNoSips}
         </p>
 
         <div className="mt-6 flex justify-center"><IdeaButton game={t.gameName} kind={t.ideaKind} /></div>

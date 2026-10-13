@@ -19,6 +19,7 @@ import { getLang, pick, useLang, useT, type Lang } from "@/lib/i18n";
 import { ArrowDown, Bomb, Check, Dices, Eye, Info, Pencil, Pointer, RotateCcw, Shuffle, Timer, Trophy, Volume2, VolumeX, X } from "lucide-react";
 import { GameIconButton, GameInlineIcon } from "@/components/games/game-icon-button";
 import { IdeaButton, RerollButton } from "@/components/games/idea-button";
+import { useGameFinished } from "@/lib/game-finished";
 
 // ── Types ─────────────────────────────────────────────────
 type Team = "red" | "blue";
@@ -241,6 +242,7 @@ export default function MotsEspionsLocal({ onReturnToLobby }: GameProps) {
   // Langue fixée pour la partie (mots de la grille)
   const [lang] = useState<Lang>(() => getLang());
   const [phase, setPhase] = useState<Phase>("setup");
+  useGameFinished(phase === "end"); // fin de partie → demande de note éventuelle (app)
   const [names, setNames] = useState<Record<Team, string>>(() => ({ red: pick(STR, lang).defaultRed, blue: pick(STR, lang).defaultBlue }));
   const [starterChoice, setStarterChoice] = useState<StarterChoice>("random");
   const [timer, setTimer] = useState<number>(0);

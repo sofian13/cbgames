@@ -6,6 +6,7 @@ import { UI } from "../strings";
 import { ZBlob, ZPALETTE, type ZColor } from "./ZBlob";
 import { BigBtn, CloseBtn, Sheet, Tag } from "./common";
 import { gameInfo, haptic, playersLabel } from "./util";
+import { useNoAlcohol } from "@/lib/party-mood";
 
 /** Fiche d'un jeu : en-tête plein couleur, mini BD, étapes, bouton Jouer. */
 export function GameSheet({
@@ -22,6 +23,7 @@ export function GameSheet({
   const [allRules, setAllRules] = useState(false);
   const lang = useLang();
   const t = pick(UI, lang);
+  const noAlc = useNoAlcohol();
   if (!game) return null;
   const info = gameInfo(game, lang);
   const c = ZPALETTE[game.color] ?? ZPALETTE.pink;
@@ -122,7 +124,7 @@ export function GameSheet({
                 </div>
               )}
 
-              {game.adult && (
+              {game.adult && !noAlc && (
                 <p className="mt-6 text-[14px] leading-relaxed" style={{ color: "var(--zz-mute)" }}>
                   {t.adultNote}
                 </p>

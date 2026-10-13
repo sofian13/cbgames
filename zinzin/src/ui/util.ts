@@ -1,6 +1,8 @@
 import { type Lang, pick } from "@/lib/i18n";
 import { GAME_TEXT, type ZGame, type ZGameText } from "../catalog";
 import { UI } from "../strings";
+import { isNoAlcohol } from "@/lib/party-mood";
+import { soberGameText } from "../no-alcohol";
 
 /** Textes d'un jeu dans la langue demandée (catalog-text.ts). */
 export type GameInfo = ZGameText;
@@ -11,7 +13,9 @@ export function stripEmoji(s: string): string {
 }
 
 export function gameInfo(g: ZGame, lang: Lang): GameInfo {
-  return pick(GAME_TEXT[g.id], lang);
+  const info = pick(GAME_TEXT[g.id], lang);
+  // Mode sans alcool : la fiche ne parle que de gages
+  return isNoAlcohol() ? soberGameText(info, lang) : info;
 }
 
 /** Libellé joueurs : « 3-12 » → « 3 à 12 joueurs », « 2+ » → « 2 joueurs et + » (selon la langue). */

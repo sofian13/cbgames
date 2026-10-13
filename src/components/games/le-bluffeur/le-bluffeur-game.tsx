@@ -20,6 +20,9 @@ import { getLang, useT } from "@/lib/i18n";
 import { STR, questionsFor } from "@/components/games/le-bluffeur/i18n";
 import { Smartphone, Target } from "lucide-react";
 import { GameInlineIcon } from "@/components/games/game-icon-button";
+import { useGameFinished } from "@/lib/game-finished";
+import { ShareResultButton } from "@/components/games/share-result-button";
+import { rankingCard } from "@/lib/share-cards";
 
 interface BluffPlayerState {
   id: string;
@@ -97,6 +100,7 @@ function LeBluffeurLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) 
   const t = useT(STR);
   type Phase = "setup" | "question" | "pass-write" | "write" | "pass-vote" | "vote" | "reveal" | "over";
   const [phase, setPhase] = useState<Phase>("setup");
+  useGameFinished(phase === "over"); // fin de partie → demande de note éventuelle (app)
   const [players, setPlayers] = useState<string[]>([]);
   const [scores, setScores] = useState<number[]>([]);
   const [round, setRound] = useState(0);
@@ -326,6 +330,7 @@ function LeBluffeurLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) 
       <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
         <ZButton size="sm" bg="#fff" style={{ width: "auto" }} onClick={() => setPhase("setup")}>{t.changePlayers}</ZButton>
         <IdeaButton game="Le Bluffeur" kind="question" bg="#fff" />
+        <ShareResultButton card={() => rankingCard("le-bluffeur", ranking)} />
       </div>
       {onReturnToLobby && <ZLink onClick={onReturnToLobby} color={GAME_INK} className="mt-2">{t.backHome}</ZLink>}
     </ZScreen>

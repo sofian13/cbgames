@@ -23,6 +23,7 @@ import type { Q } from "./questions";
 import { getLang, pick, useT, type Lang } from "@/lib/i18n";
 import { STR, packsFor } from "./i18n";
 import { getSavedDuo, saveDuo } from "@/lib/saved-players";
+import { useGameFinished } from "@/lib/game-finished";
 
 const ACCENT = "#FF6BAE";
 
@@ -156,6 +157,7 @@ function CoupleQuizLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) 
   const [lang] = useState<Lang>(getLang);
   const QPACKS = packsFor(lang);
   const [phase, setPhase] = useState<Phase>("names");
+  useGameFinished(phase === "over"); // fin de partie → demande de note éventuelle (app)
   const [names, setNames] = useState<[string, string]>(() => getSavedDuo());
   const [packs, setPacks] = useState<string[]>(() => QPACKS.filter((p) => (p.adult ? adultDefault(!!p.defaultOn) : p.defaultOn)).map((p) => p.id)); // pack 18+ selon l'ambiance de soirée
   const [rounds, setRounds] = useState(10);

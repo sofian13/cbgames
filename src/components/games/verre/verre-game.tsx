@@ -8,7 +8,7 @@ import { IdeaButton, RerollButton } from "../idea-button";
 import { GameInlineIcon } from "../game-icon-button";
 import { Mascot, MASCOT_PALETTE } from "@/components/Mascot";
 import { ConfettiBurst } from "@/components/ConfettiBurst";
-import { getPartyMood, sipsAllowed } from "@/lib/party-mood";
+import { sipsAllowed } from "@/lib/party-mood";
 import { getLang, pick, useT } from "@/lib/i18n";
 import { playCombo, playLoop, playSfx, preloadSfx, type LoopHandle, type SfxName } from "@/lib/sfx";
 import { VERRE_STR, VERRE_MAX_PLAYERS, VERRE_MIN_PLAYERS, type EventId } from "./i18n";
@@ -16,6 +16,9 @@ import { DIFF, LIQUIDS, VerreScene, type Difficulty, type LiquidStyle } from "./
 import { keepAwake, newTiltInput, requestMotionPermission, startSensors, vibrate, type TiltInput } from "./sensors";
 import { SpilledGlass } from "./art";
 import { Tools, TutoScreen } from "./ui";
+import { useGameFinished } from "@/lib/game-finished";
+import { ShareResultButton } from "../share-result-button";
+import { verreCard } from "@/lib/share-cards";
 
 // ── Le Verre Invisible ──────────────────────────────────────
 // « Jenga liquide » sur un seul tél : le tél tenu à plat est un plateau avec un verre.
@@ -62,13 +65,14 @@ export default function VerreGame({ onReturnToLobby }: GameProps) {
   // Contenu figé dans la langue du début de partie (gages, noms des liquides)
   const [content] = useState(() => pick(VERRE_STR, getLang()));
   const [phase, setPhase] = useState<Phase>("setup");
+  useGameFinished(phase === "end"); // fin de partie → demande de note éventuelle (app)
   const [players, setPlayers] = useState<string[]>([]);
   const [scores, setScores] = useState<number[]>([]);
   const [spills, setSpills] = useState<number[]>([]);
   const [bank, setBank] = useState<number[]>([]);
   const [diff, setDiff] = useState<Difficulty>("normal");
-  // Soirée « Chill » : pas de gorgées ; « Folle » : gorgées cochées d'office ; sinon gage par défaut
-  const [sipsOk] = useState(() => getPartyMood() !== "chill");
+  // Mode sans alcool / Soirée « Chill » : pas de gorgées (le verre virtuel reste) ; « Folle » : gorgées cochées d'office ; sinon gage par défaut
+  const [sipsOk] = useState(() => sipsAllowed(true));
   const [penalty, setPenalty] = useState<Penalty>(() => (sipsAllowed(false) ? "sips" : "dare"));
   const [rounds, setRounds] = useState(3);
   const [round, setRound] = useState(1);
@@ -396,7 +400,8 @@ export default function VerreGame({ onReturnToLobby }: GameProps) {
           <ZButton size="md" bg={ZZ.cream} onClick={() => setPhase("setup")}>{t.players}</ZButton>
           {onReturnToLobby ? <ZButton size="md" bg={INK} color="#fff" onClick={onReturnToLobby}>{t.quit}</ZButton> : <span />}
         </div>
-        <div className="mt-1 flex justify-center">
+        <div className="mt-1 flex flex-wrap justify-center gap-3">
+          <ShareResultButton bg={ZZ.yellow} card={() => verreCard(ranking.map((r) => ({ name: r.name, score: r.s, spills: r.sp, colorIndex: r.i, note: t.spills(r.sp) })))} />
           <IdeaButton game={GAME_FR} kind="idée" bg={ZZ.cream} />
         </div>
       </div>

@@ -11,13 +11,13 @@
 
 import type { I18n, Lang } from "@/lib/i18n";
 
-export const LEGAL_UPDATED_AT = "12 octobre 2026";
+export const LEGAL_UPDATED_AT = "13 octobre 2026";
 
 /** Date de mise à jour, écrite dans chaque langue. */
 export const LEGAL_UPDATED_AT_I18N: I18n<string> = {
   fr: LEGAL_UPDATED_AT,
-  en: "October 12, 2026",
-  es: "12 de octubre de 2026",
+  en: "October 13, 2026",
+  es: "13 de octubre de 2026",
 };
 
 export function getLegalUpdatedAt(lang: Lang): string {
@@ -110,6 +110,7 @@ export const LEGAL_DOCS: Record<LegalDocId, LegalDoc> = {
         paragraphs: [
           "Les prénoms que tu saisis pour jouer, la dernière « bande » de joueurs et les prénoms récents (pour te les reproposer), tes réglages (sons, packs choisis…), la confirmation que tu as 18 ans et l'état de ton abonnement.",
           "Ces informations sont enregistrées uniquement dans le stockage local de l'application, sur ton appareil. Nous n'y avons pas accès et elles ne sont envoyées nulle part. Évite d'y saisir autre chose que des prénoms ou surnoms.",
+          "Le bouton « Partager mon résultat » crée une image (prénoms et scores affichés à l'écran) sur ton téléphone ; elle ne part que vers l'appli que tu choisis dans la feuille de partage, jamais vers nous.",
           "Tu peux les effacer à tout moment en supprimant l'application (ou depuis les réglages de l'app quand l'option est disponible).",
         ],
       },
@@ -179,6 +180,7 @@ export const LEGAL_DOCS: Record<LegalDocId, LegalDoc> = {
         title: "4. Abonnement Zinzin Premium",
         paragraphs: [
           "Formules proposées (prix TTC affichés dans l'application au moment de l'achat, susceptibles de varier selon le pays) : Pass soirée (7 jours), Mensuel, Annuel.",
+          "Essai gratuit : la formule Annuel peut être proposée avec un essai gratuit de 3 jours, réservé aux personnes qui n'en ont pas déjà bénéficié (éligibilité vérifiée par Apple ou Google). Rien n'est prélevé pendant l'essai ; à son terme, il se convertit automatiquement en abonnement annuel payant au prix affiché, sauf résiliation au moins 24 heures avant la fin de l'essai. Si tu résilies pendant l'essai, tu gardes l'accès jusqu'à sa fin et rien ne t'est facturé.",
           "Le paiement est prélevé sur ton compte Apple ou Google à la confirmation de l'achat. L'abonnement se renouvelle automatiquement pour la même durée, sauf résiliation au moins 24 heures avant la fin de la période en cours.",
           "Tu peux gérer ou résilier ton abonnement à tout moment depuis les réglages de ton compte Apple (Réglages › ton nom › Abonnements) ou Google Play (Paiements et abonnements). La résiliation prend effet à la fin de la période en cours ; la période entamée n'est pas remboursée, sauf décision d'Apple ou de Google.",
           "Les remboursements sont gérés par Apple (reportaproblem.apple.com) ou Google selon leurs propres règles.",
@@ -308,6 +310,7 @@ const DOCS_EN: Record<LegalDocId, LegalDoc> = {
         paragraphs: [
           "The names you enter to play, your last \"crew\" of players and recent names (so we can suggest them again), your settings (sounds, chosen packs, language…), the confirmation that you are 18 or older and your subscription status.",
           "This information is stored only in the app's local storage, on your device. We have no access to it and it is not sent anywhere. Please don't enter anything other than first names or nicknames.",
+          "The \"Share my result\" button creates an image (names and scores shown on screen) on your phone; it only goes to the app you pick in the share sheet, never to us.",
           "You can erase it at any time by deleting the app (or from the app's settings when the option is available).",
         ],
       },
@@ -378,6 +381,7 @@ const DOCS_EN: Record<LegalDocId, LegalDoc> = {
         title: "4. Zinzin Premium subscription",
         paragraphs: [
           "Plans offered (prices including tax shown in the app at the time of purchase, which may vary by country): Party Pass (7 days), Monthly, Yearly.",
+          "Free trial: the Yearly plan may be offered with a 3-day free trial, available only to people who have not already had one (eligibility checked by Apple or Google). Nothing is charged during the trial; when it ends, it automatically converts into a paid yearly subscription at the price shown, unless cancelled at least 24 hours before the end of the trial. If you cancel during the trial, you keep access until it ends and are not charged.",
           "Payment is charged to your Apple or Google account when the purchase is confirmed. The subscription renews automatically for the same period unless cancelled at least 24 hours before the end of the current period.",
           "You can manage or cancel your subscription at any time from your Apple account settings (Settings › your name › Subscriptions) or Google Play (Payments & subscriptions). Cancellation takes effect at the end of the current period; the period already started is not refunded, unless Apple or Google decides otherwise.",
           "Refunds are handled by Apple (reportaproblem.apple.com) or Google according to their own rules.",
@@ -487,6 +491,7 @@ const DOCS_ES: Record<LegalDocId, LegalDoc> = {
         paragraphs: [
           "Los nombres que escribes para jugar, tu último «grupo» de jugadores y los nombres recientes (para volver a proponértelos), tus ajustes (sonidos, packs elegidos, idioma…), la confirmación de que tienes 18 años o más y el estado de tu suscripción.",
           "Esta información se guarda únicamente en el almacenamiento local de la aplicación, en tu dispositivo. No tenemos acceso a ella y no se envía a ningún sitio. Evita escribir algo que no sean nombres o apodos.",
+          "El botón «Compartir mi resultado» crea una imagen (nombres y puntuaciones que se ven en pantalla) en tu móvil; solo se envía a la app que elijas en el menú de compartir, nunca a nosotros.",
           "Puedes borrarla en cualquier momento eliminando la aplicación (o desde los ajustes de la app cuando la opción esté disponible).",
         ],
       },
@@ -557,6 +562,7 @@ const DOCS_ES: Record<LegalDocId, LegalDoc> = {
         title: "4. Suscripción Zinzin Premium",
         paragraphs: [
           "Planes disponibles (precios con impuestos incluidos mostrados en la aplicación en el momento de la compra, que pueden variar según el país): Pase fiesta (7 días), Mensual, Anual.",
+          "Prueba gratuita: el plan Anual puede ofrecerse con una prueba gratuita de 3 días, reservada a quienes no la hayan disfrutado ya (Apple o Google comprueban la elegibilidad). No se cobra nada durante la prueba; al terminar, se convierte automáticamente en una suscripción anual de pago al precio indicado, salvo que la canceles al menos 24 horas antes del final de la prueba. Si cancelas durante la prueba, conservas el acceso hasta que termine y no se te cobra nada.",
           "El pago se carga en tu cuenta de Apple o Google al confirmar la compra. La suscripción se renueva automáticamente por el mismo periodo, salvo que la canceles al menos 24 horas antes del final del periodo en curso.",
           "Puedes gestionar o cancelar tu suscripción en cualquier momento desde los ajustes de tu cuenta de Apple (Ajustes › tu nombre › Suscripciones) o de Google Play (Pagos y suscripciones). La cancelación surte efecto al final del periodo en curso; el periodo iniciado no se reembolsa, salvo decisión de Apple o Google.",
           "Los reembolsos los gestiona Apple (reportaproblem.apple.com) o Google según sus propias normas.",

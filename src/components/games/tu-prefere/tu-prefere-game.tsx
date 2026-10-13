@@ -23,7 +23,7 @@ import * as DIL_ES from "@/components/games/tu-prefere/dilemmas.es";
 import type { DilemmaTuple } from "@/components/games/tu-prefere/dilemmas";
 import { getLang, useT, type I18n, type Lang } from "@/lib/i18n";
 import { TP_STR } from "@/components/games/tu-prefere/i18n";
-import { adultDefault, sipsAllowed } from "@/lib/party-mood";
+import { adultDefault, isNoAlcohol, sipsAllowed } from "@/lib/party-mood";
 
 type Cat = "classique" | "hot" | "absurde" | "couple";
 type Penalty = "dares" | "sips";
@@ -192,7 +192,7 @@ export default function TuPrefereGame({ onReturnToLobby }: GameProps) {
             })}
           </div>
         ) : (
-          <p className="mt-2 text-[15px] font-semibold" style={{ color: "rgba(255,255,255,0.88)" }}>{t.penaltyChill}</p>
+          <p className="mt-2 text-[15px] font-semibold" style={{ color: "rgba(255,255,255,0.88)" }}>{isNoAlcohol() ? t.penaltyNoAlc : t.penaltyChill}</p>
         )}
         <ZTitle size={28} className="mt-6">{t.vibe}</ZTitle>
         <div className="mt-3 grid grid-cols-2 gap-3">

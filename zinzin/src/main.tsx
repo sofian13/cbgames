@@ -7,7 +7,9 @@ import "./app.css";
 import { App } from "./App";
 import { ErrorBoundary } from "./ui/ErrorBoundary";
 import { initPremium } from "./premium";
+import { initRating } from "./rating";
 import { installFrenchTypo } from "./ui/typo";
+import "./share-art"; // blobs déguisés des images « Partager mon résultat »
 import { getLang } from "@/lib/i18n";
 
 // navigator.vibrate n'existe pas dans la webview iOS : on le branche sur Haptics
@@ -26,6 +28,8 @@ if (cap?.isNativePlatform?.()) {
 }
 
 initPremium();
+// Demande de note automatique après les fins de partie (rare, natif uniquement)
+initRating();
 // Langue du document (lecteurs d'écran, césure) : mise à jour ensuite par setLang()
 document.documentElement.lang = getLang();
 // Espaces insécables devant « ? ! : ; » partout en français (aucun « ? » orphelin en début de ligne)

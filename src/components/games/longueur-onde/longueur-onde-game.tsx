@@ -20,6 +20,9 @@ import { IdeaButton, RerollButton } from "@/components/games/idea-button";
 import { playCombo, playSfx, preloadSfx } from "@/lib/sfx";
 import { getLang, pick, useT } from "@/lib/i18n";
 import { STR, TUTO } from "@/components/games/longueur-onde/i18n";
+import { useGameFinished } from "@/lib/game-finished";
+import { ShareResultButton } from "@/components/games/share-result-button";
+import { rankingCard } from "@/lib/share-cards";
 
 // Un indice sans aucune lettre (ex. « 73 ») donnerait directement la cible
 function clueProblem(clue: string): string | null {
@@ -159,6 +162,7 @@ function LongueurOndeLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }
   const t = useT(STR);
   type Phase = "howto" | "setup" | "pass" | "clue" | "guess" | "reveal" | "over";
   const [phase, setPhase] = useState<Phase>("howto");
+  useGameFinished(phase === "over"); // fin de partie → demande de note éventuelle (app)
   const [players, setPlayers] = useState<string[]>([]);
   const [scores, setScores] = useState<number[]>([]);
   const [round, setRound] = useState(0);
@@ -376,6 +380,7 @@ function LongueurOndeLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }
       <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
         <ZButton size="sm" bg="#fff" style={{ width: "auto" }} onClick={() => setPhase("setup")}>{t.changePlayers}</ZButton>
         <IdeaButton game="Le Curseur" kind="paire" bg="#fff" />
+        <ShareResultButton card={() => rankingCard("longueur-onde", ranking)} />
       </div>
       {onReturnToLobby && <ZLink onClick={onReturnToLobby} color={GAME_INK} className="mt-2">{t.backHome}</ZLink>}
     </ZScreen>

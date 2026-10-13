@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { Check, Loader2 } from "lucide-react";
-import { buy, defaultPlans, isTestMode, loadPlans, restore, type Plan } from "../premium";
+import { buy, defaultPlans, defaultYearlyPrice, isAndroid, isTestMode, loadPlans, restore, trialReminderPossible, type Plan } from "../premium";
 import { pick, useLang } from "@/lib/i18n";
-import { UI } from "../strings";
+import { TRIAL, UI } from "../strings";
 import { ZBlob } from "./ZBlob";
 import { BigBtn, CloseBtn } from "./common";
 import { haptic } from "./util";
@@ -30,8 +30,12 @@ export function Paywall({
 }) {
   const lang = useLang();
   const t = pick(UI, lang);
+  const tr = pick(TRIAL, lang);
   const [plans, setPlans] = useState<Plan[]>(() => defaultPlans(lang));
-  const [sel, setSel] = useState<string>("monthly");
+  // L'annuel est présélectionné (c'est lui qui porte l'essai gratuit)
+  const [sel, setSel] = useState<string>("yearly");
+  // « Jour 2 : on te prévient » seulement si la notif pourra vraiment partir
+  const [canRemind, setCanRemind] = useState(false);
   const [busy, setBusy] = useState<"buy" | "restore" | null>(null);
   const [out, setOut] = useState(false);
   const test = isTestMode();
@@ -41,10 +45,14 @@ export function Paywall({
     loadPlans().then((p) => {
       if (!alive || !p.length) return;
       setPlans(p);
-      setSel((cur) => (p.some((x) => x.id === cur) ? cur : (p[1] ?? p[0]).id));
+      setSel((cur) => (p.some((x) => x.id === cur) ? cur : (p.find((x) => x.kind === "yearly") ?? p[1] ?? p[0]).id));
     });
+    trialReminderPossible().then((ok) => { if (alive) setCanRemind(ok); });
     return () => { alive = false; };
   }, []);
+
+  const current = plans.find((p) => p.id === sel);
+  const trialDays = current?.trialDays;
 
   const leave = (cb: () => void) => { setOut(true); setTimeout(cb, 240); };
 
@@ -55,7 +63,7 @@ export function Paywall({
     setBusy("buy");
     const ok = await buy(plan);
     setBusy(null);
-    if (ok) { haptic("success"); toast(t.welcome); leave(onUnlocked); }
+    if (ok) { haptic("success"); toast(plan.trialDays ? tr.started(plan.trialDays) : t.welcome); leave(onUnlocked); }
     else toast(t.buyFailed);
   };
 
@@ -101,7 +109,7 @@ export function Paywall({
           <span className="zz-stk mt-1.5 inline-block rounded-[16px] px-3 pb-1 pt-0.5" style={{ background: "#FFD23F", color: "var(--zz-ink)", rotate: "-3deg" }}>{t.paywallTitle2}</span>
         </h1>
 
-        <ul className="zz-rise mx-auto mt-5 grid w-full max-w-[330px] gap-2" style={{ ["--d" as string]: "160ms" }}>
+        <ul className="zz-rise zz-pw-perks mx-auto mt-5 grid w-full max-w-[330px] gap-2" style={{ ["--d" as string]: "160ms" }}>
           {t.perks.map((text, i) => (
             <li key={text} className="flex items-center gap-3 text-[16px] font-bold text-white">
               <span className="zz-stk-sm grid h-8 w-8 shrink-0 place-items-center rounded-[10px]" style={{ background: PERK_COLORS[i % PERK_COLORS.length], color: "var(--zz-ink)", rotate: `${i % 2 ? 6 : -6}deg` }}>
@@ -137,12 +145,14 @@ export function Paywall({
                   transition: "background 160ms, rotate 260ms var(--zz-spring), translate 260ms var(--zz-spring)",
                 }}
               >
-                {txt.badge && (
+                {(p.trialDays || txt.badge) && (
                   <span
                     className="absolute -top-3.5 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full px-2 py-[3px] text-[12px] font-bold"
-                    style={{ background: "#FF3EA5", color: "#fff", border: "2px solid var(--zz-ink)", rotate: "3deg" }}
+                    style={p.trialDays
+                      ? { background: "#3DDC97", color: "var(--zz-ink)", border: "2px solid var(--zz-ink)", rotate: "-3deg" }
+                      : { background: "#FF3EA5", color: "#fff", border: "2px solid var(--zz-ink)", rotate: "3deg" }}
                   >
-                    {txt.badge}
+                    {p.trialDays ? tr.badge(p.trialDays) : txt.badge}
                   </span>
                 )}
                 <span className="text-[13px] font-bold" style={{ opacity: on ? 0.75 : 0.7 }}>{txt.title}</span>
@@ -155,15 +165,35 @@ export function Paywall({
           })}
         </div>
 
+        {/* Frise de l'essai (uniquement si la formule choisie a un essai) */}
+        {trialDays && (
+          <ol className="zz-fade zz-trial mt-5" aria-label={tr.timelineLabel} style={{ ["--n" as string]: canRemind && trialDays >= 2 ? 3 : 2 }}>
+            {[
+              { when: tr.today, what: tr.todayText, color: "#3DDC97" },
+              ...(canRemind && trialDays >= 2 ? [{ when: tr.remindDay(trialDays - 1), what: tr.remindText, color: "#FFD23F" }] : []),
+              { when: tr.endDay(trialDays), what: tr.endText, color: "#FF3EA5" },
+            ].map((s) => (
+              <li key={s.when + s.what}>
+                <span className="zz-trial-dot" style={{ background: s.color }} aria-hidden />
+                <span className="block text-[12px] font-extrabold text-white">{s.when}</span>
+                <span className="block text-[12px] font-semibold leading-tight" style={{ color: "var(--zz-dim)" }}>{s.what}</span>
+              </li>
+            ))}
+          </ol>
+        )}
+
         <div className="flex-1" />
 
         <div className="zz-rise mt-5" style={{ ["--d" as string]: "320ms" }}>
           <BigBtn onClick={onBuy} disabled={busy !== null} bg="#FF3EA5" color="#fff">
-            {busy === "buy" ? <Loader2 className="animate-spin" size={24} /> : t.buyCta}
+            {busy === "buy" ? <Loader2 className="animate-spin" size={24} /> : trialDays ? tr.cta(trialDays) : tr.ctaContinue}
           </BigBtn>
         </div>
-        <p className="mt-3 text-center text-[13px]" style={{ color: "var(--zz-mute)" }}>
-          {t.autoRenew}
+        {/* Conditions de l'offre, juste sous le bouton (règle App Store 3.1.2) */}
+        <p className="mt-3 text-center text-[13px] leading-snug" style={{ color: trialDays ? "var(--zz-dim)" : "var(--zz-mute)" }}>
+          {trialDays
+            ? tr.legal(trialDays, current?.price || defaultYearlyPrice(lang), isAndroid())
+            : t.autoRenew}
         </p>
 
         <div className="flex items-center justify-center whitespace-nowrap text-[13px] font-semibold" style={{ color: "var(--zz-dim)" }}>

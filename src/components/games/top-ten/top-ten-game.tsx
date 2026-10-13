@@ -19,6 +19,9 @@ import { getLang, useT } from "@/lib/i18n";
 import { adultDefault } from "@/lib/party-mood";
 import { THEMES, type ThemeState } from "@/components/games/top-ten/themes";
 import { TT_STR } from "@/components/games/top-ten/i18n";
+import { useGameFinished } from "@/lib/game-finished";
+import { ShareResultButton } from "@/components/games/share-result-button";
+import { rankingCard } from "@/lib/share-cards";
 
 // ── Types ─────────────────────────────────────────────────
 interface TopTenPlayerState {
@@ -111,6 +114,7 @@ function TopTenLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) {
   const t = useT(TT_STR);
   type Phase = "setup" | "target" | "theme" | "pass-number" | "show-number" | "answer" | "pass-rank" | "rank" | "reveal" | "over";
   const [phase, setPhase] = useState<Phase>("setup");
+  useGameFinished(phase === "over"); // fin de partie → demande de note éventuelle (app)
   const [players, setPlayers] = useState<string[]>([]);
   const [scores, setScores] = useState<number[]>([]);
   const [round, setRound] = useState(0);
@@ -337,6 +341,7 @@ function TopTenLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) {
       <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
         <ZButton size="sm" bg="#fff" style={{ width: "auto" }} onClick={() => setPhase("setup")}>{t.changePlayers}</ZButton>
         <IdeaButton game={t.gameName} kind="thème" bg="#fff" />
+        <ShareResultButton card={() => rankingCard("top-ten", ranking)} />
       </div>
       {onReturnToLobby && <ZLink onClick={onReturnToLobby} color={GAME_INK} className="mt-2">{t.backHome}</ZLink>}
     </ZScreen>

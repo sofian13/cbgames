@@ -8,17 +8,18 @@ import { Home, isLocked } from "./ui/Home";
 import { Paywall } from "./ui/Paywall";
 import { AgeGate, GameScreen, LegalScreen, SettingsSheet, type LegalPage } from "./ui/Screens";
 import { Splash } from "./ui/Splash";
+import { Onboarding, isOnboarded } from "./ui/Onboarding";
 import { installLookAtFinger } from "./ui/ZBlob";
 import { isAgeOk } from "./ui/util";
 import { SoireeSetup } from "./ui/SoireeSetup";
 import { SoireeRun } from "./ui/SoireeRun";
 import { clearSoiree, getSoiree, resumeSoiree, startSoiree } from "./soiree";
 
-type Phase = "splash" | "age" | "app";
+type Phase = "splash" | "age" | "tuto" | "app";
 
 /**
  * Navigation de l'app (état React, pas d'URL) :
- * lancement animé → âge (1re fois) → paywall (si pas premium) → accueil.
+ * lancement animé → âge (1re fois) → tuto (1re fois) → paywall (si pas premium) → accueil.
  */
 export function App() {
   const premium = usePremium();
@@ -31,6 +32,8 @@ export function App() {
   const [playing, setPlaying] = useState<string | null>(null);
   // Soirée Zinzin : préparation (3 écrans) ou déroulé (transitions + jeux + podium)
   const [soiree, setSoiree] = useState<"setup" | "run" | null>(null);
+  // Tuto revu depuis les Réglages (événement « zz:onboarding »)
+  const [replayTuto, setReplayTuto] = useState(false);
 
   // Les yeux des blobs suivent le doigt
   useEffect(() => installLookAtFinger(), []);
@@ -39,6 +42,11 @@ export function App() {
     const open = () => setPaywall({});
     window.addEventListener("zz:paywall", open);
     return () => window.removeEventListener("zz:paywall", open);
+  }, []);
+  useEffect(() => {
+    const open = () => setReplayTuto(true);
+    window.addEventListener("zz:onboarding", open);
+    return () => window.removeEventListener("zz:onboarding", open);
   }, []);
 
   const afterIntro = useCallback(() => {
@@ -60,7 +68,7 @@ export function App() {
 
   return (
     <>
-      {phase !== "splash" && phase !== "age" && (
+      {phase === "app" && (
         <div style={{ display: playing || soiree ? "none" : undefined }}>
           <Home
             premium={premium}
@@ -120,12 +128,16 @@ export function App() {
         />
       )}
 
-      {phase === "age" && <AgeGate onOk={() => { setPhase("app"); afterIntro(); }} />}
+      {phase === "age" && <AgeGate onOk={() => { if (!isOnboarded()) setPhase("tuto"); else { setPhase("app"); afterIntro(); } }} />}
+
+      {phase === "tuto" && <Onboarding onDone={() => { setPhase("app"); afterIntro(); }} />}
+      {replayTuto && <Onboarding onDone={() => setReplayTuto(false)} />}
 
       {phase === "splash" && (
         <Splash
           onDone={() => {
             if (!isAgeOk()) setPhase("age");
+            else if (!isOnboarded()) setPhase("tuto");
             else { setPhase("app"); afterIntro(); }
           }}
         />

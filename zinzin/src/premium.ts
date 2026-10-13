@@ -1,7 +1,8 @@
 import { useSyncExternalStore } from "react";
 import { notifyPremiumChanged } from "@/lib/entitlements";
 import { type Lang, getLang, pick } from "@/lib/i18n";
-import { UI } from "./strings";
+import { TRIAL, UI } from "./strings";
+import { notificationsOn } from "./settings";
 
 /**
  * Abonnement « Zinzin Premium » (tout débloquer).
@@ -54,6 +55,8 @@ export interface Plan {
   price: string;
   period: string;
   badge?: string;
+  /** Essai gratuit (jours) auquel l'utilisateur a droit sur cette formule, sinon absent */
+  trialDays?: number;
   /** objet RevenueCat (package) quand dispo */
   pkg?: unknown;
 }
@@ -65,15 +68,40 @@ const DEFAULT_PRICES: Record<PlanKind, Record<Lang, string>> = {
   yearly: { fr: "29,99 €", en: "€29.99", es: "29,99 €" },
 };
 
-/** Offres affichées par défaut (mode test ou avant chargement). */
+/** Essai simulé en mode test (offre de lancement prévue sur l'annuel). */
+const TEST_TRIAL_DAYS = 3;
+
+/**
+ * Offres affichées par défaut (mode test ou avant chargement).
+ * L'essai n'est simulé qu'en mode test : en vrai, il n'apparaît qu'une fois
+ * l'éligibilité confirmée par le store (loadPlans).
+ */
 export function defaultPlans(lang: Lang = getLang()): Plan[] {
   const t = pick(UI, lang).plans;
+  const test = isTestMode();
   return (["weekly", "monthly", "yearly"] as const).map((k) => ({
     id: k, kind: k, title: t[k].title, price: DEFAULT_PRICES[k][lang], period: t[k].period, badge: t[k].badge,
+    trialDays: test && k === "yearly" ? TEST_TRIAL_DAYS : undefined,
   }));
 }
 
+/** Prix annuel par défaut (si le store n'a pas répondu). */
+export const defaultYearlyPrice = (lang: Lang = getLang()) => DEFAULT_PRICES.yearly[lang];
+
+/** Durée (jours) d'une offre de lancement GRATUITE (introPrice RevenueCat), sinon undefined. */
+function freeTrialDays(intro: { price: number; periodUnit: string; periodNumberOfUnits: number; cycles: number } | null | undefined): number | undefined {
+  if (!intro || intro.price !== 0) return undefined;
+  const unit: Record<string, number> = { DAY: 1, WEEK: 7, MONTH: 30, YEAR: 365 };
+  const days = (unit[intro.periodUnit] ?? 0) * intro.periodNumberOfUnits * Math.max(1, intro.cycles);
+  return days > 0 ? days : undefined;
+}
+
+export const isAndroid = () =>
+  (globalThis as { Capacitor?: { getPlatform?: () => string } }).Capacitor?.getPlatform?.() === "android";
+
 let configured = false;
+/** INTRO_ELIGIBILITY_STATUS.INTRO_ELIGIBILITY_STATUS_ELIGIBLE (RevenueCat) */
+const INTRO_ELIGIBLE = 2;
 
 async function rc() {
   const { Purchases } = await import("@revenuecat/purchases-capacitor");
@@ -90,7 +118,10 @@ export async function initPremium() {
   try {
     const Purchases = await rc();
     const { customerInfo } = await Purchases.getCustomerInfo();
-    setPremium(Boolean(customerInfo.entitlements.active[ENTITLEMENT]));
+    const ent = customerInfo.entitlements.active[ENTITLEMENT];
+    setPremium(Boolean(ent));
+    // Essai résilié / terminé : le rappel « l'essai se termine demain » n'a plus lieu d'être
+    if (!ent || !ent.willRenew || String(ent.periodType).toLowerCase() !== "trial") void cancelTrialReminder();
   } catch {
     // hors-ligne : on garde le dernier état connu
   }
@@ -104,6 +135,19 @@ export async function loadPlans(): Promise<Plan[]> {
     const offerings = await Purchases.getOfferings();
     const pkgs = offerings.current?.availablePackages ?? [];
     if (!pkgs.length) return DEFAULT_PLANS;
+    // Essai : iOS → seulement si l'App Store confirme l'éligibilité (inconnu = pas d'essai affiché) ;
+    // Android → Google Play ne renvoie que les offres auxquelles l'utilisateur a droit.
+    const withTrial = pkgs.filter((p) => freeTrialDays(p.product.introPrice));
+    let eligible = new Set<string>();
+    if (withTrial.length) {
+      if (isAndroid()) eligible = new Set(withTrial.map((p) => p.product.identifier));
+      else {
+        try {
+          const res = await Purchases.checkTrialOrIntroductoryPriceEligibility({ productIdentifiers: withTrial.map((p) => p.product.identifier) });
+          eligible = new Set(Object.keys(res).filter((id) => res[id]?.status === INTRO_ELIGIBLE));
+        } catch { /* éligibilité inconnue : pas d'essai affiché */ }
+      }
+    }
     return pkgs.map((p) => {
       const idf = p.identifier.toLowerCase();
       const fallback = DEFAULT_PLANS.find((d) => idf.includes(d.id.slice(0, 4))) ?? (/annual/.test(idf) ? DEFAULT_PLANS[2] : undefined);
@@ -114,6 +158,7 @@ export async function loadPlans(): Promise<Plan[]> {
         price: p.product.priceString,
         period: fallback?.period ?? "",
         badge: fallback?.badge,
+        trialDays: eligible.has(p.product.identifier) ? freeTrialDays(p.product.introPrice) : undefined,
         pkg: p,
       };
     });
@@ -125,6 +170,7 @@ export async function loadPlans(): Promise<Plan[]> {
 export async function buy(plan: Plan): Promise<boolean> {
   if (isTestMode()) {
     setPremium(true);
+    if (plan.trialDays) void scheduleTrialReminder(plan);
     return true;
   }
   try {
@@ -133,6 +179,7 @@ export async function buy(plan: Plan): Promise<boolean> {
     const { customerInfo } = await Purchases.purchasePackage({ aPackage: plan.pkg as any });
     const ok = Boolean(customerInfo.entitlements.active[ENTITLEMENT]);
     setPremium(ok);
+    if (ok && plan.trialDays) void scheduleTrialReminder(plan);
     return ok;
   } catch {
     return false;
@@ -155,4 +202,51 @@ export async function restore(): Promise<boolean> {
 /** Mode test uniquement : revenir en gratuit. */
 export function resetPremiumForTests() {
   setPremium(false);
+}
+
+/* ───────── Rappel de fin d'essai (notification locale) ───────── */
+const TRIAL_REMINDER_ID = 5201;
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Peut-on promettre « on te prévient » ? Seulement si les notifications sont
+ * déjà autorisées (on ne redemande pas la permission depuis le paywall).
+ * Web / mode test : suit le réglage « Rappels de soirée ».
+ */
+export async function trialReminderPossible(): Promise<boolean> {
+  if (!isNative()) return notificationsOn();
+  try {
+    const { LocalNotifications } = await import("@capacitor/local-notifications");
+    return (await LocalNotifications.checkPermissions()).display === "granted";
+  } catch {
+    return false;
+  }
+}
+
+/** Programme la notif la veille de la fin de l'essai (J+2 pour 3 jours), si autorisée. */
+async function scheduleTrialReminder(plan: Plan) {
+  const days = plan.trialDays ?? 0;
+  if (days < 2 || !isNative() || !(await trialReminderPossible())) return;
+  try {
+    const { LocalNotifications } = await import("@capacitor/local-notifications");
+    const t = pick(TRIAL, getLang());
+    const price = plan.price || defaultYearlyPrice();
+    await LocalNotifications.cancel({ notifications: [{ id: TRIAL_REMINDER_ID }] }).catch(() => {});
+    await LocalNotifications.schedule({
+      notifications: [{
+        id: TRIAL_REMINDER_ID,
+        title: t.reminderTitle,
+        body: t.reminderBody(price, isAndroid()),
+        schedule: { at: new Date(Date.now() + (days - 1) * DAY_MS), allowWhileIdle: true },
+      }],
+    });
+  } catch { /* notifications indisponibles */ }
+}
+
+async function cancelTrialReminder() {
+  if (!isNative()) return;
+  try {
+    const { LocalNotifications } = await import("@capacitor/local-notifications");
+    await LocalNotifications.cancel({ notifications: [{ id: TRIAL_REMINDER_ID }] });
+  } catch { /* rien à annuler */ }
 }

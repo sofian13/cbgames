@@ -17,6 +17,7 @@ import { playCombo, type LoopHandle } from "@/lib/sfx";
 import { CupSoda, Drama, Flame, RotateCw, Vibrate } from "lucide-react";
 import { GameInlineIcon } from "../game-icon-button";
 import { MASCOT_PALETTE } from "@/components/Mascot";
+import { useGameFinished } from "@/lib/game-finished";
 
 // ── La Patate ──────────────────────────────────────────────
 // Le téléphone EST la patate chaude. Une catégorie, chacun dit une réponse
@@ -60,9 +61,11 @@ function fitName(name: string, base: string, vw: number): string {
 
 export default function PatateGame({ onReturnToLobby }: GameProps) {
   const [phase, setPhase] = useState<Phase>("setup");
+  useGameFinished(phase === "end"); // fin de partie → demande de note éventuelle (app)
   const [players, setPlayers] = useState<string[]>([]);
   const [losses, setLosses] = useState<number[]>([]);
-  const [penalty, setPenalty] = useState<Penalty>(() => (sipsAllowed(true) ? "sips" : "dares")); // Soirée « Chill » : gages seulement
+  const [sipsOk] = useState(() => sipsAllowed(true)); // mode sans alcool / Soirée « Chill » : gages seulement
+  const [penalty, setPenalty] = useState<Penalty>(() => (sipsOk ? "sips" : "dares"));
   const [spicy, setSpicy] = useState(() => adultDefault(false)); // pack 18+ selon l'ambiance de soirée
   const [shakeMode, setShakeMode] = useState(true);
   const [shakeOk, setShakeOk] = useState(false); // capteur réellement dispo
@@ -308,7 +311,7 @@ export default function PatateGame({ onReturnToLobby }: GameProps) {
   const n = players.length;
   const controls = (
     <>
-      <TopRightControls title={t.name} rules={t.rules} accent={ACCENT} />
+      <TopRightControls title={t.name} rules={sipsOk ? t.rules : [...t.rules.slice(0, -1), t.ruleNoSips]} accent={ACCENT} />
       <ScrollReset dep={phase} />
     </>
   );
@@ -343,11 +346,13 @@ export default function PatateGame({ onReturnToLobby }: GameProps) {
           </p>
         </StickerCard>
 
-        <div className="mt-6 w-full space-y-2.5">
-          <SectionTitle>{t.loserTakes}</SectionTitle>
-          <OptionCard on={penalty === "dares"} onClick={() => setPenalty("dares")} icon={Drama} title={t.dareTitle} sub={t.dareSub} onBg={ACCENT} />
-          <OptionCard on={penalty === "sips"} onClick={() => setPenalty("sips")} icon={CupSoda} title={t.sipsTitle} sub={t.sipsSub} onBg={ACCENT} />
-        </div>
+        {sipsOk && (
+          <div className="mt-6 w-full space-y-2.5">
+            <SectionTitle>{t.loserTakes}</SectionTitle>
+            <OptionCard on={penalty === "dares"} onClick={() => setPenalty("dares")} icon={Drama} title={t.dareTitle} sub={t.dareSub} onBg={ACCENT} />
+            <OptionCard on={penalty === "sips"} onClick={() => setPenalty("sips")} icon={CupSoda} title={t.sipsTitle} sub={t.sipsSub} onBg={ACCENT} />
+          </div>
+        )}
 
         <div className="mt-6 w-full space-y-2.5">
           <SectionTitle>{t.modes}</SectionTitle>

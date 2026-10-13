@@ -5,6 +5,7 @@ import { BookOpen, X } from "lucide-react";
 import { GameIconButton, GameTopRight } from "../game-icon-button";
 import { DISPLAY, SoundButton, ZButton, ZZ, zBackground } from "../local-kit";
 import { playSfx } from "@/lib/sfx";
+import { sipsAllowed, soberLines } from "@/lib/party-mood";
 import { useT } from "@/lib/i18n";
 import { VERRE_STR } from "./i18n";
 import { TutoPass, TutoPour, TutoSpill } from "./art";
@@ -30,6 +31,8 @@ export function Tools() {
 /** Feuille de règles « sticker » (fond crème, étapes numérotées colorées). */
 export function RulesSheet({ onClose }: { onClose: () => void }) {
   const t = useT(VERRE_STR);
+  // Mode sans alcool / Soirée Chill : la règle de la peine ne parle que de gage
+  const [rules] = useState(() => (sipsAllowed(true) ? t.rules : soberLines(t.rules, t.ruleNoSips)));
   return (
     <div className="fixed inset-0 z-[60] flex items-end justify-center" style={{ background: "rgba(10,4,32,0.6)" }} onClick={onClose} role="dialog" aria-modal aria-label={t.rulesTitle}>
       <div
@@ -43,7 +46,7 @@ export function RulesSheet({ onClose }: { onClose: () => void }) {
         <h2 className="pr-14 text-[30px] leading-none" style={DISPLAY}>{t.rulesTitle}</h2>
         <p className="mt-1 text-[15px] font-semibold" style={{ color: "#4A3A66" }}>{t.name}</p>
         <ol className="mt-5 space-y-3">
-          {t.rules.map((r, i) => (
+          {rules.map((r, i) => (
             <li key={i} className="flex gap-3">
               <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-[17px]" style={{ ...DISPLAY, background: STEP_COLORS[i % STEP_COLORS.length], border: `2.5px solid ${INK}`, boxShadow: `0 3px 0 ${INK}`, rotate: `${i % 2 ? 4 : -4}deg` }}>{i + 1}</span>
               <p className="pt-1 text-[16px] font-semibold leading-snug">{r}</p>

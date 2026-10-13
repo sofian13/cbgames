@@ -10,6 +10,8 @@ import { Backdrop } from "./Backdrop";
 import { ZLogo } from "./Logo";
 import { SoireeEntry } from "./SoireeKit";
 import { resumable, useSoiree } from "../soiree";
+import { useNoAlcohol } from "@/lib/party-mood";
+import { NOALC_UI } from "../no-alcohol";
 
 export function isLocked(g: ZGame, premium: boolean) {
   return !premium && !g.free;
@@ -30,6 +32,7 @@ export function Home({
   const scrollRef = useRef<HTMLDivElement>(null);
   const lang = useLang();
   const t = pick(UI, lang);
+  const noAlc = useNoAlcohol();
   return (
     <div ref={scrollRef} className="zz-scroll zz-page fixed inset-0">
       <Backdrop scrollRef={scrollRef} />
@@ -87,7 +90,7 @@ export function Home({
                 <h3 className="zz-title text-white" style={{ fontSize: big ? "min(34px, 8.5vw)" : 28 }}>
                   {stripTitle(sec.title[lang])}
                 </h3>
-                <p className="mt-1 text-[15px] font-medium" style={{ color: "var(--zz-dim)" }}>{sec.subtitle[lang]}</p>
+                <p className="mt-1 text-[15px] font-medium" style={{ color: "var(--zz-dim)" }}>{noAlc && sec.id === "after" ? NOALC_UI[lang].afterSub : sec.subtitle[lang]}</p>
               </div>
               <div className="zz-rail" style={{ paddingTop: big ? 62 : 52, gap: 14 }}>
                 {games.map((g, i) => (
@@ -109,9 +112,11 @@ export function Home({
           );
         })}
 
-        <p className="mt-4 px-8 text-center text-[13px] leading-relaxed" style={{ color: "var(--zz-mute)" }}>
-          {t.sipNote}
-        </p>
+        {!noAlc && (
+          <p className="mt-4 px-8 text-center text-[13px] leading-relaxed" style={{ color: "var(--zz-mute)" }}>
+            {t.sipNote}
+          </p>
+        )}
       </div>
     </div>
   );

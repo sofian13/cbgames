@@ -4,10 +4,13 @@ import { ConfettiBurst } from "@/components/ConfettiBurst";
 import { colorForIndex } from "@/components/games/local-kit";
 import { armPartyBand, disarmPartyBand } from "@/lib/saved-players";
 import { setPartyMood } from "@/lib/party-mood";
+import { emitGameFinished } from "@/lib/game-finished";
 import { pick, useLang } from "@/lib/i18n";
 import { playCombo, playSfx, preloadSfx } from "@/lib/sfx";
 import { GAME_KIND, getZGame } from "../catalog";
 import { shareApp } from "../settings";
+import { shareResultCard } from "@/lib/share-card";
+import { soberKind } from "../no-alcohol";
 import {
   endSoiree, ranking, recordWinners, setPhase, skipGame, useSoiree, type SoireeState,
 } from "../soiree";
@@ -108,7 +111,7 @@ function Intro({ s, onPause }: { s: SoireeState; onPause: () => void }) {
         <p className="mt-3 text-[17px] font-bold" style={{ opacity: 0.8 }}>{t.nextUp}</p>
         <h1 className="zz-title" style={{ fontSize: `min(56px, ${(100 / Math.max(6, longest)).toFixed(1)}vw)`, lineHeight: 0.92 }}>{info.name}</h1>
         <div className="mt-3 flex flex-wrap gap-1.5">
-          <Tag bg="#fff" tilt={-3}>{t.kinds[GAME_KIND[g.id]]}</Tag>
+          <Tag bg="#fff" tilt={-3}>{soberKind(GAME_KIND[g.id], t.kinds[GAME_KIND[g.id]], lang)}</Tag>
           <Tag bg="var(--zz-ink)" color="#fff" tilt={2}>{playersLabel(g.players, lang)}</Tag>
         </div>
         <p className="zz-stk-sm mt-4 rounded-[20px] px-4 py-3 text-[16px] font-semibold leading-snug" style={{ background: "#fff", color: "var(--zz-ink)", rotate: "-1deg" }}>
@@ -231,6 +234,7 @@ function End({ s, onHome, onNew, toast }: { s: SoireeState; onHome: () => void; 
   useEffect(() => {
     playCombo("fanfare");
     playSfx("applause", { volume: 0.5, delay: 0.5 });
+    emitGameFinished({ soiree: true }); // demande de note éventuelle (zinzin/src/rating.ts)
   }, []);
 
   const podium = rows.slice(0, Math.min(3, rows.length));
@@ -243,7 +247,16 @@ function End({ s, onHome, onNew, toast }: { s: SoireeState; onHome: () => void; 
     const lines = rows.map((r, i) => `${i === 0 ? "👑" : `${i + 1}.`} ${r.name} · ${t.pts(r.points)} · ${titleOf(i)}`);
     const games = s.playlist.slice(0, Math.max(1, s.index)).map((id) => gameInfo(getZGame(id)!, lang).name).join(", ");
     const text = `${t.shareHead} 🪩\n${lines.join("\n")}\n${t.shareGames}${lang === "fr" ? "\u00a0:" : ":"} ${games}\n`;
-    if (await shareApp(text)) toast(t.shared);
+    // Image story du podium (grand vainqueur + jeux joués) ; texte seul en secours
+    const top = rows[0];
+    const res = top ? await shareResultCard({
+      game: "soiree", chip: t.name, crown: true, mood: "laughing", color: colorOf(s, top.name),
+      hero: { kicker: titleOf(0), title: top.name, sub: `${t.shareGames}${lang === "fr" ? "\u00a0:" : ":"} ${games}` },
+      rows: rows.map((r, i) => ({ name: r.name, value: t.pts(r.points), note: titleOf(i), colorIndex: Math.max(0, s.band.indexOf(r.name)), rank: r.rank })),
+      text: text.trim(),
+    }) : "error";
+    if (res === "shared" || res === "saved") toast(t.shared);
+    else if (res === "error" && await shareApp(text)) toast(t.shared);
   };
 
   return (

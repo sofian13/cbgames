@@ -23,6 +23,9 @@ import { adultDefault, getPartyMood, sipsAllowed } from "@/lib/party-mood";
 import { PURETE_STR } from "./i18n";
 import { ArrowLeft, Award, EyeOff, Flame, Hand, Heart, PartyPopper, RotateCcw, Shuffle, Target, User, type LucideIcon } from "lucide-react";
 import { GameIconBadge, GameInlineIcon } from "@/components/games/game-icon-button";
+import { useGameFinished } from "@/lib/game-finished";
+import { ShareResultButton } from "@/components/games/share-result-button";
+import { pureteGroupCard, pureteSoloCard, pureteTableCard } from "@/lib/share-cards";
 
 // ── Constantes visuelles ─────────────────────────────────
 const INK = "#15082E";
@@ -319,6 +322,7 @@ export default function PureteGame({ onReturnToLobby }: GameProps) {
 
   // Partie
   const [phase, setPhase] = useState<Phase>({ k: "setup" });
+  useGameFinished(phase.k === "results"); // fin de partie → demande de note éventuelle (app)
   const [players, setPlayers] = useState<string[]>([]);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [answers, setAnswers] = useState<boolean[][]>([]); // [joueur][question]
@@ -850,7 +854,11 @@ export default function PureteGame({ onReturnToLobby }: GameProps) {
           <Btn onClick={mode === "solo" ? () => setPhase({ k: "setup" }) : changePlayers} bg={CREAM} className="text-[16px] leading-tight">{mode === "solo" ? t.playMulti : t.changePlayers}</Btn>
           <Btn onClick={() => (onReturnToLobby ? onReturnToLobby() : setPhase({ k: "setup" }))} bg={INK} color="#fff" className="text-[16px] leading-tight">{t.quit}</Btn>
         </div>
-        <div className="flex justify-center pt-1">
+        <div className="flex flex-wrap justify-center gap-3 pt-1">
+          <ShareResultButton bg={YELLOW} card={() =>
+            mode === "solo" ? pureteSoloCard(purities[0] ?? 100, titleFor(purities[0] ?? 100).title)
+              : anonymousMode ? pureteTableCard(tablePurity, tt.title)
+                : pureteGroupCard(order.map((pi) => ({ name: players[pi], purity: purities[pi], verdict: titleFor(purities[pi]).title, colorIndex: pi })))} />
           <IdeaButton game="Test de pureté" kind="question" bg={CREAM} />
         </div>
       </div>

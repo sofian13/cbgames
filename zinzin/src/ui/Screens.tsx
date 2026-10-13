@@ -1,17 +1,20 @@
 import { Suspense, lazy, useState, type ComponentType, type LazyExoticComponent, type ReactNode } from "react";
 import type { GameProps } from "@/lib/games/types";
-import { Bell, ChevronLeft, CreditCard, Mail, RotateCcw, Share2, Sparkles, Star, X } from "lucide-react";
+import { Bell, ChevronLeft, CreditCard, GlassWater, Mail, RotateCcw, Share2, Sparkles, Star, X } from "lucide-react";
 import { LANGS, notificationsOn, rateApp, setLang, setNotifications, shareApp, useLang } from "../settings";
 import { getZGame } from "../catalog";
 import { isTestMode, resetPremiumForTests, restore } from "../premium";
 import { IDEAS_EMAIL, getLegalDocs, getLegalUpdatedAt, type LegalDocId } from "@/lib/legal/zinzin";
 import { pick, useT } from "@/lib/i18n";
-import { UI } from "../strings";
+import { ONBOARDING, UI } from "../strings";
 import { IdeaButton } from "@/components/games/idea-button";
 import { ZBlob, ZPALETTE } from "./ZBlob";
 import { BigBtn, CloseBtn, RoundBtn, Sheet } from "./common";
 import { ErrorBoundary } from "./ErrorBoundary";
 import { APP_VERSION, haptic, setAgeOk } from "./util";
+import { setNoAlcohol, useNoAlcohol } from "@/lib/party-mood";
+import { NOALC_UI } from "../no-alcohol";
+import { markRatedManually } from "../rating";
 
 export type LegalPage = "cgu" | "confidentialite" | "mentions";
 
@@ -113,11 +116,14 @@ export function SettingsSheet({
               haptic();
               if (await shareApp()) toast(t.thanksShare);
             }} />
-            <Tile bg="#A98BFF" tilt={1.5} icon={<Star size={26} strokeWidth={2.6} />} label={t.rate} sub={t.rateSub} onClick={() => { haptic(); void rateApp(); }} />
+            <Tile bg="#A98BFF" tilt={1.5} icon={<Star size={26} strokeWidth={2.6} />} label={t.rate} sub={t.rateSub} onClick={() => { haptic(); markRatedManually(); void rateApp(); }} />
           </div>
 
           {/* Rappels de soirée */}
           <NotifToggle toast={toast} />
+
+          {/* Mode sans alcool : toutes les peines deviennent des gages */}
+          <NoAlcoholToggle />
 
           {/* Langue */}
           <LangPicker />
@@ -125,6 +131,7 @@ export function SettingsSheet({
           <div className="mt-5 flex justify-center">
             <IdeaButton game="Zinzin (nouveau jeu)" kind="idée de jeu" />
           </div>
+          <ReplayTuto close={close} />
 
           {test && (
             <button
@@ -151,6 +158,47 @@ export function SettingsSheet({
         </div>
       )}
     </Sheet>
+  );
+}
+
+/** Revoir le tuto du premier lancement (écouté par App.tsx). */
+function ReplayTuto({ close }: { close: () => void }) {
+  const t = useT(ONBOARDING);
+  return (
+    <div className="mt-1 flex justify-center">
+      <button
+        type="button"
+        className="zz-tap min-h-11 px-3 text-[14px] font-bold underline decoration-2 underline-offset-4"
+        style={{ color: "var(--zz-dim)" }}
+        onClick={() => { haptic(); close(); setTimeout(() => window.dispatchEvent(new Event("zz:onboarding")), 260); }}
+      >
+        {t.replay}
+      </button>
+    </div>
+  );
+}
+
+function NoAlcoholToggle() {
+  const on = useNoAlcohol();
+  const t = useT(NOALC_UI);
+  return (
+    <button
+      type="button"
+      onClick={() => { haptic(); setNoAlcohol(!on); }}
+      className="zz-push zz-stk mt-3.5 flex w-full items-center gap-3 rounded-[22px] px-4 py-3.5 text-left"
+      style={{ background: "#FFF6E5", color: "var(--zz-ink)" }}
+      role="switch"
+      aria-checked={on}
+    >
+      <GlassWater size={26} strokeWidth={2.6} />
+      <span className="flex-1">
+        <span className="zz-title block text-[19px]">{t.title}</span>
+        <span className="block text-[13px] font-semibold opacity-75">{t.sub}</span>
+      </span>
+      <span className="relative h-8 w-14 shrink-0 rounded-full" style={{ background: on ? "#3DDC97" : "#CFC6E3", border: "2.5px solid var(--zz-ink)" }}>
+        <span className="absolute top-1/2 h-6 w-6 -translate-y-1/2 rounded-full bg-white transition-[left]" style={{ left: on ? 26 : 2, border: "2.5px solid var(--zz-ink)" }} />
+      </span>
+    </button>
   );
 }
 

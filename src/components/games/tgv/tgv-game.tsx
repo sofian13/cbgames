@@ -26,6 +26,7 @@ import {
   ArrowDown, ArrowLeft, ArrowUp, Check, CupSoda, Dices, Equal, Flame, Home, RotateCcw, Siren, TrainFront,
   Volume2, VolumeX, X, type LucideIcon,
 } from "lucide-react";
+import { useGameFinished } from "@/lib/game-finished";
 
 // ── DA sticker ────────────────────────────────────────────
 const INK = "#15082E";
@@ -192,11 +193,13 @@ export default function TgvGame({ onReturnToLobby }: GameProps) {
   const t = useT(STR);
   type Phase = "setup" | "config" | "pass" | "play" | "win" | "over";
   const [phase, setPhase] = useState<Phase>("setup");
+  useGameFinished(phase === "over"); // fin de partie → demande de note éventuelle (app)
   const [players, setPlayers] = useState<string[]>([]);
   const [losses, setLosses] = useState<number[]>([]);
   const [currentIdx, setCurrentIdx] = useState(0);
   const [numPiles, setNumPiles] = useState<number>(4);
-  const [penaltyMode, setPenaltyMode] = useState<PenaltyMode>(() => (sipsAllowed(true) ? "mix" : "gages")); // Soirée « Chill » : gages seulement
+  const [sipsOk] = useState(() => sipsAllowed(true)); // mode sans alcool / Soirée « Chill » : gages seulement
+  const [penaltyMode, setPenaltyMode] = useState<PenaltyMode>(() => (sipsOk ? "mix" : "gages"));
 
   // Partie en cours
   const deckRef = useRef<Card[]>([]);
@@ -223,7 +226,7 @@ export default function TgvGame({ onReturnToLobby }: GameProps) {
     if ((verdict !== "loss" && verdict !== "tie") || suspense) return;
     const sips = verdict === "tie" ? 1 : pileIdx + 1;
     const final = drawPenalty(penaltyMode, sips);
-    const faces: SpinFace[] = ["sips", "gage", "sips", "hot"];
+    const faces: SpinFace[] = penaltyMode === "gages" ? ["gage", "hot"] : ["sips", "gage", "sips", "hot"];
     let iv: ReturnType<typeof setInterval> | undefined;
     let ticks = 0;
     const start = setTimeout(() => {
@@ -365,7 +368,7 @@ export default function TgvGame({ onReturnToLobby }: GameProps) {
     const steps: { icon: LucideIcon; text: ReactNode }[] = [
       { icon: ArrowUp, text: t.step1 },
       { icon: TrainFront, text: t.step2 },
-      { icon: CupSoda, text: t.step3 },
+      sipsOk ? { icon: CupSoda, text: t.step3 } : { icon: Dices, text: t.step3NoSips },
     ];
     return (
       <Page>
@@ -406,7 +409,7 @@ export default function TgvGame({ onReturnToLobby }: GameProps) {
         </div>
 
         <h2 className="mt-7" style={{ ...DISPLAY, fontSize: 28, lineHeight: 1 }}>{t.penalty}</h2>
-        <div className="mt-3 grid grid-cols-3 gap-2.5">
+        {sipsOk && <div className="mt-3 grid grid-cols-3 gap-2.5">
           {(
             [
               { v: "mix", icons: [CupSoda, Dices], label: t.mix },
@@ -429,9 +432,9 @@ export default function TgvGame({ onReturnToLobby }: GameProps) {
               </button>
             );
           })}
-        </div>
+        </div>}
         <p className="mt-3 text-[15px] font-semibold leading-snug" style={{ color: "rgba(255,255,255,0.8)" }}>
-          {t.sipNote}
+          {sipsOk ? t.sipNote : t.noSipsNote}
         </p>
 
         <div className="mt-5 flex justify-center"><IdeaButton game="Le Train Fou" kind="gage" /></div>
@@ -480,7 +483,7 @@ export default function TgvGame({ onReturnToLobby }: GameProps) {
           <p className="mt-3 text-center text-[15px] font-bold" style={{ color: isLast ? "#FFD23F" : "rgba(255,255,255,0.85)" }}>
             {isLast ? <><GameInlineIcon icon={Siren} /> {t.lastWagon}</> : t.wagonOf(pileIdx + 1, numPiles)}
             {/* « en jeu… » reste d'un bloc : pas de « un gage » orphelin à la ligne */}
-            {isLast ? <br /> : " · "}<span className="whitespace-nowrap">{t.atStake(sipsAtStake)}</span>
+            {isLast ? <br /> : " · "}<span className="whitespace-nowrap">{sipsOk ? t.atStake(sipsAtStake) : t.atStakeDare}</span>
           </p>
 
           <div className="flex flex-1 items-center justify-center gap-4 py-4" style={{ perspective: 800 }}>
@@ -537,7 +540,7 @@ export default function TgvGame({ onReturnToLobby }: GameProps) {
         <div className="relative mt-16 rounded-[26px] px-5 pb-5 pt-[72px] text-center" style={{ ...stk("#FFD23F", 6), color: INK, transform: "rotate(-2deg)", animation: "tgv-pop .5s ease-out" }}>
           <div className="absolute -top-16 left-1/2 -translate-x-1/2"><Mascot size={96} color={colorForIndex(currentIdx)} mood="laughing" cheering crown shadow={false} /></div>
           <p style={{ ...DISPLAY, fontSize: nameSize(currentName, 40), lineHeight: 1, overflowWrap: "anywhere" }}>{currentName}</p>
-          <p className="mt-2 text-[16px] font-semibold leading-snug">{t.winNote}</p>
+          <p className="mt-2 text-[16px] font-semibold leading-snug">{sipsOk ? t.winNote : t.winNoteNoSips}</p>
         </div>
         <div className="min-h-8 flex-1" />
         <Push big bg={ACCENT} onClick={nextPlayer} className="mt-8 w-full">
@@ -725,7 +728,7 @@ function PenaltyOverlay({
               ) : (
                 <>
                   <p style={{ ...DISPLAY, fontSize: 26, lineHeight: 1.1 }}>{penalty.gage}</p>
-                  <p className="mt-2 text-[15px] font-semibold" style={{ opacity: 0.8 }}>{t.orSips(penalty.sips)}</p>
+                  {sipsAllowed(true) && <p className="mt-2 text-[15px] font-semibold" style={{ opacity: 0.8 }}>{t.orSips(penalty.sips)}</p>}
                 </>
               )}
             </div>

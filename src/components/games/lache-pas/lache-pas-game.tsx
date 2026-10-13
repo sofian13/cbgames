@@ -17,6 +17,7 @@ import { IdeaButton, RerollButton } from "@/components/games/idea-button";
 import { playCombo, playSfx, type LoopHandle } from "@/lib/sfx";
 import { Crown, CupSoda, Drama, Fingerprint } from "lucide-react";
 import { GameInlineIcon } from "@/components/games/game-icon-button";
+import { useGameFinished } from "@/lib/game-finished";
 
 // ── Lâche pas ! ────────────────────────────────────────────
 // Tout le monde pose un doigt sur l'écran : une bombe à retardement (cachée,
@@ -53,7 +54,9 @@ interface Outcome {
 
 export default function LachePasGame({ onReturnToLobby }: GameProps) {
   const [phase, setPhase] = useState<Phase>("intro");
-  const [penalty, setPenalty] = useState<Penalty>(() => (sipsAllowed(true) ? "sips" : "dares")); // Soirée « Chill » : gages seulement
+  useGameFinished(phase === "end"); // fin de partie → demande de note éventuelle (app)
+  const [sipsOk] = useState(() => sipsAllowed(true)); // mode sans alcool / Soirée « Chill » : gages seulement
+  const [penalty, setPenalty] = useState<Penalty>(() => (sipsOk ? "sips" : "dares"));
   const [fingers, setFingers] = useState<Finger[]>([]);
   const [count, setCount] = useState(3);
   const [taunt, setTaunt] = useState<string | null>(null);
@@ -290,11 +293,13 @@ export default function LachePasGame({ onReturnToLobby }: GameProps) {
           {t.intro}
         </p>
 
-        <div className="mt-6 w-full space-y-2.5">
-          <SectionTitle>{t.loserTakes}</SectionTitle>
-          <OptionCard on={penalty === "dares"} onClick={() => setPenalty("dares")} icon={Drama} title={t.dareTitle} sub={t.dareSub} onBg={ACCENT} />
-          <OptionCard on={penalty === "sips"} onClick={() => setPenalty("sips")} icon={CupSoda} title={t.sipsTitle} sub={t.sipsSub} onBg={ACCENT} />
-        </div>
+        {sipsOk && (
+          <div className="mt-6 w-full space-y-2.5">
+            <SectionTitle>{t.loserTakes}</SectionTitle>
+            <OptionCard on={penalty === "dares"} onClick={() => setPenalty("dares")} icon={Drama} title={t.dareTitle} sub={t.dareSub} onBg={ACCENT} />
+            <OptionCard on={penalty === "sips"} onClick={() => setPenalty("sips")} icon={CupSoda} title={t.sipsTitle} sub={t.sipsSub} onBg={ACCENT} />
+          </div>
+        )}
 
         <div className="mt-auto w-full pt-7">
           <StickerBtn

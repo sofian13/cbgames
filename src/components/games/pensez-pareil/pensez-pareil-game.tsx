@@ -35,6 +35,7 @@ import {
   type Prompt as PPPrompt,
   type Tier as PPTier,
 } from "@/components/games/pensez-pareil/pp-content";
+import { useGameFinished } from "@/lib/game-finished";
 
 const SYNC_BASE = 100;
 const COMBO_STEP = 25;
@@ -93,6 +94,7 @@ function PensezPareilLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }
   type Phase = "setup" | "passA" | "typeA" | "passB" | "typeB" | "reveal" | "over";
   const t = useT(STR);
   const [phase, setPhase] = useState<Phase>("setup");
+  useGameFinished(phase === "over"); // fin de partie → demande de note éventuelle (app)
   // Langue figée au début de la partie (thèmes + règles de comparaison des réponses)
   const [lang, setLang] = useState<Lang>(getLang);
   const [names, setNames] = useState<[string, string]>(["", ""]);

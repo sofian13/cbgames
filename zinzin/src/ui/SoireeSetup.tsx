@@ -11,6 +11,7 @@ import { ZBlob, ZPALETTE } from "./ZBlob";
 import { BigBtn, Tag } from "./common";
 import { CornerBtn, DiscoBall, SOIREE_BG, SoireeStyles } from "./SoireeKit";
 import { gameInfo, haptic } from "./util";
+import { soberKind, soberVibeSub } from "../no-alcohol";
 
 const VIBE_LOOK: Record<Vibe, { bg: string; mood: "asleep" | "laughing" | "fire"; color: "mint" | "yellow" | "coral" }> = {
   chill: { bg: "#3DDC97", mood: "asleep", color: "mint" },
@@ -85,7 +86,7 @@ export function SoireeSetup({ onClose, onLaunch }: {
                   <ZBlob size={54} color={look.color} mood={look.mood} seed={i + 2} outline shadow={false} wobble={on} />
                   <span className="min-w-0 flex-1">
                     <span className="zz-title block text-[24px]">{t.vibes[v].name}</span>
-                    <span className="mt-0.5 block text-[14px] font-semibold leading-snug" style={{ opacity: 0.8 }}>{t.vibes[v].sub}</span>
+                    <span className="mt-0.5 block text-[14px] font-semibold leading-snug" style={{ opacity: 0.8 }}>{soberVibeSub(v, t.vibes[v].sub, lang)}</span>
                   </span>
                   <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full" style={{ border: "3px solid var(--zz-ink)", background: on ? "var(--zz-ink)" : "#fff" }}>
                     {on && <span className="h-3 w-3 rounded-full" style={{ background: look.bg }} />}
@@ -194,7 +195,7 @@ function Recap({ band, vibe, length, playlist, setPlaylist, onLaunch }: {
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="zz-title block break-words text-[18px] leading-[1]">{info.name}</span>
-                    <span className="mt-1 block text-[13px] font-bold" style={{ opacity: 0.75 }}>{t.kinds[GAME_KIND[id]]}</span>
+                    <span className="mt-1 block text-[13px] font-bold" style={{ opacity: 0.75 }}>{soberKind(GAME_KIND[id], t.kinds[GAME_KIND[id]], lang)}</span>
                   </span>
                   <span className="flex shrink-0 flex-col">
                     <MiniBtn label={t.moveUp(info.name)} disabled={i === 0} onClick={() => setPlaylist(moveGame(playlist, i, -1))}><ChevronUp size={18} strokeWidth={3} /></MiniBtn>

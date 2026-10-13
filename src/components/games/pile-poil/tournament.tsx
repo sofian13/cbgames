@@ -10,9 +10,10 @@ import { IdeaButton, RerollButton } from "@/components/games/idea-button";
 import { TopRightControls } from "@/components/games/patate/rules-sheet";
 import { C, Chip as KitChip, DISPLAY, INK, KitStyles, NameTag, OptionCard, SectionTitle, SoftLink, StickerBtn, StickerCard, StickerScreen, TOP_PAD, BOTTOM_PAD, dotted, sticker } from "@/components/games/patate/sticker-kit";
 import { getLang, pick as pickLang, useT } from "@/lib/i18n";
-import { sipsAllowed } from "@/lib/party-mood";
+import { sipsAllowed, soberLines } from "@/lib/party-mood";
 import { CHALLENGES as CHALLENGE_TEXT, CHALLENGE_IDS, GAGES as GAGES_I18N, PP_STR } from "./i18n";
 import { fxBad, fxDrum, fxGood, fxOver, fxPerfect, fxPreload, fxReveal, fxTap, fxTick, fxUnlock, vibrate } from "./pp-fx";
+import { useGameFinished } from "@/lib/game-finished";
 
 // ── Pile Poil · mode Tournoi (tout sur un seul téléphone) ─────────────────
 // Chacun à son tour : GO, on compte dans sa tête, STOP. Le temps est mesuré
@@ -142,6 +143,7 @@ export function Tournament({ net, onExit }: { net?: TournamentNet; onExit?: () =
   // Défis figés dans la langue du début de partie
   const [CHALLENGES] = useState(() => challengesFor());
   const [phase, setPhase] = useState<Phase>("setup");
+  useGameFinished(phase === "final"); // fin de partie → demande de note éventuelle (app)
   const [players, setPlayers] = useState<string[]>([]);
   const [points, setPoints] = useState<number[]>([]);
   const [mode, setMode] = useState<PPMode>("closest");
@@ -288,7 +290,7 @@ export function Tournament({ net, onExit }: { net?: TournamentNet; onExit?: () =
     setRound({ ...round, target: t, label: round.challenge?.id === "calc" ? calcLabel(t) : null });
   };
 
-  const controls = <TopRightControls title={t.name} rules={t.rules} accent={ACCENT} />;
+  const controls = <TopRightControls title={t.name} rules={sipsAllowed(true) ? t.rules : soberLines(t.rules, t.ruleNoSips)} accent={ACCENT} />;
 
   // ── Écrans ─────────────────────────────────────────────
   if (phase === "setup") {
@@ -518,7 +520,7 @@ function ConfigScreen(p: {
       {/* Règle en 3 lignes : un nouveau joueur comprend en 10 s */}
       <StickerCard bg={C.cream} radius={22} shadow={5} tilt={-1} className="mt-4 p-4">
         <ol className="space-y-1.5 text-[15px] font-semibold leading-snug">
-          {[t.rule1, t.rule2, t.rule3].map(([a, b, c]) => (
+          {[t.rule1, t.rule2, sipsAllowed(true) ? t.rule3 : [t.rule3[0], t.rule3[1], t.rule3NoSips]].map(([a, b, c]) => (
             <li key={a}>{a}<b>{b}</b>{c}</li>
           ))}
         </ol>

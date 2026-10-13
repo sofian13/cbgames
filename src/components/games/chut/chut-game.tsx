@@ -18,6 +18,9 @@ import { CHUT_STR, chutContent } from "./i18n";
 import type { Ammo, ChutContent } from "./types";
 import { MicMeter, floorFrom, gaugeOf, holdMsFor, thresholdFor, type MicError, type Sensitivity } from "./mic";
 import { ChutBlob, NoiseMeter } from "./visuals";
+import { useGameFinished } from "@/lib/game-finished";
+import { ShareResultButton } from "@/components/games/share-result-button";
+import { chutCard } from "@/lib/share-cards";
 
 // ── Chut ! ────────────────────────────────────────────────
 // Duel « Ne ris pas ! » arbitré par le micro : le Clown a 30 s pour faire craquer
@@ -132,11 +135,13 @@ const SKETCHES: { s: [SfxName, number, number][]; len: number }[] = [
 // ══════════════════════════════════════════════════════════
 export default function ChutGame({ onReturnToLobby }: GameProps) {
   const t = useT(CHUT_STR);
+  const [sipsOk] = useState(() => sipsAllowed(true)); // mode sans alcool / Soirée « Chill » : gages seulement
   const [players, setPlayers] = useState<string[]>([]);
   const [screen, setScreen] = useState<Screen>("players");
+  useGameFinished(screen === "end"); // fin de partie → demande de note éventuelle (app)
   const [settings, setSettings] = useState<Settings>(() => ({
     mode: "duel", format: "rotation", tours: 1, sens: "living",
-    penalty: sipsAllowed(true) ? "sips" : "dares", adult: adultDefault(false), human: false,
+    penalty: sipsOk ? "sips" : "dares", adult: adultDefault(false), human: false,
   }));
   const [floor, setFloor] = useState<number | null>(null);
   const [rulesOpen, setRulesOpen] = useState(false);
@@ -442,7 +447,7 @@ export default function ChutGame({ onReturnToLobby }: GameProps) {
           </div>
         </Section>
 
-        <Section title={t.secPenalty}>
+        {sipsOk && <Section title={t.secPenalty}>
           <div className="grid grid-cols-2 gap-3">
             <ZChoice active={settings.penalty === "dares"} onClick={() => set({ penalty: "dares" })} color={ZZ.sky}>
               <Drama size={22} strokeWidth={2.6} aria-hidden />
@@ -455,7 +460,7 @@ export default function ChutGame({ onReturnToLobby }: GameProps) {
               <p className="mt-1 text-[13px] font-semibold leading-snug">{t.sipsSub}</p>
             </ZChoice>
           </div>
-        </Section>
+        </Section>}
 
         <Section title={t.secAmmo}>
           <div className="flex flex-col gap-3">
@@ -1463,7 +1468,16 @@ function EndScreen({ players, mode, results, ko, tableCracks, tools, overlays, o
       <div className="mt-auto flex flex-col items-center gap-1 pt-7">
         <ZButton bg={ACCENT} onClick={onReplay}>{t.replay}</ZButton>
         {onQuit && <ZLink onClick={onQuit}>{t.quit}</ZLink>}
-        <div className="mt-2"><IdeaButton game={t.name} kind="carte" bg={ZZ.cream} /></div>
+        <div className="mt-2 flex flex-wrap justify-center gap-3">
+          <ShareResultButton bg={ZZ.yellow} card={() => chutCard(
+            awards.map((a) => ({ title: a.title, sub: a.sub, name: players[a.p], colorIndex: a.p, bg: a.bg })),
+            rows.map((r) => ({
+              name: r.name, value: unit ? `${r.score} ${unit}` : String(r.score), note: typeof r.note === "string" ? r.note : undefined,
+              colorIndex: r.colorIndex, rank: 1 + rows.findIndex((x) => x.score === r.score),
+            })),
+          )} />
+          <IdeaButton game={t.name} kind="carte" bg={ZZ.cream} />
+        </div>
       </div>
     </ZScreen>
   );

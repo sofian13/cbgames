@@ -136,6 +136,9 @@ interface PPStr {
   rule1: [string, string, string];
   rule2: [string, string, string];
   rule3: [string, string, string];
+  /** Mode sans alcool / Soirée Chill : fin de rule3 et règle de la peine, gage seulement */
+  rule3NoSips: string;
+  ruleNoSips: string;
   perfectBonus: string;
   roundsCount: string;
   theRule: string;
@@ -237,6 +240,8 @@ export const PP_STR: I18n<PPStr> = {
     roundResults: "Résultats de la manche",
     rule1: ["1. Une ", "cible", " s'affiche (ex. 7 s)."],
     rule2: ["2. GO, tu comptes ", "dans ta tête", " : le chrono est caché."],
+    rule3NoSips: " (un gage).",
+    ruleNoSips: "Le plus loin prend un gage.",
     rule3: ["3. STOP quand tu y es. Le plus proche gagne, ", "le plus loin prend une peine", " (1 gorgée, eau OK, ou un gage)."],
     perfectBonus: "À 0,10 s près : PILE POIL, +1 bonus.",
     roundsCount: "Nombre de manches",
@@ -331,6 +336,8 @@ export const PP_STR: I18n<PPStr> = {
     roundResults: "Round results",
     rule1: ["1. A ", "target", " pops up (e.g. 7 s)."],
     rule2: ["2. Hit GO and count ", "in your head", ": the timer is hidden."],
+    rule3NoSips: " (a dare).",
+    ruleNoSips: "Furthest off does a dare.",
     rule3: ["3. STOP when you're there. Closest wins, ", "furthest off gets a penalty", " (1 sip, water's fine, or a dare)."],
     perfectBonus: "Within 0.10 s: SPOT ON, +1 bonus.",
     roundsCount: "Number of rounds",
@@ -425,6 +432,8 @@ export const PP_STR: I18n<PPStr> = {
     roundResults: "Resultados de la ronda",
     rule1: ["1. Aparece un ", "objetivo", " (p. ej. 7 s)."],
     rule2: ["2. GO, cuentas ", "mentalmente", ": el crono está oculto."],
+    rule3NoSips: " (un reto).",
+    ruleNoSips: "El más alejado hace un reto.",
     rule3: ["3. STOP cuando llegues. Gana el más cercano, ", "el más alejado se lleva un castigo", " (1 trago, vale agua, o un reto)."],
     perfectBonus: "A 0,10 s o menos: ¡JUSTO A TIEMPO!, +1 extra.",
     roundsCount: "Número de rondas",

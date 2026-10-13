@@ -81,6 +81,8 @@ interface Strings {
   rulesBtn: string;
   rulesTitle: string;
   rules: string[];
+  /** Règle de la peine en mode sans alcool / Soirée Chill (remplace celle qui parle de gorgées) */
+  ruleNoSips: string;
   close: string;
   // Contenu
   liquids: Record<LiquidId, string>;
@@ -157,6 +159,7 @@ export const VERRE_STR: I18n<Strings> = {
     skip: "Passer",
     rulesBtn: "Règles",
     rulesTitle: "Les règles",
+    ruleNoSips: "Si ça déborde (en versant ou pendant le passage), tu perds tes points de la manche et tu fais un gage.",
     rules: [
       "Le téléphone devient un plateau avec un verre posé dessus : le liquide suit l'inclinaison du tél.",
       "À ton tour, maintiens « Verser » pour remplir le verre. Un seul appui : dès que tu lâches, ton tour est fini.",
@@ -279,6 +282,7 @@ export const VERRE_STR: I18n<Strings> = {
     skip: "Skip",
     rulesBtn: "Rules",
     rulesTitle: "The rules",
+    ruleNoSips: "If it overflows (while pouring or passing), you lose your points for the round and do a dare.",
     rules: [
       "The phone becomes a tray with a glass on it: the liquid follows the phone's tilt.",
       "On your turn, hold \"Pour\" to fill the glass. One press only: as soon as you let go, your turn is over.",
@@ -401,6 +405,7 @@ export const VERRE_STR: I18n<Strings> = {
     skip: "Saltar",
     rulesBtn: "Reglas",
     rulesTitle: "Las reglas",
+    ruleNoSips: "Si se desborda (al servir o al pasarlo), pierdes tus puntos de la ronda y haces un reto.",
     rules: [
       "El móvil se convierte en una bandeja con un vaso encima: el líquido sigue la inclinación del móvil.",
       "En tu turno, mantén pulsado «Servir» para llenar el vaso. Un solo toque: en cuanto sueltas, se acaba tu turno.",

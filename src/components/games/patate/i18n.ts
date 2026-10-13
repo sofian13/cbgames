@@ -14,6 +14,8 @@ export const SHEET_STR: I18n<{ soundOn: string; soundOff: string; rules: string;
 interface PatateStr {
   name: string;
   rules: string[];
+  /** Dernière règle en mode sans alcool / Soirée Chill (gages uniquement) */
+  ruleNoSips: string;
   noticeDenied: string;
   noticeUnavailable: string;
   noticeNoSensor: string;
@@ -71,6 +73,7 @@ export const PATATE_STR: I18n<PatateStr> = {
       "La mèche est cachée et le tic‑tac accélère. BOUM = celui qui tient le tél a perdu.",
       "Le perdant fait un gage (ou 1 à 3 gorgées, eau OK).",
     ],
+    ruleNoSips: "Le perdant fait un gage.",
     noticeDenied: "Capteur refusé : on joue en mode classique (la patate ne craint pas les secousses).",
     noticeUnavailable: "Capteur indisponible : mode classique.",
     noticeNoSensor: "Pas d'accéléromètre ici : mode classique.",
@@ -126,6 +129,7 @@ export const PATATE_STR: I18n<PatateStr> = {
       "The fuse is hidden and the ticking speeds up. BOOM = whoever's holding the phone loses.",
       "The loser does a dare (or takes 1–3 sips, water's fine).",
     ],
+    ruleNoSips: "The loser does a dare.",
     noticeDenied: "Motion sensor denied: classic mode it is (the potato doesn't mind a shake).",
     noticeUnavailable: "Motion sensor unavailable: classic mode.",
     noticeNoSensor: "No accelerometer here: classic mode.",
@@ -181,6 +185,7 @@ export const PATATE_STR: I18n<PatateStr> = {
       "La mecha está oculta y el tictac se acelera. BUM = quien tiene el móvil pierde.",
       "Quien pierde hace un reto (o 1 a 3 tragos, vale agua).",
     ],
+    ruleNoSips: "Quien pierde hace un reto.",
     noticeDenied: "Sensor denegado: jugamos en modo clásico (a la patata no le importan las sacudidas).",
     noticeUnavailable: "Sensor no disponible: modo clásico.",
     noticeNoSensor: "Aquí no hay acelerómetro: modo clásico.",

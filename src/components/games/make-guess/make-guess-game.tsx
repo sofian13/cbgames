@@ -16,6 +16,7 @@ import { useLang, type Lang } from "@/lib/i18n";
 import { adultDefault } from "@/lib/party-mood";
 import { STR } from "./i18n";
 import { DEFAULT_THEME_IDS, OPT_IN_THEME_IDS, THEME_IDS, WORDS, type ThemeId } from "./words";
+import { useGameFinished } from "@/lib/game-finished";
 
 const ACCENT = "#FFD23F";
 
@@ -124,6 +125,7 @@ export default function MakeGuessGame({
 
   // ── Game state ──
   const [phase, setPhase] = useState<Phase>("setup");
+  useGameFinished(phase === "game-over"); // fin de partie → demande de note éventuelle (app)
   const [currentRound, setCurrentRound] = useState(1);
   const [currentTeamIndex, setCurrentTeamIndex] = useState(0);
   // Dans une manche : passage 0 → le joueur 1 de chaque équipe fait deviner,

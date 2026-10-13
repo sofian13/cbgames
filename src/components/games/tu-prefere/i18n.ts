@@ -31,6 +31,8 @@ interface TPStrings {
   penaltyDares: { title: string; sub: string };
   penaltySips: { title: string; sub: string };
   penaltyChill: string;
+  /** Réglage « Mode sans alcool » actif */
+  penaltyNoAlc: string;
   /** Pastille sur la carte du camp minoritaire après révélation */
   minorityBadge: string;
   noPenaltyTie: string;
@@ -78,6 +80,7 @@ export const TP_STR: I18n<TPStrings> = {
     penaltyDares: { title: "Un gage", sub: "Zéro gorgée" },
     penaltySips: { title: "Gorgées ou gage", sub: "1 à 2 gorgées de zinzin" },
     penaltyChill: "Ambiance chill : le camp minoritaire fait un gage.",
+    penaltyNoAlc: "Que des gages : le camp minoritaire fait un gage.",
     minorityBadge: "Minorité",
     noPenaltyTie: "Personne ne prend : débattez !",
     noPenaltyUnanimous: "Unanimité ! Personne ne prend.",
@@ -134,6 +137,7 @@ export const TP_STR: I18n<TPStrings> = {
     penaltyDares: { title: "A dare", sub: "Zero sips" },
     penaltySips: { title: "Sips or a dare", sub: "1 to 2 zinzin sips" },
     penaltyChill: "Chill vibe: the minority does a dare.",
+    penaltyNoAlc: "Dares only: the minority does a dare.",
     minorityBadge: "Minority",
     noPenaltyTie: "Nobody takes it: debate!",
     noPenaltyUnanimous: "Unanimous! Nobody takes it.",
@@ -190,6 +194,7 @@ export const TP_STR: I18n<TPStrings> = {
     penaltyDares: { title: "Un reto", sub: "Cero tragos" },
     penaltySips: { title: "Tragos o reto", sub: "1 a 2 tragos de zinzin" },
     penaltyChill: "Ambiente chill: la minoría hace un reto.",
+    penaltyNoAlc: "Solo retos: la minoría hace un reto.",
     minorityBadge: "Minoría",
     noPenaltyTie: "Nadie paga: ¡a debatir!",
     noPenaltyUnanimous: "¡Unanimidad! Nadie paga.",

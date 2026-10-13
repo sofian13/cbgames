@@ -23,6 +23,9 @@ import {
 import { FT_STR, answerLabel, type FTStrings } from "./i18n";
 import { BlobFigure, SceneView } from "./scene-view";
 import { COLOR_HEX, DECOR_IDS, makeScene, planRound, sameAnswer, type DecorId, type Question, type Scene } from "./scene";
+import { useGameFinished } from "@/lib/game-finished";
+import { ShareResultButton } from "@/components/games/share-result-button";
+import { rankingCard } from "@/lib/share-cards";
 
 const ACCENT = "#4ECDC4";
 const VIEW_SEC = 5;
@@ -44,6 +47,7 @@ const rnd = (n: number) => Math.floor(Math.random() * n);
 export default function FauxTemoinGame({ onReturnToLobby }: GameProps) {
   const t = useT(FT_STR);
   const [phase, setPhase] = useState<Phase>("setup");
+  useGameFinished(phase === "end"); // fin de partie → demande de note éventuelle (app)
   const [players, setPlayers] = useState<string[]>([]);
   const [scores, setScores] = useState<number[]>([]);
   const [fakeCount, setFakeCount] = useState<number[]>([]);
@@ -437,7 +441,10 @@ export default function FauxTemoinGame({ onReturnToLobby }: GameProps) {
         <div className="min-h-6 flex-1" />
         {end ? (
           <>
-            <div className="mt-6 flex justify-center"><IdeaButton game={t.name} kind={t.ideaKind} bg="#fff" /></div>
+            <div className="mt-6 flex flex-wrap justify-center gap-3">
+              <ShareResultButton bg={ZZ.yellow} card={() => rankingCard("faux-temoin", order, t.pts)} />
+              <IdeaButton game={t.name} kind={t.ideaKind} bg="#fff" />
+            </div>
             <ZButton className="mt-5" bg={ACCENT} onClick={replay}>{t.replay}</ZButton>
             {onReturnToLobby && <ZButton className="mt-3" bg="#fff" size="md" onClick={onReturnToLobby}>{t.quit}</ZButton>}
           </>

@@ -15,6 +15,7 @@ import { playCombo, playSfx, preloadSfx } from "@/lib/sfx";
 import { useLang } from "@/lib/i18n";
 import { PACKS_BY_LANG } from "./words";
 import { STR } from "./i18n";
+import { useGameFinished } from "@/lib/game-finished";
 
 // ── Deviner le Mot ─────────────────────────────────────────
 // Un joueur met le tél sur son front (écran vers les autres), les autres le
@@ -61,6 +62,7 @@ export default function GuessWordGame({ onReturnToLobby }: GameProps) {
   }, []);
 
   const [phase, setPhase] = useState<Phase>("setup");
+  useGameFinished(phase === "final"); // fin de partie → demande de note éventuelle (app)
   const [players, setPlayers] = useState<string[]>([]);
   const [scores, setScores] = useState<number[]>([]);
   const [packs, setPacks] = useState<string[]>(() => PACKS.filter((p) => (p.adult ? adultDefault(!!p.defaultOn) : p.defaultOn)).map((p) => p.id)); // pack 18+ selon l'ambiance de soirée

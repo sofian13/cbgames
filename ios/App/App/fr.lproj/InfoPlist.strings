@@ -1,2 +1,3 @@
 "NSMicrophoneUsageDescription" = "Zinzin utilise le micro uniquement pendant le jeu « Chut ! » pour mesurer le bruit en direct. Rien n’est enregistré ni envoyé.";
 "NSMotionUsageDescription" = "Zinzin utilise les capteurs de mouvement pour des jeux comme Le Verre Invisible ou La Patate. Rien n’est enregistré.";
+"NSPhotoLibraryAddUsageDescription" = "Zinzin enregistre dans tes photos l’image de ton résultat, seulement si tu choisis « Enregistrer l’image » en la partageant.";
