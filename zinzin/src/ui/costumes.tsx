@@ -95,9 +95,14 @@ export function costumeLayers(kind: ZCostume | undefined, ctx: Ctx): CostumeLaye
       return {
         face: (
           <g className="zc-nose">
-            <path d="M56 64 L116 70 Q118 72 116 74 L56 78Z" fill="#F2B880" stroke={INK} strokeWidth={SW} strokeLinejoin="round" />
-            <circle cx={58} cy={71} r={7} fill="#F2B880" stroke={INK} strokeWidth={SW} />
-            <path d="M62 68 L100 70" stroke="#fff" strokeWidth={2} strokeLinecap="round" opacity={0.6} />
+            {/* Nez en bois conique : base ronde, pointe arrondie, veines du bois, petite feuille */}
+            <path d="M54 62 C70 63 96 66 112 69 C117 70 118 75 113 76 C96 79 70 82 54 82 C47 81 47 63 54 62Z"
+                  fill="#E8A86A" stroke={INK} strokeWidth={SW} strokeLinejoin="round" />
+            <path d="M58 76 C74 76 96 74 110 73" fill="none" stroke="#B9733A" strokeWidth={2.4} strokeLinecap="round" />
+            <path d="M60 67 C76 67 94 68 106 70" fill="none" stroke="#FFE2BF" strokeWidth={2.6} strokeLinecap="round" opacity={0.85} />
+            <ellipse cx={55} cy={72} rx={8} ry={10} fill="#F0B57C" stroke={INK} strokeWidth={SW} />
+            <ellipse cx={53} cy={68.5} rx={3} ry={2.2} fill="#fff" opacity={0.7} />
+            <path d="M88 67 C90 58 98 55 103 57 C100 62 95 66 88 67Z" fill="#3DDC97" stroke={INK} strokeWidth={2.2} strokeLinejoin="round" />
           </g>
         ),
       };
