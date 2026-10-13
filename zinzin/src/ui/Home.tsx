@@ -90,7 +90,7 @@ export function Home({
         })}
 
         <p className="mt-4 px-8 text-center text-[13px] leading-relaxed" style={{ color: "var(--zz-mute)" }}>
-          Les jeux à boire se jouent avec modération. Eau et soft acceptés.
+          Une gorgée de zinzin, c’est de ce que tu veux : eau, soft… avec modération.
         </p>
       </div>
     </div>

@@ -158,7 +158,7 @@ export default function LeBusGame({ roomCode, playerId, playerName }: GameProps)
     return (
       <Centered emoji="🚌" text="Le bus démarre… montez à bord !">
         <p className="max-w-xs text-[13px] text-white/55">
-          Max {DEFAULT_CAP} gorgées par joueur : au-delà, c&apos;est une pénalité en points. Eau ou soft, ça compte aussi 💧
+          Max {DEFAULT_CAP} gorgées par joueur : au-delà, c&apos;est une pénalité en points. Une gorgée de zinzin, c&apos;est de ce que tu veux : eau ou soft comptent aussi.
         </p>
         <button
           onClick={() => sendRaw({ type: "start-with-bots" })}

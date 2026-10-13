@@ -329,7 +329,7 @@ export default function PatateGame({ onReturnToLobby }: GameProps) {
         <div className="mt-6 w-full space-y-2.5">
           <SectionTitle>Le perdant prend…</SectionTitle>
           <OptionCard on={penalty === "dares"} onClick={() => setPenalty("dares")} icon={Drama} title="Un gage" sub="Que des gages, zéro gorgée" onBg={ACCENT} />
-          <OptionCard on={penalty === "sips"} onClick={() => setPenalty("sips")} icon={CupSoda} title="Gorgées ou gage" sub="1 à 3 gorgées, eau ou soft acceptés" onBg={ACCENT} />
+          <OptionCard on={penalty === "sips"} onClick={() => setPenalty("sips")} icon={CupSoda} title="Gorgées ou gage" sub="1 à 3 gorgées de zinzin" onBg={ACCENT} />
         </div>
 
         <div className="mt-6 w-full space-y-2.5">
@@ -497,8 +497,8 @@ export default function PatateGame({ onReturnToLobby }: GameProps) {
           <StickerCard bg={C.cream} radius={24} shadow={5} className="mt-4 p-4 text-center">
             {boom.alt ? (
               <>
-                <p className="text-[26px] leading-tight" style={DISPLAY}><GameInlineIcon icon={CupSoda} /> {boom.penalty}</p>
-                <p className="mt-1 text-[15px] font-bold" style={{ color: "#4A3A66" }}>eau ou soft acceptés, ou le gage :</p>
+                <p className="text-[26px] leading-tight" style={DISPLAY}><GameInlineIcon icon={CupSoda} /> {boom.penalty} de zinzin</p>
+                <p className="mt-1 text-[15px] font-bold" style={{ color: "#4A3A66" }}>ou le gage :</p>
                 <p className="mt-1 text-[18px] font-semibold leading-snug">{boom.alt}</p>
               </>
             ) : (

@@ -110,7 +110,7 @@ export function GameSheet({
 
               {game.adult && (
                 <p className="mt-6 text-[14px] leading-relaxed" style={{ color: "var(--zz-mute)" }}>
-                  À jouer avec modération. Eau et soft acceptés, chacun boit ce qu’il veut (ou fait un gage).
+                  Une gorgée de zinzin, c’est de ce que tu veux : eau, soft, jus… ou un gage. Avec modération.
                 </p>
               )}
             </div>

@@ -380,7 +380,7 @@ export default function PicoletteGame({ onReturnToLobby }: GameProps) {
               {[
                 "18+. Personne ne prend le volant après la soirée.",
                 "La peine : 1 à 3 gorgées max… ou un gage.",
-                "Tu bois ce que tu veux : eau, soft, jus… ça compte pareil.",
+                "Une gorgée de zinzin, c’est de ce que tu veux : eau, soft, jus… ça compte pareil.",
                 "Personne n'est obligé de boire : on peut toujours prendre le gage.",
                 "Les cartes sont des suggestions, adaptez-les.",
               ].map((t, i) => (
@@ -695,7 +695,7 @@ function PacksScreen({
           })}
         </div>
         <p className="mt-3 text-[15px] font-semibold leading-snug" style={{ color: "rgba(255,255,255,0.78)" }}>
-          La roulette tire au hasard. Une gorgée, c&apos;est de ce que tu veux : eau, soft, jus…
+          La roulette tire au hasard. Une gorgée de zinzin, c&apos;est de ce que tu veux : eau, soft, jus…
         </p>
 
         <div className="mt-6 flex justify-center"><IdeaButton game="La Tournée" kind="idée de carte" /></div>
@@ -782,7 +782,7 @@ function RouletteOverlay({
               </p>
               <p className="mt-2 text-[15px] font-semibold" style={{ opacity: 0.8 }}>
                 {result.kind === "sips"
-                  ? "De ce que tu veux (eau ou soft, ça compte)… ou un gage, au choix."
+                  ? "Des gorgées de zinzin… ou un gage, au choix."
                   : result.kind === "shield"
                     ? "Le bouclier est cassé, profites-en."
                     : "Le gage ne passe pas ? Tire-en un autre."}

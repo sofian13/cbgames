@@ -295,7 +295,7 @@ export default function LachePasGame({ onReturnToLobby }: GameProps) {
         <div className="mt-6 w-full space-y-2.5">
           <SectionTitle>Le perdant prend…</SectionTitle>
           <OptionCard on={penalty === "dares"} onClick={() => setPenalty("dares")} icon={Drama} title="Un gage" sub="Que des gages, zéro gorgée" onBg={ACCENT} />
-          <OptionCard on={penalty === "sips"} onClick={() => setPenalty("sips")} icon={CupSoda} title="Gorgées ou gage" sub="1 à 3 gorgées, eau ou soft acceptés" onBg={ACCENT} />
+          <OptionCard on={penalty === "sips"} onClick={() => setPenalty("sips")} icon={CupSoda} title="Gorgées ou gage" sub="1 à 3 gorgées de zinzin" onBg={ACCENT} />
         </div>
 
         <div className="mt-auto w-full pt-7">
@@ -417,7 +417,7 @@ export default function LachePasGame({ onReturnToLobby }: GameProps) {
             </div>
             {outcome.alt ? (
               <p className="mt-2 text-[16px] font-semibold leading-snug">
-                <b style={DISPLAY}><GameInlineIcon icon={CupSoda} /> {outcome.penalty}</b> (eau ou soft OK), ou le gage : {outcome.alt}
+                <b style={DISPLAY}><GameInlineIcon icon={CupSoda} /> {outcome.penalty} de zinzin</b>, ou le gage : {outcome.alt}
               </p>
             ) : (
               <p className="mt-2 text-[16px] font-semibold leading-snug"><GameInlineIcon icon={Drama} /> {outcome.penalty}</p>

@@ -31,7 +31,7 @@ export function AgeGate({ onOk }: { onOk: () => void }) {
         Ici, c’est entre adultes.
       </h1>
       <p className="zz-rise mt-3 text-[17px] font-medium leading-relaxed" style={{ color: "var(--zz-dim)", ["--d" as string]: "180ms" }}>
-        Zinzin est réservé aux 18 ans et plus. Les jeux à boire se jouent avec modération, eau et soft acceptés.
+        Zinzin est réservé aux 18 ans et plus. Dans les jeux à boire, une « gorgée de zinzin », c’est de ce que tu veux : eau, soft, jus… Avec modération.
       </p>
       <div className="flex-1" />
       <div className="zz-rise" style={{ ["--d" as string]: "260ms" }}>

@@ -490,7 +490,7 @@ export default function PureteGame({ onReturnToLobby }: GameProps) {
             )}
             {mode !== "solo" && <Toggle on={peines && !anonymousMode} onChange={setPeines} disabled={anonymousMode}
               label="Peines pour le moins pur"
-              sub={anonymousMode ? "Il faut les prénoms pour savoir qui est le moins pur." : "Un gage, ou 1 à 3 gorgées (eau ou soft, ça compte)"} />}
+              sub={anonymousMode ? "Il faut les prénoms pour savoir qui est le moins pur." : "Un gage, ou 1 à 3 gorgées de zinzin"} />}
           </div>
 
           <Btn onClick={goNext} disabled={!canGo} bg={PINK} color="#fff" className="w-full text-[22px]" style={{ minHeight: 60 }}>
@@ -769,7 +769,7 @@ export default function PureteGame({ onReturnToLobby }: GameProps) {
             <GameInlineIcon icon={Target} /> {gage}
           </p>
           <p className="mt-2 text-[15px] font-bold text-white">
-            Ou {gorgees} gorgée{gorgees > 1 ? "s" : ""}, au choix (eau ou soft, ça compte).
+            Ou {gorgees} gorgée{gorgees > 1 ? "s" : ""} de zinzin, au choix.
           </p>
         </div>
       )}

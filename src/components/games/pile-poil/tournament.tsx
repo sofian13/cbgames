@@ -974,7 +974,7 @@ function Board({
         <StickerCard bg={RED} radius={24} shadow={5} tilt={1} className="mt-5 p-4 text-center" style={{ animation: `pp-pop .45s ${ranked.length * 0.08 + 0.1}s ease-out both` }}>
           <p className="text-[26px] leading-tight" style={DISPLAY}>{loser.name} prend une peine</p>
           <p className="mt-1 text-[16px] font-bold">
-            {sips} gorgée{sips > 1 ? "s" : ""} (eau ou soft OK) ou le gage :
+            {sips} gorgée{sips > 1 ? "s" : ""} de zinzin ou le gage :
           </p>
           <p className="mt-2 px-3 py-2 text-[17px] font-semibold leading-snug" style={sticker("#fff", { radius: 16, shadow: 0, border: 2.5 })}>
             {gage}

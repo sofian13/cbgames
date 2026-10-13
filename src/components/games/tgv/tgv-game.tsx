@@ -722,7 +722,7 @@ function PenaltyOverlay({
               ) : (
                 <>
                   <p style={{ ...DISPLAY, fontSize: 26, lineHeight: 1.1 }}>{penalty.gage}</p>
-                  <p className="mt-2 text-[15px] font-semibold" style={{ opacity: 0.8 }}>Ou {penalty.sips} gorgée{penalty.sips > 1 ? "s" : ""}, au choix (eau ou soft, ça compte).</p>
+                  <p className="mt-2 text-[15px] font-semibold" style={{ opacity: 0.8 }}>Ou {penalty.sips} gorgée{penalty.sips > 1 ? "s" : ""} de zinzin, au choix.</p>
                 </>
               )}
             </div>

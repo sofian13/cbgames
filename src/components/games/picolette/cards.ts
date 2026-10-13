@@ -256,7 +256,7 @@ export const GAGES: string[] = [
   "Raconte ta journée comme un conte de fées.",
   "Tiens sur un pied pendant 20 secondes en racontant ta semaine.",
   "Échange ta place avec la personne de ton choix.",
-  "Propose un toast (eau ou soft, ça compte) en l'honneur de quelqu'un.",
+  "Propose un toast de zinzin en l'honneur de quelqu'un.",
   "Fais deviner un film en mimant, sans un mot.",
   "Imite la sonnerie de ton réveil jusqu'à ce que quelqu'un rie.",
   "Joue la prochaine carte avec la voix d'un méchant de film.",
