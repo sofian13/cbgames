@@ -5,8 +5,9 @@ import { getPartyMood } from "@/lib/party-mood";
  * Demande de note automatique, rare et au bon moment :
  * - seulement juste après la FIN d'une partie (ou d'une Soirée Zinzin complète),
  *   jamais en plein jeu : ~1,5 s après l'arrivée sur l'écran de fin ;
- * - pas avant la 3e partie terminée, ni avant 2 jours après la 1re ouverture ;
- * - au plus 1 fois tous les 60 jours, 3 fois max au total ;
+ * - pas avant la 3e partie terminée ;
+ * - ensuite, de nouveau dès que 2 jours sont passés OU 5 parties ont été terminées depuis la dernière demande
+ *   (iOS décide seul de l'afficher : 3 fois max par an, il ignore les demandes en trop) ;
  * - jamais si le joueur a déjà touché « Noter l'app » dans les Réglages.
  * iOS (SKStoreReviewController) plafonne de toute façon à 3 affichages par an.
  * Pendant une Soirée, les fins de jeux comptent mais on attend la fin de la soirée.
@@ -14,7 +15,7 @@ import { getPartyMood } from "@/lib/party-mood";
 
 const KEY = "zz-rating";
 const DAY = 86_400_000;
-export const RATING_RULES = { minGames: 3, minDays: 2, gapDays: 60, maxAsks: 3, delayMs: 1500 } as const;
+export const RATING_RULES = { minGames: 3, gapDays: 2, gapGames: 5, delayMs: 1500 } as const;
 
 export interface RatingState {
   /** 1re ouverture de l'app (ms) */
@@ -25,22 +26,23 @@ export interface RatingState {
   asks: number;
   /** Date de la dernière demande (ms, 0 = jamais) */
   lastAsk: number;
+  /** Parties terminées au moment de la dernière demande */
+  finishedAtAsk: number;
   /** A touché « Noter l'app » dans les Réglages */
   manual: boolean;
 }
 
 export function freshState(now: number): RatingState {
-  return { firstOpen: now, finished: 0, asks: 0, lastAsk: 0, manual: false };
+  return { firstOpen: now, finished: 0, asks: 0, lastAsk: 0, finishedAtAsk: 0, manual: false };
 }
 
 /** Logique pure (testée) : faut-il demander une note maintenant ? */
 export function shouldAsk(s: RatingState, now: number): boolean {
   const R = RATING_RULES;
-  if (s.manual || s.asks >= R.maxAsks) return false;
+  if (s.manual) return false;
   if (s.finished < R.minGames) return false;
-  if (now - s.firstOpen < R.minDays * DAY) return false;
-  if (s.lastAsk && now - s.lastAsk < R.gapDays * DAY) return false;
-  return true;
+  if (!s.lastAsk) return true;
+  return now - s.lastAsk >= R.gapDays * DAY || s.finished - s.finishedAtAsk >= R.gapGames;
 }
 
 function load(): RatingState {
@@ -88,7 +90,7 @@ export function initRating() {
     window.setTimeout(() => {
       const cur = load();
       if (!shouldAsk(cur, Date.now())) return;
-      save({ ...cur, asks: cur.asks + 1, lastAsk: Date.now() });
+      save({ ...cur, asks: cur.asks + 1, lastAsk: Date.now(), finishedAtAsk: cur.finished });
       import("@capacitor-community/in-app-review")
         .then(({ InAppReview }) => InAppReview.requestReview())
         .catch(() => { /* plugin indispo */ });
