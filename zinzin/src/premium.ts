@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from "react";
+import { notifyPremiumChanged } from "@/lib/entitlements";
 
 /**
  * Abonnement « Zinzin Premium » (tout débloquer).
@@ -17,6 +18,7 @@ function setPremium(v: boolean) {
   premium = v;
   localStorage.setItem(KEY, v ? "1" : "0");
   listeners.forEach((l) => l());
+  notifyPremiumChanged(); // les jeux (src/) se mettent à jour
 }
 
 export function usePremium(): boolean {

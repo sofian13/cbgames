@@ -9,6 +9,7 @@ import { DISPLAY, PlayersSetup, SoundButton, ZButton, ZChip, ZZ, zBackground, us
 import { IdeaButton, RerollButton } from "@/components/games/idea-button";
 import { playCombo, playSfx, preloadSfx } from "@/lib/sfx";
 import { isOfflineApp } from "@/lib/offline-app";
+import { requestPaywall, useUnlocked } from "@/lib/entitlements";
 
 /* ─────────────────────────────────────────────────────────────
    L'INTRUS LOCAL — Pass-and-play (un seul téléphone)
@@ -194,6 +195,13 @@ const WORD_CATEGORIES: { id: string; label: string; emoji: string; adult?: boole
 // Sans sélection : tout sauf le +18.
 const ALL_WORD_PAIRS: [string, string][] = WORD_CATEGORIES.filter((c) => !c.adult).flatMap((c) => c.pairs);
 
+// Version gratuite de l'app : toujours les mêmes 50 paires (4 par thème du quotidien).
+// Anime, +18 et les autres thèmes sont réservés à Premium.
+const FREE_CAT_IDS = ["food", "drinks", "places", "sport", "animals", "transport", "objects", "nature", "jobs", "home", "fashion", "music", "events"];
+const FREE_PAIRS: [string, string][] = FREE_CAT_IDS
+  .flatMap((id) => (WORD_CATEGORIES.find((c) => c.id === id)?.pairs ?? []).slice(0, 4))
+  .slice(0, 50);
+
 // ═════════════════════════════════════════════════════════════
 //  Tokens (mirror online)
 // ═════════════════════════════════════════════════════════════
@@ -224,6 +232,8 @@ export default function UndercoverLocal({ onReturnToLobby }: { onReturnToLobby?:
 
   // Pair de mots tirée pour la partie
   const [civilWord, setCivilWord]   = useState("");
+  // Abonné (ou site web) = tous les thèmes ; sinon 50 paires gratuites
+  const unlocked = useUnlocked();
   const [rerollNotice, setRerollNotice] = useState(false);
   const [ucWord, setUcWord]         = useState("");
 
@@ -285,9 +295,11 @@ export default function UndercoverLocal({ onReturnToLobby }: { onReturnToLobby?:
   // ── Distribution des rôles + mots ───────────────────────
   const distributeRoles = () => {
     // Pioche dans les catégories choisies (toutes si aucune sélection).
-    const pool = selectedCats.size === 0
-      ? ALL_WORD_PAIRS
-      : WORD_CATEGORIES.filter((c) => selectedCats.has(c.id)).flatMap((c) => c.pairs);
+    const pool = !unlocked
+      ? FREE_PAIRS
+      : selectedCats.size === 0
+        ? ALL_WORD_PAIRS
+        : WORD_CATEGORIES.filter((c) => selectedCats.has(c.id)).flatMap((c) => c.pairs);
     const src0 = pool.length > 0 ? pool : ALL_WORD_PAIRS;
     // Jamais deux fois la même paire d'affilée (bouton « Changer de mot »)
     const src = src0.length > 1 ? src0.filter((pp) => !pp.includes(civilWord)) : src0;
@@ -505,6 +517,7 @@ export default function UndercoverLocal({ onReturnToLobby }: { onReturnToLobby?:
         jester={jester}
         setJester={setJester}
         selectedCats={selectedCats}
+        unlocked={unlocked}
         setSelectedCats={setSelectedCats}
         onStart={distributeRoles}
         onBack={() => setPhase("setup-players")}
@@ -679,13 +692,14 @@ export default function UndercoverLocal({ onReturnToLobby }: { onReturnToLobby?:
 
 // — SETUP ROLES (composition)
 function SetupRoles({
-  players, ucCount, setUcCount, mrWhite, setMrWhite, jester, setJester, selectedCats, setSelectedCats, onStart, onBack,
+  players, ucCount, setUcCount, mrWhite, setMrWhite, jester, setJester, selectedCats, setSelectedCats, unlocked, onStart, onBack,
 }: {
   players: LocalPlayer[];
   ucCount: number; setUcCount: (v: number) => void;
   mrWhite: boolean; setMrWhite: (v: boolean) => void;
   jester: boolean; setJester: (v: boolean) => void;
   selectedCats: Set<string>; setSelectedCats: (v: Set<string>) => void;
+  unlocked: boolean;
   onStart: () => void; onBack: () => void;
 }) {
   const toggleCat = (id: string) => {
@@ -768,27 +782,64 @@ function SetupRoles({
       </FileCard>
 
       {/* Catégories de mots */}
+      {unlocked ? (
+        <>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", margin: "14px 0 10px" }}>
-        <div style={{ ...DISPLAY, fontSize: 28 }}>Les mots</div>
-        <ZButton size="sm" bg={allSafe ? ZZ.yellow : "#fff"} onClick={toggleAll} style={{ width: "auto" }}>{allSafe ? "Tout est coché" : "Tout cocher"}</ZButton>
-      </div>
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 18 }}>
-        {WORD_CATEGORIES.map((c, i) => {
-          const on = selectedCats.has(c.id);
-          return (
-            <button key={c.id} type="button" onClick={() => { playSfx("toggle", { volume: 0.45 }); toggleCat(c.id); }} aria-pressed={on}
-              className="transition-[translate,box-shadow] shadow-[0_3px_0_#15082E] active:translate-y-[2px] active:shadow-[0_1px_0_#15082E]"
-              style={{
-                display: "flex", alignItems: "center", gap: 6, padding: "0 14px", minHeight: 44, borderRadius: 999,
-                fontSize: 15, fontWeight: 800, color: ZZ.ink,
-                background: on ? (c.adult ? ZZ.pink : ZZ.yellow) : "rgba(255,255,255,0.55)",
-                border: `2.5px solid ${ZZ.ink}`, rotate: on ? `${i % 2 ? 1.5 : -1.5}deg` : undefined,
-              }}>
-              {on && <Check size={15} strokeWidth={3.2} aria-hidden />}{c.label}
-            </button>
-          );
-        })}
-      </div>
+          <div style={{ ...DISPLAY, fontSize: 28 }}>Les mots</div>
+          <ZButton size="sm" bg={allSafe ? ZZ.yellow : "#fff"} onClick={toggleAll} style={{ width: "auto" }}>{allSafe ? "Tout est coché" : "Tout cocher"}</ZButton>
+        </div>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 18 }}>
+          {WORD_CATEGORIES.map((c, i) => {
+            const on = selectedCats.has(c.id);
+            return (
+              <button key={c.id} type="button" onClick={() => { playSfx("toggle", { volume: 0.45 }); toggleCat(c.id); }} aria-pressed={on}
+                className="transition-[translate,box-shadow] shadow-[0_3px_0_#15082E] active:translate-y-[2px] active:shadow-[0_1px_0_#15082E]"
+                style={{
+                  display: "flex", alignItems: "center", gap: 6, padding: "0 14px", minHeight: 44, borderRadius: 999,
+                  fontSize: 15, fontWeight: 800, color: ZZ.ink,
+                  background: on ? (c.adult ? ZZ.pink : ZZ.yellow) : "rgba(255,255,255,0.55)",
+                  border: `2.5px solid ${ZZ.ink}`, rotate: on ? `${i % 2 ? 1.5 : -1.5}deg` : undefined,
+                }}>
+                {on && <Check size={15} strokeWidth={3.2} aria-hidden />}{c.label}
+              </button>
+            );
+          })}
+        </div>
+        </>
+      ) : (
+        <>
+          <div style={{ ...DISPLAY, fontSize: 28, margin: "14px 0 10px" }}>Les mots</div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
+            <span style={{
+              display: "flex", alignItems: "center", gap: 6, padding: "0 14px", minHeight: 44, borderRadius: 999,
+              fontSize: 15, fontWeight: 800, color: ZZ.ink, background: ZZ.yellow, border: `2.5px solid ${ZZ.ink}`,
+              boxShadow: `0 3px 0 ${ZZ.ink}`, rotate: "-1.5deg",
+            }}>
+              <Check size={15} strokeWidth={3.2} aria-hidden /> {FREE_PAIRS.length} paires gratuites
+            </span>
+            {WORD_CATEGORIES.filter((c) => !FREE_CAT_IDS.includes(c.id)).map((c) => (
+              <button key={c.id} type="button" onClick={() => { playSfx("tap", { volume: 0.5 }); requestPaywall(); }}
+                aria-label={`${c.label} : réservé à Premium`}
+                className="transition-[translate,box-shadow] shadow-[0_3px_0_#15082E] active:translate-y-[2px] active:shadow-[0_1px_0_#15082E]"
+                style={{
+                  display: "flex", alignItems: "center", gap: 6, padding: "0 14px", minHeight: 44, borderRadius: 999,
+                  fontSize: 15, fontWeight: 800, color: ZZ.ink, background: "rgba(255,255,255,0.55)", border: `2.5px solid ${ZZ.ink}`,
+                }}>
+                <Lock size={14} strokeWidth={3} aria-hidden /> {c.label}
+              </button>
+            ))}
+          </div>
+          <button type="button" onClick={() => { playSfx("open", { volume: 0.6 }); requestPaywall(); }}
+            className="transition-[translate,box-shadow] shadow-[0_4px_0_#15082E] active:translate-y-[3px] active:shadow-[0_1px_0_#15082E]"
+            style={{
+              width: "100%", textAlign: "left", padding: "14px 16px", marginBottom: 18, borderRadius: 22,
+              background: ZZ.pink, color: ZZ.ink, border: `2.5px solid ${ZZ.ink}`,
+            }}>
+            <div style={{ ...DISPLAY, fontSize: 21 }}>Débloque tous les mots</div>
+            <div style={{ fontSize: 14, fontWeight: 700 }}>+{ALL_WORD_PAIRS.length - FREE_PAIRS.length} paires, l&apos;Anime, le +18 et tous les thèmes avec Premium.</div>
+          </button>
+        </>
+      )}
 
       <RulesCard jester={jSlots > 0} />
 
@@ -1550,8 +1601,12 @@ function PassScreenUC({ toName, colorIdx, label, players, currentIdx, buttonLabe
               const active = p.idx === currentIdx;
               return (
                 <div key={p.idx} style={{ textAlign: "center", opacity: active ? 1 : 0.45, width: 52 }}>
-                  <div style={{ borderRadius: "50%", border: active ? `3px solid ${ZZ.yellow}` : "3px solid transparent", padding: 1 }}>
-                    <Mascot size={34} color={MASCOT_COLORS[p.idx % MASCOT_COLORS.length]} mood="happy" bob={false} shadow={false} />
+                  {/* Anneau parfaitement rond, blob centré dedans */}
+                  <div style={{
+                    width: 46, height: 46, margin: "0 auto", borderRadius: "50%", display: "grid", placeItems: "center",
+                    border: active ? `3px solid ${ZZ.yellow}` : "3px solid transparent", boxSizing: "border-box",
+                  }}>
+                    <Mascot size={32} color={MASCOT_COLORS[p.idx % MASCOT_COLORS.length]} mood="happy" bob={false} shadow={false} style={{ display: "block" }} />
                   </div>
                   <div style={{ fontSize: 13, marginTop: 3, color: active ? "#FFD23F" : "rgba(255,255,255,0.85)", fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</div>
                 </div>

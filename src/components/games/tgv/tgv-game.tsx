@@ -671,10 +671,26 @@ function PlayingCard({ card, dim, ring }: { card: Card; dim?: boolean; ring?: st
         <span className="text-[24px] font-bold">{card.r}</span>
         <span className="text-[18px]">{card.s}</span>
       </div>
-      <div className="m-auto text-[66px] leading-none">{card.s}</div>
+      {FACE_FILE[card.r] ? (
+        // Vraies figures (Valet / Dame / Roi), coins en français
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={`/cards/faces/${FACE_FILE[card.r]}${SUIT_FILE[card.s]}.jpg`}
+          alt=""
+          draggable={false}
+          className="m-auto block rounded-[8px] object-cover"
+          style={{ width: 86, height: 138, border: `2px solid ${INK}` }}
+        />
+      ) : (
+        <div className="m-auto text-[66px] leading-none">{card.s}</div>
+      )}
     </div>
   );
 }
+
+// Fichiers des figures (domaine public, recadrées) : J/Q/K + C/D/H/S
+const FACE_FILE: Record<string, string> = { V: "J", D: "Q", R: "K" };
+const SUIT_FILE: Record<string, string> = { "♣": "C", "♦": "D", "♥": "H", "♠": "S" };
 
 function MysteryCard() {
   return (

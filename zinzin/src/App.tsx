@@ -29,6 +29,12 @@ export function App() {
 
   // Les yeux des blobs suivent le doigt
   useEffect(() => installLookAtFinger(), []);
+  // Un jeu demande l'abonnement (contenu verrouillé) → paywall par-dessus le jeu
+  useEffect(() => {
+    const open = () => setPaywall({});
+    window.addEventListener("zz:paywall", open);
+    return () => window.removeEventListener("zz:paywall", open);
+  }, []);
 
   const afterIntro = useCallback(() => {
     // Paywall de lancement : uniquement pour les non-premium
