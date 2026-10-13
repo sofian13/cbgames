@@ -7,7 +7,9 @@
  */
 
 import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
-import { Mascot, MascotAvatar } from "@/components/Mascot";
+import { MascotAvatar } from "@/components/Mascot";
+import { RoleBlob } from "./lg-role-blob";
+import { RoleBurst } from "./lg-role-fx";
 import { colorForIndex } from "@/components/games/local-kit";
 import { ROLES, SPECIALS, type Player, type RoleId } from "./lg-local-data";
 import { Check, X } from "lucide-react";
@@ -149,17 +151,25 @@ export function BigButton({
   );
 }
 
-/** Carte de rôle : bloc plein dans la couleur du rôle */
+/**
+ * Carte de rôle : bloc plein dans la couleur du rôle. À l'affichage, la carte se
+ * retourne, le blob costumé fait « pop » et une gerbe de particules du rôle jaillit.
+ * (Montée seulement quand le joueur concerné regarde : rien n'est pré-rendu.)
+ */
 export function RoleCard({ role, compact = false, subtitle }: { role: RoleId; compact?: boolean; subtitle?: string }) {
   const r = ROLES[role];
   const t = useT(STR);
   const rt = useT(ROLE_TEXT)[role];
   return (
+    <div className="lgb-flip w-full">
     <div
       className="relative flex w-full flex-col items-center rounded-[28px] text-center"
-      style={{ ...stk(r.accent, 6, 3), color: INK, padding: compact ? "18px 16px 20px" : "24px 20px 26px", transform: "rotate(-1.5deg)" }}
+      style={{ ...stk(r.accent, 6, 3), color: INK, padding: compact ? "14px 16px 20px" : "18px 20px 26px", transform: "rotate(-1.5deg)" }}
     >
-      <Mascot size={compact ? 92 : 128} color={r.color} mood={r.mood} shadow={false} sparkle={role === "voyante" || role === "sorciere"} arms={role === "chasseur" || role === "gardien"} look={role === "loup" ? "shifty" : "center"} />
+      <div className="relative">
+        <RoleBlob role={role} size={compact ? 104 : 150} reveal />
+        <RoleBurst role={role} count={compact ? 12 : 18} spread={compact ? 0.8 : 1} />
+      </div>
       {subtitle && <p className="mt-2 text-[17px] font-bold">{subtitle}</p>}
       <h2 className="mt-1" style={{ ...DISPLAY, fontSize: compact ? 36 : 48, lineHeight: 0.95 }}>{rt.name}</h2>
       <span className="mt-3">
@@ -168,6 +178,7 @@ export function RoleCard({ role, compact = false, subtitle }: { role: RoleId; co
         </Tag>
       </span>
       {!compact && <p className="mt-4 text-[17px] font-semibold leading-snug">{rt.power}</p>}
+    </div>
     </div>
   );
 }
@@ -293,7 +304,7 @@ export function RulesContent() {
         <div className="space-y-2.5">
           {(["loup", "villageois", ...SPECIALS] as RoleId[]).map((id, i) => (
             <div key={id} className="flex items-center gap-3 rounded-[18px] p-3" style={{ ...stk(ROLES[id].accent, 3), transform: `rotate(${i % 2 ? 0.8 : -0.8}deg)` }}>
-              <MascotAvatar color={ROLES[id].color} mood={ROLES[id].mood} size={40} border={false} />
+              <RoleBlob role={id} size={52} still />
               <div className="min-w-0">
                 <p style={{ ...DISPLAY, fontSize: 20, letterSpacing: "-0.01em" }}>{roles[id].name}</p>
                 <p className="text-[14px] font-semibold leading-snug">{roles[id].power}</p>
@@ -317,7 +328,7 @@ export function PlayerRow({ p, lover = false, dim = false }: { p: Player; lover?
   const name = useT(ROLE_TEXT)[p.role].name;
   return (
     <div className="flex items-center gap-3 rounded-[18px] px-3 py-2" style={{ ...stk("#fff", 3), color: INK, opacity: dim ? 0.6 : 1, minHeight: 56 }}>
-      <MascotAvatar color={colorForIndex(p.id)} size={38} mood={p.alive ? "happy" : "dead"} border={false} />
+      <RoleBlob role={p.role} size={46} state={p.alive ? "idle" : "ghost"} still />
       <span className="min-w-0 flex-1 truncate text-[17px] font-bold" style={{ textDecoration: p.alive ? "none" : "line-through" }}>
         {p.name}{lover && <span style={{ color: PINK }}> · {t.lover}</span>}
       </span>

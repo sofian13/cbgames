@@ -27,6 +27,8 @@ import {
 } from "./lg-local-ui";
 import { useT, pick, getLang } from "@/lib/i18n";
 import { CAUSE_LABEL, ROLE_TEXT, STR, WIN_TEXT, type LgStrings } from "./lg-local-i18n";
+import { RoleBlob } from "./lg-role-blob";
+import { NightSleepers, WinnersParade } from "./lg-role-fx";
 import { useGameFinished } from "@/lib/game-finished";
 
 // ── Réglages persistants ──────────────────────────────────
@@ -274,8 +276,9 @@ export default function LoupGarouLocal({ onReturnToLobby }: GameProps) {
     content = (
       <Screen tone="night" center>
         <div className="text-center">
-          <SkyBadge tone="night" size={96} />
-          <div className="mt-7"><Tag bg="#2A1866" color="#fff" tilt={-2}>{first ? t.everyoneHasCard : t.endOfDay(game.night)}</Tag></div>
+          <SkyBadge tone="night" size={84} />
+          <div className="mt-5"><NightSleepers size={78} /></div>
+          <div className="mt-6"><Tag bg="#2A1866" color="#fff" tilt={-2}>{first ? t.everyoneHasCard : t.endOfDay(game.night)}</Tag></div>
           <Title size={40} className="mt-3">{t.putPhone}</Title>
           <p className="mx-auto mt-4 max-w-xs text-[17px] font-semibold" style={{ color: "rgba(255,255,255,0.78)" }}>
             {settings.voice && speechAvailable() ? t.faceUpVoice : t.faceUpNoVoice}
@@ -549,8 +552,8 @@ function RolesSetup({
       <div className="mt-6 grid grid-cols-[minmax(0,1fr)] gap-3">
         {/* Loups : compteur (gap réduit : tient en 375 px sans déborder) */}
         <div className="flex items-center gap-2 rounded-[22px] px-3 py-2" style={{ ...stk(ROLES.loup.accent, 4, 3), color: INK, minHeight: 66, transform: "rotate(-1deg)" }}>
-          <MascotAvatar color="coral" mood="angry" size={42} border={false} />
-          <span className="ml-1 min-w-0 flex-1 truncate" style={{ ...DISPLAY, fontSize: 20, letterSpacing: "-0.01em" }}>{t.theWolves}</span>
+          <RoleBlob role="loup" size={42} still />
+          <span className="min-w-0 flex-1 truncate" style={{ ...DISPLAY, fontSize: 18, letterSpacing: "-0.02em" }}>{t.theWolves}</span>
           <GameIconButton icon={Minus} label={t.fewerWolves} onClick={() => setComp({ ...comp, loup: Math.max(1, comp.loup - 1) })} />
           <span className="w-7 text-center" style={{ ...DISPLAY, fontSize: 30 }}>{comp.loup}</span>
           <GameIconButton icon={Plus} label={t.moreWolves} bg={INK} color="#fff" onClick={() => setComp({ ...comp, loup: Math.min(maxWolves, comp.loup + 1) })} />
@@ -568,7 +571,7 @@ function RolesSetup({
               className="flex w-full items-center gap-3 rounded-[22px] px-3 py-2.5 text-left transition-transform active:translate-y-[2px]"
               style={{ ...stk(on ? r.accent : "#2A1866", on ? 4 : 3, 3), color: on ? INK : "#fff", minHeight: 66 }}
             >
-              <MascotAvatar color={r.color} mood={r.mood} size={42} border={false} />
+              <RoleBlob role={id} size={50} still={!on} />
               <span className="flex-1">
                 <span className="block" style={{ ...DISPLAY, fontSize: 21, letterSpacing: "-0.01em" }}>{roleText[id].name}</span>
                 <span className="block text-[14px] font-medium leading-snug" style={{ opacity: on ? 0.85 : 0.75 }}>{roleText[id].power}</span>
@@ -581,7 +584,7 @@ function RolesSetup({
         })}
 
         <div className="flex items-center gap-3 rounded-[22px] px-3 py-2" style={{ ...stk(MINT, 4, 3), color: INK, minHeight: 62, transform: "rotate(1deg)" }}>
-          <MascotAvatar color="mint" mood="happy" size={42} border={false} />
+          <RoleBlob role="villageois" size={50} still />
           <span className="flex-1" style={{ ...DISPLAY, fontSize: 21, letterSpacing: "-0.01em" }}>{roleText.villageois.name}</span>
           <span className="w-10 text-center" style={{ ...DISPLAY, fontSize: 30 }}>{Math.max(0, villagers)}</span>
         </div>
@@ -626,7 +629,7 @@ function HoldReveal({ player, last, onDone }: { player: Player; last: boolean; o
 
   const down = () => {
     if (timer.current) clearTimeout(timer.current);
-    timer.current = setTimeout(() => { setHolding(true); setSeen(true); lgSfx.card(); }, 250);
+    timer.current = setTimeout(() => { setHolding(true); setSeen(true); lgSfx.reveal(); }, 250);
   };
   const up = () => {
     if (timer.current) clearTimeout(timer.current);
@@ -741,7 +744,7 @@ function DeathsScreen({
           const r = ROLES[p.role];
           return (
             <div key={d.id} className="flex items-center gap-4 rounded-[26px] p-4" style={{ ...stk("#fff", 5, 3), color: INK, transform: `rotate(${k % 2 ? 1.2 : -1.2}deg)` }}>
-              <Mascot size={74} color={colorForIndex(p.id)} mood="dead" bob={false} shadow={false} />
+              <RoleBlob role={p.role} size={84} state="ghost" reveal delay={k * 0.4} />
               <div className="min-w-0 flex-1">
                 <p className="truncate" style={{ ...DISPLAY, fontSize: 30, lineHeight: 1 }}>{p.name}</p>
                 <p className="mt-0.5 text-[15px] font-semibold" style={{ color: "#4A3A66" }}>{causeLabel[d.cause]}</p>
@@ -775,7 +778,7 @@ function HunterScreen({ game, hunterId, say, onShoot }: { game: GameState; hunte
   return (
     <Screen tone="day">
       <div className="text-center">
-        <div className="flex justify-center"><GameIconBadge icon={Crosshair} bg={YELLOW} size={64} /></div>
+        <div className="flex justify-center"><RoleBlob role="chasseur" size={104} state="ghost" reveal /></div>
         <Title size={38} className="mt-3">{t.hunterTitle(hunter.name)}</Title>
         <p className="mt-2 text-[17px] font-semibold" style={{ color: "rgba(255,255,255,0.9)" }}>{t.hunterSub}</p>
       </div>
@@ -994,10 +997,11 @@ function EndScreen({
   return (
     <Screen tone="day">
       {winner !== "personne" && <ConfettiBurst count={70} />}
-      <div className="relative z-[1] -mb-7 flex justify-center">
-        <Mascot size={112} color={w.mascot} mood={w.mood} cheering={winner !== "personne"} crown={winner !== "personne"} shadow={false} />
+      {/* La bande du camp gagnant saute de joie (les loups hurlent à la lune) */}
+      <div className="relative z-[1] mb-3">
+        <WinnersParade players={game.players} winner={winner} lovers={game.lovers} />
       </div>
-      <div className="relative rounded-[28px] px-5 pb-6 pt-10 text-center" style={{ ...stk(w.bg, 6, 3), color: INK, transform: "rotate(-1.5deg)" }}>
+      <div className="relative rounded-[28px] px-5 pb-6 pt-8 text-center" style={{ ...stk(w.bg, 6, 3), color: INK, transform: "rotate(-1.5deg)" }}>
         <Title size={42}>{w.title}</Title>
         <p className="mt-2 text-[17px] font-semibold">{w.sub}</p>
       </div>

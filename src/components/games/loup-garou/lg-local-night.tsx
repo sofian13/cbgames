@@ -8,7 +8,8 @@
  */
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { Mascot } from "@/components/Mascot";
+import { RoleBlob } from "./lg-role-blob";
+import { NightSleepers } from "./lg-role-fx";
 import {
   EMPTY_NIGHT, type Composition, type NightActions, type Player, type RoleId,
 } from "./lg-local-data";
@@ -189,20 +190,33 @@ export function NightRunner({
     <Screen tone="night" center={!body}>
       {body ? (
         <>
-          <div className="text-center"><Tag bg="#2A1866" color="#fff" tilt={-2}>{t.nightN(night)}</Tag></div>
+          <div className="flex items-center justify-center gap-3">
+            {role && <RoleBlob role={role} size={58} />}
+            <Tag bg="#2A1866" color="#fff" tilt={-2}>{t.nightN(night)}</Tag>
+          </div>
           <Title size={38} className="mt-2 text-center">{TEXT[step].title}</Title>
           <div className="mt-4 flex flex-1 flex-col">{body}</div>
         </>
       ) : sub === "sleeping" ? (
         <div className="text-center">
-          <div className="flex justify-center"><Mascot size={110} color="lavender" mood="asleep" shadow={false} /></div>
+          <div className="flex justify-center"><RoleBlob role={role ?? "villageois"} state="asleep" size={124} /></div>
           <Title size={32} className="mt-6" style={{ lineHeight: 1.05 }}>
             {t.restPhone}
           </Title>
         </div>
       ) : (
         <div className="text-center">
-          <SkyBadge tone="night" />
+          {/* Le rôle appelé (annoncé à voix haute : rien de secret) ; sinon le village qui dort */}
+          {role ? (
+            <div className="flex items-end justify-center gap-1">
+              <SkyBadge tone="night" size={56} />
+              <RoleBlob key={step} role={role} size={112} reveal={sub === "wake"} state={sub === "closing" ? "asleep" : "idle"} />
+            </div>
+          ) : step === "amoureux" ? (
+            <div className="flex justify-center"><RoleBlob role="cupidon" size={112} /></div>
+          ) : (
+            <><SkyBadge tone="night" size={64} /><div className="mt-4"><NightSleepers size={70} /></div></>
+          )}
           <div className="mt-6"><Tag bg="#2A1866" color="#fff" tilt={-2}>{t.nightN(night)} · {TEXT[step].title}</Tag></div>
           <p className="mt-4" style={{ ...DISPLAY, fontSize: 30, lineHeight: 1.1 }}>
             {headline.replace(/ ([!?:;])/g, "\u00A0$1")}

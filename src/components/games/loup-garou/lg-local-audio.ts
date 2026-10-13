@@ -82,6 +82,8 @@ export const lgSfx = {
   dawn: () => { playSfx("bell", { volume: 0.6 }); playSfx("bell", { volume: 0.35, rate: 1.25, delay: 0.25 }); },
   /** Carte retournée (distribution, voyante) */
   card: () => playSfx("card-flip", { volume: 0.8 }),
+  /** Révélation de sa carte : retournement puis « pop » du costume (identique pour tous les rôles) */
+  reveal: () => { playSfx("card-flip", { volume: 0.8 }); playSfx("pop", { volume: 0.5, rate: 1.15, delay: 0.3 }); },
   /** Annonce d'un mort */
   death: () => { playSfx("thump", { volume: 0.9, rate: 0.7 }); playSfx("lose", { volume: 0.45, delay: 0.15 }); },
   /** Personne n'est mort */
