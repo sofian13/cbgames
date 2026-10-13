@@ -1,7 +1,8 @@
 /**
  * Le Faux Témoin — génération procédurale des scènes et des questions.
  * Données pures (aucun texte) : les libellés sont dans i18n.ts.
- * Une scène = un décor + 3 à 5 blobs (couleur, accessoire, endormi ?) + 1 à 3 objets
+ * Une scène = un décor (35 lieux, chacun avec son gros élément coloré et, souvent, un détail
+ * à compter) + 3 à 5 blobs (couleur, accessoire, endormi ? bras levés ?) + 1 à 3 objets
  * au sol + 1 à 2 éléments « au mur » (horloge, panneau, ballons). 6 à 10 éléments en tout.
  * Les questions sont tirées des attributs réellement présents : réponse juste garantie.
  */
@@ -20,13 +21,41 @@ export const COLOR_HEX: Record<ColorId, string> = {
 
 export type DecorId =
   | "kitchen" | "beach" | "party" | "street" | "classroom" | "forest"
-  | "tvset" | "pool" | "club" | "wedding" | "park";
-export const DECOR_IDS: DecorId[] = ["kitchen", "beach", "party", "street", "classroom", "forest", "tvset", "pool", "club", "wedding", "park"];
+  | "tvset" | "pool" | "club" | "wedding" | "park"
+  | "bank" | "supermarket" | "metro" | "camping" | "gym" | "birthday" | "airport" | "hospital"
+  | "concert" | "zoo" | "funfair" | "laundromat" | "office" | "schoolyard" | "christmas" | "hotel"
+  | "cruise" | "worksite" | "farm" | "museum" | "salon" | "train" | "festival" | "restaurant";
+export const DECOR_IDS: DecorId[] = [
+  "kitchen", "beach", "party", "street", "classroom", "forest", "tvset", "pool", "club", "wedding", "park",
+  "bank", "supermarket", "metro", "camping", "gym", "birthday", "airport", "hospital",
+  "concert", "zoo", "funfair", "laundromat", "office", "schoolyard", "christmas", "hotel",
+  "cruise", "worksite", "farm", "museum", "salon", "train", "festival", "restaurant",
+];
 /** Décors en intérieur (l'horloge n'a de sens qu'au mur). */
 export const INDOOR: Record<DecorId, boolean> = {
   kitchen: true, beach: false, party: true, street: false, classroom: true, forest: false,
   tvset: true, pool: false, club: true, wedding: true, park: false,
+  bank: true, supermarket: true, metro: true, camping: false, gym: true, birthday: true, airport: true, hospital: true,
+  concert: false, zoo: false, funfair: false, laundromat: true, office: true, schoolyard: false, christmas: true, hotel: true,
+  cruise: false, worksite: false, farm: false, museum: true, salon: true, train: true, festival: false, restaurant: true,
 };
+/** Détail à compter propre au décor (bougies, lingots, mouettes…) : [min, max]. */
+export type CountDecor = Exclude<DecorId, "kitchen" | "beach" | "party" | "street" | "classroom" | "forest" | "tvset" | "pool" | "club" | "wedding" | "park">;
+export const COUNT_RANGE: Record<CountDecor, [number, number]> = {
+  bank: [2, 5], supermarket: [2, 5], metro: [2, 4], camping: [2, 5], gym: [2, 4], birthday: [2, 6],
+  airport: [2, 5], hospital: [2, 5], concert: [2, 5], zoo: [2, 4], funfair: [4, 8], laundromat: [2, 5],
+  office: [2, 6], schoolyard: [2, 5], christmas: [3, 7], hotel: [2, 6], cruise: [2, 5], worksite: [2, 5],
+  farm: [2, 5], museum: [2, 5], salon: [2, 5], train: [1, 4], festival: [2, 5], restaurant: [2, 5],
+};
+export const hasCount = (d: DecorId): d is CountDecor => d in COUNT_RANGE;
+/** Couleurs interdites pour le gros élément (il se fondrait dans le décor). */
+const FEATURE_AVOID: Partial<Record<DecorId, ColorId[]>> = {
+  christmas: ["green"], zoo: ["yellow", "orange"], bank: ["yellow"], worksite: ["orange"],
+};
+/** Décors sans animal caché (on y voit déjà des animaux : la question serait ambiguë). */
+const NO_PET: DecorId[] = ["zoo", "farm"];
+/** Objets à éviter dans un décor (doublon avec le gros élément). */
+const NO_OBJ: Partial<Record<DecorId, ObjId[]>> = { birthday: ["cake"], concert: ["guitar"] };
 
 export type Acc = "hat" | "glasses" | "crown" | "bow";
 export const ACCS: Acc[] = ["hat", "glasses", "crown", "bow"];
@@ -39,7 +68,7 @@ const TABLE_ITEMS: ObjId[] = ["pizza", "cake", "plant", "trophy", "gift", "book"
 export type PetId = "cat" | "dog" | "duck";
 export const PET_IDS: PetId[] = ["cat", "dog", "duck"];
 
-export interface SBlob { color: ColorId; acc: Acc | null; asleep: boolean; slot: number }
+export interface SBlob { color: ColorId; acc: Acc | null; asleep: boolean; cheer?: boolean; slot: number }
 export type FloorThing =
   | { kind: "obj"; obj: ObjId; color: ColorId; slot: number }
   | { kind: "pet"; pet: PetId; slot: number }
@@ -53,6 +82,8 @@ export interface Scene {
   id: string;
   decor: DecorId;
   featureColor: ColorId;
+  /** Nombre du détail à compter (si le décor en a un) */
+  featureN?: number;
   blobs: SBlob[];
   floor: FloorThing[];
   wall: WallThing[];
@@ -105,15 +136,20 @@ export function makeScene(avoid: DecorId[] = []): Scene {
     return b;
   });
   if (Math.random() < 0.45) blobs[rnd(nBlobs)].asleep = true;
+  // Parfois un blob lève les bras (jamais celui qui dort)
+  if (Math.random() < 0.45) {
+    const awake = blobs.map((b, i) => (b.asleep ? -1 : i)).filter((i) => i >= 0);
+    if (awake.length) blobs[pickOne(awake)].cheer = true;
+  }
 
   // Sol : objets / animal / table, sans doublon
   const floor: FloorThing[] = [];
-  const usedObj = new Set<ObjId>();
+  const usedObj = new Set<ObjId>(NO_OBJ[decor] ?? []);
   const kinds = shuffle<"obj" | "pet" | "table">(["obj", "obj", "pet", "table"]);
   for (let i = 0; i < nFloor; i++) {
     const kind = kinds[i % kinds.length];
     const slot = rest[i];
-    if (kind === "pet" && !floor.some((f) => f.kind === "pet")) {
+    if (kind === "pet" && !NO_PET.includes(decor) && !floor.some((f) => f.kind === "pet")) {
       floor.push({ kind: "pet", pet: pickOne(PET_IDS), slot });
     } else if (kind === "table" && !floor.some((f) => f.kind === "table")) {
       const item = pickOne(TABLE_ITEMS.filter((o) => !usedObj.has(o)));
@@ -138,10 +174,12 @@ export function makeScene(avoid: DecorId[] = []): Scene {
     else wall.push({ kind: "balloons", count: 2 + rnd(4), color: pickOne(COLOR_IDS), side });
   }
 
+  const range = hasCount(decor) ? COUNT_RANGE[decor] : null;
   return {
     id: Math.random().toString(36).slice(2, 9),
     decor,
-    featureColor: pickOne(COLOR_IDS),
+    featureColor: pickOne(COLOR_IDS.filter((c) => !(FEATURE_AVOID[decor] ?? []).includes(c))),
+    featureN: range ? range[0] + rnd(range[1] - range[0] + 1) : undefined,
     blobs,
     floor,
     wall,
@@ -162,6 +200,8 @@ export type QKind =
   | { t: "colorAcc"; acc: Acc }
   | { t: "colorSleeper" }
   | { t: "featureColor"; decor: DecorId }
+  | { t: "featureCount"; decor: CountDecor }
+  | { t: "colorCheer" }
   | { t: "clock" }
   | { t: "sign" }
   | { t: "balloonsCount" }
@@ -232,12 +272,20 @@ export function questionsFor(s: Scene): Question[] {
       add(`acc1-${acc}`, { t: "colorAcc", acc }, { k: "color", v: c }, shuffle(full).map((v) => ({ k: "color" as const, v })));
     }
   }
-  const sleeper = s.blobs.find((b) => b.asleep);
-  if (sleeper) {
-    const others = s.blobs.map((b) => b.color).filter((x) => x !== sleeper.color);
-    const opts = [sleeper.color, ...shuffle(others).slice(0, 3)];
+  // Couleur d'un blob précis : distracteurs = couleurs des autres blobs d'abord
+  const blobColorOpts = (c: ColorId): Answer[] => {
+    const others = s.blobs.map((b) => b.color).filter((x) => x !== c);
+    const opts = [c, ...shuffle(others).slice(0, 3)];
     const full = opts.length >= 4 ? opts : [...opts, ...shuffle(COLOR_IDS.filter((x) => !opts.includes(x))).slice(0, 4 - opts.length)];
-    add("sleeper", { t: "colorSleeper" }, { k: "color", v: sleeper.color }, shuffle(full).map((v) => ({ k: "color" as const, v })));
+    return shuffle(full).map((v) => ({ k: "color" as const, v }));
+  };
+  const sleeper = s.blobs.find((b) => b.asleep);
+  if (sleeper) add("sleeper", { t: "colorSleeper" }, { k: "color", v: sleeper.color }, blobColorOpts(sleeper.color));
+  const cheerer = s.blobs.find((b) => b.cheer);
+  if (cheerer) add("cheer", { t: "colorCheer" }, { k: "color", v: cheerer.color }, blobColorOpts(cheerer.color));
+  const range = hasCount(s.decor) ? COUNT_RANGE[s.decor] : null;
+  if (range && s.featureN != null) {
+    add("count", { t: "featureCount", decor: s.decor as CountDecor }, { k: "num", v: s.featureN }, numOptions(s.featureN, Math.max(0, range[0] - 1), range[1] + 2));
   }
 
   for (const w of s.wall) {

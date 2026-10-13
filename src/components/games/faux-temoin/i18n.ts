@@ -1,6 +1,6 @@
 // Textes du Faux Témoin (interface + libellés des scènes / questions), FR · EN · ES.
 import type { I18n } from "@/lib/i18n";
-import type { Acc, Answer, ColorId, DecorId, ObjId, PetId, QKind } from "./scene";
+import type { Acc, Answer, ColorId, CountDecor, DecorId, ObjId, PetId, QKind } from "./scene";
 
 type ColorObj = "ball" | "gift" | "guitar" | "book";
 
@@ -93,6 +93,38 @@ export interface FTStrings {
 const FEATURE_FR: Record<DecorId, string> = {
   kitchen: "le frigo", beach: "le parasol", party: "le canapé", street: "la voiture", classroom: "le bureau du prof",
   forest: "la tente", tvset: "le pupitre", pool: "la bouée", club: "la cabine du DJ", wedding: "l'arche de fleurs", park: "le banc",
+  bank: "le coffre-fort", supermarket: "le chariot", metro: "la rame de métro", camping: "la caravane", gym: "le sac de frappe",
+  birthday: "le gâteau d'anniversaire", airport: "la valise", hospital: "la couverture du lit", concert: "la grosse caisse",
+  zoo: "l'écharpe de la girafe", funfair: "la grande roue", laundromat: "la machine à laver du milieu", office: "la photocopieuse",
+  schoolyard: "le toit de l'école", christmas: "les boules du sapin", hotel: "le comptoir de la réception",
+  cruise: "la cheminée du bateau", worksite: "la grue", farm: "la grange", museum: "le cadre du grand tableau",
+  salon: "le fauteuil du coiffeur", train: "le chariot du bar", festival: "le food truck", restaurant: "la grande marmite",
+};
+const COUNT_FR: Record<CountDecor, string> = {
+  bank: "Combien de lingots d'or y avait-il devant le coffre-fort ?",
+  supermarket: "Combien d'articles y avait-il dans le chariot ?",
+  metro: "Combien de fenêtres avait la rame de métro ?",
+  camping: "Combien de guimauves y avait-il sur la pique ?",
+  gym: "Combien de kettlebells y avait-il par terre ?",
+  birthday: "Combien de bougies y avait-il sur le gâteau ?",
+  airport: "Combien d'autocollants y avait-il sur la valise ?",
+  hospital: "Combien de fleurs y avait-il dans le vase ?",
+  concert: "Combien de projecteurs éclairaient la scène ?",
+  zoo: "Combien de manchots y avait-il ?",
+  funfair: "Combien de nacelles avait la grande roue ?",
+  laundromat: "Combien de chaussettes séchaient sur le fil ?",
+  office: "Combien de pense-bêtes y avait-il sur le tableau ?",
+  schoolyard: "Combien de fenêtres avait l'école ?",
+  christmas: "Combien de boules y avait-il dans le sapin ?",
+  hotel: "Combien de clés étaient accrochées au tableau ?",
+  cruise: "Combien de mouettes volaient dans le ciel ?",
+  worksite: "Combien de cônes de chantier y avait-il ?",
+  farm: "Combien de poules y avait-il devant la grange ?",
+  museum: "Combien de pommes y avait-il dans le tableau ?",
+  salon: "Combien de flacons y avait-il sur l'étagère ?",
+  train: "Combien de vaches voyait-on par la fenêtre ?",
+  festival: "Combien de drapeaux flottaient sur le food truck ?",
+  restaurant: "Combien de poêles étaient accrochées au mur ?",
 };
 const ACC_COUNT_FR: Record<Acc, string> = { hat: "un chapeau", glasses: "des lunettes", crown: "une couronne", bow: "un nœud papillon" };
 const ACC_WITH_FR: Record<Acc, string> = { hat: "au chapeau", glasses: "à lunettes", crown: "à la couronne", bow: "au nœud papillon" };
@@ -107,6 +139,38 @@ const OBJ_COLOR_FR: Record<ColorObj, string> = {
 const FEATURE_EN: Record<DecorId, string> = {
   kitchen: "the fridge", beach: "the beach umbrella", party: "the sofa", street: "the car", classroom: "the teacher's desk",
   forest: "the tent", tvset: "the podium", pool: "the pool ring", club: "the DJ booth", wedding: "the flower arch", park: "the bench",
+  bank: "the safe", supermarket: "the shopping cart", metro: "the subway train", camping: "the caravan", gym: "the punching bag",
+  birthday: "the birthday cake", airport: "the suitcase", hospital: "the blanket on the bed", concert: "the bass drum",
+  zoo: "the giraffe's scarf", funfair: "the Ferris wheel", laundromat: "the washing machine in the middle", office: "the photocopier",
+  schoolyard: "the school roof", christmas: "the Christmas tree baubles", hotel: "the reception desk",
+  cruise: "the ship's funnel", worksite: "the crane", farm: "the barn", museum: "the frame of the big painting",
+  salon: "the salon chair", train: "the snack trolley", festival: "the food truck", restaurant: "the big pot",
+};
+const COUNT_EN: Record<CountDecor, string> = {
+  bank: "How many gold bars were in front of the safe?",
+  supermarket: "How many items were in the shopping cart?",
+  metro: "How many windows did the subway train have?",
+  camping: "How many marshmallows were on the stick?",
+  gym: "How many kettlebells were on the floor?",
+  birthday: "How many candles were on the cake?",
+  airport: "How many stickers were on the suitcase?",
+  hospital: "How many flowers were in the vase?",
+  concert: "How many spotlights were over the stage?",
+  zoo: "How many penguins were there?",
+  funfair: "How many cabins did the Ferris wheel have?",
+  laundromat: "How many socks were drying on the line?",
+  office: "How many sticky notes were on the board?",
+  schoolyard: "How many windows did the school have?",
+  christmas: "How many baubles were on the Christmas tree?",
+  hotel: "How many keys were hanging on the board?",
+  cruise: "How many seagulls were flying in the sky?",
+  worksite: "How many traffic cones were there?",
+  farm: "How many hens were in front of the barn?",
+  museum: "How many apples were in the painting?",
+  salon: "How many bottles were on the shelf?",
+  train: "How many cows could you see out the window?",
+  festival: "How many flags were on the food truck?",
+  restaurant: "How many frying pans were hanging on the wall?",
 };
 const ACC_COUNT_EN: Record<Acc, string> = { hat: "a hat", glasses: "glasses", crown: "a crown", bow: "a bow tie" };
 const ACC_WITH_EN: Record<Acc, string> = { hat: "with the hat", glasses: "with the glasses", crown: "with the crown", bow: "with the bow tie" };
@@ -121,6 +185,38 @@ const OBJ_COLOR_EN: Record<ColorObj, string> = {
 const FEATURE_ES: Record<DecorId, string> = {
   kitchen: "la nevera", beach: "la sombrilla", party: "el sofá", street: "el coche", classroom: "la mesa del profe",
   forest: "la tienda de campaña", tvset: "el atril", pool: "el flotador", club: "la cabina del DJ", wedding: "el arco de flores", park: "el banco",
+  bank: "la caja fuerte", supermarket: "el carrito de la compra", metro: "el vagón del metro", camping: "la caravana", gym: "el saco de boxeo",
+  birthday: "la tarta de cumpleaños", airport: "la maleta", hospital: "la manta de la cama", concert: "el bombo",
+  zoo: "la bufanda de la jirafa", funfair: "la noria", laundromat: "la lavadora del centro", office: "la fotocopiadora",
+  schoolyard: "el tejado del colegio", christmas: "las bolas del árbol de Navidad", hotel: "el mostrador de recepción",
+  cruise: "la chimenea del barco", worksite: "la grúa", farm: "el granero", museum: "el marco del cuadro grande",
+  salon: "el sillón de la peluquería", train: "el carrito de la cafetería", festival: "la furgoneta de comida", restaurant: "la olla grande",
+};
+const COUNT_ES: Record<CountDecor, string> = {
+  bank: "¿Cuántos lingotes de oro había delante de la caja fuerte?",
+  supermarket: "¿Cuántos productos había en el carrito?",
+  metro: "¿Cuántas ventanas tenía el vagón del metro?",
+  camping: "¿Cuántas nubes de golosina había en el palo?",
+  gym: "¿Cuántas pesas rusas había en el suelo?",
+  birthday: "¿Cuántas velas había en la tarta?",
+  airport: "¿Cuántas pegatinas había en la maleta?",
+  hospital: "¿Cuántas flores había en el jarrón?",
+  concert: "¿Cuántos focos iluminaban el escenario?",
+  zoo: "¿Cuántos pingüinos había?",
+  funfair: "¿Cuántas cabinas tenía la noria?",
+  laundromat: "¿Cuántos calcetines se secaban en el tendedero?",
+  office: "¿Cuántas notas adhesivas había en el tablero?",
+  schoolyard: "¿Cuántas ventanas tenía el colegio?",
+  christmas: "¿Cuántas bolas había en el árbol de Navidad?",
+  hotel: "¿Cuántas llaves colgaban del tablero?",
+  cruise: "¿Cuántas gaviotas volaban por el cielo?",
+  worksite: "¿Cuántos conos de obra había?",
+  farm: "¿Cuántas gallinas había delante del granero?",
+  museum: "¿Cuántas manzanas había en el cuadro?",
+  salon: "¿Cuántos frascos había en la estantería?",
+  train: "¿Cuántas vacas se veían por la ventana?",
+  festival: "¿Cuántas banderas ondeaban sobre la furgoneta de comida?",
+  restaurant: "¿Cuántas sartenes colgaban de la pared?",
 };
 const ACC_COUNT_ES: Record<Acc, string> = { hat: "sombrero", glasses: "gafas", crown: "corona", bow: "pajarita" };
 const ACC_WITH_ES: Record<Acc, string> = { hat: "con sombrero", glasses: "con gafas", crown: "con corona", bow: "con pajarita" };
@@ -207,6 +303,11 @@ export const FT_STR: I18n<FTStrings> = {
     decor: {
       kitchen: "La cuisine", beach: "La plage", party: "La soirée", street: "La rue", classroom: "La salle de classe",
       forest: "La forêt", tvset: "Le plateau télé", pool: "La piscine", club: "La boîte de nuit", wedding: "Le mariage", park: "Le parc",
+      bank: "Le braquage", supermarket: "Le supermarché", metro: "Le métro", camping: "Le camping", gym: "La salle de sport",
+      birthday: "L'anniversaire", airport: "L'aéroport", hospital: "L'hôpital", concert: "Le concert", zoo: "Le zoo",
+      funfair: "La fête foraine", laundromat: "La laverie", office: "L'open space", schoolyard: "La cour de récré",
+      christmas: "Noël en famille", hotel: "L'hôtel", cruise: "La croisière", worksite: "Le chantier", farm: "La ferme",
+      museum: "Le musée", salon: "Le salon de coiffure", train: "Le train", festival: "Le festival", restaurant: "La cuisine du resto",
     },
     color: { red: "Rouge", yellow: "Jaune", blue: "Bleu", green: "Vert", pink: "Rose", purple: "Violet", orange: "Orange" },
     obj: {
@@ -221,7 +322,9 @@ export const FT_STR: I18n<FTStrings> = {
         case "countAcc": return `Combien de blobs portaient ${ACC_COUNT_FR[q.acc]} ?`;
         case "colorAcc": return `De quelle couleur était le blob ${ACC_WITH_FR[q.acc]} ?`;
         case "colorSleeper": return "Un blob dormait. De quelle couleur était-il ?";
-        case "featureColor": return `De quelle couleur était ${FEATURE_FR[q.decor]} ?`;
+        case "featureColor": return q.decor === "christmas" ? "De quelle couleur étaient les boules du sapin ?" : `De quelle couleur était ${FEATURE_FR[q.decor]} ?`;
+        case "featureCount": return COUNT_FR[q.decor];
+        case "colorCheer": return "Un blob levait les bras. De quelle couleur était-il ?";
         case "clock": return "Quelle heure indiquait l'horloge ?";
         case "sign": return "Quel nombre était écrit sur le panneau ?";
         case "balloonsCount": return "Combien y avait-il de ballons de baudruche ?";
@@ -308,6 +411,11 @@ export const FT_STR: I18n<FTStrings> = {
     decor: {
       kitchen: "The kitchen", beach: "The beach", party: "The house party", street: "The street", classroom: "The classroom",
       forest: "The forest", tvset: "The TV studio", pool: "The pool", club: "The nightclub", wedding: "The wedding", park: "The park",
+      bank: "The bank heist", supermarket: "The supermarket", metro: "The subway", camping: "The campsite", gym: "The gym",
+      birthday: "The birthday party", airport: "The airport", hospital: "The hospital", concert: "The concert", zoo: "The zoo",
+      funfair: "The funfair", laundromat: "The laundromat", office: "The office", schoolyard: "The playground",
+      christmas: "Christmas at home", hotel: "The hotel", cruise: "The cruise", worksite: "The building site", farm: "The farm",
+      museum: "The museum", salon: "The hair salon", train: "The train", festival: "The festival", restaurant: "The restaurant kitchen",
     },
     color: { red: "Red", yellow: "Yellow", blue: "Blue", green: "Green", pink: "Pink", purple: "Purple", orange: "Orange" },
     obj: {
@@ -322,7 +430,9 @@ export const FT_STR: I18n<FTStrings> = {
         case "countAcc": return `How many blobs were wearing ${ACC_COUNT_EN[q.acc]}?`;
         case "colorAcc": return `What color was the blob ${ACC_WITH_EN[q.acc]}?`;
         case "colorSleeper": return "One blob was asleep. What color was it?";
-        case "featureColor": return `What color was ${FEATURE_EN[q.decor]}?`;
+        case "featureColor": return q.decor === "christmas" ? "What color were the Christmas tree baubles?" : `What color was ${FEATURE_EN[q.decor]}?`;
+        case "featureCount": return COUNT_EN[q.decor];
+        case "colorCheer": return "One blob had its arms up. What color was it?";
         case "clock": return "What time did the clock say?";
         case "sign": return "What number was on the sign?";
         case "balloonsCount": return "How many balloons were there?";
@@ -409,6 +519,11 @@ export const FT_STR: I18n<FTStrings> = {
     decor: {
       kitchen: "La cocina", beach: "La playa", party: "La fiesta en casa", street: "La calle", classroom: "El aula",
       forest: "El bosque", tvset: "El plató de tele", pool: "La piscina", club: "La discoteca", wedding: "La boda", park: "El parque",
+      bank: "El atraco al banco", supermarket: "El supermercado", metro: "El metro", camping: "El camping", gym: "El gimnasio",
+      birthday: "El cumpleaños", airport: "El aeropuerto", hospital: "El hospital", concert: "El concierto", zoo: "El zoo",
+      funfair: "La feria", laundromat: "La lavandería", office: "La oficina", schoolyard: "El patio del colegio",
+      christmas: "Navidad en familia", hotel: "El hotel", cruise: "El crucero", worksite: "La obra", farm: "La granja",
+      museum: "El museo", salon: "La peluquería", train: "El tren", festival: "El festival", restaurant: "La cocina del restaurante",
     },
     color: { red: "Rojo", yellow: "Amarillo", blue: "Azul", green: "Verde", pink: "Rosa", purple: "Morado", orange: "Naranja" },
     obj: {
@@ -423,7 +538,9 @@ export const FT_STR: I18n<FTStrings> = {
         case "countAcc": return `¿Cuántos blobs llevaban ${ACC_COUNT_ES[q.acc]}?`;
         case "colorAcc": return `¿De qué color era el blob ${ACC_WITH_ES[q.acc]}?`;
         case "colorSleeper": return "Un blob estaba dormido. ¿De qué color era?";
-        case "featureColor": return `¿De qué color era ${FEATURE_ES[q.decor]}?`;
+        case "featureColor": return q.decor === "christmas" ? "¿De qué color eran las bolas del árbol de Navidad?" : `¿De qué color era ${FEATURE_ES[q.decor]}?`;
+        case "featureCount": return COUNT_ES[q.decor];
+        case "colorCheer": return "Un blob tenía los brazos en alto. ¿De qué color era?";
         case "clock": return "¿Qué hora marcaba el reloj?";
         case "sign": return "¿Qué número había en el cartel?";
         case "balloonsCount": return "¿Cuántos globos había?";

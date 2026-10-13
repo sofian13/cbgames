@@ -7,8 +7,9 @@
  */
 
 import type { CSSProperties, ReactNode } from "react";
+import { MoreBackdrop, MoreFeature } from "./scene-decors";
 import {
-  COLOR_HEX, INDOOR, SLOTS,
+  COLOR_HEX, INDOOR, SLOTS, hasCount,
   type Acc, type ColorId, type DecorId, type FloorThing, type ObjId, type PetId, type SBlob, type Scene, type WallThing,
 } from "./scene";
 
@@ -56,10 +57,19 @@ function Accessory({ acc, body }: { acc: Acc; body: ColorId }) {
   );
 }
 
-export function BlobFigure({ color, acc, asleep, blindfold }: { color: ColorId; acc?: Acc | null; asleep?: boolean; blindfold?: boolean }) {
+export function BlobFigure({ color, acc, asleep, cheer, blindfold }: { color: ColorId; acc?: Acc | null; asleep?: boolean; cheer?: boolean; blindfold?: boolean }) {
   return (
     <g>
       <ellipse cx={0} cy={1} rx={22} ry={5} fill="rgba(21,8,46,0.28)" />
+      {cheer && (
+        // Bras levés (dessinés derrière le corps)
+        <g strokeLinecap="round">
+          <path d="M-18,-26 L-34,-50 M18,-26 L34,-50" stroke={INK} strokeWidth={10} />
+          <path d="M-18,-26 L-34,-50 M18,-26 L34,-50" stroke={COLOR_HEX[color]} strokeWidth={4.6} />
+          <circle cx={-35} cy={-52} r={6} fill={COLOR_HEX[color]} stroke={INK} strokeWidth={2.6} />
+          <circle cx={35} cy={-52} r={6} fill={COLOR_HEX[color]} stroke={INK} strokeWidth={2.6} />
+        </g>
+      )}
       <path d="M-24,-4 C-27,-31 -15,-50 0,-50 C15,-50 27,-31 24,-4 C21,3 -21,3 -24,-4 Z" fill={COLOR_HEX[color]} {...ST} />
       <ellipse cx={-11} cy={-36} rx={4.5} ry={7} fill="#fff" opacity={0.45} transform="rotate(20 -11 -36)" />
       {blindfold ? (
@@ -82,6 +92,8 @@ export function BlobFigure({ color, acc, asleep, blindfold }: { color: ColorId; 
       )}
       {asleep ? (
         <ellipse cx={0} cy={-15} rx={3} ry={3.6} fill={INK} />
+      ) : cheer ? (
+        <path d="M-8,-18 Q0,-18 8,-18 Q7,-8 0,-8 Q-7,-8 -8,-18 Z" fill={INK} stroke={INK} strokeWidth={2} strokeLinejoin="round" />
       ) : (
         <path d={blindfold ? "M-6,-13 q6,-4 12,0" : "M-7,-17 q7,7 14,0"} fill="none" {...ST} strokeWidth={2.6} />
       )}
@@ -318,6 +330,7 @@ function WallItem({ w, indoor }: { w: WallThing; indoor: boolean }) {
 
 // ── Décors ───────────────────────────────────────────────
 function Backdrop({ decor }: { decor: DecorId }): ReactNode {
+  if (hasCount(decor)) return <MoreBackdrop decor={decor} />;
   switch (decor) {
     case "kitchen":
       return (
@@ -479,8 +492,9 @@ function Backdrop({ decor }: { decor: DecorId }): ReactNode {
 }
 
 /** Le gros élément coloré du décor (frigo, parasol, voiture…). */
-function Feature({ decor, color }: { decor: DecorId; color: ColorId }) {
+function Feature({ decor, color, n }: { decor: DecorId; color: ColorId; n?: number }) {
   const c = COLOR_HEX[color];
+  if (hasCount(decor)) return <MoreFeature decor={decor} c={c} n={n ?? 3} />;
   const shade = "rgba(21,8,46,0.16)";
   switch (decor) {
     case "kitchen":
@@ -608,7 +622,7 @@ export function SceneView({ scene, label, className, style }: { scene: Scene; la
   const items: { y: number; node: ReactNode }[] = [];
   scene.blobs.forEach((b: SBlob, i) => {
     const s = SLOTS[b.slot];
-    items.push({ y: s.y, node: <g key={`b${i}`} transform={`translate(${s.x} ${s.y}) scale(${s.s})`}><BlobFigure color={b.color} acc={b.acc} asleep={b.asleep} /></g> });
+    items.push({ y: s.y, node: <g key={`b${i}`} transform={`translate(${s.x} ${s.y}) scale(${s.s})`}><BlobFigure color={b.color} acc={b.acc} asleep={b.asleep} cheer={b.cheer} /></g> });
   });
   scene.floor.forEach((f, i) => {
     const s = SLOTS[f.slot];
@@ -620,7 +634,7 @@ export function SceneView({ scene, label, className, style }: { scene: Scene; la
     <svg viewBox="0 0 360 300" role="img" aria-label={label} className={className} style={{ display: "block", width: "100%", height: "auto", ...style }}>
       <Backdrop decor={scene.decor} />
       {scene.wall.map((w, i) => <WallItem key={i} w={w} indoor={indoor} />)}
-      <Feature decor={scene.decor} color={scene.featureColor} />
+      <Feature decor={scene.decor} color={scene.featureColor} n={scene.featureN} />
       {items.map((it) => it.node)}
     </svg>
   );

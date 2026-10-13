@@ -22,7 +22,7 @@ import {
 } from "@/components/games/local-kit";
 import { FT_STR, answerLabel, type FTStrings } from "./i18n";
 import { BlobFigure, SceneView } from "./scene-view";
-import { COLOR_HEX, makeScene, planRound, sameAnswer, type DecorId, type Question, type Scene } from "./scene";
+import { COLOR_HEX, DECOR_IDS, makeScene, planRound, sameAnswer, type DecorId, type Question, type Scene } from "./scene";
 
 const ACCENT = "#4ECDC4";
 const VIEW_SEC = 5;
@@ -84,7 +84,11 @@ export default function FauxTemoinGame({ onReturnToLobby }: GameProps) {
 
   const rerollScene = () => {
     if (!scene) return;
-    drawScene([...usedDecors, scene.decor]);
+    // La scène écartée compte comme vue : on ne la retire pas tout de suite
+    let seen = usedDecors.includes(scene.decor) ? usedDecors : [...usedDecors, scene.decor];
+    if (seen.length >= DECOR_IDS.length) seen = [scene.decor];
+    setUsedDecors(seen);
+    drawScene(seen);
   };
 
   const deal = () => {
@@ -95,7 +99,7 @@ export default function FauxTemoinGame({ onReturnToLobby }: GameProps) {
     const f = cands[rnd(cands.length)];
     setFake(f);
     setFakeCount((p) => p.map((c, i) => (i === f ? c + 1 : c)));
-    setUsedDecors((p) => [...p, scene.decor]);
+    setUsedDecors((p) => (p.includes(scene.decor) ? p : [...p, scene.decor]));
     setViewer(0);
     setQi(0);
     setStarter(rnd(players.length));
@@ -170,8 +174,10 @@ export default function FauxTemoinGame({ onReturnToLobby }: GameProps) {
 
   const nextRound = () => {
     setRound((r) => r + 1);
-    drawScene(usedDecors.length >= 10 ? [] : usedDecors);
-    if (usedDecors.length >= 10) setUsedDecors([]);
+    // Pas de décor déjà joué tant qu'il en reste (35 lieux) ; ensuite on repart de zéro
+    const exhausted = usedDecors.length >= DECOR_IDS.length;
+    drawScene(exhausted ? [] : usedDecors);
+    if (exhausted) setUsedDecors([]);
     setPhase("teaser");
   };
 
