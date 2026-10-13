@@ -10,6 +10,13 @@ export interface CursorPair {
   right: string;
   /** Exemples d'indices : [tout à gauche, au milieu, tout à droite] */
   ex: [string, string, string];
+  /**
+   * Manche « catégorie » : le Médium doit donner UN exemple de cette catégorie
+   * (ex. « destination ») qui se place à l'endroit de la cible. Sans article.
+   */
+  category?: string;
+  /** Article de la catégorie, pour accorder « Une destination » / « Trouve UN plat ». */
+  art?: "un" | "une";
 }
 
 export const CURSOR_PAIRS: CursorPair[] = [
@@ -103,6 +110,156 @@ export const CURSOR_PAIRS: CursorPair[] = [
   { left: "Ça se mange avec les doigts", right: "Faut des couverts", ex: ["des frites", "une salade", "une soupe"] },
   { left: "Petit bruit", right: "Gros boum", ex: ["une souris", "une porte qui claque", "un feu d'artifice"] },
 ];
+
+/** Raccourci d'écriture d'une manche « catégorie ». */
+const k = (art: "un" | "une", category: string, left: string, right: string, ex: [string, string, string]): CursorPair =>
+  ({ art, category, left, right, ex });
+
+/**
+ * Manches « catégorie » : une catégorie + une échelle, le Médium cite UN exemple
+ * de la catégorie qui tombe sur la cible (destination nulle ↔ géniale → « Bali »).
+ * Exemples génériques (pas de marques), évidents pour toute la table.
+ */
+export const CATEGORY_PAIRS: CursorPair[] = [
+  // Voyages
+  k("une", "destination", "Nulle", "Géniale", ["une aire d'autoroute", "un camping sous la pluie", "les Maldives"]),
+  k("une", "destination", "Pas chère", "Hors de prix", ["chez mamie", "l'Espagne en bus", "Dubaï en palace"]),
+  k("une", "destination", "Calme", "Intense", ["un monastère", "Barcelone", "Las Vegas"]),
+  k("une", "destination", "Pour les enfants", "Pour les adultes", ["un parc d'attractions", "la montagne", "Ibiza"]),
+  k("un", "pays", "Glacial", "Brûlant", ["l'Islande", "la France", "l'Égypte"]),
+  k("un", "pays", "Tout près", "Au bout du monde", ["la Belgique", "le Maroc", "la Nouvelle-Zélande"]),
+  k("une", "ville", "Calme", "Ne dort jamais", ["un village de 200 habitants", "Bordeaux", "New York"]),
+  k("un", "moyen de transport", "Confortable", "Galère", ["un jet privé", "le train", "le bus de nuit bondé"]),
+  k("un", "moyen de transport", "Lent", "Rapide", ["une trottinette", "un bus", "un avion"]),
+  // Écrans
+  k("un", "réseau social", "Pour les ados", "Pour les darons", ["l'appli de vidéos courtes", "le réseau des photos", "le réseau où tata partage des chats"]),
+  k("une", "appli", "Inutile", "Indispensable", ["une appli d'horoscope", "une appli de recettes", "le GPS"]),
+  k("une", "appli", "Rassurante", "Stressante", ["une appli de méditation", "la météo", "l'appli de la banque en fin de mois"]),
+  k("un", "film", "Pour les enfants", "Pour les adultes", ["un dessin animé de princesses", "un film de super-héros", "un thriller sanglant"]),
+  k("un", "film", "Pour pleurer", "Pour rire", ["un drame où le chien meurt", "une comédie romantique", "une parodie débile"]),
+  k("un", "film", "Tout doux", "Flippant", ["un dessin animé", "un polar", "un film d'exorcisme"]),
+  k("un", "film", "Navet", "Chef-d'œuvre", ["un téléfilm de Noël", "un film d'action", "un grand classique"]),
+  k("un", "film", "Parfait en date", "À éviter en date", ["une comédie romantique", "un film d'action", "un film d'horreur gore"]),
+  k("une", "série", "Pour s'endormir", "À binger toute la nuit", ["un docu sur la pêche", "une sitcom", "un thriller plein de rebondissements"]),
+  k("une", "série", "Légère", "Traumatisante", ["une sitcom", "une série policière", "une série de zombies"]),
+  k("un", "emoji", "Gentil", "Agressif", ["le cœur", "le pouce levé", "le couteau"]),
+  k("un", "emoji", "Ringard", "Stylé", ["le smiley qui pleure de rire", "le pouce levé", "le crâne"]),
+  k("un", "emoji", "Innocent", "Sous-entendu", ["le soleil", "le clin d'œil", "l'aubergine"]),
+  // À table
+  k("un", "plat", "Sain", "Pas sain", ["une salade de quinoa", "des lasagnes", "un tacos 3 viandes"]),
+  k("un", "plat", "Facile à cuisiner", "Galère à cuisiner", ["des pâtes au beurre", "un gratin", "un soufflé"]),
+  k("un", "plat", "Pas cher", "Hors de prix", ["des pâtes", "une raclette", "du caviar"]),
+  k("un", "plat", "Parfait en date", "Catastrophe en date", ["des sushis", "un burger", "des spaghettis à l'ail"]),
+  k("un", "plat", "Ringard", "Tendance", ["la salade piémontaise", "un croque-monsieur", "un poke bowl"]),
+  k("un", "dessert", "Léger", "Bourratif", ["une salade de fruits", "une tarte aux pommes", "un fondant au chocolat"]),
+  k("un", "dessert", "Nul", "Génial", ["un yaourt nature", "une compote", "un tiramisu"]),
+  k("un", "dessert", "Pour les enfants", "Pour les adultes", ["un flan", "une crème brûlée", "un café gourmand"]),
+  k("un", "petit-déj", "Sain", "Pas sain", ["un bol de fruits", "une tartine beurrée", "des restes de pizza froide"]),
+  k("un", "fromage", "Doux", "Qui pue", ["la mozzarella", "le comté", "le maroilles"]),
+  k("une", "pizza", "Classique", "Sacrilège", ["la margherita", "la 4 fromages", "la pizza ananas-banane"]),
+  k("un", "fruit", "Facile à manger", "Galère à manger", ["une banane", "une orange", "une grenade"]),
+  k("un", "légume", "Les enfants détestent", "Les enfants adorent", ["les choux de Bruxelles", "les carottes", "les frites"]),
+  k("un", "parfum de glace", "Classique", "Bizarre", ["vanille", "pistache", "fromage de chèvre"]),
+  k("un", "plat de cantine", "Le pire", "Le meilleur", ["les épinards à la crème", "le hachis parmentier", "les frites du vendredi"]),
+  k("un", "repas du soir", "Léger", "Bourratif", ["une soupe", "un steak-frites", "une raclette"]),
+  k("une", "boisson de soirée", "Ringarde", "Stylée", ["le jus de pomme en brique", "un soda", "un mocktail à la menthe"]),
+  k("une", "boisson", "Sucrée", "Amère", ["un sirop de grenadine", "un thé glacé", "un café serré"]),
+  k("une", "boisson", "Pour les enfants", "Pour les adultes", ["un chocolat chaud", "un thé", "un expresso serré"]),
+  k("une", "boisson", "Glacée", "Brûlante", ["un granité", "un jus d'orange", "un thé fumant"]),
+  // Les gens
+  k("un", "prénom", "Ringard", "Stylé", ["Gérard", "Julien", "Nova"]),
+  k("un", "prénom", "Bébé de 2025", "Papy", ["Léo", "Thierry", "Marcel"]),
+  k("un", "prénom", "Gentil", "Méchant de film", ["Câline", "Patrick", "Lucifer"]),
+  k("un", "nom de chien", "Ridicule", "Impressionnant", ["Pupuce", "Max", "Zeus"]),
+  k("un", "métier", "Tranquille", "Stressant", ["gardien de phare", "boulanger", "démineur"]),
+  k("un", "métier", "Mal payé", "Très bien payé", ["stagiaire", "prof", "footballeur pro"]),
+  k("un", "métier", "Propre", "Salissant", ["employé de banque", "cuisinier", "égoutier"]),
+  k("un", "métier", "Rêve d'enfant", "Cauchemar d'enfant", ["astronaute", "banquier", "dentiste"]),
+  k("un", "job d'été", "Tranquille", "L'enfer", ["maître-nageur", "serveur en terrasse", "les vendanges en pleine canicule"]),
+  // Amour & soirées
+  k("un", "premier rendez-vous", "Nul", "Génial", ["un fast-food sur un parking", "un ciné", "un dîner sur un rooftop"]),
+  k("un", "premier rendez-vous", "Gênant", "Classe", ["chez ses parents", "un bowling", "un pique-nique au coucher du soleil"]),
+  k("un", "premier rendez-vous", "Calme", "Intense", ["une balade au parc", "un karaoké", "un saut en parachute"]),
+  k("un", "premier rendez-vous", "Pas cher", "Hors de prix", ["une balade", "un resto italien", "un week-end à Venise"]),
+  k("une", "phrase de drague", "Gênante", "Classe", ["« t'es tombée du ciel ? »", "« salut, ça va ? »", "un compliment sincère sur son rire"]),
+  k("un", "message à 3 h du mat", "Innocent", "À regretter", ["« bien rentré ? »", "« tu dors ? »", "« je t'ai toujours aimé »"]),
+  k("un", "lieu pour demander en mariage", "Gênant", "Magique", ["sur l'écran géant du stade", "au resto", "sur une plage au coucher du soleil"]),
+  k("un", "cadeau d'anniversaire", "Nul", "Génial", ["une paire de chaussettes", "un livre", "un voyage surprise"]),
+  k("un", "cadeau d'anniversaire", "Pas cher", "Hors de prix", ["une carte faite main", "un parfum", "une voiture"]),
+  k("un", "cadeau", "Romantique", "Pas romantique", ["un bouquet de roses", "un bon d'achat", "un aspirateur"]),
+  k("une", "excuse pour partir tôt", "Crédible", "Pas crédible", ["je bosse tôt demain", "mon chat est malade", "mon poisson rouge déprime"]),
+  k("une", "excuse pour être en retard", "Crédible", "Pas crédible", ["les bouchons", "j'ai perdu mes clés", "enlevé par des extraterrestres"]),
+  k("une", "excuse pour annuler un date", "Polie", "Cruelle", ["je suis malade", "j'ai un empêchement", "j'ai rencontré quelqu'un hier"]),
+  k("un", "lieu de soirée", "Calme", "Intense", ["un salon avec des jeux de société", "un bar", "une boîte de nuit"]),
+  k("une", "fête", "Gênante", "Mythique", ["un repas de famille tendu", "un apéro", "un mariage où tout le monde danse"]),
+  k("une", "fin de soirée", "Calme", "Chaotique", ["une tisane et au lit", "un kebab", "tout le monde à l'eau habillé"]),
+  k("une", "chanson pour danser", "Ringarde", "Stylée", ["la danse des canards", "un tube disco", "le son du moment en boîte"]),
+  k("une", "chanson", "Calme", "Intense", ["une berceuse", "une ballade pop", "du métal hurlé"]),
+  k("une", "chanson", "Triste", "Joyeuse", ["une chanson de rupture", "une ballade", "Joyeux anniversaire"]),
+  k("une", "chanson pour le karaoké", "Gênante", "Mythique", ["l'hymne national", "un slow en anglais", "un tube des années 80"]),
+  k("un", "jeu de société", "Calme", "Finit en dispute", ["un puzzle", "les petits chevaux", "le jeu où on achète des rues"]),
+  // Bêtes, pouvoirs & trucs
+  k("un", "super-pouvoir", "Inutile", "Trop puissant", ["parler aux pigeons", "voir dans le noir", "arrêter le temps"]),
+  k("un", "super-pouvoir", "Gênant", "Classe", ["rougir sur commande", "respirer sous l'eau", "voler"]),
+  k("un", "animal de compagnie", "Facile", "Galère", ["un poisson rouge", "un chat", "un crocodile"]),
+  k("un", "animal de compagnie", "Mignon", "Flippant", ["un lapin", "un perroquet", "une mygale"]),
+  k("un", "animal de compagnie", "Calme", "Bruyant", ["une tortue", "un chien", "un coq"]),
+  k("un", "animal de compagnie", "Pas cher", "Hors de prix", ["un poisson rouge", "un chien de race", "un cheval"]),
+  k("un", "animal", "Inoffensif", "Mortel", ["un lapin", "un chien", "un requin blanc"]),
+  k("une", "odeur", "Horrible", "Délicieuse", ["les poubelles en été", "la lessive", "le pain chaud"]),
+  k("une", "odeur", "Rassurante", "Inquiétante", ["un gâteau au four", "l'eau de Javel", "le brûlé"]),
+  k("une", "odeur", "Gênante", "Classe", ["des pieds après le sport", "le café", "un parfum de luxe"]),
+  k("un", "bruit", "Apaisant", "Insupportable", ["la pluie sur le toit", "un aspirateur", "une craie sur un tableau"]),
+  k("un", "sport", "Tranquille", "Épuisant", ["la pétanque", "le tennis", "le marathon"]),
+  k("un", "sport", "Sans risque", "Dangereux", ["les échecs", "le foot", "le saut en base jump"]),
+  k("un", "sport", "Ringard", "Stylé", ["le curling", "le badminton", "le surf"]),
+  k("un", "sport", "Ennuyeux à regarder", "Captivant", ["le golf", "le tennis", "une finale de foot"]),
+  k("un", "sport", "Pas cher", "Hors de prix", ["la course à pied", "le tennis", "le polo à cheval"]),
+  k("une", "activité du dimanche", "Chill", "Sportive", ["la sieste", "une balade", "un trail en montagne"]),
+  k("une", "tenue", "Décontractée", "Très habillée", ["un pyjama", "un jean-baskets", "un smoking"]),
+  k("une", "coupe de cheveux", "Ringarde", "Stylée", ["la coupe au bol", "la raie sur le côté", "un dégradé bien net"]),
+  k("un", "tatouage", "Regrettable", "Stylé", ["le prénom de son ex", "un petit cœur", "un dragon dans le dos"]),
+  k("une", "voiture", "Pas chère", "Hors de prix", ["une vieille citadine", "un SUV familial", "une voiture de course"]),
+  k("une", "voiture", "Ringarde", "Stylée", ["une voiture sans permis", "un break", "un cabriolet"]),
+  k("une", "matière à l'école", "Facile", "Difficile", ["la récré", "l'anglais", "la physique quantique"]),
+  k("un", "endroit pour dormir", "Inconfortable", "Le grand luxe", ["un banc de gare", "un canapé", "un lit king size dans un palace"]),
+  k("un", "objet pour une île déserte", "Inutile", "Indispensable", ["une cravate", "un livre", "un couteau suisse"]),
+  k("un", "objet oublié chez son date", "Pas grave", "Catastrophe", ["un stylo", "son écharpe", "son téléphone"]),
+  k("une", "phrase à dire à son boss", "Pro", "Viré direct", ["« bien reçu, merci »", "« je peux partir plus tôt ? »", "« t'as une tête de chips »"]),
+  k("une", "insulte", "Mignonne", "Méchante", ["patate", "andouille", "espèce de cafard"]),
+  k("un", "compliment", "Bizarre", "Touchant", ["« t'as un beau front »", "« t'as l'air reposé »", "« t'es la personne la plus drôle que je connaisse »"]),
+  k("une", "habitude", "Saine", "Pas saine", ["boire de l'eau", "le café du matin", "scroller jusqu'à 4 h"]),
+];
+
+/** « Une destination » (sticker de la manche). */
+export function categoryLabel(pair: CursorPair): string | null {
+  if (!pair.category) return null;
+  const art = pair.art ?? "un";
+  return `${art.charAt(0).toUpperCase()}${art.slice(1)} ${pair.category}`;
+}
+
+/**
+ * Pioche d'une partie : 2 manches « catégorie » pour 1 paire simple, mélangées,
+ * jamais deux fois la même (chaque paire n'apparaît qu'une fois dans la pioche).
+ */
+export function buildDeck(): CursorPair[] {
+  const shuffle = <T,>(a: T[]): T[] => {
+    const r = [...a];
+    for (let i = r.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [r[i], r[j]] = [r[j], r[i]]; }
+    return r;
+  };
+  const cats = shuffle(CATEGORY_PAIRS);
+  const simple = shuffle(CURSOR_PAIRS);
+  // une partie sur deux commence par une paire simple → le rythme varie
+  const offset = Math.random() < 0.5 ? 0 : 2;
+  const deck: CursorPair[] = [];
+  while (cats.length || simple.length) {
+    const wantSimple = (deck.length + offset) % 3 === 2;
+    const next = (wantSimple ? simple.shift() ?? cats.shift() : cats.shift() ?? simple.shift())!;
+    deck.push(next);
+  }
+  return deck;
+}
 
 /** Exemple d'indice pour la position de la cible (0 = tout à gauche, 100 = tout à droite). */
 export function exampleFor(pair: CursorPair, target: number): string {

@@ -40,12 +40,13 @@ function slice(v1: number, v2: number, r = R): string {
 }
 
 /** Étiquette d'un extrême : sticker plein, plus petit si le texte est long. */
-function EndLabel({ text, side, small }: { text: string; side: "left" | "right"; small?: boolean }) {
-  // taille selon la longueur totale ET le mot le plus long (+ la flèche collée)
-  const n = text.length;
-  const word = Math.max(...text.split(" ").map((w) => w.length)) + (small ? 0 : 2);
+function EndLabel({ text, pair, side, small }: { text: string; pair: string; side: "left" | "right"; small?: boolean }) {
+  // taille selon la longueur totale ET le mot le plus long (+ la flèche collée),
+  // calculée sur l'étiquette la plus longue des deux → même taille de texte des deux côtés
+  const n = Math.max(text.length, pair.length);
+  const word = Math.max(...`${text} ${pair}`.split(" ").map((w) => w.length)) + (small ? 0 : 2);
   const fs = small
-    ? (n > 12 || word > 7 ? 11 : 13)
+    ? (n > 12 || word > 6 ? 11 : 13)
     : Math.min(n > 18 ? 16 : n > 12 ? 18 : n > 9 ? 20 : 22, word > 12 ? 15 : word > 10 ? 17 : word > 8 ? 19 : 22);
   const style: CSSProperties = {
     ...DISPLAY,
@@ -59,6 +60,8 @@ function EndLabel({ text, side, small }: { text: string; side: "left" | "right";
     lineHeight: 1.02,
     maxWidth: "48%",
     textAlign: side,
+    // grand cadran : 2 étiquettes de même largeur et même hauteur, texte centré verticalement
+    ...(small ? null : { flex: "0 1 48%", display: "flex", alignItems: "center", justifyContent: side === "left" ? "flex-start" : "flex-end" }),
     padding: small ? "3px 6px" : "7px 12px",
   };
   const arrow = !small;
@@ -69,10 +72,14 @@ function EndLabel({ text, side, small }: { text: string; side: "left" | "right";
     if (!el) return;
     let size = fs;
     el.style.fontSize = `${size}px`;
+    // mesure alignée à gauche : un débordement côté gauche (étiquette de droite) ne compte pas dans scrollWidth
+    const justify = el.style.justifyContent;
+    el.style.justifyContent = "flex-start";
     while (el.scrollWidth > el.clientWidth + 0.5 && size > 11) {
       size -= 1;
       el.style.fontSize = `${size}px`;
     }
+    el.style.justifyContent = justify;
   }, [text, fs]);
   // la flèche reste collée au dernier / premier mot
   return <div ref={ref} style={style}>{arrow && side === "left" ? "←\u00a0" : ""}{text}{arrow && side === "right" ? "\u00a0→" : ""}</div>;
@@ -189,9 +196,9 @@ export function CursorGauge({
           <circle cx={CX} cy={CY} r={small ? 5 : 7} fill={INK} />
         </svg>
       </div>
-      <div className={`flex items-start justify-between gap-2 ${small ? "mt-2" : "mt-3"}`}>
-        <EndLabel text={left} side="left" small={small} />
-        <EndLabel text={right} side="right" small={small} />
+      <div className={`flex justify-between gap-2 ${small ? "mt-2 items-start" : "mt-3 items-stretch"}`}>
+        <EndLabel text={left} pair={right} side="left" small={small} />
+        <EndLabel text={right} pair={left} side="right" small={small} />
       </div>
       <style>{`.cur-wedge{transform-box:view-box;transform-origin:${CX}px ${CY}px;animation:cur-wedge .7s cubic-bezier(.2,1.5,.4,1) both}
 @keyframes cur-wedge{from{transform:scale(.05) rotate(-40deg);opacity:0}to{transform:none;opacity:1}}`}</style>

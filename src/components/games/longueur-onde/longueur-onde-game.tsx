@@ -13,7 +13,7 @@ import {
 } from "@/components/games/local-kit";
 import { SynthwaveScreen, NeonConsole, CassetteInput, SpectrumPair, WAVE_COLOR } from "@/components/games/longueur-onde/synthwave";
 import { CursorGauge } from "@/components/games/longueur-onde/gauge";
-import { CURSOR_PAIRS, cursorPoints, exampleFor, type CursorPair } from "@/components/games/longueur-onde/pairs";
+import { CURSOR_PAIRS, buildDeck, categoryLabel, cursorPoints, exampleFor, type CursorPair } from "@/components/games/longueur-onde/pairs";
 import { Lock, Pencil } from "lucide-react";
 import { GameInlineIcon, GAME_INK } from "@/components/games/game-icon-button";
 import { IdeaButton, RerollButton } from "@/components/games/idea-button";
@@ -25,11 +25,6 @@ function clueProblem(clue: string): string | null {
   if (!c) return null;
   if (!/\p{L}/u.test(c)) return "Pas de chiffres seuls : donne un mot ou un exemple !";
   return null;
-}
-function shuffleArr<T>(a: T[]): T[] {
-  const r = [...a];
-  for (let i = r.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [r[i], r[j]] = [r[j], r[i]]; }
-  return r;
 }
 /** Cible tirée au sort, jamais collée aux bords (la part entière reste visible). */
 const randomTarget = () => 10 + Math.floor(Math.random() * 81);
@@ -75,7 +70,39 @@ function Step({ n, bg, tilt = 0, title, children }: { n: number; bg: string; til
   );
 }
 
-/** Mini-tuto : 3 vignettes avec un exemple complet (Froid ↔ Chaud). */
+/** « de Léa » / « d'Inès » (élision devant une voyelle). */
+const deOf = (name: string) => (/^[aeiouyàâäéèêëîïôöùûü]/i.test(name) ? `d'${name}` : `de ${name}`);
+
+/** Sticker de la catégorie de la manche (« Une destination »), en gros au-dessus du cadran. */
+function CategorySticker({ pair, small = false, className }: { pair: CursorPair; small?: boolean; className?: string }) {
+  const label = categoryLabel(pair);
+  if (!label) return null;
+  const n = label.length;
+  const fs = small ? 12.5 : n <= 12 ? 27 : n <= 18 ? 23 : n <= 26 ? 20 : 18;
+  return (
+    <div className={`flex justify-center ${className ?? ""}`}>
+      <span className="max-w-full rounded-[16px] text-center"
+        style={{
+          ...DISPLAY, fontSize: fs, lineHeight: 1.05, textWrap: "balance", whiteSpace: small ? "nowrap" : undefined,
+          background: GAME_INK, color: "#FFD23F", border: `${small ? 2 : 3}px solid ${GAME_INK}`,
+          boxShadow: `0 ${small ? 2 : 4}px 0 #FF3EA5`, rotate: "-1.5deg",
+          padding: small ? "3px 8px" : "6px 14px",
+        }}>
+        {label}
+      </span>
+    </div>
+  );
+}
+
+/** « Trouve UNE destination qui se place là » (ou « UN truc » pour une paire simple). */
+function findTitle(pair: CursorPair): ReactNode {
+  if (!pair.category) return "Trouve UN truc qui se place là";
+  return <>Trouve {(pair.art ?? "un").toUpperCase()} {pair.category} qui se place là</>;
+}
+
+/** Mini-tuto : 3 vignettes avec un exemple complet (Une destination : Nulle ↔ Géniale). */
+const TUTO_PAIR: CursorPair = { art: "une", category: "destination", left: "Nulle", right: "Géniale", ex: ["", "", "Bali"] };
+
 function HowTo({ onGo }: { onGo: () => void }) {
   return (
     <ZScreen bg={WAVE_COLOR}>
@@ -84,10 +111,13 @@ function HowTo({ onGo }: { onGo: () => void }) {
 
       <div className="mt-4 flex flex-col gap-3.5">
         <ZCard bg="#fff" tilt={-1.2} shadow={4} radius={22} className="flex items-center gap-3 px-3 py-3">
-          <div className="w-[44%] shrink-0"><CursorGauge left="Froid" right="Chaud" target={12} small /></div>
+          <div className="w-[44%] shrink-0">
+            <CategorySticker pair={TUTO_PAIR} small className="mb-1.5" />
+            <CursorGauge left={TUTO_PAIR.left} right={TUTO_PAIR.right} target={88} small />
+          </div>
           <div className="min-w-0">
             <StepNum n={1} />
-            <p className="mt-1.5 text-[15px] font-bold leading-snug">Léa voit en secret la cible : <b style={{ color: "#E0218A" }}>tout à gauche</b>, côté froid.</p>
+            <p className="mt-1.5 text-[15px] font-bold leading-snug">Léa voit en secret la cible : <b style={{ color: "#E0218A" }}>tout à droite</b>, côté génial.</p>
           </div>
         </ZCard>
 
@@ -95,19 +125,19 @@ function HowTo({ onGo }: { onGo: () => void }) {
           <div className="flex w-[44%] shrink-0 flex-col items-center">
             <span className="rounded-[14px] px-2.5 py-1.5 text-center text-[16px] leading-tight"
               style={{ ...DISPLAY, background: "#fff", border: `2.5px solid ${GAME_INK}`, boxShadow: `0 3px 0 ${GAME_INK}`, rotate: "-3deg" }}>
-              « La banquise ! »
+              {"«\u00A0Bali\u00A0!\u00A0»"}
             </span>
             <Mascot size={46} color="pink" mood="wink" shadow={false} bob={false} />
           </div>
           <div className="min-w-0">
             <StepNum n={2} />
-            <p className="mt-1.5 text-[15px] font-bold leading-snug">Elle dit à voix haute UN truc qui se place là.</p>
+            <p className="mt-1.5 text-[15px] font-bold leading-snug">Elle dit à voix haute UNE destination qui se place là.</p>
           </div>
         </ZCard>
 
         <ZCard bg="#3DDC97" tilt={-1} shadow={4} radius={22} className="flex items-center gap-3 px-3 py-3">
           <div className="relative w-[44%] shrink-0">
-            <CursorGauge left="Froid" right="Chaud" target={12} needle={10} small />
+            <CursorGauge left={TUTO_PAIR.left} right={TUTO_PAIR.right} target={88} needle={86} small />
           </div>
           <div className="min-w-0">
             <div className="flex items-center gap-2">
@@ -132,7 +162,7 @@ function LongueurOndeLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }
   const [scores, setScores] = useState<number[]>([]);
   const [round, setRound] = useState(0);
   const [psychic, setPsychic] = useState(0);
-  const [pairs, setPairs] = useState<CursorPair[]>(() => shuffleArr(CURSOR_PAIRS));
+  const [pairs, setPairs] = useState<CursorPair[]>(buildDeck);
   const [target, setTarget] = useState(50);
   const [clue, setClue] = useState("");
   const [guess, setGuess] = useState(50);
@@ -157,7 +187,7 @@ function LongueurOndeLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }
   };
   const begin = (names: string[]) => {
     setPlayers(names); setScores(names.map(() => 0));
-    setPairs(shuffleArr(CURSOR_PAIRS));
+    setPairs(buildDeck());
     startRound(1, 0);
   };
   // « Une autre paire » : la paire est retirée → une paire jamais vue prend sa place
@@ -204,10 +234,11 @@ function LongueurOndeLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }
 
         <div className="mt-4 flex flex-col gap-3">
           <Step n={1} bg="#fff" title={<>{name}, regarde où est la cible <span style={{ color: "#E0218A" }}>(cache l&apos;écran !)</span></>}>
-            <CursorGauge left={pair.left} right={pair.right} target={target} className="mx-auto mt-2 max-w-[300px]" />
+            <CategorySticker pair={pair} className="mt-3" />
+            <CursorGauge left={pair.left} right={pair.right} target={target} className={`mx-auto max-w-[300px] ${pair.category ? "mt-3" : "mt-2"}`} />
           </Step>
 
-          <Step n={2} bg="#FFD23F" tilt={-0.8} title="Trouve UN truc qui se place là">
+          <Step n={2} bg="#FFD23F" tilt={-0.8} title={findTitle(pair)}>
             <p className="mt-1.5 pl-[42px] text-[15px] font-semibold leading-tight">Ex. : <span className="text-[21px]" style={DISPLAY}>{exampleFor(pair, target)}</span>
               <span className="text-[13px]" style={{ color: "#4A3A66" }}> (ou mieux, le tien !)</span></p>
           </Step>
@@ -253,7 +284,7 @@ function LongueurOndeLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }
           <Mascot size={44} color={colorForIndex(psychic)} mood="wink" shadow={false} bob={false} />
           {clue ? (
             <div className="min-w-0">
-              <p className="text-[15px] font-bold">L&apos;indice de {name} :</p>
+              <p className="text-[15px] font-bold">L&apos;indice {deOf(name)} :</p>
               <p className="break-words text-[28px] leading-none" style={DISPLAY}>{clue}</p>
             </div>
           ) : (
@@ -262,9 +293,10 @@ function LongueurOndeLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }
         </ZCard>
 
         <p className="mt-4 text-[16px] font-extrabold leading-snug">Faites glisser le curseur là où vous pensez que l&apos;indice se place.</p>
+        <CategorySticker pair={pair} className="mt-3" />
         <CursorGauge left={pair.left} right={pair.right} needle={guess} onChange={setGuess} className="mx-auto mt-3 max-w-[340px]" />
         <p className="mt-3 text-[14px] font-semibold leading-snug" style={{ color: "#2A1A55" }}>
-          Un seul curseur pour toute la table : mettez-vous d&apos;accord !
+          Un seul curseur pour toute la table : <span className="whitespace-nowrap">mettez-vous</span> d&apos;accord !
         </p>
 
         <div className="min-h-2 flex-1" />
@@ -294,9 +326,10 @@ function LongueurOndeLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }
         {shown && bull && <ConfettiBurst count={40} />}
         <ZChip bg="#fff" tilt={-2}>Manche {round}/{total}</ZChip>
         <ZTitle size={38} className="mt-3">{verdict}</ZTitle>
-        {clue && <p className="mt-1 text-[16px] font-bold">Indice de {name} : « {clue} »</p>}
+        {clue && <p className="mt-1 text-[16px] font-bold">Indice {deOf(name)} : « {clue} »</p>}
 
-        <CursorGauge left={pair.left} right={pair.right} target={shown ? target : null} needle={guess} reveal className="mt-5" />
+        <CategorySticker pair={pair} className="mt-4" />
+        <CursorGauge left={pair.left} right={pair.right} target={shown ? target : null} needle={guess} reveal className={pair.category ? "mt-3" : "mt-5"} />
 
         <div className="mt-5 flex min-h-[92px] items-center justify-center">
           {shown && (
@@ -330,8 +363,11 @@ function LongueurOndeLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }
   return (
     <ZScreen bg={WAVE_COLOR}>
       <ConfettiBurst count={50} />
-      <ZTitle size={40} className="text-center">{ranking[0]?.name}, meilleur Médium !</ZTitle>
-      <p className="mt-2 text-center text-[15px] font-bold">Chacun marque les points trouvés grâce à son indice.</p>
+      <ZTitle size={(ranking[0]?.name.length ?? 0) > 9 ? 32 : 40} className="text-center">
+        {/* prénom composé jamais coupé au trait d'union */}
+        <span className="whitespace-nowrap">{ranking[0]?.name},</span> meilleur Médium !
+      </ZTitle>
+      <p className="mt-2 text-center text-[15px] font-bold" style={{ textWrap: "balance" }}>Chacun marque les points trouvés grâce à son indice.</p>
       <div className="mt-6"><ZRanking rows={ranking} /></div>
       <div className="min-h-8 flex-1" />
       <ZButton bg={GAME_INK} className="mt-6" onClick={() => begin(players)}>Rejouer</ZButton>
