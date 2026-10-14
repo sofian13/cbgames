@@ -24,6 +24,9 @@ export const AVATAR_STR: I18n<{
   nameTaken: string;
   saved: string;
   addMember: string;
+  manageBand: string;
+  doneManage: string;
+  tapHint: string;
   bandCount: (n: number, max: number) => string;
   bandFull: string;
   bandEmpty: string;
@@ -74,6 +77,9 @@ export const AVATAR_STR: I18n<{
     nameTaken: "Ce prénom est déjà dans la bande",
     saved: "Perso enregistré !",
     addMember: "Ajouter un perso",
+    manageBand: "Modifier la bande",
+    doneManage: "Terminé",
+    tapHint: "Touche un perso pour l'entendre",
     bandCount: (n, max) => `${n}/${max} persos`,
     bandFull: "La bande est complète (16 persos)",
     bandEmpty: "Crée ton perso, puis ceux de tes potes : ils apparaîtront dans tous les jeux.",
@@ -124,6 +130,9 @@ export const AVATAR_STR: I18n<{
     nameTaken: "That name is already in the crew",
     saved: "Character saved!",
     addMember: "Add a character",
+    manageBand: "Edit the crew",
+    doneManage: "Done",
+    tapHint: "Tap a character to hear them",
     bandCount: (n, max) => `${n}/${max} characters`,
     bandFull: "Your crew is full (16 characters)",
     bandEmpty: "Make your character, then your friends': they'll show up in every game.",
@@ -174,6 +183,9 @@ export const AVATAR_STR: I18n<{
     nameTaken: "Ese nombre ya está en el grupo",
     saved: "¡Personaje guardado!",
     addMember: "Añadir un personaje",
+    manageBand: "Editar el grupo",
+    doneManage: "Listo",
+    tapHint: "Toca un personaje para oírlo",
     bandCount: (n, max) => `${n}/${max} personajes`,
     bandFull: "El grupo está completo (16 personajes)",
     bandEmpty: "Crea tu personaje y luego los de tus amigos: saldrán en todos los juegos.",
