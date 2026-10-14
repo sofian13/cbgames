@@ -312,3 +312,8 @@ html, body { overflow-x: clip; overscroll-behavior-x: none; }
  * un blob qui dépasse en bas leur donnait quelques px de défilement vertical (la carte « bougeait »
  * et un swipe vertical posé dessus ne faisait plus défiler la page). Rendu identique (déjà coupé). */
 .zz-home .zz-carousel, .zz-home .zz-rail { overflow-y: hidden; touch-action: pan-x pan-y; }
+
+/* Zones qui défilent en hauteur (fiches, réglages, écrans de jeu) : jamais de glissement
+   horizontal parasite (un élément tourné ou une ombre qui dépasse rendait l'écran « déplaçable »). */
+.zz-scroll,
+.overflow-y-auto:not(.overflow-x-auto) { overflow-x: hidden; overscroll-behavior-x: none; }
