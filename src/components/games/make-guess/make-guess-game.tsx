@@ -3,6 +3,7 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import type { GameProps } from "@/lib/games/types";
 import { Mascot, type MascotColor } from "@/components/Mascot";
+import { PlayerBlob, usePlayerLook } from "@/components/avatar/PlayerBlob";
 import { ConfettiBurst } from "@/components/ConfettiBurst";
 import { registerSoftReplay } from "@/lib/game-replay";
 import { getSavedPlayers, savePlayers } from "@/lib/saved-players";
@@ -559,7 +560,7 @@ export default function MakeGuessGame({
           {t.roundTurn(currentRound, totalRounds, subTurn + 1)}
         </span>
         <div className="relative z-[1] mt-4 -mb-6">
-          <Mascot size={90} color={blob} mood="happy" arms shadow={false} />
+          <PlayerBlob name={describer} color={blob} size={90} mood="happy" arms />
         </div>
         <h2 className="max-w-full break-words px-6 pb-2 pt-6 text-center text-[clamp(34px,10vw,48px)] leading-none" style={{ ...sticker(MASCOT_BG[blob], { radius: 24, shadow: 5 }), ...DISPLAY, transform: "rotate(-2deg)" }}>
           {currentTeam.name}
@@ -725,7 +726,7 @@ export default function MakeGuessGame({
             const place = sortedFinal.findIndex((x) => x.score === row.score) + 1;
             return (
               <div key={row.idx} className="flex flex-col items-center">
-                <Mascot size={place === 1 ? 72 : 54} color={TEAM_BLOB[row.idx % TEAM_BLOB.length]} mood="happy" arms cheering={place === 1} crown={place === 1} delay={place * 0.12} shadow={false} />
+                <TeamBlob team={teams[row.idx]} size={place === 1 ? 72 : 54} color={TEAM_BLOB[row.idx % TEAM_BLOB.length]} mood="happy" arms cheering={place === 1} crown={place === 1} delay={place * 0.12} />
                 <div className="mt-1 flex w-full flex-col items-center pt-2" style={{ ...sticker(PODIUM_BG[place], { radius: 18, shadow: 4 }), borderBottomLeftRadius: 6, borderBottomRightRadius: 6, minHeight: heights[place] }}>
                   <div className="leading-none" style={{ ...DISPLAY, fontSize: place === 1 ? 32 : 24 }}>{place}</div>
                   <div className="mt-1 line-clamp-2 w-full px-1.5 text-center text-[14px] font-bold leading-tight" lang={lang} style={{ hyphens: "auto", overflowWrap: "anywhere" }}>{row.name}</div>
@@ -768,6 +769,23 @@ export default function MakeGuessGame({
         </div>
       </div>
     </StickerScreen>
+  );
+}
+
+/** Blob d'une équipe sur le podium : les persos des deux joueurs s'ils en ont, sinon le blob d'équipe habituel. */
+function TeamBlob({ team, size, color, mood, arms, cheering, crown, delay }: {
+  team?: Team; size: number; color: MascotColor; mood: "happy"; arms?: boolean; cheering?: boolean; crown?: boolean; delay?: number;
+}) {
+  const a = usePlayerLook(team?.player1);
+  const b = usePlayerLook(team?.player2);
+  if (!team || (!a && !b)) return <Mascot size={size} color={color} mood={mood} arms={arms} cheering={cheering} crown={crown} delay={delay} shadow={false} />;
+  const k = Math.round(size * 0.78);
+  return (
+    // Même hauteur que le blob d'équipe : le podium ne bouge pas
+    <div className="flex items-end justify-center" style={{ height: size * 1.15 + (crown ? size * 0.3 : 0) }}>
+      <PlayerBlob name={team.player1} color={color} size={k} mood={mood} arms={arms} cheering={cheering} crown={crown} delay={delay} />
+      <PlayerBlob name={team.player2} color={color} size={k} mood={mood} arms={arms} cheering={cheering} delay={(delay ?? 0) + 0.2} style={{ marginLeft: -k * 0.28 }} />
+    </div>
   );
 }
 

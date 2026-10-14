@@ -7,10 +7,11 @@ import { useGameStore } from "@/lib/stores/game-store";
 import type { GameProps } from "@/lib/games/types";
 import { useKeyedState } from "@/lib/use-keyed-state";
 import { Mascot } from "@/components/Mascot";
+import { PlayerBlob } from "@/components/avatar/PlayerBlob";
 import { isOfflineApp } from "@/lib/offline-app";
 import { ConfettiBurst, Sparkles } from "@/components/ConfettiBurst";
 import {
-  ModeSelect, PassScreen, colorForIndex, type GameMode,
+  ModeSelect, PassScreen, type GameMode,
   DISPLAY, ZButton, ZCard, ZChip, ZChoice, ZLink, ZScreen, ZTitle, useScrollTopOn,
 } from "@/components/games/local-kit";
 import { GAME_INK } from "@/components/games/game-icon-button";
@@ -237,7 +238,7 @@ function CoupleSetup({ pack, onStart, onBack }: {
         {[{ v: a, set: setA, i: 0 }, { v: b, set: setB, i: 1 }].map(({ v, set, i }) => (
           <div key={i} className="flex items-center gap-3 rounded-[20px] py-1.5 pl-2 pr-3"
             style={{ background: "#fff", border: `3px solid ${GAME_INK}`, boxShadow: `0 4px 0 ${GAME_INK}`, rotate: `${i ? 1 : -1}deg` }}>
-            <Mascot size={42} color={colorForIndex(i)} mood="happy" shadow={false} bob={false} />
+            <PlayerBlob name={v.trim()} colorIndex={i} size={42} mood="happy" bob={false} />
             <input value={v} onChange={(e) => set(e.target.value.slice(0, 16))}
               placeholder={i === 0 ? t.yourName : t.theirName} aria-label={i === 0 ? t.yourName : t.partnerAria}
               autoCorrect="off" autoCapitalize="words" spellCheck={false}
@@ -520,7 +521,8 @@ function RevealScreen({
         {[0, 1].map((i) => (
           <div key={i} className="rounded-[22px] px-3 pb-4 pt-3 text-center"
             style={{ background: i ? "#FFF6E5" : "#fff", color: GAME_INK, border: `3px solid ${GAME_INK}`, boxShadow: `0 5px 0 ${GAME_INK}`, rotate: `${i ? 2 : -2}deg` }}>
-            <div className="flex justify-center"><Mascot size={44} color={colorForIndex(i)} mood={matched ? "love" : "shocked"} shadow={false} bob={false} /></div>
+            <div className="flex justify-center"><PlayerBlob name={names[i]} colorIndex={i} size={44} mood={matched ? "love" : "shocked"} bob={false} />
+</div>
             <p className="mt-1 truncate text-[14px] font-bold">{names[i]}</p>
             {/* Réponse longue (40 car. max) : plus petite, sans césure au milieu des mots */}
             <p className="mt-1 leading-tight" style={{ ...DISPLAY, fontSize: (answers[i] ?? "").length > 18 ? 18 : (answers[i] ?? "").length > 10 ? 21 : 24, overflowWrap: "anywhere" }}>{answers[i] || "—"}</p>

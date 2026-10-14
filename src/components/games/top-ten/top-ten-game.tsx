@@ -5,10 +5,10 @@ import { useGame } from "@/lib/party/use-game";
 import { useGameStore } from "@/lib/stores/game-store";
 import type { GameProps } from "@/lib/games/types";
 import { cn } from "@/lib/utils";
-import { Mascot } from "@/components/Mascot";
+import { PlayerBlob } from "@/components/avatar/PlayerBlob";
 import { ConfettiBurst } from "@/components/ConfettiBurst";
 import {
-  ModeSelect, PlayersSetup, PassScreen, colorForIndex, type GameMode,
+  ModeSelect, PlayersSetup, PassScreen, type GameMode,
   DISPLAY, SoundButton, ZButton, ZCard, ZChip, ZChoice, ZLink, ZRanking, ZScreen, ZTitle, useScrollTopOn,
 } from "@/components/games/local-kit";
 import { ArrowDown, ArrowLeft, ArrowUp, Check, Eye, Flame, GripVertical, RefreshCw, Timer, Trophy, type LucideIcon } from "lucide-react";
@@ -310,7 +310,7 @@ function TopTenLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) {
                 style={{ background: "#fff", color: GAME_INK, border: `3px solid ${GAME_INK}`, boxShadow: `0 4px 0 ${GAME_INK}`, rotate: `${i % 2 ? 0.8 : -0.8}deg` }}>
                 <span className="grid h-11 min-w-11 shrink-0 place-items-center rounded-[14px] px-1 text-[22px]"
                   style={{ ...DISPLAY, background: hot > 0.66 ? "#FF3EA5" : hot > 0.33 ? "#FFD23F" : "#3DDC97", color: GAME_INK, border: `2.5px solid ${GAME_INK}` }}>{num}</span>
-                <Mascot size={34} color={colorForIndex(idx)} mood="happy" shadow={false} bob={false} />
+                <PlayerBlob name={players[idx]} colorIndex={idx} size={34} mood="happy" bob={false} />
                 <span className="min-w-0 flex-1 truncate text-[19px]" style={DISPLAY}>{players[idx]}</span>
               </div>
             );
@@ -322,7 +322,7 @@ function TopTenLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) {
           {perRound.map((p) => (
             <div key={p.i} className="flex items-center gap-3 rounded-[18px] px-3 py-2.5"
               style={{ background: p.perfect ? "#3DDC97" : "#FFF6E5", color: GAME_INK, border: `3px solid ${GAME_INK}`, boxShadow: `0 4px 0 ${GAME_INK}` }}>
-              <Mascot size={34} color={colorForIndex(p.i)} mood={p.perfect ? "laughing" : "happy"} shadow={false} bob={false} />
+              <PlayerBlob name={p.name} colorIndex={p.i} size={34} mood={p.perfect ? "laughing" : "happy"} bob={false} />
               <span className="min-w-0 flex-1 truncate text-[18px]" style={DISPLAY}>{p.name}</span>
               <span className="text-[14px] font-bold">{p.perfect ? t.perfect : t.pairs(p.correct, p.total)}</span>
               <span className="text-[22px]" style={DISPLAY}>+{p.points}</span>
@@ -989,7 +989,7 @@ function OrderingBoard({
                 <GripVertical size={20} strokeWidth={2.6} aria-hidden />
               </div>
               <span className="w-6 shrink-0 text-center text-[18px]" style={DISPLAY}>{i + 1}</span>
-              {colorOf && <Mascot size={30} color={colorForIndex(colorOf(id))} mood="happy" shadow={false} bob={false} />}
+              {colorOf && <PlayerBlob name={nameOf(id)} colorIndex={colorOf(id)} size={30} mood="happy" bob={false} />}
               {/* Prénom long : plus petit et sur 2 lignes (coupure au trait d'union) plutôt que « Jean-Chri… » */}
               <span className={`min-w-0 flex-1 ${nameOf(id).length > 10 ? "line-clamp-2 text-[15px] leading-[1.05]" : "truncate text-[18px]"}`} style={DISPLAY}>
                 {nameOf(id)}{isMe && t.me}

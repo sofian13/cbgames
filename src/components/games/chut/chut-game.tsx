@@ -7,6 +7,7 @@ import { getLang, useT } from "@/lib/i18n";
 import { adultDefault, sipsAllowed } from "@/lib/party-mood";
 import { playCombo, playSfx, preloadSfx, type SfxName } from "@/lib/sfx";
 import { Mascot } from "@/components/Mascot";
+import { PlayerBlob } from "@/components/avatar/PlayerBlob";
 import { ConfettiBurst } from "@/components/ConfettiBurst";
 import { GameIconButton, GameTopRight } from "@/components/games/game-icon-button";
 import { IdeaButton } from "@/components/games/idea-button";
@@ -758,7 +759,7 @@ export default function ChutGame({ onReturnToLobby }: GameProps) {
         <div className="flex flex-col items-center text-center">
           {last.cracked
             ? <ChutBlob size={150} color={colorForIndex(last.serious)} state="burst" />
-            : <Mascot size={120} color={colorForIndex(last.serious)} mood="cool" crown shadow={false} />}
+            : <PlayerBlob name={players[last.serious]} colorIndex={last.serious} size={120} mood="cool" crown />}
           <ZTitle size={last.cracked ? "clamp(52px, 16vw, 72px)" : "clamp(40px, 12vw, 54px)"} as="h1" className="mt-1" style={{ color: last.cracked ? ZZ.yellow : "#fff", WebkitTextStroke: `2.5px ${INK}`, textShadow: `4px 4px 0 ${INK}`, rotate: "-3deg" }}>
             {last.cracked ? t.cracked : t.survivedTitle}
           </ZTitle>
@@ -850,7 +851,7 @@ export default function ChutGame({ onReturnToLobby }: GameProps) {
             <button key={i} type="button" onClick={() => blame(i)}
               className="flex min-h-14 items-center gap-2 rounded-[18px] px-3 py-2 text-left shadow-[0_4px_0_#15082E] transition-[translate,box-shadow] active:translate-y-[3px] active:shadow-[0_1px_0_#15082E]"
               style={{ background: "#fff", color: INK, border: `3px solid ${INK}` }}>
-              <Mascot size={32} color={colorForIndex(i)} mood="laughing" bob={false} shadow={false} />
+              <PlayerBlob name={p} colorIndex={i} size={32} mood="laughing" bob={false} />
               <span className="min-w-0 flex-1 text-[17px] leading-tight" style={{ ...DISPLAY, overflowWrap: "anywhere" }}>{p}</span>
             </button>
           ))}
@@ -919,7 +920,7 @@ function MatchLine({ m, players }: { m: Match; players: string[] }) {
     <div className="flex items-center justify-between gap-2" style={{ color: INK }}>
       {[m.a, m.b].map((p, i) => (
         <div key={p} className={`flex min-w-0 flex-1 items-center gap-2 ${i ? "flex-row-reverse text-right" : ""}`}>
-          <Mascot size={34} color={colorForIndex(p)} mood={m.winner === p ? "cool" : m.winner != null ? "sad" : "happy"} crown={m.winner === p} bob={false} shadow={false} />
+          <PlayerBlob name={players[p]} colorIndex={p} size={34} mood={m.winner === p ? "cool" : m.winner != null ? "sad" : "happy"} crown={m.winner === p} bob={false} />
           <div className="min-w-0">
             <p className="truncate text-[17px] leading-tight" style={DISPLAY}>{players[p]}</p>
             <p className="text-[14px] font-bold">{played(p) ? t.sec(secs(held(p), t.dec)) : t.pending}</p>
@@ -1622,7 +1623,7 @@ function EndScreen({ players, mode, results, ko, tableCracks, tools, overlays, o
       <div className="mt-5 flex flex-col gap-3">
         {awards.map((a, i) => (
           <ZCard key={a.title} bg={a.bg} tilt={i % 2 ? 1.2 : -1.2} shadow={5} className="flex items-center gap-3 p-3">
-            <Mascot size={52} color={colorForIndex(a.p)} mood={a.mood} crown={i === 0} bob={false} shadow={false} />
+            <PlayerBlob name={players[a.p]} colorIndex={a.p} size={52} mood={a.mood} crown={i === 0} bob={false} />
             <div className="min-w-0 flex-1" style={{ color: inkOn(a.bg) }}>
               <p className="flex items-center gap-1.5 text-[14px] font-bold"><a.icon size={15} strokeWidth={2.8} aria-hidden /> {a.title}</p>
               <p className="truncate text-[24px] leading-tight" style={DISPLAY}>{players[a.p]}</p>

@@ -13,9 +13,10 @@
 import { useEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type ReactNode } from "react";
 import { sipsAllowed } from "@/lib/party-mood";
 import type { GameProps } from "@/lib/games/types";
-import { Mascot, MascotAvatar } from "@/components/Mascot";
+import { Mascot } from "@/components/Mascot";
+import { PlayerAvatar, PlayerBlob } from "@/components/avatar/PlayerBlob";
 import { ConfettiBurst } from "@/components/ConfettiBurst";
-import { PlayersSetup, PassScreen, colorForIndex } from "@/components/games/local-kit";
+import { PlayersSetup, PassScreen } from "@/components/games/local-kit";
 import { GameIconButton, GameInlineIcon, GameTopRight } from "@/components/games/game-icon-button";
 import { IdeaButton, RerollButton } from "@/components/games/idea-button";
 import { getLang, pick, useT } from "@/lib/i18n";
@@ -476,7 +477,7 @@ export default function TgvGame({ onReturnToLobby }: GameProps) {
         {chrome}
         <div className="mx-auto flex w-full max-w-md flex-1 flex-col items-center">
           <div className="flex items-center gap-2 rounded-full py-1 pl-1 pr-4" style={{ ...stk("#fff", 3, 2.5), color: INK, transform: "rotate(-2deg)" }}>
-            <MascotAvatar color={colorForIndex(currentIdx)} size={34} mood="wink" border={false} />
+            <PlayerAvatar name={currentName} colorIndex={currentIdx} size={34} mood="wink" border={false} />
             <span style={{ ...DISPLAY, fontSize: 22, lineHeight: 1 }}>{currentName}</span>
           </div>
           <Train total={numPiles} pileIdx={pileIdx} cleared={verdict === "win" && revealed ? pileIdx + 1 : pileIdx} />
@@ -538,7 +539,7 @@ export default function TgvGame({ onReturnToLobby }: GameProps) {
         <ConfettiBurst count={80} />
         <h1 className="text-center" style={{ ...DISPLAY, fontSize: 46, lineHeight: 0.95 }}>{t.arrived}</h1>
         <div className="relative mt-16 rounded-[26px] px-5 pb-5 pt-[72px] text-center" style={{ ...stk("#FFD23F", 6), color: INK, transform: "rotate(-2deg)", animation: "tgv-pop .5s ease-out" }}>
-          <div className="absolute -top-16 left-1/2 -translate-x-1/2"><Mascot size={96} color={colorForIndex(currentIdx)} mood="laughing" cheering crown shadow={false} /></div>
+          <div className="absolute -top-16 left-1/2 -translate-x-1/2"><PlayerBlob name={currentName} colorIndex={currentIdx} size={96} mood="laughing" cheering crown /></div>
           <p style={{ ...DISPLAY, fontSize: nameSize(currentName, 40), lineHeight: 1, overflowWrap: "anywhere" }}>{currentName}</p>
           <p className="mt-2 text-[16px] font-semibold leading-snug">{sipsOk ? t.winNote : t.winNoteNoSips}</p>
         </div>
@@ -561,7 +562,7 @@ export default function TgvGame({ onReturnToLobby }: GameProps) {
       <p className="mt-2 text-[16px] font-semibold" style={{ color: "rgba(255,255,255,0.82)" }}>{t.summary}</p>
       {top && (
         <div className="relative mt-16 rounded-[26px] px-5 pb-4 pt-[52px] text-center" style={{ ...stk("#3DDC97", 6), color: INK, transform: "rotate(-2deg)" }}>
-          <div className="absolute -top-[62px] left-1/2 -translate-x-1/2"><Mascot size={76} color={colorForIndex(top.i)} mood="cool" crown arms shadow={false} /></div>
+          <div className="absolute -top-[62px] left-1/2 -translate-x-1/2"><PlayerBlob name={top.name} colorIndex={top.i} size={76} mood="cool" crown arms /></div>
           <p className="text-[15px] font-bold">{t.bestDriver}</p>
           <p style={{ ...DISPLAY, fontSize: nameSize(top.name, 40), lineHeight: 1, overflowWrap: "anywhere" }}>{top.name}</p>
           <p className="mt-1 text-[15px] font-bold">{t.penalties(top.losses)}</p>
@@ -571,7 +572,7 @@ export default function TgvGame({ onReturnToLobby }: GameProps) {
         {ranking.slice(1).map((p, k) => (
           <div key={p.i} className="flex items-center gap-3 rounded-[18px] px-3.5" style={{ ...stk("#fff", 3, 2.5), color: INK, minHeight: 54, transform: `rotate(${k % 2 ? 0.8 : -0.8}deg)` }}>
             <span className="w-7 text-[18px]" style={DISPLAY}>{k + 2}</span>
-            <MascotAvatar color={colorForIndex(p.i)} size={32} mood="happy" />
+            <PlayerAvatar name={p.name} colorIndex={p.i} size={32} mood="happy" />
             <span className="min-w-0 flex-1 truncate text-[17px] font-bold">{p.name}</span>
             <span className="text-[15px] font-bold">{t.penalties(p.losses)}</span>
           </div>
@@ -709,7 +710,7 @@ function PenaltyOverlay({
       <div className="mx-auto flex w-full max-w-md flex-1 flex-col items-center justify-center text-center">
         <p className="text-[17px] font-bold" style={{ color: "rgba(255,255,255,0.85)" }}>{t.penaltyFor}</p>
         <div className="mt-2 flex items-center gap-2.5 rounded-full py-1.5 pl-1.5 pr-5" style={{ ...stk("#fff", 4), color: INK, transform: "rotate(-2deg)" }}>
-          <MascotAvatar color={colorForIndex(colorIndex)} size={40} mood="shocked" />
+          <PlayerAvatar name={name} colorIndex={colorIndex} size={40} mood="shocked" />
           <span style={{ ...DISPLAY, fontSize: nameSize(name, 30, 96), lineHeight: 1, overflowWrap: "anywhere" }}>{name}</span>
         </div>
         {spin ? (

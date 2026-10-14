@@ -168,6 +168,20 @@ function eyes(style: string, c: { body: string; deep: string }, hide: { L: boole
   }
 }
 
+/** Yeux « éliminé » (croix), à la place des yeux du look — comme le blob par défaut. */
+function deadEyes(): ReactNode {
+  return (
+    <g stroke={INK} strokeWidth={5} strokeLinecap="round">
+      {[L0, R0].map((e) => (
+        <path key={e.x} d={`M${e.x - 8} ${e.y - 8} L${e.x + 8} ${e.y + 8} M${e.x + 8} ${e.y - 8} L${e.x - 8} ${e.y + 8}`} />
+      ))}
+    </g>
+  );
+}
+
+/** Accessoires du visage qui masquent les yeux ou la bouche : retirés quand le perso est éliminé (lisibilité). */
+const FACE_HIDDEN_WHEN_DEAD = new Set(["shades", "patch", "mask", "goggles"]);
+
 /* ───────── Bouche (selon l'humeur du moment) ───────── */
 function mouth(mood: MascotMood, clipId: string): ReactNode {
   const mx = 60, my = 80;
@@ -194,9 +208,11 @@ function mouth(mood: MascotMood, clipId: string): ReactNode {
         </g>
       );
     }
+    case "dead":
+      // Éliminé : bouche en zigzag (comme le blob par défaut)
+      return <path d={`M${mx - 11} ${my + 5} L${mx - 6} ${my + 1} L${mx - 2} ${my + 7} L${mx + 2} ${my + 1} L${mx + 6} ${my + 7} L${mx + 11} ${my + 3}`} fill="none" stroke={INK} strokeWidth={4} strokeLinecap="round" strokeLinejoin="round" />;
     case "sad":
     case "angry":
-    case "dead":
       return <path d={`M${mx - 9} ${my + 8} Q${mx} ${my - 1} ${mx + 9} ${my + 8}`} fill="none" stroke={INK} strokeWidth={4} strokeLinecap="round" />;
     case "love":
     case "kiss":
@@ -755,10 +771,13 @@ export function AvatarSvg({ look, size, mood = "happy", animate = false, shadow 
   const top = cos.top ? 14 : HAIR_TOP[look.hair] ?? 14;
   const hatId = cos.top ? "none" : look.hat;
   const cover = HAT_COVER[hatId];
-  const face = cos.face ? {} : faceLayer(look.face, c, look.hair !== "none" ? hc : "#5A3420", clip);
+  // Éliminé (mood « dead ») : yeux en croix + bouche zigzag, l'accessoire qui cache le visage est retiré
+  const dead = mood === "dead";
+  const faceId = dead && FACE_HIDDEN_WHEN_DEAD.has(look.face) ? "none" : look.face;
+  const face = cos.face ? {} : faceLayer(faceId, c, look.hair !== "none" ? hc : "#5A3420", clip);
   const extra = extraLayers(look.extra, c, top, clip);
-  const hideEyes = { L: !cos.face && look.face === "shades", R: !cos.face && (look.face === "shades" || look.face === "patch") };
-  const hideMouth = !cos.face && look.face === "mask";
+  const hideEyes = { L: !cos.face && faceId === "shades", R: !cos.face && (faceId === "shades" || faceId === "patch") };
+  const hideMouth = !cos.face && faceId === "mask";
   // Couvre-chef : les cheveux au-dessus du bord sont rangés dessous
   const underHat = (n: ReactNode) => (cover !== undefined && n ? <g clipPath={`url(#${hatClip})`}>{n}</g> : n);
   const sw = Math.max(3.2, 300 / size);
@@ -800,7 +819,7 @@ export function AvatarSvg({ look, size, mood = "happy", animate = false, shadow 
       <path d={SHAPE} fill="none" stroke={INK} strokeWidth={sw} strokeLinejoin="round" />
 
       {/* Visage */}
-      {eyes(look.eyes, c, hideEyes, animate)}
+      {dead ? deadEyes() : eyes(look.eyes, c, hideEyes, animate)}
       {!hideMouth && mouth(mood, clip)}
       {face.over}
       {cos.face}

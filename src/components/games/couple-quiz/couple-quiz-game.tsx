@@ -14,6 +14,7 @@ import { useGame } from "@/lib/party/use-game";
 import { useGameStore } from "@/lib/stores/game-store";
 import { LocalShell, ModeSelect, colorForIndex, type GameMode } from "@/components/games/local-kit";
 import { Mascot, MASCOT_PALETTE } from "@/components/Mascot";
+import { PlayerBlob } from "@/components/avatar/PlayerBlob";
 import { ArrowLeft, Brain, Check, Flame, Heart, Hourglass, House, MessageCircle, Pizza, RotateCcw, Sparkles, Volume2, VolumeX, type LucideIcon } from "lucide-react";
 import { GameIconButton, GameInlineIcon, GameTopRight } from "@/components/games/game-icon-button";
 import { IdeaButton, RerollButton } from "@/components/games/idea-button";
@@ -250,7 +251,7 @@ function CoupleQuizLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) 
             return (
               <div key={i} className="flex flex-col items-center" style={{ transform: `rotate(${i ? 2 : -2}deg)` }}>
                 <div className="relative z-[1] -mb-5">
-                  <Mascot size={72} color={colorForIndex(i)} mood={names[i].trim() ? "love" : "thinking"} shadow={false} delay={i * 0.3} />
+                  <PlayerBlob name={names[i].trim()} colorIndex={i} size={72} mood={names[i].trim() ? "love" : "thinking"} delay={i * 0.3} />
                 </div>
                 <input
                   value={names[i]}
@@ -373,7 +374,7 @@ function CoupleQuizLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) 
         <QuestionChip round={round} total={deck.length} />
         <p className="mt-6 text-[18px] font-semibold text-white/85">{t.passTo}</p>
         <div className="relative z-[1] -mb-6 mt-2">
-          <Mascot size={124} color={colorForIndex(to)} mood="wink" arms shadow={false} />
+          <PlayerBlob name={names[to]} colorIndex={to} size={124} mood="wink" arms headroom />
         </div>
         <h1
           className="max-w-full rounded-[24px] px-6 pb-3 pt-7 text-center"
@@ -427,8 +428,8 @@ function CoupleQuizLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) 
         footer={<BigBtn bg="#FFD23F" onClick={nextRound}>{last ? t.seeResult : t.nextQuestion}</BigBtn>}
       >
         <div className="flex items-end justify-center gap-1">
-          <Mascot size={78} color={colorForIndex(0)} mood={correct ? "love" : "shocked"} shadow={false} />
-          <Mascot size={78} color={colorForIndex(1)} mood={correct ? "kiss" : "sad"} shadow={false} delay={0.3} />
+          <PlayerBlob name={names[0]} colorIndex={0} size={78} mood={correct ? "love" : "shocked"} />
+          <PlayerBlob name={names[1]} colorIndex={1} size={78} mood={correct ? "kiss" : "sad"} delay={0.3} />
         </div>
         <h1 className="mt-2 text-center" style={{ ...DISPLAY, fontSize: "clamp(40px, 12vw, 56px)", lineHeight: 0.95, color: correct ? "#3DDC97" : "#FF6B5B" }}>
           {correct ? t.bull : t.missed}
@@ -477,14 +478,14 @@ function CoupleQuizLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) 
         <div className="flex flex-col items-center">
           <p className="text-[18px] font-semibold text-white/85">{t.rate}</p>
           <div className="mt-3 flex items-end justify-center gap-1">
-            <Mascot size={60} color={colorForIndex(0)} mood={pct >= 45 ? "love" : "sad"} shadow={false} />
+            <PlayerBlob name={names[0]} colorIndex={0} size={60} mood={pct >= 45 ? "love" : "sad"} />
             <div
               className="rounded-[26px] px-6 pb-2 pt-3"
               style={{ ...sticker(verdict.c, 6), ...DISPLAY, color: INK, fontSize: "clamp(46px, 14vw, 64px)", lineHeight: 1, transform: "rotate(-3deg)", whiteSpace: "nowrap" }}
             >
               {pct}&nbsp;%
             </div>
-            <Mascot size={60} color={colorForIndex(1)} mood={pct >= 45 ? "kiss" : "sad"} shadow={false} delay={0.3} />
+            <PlayerBlob name={names[1]} colorIndex={1} size={60} mood={pct >= 45 ? "kiss" : "sad"} delay={0.3} />
           </div>
           <h1 className="mt-5 text-center" style={{ ...DISPLAY, fontSize: 34, lineHeight: 1 }}>{verdict.t}</h1>
           <p className="mt-2 text-[16px] font-semibold text-white/80">

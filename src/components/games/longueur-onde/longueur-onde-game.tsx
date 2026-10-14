@@ -6,9 +6,10 @@ import { useGameStore } from "@/lib/stores/game-store";
 import type { GameProps } from "@/lib/games/types";
 import { useKeyedState } from "@/lib/use-keyed-state";
 import { Mascot, MascotAvatar, MASCOT_PALETTE, type MascotColor } from "@/components/Mascot";
+import { PlayerBlob } from "@/components/avatar/PlayerBlob";
 import { ConfettiBurst, Sparkles } from "@/components/ConfettiBurst";
 import {
-  ModeSelect, PlayersSetup, PassScreen, colorForIndex, type GameMode,
+  ModeSelect, PlayersSetup, PassScreen, type GameMode,
   DISPLAY, ZButton, ZCard, ZChip, ZLink, ZRanking, ZScreen, ZTitle, useScrollTopOn,
 } from "@/components/games/local-kit";
 import { SynthwaveScreen, NeonConsole, CassetteInput, SpectrumPair, WAVE_COLOR } from "@/components/games/longueur-onde/synthwave";
@@ -287,7 +288,7 @@ function LongueurOndeLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }
         <ZTitle size={32}>{t.yourTurn}</ZTitle>
 
         <ZCard bg="#FFD23F" tilt={-1.5} shadow={5} radius={22} className="mt-3 flex items-center gap-3 px-4 py-2.5">
-          <Mascot size={44} color={colorForIndex(psychic)} mood="wink" shadow={false} bob={false} />
+          <PlayerBlob name={name} colorIndex={psychic} size={44} mood="wink" bob={false} />
           {clue ? (
             <div className="min-w-0">
               <p className="text-[15px] font-bold">{t.clueOf(name)}</p>
@@ -341,7 +342,7 @@ function LongueurOndeLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }
           {shown && (
             <ZCard bg={pts > 0 ? "#FF3EA5" : "#fff"} tilt={-2} shadow={6} radius={24} className="flex items-center gap-3 px-5 py-3"
               style={{ animation: "cur-pop .45s cubic-bezier(.2,1.6,.4,1) both" }}>
-              <Mascot size={52} color={colorForIndex(psychic)} mood={bull ? "laughing" : pts ? "happy" : "sad"} shadow={false} bob={false} />
+              <PlayerBlob name={players[psychic]} colorIndex={psychic} size={52} mood={bull ? "laughing" : pts ? "happy" : "sad"} bob={false} />
               <div>
                 <p className="text-[44px] leading-none" style={DISPLAY}>{pts > 0 ? `+${pts}` : t.zeroPoint}</p>
                 <p className="text-[15px] font-bold">{pts > 0 ? t.pointsFor(name) : t.tooBad}</p>

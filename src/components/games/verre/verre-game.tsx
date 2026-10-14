@@ -7,6 +7,7 @@ import { PlayersSetup, PassScreen, colorForIndex, DISPLAY, ZButton, ZCard, ZChip
 import { IdeaButton, RerollButton } from "../idea-button";
 import { GameInlineIcon } from "../game-icon-button";
 import { Mascot, MASCOT_PALETTE } from "@/components/Mascot";
+import { PlayerBlob } from "@/components/avatar/PlayerBlob";
 import { ConfettiBurst } from "@/components/ConfettiBurst";
 import { sipsAllowed } from "@/lib/party-mood";
 import { getLang, pick, useT } from "@/lib/i18n";
@@ -341,7 +342,7 @@ export default function VerreGame({ onReturnToLobby }: GameProps) {
         <div className="relative mx-auto mt-2 w-full max-w-sm" style={{ aspectRatio: "300 / 150" }}>
           <SpilledGlass color={result.liquid.body} top={result.liquid.top} deep={result.liquid.deep} />
           <div className="absolute" style={{ right: "1%", bottom: "24%" }}>
-            <Mascot size={62} color={colorForIndex(result.loser)} mood="shocked" arms shadow={false} />
+            <PlayerBlob name={name} colorIndex={result.loser} size={62} mood="shocked" arms />
           </div>
         </div>
         {result.lost > 0 && (
@@ -418,7 +419,7 @@ export default function VerreGame({ onReturnToLobby }: GameProps) {
       <Tools />
       <ConfettiBurst count={60} />
       <div className="flex justify-center">
-        <Mascot size={118} color={colorForIndex(best?.i ?? 0)} mood="laughing" crown arms />
+        <PlayerBlob name={best?.name} colorIndex={best?.i ?? 0} size={118} mood="laughing" crown arms shadow />
       </div>
       <h1 className="mt-3 text-center text-[clamp(38px,11vw,54px)] leading-[0.95]" style={{ ...DISPLAY, textShadow: `4px 4px 0 ${INK}`, overflowWrap: "anywhere" }}>
         {t.winner(best?.name ?? "")}

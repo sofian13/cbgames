@@ -7,10 +7,9 @@
  */
 
 import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
-import { MascotAvatar } from "@/components/Mascot";
+import { PlayerAvatar, PlayerBlob, usePlayerLook } from "@/components/avatar/PlayerBlob";
 import { RoleBlob } from "./lg-role-blob";
 import { RoleBurst } from "./lg-role-fx";
-import { colorForIndex } from "@/components/games/local-kit";
 import { ROLES, SPECIALS, type Player, type RoleId } from "./lg-local-data";
 import { Check, X } from "lucide-react";
 import { GameIconButton } from "@/components/games/game-icon-button";
@@ -207,7 +206,7 @@ export function PickList({
             className="flex w-full items-center gap-3 rounded-[20px] px-3 text-left transition-transform active:translate-y-[2px] disabled:opacity-50"
             style={{ ...stk(on ? YELLOW : "#fff", on ? 4 : 3), color: INK, minHeight: 60, transform: on ? "rotate(-1deg)" : undefined }}
           >
-            <MascotAvatar color={colorForIndex(p.id)} size={40} mood={on ? "shocked" : "neutral"} border={false} />
+            <PlayerAvatar name={p.name} colorIndex={p.id} size={40} mood={on ? "shocked" : "neutral"} border={false} />
             <span className="flex-1 truncate" style={{ ...DISPLAY, fontSize: 22, letterSpacing: "-0.01em" }}>{p.name}</span>
             {n && <span className="text-[14px] font-semibold">{n}</span>}
             {on && (
@@ -321,6 +320,27 @@ export function RulesContent() {
   );
 }
 
+/**
+ * Joueur dont le rôle est révélé (morts, « Qui était qui ») : son perso s'il en a un
+ * (mort = yeux/bouche « éliminé », un peu translucide, et le petit blob de rôle en badge),
+ * sinon le blob costumé du rôle, comme avant.
+ */
+export function RevealedBlob({ p, size, reveal = false, delay = 0, ghost = !p.alive, badge: withBadge = true }: { p: Player; size: number; reveal?: boolean; delay?: number; ghost?: boolean; badge?: boolean }) {
+  const look = usePlayerLook(p.name);
+  if (!look) return <RoleBlob role={p.role} size={size} state={ghost ? "ghost" : "idle"} still={!reveal} reveal={reveal} delay={delay} />;
+  const badge = Math.round(size * 0.46);
+  return (
+    <div className="relative shrink-0" style={{ width: size, height: size * 1.15 }}>
+      <PlayerBlob name={p.name} colorIndex={p.id} size={size} mood={ghost ? "dead" : "happy"} bob={reveal} style={ghost ? { opacity: 0.78 } : undefined} />
+      {withBadge && (
+        <div className="absolute" style={{ right: -badge * 0.3, bottom: -badge * 0.1 }}>
+          <RoleBlob role={p.role} size={badge} still />
+        </div>
+      )}
+    </div>
+  );
+}
+
 /** Ligne de joueur pour les récaps (rôle révélé) */
 export function PlayerRow({ p, lover = false, dim = false }: { p: Player; lover?: boolean; dim?: boolean }) {
   const r = ROLES[p.role];
@@ -328,7 +348,7 @@ export function PlayerRow({ p, lover = false, dim = false }: { p: Player; lover?
   const name = useT(ROLE_TEXT)[p.role].name;
   return (
     <div className="flex items-center gap-3 rounded-[18px] px-3 py-2" style={{ ...stk("#fff", 3), color: INK, opacity: dim ? 0.6 : 1, minHeight: 56 }}>
-      <RoleBlob role={p.role} size={46} state={p.alive ? "idle" : "ghost"} still />
+      <RevealedBlob p={p} size={46} badge={false} />
       <span className="min-w-0 flex-1 truncate text-[17px] font-bold" style={{ textDecoration: p.alive ? "none" : "line-through" }}>
         {p.name}{lover && <span style={{ color: PINK }}> · {t.lover}</span>}
       </span>

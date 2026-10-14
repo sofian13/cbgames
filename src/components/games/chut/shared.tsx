@@ -3,10 +3,10 @@
 import { useSyncExternalStore, type ReactNode } from "react";
 import { CupSoda, Drama } from "lucide-react";
 import { useT } from "@/lib/i18n";
-import { Mascot } from "@/components/Mascot";
+import { PlayerBlob } from "@/components/avatar/PlayerBlob";
 import { GameInlineIcon } from "@/components/games/game-icon-button";
 import { RerollButton } from "@/components/games/idea-button";
-import { DISPLAY, ZCard, ZTitle, ZZ, colorForIndex } from "@/components/games/local-kit";
+import { DISPLAY, ZCard, ZTitle, ZZ } from "@/components/games/local-kit";
 import { CHUT_STR } from "./i18n";
 
 /** Briques communes à tous les modes de « Chut ! ». */
@@ -32,7 +32,7 @@ export function SentenceCard({ name, colorIndex, sentence, onReroll, title }: {
   return (
     <ZCard bg={ZZ.cream} className="mt-5 p-4 text-center" shadow={6} radius={26} tilt={-1}>
       <div className="flex items-center justify-center gap-2">
-        <Mascot size={34} color={colorForIndex(colorIndex)} mood="dead" bob={false} shadow={false} />
+        <PlayerBlob name={name} colorIndex={colorIndex} size={34} mood="dead" bob={false} />
         <span className="min-w-0 text-[22px] leading-tight" style={{ ...DISPLAY, overflowWrap: "anywhere" }}>{title ?? t.penaltyFor(name)}</span>
       </div>
       {sentence.sips != null ? (

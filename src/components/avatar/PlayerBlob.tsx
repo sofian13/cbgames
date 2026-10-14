@@ -1,12 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useSyncExternalStore, type CSSProperties } from "react";
-import { Mascot, type MascotMood } from "@/components/Mascot";
+import { Mascot, MascotAvatar, type MascotColor, type MascotMood } from "@/components/Mascot";
 import { useUnlocked } from "@/lib/entitlements";
-import { freeLook, type AvatarLook } from "@/lib/avatar/look";
+import { AVATAR_PALETTE, freeLook, type AvatarLook } from "@/lib/avatar/look";
 import { getBand, getPlayerLook, subscribePlayers, type BandEntry } from "@/lib/saved-players";
 import { colorForIndexSafe } from "./colors";
-import { AvatarBlob } from "./AvatarBlob";
+import { AvatarBlob, type AvatarCostumeLayers } from "./AvatarBlob";
 import { playPersoVoice, talkMood, usePersoVoice, useSpeaking, voiceKey } from "@/lib/avatar/voice";
 import { VoiceBadge, hopEl } from "./VoiceUI";
 
@@ -64,8 +64,24 @@ export function useBand(): BandEntry[] {
   return useSyncExternalStore(subscribePlayers, bandSnapshot, () => bandCache);
 }
 
+/** Couronne du gagnant sur un perso (repère 120×120), posée à la place du chapeau
+ *  (au-dessus de l'arceau s'il porte un casque audio). */
+const crownAt = (y: number): AvatarCostumeLayers => ({
+  top: (
+    <g transform={`translate(60 ${y}) rotate(-8)`}>
+      <path d="M-20 4 L-24 -16 L-11 -6 L0 -22 L11 -6 L24 -16 L20 4Z" fill="#FFD23F" stroke="#15082E" strokeWidth={3.4} strokeLinejoin="round" />
+      <circle cx={0} cy={-6} r={3.2} fill="#FF3EA5" stroke="#15082E" strokeWidth={1.6} />
+    </g>
+  ),
+});
+const CROWN = crownAt(12);
+const CROWN_HIGH = crownAt(-3);
+const crownCostume = () => CROWN;
+const crownHighCostume = () => CROWN_HIGH;
+
 export function PlayerBlob({
-  name, colorIndex = 0, size = 56, mood = "happy", arms, bob, shadow = false, delay, animate = true, style, className, talk = false, autoTalk = false,
+  name, colorIndex = 0, color, size = 56, mood = "happy", arms, bob, shadow = false, delay, animate = true, style, className, talk = false, autoTalk = false,
+  crown = false, cheering = false, sweat, sparkle, blink, headroom = false,
 }: {
   name?: string | null;
   colorIndex?: number;
@@ -83,6 +99,18 @@ export function PlayerBlob({
   talk?: boolean;
   /** Dit son son une fois à l'apparition (réglage « Voix des persos en jeu ») */
   autoTalk?: boolean;
+  /** Couleur forcée du blob par défaut (sinon : couleur du rang colorIndex) */
+  color?: MascotColor;
+  /** Couronne du gagnant (blob par défaut ET perso) */
+  crown?: boolean;
+  /** Saute de joie (blob par défaut ET perso) */
+  cheering?: boolean;
+  /** Options du blob par défaut seulement (sans effet sur un perso) */
+  sweat?: boolean;
+  sparkle?: boolean;
+  blink?: boolean;
+  /** Perso seulement : réserve de la place au-dessus (cheveux, chapeau) quand un texte est juste au-dessus */
+  headroom?: boolean;
 }) {
   const look = usePlayerLook(name);
   const voice = usePersoVoice(talk ? name : null);
@@ -90,7 +118,7 @@ export function PlayerBlob({
   const m = talkingMood ?? mood;
   const tap = talk && voice && name ? { onClick: () => void playPersoVoice(name), role: "button" as const, tabIndex: 0, "aria-label": name } : {};
   if (!look) {
-    const blob = <Mascot size={size} color={colorForIndexSafe(colorIndex)} mood={m} arms={arms} bob={bob} shadow={shadow} delay={delay} style={talk || autoTalk ? undefined : style} className={talk || autoTalk ? undefined : className} />;
+    const blob = <Mascot size={size} color={color ?? colorForIndexSafe(colorIndex)} mood={m} arms={arms} bob={bob} shadow={shadow} delay={delay} crown={crown} cheering={cheering} sweat={sweat} sparkle={sparkle} blink={blink} style={talk || autoTalk ? undefined : style} className={talk || autoTalk ? undefined : className} />;
     if (!talk && !autoTalk) return blob;
     return (
       <div ref={ref} className={className} style={{ position: "relative", display: "inline-block", flexShrink: 0, ...style }} {...tap}>
@@ -100,13 +128,47 @@ export function PlayerBlob({
     );
   }
   // Même encombrement que le Mascot (largeur s, hauteur 1,15 s) : rien ne bouge dans la mise en page
+  // (+ la place de la couronne au-dessus, comme le Mascot couronné)
   const k = size * 1.15;
+  const crownH = crown ? size * 0.3 : 0;
+  const cheer = cheering && !talking ? { animation: "mascot-cheer 0.9s ease-in-out infinite", animationDelay: `${delay ?? 0}s`, transformOrigin: "50% 80%" } : null;
   return (
-    <div ref={ref} className={className} style={{ position: "relative", width: size, height: k, flexShrink: 0, ...style }} {...tap}>
+    <div ref={ref} className={[cheer ? "pb-cheer" : "", className ?? ""].join(" ").trim() || undefined} style={{ position: "relative", width: size, height: k + crownH, flexShrink: 0, marginTop: headroom ? size * 0.2 : undefined, ...cheer, ...style }} {...tap}>
+      {cheer && <style>{"@media (prefers-reduced-motion: reduce){.pb-cheer{animation:none!important}}"}</style>}
       <div style={{ position: "absolute", left: (size - k) / 2, bottom: -k * 0.04 }}>
-        <AvatarBlob look={look} size={k} mood={m} animate={animate && bob !== false && !talking} />
+        <AvatarBlob look={look} size={k} mood={m} animate={animate && bob !== false && !talking && !cheer} costume={crown ? (look.extra === "headphones" ? crownHighCostume : crownCostume) : undefined} />
       </div>
       {talk && voice && <VoiceBadge size={Math.max(16, Math.round(size * 0.3))} />}
+    </div>
+  );
+}
+
+/**
+ * Pastille ronde d'un joueur (équivalent de MascotAvatar) : son perso s'il en a un,
+ * sinon la pastille habituelle. Même encombrement (size × size).
+ */
+export function PlayerAvatar({ name, colorIndex = 0, color, size = 44, mood = "happy", border = true }: {
+  name?: string | null;
+  colorIndex?: number;
+  color?: MascotColor;
+  size?: number;
+  mood?: MascotMood;
+  border?: boolean;
+}) {
+  const look = usePlayerLook(name);
+  if (!look) return <MascotAvatar color={color ?? colorForIndexSafe(colorIndex)} size={size} mood={mood} border={border} />;
+  const c = AVATAR_PALETTE[look.color] ?? AVATAR_PALETTE.pink;
+  const k = size * 0.96;
+  return (
+    <div style={{
+      width: size, height: size, borderRadius: "50%", position: "relative", flexShrink: 0, overflow: "hidden",
+      background: `radial-gradient(circle at 30% 30%, ${c.hi}, ${c.body} 45%, ${c.deep})`,
+      border: border ? `${Math.max(2, size * 0.06)}px solid white` : "none",
+      boxShadow: `0 4px 12px ${c.body}66`,
+    }}>
+      <div style={{ position: "absolute", left: "50%", top: "50%", marginLeft: -k / 2, marginTop: -k * 0.42 }}>
+        <AvatarBlob look={look} size={k} mood={mood} animate={false} />
+      </div>
     </div>
   );
 }

@@ -11,7 +11,8 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import type { GameProps } from "@/lib/games/types";
 import { PlayersSetup, PassScreen, colorForIndex } from "@/components/games/local-kit";
-import { Mascot, MascotAvatar, MASCOT_PALETTE, type MascotColor, type MascotMood } from "@/components/Mascot";
+import { MASCOT_PALETTE, type MascotColor, type MascotMood } from "@/components/Mascot";
+import { PlayerAvatar, PlayerBlob, usePlayerLook } from "@/components/avatar/PlayerBlob";
 import { ConfettiBurst } from "@/components/ConfettiBurst";
 import { playCombo, playSfx, preloadSfx } from "@/lib/sfx";
 import { IdeaButton, RerollButton } from "@/components/games/idea-button";
@@ -190,26 +191,30 @@ function useCountdown(target: number, run: boolean, dur = 2600) {
 }
 
 // ── Blob avec auréole (pur) ou cornes (pas pur) ──
-function PureBlob({ color, purity, size = 120, show = true, cheering = false }: { color: MascotColor; purity: number; size?: number; show?: boolean; cheering?: boolean }) {
+function PureBlob({ name, color, purity, size = 120, show = true, cheering = false }: { name?: string; color: MascotColor; purity: number; size?: number; show?: boolean; cheering?: boolean }) {
   const halo = show && purity >= 60;
   const horns = show && purity < 40;
   const s = size;
+  // Perso : ses cheveux / chapeau dépassent au-dessus → un peu plus petit, posé en bas du même cadre
+  const look = usePlayerLook(name);
+  const ps = look ? Math.round(s * 0.86) : s;
   return (
     <div style={{ position: "relative", width: s, height: s * 1.15, animation: "pur-bob 2.4s ease-in-out infinite" }}>
       {horns && (
         <>
-          <div className="pur-pop" style={{ position: "absolute", top: -s * 0.06, left: s * 0.14, width: s * 0.22, height: s * 0.32, zIndex: 0, transform: "rotate(-18deg)", filter: `drop-shadow(3px 3px 0 ${INK})` }}>
+          <div className="pur-pop" style={{ position: "absolute", top: s * (look ? 0.02 : -0.06), left: s * 0.14, width: s * 0.22, height: s * 0.32, zIndex: look ? 2 : 0, transform: "rotate(-18deg)", filter: `drop-shadow(3px 3px 0 ${INK})` }}>
             <div style={{ width: "100%", height: "100%", background: "linear-gradient(180deg, #FF2D2D, #A0101E)", clipPath: "polygon(50% 0%, 100% 100%, 0% 100%)" }} />
           </div>
-          <div className="pur-pop" style={{ position: "absolute", top: -s * 0.06, right: s * 0.14, width: s * 0.22, height: s * 0.32, zIndex: 0, transform: "rotate(18deg)", filter: `drop-shadow(3px 3px 0 ${INK})` }}>
+          <div className="pur-pop" style={{ position: "absolute", top: s * (look ? 0.02 : -0.06), right: s * 0.14, width: s * 0.22, height: s * 0.32, zIndex: look ? 2 : 0, transform: "rotate(18deg)", filter: `drop-shadow(3px 3px 0 ${INK})` }}>
             <div style={{ width: "100%", height: "100%", background: "linear-gradient(180deg, #FF2D2D, #A0101E)", clipPath: "polygon(50% 0%, 100% 100%, 0% 100%)" }} />
           </div>
         </>
       )}
-      <Mascot size={s} color={color} mood={show ? moodFor(purity) : "neutral"} bob={false} arms cheering={cheering} sparkle={show && purity >= 80} />
+      <PlayerBlob name={name} color={color} size={ps} mood={show ? moodFor(purity) : "neutral"} bob={false} arms cheering={cheering} sparkle={show && purity >= 80} shadow
+        style={look ? { position: "absolute", left: (s - ps) / 2, bottom: 0 } : undefined} />
       {halo && (
         <div className="pur-halo" style={{
-          position: "absolute", top: -s * 0.1, left: "50%", width: s * 0.62, height: s * 0.17, marginLeft: -s * 0.31,
+          position: "absolute", top: -s * (look ? 0.08 : 0.1), left: "50%", width: s * 0.62, height: s * 0.17, marginLeft: -s * 0.31,
           border: `${Math.max(4, s * 0.055)}px solid #FFE36B`, borderRadius: "50%", zIndex: 5,
           boxShadow: `0 0 16px rgba(255,227,107,0.9), 3px 3px 0 ${INK}`,
         }} />
@@ -614,7 +619,7 @@ export default function PureteGame({ onReturnToLobby }: GameProps) {
         <RulesButton />
         <div className="mb-3 flex w-full max-w-md items-center gap-3">
           <div style={{ transform: flash === "oui" ? "rotate(-8deg) scale(1.08)" : flash === "non" ? "translateY(-6px)" : undefined, transition: "transform .2s" }}>
-            <PureBlob color={colorForIndex(p)} purity={flash === "oui" ? 0 : flash === "non" ? 100 : 50} size={72} show={flash !== null} />
+            <PureBlob name={players[p]} color={colorForIndex(p)} purity={flash === "oui" ? 0 : flash === "non" ? 100 : 50} size={72} show={flash !== null} />
           </div>
           <div className="min-w-0">
             <div className="truncate text-[28px] leading-none" style={DISPLAY}>{players[p]}</div>
@@ -654,8 +659,8 @@ export default function PureteGame({ onReturnToLobby }: GameProps) {
       <Screen bg={YELLOW} center>
         <RulesButton />
         <div className="flex items-end gap-2">
-          {players.slice(0, 5).map((_, i) => (
-            <PureBlob key={i} color={colorForIndex(i)} purity={50} size={58} show={false} />
+          {players.slice(0, 5).map((pn, i) => (
+            <PureBlob key={i} name={pn} color={colorForIndex(i)} purity={50} size={58} show={false} />
           ))}
         </div>
         {mode === "solo" ? (
@@ -724,7 +729,7 @@ export default function PureteGame({ onReturnToLobby }: GameProps) {
                   <button key={pi} onClick={() => togglePlayer(pi)} aria-pressed={on}
                     className="pur-btn flex min-h-[48px] items-center gap-2 py-1.5 pl-1.5 pr-3.5 text-[17px]"
                     style={{ ...block(on ? RED : "#fff", 999, on ? 3 : 2), color: on ? "#fff" : INK, ...DISPLAY }}>
-                    <MascotAvatar color={colorForIndex(pi)} size={34} mood={on ? "sus" : "happy"} border={false} />
+                    <PlayerAvatar name={name} colorIndex={pi} size={34} mood={on ? "sus" : "happy"} border={false} />
                     {name}
                   </button>
                 );
@@ -806,7 +811,7 @@ export default function PureteGame({ onReturnToLobby }: GameProps) {
             return (
               <div key={pi} className="pur-rise flex items-center gap-3 p-3" style={{ ...block(rank === 0 ? YELLOW : CREAM, 20, 4), animationDelay: `${rank * 0.08}s` }}>
                 <span className="w-7 text-center text-[24px]" style={DISPLAY}>{rank + 1}</span>
-                <MascotAvatar color={colorForIndex(pi)} size={42} mood={moodFor(pur)} border={false} />
+                <PlayerAvatar name={players[pi]} colorIndex={pi} size={42} mood={moodFor(pur)} border={false} />
                 <div className="min-w-0 flex-1">
                   <div className="flex items-baseline justify-between gap-2">
                     <span className="truncate text-[20px]" style={DISPLAY}>{players[pi]}</span>
@@ -847,7 +852,7 @@ export default function PureteGame({ onReturnToLobby }: GameProps) {
       {peines && mode !== "solo" && !anonymousMode && losers.length > 0 && (
         <div className="pur-rise mt-7 w-full max-w-md p-4" style={block(RED, 24, 5)}>
           <div className="flex items-center gap-3">
-            <PureBlob color={colorForIndex(losers[0].i)} purity={0} size={64} />
+            <PureBlob name={players[losers[0].i]} color={colorForIndex(losers[0].i)} purity={0} size={64} />
             <div className="min-w-0 text-white">
               <div className="text-[15px] font-bold">{t.demonPenalty}</div>
               <div className="text-[26px] leading-tight" style={DISPLAY}>{losers.map((l) => l.n).join(" & ")}</div>
@@ -989,9 +994,9 @@ function SuspenseReveal({ label, name, color, purity, last, onNext, nextLabel }:
       <RulesButton />
       {done && purity >= 90 && <ConfettiBurst count={50} />}
       <p className="px-12 text-center text-[20px] leading-tight" style={{ ...DISPLAY, textWrap: "balance" }}>{label}</p>
-      {name && <h1 className={`mt-1 max-w-full truncate text-center leading-none ${name.length > 11 ? "text-[clamp(30px,9vw,44px)]" : "text-[clamp(40px,12vw,60px)]"}`} style={{ ...DISPLAY, whiteSpace: "nowrap", color: done && !pure ? "#fff" : INK, textShadow: done && !pure ? `3px 3px 0 ${INK}` : undefined }}>{name}</h1>}
+      {name && <h1 className={`mt-1 max-w-full shrink-0 truncate text-center leading-none ${name.length > 11 ? "text-[clamp(30px,9vw,44px)]" : "text-[clamp(40px,12vw,60px)]"}`} style={{ ...DISPLAY, whiteSpace: "nowrap", color: done && !pure ? "#fff" : INK, textShadow: done && !pure ? `3px 3px 0 ${INK}` : undefined }}>{name}</h1>}
       <div className={`mt-6 ${!done && go ? "pur-shake" : ""}`}>
-        <PureBlob key={done ? "d" : "w"} color={color} purity={purity} size={150} show={done} cheering={done && pure} />
+        <PureBlob key={done ? "d" : "w"} name={name} color={color} purity={purity} size={150} show={done} cheering={done && pure} />
       </div>
       <div className="mt-5 px-6 py-2" style={{ ...block("#fff", 26, 6), transform: "rotate(-2deg)" }}>
         <span className="text-[clamp(72px,24vw,112px)] leading-none tabular-nums" style={DISPLAY}>{s.pct(v)}</span>

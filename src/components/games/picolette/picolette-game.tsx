@@ -12,9 +12,10 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type CSSProperties, type ReactNode } from "react";
 import { adultDefault, sipsAllowed } from "@/lib/party-mood";
 import type { GameProps } from "@/lib/games/types";
-import { Mascot, MascotAvatar } from "@/components/Mascot";
+import { Mascot } from "@/components/Mascot";
+import { PlayerAvatar, PlayerBlob } from "@/components/avatar/PlayerBlob";
 import { ConfettiBurst } from "@/components/ConfettiBurst";
-import { PlayersSetup, colorForIndex } from "@/components/games/local-kit";
+import { PlayersSetup } from "@/components/games/local-kit";
 import { GameIconButton, GameInlineIcon, GameTopRight } from "@/components/games/game-icon-button";
 import { IdeaButton, RerollButton } from "@/components/games/idea-button";
 import { isSfxMuted, playCombo, playSfx, preloadSfx, setSfxMuted, subscribeSfxMuted } from "@/lib/sfx";
@@ -649,7 +650,7 @@ export default function PicoletteGame({ onReturnToLobby }: GameProps) {
               </span>
               {readerName && (
                 <span className="flex min-w-0 items-center gap-1.5 text-[14px] font-bold" style={{ opacity: 0.9 }} aria-label={tr.readsCardAria(readerName)}>
-                  <MascotAvatar color={colorForIndex(reader)} size={26} mood="happy" border={false} />
+                  <PlayerAvatar name={readerName} colorIndex={reader} size={26} mood="happy" border={false} />
                   <span className="max-w-[118px] truncate">{tr.reads(readerName)}</span>
                 </span>
               )}
@@ -836,7 +837,7 @@ export default function PicoletteGame({ onReturnToLobby }: GameProps) {
 
         {top && (
           <div className="relative mt-16 rounded-[26px] px-5 pb-4 pt-[52px] text-center" style={{ ...stk(ACCENT, 6), color: INK, transform: "rotate(-2deg)" }}>
-            <div className="absolute -top-[62px] left-1/2 -translate-x-1/2"><Mascot size={76} color={colorForIndex(top.i)} mood="rofl" crown arms shadow={false} /></div>
+            <div className="absolute -top-[62px] left-1/2 -translate-x-1/2"><PlayerBlob name={top.name} colorIndex={top.i} size={76} mood="rofl" crown arms /></div>
             <p className="text-[15px] font-bold">{tr.overStar}</p>
             <p style={{ ...DISPLAY, fontSize: top.name.length > 11 ? 32 : 40, lineHeight: 1, overflowWrap: "anywhere" }}>{top.name}</p>
             <p className="mt-1 text-[15px] font-bold">{tr.penalties(top.losses)}</p>
@@ -848,7 +849,7 @@ export default function PicoletteGame({ onReturnToLobby }: GameProps) {
             <div key={p.i} className="flex items-center gap-3 rounded-[18px] px-3.5" style={{ ...stk("#fff", 3, 2.5), color: INK, minHeight: 54, transform: `rotate(${k % 2 ? 0.8 : -0.8}deg)` }}>
               {/* Ex aequo = même rang */}
               <span className="w-7 text-[18px]" style={DISPLAY}>{1 + ranking.filter((x) => x.losses > p.losses).length}</span>
-              <MascotAvatar color={colorForIndex(p.i)} size={32} mood="happy" />
+              <PlayerAvatar name={p.name} colorIndex={p.i} size={32} mood="happy" />
               <span className="min-w-0 flex-1 truncate text-[17px] font-bold">{p.name}</span>
               <span className="text-[15px] font-bold">{tr.penalties(p.losses)}</span>
             </div>
@@ -1093,7 +1094,7 @@ function PickerOverlay({
               className="flex min-h-[58px] items-center gap-2.5 rounded-[18px] px-3 text-left active:translate-y-[3px]"
               style={{ ...stk(multi && sel.includes(i) ? "#FF3EA5" : "#fff", 3, 2.5), color: INK }}
             >
-              <MascotAvatar color={colorForIndex(i)} size={34} mood={mood} />
+              <PlayerAvatar name={name} colorIndex={i} size={34} mood={mood} />
               <span className="line-clamp-2 min-w-0 flex-1 text-[16px] font-bold leading-tight" style={{ overflowWrap: "anywhere" }}>{name}</span>
               {shields[i] && <Shield size={20} strokeWidth={2.8} aria-label={t.shieldAria} />}
             </button>
@@ -1141,7 +1142,7 @@ function RouletteOverlay({
         <div className="mt-2 flex items-center gap-2.5 rounded-full py-1.5 pl-1.5 pr-5" style={{ ...stk("#fff", 4), color: INK, transform: "rotate(-2deg)" }}>
           <span className="flex shrink-0">
             {losers.slice(0, 3).map((i, k) => (
-              <span key={i} style={{ marginLeft: k ? -14 : 0 }}><MascotAvatar color={colorForIndex(i)} size={40} mood="shocked" /></span>
+              <span key={i} style={{ marginLeft: k ? -14 : 0 }}><PlayerAvatar name={players[i]} colorIndex={i} size={40} mood="shocked" /></span>
             ))}
           </span>
           <span style={{ ...DISPLAY, fontSize: losers.length > 1 || names.length > 14 ? 24 : 30, lineHeight: 1.05, overflowWrap: "anywhere" }}>{names}</span>
@@ -1212,7 +1213,7 @@ function LossRecap({
             className="flex h-9 items-center gap-1.5 rounded-full pl-1 pr-3"
             style={{ ...stk(hot ? "#FF3EA5" : "#fff", 2, 2.5), color: INK, transform: hot ? "rotate(-2deg) scale(1.05)" : undefined, transition: "transform .2s" }}
           >
-            <MascotAvatar color={colorForIndex(i)} size={26} mood={hot ? "sad" : "happy"} border={false} />
+            <PlayerAvatar name={name} colorIndex={i} size={26} mood={hot ? "sad" : "happy"} border={false} />
             <span className="max-w-[110px] truncate text-[14px] font-bold">{name}</span>
             {shields[i] && <Shield size={14} strokeWidth={3} aria-label={t.shieldAria} />}
             <span className="text-[14px] font-extrabold tabular-nums">{losses[i]}</span>

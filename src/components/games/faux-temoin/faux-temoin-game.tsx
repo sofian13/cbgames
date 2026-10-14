@@ -15,11 +15,12 @@ import type { GameProps } from "@/lib/games/types";
 import { useT } from "@/lib/i18n";
 import { playCombo, playSfx, preloadSfx } from "@/lib/sfx";
 import { Mascot } from "@/components/Mascot";
+import { PlayerBlob } from "@/components/avatar/PlayerBlob";
 import { GameIconButton, GAME_INK } from "@/components/games/game-icon-button";
 import { IdeaButton, RerollButton } from "@/components/games/idea-button";
 import {
   DISPLAY, PassScreen, PlayersSetup, ZButton, ZCard, ZChip, ZChoice, ZLink, ZRanking, ZScreen, ZTitle, ZZ,
-  colorForIndex, inkOn, useScrollTopOn, useSfxMuted,
+  inkOn, useScrollTopOn, useSfxMuted,
 } from "@/components/games/local-kit";
 import { FT_STR, answerLabel, type FTStrings } from "./i18n";
 import { BlobFigure, SceneView } from "./scene-view";
@@ -332,7 +333,7 @@ export default function FauxTemoinGame({ onReturnToLobby }: GameProps) {
             return (
               <div key={i} role="listitem" className="flex w-[48px] flex-col items-center" style={{ opacity: done ? 0.45 : 1 }} aria-current={cur || undefined}>
                 <span className="grid h-10 w-10 place-items-center rounded-full" style={{ background: cur ? "#fff" : "transparent", border: cur ? `3px solid ${INK}` : "3px solid transparent", boxShadow: cur ? `0 3px 0 ${INK}` : undefined }}>
-                  <Mascot size={cur ? 28 : 24} color={colorForIndex(i)} mood={cur ? "happy" : "sus"} shadow={false} bob={false} />
+                  <PlayerBlob name={players[i]} colorIndex={i} size={cur ? 28 : 24} mood={cur ? "happy" : "sus"} bob={false} />
                 </span>
                 <span className="mt-0.5 w-full truncate text-center text-[12px] font-bold leading-tight" style={{ color: cur ? ZZ.yellow : "rgba(255,255,255,0.8)" }}>{players[i]}</span>
               </div>
@@ -340,14 +341,14 @@ export default function FauxTemoinGame({ onReturnToLobby }: GameProps) {
           })}
         </div>
         <ZCard bg="#fff" tilt={-1} className="mt-3 flex items-center gap-3 px-3.5 py-2.5">
-          <Mascot size={44} color={colorForIndex(asker)} mood="happy" shadow={false} bob={false} />
+          <PlayerBlob name={players[asker]} colorIndex={asker} size={44} mood="happy" bob={false} />
           <ZTitle size="clamp(21px, 6.2vw, 26px)" style={{ lineHeight: 1.02, textWrap: "balance", overflowWrap: "anywhere" }}>{t.askTitle(players[asker])}</ZTitle>
         </ZCard>
         <p className="mt-4 text-[16px] font-bold">{t.askWho}</p>
         <div className="mt-2 grid grid-cols-3 gap-2.5">
           {players.map((p, i) => i === asker ? null : (
             <ZChoice key={i} active={target === i} onClick={() => setTarget(i)} color={ZZ.pink} className="flex min-h-[48px] items-center justify-center gap-1.5 !px-1.5 !py-1.5 text-center" label={p}>
-              <Mascot size={24} color={colorForIndex(i)} mood={target === i ? "shocked" : "sus"} shadow={false} bob={false} />
+              <PlayerBlob name={p} colorIndex={i} size={24} mood={target === i ? "shocked" : "sus"} bob={false} />
               <span className="min-w-0 truncate leading-tight" style={{ ...DISPLAY, fontSize: 15 }}>{p}</span>
             </ZChoice>
           ))}
@@ -389,7 +390,7 @@ export default function FauxTemoinGame({ onReturnToLobby }: GameProps) {
         <div className="mt-5 grid grid-cols-2 gap-3">
           {players.map((p, i) => (
             <ZChoice key={i} active={accused === i} onClick={() => setAccused(i)} color={ZZ.pink} tilt={i % 2 ? 1.2 : -1.2} className="flex min-h-[64px] items-center gap-2.5">
-              <Mascot size={38} color={colorForIndex(i)} mood={accused === i ? "shocked" : "sus"} shadow={false} bob={false} />
+              <PlayerBlob name={p} colorIndex={i} size={38} mood={accused === i ? "shocked" : "sus"} bob={false} />
               <span className="min-w-0 flex-1 leading-tight" style={{ ...DISPLAY, fontSize: p.length > 10 ? 16 : 19, overflowWrap: "anywhere" }}>{p}</span>
             </ZChoice>
           ))}
@@ -412,7 +413,7 @@ export default function FauxTemoinGame({ onReturnToLobby }: GameProps) {
     bg = caught ? ZZ.mint : ZZ.coral;
     body = (
       <div className="flex flex-1 flex-col items-center text-center">
-        <div className="mt-2"><Mascot size={120} color={colorForIndex(fake)} mood={caught ? "shocked" : "cool"} arms shadow={false} /></div>
+        <div className="mt-2"><PlayerBlob name={players[fake]} colorIndex={fake} size={120} mood={caught ? "shocked" : "cool"} arms /></div>
         <ZTitle size="clamp(46px, 14vw, 64px)" className="mt-4" style={{ color: INK }}>{caught ? t.caughtTitle : t.missedTitle}</ZTitle>
         <p className="mt-3 max-w-sm text-[18px] font-bold leading-snug" style={{ color: INK }}>
           {caught ? t.caughtText(fakeName) : t.missedText(players[accused ?? 0], fakeName)}
@@ -521,7 +522,8 @@ export default function FauxTemoinGame({ onReturnToLobby }: GameProps) {
     body = (
       <>
         {end && (
-          <div className="mb-2 flex justify-center"><Mascot size={110} color={colorForIndex(order[0].colorIndex)} mood="laughing" crown={!tie} arms cheering shadow={false} /></div>
+          <div className="mb-2 flex justify-center"><PlayerBlob name={order[0].name} colorIndex={order[0].colorIndex} size={110} mood="laughing" crown={!tie} arms cheering />
+</div>
         )}
         <ZTitle size="clamp(34px, 10vw, 46px)" className={end ? "text-center" : ""}>{end ? t.endTitle : t.scoresTitle}</ZTitle>
         {end && <p className="mt-2 text-center text-[20px] font-bold" style={{ color: ZZ.yellow }}>{tie ? t.tie : t.winner(order[0].name)}</p>}

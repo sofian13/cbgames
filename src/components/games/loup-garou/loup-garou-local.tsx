@@ -8,9 +8,10 @@
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import type { GameProps } from "@/lib/games/types";
-import { Mascot, MascotAvatar } from "@/components/Mascot";
+import { Mascot } from "@/components/Mascot";
+import { PlayerAvatar } from "@/components/avatar/PlayerBlob";
 import { ConfettiBurst } from "@/components/ConfettiBurst";
-import { PassScreen, PlayersSetup, colorForIndex, useScrollTopOn } from "@/components/games/local-kit";
+import { PassScreen, PlayersSetup, useScrollTopOn } from "@/components/games/local-kit";
 import {
   MAX_PLAYERS, MIN_PLAYERS, ROLES, SPECIALS,
   applyDeaths, checkWinner, compositionProblem, deal, nightKills, recommended, villagersCount,
@@ -23,7 +24,8 @@ import { NightRunner, type NightResult } from "./lg-local-night";
 import { Check, Minus, Crosshair, Eye, EyeOff, FlaskConical, Handshake, Heart, HeartCrack, PawPrint, Shield, Skull, Fingerprint, Hand, Info, Moon, Music, Pause, Play, Plus, RotateCcw, Scale, ScrollText, Shuffle, SkipForward, Sparkles, Speech, Volume2, VolumeX, Vote, ArrowLeft } from "lucide-react";
 import { GameIconBadge, GameIconButton, GameInlineIcon, GameTopRight } from "@/components/games/game-icon-button";
 import {
-  BigButton, Confirm, CORAL, DISPLAY, INK, MINT, Modal, PickList, PlayerRow, RoleCard, RulesContent, Screen, SectionTitle, SkyBadge, Tag, Title, YELLOW, stk, type Tone,
+  BigButton, Confirm, CORAL, DISPLAY, INK, MINT, Modal, PickList, PlayerRow, RevealedBlob, RoleCard,
+ RulesContent, Screen, SectionTitle, SkyBadge, Tag, Title, YELLOW, stk, type Tone,
 } from "./lg-local-ui";
 import { useT, pick, getLang } from "@/lib/i18n";
 import { CAUSE_LABEL, ROLE_TEXT, STR, WIN_TEXT, type LgStrings } from "./lg-local-i18n";
@@ -744,7 +746,7 @@ function DeathsScreen({
           const r = ROLES[p.role];
           return (
             <div key={d.id} className="flex items-center gap-4 rounded-[26px] p-4" style={{ ...stk("#fff", 5, 3), color: INK, transform: `rotate(${k % 2 ? 1.2 : -1.2}deg)` }}>
-              <RoleBlob role={p.role} size={84} state="ghost" reveal delay={k * 0.4} />
+              <RevealedBlob p={p} size={84} ghost reveal delay={k * 0.4} />
               <div className="min-w-0 flex-1">
                 <p className="truncate" style={{ ...DISPLAY, fontSize: 30, lineHeight: 1 }}>{p.name}</p>
                 <p className="mt-0.5 text-[15px] font-semibold" style={{ color: "#4A3A66" }}>{causeLabel[d.cause]}</p>
@@ -860,7 +862,7 @@ function DebateScreen({ game, seconds, say, onBell, onVote }: { game: GameState;
       <div className="flex flex-wrap justify-center gap-2.5">
         {alive.map((p, k) => (
           <span key={p.id} className="flex items-center gap-1.5 rounded-full py-1 pl-1 pr-3 text-[16px] font-bold" style={{ ...stk("#fff", 2, 2), color: INK, transform: `rotate(${k % 2 ? 1.5 : -1.5}deg)` }}>
-            <MascotAvatar color={colorForIndex(p.id)} size={28} border={false} mood="sus" /> {p.name}
+            <PlayerAvatar name={p.name} colorIndex={p.id} size={28} border={false} mood="sus" /> {p.name}
           </span>
         ))}
       </div>
@@ -956,7 +958,7 @@ function TallyScreen({
       <div className="mt-6 grid gap-3">
         {rows.map(([id, c], k) => (
           <div key={id} className="flex items-center gap-3 rounded-[20px] px-3 py-2" style={{ ...stk(top.includes(id) ? CORAL : "#fff", top.includes(id) ? 4 : 3), color: INK, minHeight: 60, transform: top.includes(id) ? `rotate(${k % 2 ? 1 : -1}deg)` : undefined }}>
-            <MascotAvatar color={colorForIndex(id)} size={38} border={false} mood={top.includes(id) ? "shocked" : "neutral"} />
+            <PlayerAvatar name={game.players[id].name} colorIndex={id} size={38} border={false} mood={top.includes(id) ? "shocked" : "neutral"} />
             <span className="flex-1 truncate" style={{ ...DISPLAY, fontSize: 22, letterSpacing: "-0.01em" }}>{game.players[id].name}</span>
             <span className="flex items-center gap-1.5" style={{ ...DISPLAY, fontSize: 26 }}>{c} <Vote size={22} strokeWidth={2.6} aria-hidden /></span>
           </div>

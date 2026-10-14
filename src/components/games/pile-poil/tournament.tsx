@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { PlayersSetup, PassScreen, colorForIndex } from "@/components/games/local-kit";
-import { Mascot, MascotAvatar, MASCOT_PALETTE } from "@/components/Mascot";
+import { Mascot, MASCOT_PALETTE } from "@/components/Mascot";
+import { PlayerAvatar, PlayerBlob } from "@/components/avatar/PlayerBlob";
 import { ConfettiBurst } from "@/components/ConfettiBurst";
 import { Ban, Crown, CupSoda, Dices, PenLine, Target, Tv, Zap } from "lucide-react";
 import { GameIconBadge, GameInlineIcon } from "@/components/games/game-icon-button";
@@ -783,12 +784,12 @@ function Reveal({
         </>
       )}
       <style>{KEYFRAMES}</style>
-      <Mascot
+      <PlayerBlob
+        name={attempt.name}
+        colorIndex={attempt.pi}
         size={92}
-        color={colorForIndex(attempt.pi)}
         mood={!done ? "thinking" : mystery ? "wink" : perfect ? "mindblown" : bad ? "dead" : close ? "fire" : "happy"}
         arms
-        shadow={false}
       />
       <p className="mt-2 text-[26px] leading-none" style={DISPLAY}>{attempt.name}</p>
       {!mystery && <p className="mt-1.5 text-[16px] font-bold">{t.target(`${num(target, t.dec)}\u00a0s`)}</p>}
@@ -919,7 +920,7 @@ function Board({
               <span className="grid w-7 place-items-center text-[20px]" style={DISPLAY}>
                 {isWin ? <Crown size={20} strokeWidth={2.8} aria-hidden /> : isLose ? <CupSoda size={18} strokeWidth={2.8} aria-hidden /> : `${i + 1}`}
               </span>
-              <MascotAvatar color={colorForIndex(a.pi)} size={34} mood={isWin ? "cool" : isLose ? "dead" : "happy"} border={false} />
+              <PlayerAvatar name={a.name} colorIndex={a.pi} size={34} mood={isWin ? "cool" : isLose ? "dead" : "happy"} border={false} />
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-[18px] leading-tight" style={DISPLAY}>{a.name}</span>
                 <span className="block text-[14px] font-semibold">
@@ -1019,7 +1020,7 @@ function FinalScreen({
         {t.champ}
       </span>
       <div className="mt-3" style={{ animation: "pp-pop .6s ease-out" }}>
-        <Mascot size={104} color={colorForIndex(champ?.i ?? 0)} mood="cool" arms crown shadow={false} />
+        <PlayerBlob name={champ?.name} colorIndex={champ?.i ?? 0} size={104} mood="cool" arms crown />
       </div>
       <h2 className="mt-1 max-w-full break-words text-center leading-[0.95]" style={{ ...DISPLAY, fontSize: `min(clamp(40px,12vw,56px), max(26px, ${(88 / (Math.max((champ?.name ?? "").length, 1) * 0.6)).toFixed(2)}vw))`, textShadow: `4px 4px 0 ${INK}` }}>{champ?.name ?? "—"}</h2>
       <p className="mt-2 text-center text-[16px] font-bold">
@@ -1031,7 +1032,7 @@ function FinalScreen({
         {standings.map((s, i) => (
           <div key={s.i} className="flex items-center gap-3 px-3 py-2" style={{ ...sticker(i === 0 ? GOLD : C.cream, { radius: 18, shadow: 3 }), animation: `pp-rise .35s ${i * 0.07}s ease-out both` }}>
             <span className="w-6 text-center text-[20px]" style={DISPLAY}>{i + 1}</span>
-            <MascotAvatar color={colorForIndex(s.i)} size={32} mood={i === 0 ? "cool" : "happy"} border={false} />
+            <PlayerAvatar name={s.name} colorIndex={s.i} size={32} mood={i === 0 ? "cool" : "happy"} border={false} />
             <span className="min-w-0 flex-1 text-[18px] leading-tight" style={{ ...DISPLAY, overflowWrap: "anywhere" }}>{s.name}</span>
             <span className="shrink-0 whitespace-nowrap text-[18px]" style={DISPLAY}>{t.pts(s.pts)}</span>
           </div>

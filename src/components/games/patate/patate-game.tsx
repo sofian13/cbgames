@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { adultDefault, sipsAllowed } from "@/lib/party-mood";
 import type { GameProps } from "@/lib/games/types";
 import { PlayersSetup, colorForIndex } from "@/components/games/local-kit";
-import { Mascot, MascotAvatar } from "@/components/Mascot";
+import { PlayerAvatar, PlayerBlob } from "@/components/avatar/PlayerBlob";
 import { ConfettiBurst } from "@/components/ConfettiBurst";
 import { PATATE_THEMES, freeCategories, patateContent, pick, shuffle, themeCategories } from "./categories";
 import { PATATE_STR, decimal } from "./i18n";
@@ -411,7 +411,7 @@ export default function PatateGame({ onReturnToLobby }: GameProps) {
           {t.round(round)}
         </span>
         <div className="relative z-[1] mt-3 -mb-6">
-          <Mascot size={92} color={colorForIndex(holder)} mood="shifty" arms shadow={false} />
+          <PlayerBlob name={players[holder]} colorIndex={holder} size={92} mood="shifty" arms />
         </div>
         <h1
           className="max-w-full px-6 pb-2 pt-6 text-center leading-none"
@@ -538,7 +538,7 @@ export default function PatateGame({ onReturnToLobby }: GameProps) {
             {boom.reason === "shake" ? t.tooShaken : t.fuseLasted(decimal(boom.secs, 1, t.dec))}
           </p>
           <div className="relative z-[1] mt-3 -mb-5">
-            <Mascot size={92} color={colorForIndex(boom.loser)} mood="dead" shadow={false} />
+            <PlayerBlob name={players[boom.loser]} colorIndex={boom.loser} size={92} mood="dead" />
           </div>
           <div
             className="max-w-full px-5 pb-2 pt-5 text-center"
@@ -576,7 +576,7 @@ export default function PatateGame({ onReturnToLobby }: GameProps) {
                   className="flex items-center gap-1.5 py-1 pl-1 pr-3 text-[15px] font-bold"
                   style={{ ...sticker(r.i === boom.loser ? C.yellow : "#fff", { radius: 999, shadow: 2, border: 2.5 }) }}
                 >
-                  <MascotAvatar color={colorForIndex(r.i)} size={28} mood={r.l > 0 ? "sad" : "happy"} border={false} />
+                  <PlayerAvatar name={r.name} colorIndex={r.i} size={28} mood={r.l > 0 ? "sad" : "happy"} border={false} />
                   {r.name}
                   <span style={DISPLAY}>· {r.l}</span>
                 </span>
@@ -605,7 +605,7 @@ export default function PatateGame({ onReturnToLobby }: GameProps) {
         {t.roundsPlayed(round)}
       </span>
       <div className="mt-4 flex items-end">
-        <Mascot size={110} color={colorForIndex(worst?.i ?? 0)} mood={hasLoser ? "rofl" : "cool"} crown />
+        <PlayerBlob name={worst?.name} colorIndex={worst?.i ?? 0} size={110} mood={hasLoser ? "rofl" : "cool"} crown shadow />
         <PotatoBlob size={70} face="smug" style={{ marginLeft: -18 }} />
       </div>
       <h1 className="mt-2 max-w-full text-center leading-[0.95]" style={{ ...DISPLAY, fontSize: fitName(hasLoser ? worst.name : t.nobody, "clamp(40px,12vw,56px)", 88), textShadow: `4px 4px 0 ${INK}`, overflowWrap: "anywhere" }}>
@@ -618,7 +618,7 @@ export default function PatateGame({ onReturnToLobby }: GameProps) {
         {ranking.map((r, k) => (
           <div key={r.i} className="zk-rise flex items-center gap-3 px-3 py-2" style={{ ...sticker(k === 0 && hasLoser ? C.yellow : C.cream, { radius: 18, shadow: 3 }), animationDelay: `${k * 0.06}s` }}>
             <span className="w-6 text-center text-[20px]" style={DISPLAY}>{k + 1}</span>
-            <MascotAvatar color={colorForIndex(r.i)} size={34} mood={r.l > 0 ? "dead" : "happy"} border={false} />
+            <PlayerAvatar name={r.name} colorIndex={r.i} size={34} mood={r.l > 0 ? "dead" : "happy"} border={false} />
             {/* Prénom long : passe à la ligne (au tiret) plutôt que d'être tronqué */}
             <span className="min-w-0 flex-1 text-[18px] leading-tight" style={{ ...DISPLAY, overflowWrap: "anywhere" }}>{r.name}</span>
             <span className="shrink-0 whitespace-nowrap text-[18px]" style={DISPLAY}>{t.booms(r.l)}</span>

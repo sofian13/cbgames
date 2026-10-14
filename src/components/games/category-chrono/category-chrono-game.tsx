@@ -4,7 +4,8 @@ import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type CSSPro
 import { adultDefault } from "@/lib/party-mood";
 import type { GameProps } from "@/lib/games/types";
 import { PlayersSetup, colorForIndex, useScrollTopOn } from "@/components/games/local-kit";
-import { Mascot, MascotAvatar, MASCOT_PALETTE } from "@/components/Mascot";
+import { MASCOT_PALETTE } from "@/components/Mascot";
+import { PlayerAvatar, PlayerBlob } from "@/components/avatar/PlayerBlob";
 import { ConfettiBurst } from "@/components/ConfettiBurst";
 import { isSfxMuted, playCombo, playSfx, preloadSfx, setSfxMuted, subscribeSfxMuted } from "@/lib/sfx";
 import { PACKS_BY_LANG, type Category } from "./categories";
@@ -387,7 +388,7 @@ export default function CategoryChronoGame({ onReturnToLobby }: GameProps) {
           <p className="text-[18px] font-semibold text-white/85">{t.itsTurn}</p>
           <div key={`${cur}-${streak}`} style={{ animation: "cc-pop .25s ease-out" }} className="flex flex-col items-center">
             <div className="relative z-[1] -mb-5">
-              <Mascot size={104} color={col} mood={urgent ? "shocked" : "happy"} arms shadow={false} sweat={urgent} />
+              <PlayerBlob name={players[cur]?.name} color={col} size={104} mood={urgent ? "shocked" : "happy"} arms sweat={urgent} headroom />
             </div>
             <h2
               className="max-w-full rounded-[22px] px-6 pb-2 pt-6"
@@ -422,7 +423,7 @@ export default function CategoryChronoGame({ onReturnToLobby }: GameProps) {
         {soundBtn}
         <div className="flex flex-1 flex-col items-center justify-center">
           <div style={{ animation: "cc-shake .5s ease-out" }} className="relative z-[1] -mb-5">
-            <Mascot size={120} color={col} mood={out ? "dead" : "sad"} arms shadow={false} />
+            <PlayerBlob name={p?.name} color={col} size={120} mood={out ? "dead" : "sad"} arms headroom />
           </div>
           <div className="rounded-[24px] px-6 pb-4 pt-7 text-center" style={{ ...sticker(MASCOT_PALETTE[col].body, 6), color: inkOn(MASCOT_PALETTE[col].body), transform: "rotate(-2deg)", maxWidth: "100%" }}>
             <h2 style={{ ...DISPLAY, fontSize: nameSize(p.name, 50), lineHeight: 1, overflowWrap: "anywhere" }}>{p.name}</h2>
@@ -455,7 +456,7 @@ export default function CategoryChronoGame({ onReturnToLobby }: GameProps) {
       <div className="mx-auto flex w-full max-w-md flex-col items-center">
         <p className="text-[18px] font-semibold text-white/85">{t.lastStanding}</p>
         <div className="relative z-[1] -mb-5 mt-2">
-          <Mascot size={118} color={wcol} mood="cool" arms crown cheering shadow={false} />
+          <PlayerBlob name={winner?.name} color={wcol} size={118} mood="cool" arms crown cheering headroom />
         </div>
         <div className="rounded-[26px] px-7 pb-4 pt-7 text-center" style={{ ...sticker(MASCOT_PALETTE[wcol].body, 6), color: inkOn(MASCOT_PALETTE[wcol].body), transform: "rotate(-2deg)", maxWidth: "100%" }}>
           <h2 style={{ ...DISPLAY, fontSize: nameSize(winner?.name ?? t.nobody, 58), lineHeight: 1, overflowWrap: "anywhere" }}>{winner?.name ?? t.nobody}</h2>
@@ -472,7 +473,7 @@ export default function CategoryChronoGame({ onReturnToLobby }: GameProps) {
               <span className="w-7 text-center" style={{ ...DISPLAY, fontSize: 22 }}>
                 {p.lives > 0 ? k + 1 : <Skull size={20} strokeWidth={2.8} className="mx-auto" aria-label={t.eliminatedAria} />}
               </span>
-              <MascotAvatar color={colorForIndex(p.i)} size={34} mood={k === 0 ? "cool" : p.lives > 0 ? "happy" : "dead"} />
+              <PlayerAvatar name={p.name} colorIndex={p.i} size={34} mood={k === 0 ? "cool" : p.lives > 0 ? "happy" : "dead"} />
               <span className="min-w-0 flex-1 truncate text-[17px] font-bold">{p.name}</span>
               {p.lives > 0 && <LifeHearts n={p.lives} size={16} label={t.livesAria(p.lives)} />}
             </div>

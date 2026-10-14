@@ -1,6 +1,6 @@
 "use client";
 
-import { PlayerBlob } from "@/components/avatar/PlayerBlob";
+import { PlayerBlob, usePlayerLook } from "@/components/avatar/PlayerBlob";
 import { useMemo, useState, useEffect, type CSSProperties, type ReactNode } from "react";
 import { Mascot, MASCOT_COLORS, MASCOT_PALETTE, type MascotColor, type MascotMood } from "@/components/Mascot";
 import { registerSoftReplay } from "@/lib/game-replay";
@@ -982,7 +982,7 @@ function EliminateScreen({
         <>
           <div style={{ position: "relative", display: "flex", flexDirection: "column", alignItems: "center", padding: "12px 0 20px" }}>
             <div style={{ position: "relative", animation: "uc-die 1.1s cubic-bezier(0.34,1.45,0.64,1) both" }}>
-              <SpyMascotById idx={eliminated.idx} size={160} tilt={-4} mood="dead" />
+              <SpyMascotById name={eliminated.name} idx={eliminated.idx} size={160} tilt={-4} mood="dead" />
               <div style={{ position: "absolute", top: -34, right: -56, zIndex: 5, animation: "uc-die 0.5s ease-out 0.9s both" }}>
                 <Stamp text={t.stampEliminated} color={color} rotate={-12} size={20} />
               </div>
@@ -1111,9 +1111,9 @@ function GameOverScreen({
       </div>
 
       <div style={{ position: "relative", height: 200, display: "flex", alignItems: "flex-end", justifyContent: "center", marginBottom: 14 }}>
-        {winners[1] && <div style={{ position: "absolute", left: "12%", bottom: 0 }}><SpyMascotById idx={winners[1].idx} size={72} tilt={-8} mood="happy" arms delay={0.2} /></div>}
-        {winners[2] && <div style={{ position: "absolute", right: "12%", bottom: 0 }}><SpyMascotById idx={winners[2].idx} size={68} tilt={6} mood="wink" arms delay={0.3} /></div>}
-        {winners[0] && <div style={{ position: "relative", zIndex: 2 }}><SpyMascotById idx={winners[0].idx} size={130} tilt={-2} mood="happy" cheering arms crown /></div>}
+        {winners[1] && <div style={{ position: "absolute", left: "12%", bottom: 0 }}><SpyMascotById name={winners[1].name} idx={winners[1].idx} size={72} tilt={-8} mood="happy" arms delay={0.2} /></div>}
+        {winners[2] && <div style={{ position: "absolute", right: "12%", bottom: 0 }}><SpyMascotById name={winners[2].name} idx={winners[2].idx} size={68} tilt={6} mood="wink" arms delay={0.3} /></div>}
+        {winners[0] && <div style={{ position: "relative", zIndex: 2 }}><SpyMascotById name={winners[0].name} idx={winners[0].idx} size={130} tilt={-2} mood="happy" cheering arms crown /></div>}
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14 }}>
@@ -1251,9 +1251,12 @@ function Btn({ children, tone = "primary", disabled = false, onClick, full = tru
   );
 }
 
-function SpyMascotById({ idx, size = 80, tilt = -3, mood = "sus", cheering = false, crown = false, arms = false, delay = 0 }: {
-  idx: number; size?: number; tilt?: number; mood?: MascotMood; cheering?: boolean; crown?: boolean; arms?: boolean; delay?: number;
+function SpyMascotById({ name, idx, size = 80, tilt = -3, mood = "sus", cheering = false, crown = false, arms = false, delay = 0 }: {
+  name?: string; idx: number; size?: number; tilt?: number; mood?: MascotMood; cheering?: boolean; crown?: boolean; arms?: boolean; delay?: number;
 }) {
+  const look = usePlayerLook(name);
+  // Perso personnalisé : on le montre tel quel (sans les lunettes d'espion) ; éliminé = yeux/bouche « dead »
+  if (look) return <PlayerBlob name={name} colorIndex={idx} size={size} mood={mood} cheering={cheering} crown={crown} arms={arms} delay={delay} />;
   const color = colorByIdx(idx);
   const w = size * 0.66, h = size * 0.18;
   // Les lunettes suivent l'animation du blob (sinon elles restent figées).
