@@ -13,8 +13,8 @@ export type SfxName =
   | "confirm" | "success" | "error" | "wrong" | "question"
   | "pop" | "pop2" | "ding" | "ding2" | "gong" | "tick" | "tock" | "scratch" | "pluck" | "pluck2"
   | "whoosh" | "whooshdown"
-  // interface de l'app, style « blob » (bloop = toucher un jeu/perso, bloop2 = petit choix, swoop = fiche qui s'ouvre/se ferme)
-  | "bloop" | "bloop2" | "swoop-up" | "swoop-down"
+  // interface de l'app, style « blob » (bloop2 = petit choix, toucher un jeu/perso = pop : voir ui-sfx.ts)
+  | "bloop2"
   // objets
   | "card-place" | "card-slide" | "card-shuffle" | "card-fan" | "card-flip"
   | "dice-shake" | "dice-throw" | "coin" | "coins"
