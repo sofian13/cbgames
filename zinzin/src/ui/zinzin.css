@@ -292,13 +292,13 @@
 .zz-band-txt { max-width: 58%; }
 .zz-band-sub { font-size: 14px; }
 .zz-band-cta { font-size: 14px; padding: 0 14px; }
-.zz-band-grp { transform-origin: 100% 100%; }
-@media (max-width: 400px) { .zz-band-grp { transform: scale(0.9); } .zz-band-sub { font-size: 13.5px; } }
+/* Place du groupe : toute la carte (marges), le texte réel est mesuré dans BandSlide.tsx */
+.zz-band-grp { top: 12px; bottom: 12px; right: 14px; left: 14px; }
+@media (max-width: 400px) { .zz-band-sub { font-size: 13.5px; } }
 @media (max-width: 360px) {
   .zz-band-txt { max-width: 64%; }
   .zz-band-sub { font-size: 13px; }
   .zz-band-cta { font-size: 13px; padding: 0 11px; }
-  .zz-band-grp { transform: scale(0.68); }
 }
 
 /* ── Pas de glissement horizontal de la page ──
