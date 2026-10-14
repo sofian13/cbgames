@@ -351,7 +351,7 @@ function GameCard({
           // Une seule ligne d'étiquettes compactes : « Nouveau » et « Gratuit » fusionnent si les deux
           <div className="mb-2 flex flex-nowrap items-center gap-1.5">
             {(game.isNew || showFree) && (
-              <Tag bg={showFree ? "#3DDC97" : "#fff"} tilt={-3} style={TAG_SM}>
+              <Tag bg="#fff" tilt={-3} style={TAG_SM}>
                 {game.isNew && showFree ? `${t.tagNew} · ${t.tagFree}` : game.isNew ? t.tagNew : t.tagFree}
               </Tag>
             )}
