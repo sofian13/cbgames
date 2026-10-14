@@ -9,7 +9,8 @@ import type { Sentence } from "./shared";
  */
 
 export type ModeId = "volume" | "whisper" | "crescendo" | "souffle" | "duel" | "table";
-export const MODE_IDS: ModeId[] = ["volume", "whisper", "crescendo", "souffle", "duel", "table"];
+// « Ne ris pas ! » (duel) et « Silence total » (table) sont retirés du menu (code gardé).
+export const MODE_IDS: ModeId[] = ["volume", "whisper", "crescendo", "souffle"];
 
 export type Penalty = "dares" | "sips";
 

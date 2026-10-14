@@ -1595,7 +1595,7 @@ export const GAME_TEXT = {
     fr: {
       name: "Chut !",
       tagline: "Chuchote, crie… le micro juge !",
-      pitch: "Six jeux au micro (il mesure le volume, rien n'est enregistré). En vedette : Le bon volume, où tu dis une phrase absurde en gardant l'aiguille dans la zone. Et aussi : Chuchote-le !, Crescendo, Le Souffle, Ne ris pas ! et Silence total.",
+      pitch: "Quatre jeux au micro (il mesure le volume, rien n'est enregistré). En vedette : Le bon volume, où tu dis une phrase absurde en gardant l'aiguille dans la zone. Et aussi : Chuchote-le !, Crescendo et Le Souffle.",
       example: "Hugo tient le tél. Sa phrase : « Un poney en peignoir commande un expresso au comptoir », zone : MURMURE. Il maintient « Parler » et chuchote… mais s'emballe sur « expresso » : l'aiguille sort de la zone. 64 %, +20 pour la phrase entière : 84 points. Léa fait 97. Au classement final, le dernier prend 2 gorgées de zinzin ou un gage.",
       rules: [
         "Le micro mesure seulement le volume, en direct : rien n'est enregistré ni envoyé. On le calibre une fois par partie (3 s de silence).",
@@ -1604,11 +1604,10 @@ export const GAME_TEXT = {
         "Chuchote-le ! : deux équipes, 60 s pour faire deviner un max de mots en chuchotant. Un éclat de voix à table = BUZZ, mot perdu et −1.",
         "Crescendo : chacun fait un son plus fort que le précédent (ou plus doux en Decrescendo), sans toucher le plafond BOUM. Celui qui rate prend la peine.",
         "Le Souffle : tiens un « Aaaah » le plus longtemps possible dans la zone de volume. Record à battre.",
-        "Ne ris pas ! : le Clown a 30 s pour faire craquer le Sérieux. Silence total : tout le monde se tait pendant que le téléphone fait l'idiot.",
         "Pas de micro ? Chaque mode se joue aussi avec la table pour arbitre. Peines : 1 à 3 gorgées de zinzin ou un gage (gages seuls en mode sans alcool).",
       ],
       steps: [
-        "Choisis un des 6 modes (Le bon volume en vedette)",
+        "Choisis un des 4 modes (Le bon volume en vedette)",
         "Calibrez le micro une fois (3 s de silence)",
         "Le micro écoute celui qui tient le tél… ou toute la table",
         "Le dernier (ou l'équipe perdante) prend la peine",
@@ -1623,7 +1622,7 @@ export const GAME_TEXT = {
     en: {
       name: "Shh!",
       tagline: "Whisper, shout… the mic is the judge!",
-      pitch: "Six games played with the mic (it measures volume, nothing is recorded). The star: Volume Control, where you say an absurd line while keeping the needle in the zone. Plus: Whisper It!, Crescendo, Hold the Note, Don't Laugh! and Total Silence.",
+      pitch: "Four games played with the mic (it measures volume, nothing is recorded). The star: Volume Control, where you say an absurd line while keeping the needle in the zone. Plus: Whisper It!, Crescendo and Hold the Note.",
       example: "Hugo holds the phone. His line: \"A pony in a bathrobe is ordering an espresso at the bar\", zone: WHISPER. He holds \"Talk\" and whispers… but gets carried away on \"espresso\": the needle leaves the zone. 64%, +20 for the whole line: 84 points. Léa scores 97. In the final ranking, last place takes 2 zinzin sips or a dare.",
       rules: [
         "The mic only measures volume, live: nothing is recorded or sent. You calibrate it once per game (3 s of silence).",
@@ -1632,11 +1631,10 @@ export const GAME_TEXT = {
         "Whisper It!: two teams, 60 s to get as many words guessed as possible, in a whisper. Any loud burst at the table = BUZZ, word lost and −1.",
         "Crescendo: each player makes a sound louder than the last (or softer in Decrescendo), without hitting the BOOM ceiling. Miss it and you take the penalty.",
         "Hold the Note: hold an \"Aaaah\" for as long as you can inside the volume zone. Beat the record.",
-        "Don't Laugh!: the Clown has 30 s to crack the Straight Face. Total Silence: everyone shuts up while the phone acts silly.",
         "No mic? Every mode also works with the table as referee. Penalties: 1 to 3 zinzin sips or a dare (dares only in alcohol-free mode).",
       ],
       steps: [
-        "Pick one of the 6 modes (Volume Control is the star)",
+        "Pick one of the 4 modes (Volume Control is the star)",
         "Calibrate the mic once (3 s of silence)",
         "The mic listens to whoever holds the phone… or the whole table",
         "Last place (or the losing team) takes the penalty",
@@ -1651,7 +1649,7 @@ export const GAME_TEXT = {
     es: {
       name: "¡Chis!",
       tagline: "Susurra, grita… ¡el micro juzga!",
-      pitch: "Seis juegos con el micro (mide el volumen, no se graba nada). La estrella: El volumen justo, donde dices una frase absurda con la aguja dentro de la zona. Y además: ¡Susúrralo!, Crescendo, Sin aliento, ¡No te rías! y Silencio total.",
+      pitch: "Cuatro juegos con el micro (mide el volumen, no se graba nada). La estrella: El volumen justo, donde dices una frase absurda con la aguja dentro de la zona. Y además: ¡Susúrralo!, Crescendo y Sin aliento.",
       example: "Hugo tiene el móvil. Su frase: «Un poni en albornoz pide un cortado en la barra», zona: SUSURRO. Mantiene «Hablar» y susurra… pero se le escapa el «cortado»: la aguja se sale de la zona. 64 %, +20 por la frase entera: 84 puntos. Léa saca 97. En la clasificación final, el último se lleva 2 tragos de zinzin o un reto.",
       rules: [
         "El micro solo mide el volumen, en directo: no se graba ni se envía nada. Se calibra una vez por partida (3 s de silencio).",
@@ -1660,11 +1658,10 @@ export const GAME_TEXT = {
         "¡Susúrralo!: dos equipos, 60 s para hacer adivinar el máximo de palabras susurrando. Una voz alta en la mesa = BUZZ, palabra perdida y −1.",
         "Crescendo: cada uno hace un sonido más fuerte que el anterior (o más suave en Decrescendo), sin tocar el techo BUM. Quien falla se lleva el castigo.",
         "Sin aliento: aguanta un «Aaaah» todo lo que puedas dentro de la zona de volumen. Bate el récord.",
-        "¡No te rías!: el Payaso tiene 30 s para hacer reír al Serio. Silencio total: todos callados mientras el móvil hace el tonto.",
         "¿Sin micro? Todos los modos se juegan también con la mesa como árbitro. Castigos: de 1 a 3 tragos de zinzin o un reto (solo retos en modo sin alcohol).",
       ],
       steps: [
-        "Elige uno de los 6 modos (El volumen justo es la estrella)",
+        "Elige uno de los 4 modos (El volumen justo es la estrella)",
         "Calibrad el micro una vez (3 s de silencio)",
         "El micro escucha a quien tiene el móvil… o a toda la mesa",
         "El último (o el equipo perdedor) se lleva el castigo",
