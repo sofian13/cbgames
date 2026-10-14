@@ -29,11 +29,15 @@ const devMock = () => {
 };
 let mockName: string | null = null;
 
-let plugin: Promise<AppIconPlugin | null> | null = null;
-function getPlugin(): Promise<AppIconPlugin | null> {
+// ⚠️ Un plugin Capacitor est un Proxy qui répond à TOUTES les propriétés, y compris « then » :
+// il ne doit JAMAIS être la valeur d'une promesse (ni renvoyé par une fonction async), sinon
+// il passe pour une promesse qui ne se résout jamais. On le garde emballé dans { p }.
+type Holder = { p: AppIconPlugin } | null;
+let plugin: Promise<Holder> | null = null;
+function getPlugin(): Promise<Holder> {
   if (!isIos()) return Promise.resolve(null);
   plugin ??= import("@capacitor/core")
-    .then(({ registerPlugin }) => registerPlugin<AppIconPlugin>("ZinzinAppIcon"))
+    .then(({ registerPlugin }) => ({ p: registerPlugin<AppIconPlugin>("ZinzinAppIcon") }))
     .catch(() => null);
   return plugin;
 }
@@ -41,9 +45,9 @@ function getPlugin(): Promise<AppIconPlugin | null> {
 /** L'appareil sait-il changer d'icône ? (false sur le web / plugin absent) */
 export async function appIconSupported(): Promise<boolean> {
   if (devMock()) return true;
-  const p = await getPlugin();
-  if (!p) return false;
-  try { return (await p.isSupported()).value; } catch { return false; }
+  const h = await getPlugin();
+  if (!h) return false;
+  try { return (await h.p.isSupported()).value; } catch { return false; }
 }
 
 /** L'icône actuelle. */
@@ -51,8 +55,8 @@ export async function currentAppIcon(): Promise<AppIconId> {
   let name: string | null = null;
   if (devMock()) name = mockName;
   else {
-    const p = await getPlugin();
-    try { name = p ? (await p.getName()).value : null; } catch { name = null; }
+    const h = await getPlugin();
+    try { name = h ? (await h.p.getName()).value : null; } catch { name = null; }
   }
   return APP_ICONS.find((x) => x.native === name)?.id ?? "classic";
 }
@@ -61,10 +65,10 @@ export async function currentAppIcon(): Promise<AppIconId> {
 export async function setAppIcon(id: AppIconId): Promise<boolean> {
   const native = APP_ICONS.find((x) => x.id === id)?.native ?? null;
   if (devMock()) { mockName = native; return true; }
-  const p = await getPlugin();
-  if (!p) return false;
+  const h = await getPlugin();
+  if (!h) return false;
   try {
-    await p.setName(native ? { name: native } : {});
+    await h.p.setName(native ? { name: native } : {});
     return true;
   } catch {
     return false;

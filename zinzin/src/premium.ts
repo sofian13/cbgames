@@ -108,20 +108,22 @@ let configured = false;
 /** INTRO_ELIGIBILITY_STATUS.INTRO_ELIGIBILITY_STATUS_ELIGIBLE (RevenueCat) */
 const INTRO_ELIGIBLE = 2;
 
+// ⚠️ Un plugin Capacitor est un Proxy « thenable » : ne JAMAIS le renvoyer tel quel d'une fonction
+// async (la promesse ne se résoudrait jamais). On le renvoie emballé : const { P } = await rc().
 async function rc() {
   const { Purchases } = await import("@revenuecat/purchases-capacitor");
   if (!configured) {
     await Purchases.configure({ apiKey: apiKey()! });
     configured = true;
   }
-  return Purchases;
+  return { P: Purchases };
 }
 
 /** À appeler au démarrage : resynchronise l'état d'abonnement. */
 export async function initPremium() {
   if (isTestMode()) return;
   try {
-    const Purchases = await rc();
+    const { P: Purchases } = await rc();
     const { customerInfo } = await Purchases.getCustomerInfo();
     const ent = customerInfo.entitlements.active[ENTITLEMENT];
     setPremium(Boolean(ent));
@@ -136,7 +138,7 @@ export async function loadPlans(): Promise<Plan[]> {
   const DEFAULT_PLANS = defaultPlans();
   if (isTestMode()) return DEFAULT_PLANS;
   try {
-    const Purchases = await rc();
+    const { P: Purchases } = await rc();
     const offerings = await Purchases.getOfferings();
     const pkgs = offerings.current?.availablePackages ?? [];
     if (!pkgs.length) return DEFAULT_PLANS;
@@ -179,7 +181,7 @@ export async function buy(plan: Plan): Promise<boolean> {
     return true;
   }
   try {
-    const Purchases = await rc();
+    const { P: Purchases } = await rc();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { customerInfo } = await Purchases.purchasePackage({ aPackage: plan.pkg as any });
     const ok = Boolean(customerInfo.entitlements.active[ENTITLEMENT]);
@@ -194,7 +196,7 @@ export async function buy(plan: Plan): Promise<boolean> {
 export async function restore(): Promise<boolean> {
   if (isTestMode()) return premium;
   try {
-    const Purchases = await rc();
+    const { P: Purchases } = await rc();
     const { customerInfo } = await Purchases.restorePurchases();
     const ok = Boolean(customerInfo.entitlements.active[ENTITLEMENT]);
     setPremium(ok);

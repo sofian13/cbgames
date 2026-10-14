@@ -66,3 +66,4 @@ Server -> Client:  { type: "game-state", payload: { ... } }
 - **UI components:** shadcn/ui (new-york style) with Tailwind CSS 4, icons from lucide-react
 - **State management:** Zustand stores in `src/lib/stores/`
 - **All UI text is in French**
+- **Capacitor plugins are "thenable" Proxies:** never return a plugin object from an `async` function or resolve a promise with it (it hangs forever). Wrap it (`return { P: Purchases }`) — see `zinzin/src/premium.ts` / `zinzin/src/app-icon.ts`.
