@@ -325,9 +325,8 @@ function LeBluffeurLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) 
 const LETTERS = "ABCDEFGHIJ";
 
 /**
- * Vote commun (tél au milieu de la table) : les propositions s'affichent sans
- * auteur ; au « 3, 2, 1 » chacun montre sa lettre, puis on touche la lettre de
- * chaque joueur. Aucune info privée à l'écran, rien à se repasser.
+ * Vote commun (tél au milieu de la table) : chacun vote À SON TOUR, devant tout le monde,
+ * sur le même écran (propositions sans auteur, aucune info privée, rien à se repasser).
  */
 function CommonVote({ players, options, votes, question, onVote, onReveal }: {
   players: string[];
@@ -338,72 +337,56 @@ function CommonVote({ players, options, votes, question, onVote, onReveal }: {
   onReveal: () => void;
 }) {
   const t = useT(STR);
-  const [count, setCount] = useState<number | null>(null);
-  // Décompte « 3, 2, 1… montrez ! » (0 = « Montrez ! », puis disparaît)
-  useEffect(() => {
-    if (count === null) return;
-    if (count > 0) playSfx("tick", { volume: 0.8 });
-    else playSfx("gong", { volume: 0.6, rate: 1.2 });
-    const id = setTimeout(() => setCount(count > 0 ? count - 1 : null), count > 0 ? 750 : 1100);
-    return () => clearTimeout(id);
-  }, [count]);
   const done = votes.filter((v) => v >= 0).length;
-  const letterOf = (optId: number) => LETTERS[options.findIndex((o) => o.id === optId)] ?? "?";
+  const [turn, setTurn] = useState(() => Math.max(0, votes.findIndex((v) => v < 0)));
+  const all = done === players.length && turn >= players.length;
+  const cur = Math.min(turn, players.length - 1);
+  const pick = (optId: number) => {
+    onVote(cur, optId);
+    // joueur suivant qui n'a pas encore voté (sinon : fin du vote)
+    const next = players.findIndex((_, k) => k > cur && votes[k] < 0);
+    setTurn(next >= 0 ? next : players.length);
+  };
+  const back = () => {
+    const before = all ? players.length : cur;
+    for (let k = before - 1; k >= 0; k--) if (votes[k] >= 0) { setTurn(k); return; }
+  };
   return (
     <ZScreen>
-      {count !== null && (
-        <div className="fixed inset-0 z-50 grid place-items-center" style={{ background: "rgba(14,8,40,0.88)" }} onClick={() => setCount(null)}>
-          <span key={count} className="px-4 text-center leading-none" style={{ ...DISPLAY, fontSize: count > 0 ? 160 : 64, color: count > 0 ? "#fff" : BLUFF_COLOR, textShadow: `5px 5px 0 ${GAME_INK}`, animation: "reaction-pop .4s ease-out" }}>
-            {count > 0 ? count : t.countdownGo}
-          </span>
-        </div>
-      )}
-      <ZChip bg={BLUFF_COLOR} tilt={-2}>{t.voteChip}</ZChip>
-      <ZTitle size={34} className="mt-3">{t.whichTrue}</ZTitle>
-      <p className="mt-2 text-[16px] font-semibold leading-snug" style={{ color: "rgba(255,255,255,0.88)" }}>{question.replace(/\s*_{2,}\.?/g, "…")}</p>
-      {/* Propositions : une lettre chacune, aucun auteur affiché */}
-      <div className="mt-5 flex flex-col gap-3">
-        {options.map((o, i) => (
-          <div key={o.id} className="flex items-center gap-3 rounded-[20px] px-3 py-2.5"
-            style={{ background: "#fff", color: GAME_INK, border: `3px solid ${GAME_INK}`, boxShadow: `0 4px 0 ${GAME_INK}`, rotate: `${i % 2 ? 0.6 : -0.6}deg` }}>
-            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full text-[20px]" style={{ ...DISPLAY, background: BLUFF_COLOR, border: `2.5px solid ${GAME_INK}` }}>{LETTERS[i]}</span>
-            <span className="min-w-0 break-words text-[18px] leading-tight" style={{ ...DISPLAY, letterSpacing: "-0.01em" }}>{o.text}</span>
-          </div>
-        ))}
-      </div>
-      <p className="mt-5 text-[15px] font-semibold leading-snug" style={{ color: "rgba(255,255,255,0.9)" }}>{t.voteHow}</p>
-      <ZButton size="sm" bg="#fff" className="mt-3" onClick={() => setCount(3)}>{t.countdownBtn}</ZButton>
-      <div className="mt-7 flex items-baseline justify-between gap-3">
-        <ZTitle size={26}>{t.theVotes}</ZTitle>
-        <span className="shrink-0 text-[15px] font-bold" style={{ color: done === players.length ? "#3DDC97" : "rgba(255,255,255,0.8)" }}>{t.votesCount(done, players.length)}</span>
-      </div>
-      <div className="mt-3 flex flex-col gap-2.5">
+      <ZChip bg={BLUFF_COLOR} tilt={-2}>{t.voteChip} · {t.votesCount(done, players.length)}</ZChip>
+      <p className="mt-3 text-[16px] font-semibold leading-snug" style={{ color: "rgba(255,255,255,0.88)" }}>{question.replace(/\s*_{2,}\.?/g, "…")}</p>
+      {/* Ordre de vote : celui qui vote est mis en avant */}
+      <div className="mt-4 flex flex-wrap items-end justify-center gap-2">
         {players.map((name, p) => (
-          <div key={p} className="flex items-center gap-3 rounded-[20px] px-3 py-2" role="group" aria-label={t.votedFor(name)}
-            style={{ background: "rgba(255,255,255,0.08)", border: `2px solid ${votes[p] >= 0 ? "rgba(61,220,151,0.7)" : "rgba(255,255,255,0.18)"}` }}>
-            <PlayerBlob name={name} colorIndex={p} size={40} mood={votes[p] >= 0 ? "happy" : "thinking"} bob={false} />
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-[16px] font-bold leading-tight">{name}</p>
-              <div className="mt-1.5 flex flex-wrap gap-1.5">
-                {options.map((o, i) => {
-                  const on = votes[p] === o.id;
-                  return (
-                    <button key={o.id} type="button" aria-pressed={on} aria-label={`${name} : ${LETTERS[i]}`}
-                      onClick={() => onVote(p, o.id)}
-                      className="grid h-11 w-11 place-items-center rounded-full text-[19px] transition-transform active:scale-95"
-                      style={{ ...DISPLAY, background: on ? BLUFF_COLOR : "#fff", color: GAME_INK, border: `2.5px solid ${GAME_INK}`, boxShadow: on ? `0 1px 0 ${GAME_INK}` : `0 3px 0 ${GAME_INK}`, translate: on ? "0 2px" : undefined }}>
-                      {LETTERS[i]}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-            {votes[p] >= 0 && <span className="sr-only">{letterOf(votes[p])}</span>}
+          <div key={p} className="flex flex-col items-center" style={{ opacity: !all && p !== cur && votes[p] < 0 ? 0.55 : 1 }}>
+            <PlayerBlob name={name} colorIndex={p} size={!all && p === cur ? 52 : 36} mood={votes[p] >= 0 ? "happy" : p === cur ? "thinking" : "sus"} bob={false} />
+            <span className="mt-0.5 max-w-[64px] truncate text-[12px] font-bold" style={{ color: votes[p] >= 0 ? "#3DDC97" : "#fff" }}>{name}</span>
           </div>
         ))}
       </div>
-      <p className="mt-3 text-[14px] font-semibold" style={{ color: "rgba(255,255,255,0.7)" }}>{t.ownNote}</p>
-      <ZButton bg={GAME_INK} className="mt-6" disabled={done < players.length} onClick={onReveal}>{t.revealBtn}</ZButton>
+      {!all ? (
+        <>
+          <ZTitle size={30} className="mt-5">{t.voteTurn(players[cur])}</ZTitle>
+          <p className="mt-1 text-[15px] font-semibold leading-snug" style={{ color: "rgba(255,255,255,0.85)" }}>{t.voteHow}</p>
+          <div className="mt-4 flex flex-col gap-3">
+            {options.map((o, i) => (
+              <button key={o.id} type="button" onClick={() => pick(o.id)}
+                className="flex items-center gap-3 rounded-[20px] px-3 py-3 text-left transition-transform active:scale-[0.98]"
+                style={{ background: "#fff", color: GAME_INK, border: `3px solid ${GAME_INK}`, boxShadow: `0 4px 0 ${GAME_INK}`, rotate: `${i % 2 ? 0.6 : -0.6}deg` }}>
+                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full text-[20px]" style={{ ...DISPLAY, background: BLUFF_COLOR, border: `2.5px solid ${GAME_INK}` }}>{LETTERS[i]}</span>
+                <span className="min-w-0 break-words text-[18px] leading-tight" style={{ ...DISPLAY, letterSpacing: "-0.01em" }}>{o.text}</span>
+              </button>
+            ))}
+          </div>
+          <p className="mt-3 text-[14px] font-semibold" style={{ color: "rgba(255,255,255,0.7)" }}>{t.ownNote}</p>
+        </>
+      ) : (
+        <>
+          <ZTitle size={30} className="mt-6 text-center">{t.votesCount(done, players.length)}</ZTitle>
+          <ZButton bg={GAME_INK} className="mt-6" onClick={onReveal}>{t.revealBtn}</ZButton>
+        </>
+      )}
+      {done > 0 && <ZLink color="#fff" className="mt-4" onClick={back}>{t.prevVoter}</ZLink>}
     </ZScreen>
   );
 }

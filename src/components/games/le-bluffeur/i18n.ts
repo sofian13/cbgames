@@ -32,6 +32,8 @@ export const STR: I18n<{
   ownNote: string;
   votesCount: (n: number, t: number) => string;
   revealBtn: string;
+  voteTurn: (name: string) => string;
+  prevVoter: string;
   round: (r: number, t: number) => string;
   trueAnswer: string;
   foundBy: string;
@@ -62,10 +64,10 @@ export const STR: I18n<{
     validateBluff: "Valider mon bluff",
     whichTrue: "Laquelle est la vraie ?",
     tableTitle: "Téléphone au milieu !",
-    tableHint: "Tous les bluffs sont écrits. Posez le tél au centre : on vote tous ensemble sur le même écran, rien de secret ne s'affiche.",
+    tableHint: "Tous les bluffs sont écrits. Posez le tél au centre : chacun vote à son tour, devant tout le monde, sur le même écran.",
     tableBtn: "On vote !",
-    voteChip: "Vote à main levée",
-    voteHow: "Choisissez en silence. Au « 3, 2, 1 », tout le monde montre sa lettre en même temps, puis touchez la lettre de chacun.",
+    voteChip: "Le vote",
+    voteHow: "Touche la réponse que tu crois vraie. Les autres regardent… et jugent.",
     countdownBtn: "3, 2, 1… montrez !",
     countdownGo: "Montrez !",
     theVotes: "Qui vote quoi ?",
@@ -73,6 +75,8 @@ export const STR: I18n<{
     ownNote: "Voter pour son propre bluff ne rapporte rien.",
     votesCount: (n, t) => `${n}/${t} votes`,
     revealBtn: "Révéler la vraie réponse",
+    voteTurn: (name) => `${name}, à toi de voter !`,
+    prevVoter: "Revenir au vote d'avant",
     round: (r, t) => `Manche ${r}/${t}`,
     trueAnswer: "La vraie réponse",
     foundBy: "Trouvée par ",
@@ -103,10 +107,10 @@ export const STR: I18n<{
     validateBluff: "Lock in my bluff",
     whichTrue: "Which one is real?",
     tableTitle: "Phone in the middle!",
-    tableHint: "All the bluffs are in. Put the phone in the middle: everyone votes together on the same screen, nothing secret is shown.",
+    tableHint: "All the bluffs are in. Put the phone in the middle: everyone votes in turn, in front of everyone, on the same screen.",
     tableBtn: "Let's vote!",
-    voteChip: "Show of hands",
-    voteHow: "Pick in silence. On \"3, 2, 1\", everyone shows their letter at the same time, then tap each player's letter.",
+    voteChip: "The vote",
+    voteHow: "Tap the answer you think is real. Everyone else watches… and judges.",
     countdownBtn: "3, 2, 1… show!",
     countdownGo: "Show!",
     theVotes: "Who votes what?",
@@ -114,6 +118,8 @@ export const STR: I18n<{
     ownNote: "Voting for your own bluff scores nothing.",
     votesCount: (n, t) => `${n}/${t} votes`,
     revealBtn: "Reveal the real answer",
+    voteTurn: (name) => `${name}, your vote!`,
+    prevVoter: "Back to the previous vote",
     round: (r, t) => `Round ${r}/${t}`,
     trueAnswer: "The real answer",
     foundBy: "Found by ",
@@ -144,10 +150,10 @@ export const STR: I18n<{
     validateBluff: "Confirmar mi farol",
     whichTrue: "¿Cuál es la verdadera?",
     tableTitle: "¡Móvil en el centro!",
-    tableHint: "Ya están todos los faroles. Dejad el móvil en el centro: votáis todos juntos en la misma pantalla, no se muestra nada secreto.",
+    tableHint: "Ya están todos los faroles. Dejad el móvil en el centro: cada uno vota por turnos, delante de todos, en la misma pantalla.",
     tableBtn: "¡A votar!",
-    voteChip: "Votación a mano alzada",
-    voteHow: "Elegid en silencio. Al «3, 2, 1», todos enseñáis vuestra letra a la vez y luego tocad la letra de cada uno.",
+    voteChip: "La votación",
+    voteHow: "Toca la respuesta que crees verdadera. Los demás miran… y juzgan.",
     countdownBtn: "3, 2, 1… ¡enseñad!",
     countdownGo: "¡Enseñad!",
     theVotes: "¿Quién vota qué?",
@@ -155,6 +161,8 @@ export const STR: I18n<{
     ownNote: "Votar tu propio farol no da puntos.",
     votesCount: (n, t) => `${n}/${t} votos`,
     revealBtn: "Revelar la respuesta verdadera",
+    voteTurn: (name) => `¡${name}, te toca votar!`,
+    prevVoter: "Volver al voto anterior",
     round: (r, t) => `Ronda ${r}/${t}`,
     trueAnswer: "La respuesta verdadera",
     foundBy: "La encontró: ",
