@@ -31,39 +31,41 @@ export interface FTStrings {
   fakeTitle: string;
   fakeText: string;
   secondsLeft: (n: number) => string;
-  // Questions entre joueurs
-  centerTitle: string;
-  centerText: string;
-  turnsLabel: string;
-  centerBtn: string;
-  turnChip: (i: number, n: number) => string;
+  // Réglage du nombre de Faux Témoins
+  fakesLabel: string;
+  fakeTitleMulti: string;
+  fakeTextMulti: (k: number) => string;
+  // Ordre des questions (tout se passe à l'oral)
+  orderTitle: string;
+  orderText: string;
+  orderFakes: (k: number) => string;
+  orderChip: (i: number) => string;
   orderLabel: string;
-  askTitle: (name: string) => string;
-  askWho: string;
-  answersAloud: (name: string) => string;
-  beware: string;
+  pairLabel: (asker: string, target: string) => string;
   ideaBtn: string;
   ideaAnother: string;
   ideaNone: string;
   ideaTag: string;
-  /** La question d'idée, adressée à la cible si elle est choisie */
-  ask: (name: string | null, q: string) => string;
-  nextTurn: string;
-  nextTurnPick: string;
+  moreTurn: string;
   toVote: string;
   // Vote
-  voteTitle: string;
-  voteText: string;
-  voteBtn: string;
-  votePick: string;
-  suspense: string;
+  voteTitle: (k: number) => string;
+  voteText: (k: number) => string;
+  voteBtn: (k: number) => string;
+  votePick: (left: number) => string;
+  suspense: (k: number) => string;
   // Verdict
   caughtTitle: string;
   caughtText: (name: string) => string;
   caughtHint: string;
+  caughtHintMulti: (k: number) => string;
   caughtBtn: string;
   missedTitle: string;
   missedText: (accused: string, fake: string) => string;
+  partialTitle: (caught: number, k: number) => string;
+  fakesWere: (names: string) => string;
+  tagCaught: string;
+  tagFree: string;
   seeScene: string;
   lastTitle: (name: string) => string;
   lastSub: string;
@@ -71,15 +73,19 @@ export interface FTStrings {
   lastWinText: (name: string) => string;
   lastLoseTitle: string;
   lastLoseText: string;
+  lastLoseOne: string;
+  lastNext: (name: string) => string;
   // Révélation / scores
   revealTitle: string;
-  revealWho: (name: string) => string;
-  askedTitle: string;
-  noneAsked: string;
+  revealWho: (names: string, k: number) => string;
+  ideasTitle: string;
   moreDetails: string;
-  lastTag: string;
+  lastTag: (name: string) => string;
   ptsFake: (name: string, pts: number) => string;
-  ptsWitnesses: string;
+  ptsOne: (name: string, pts: number) => string;
+  ptsWitnesses: (n: number) => string;
+  /** « et » pour joindre des prénoms */
+  and: string;
   scoresBtn: string;
   scoresTitle: string;
   nextRound: string;
@@ -102,9 +108,6 @@ export interface FTStrings {
   question: (q: QKind) => string;
 }
 
-/** « Tom, combien de… » : minuscule après le prénom (en sautant ¿ ¡ en espagnol). */
-const lcFirst = (q: string) => q.replace(/^([¿¡]?)(\p{L})/u, (_, p: string, c: string) => p + c.toLowerCase());
-const addressed = (name: string | null, q: string) => (name ? `${name}, ${lcFirst(q)}` : q);
 const COLOR_LC: Record<"fr" | "en" | "es", Record<ColorId, string>> = {
   fr: { red: "rouge", yellow: "jaune", blue: "bleu", green: "vert", pink: "rose", purple: "violet", orange: "orange" },
   en: { red: "red", yellow: "yellow", blue: "blue", green: "green", pink: "pink", purple: "purple", orange: "orange" },
@@ -260,8 +263,8 @@ export const FT_STR: I18n<FTStrings> = {
     howtoTitle: "Comment on joue ?",
     howto: [
       { title: "Regarde la scène", text: "Chacun son tour, 5 secondes pour mémoriser une scène. Sauf le Faux Témoin, qui ne voit rien." },
-      { title: "Interrogez-vous", text: "À ton tour, pose une question sur la scène à qui tu veux. En panne ? Touche « Une idée de question ? »." },
-      { title: "Démasquez-le", text: "Le Faux Témoin pose et répond aussi… au bluff. Votez ! Démasqué, il a une dernière chance." },
+      { title: "Interrogez-vous", text: "L'app tire l'ordre : chacun pose une question sur la scène à voix haute. Le tél, on n'y touche plus." },
+      { title: "Démasquez-le", text: "Le Faux Témoin pose et répond aussi… au bluff. Votez à trois ! Démasqué, il a une dernière chance." },
     ],
     howtoGo: "C'est parti !",
     round: (n) => `Manche ${n}`,
@@ -277,35 +280,39 @@ export const FT_STR: I18n<FTStrings> = {
     fakeTitle: "Tu es le Faux Témoin : tu n'as rien vu !",
     fakeText: "Bluffe : pose des questions crédibles et écoute bien les réponses.",
     secondsLeft: (n) => `${n} s`,
-    centerTitle: "Téléphone au centre !",
-    centerText: "Chacun son tour, pose une question sur la scène à qui tu veux. Le Faux Témoin aussi… à vous de le griller !",
-    turnsLabel: "Combien de tours de table ?",
-    centerBtn: "Première question",
-    turnChip: (i, n) => `Tour ${i}/${n}`,
-    orderLabel: "Ordre de passage",
-    askTitle: (name) => `${name}, pose ta question !`,
-    askWho: "Tu interroges qui ?",
-    answersAloud: (name) => `${name} répond à voix haute.`,
-    beware: "Réponse floue ? Question bizarre ? Méfiance…",
+    fakesLabel: "Combien de Faux Témoins ?",
+    fakeTitleMulti: "Tu es un Faux Témoin : tu n'as rien vu !",
+    fakeTextMulti: (k) => `Vous êtes ${k} Faux Témoins… mais tu ne sais pas qui sont les autres. Bluffe !`,
+    orderTitle: "Interrogez-vous !",
+    orderText: "Dans cet ordre, chacun pose UNE question sur la scène, à voix haute. Le Faux Témoin aussi… au bluff !",
+    orderFakes: (k) => `Attention : ${k} Faux Témoins parmi vous.`,
+    orderChip: (i) => `Tour de questions ${i}`,
+    orderLabel: "Ordre des questions",
+    pairLabel: (a, b) => `${a} interroge ${b}`,
     ideaBtn: "Une idée de question ?",
     ideaAnother: "Une autre",
-    ideaNone: "Plus d'idées : invente ta question !",
+    ideaNone: "Plus d'idées : inventez !",
     ideaTag: "Idée",
-    ask: addressed,
-    nextTurn: "Répondu ! Au suivant",
-    nextTurnPick: "Touche qui tu interroges",
-    toVote: "On vote !",
-    voteTitle: "Qui est le Faux Témoin ?",
-    voteText: "À trois, tout le monde pointe quelqu'un du doigt. Touchez le prénom qui a le plus de voix.",
-    voteBtn: "On l'accuse !",
-    votePick: "Touchez un prénom",
-    suspense: "Le Faux Témoin était…",
+    moreTurn: "Encore un tour de questions",
+    toVote: "On passe au vote",
+    voteTitle: (k) => (k > 1 ? `Qui sont les ${k} Faux Témoins ?` : "Qui est le Faux Témoin ?"),
+    voteText: (k) => (k > 1
+      ? `À trois, chacun pointe quelqu'un du doigt. Touchez les ${k} prénoms qui ont le plus de voix.`
+      : "À trois, tout le monde pointe quelqu'un du doigt. Touchez le prénom qui a le plus de voix."),
+    voteBtn: (k) => (k > 1 ? "On les accuse !" : "On l'accuse !"),
+    votePick: (left) => (left > 1 ? `Touchez encore ${left} prénoms` : "Touchez un prénom"),
+    suspense: (k) => (k > 1 ? "Les Faux Témoins étaient…" : "Le Faux Témoin était…"),
     caughtTitle: "Démasqué !",
     caughtText: (name) => `${name} était bien le Faux Témoin.`,
     caughtHint: "Dernière chance : une bonne réponse et la victoire lui revient quand même !",
+    caughtHintMulti: (k) => (k > 1 ? "Dernière chance : chaque démasqué répond à sa question. Bonne réponse = +2 !" : "Dernière chance : une bonne réponse = +2 quand même !"),
     caughtBtn: "Dernière chance",
     missedTitle: "Raté !",
     missedText: (accused, fake) => `${accused} avait tout vu. Le Faux Témoin, c'était ${fake} !`,
+    partialTitle: (c, k) => (c === k ? "Tous démasqués !" : `${c} sur ${k} !`),
+    fakesWere: (names) => `Les Faux Témoins : ${names}.`,
+    tagCaught: "Démasqué",
+    tagFree: "Pas vu",
     seeScene: "Voir la scène",
     lastTitle: (name) => `${name}, dernière chance !`,
     lastSub: "Une seule réponse. Les autres, motus !",
@@ -313,14 +320,17 @@ export const FT_STR: I18n<FTStrings> = {
     lastWinText: (name) => `${name} vole la victoire.`,
     lastLoseTitle: "Raté !",
     lastLoseText: "Les témoins gagnent la manche.",
+    lastLoseOne: "Les témoins marquent 1 point.",
+    lastNext: (name) => `Au tour de ${name}`,
     revealTitle: "La scène",
-    revealWho: (name) => `Le Faux Témoin : ${name}`,
-    askedTitle: "Les questions posées",
-    noneAsked: "Pas d'idée tirée cette fois : vérifiez vos questions sur la scène !",
+    revealWho: (names, k) => (k > 1 ? `Les Faux Témoins : ${names}` : `Le Faux Témoin : ${names}`),
+    ideasTitle: "Les idées tirées",
     moreDetails: "Tous les détails de la scène",
-    lastTag: "Dernière chance",
+    lastTag: (name) => `Dernière chance · ${name}`,
     ptsFake: (name, pts) => `${name} remporte la manche : +${pts} points`,
-    ptsWitnesses: "Les témoins marquent 1 point chacun",
+    ptsOne: (name, pts) => `${name} : +${pts} points`,
+    ptsWitnesses: (n) => (n > 1 ? `Les témoins marquent ${n} points chacun` : "Les témoins marquent 1 point chacun"),
+    and: "et",
     scoresBtn: "Les scores",
     scoresTitle: "Les scores",
     nextRound: "Manche suivante",
@@ -383,8 +393,8 @@ export const FT_STR: I18n<FTStrings> = {
     howtoTitle: "How to play",
     howto: [
       { title: "Look at the scene", text: "One by one, 5 seconds to memorize a scene. Except the Fake Witness, who sees nothing." },
-      { title: "Grill each other", text: "On your turn, ask anyone a question about the scene. Stuck? Tap \"Need a question idea?\"." },
-      { title: "Unmask them", text: "The Fake Witness asks and answers too… by bluffing. Vote! If caught, they get one last chance." },
+      { title: "Grill each other", text: "The app picks the order: everyone asks a question about the scene out loud. No more tapping the phone." },
+      { title: "Unmask them", text: "The Fake Witness asks and answers too… by bluffing. Vote on three! If caught, they get one last chance." },
     ],
     howtoGo: "Let's go!",
     round: (n) => `Round ${n}`,
@@ -400,35 +410,39 @@ export const FT_STR: I18n<FTStrings> = {
     fakeTitle: "You're the Fake Witness: you saw nothing!",
     fakeText: "Bluff: ask believable questions and listen closely to the answers.",
     secondsLeft: (n) => `${n}s`,
-    centerTitle: "Phone in the middle!",
-    centerText: "Take turns asking anyone a question about the scene. The Fake Witness asks too… so catch them out!",
-    turnsLabel: "How many times around the table?",
-    centerBtn: "First question",
-    turnChip: (i, n) => `Lap ${i}/${n}`,
-    orderLabel: "Turn order",
-    askTitle: (name) => `${name}, ask a question!`,
-    askWho: "Who are you asking?",
-    answersAloud: (name) => `${name} answers out loud.`,
-    beware: "Vague answer? Weird question? Suspicious…",
+    fakesLabel: "How many Fake Witnesses?",
+    fakeTitleMulti: "You're a Fake Witness: you saw nothing!",
+    fakeTextMulti: (k) => `There are ${k} Fake Witnesses… but you don't know who the others are. Bluff!`,
+    orderTitle: "Grill each other!",
+    orderText: "In this order, everyone asks ONE question about the scene, out loud. The Fake Witness too… by bluffing!",
+    orderFakes: (k) => `Heads up: ${k} Fake Witnesses among you.`,
+    orderChip: (i) => `Question round ${i}`,
+    orderLabel: "Question order",
+    pairLabel: (a, b) => `${a} asks ${b}`,
     ideaBtn: "Need a question idea?",
     ideaAnother: "Another one",
-    ideaNone: "Out of ideas: make up your own!",
+    ideaNone: "Out of ideas: make one up!",
     ideaTag: "Idea",
-    ask: addressed,
-    nextTurn: "Answered! Next",
-    nextTurnPick: "Tap who you're asking",
-    toVote: "Let's vote!",
-    voteTitle: "Who's the Fake Witness?",
-    voteText: "On three, everyone points at someone. Tap the name with the most fingers pointed at it.",
-    voteBtn: "Accuse!",
-    votePick: "Tap a name",
-    suspense: "The Fake Witness was…",
+    moreTurn: "One more round of questions",
+    toVote: "Time to vote",
+    voteTitle: (k) => (k > 1 ? `Who are the ${k} Fake Witnesses?` : "Who's the Fake Witness?"),
+    voteText: (k) => (k > 1
+      ? `On three, everyone points at someone. Tap the ${k} names with the most fingers pointed at them.`
+      : "On three, everyone points at someone. Tap the name with the most fingers pointed at it."),
+    voteBtn: (k) => (k > 1 ? "Accuse them!" : "Accuse!"),
+    votePick: (left) => (left > 1 ? `Tap ${left} more names` : "Tap a name"),
+    suspense: (k) => (k > 1 ? "The Fake Witnesses were…" : "The Fake Witness was…"),
     caughtTitle: "Busted!",
     caughtText: (name) => `${name} really was the Fake Witness.`,
     caughtHint: "Last chance: one right answer and they still win!",
+    caughtHintMulti: (k) => (k > 1 ? "Last chance: each busted witness answers their own question. Right answer = +2!" : "Last chance: a right answer still scores +2!"),
     caughtBtn: "Last chance",
     missedTitle: "Wrong!",
     missedText: (accused, fake) => `${accused} saw everything. The Fake Witness was ${fake}!`,
+    partialTitle: (c, k) => (c === k ? "All busted!" : `${c} out of ${k}!`),
+    fakesWere: (names) => `The Fake Witnesses: ${names}.`,
+    tagCaught: "Busted",
+    tagFree: "Got away",
     seeScene: "See the scene",
     lastTitle: (name) => `${name}, last chance!`,
     lastSub: "One answer only. Everyone else, zip it!",
@@ -436,14 +450,17 @@ export const FT_STR: I18n<FTStrings> = {
     lastWinText: (name) => `${name} steals the win.`,
     lastLoseTitle: "Missed!",
     lastLoseText: "The witnesses win the round.",
+    lastLoseOne: "The witnesses score 1 point.",
+    lastNext: (name) => `${name}'s turn`,
     revealTitle: "The scene",
-    revealWho: (name) => `Fake Witness: ${name}`,
-    askedTitle: "Questions asked",
-    noneAsked: "No idea cards drawn this time: check your questions against the scene!",
+    revealWho: (names, k) => (k > 1 ? `Fake Witnesses: ${names}` : `Fake Witness: ${names}`),
+    ideasTitle: "Ideas drawn",
     moreDetails: "Every detail of the scene",
-    lastTag: "Last chance",
+    lastTag: (name) => `Last chance · ${name}`,
     ptsFake: (name, pts) => `${name} wins the round: +${pts} points`,
-    ptsWitnesses: "Each witness scores 1 point",
+    ptsOne: (name, pts) => `${name}: +${pts} points`,
+    ptsWitnesses: (n) => (n > 1 ? `Each witness scores ${n} points` : "Each witness scores 1 point"),
+    and: "and",
     scoresBtn: "Scores",
     scoresTitle: "Scores",
     nextRound: "Next round",
@@ -506,8 +523,8 @@ export const FT_STR: I18n<FTStrings> = {
     howtoTitle: "¿Cómo se juega?",
     howto: [
       { title: "Mira la escena", text: "Por turnos, 5 segundos para memorizar una escena. Menos el Falso Testigo, que no ve nada." },
-      { title: "Interrogaos", text: "En tu turno, hazle una pregunta sobre la escena a quien quieras. ¿Sin ideas? Toca «¿Una idea de pregunta?»." },
-      { title: "Desenmascáralo", text: "El Falso Testigo también pregunta y responde… de farol. ¡Votad! Si lo pilláis, tiene una última oportunidad." },
+      { title: "Interrogaos", text: "La app sortea el orden: cada uno hace una pregunta sobre la escena en voz alta. El móvil ya no se toca." },
+      { title: "Desenmascáralo", text: "El Falso Testigo también pregunta y responde… de farol. ¡Votad a la de tres! Si lo pilláis, tiene una última oportunidad." },
     ],
     howtoGo: "¡Vamos!",
     round: (n) => `Ronda ${n}`,
@@ -523,35 +540,39 @@ export const FT_STR: I18n<FTStrings> = {
     fakeTitle: "Eres el Falso Testigo: ¡no has visto nada!",
     fakeText: "Marca un farol: haz preguntas creíbles y escucha bien las respuestas.",
     secondsLeft: (n) => `${n} s`,
-    centerTitle: "¡Móvil en el centro!",
-    centerText: "Por turnos, hazle una pregunta sobre la escena a quien quieras. El Falso Testigo también… ¡a pillarlo!",
-    turnsLabel: "¿Cuántas vueltas de preguntas?",
-    centerBtn: "Primera pregunta",
-    turnChip: (i, n) => `Vuelta ${i}/${n}`,
-    orderLabel: "Orden de turnos",
-    askTitle: (name) => `${name}, ¡haz tu pregunta!`,
-    askWho: "¿A quién preguntas?",
-    answersAloud: (name) => `${name} responde en voz alta.`,
-    beware: "¿Respuesta vaga? ¿Pregunta rara? Sospechoso…",
+    fakesLabel: "¿Cuántos Falsos Testigos?",
+    fakeTitleMulti: "Eres un Falso Testigo: ¡no has visto nada!",
+    fakeTextMulti: (k) => `Sois ${k} Falsos Testigos… pero no sabes quiénes son los demás. ¡Marca un farol!`,
+    orderTitle: "¡Interrogaos!",
+    orderText: "En este orden, cada uno hace UNA pregunta sobre la escena, en voz alta. El Falso Testigo también… ¡de farol!",
+    orderFakes: (k) => `Ojo: hay ${k} Falsos Testigos entre vosotros.`,
+    orderChip: (i) => `Ronda de preguntas ${i}`,
+    orderLabel: "Orden de las preguntas",
+    pairLabel: (a, b) => `${a} le pregunta a ${b}`,
     ideaBtn: "¿Una idea de pregunta?",
     ideaAnother: "Otra",
-    ideaNone: "No quedan ideas: ¡inventa tu pregunta!",
+    ideaNone: "No quedan ideas: ¡inventad!",
     ideaTag: "Idea",
-    ask: addressed,
-    nextTurn: "¡Respondido! Siguiente",
-    nextTurnPick: "Toca a quién preguntas",
+    moreTurn: "Otra ronda de preguntas",
     toVote: "¡A votar!",
-    voteTitle: "¿Quién es el Falso Testigo?",
-    voteText: "A la de tres, todos señaláis a alguien. Tocad el nombre con más votos.",
-    voteBtn: "¡Lo acusamos!",
-    votePick: "Toca un nombre",
-    suspense: "El Falso Testigo era…",
+    voteTitle: (k) => (k > 1 ? `¿Quiénes son los ${k} Falsos Testigos?` : "¿Quién es el Falso Testigo?"),
+    voteText: (k) => (k > 1
+      ? `A la de tres, todos señaláis a alguien. Tocad los ${k} nombres con más votos.`
+      : "A la de tres, todos señaláis a alguien. Tocad el nombre con más votos."),
+    voteBtn: (k) => (k > 1 ? "¡Los acusamos!" : "¡Lo acusamos!"),
+    votePick: (left) => (left > 1 ? `Tocad ${left} nombres más` : "Toca un nombre"),
+    suspense: (k) => (k > 1 ? "Los Falsos Testigos eran…" : "El Falso Testigo era…"),
     caughtTitle: "¡Pillado!",
     caughtText: (name) => `${name} era el Falso Testigo.`,
     caughtHint: "Última oportunidad: si acierta una respuesta, ¡gana igualmente!",
+    caughtHintMulti: (k) => (k > 1 ? "Última oportunidad: cada pillado responde a su pregunta. ¡Acierto = +2!" : "Última oportunidad: ¡si acierta, +2 igualmente!"),
     caughtBtn: "Última oportunidad",
     missedTitle: "¡Fallasteis!",
     missedText: (accused, fake) => `${accused} lo había visto todo. ¡El Falso Testigo era ${fake}!`,
+    partialTitle: (c, k) => (c === k ? "¡Todos pillados!" : `¡${c} de ${k}!`),
+    fakesWere: (names) => `Los Falsos Testigos: ${names}.`,
+    tagCaught: "Pillado",
+    tagFree: "Se libró",
     seeScene: "Ver la escena",
     lastTitle: (name) => `${name}, ¡última oportunidad!`,
     lastSub: "Una sola respuesta. Los demás, ¡ni pío!",
@@ -559,14 +580,17 @@ export const FT_STR: I18n<FTStrings> = {
     lastWinText: (name) => `${name} se lleva la victoria.`,
     lastLoseTitle: "¡Fallo!",
     lastLoseText: "Los testigos ganan la ronda.",
+    lastLoseOne: "Los testigos ganan 1 punto.",
+    lastNext: (name) => `Le toca a ${name}`,
     revealTitle: "La escena",
-    revealWho: (name) => `El Falso Testigo: ${name}`,
-    askedTitle: "Las preguntas hechas",
-    noneAsked: "Esta vez no salió ninguna idea: ¡comprobad vuestras preguntas en la escena!",
+    revealWho: (names, k) => (k > 1 ? `Los Falsos Testigos: ${names}` : `El Falso Testigo: ${names}`),
+    ideasTitle: "Las ideas sacadas",
     moreDetails: "Todos los detalles de la escena",
-    lastTag: "Última oportunidad",
+    lastTag: (name) => `Última oportunidad · ${name}`,
     ptsFake: (name, pts) => `${name} gana la ronda: +${pts} puntos`,
-    ptsWitnesses: "Cada testigo gana 1 punto",
+    ptsOne: (name, pts) => `${name}: +${pts} puntos`,
+    ptsWitnesses: (n) => (n > 1 ? `Cada testigo gana ${n} puntos` : "Cada testigo gana 1 punto"),
+    and: "y",
     scoresBtn: "Puntuaciones",
     scoresTitle: "Puntuaciones",
     nextRound: "Siguiente ronda",

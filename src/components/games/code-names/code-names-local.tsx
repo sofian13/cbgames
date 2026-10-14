@@ -3,9 +3,10 @@
 /**
  * Mots Espions — mode « un seul téléphone qu'on se passe ».
  * Déroulé : prénoms → 2 équipes → un chef par équipe → étape secrète (seuls les
- * chefs regardent la carte) → tours : le chef tape son indice (1 mot + 1 nombre),
- * se tait, son équipe touche les cartes (nombre + 1 essais max) → écran gagnant.
- * Le chrono (facultatif) ne tourne que pendant que l'équipe touche les cartes.
+ * chefs regardent la carte) → tours : le chef DIT son indice à voix haute (1 mot +
+ * 1 nombre, rien à taper), se tait, son équipe touche les cartes ; nombre annoncé
+ * optionnel (1-4, ∞) pour limiter à nombre + 1 essais ; 1 tap pour passer la main.
+ * Le chrono (facultatif) part au « C'est parti ! » de chaque tour.
  * DA « sticker » de l'app Zinzin : aplats, contour encre, ombre dure.
  */
 
@@ -20,8 +21,8 @@ import { IdeaButton, RerollButton } from "@/components/games/idea-button";
 import { playCombo, playSfx, preloadSfx } from "@/lib/sfx";
 import { useGameFinished } from "@/lib/game-finished";
 import { getLang, pick, useT, type Lang } from "@/lib/i18n";
-import { ArrowLeft, Bomb, Check, Crown, Dices, Eye, Hand, Pencil, Pointer, RotateCcw, Shuffle, Timer, Users, X } from "lucide-react";
-import { CN_WORDS, isGridWord } from "./cn-local-words";
+import { ArrowLeft, ArrowRight, Bomb, Check, Crown, Dices, Eye, Pointer, RotateCcw, Shuffle, Timer, Users, X } from "lucide-react";
+import { CN_WORDS } from "./cn-local-words";
 import { STR } from "./i18n";
 import { ArtClue, ArtKey, ArtTap, ArtTeams } from "./tuto-art";
 
@@ -35,12 +36,6 @@ interface Card {
   revealed: boolean;
 }
 
-interface Clue {
-  word: string;
-  /** "0".."6" ou "∞" */
-  count: string;
-}
-
 interface GameState {
   cards: Card[];
   turn: Team;
@@ -51,11 +46,10 @@ interface GameState {
   turnNo: number;
   /** Identifiant de la grille (clé des cartes) */
   seed: number;
-  /** clue : le chef prépare son indice ; guess : l'équipe touche les cartes */
-  stage: "clue" | "guess";
-  clue: Clue | null;
-  /** Essais restants (null = sans limite) */
-  tries: number | null;
+  /** Nombre annoncé par le chef (facultatif : null = sans limite) */
+  count: string | null;
+  /** Cartes de l'équipe trouvées pendant ce tour */
+  found: number;
 }
 
 type Step = "players" | "teams" | "chief-red" | "chief-blue" | "play" | "end";
@@ -64,7 +58,6 @@ type Overlay =
   | { k: "gate"; team: Team | null; initial: boolean }
   | { k: "key"; team: Team | null; initial: boolean }
   | { k: "pass" }
-  | { k: "announce" }
   | null;
 
 interface Verdict {
@@ -89,7 +82,8 @@ const VIOLET = "#7A4EE8";
 const MINT = "#3DDC97";
 
 const TIMER_OPTIONS = [0, 60, 90, 120] as const;
-const COUNTS = ["1", "2", "3", "4", "5", "6", "0", "∞"] as const;
+/** Nombres annoncés proposés (sélecteur rapide et facultatif) */
+const COUNTS = ["1", "2", "3", "4", "∞"] as const;
 const other = (t: Team): Team => (t === "red" ? "blue" : "red");
 
 const DISPLAY: CSSProperties = { fontFamily: "var(--font-display), system-ui, sans-serif", fontWeight: 700, letterSpacing: "-0.03em", wordSpacing: "0.1em" };
@@ -157,17 +151,21 @@ function newGame(starter: Team, seen: Set<string>, lang: Lang): GameState {
     reason: null,
     turnNo: 1,
     seed: Date.now() + Math.random(),
-    stage: "clue",
-    clue: null,
-    tries: null,
+    count: null,
+    found: 0,
   };
 }
 
-/** Essais autorisés pour un nombre annoncé : nombre + 1 ; 0 et ∞ = sans limite. */
-function triesFor(count: string): number | null {
+/** Essais autorisés pour un nombre annoncé : nombre + 1 ; ∞ ou rien = sans limite. */
+function triesFor(count: string | null): number | null {
   const n = Number(count);
-  return count === "∞" || !Number.isFinite(n) || n <= 0 ? null : n + 1;
+  return count === null || count === "∞" || !Number.isFinite(n) || n <= 0 ? null : n + 1;
 }
+/** Essais restants dans le tour (null = sans limite). */
+const triesLeftOf = (g: GameState): number | null => {
+  const max = triesFor(g.count);
+  return max === null ? null : max - g.found;
+};
 
 const VOWELS = "AEIOUYÀÂÄÉÈÊËÎÏÔÖÙÛÜŒÁÍÓÚ";
 const isV = (c: string | undefined) => !!c && VOWELS.includes(c);
@@ -291,9 +289,11 @@ export default function MotsEspionsLocal({ onReturnToLobby }: GameProps) {
   const [verdict, setVerdict] = useState<Verdict | null>(null);
   const [toast, setToast] = useState<{ id: number; text: string } | null>(null);
   const [showRules, setShowRules] = useState(false);
-  const [clueOpen, setClueOpen] = useState(false);
   const [boom, setBoom] = useState(false);
   const tuto = useFirstTimeTuto("code-names");
+  // Tuto : 1re fois, dès l'ouverture du jeu (avant la saisie des prénoms)
+  const showTutoOnce = useRef(tuto.showIfFirstTime);
+  useEffect(() => { showTutoOnce.current(); }, []);
   const timeouts = useRef<number[]>([]);
   const seenWords = useRef<Set<string>>(new Set());
 
@@ -335,7 +335,6 @@ export default function MotsEspionsLocal({ onReturnToLobby }: GameProps) {
     setTeamOf(splitTeams(names.length));
     setChiefs({ red: -1, blue: -1 });
     setStep("teams");
-    tuto.showIfFirstTime();
   };
 
   /** Chef proposé : le précédent s'il est encore dans l'équipe, sinon le 1er. */
@@ -382,7 +381,7 @@ export default function MotsEspionsLocal({ onReturnToLobby }: GameProps) {
 
   // ── Passage au tour suivant (écran « Au tour de… »)
   const endTurn = useCallback(() => {
-    setGame((g) => (!g || g.winner ? g : { ...g, turn: other(g.turn), turnNo: g.turnNo + 1, stage: "clue", clue: null, tries: null }));
+    setGame((g) => (!g || g.winner ? g : { ...g, turn: other(g.turn), turnNo: g.turnNo + 1, count: null, found: 0 }));
     setSelected(null);
     setBusy(false);
     setVerdict(null);
@@ -401,8 +400,8 @@ export default function MotsEspionsLocal({ onReturnToLobby }: GameProps) {
   );
 
   // ── Chrono : seulement pendant que l'équipe touche les cartes, rien d'ouvert par-dessus
-  const guessing = step === "play" && game?.stage === "guess" && !game.winner;
-  const running = guessing && timer > 0 && !busy && overlay === null && !showRules && !tuto.open && !clueOpen;
+  const guessing = step === "play" && !!game && !game.winner;
+  const running = guessing && timer > 0 && !busy && overlay === null && !showRules && !tuto.open;
   useEffect(() => {
     if (!running) return;
     const id = window.setInterval(() => {
@@ -423,7 +422,7 @@ export default function MotsEspionsLocal({ onReturnToLobby }: GameProps) {
 
   // ── Révélation d'une case
   const reveal = (idx: number) => {
-    if (!game || busy || game.winner || game.stage !== "guess") return;
+    if (!game || busy || game.winner) return;
     const card = game.cards[idx];
     if (card.revealed) return;
     const team = game.turn;
@@ -473,8 +472,9 @@ export default function MotsEspionsLocal({ onReturnToLobby }: GameProps) {
     }
 
     if (card.color === team) {
-      const tries = game.tries === null ? null : game.tries - 1;
-      setGame({ ...game, cards, tries });
+      const next = { ...game, cards, found: game.found + 1 };
+      const tries = triesLeftOf(next);
+      setGame(next);
       playSfx("success", { volume: 0.65, delay: 0.15 });
       vibrate(25);
       const title = t.vOwn(t.team[team].color);
@@ -495,13 +495,25 @@ export default function MotsEspionsLocal({ onReturnToLobby }: GameProps) {
     );
   };
 
+  /** Nombre annoncé (facultatif) : retoucher le même l'enlève. Trop petit vu les cartes déjà trouvées = impossible. */
+  const pickCount = (n: string) => {
+    if (!game || busy || game.winner) return;
+    const count = game.count === n ? null : n;
+    const left = triesLeftOf({ ...game, count });
+    if (left !== null && left <= 0) return;
+    playSfx("toggle", { volume: 0.4 });
+    setGame({ ...game, count });
+  };
+
+  /** Passer la main à l'autre équipe (1 tap). */
+  const passHand = () => {
+    if (!game || busy || game.winner) return;
+    playSfx("toggle", { volume: 0.5 });
+    endTurnWith({ color: "info", title: t.vStop, sub: t.vStopSub }, 1300);
+  };
+
   const tapCard = (idx: number) => {
     if (!game || busy || game.winner || game.cards[idx].revealed) return;
-    if (game.stage !== "guess") {
-      playSfx("tap", { volume: 0.4, rate: 0.8 });
-      flash(t.waitClue);
-      return;
-    }
     if (selected === idx) {
       reveal(idx);
     } else {
@@ -528,7 +540,7 @@ export default function MotsEspionsLocal({ onReturnToLobby }: GameProps) {
   if (step === "players") {
     return (
       <>
-        <PlayersSetup emoji="🕵️" name="Mots Espions" min={4} max={12} accent={PINK} onStart={onPlayers} footer={<IdeaButton game="Mots Espions" kind="mot" />} />
+        <PlayersSetup emoji="🕵️" name={t.title} min={4} max={12} accent={PINK} onStart={onPlayers} footer={<IdeaButton game="Mots Espions" kind="mot" />} />
         {tools}
         {sheets}
       </>
@@ -588,7 +600,6 @@ export default function MotsEspionsLocal({ onReturnToLobby }: GameProps) {
   const w = game.winner;
   const accent = ended && w ? TEAM[w] : TEAM[team];
   const remaining = (x: Team) => game.cards.filter((c) => c.color === x && !c.revealed).length;
-  const chiefName = nameOf(chiefs[team]);
   const lowTime = timer > 0 && timeLeft <= 10;
 
   return (
@@ -616,18 +627,13 @@ export default function MotsEspionsLocal({ onReturnToLobby }: GameProps) {
             <span className="text-[14px] font-bold leading-tight">{t.wholeGrid}</span>
           </div>
         ) : (
-          <div className="flex min-h-[54px] min-w-0 flex-[1.3] flex-col items-center justify-center rounded-[18px] px-2 py-1 text-center" style={{ ...stk(game.clue ? YELLOW : CARD_FACE, 3), color: INK }}>
-            {game.clue && game.stage === "guess" ? (
-              <>
-                <span className="max-w-full truncate text-[18px] leading-tight" style={DISPLAY}>
-                  {game.clue.word}
-                  <span style={{ color: accent.main }}> · {game.clue.count}</span>
-                </span>
-                <span className="text-[13px] font-bold leading-tight">{game.tries === null ? t.triesInf : t.triesLeft(game.tries)}</span>
-              </>
-            ) : (
-              <span className="text-[13px] font-bold leading-tight">{t.noClue}</span>
-            )}
+          <div className="flex min-h-[54px] min-w-0 flex-[1.3] flex-col items-center justify-center rounded-[18px] px-2 py-1 text-center" style={{ ...stk(game.count ? YELLOW : CARD_FACE, 3), color: INK }}>
+            <span className="max-w-full leading-[1.05]" style={{ ...DISPLAY, fontSize: "clamp(14px, 4.2vw, 16px)", overflowWrap: "anywhere" }}>
+              {game.count ? t.clueN(game.count) : t.clueOral}
+            </span>
+            <span className="text-[13px] font-bold leading-tight">
+              {triesLeftOf(game) === null ? (game.count ? t.triesInf : t.noLimit) : t.triesLeft(triesLeftOf(game) ?? 0)}
+            </span>
           </div>
         )}
         <Counter team="blue" label={t.team.blue.short} left={remaining("blue")} active={!ended && team === "blue"} aria={t.counterAria(t.team.blue.short, remaining("blue"))} />
@@ -668,13 +674,31 @@ export default function MotsEspionsLocal({ onReturnToLobby }: GameProps) {
       {/* ── Rappel contextuel + actions */}
       <footer className="relative z-10 mx-auto w-full max-w-[560px] px-3" style={{ paddingBottom: BOTTOM_PAD }}>
         {!ended && (
-          <div className="mb-2.5 flex items-center gap-2">
-            <p className="min-w-0 flex-1 rounded-[16px] px-3 py-2 text-[14px] font-bold leading-snug" style={{ ...stk(CARD_FACE, 2, 2), color: INK }}>
-              {game.stage === "clue" ? t.clueHint(chiefName) : t.guessHint(chiefName)}
-            </p>
-            {game.stage === "guess" && timer > 0 && (
+          <div className="mb-2.5 flex flex-wrap items-center gap-x-1.5 gap-y-1">
+            {/* Nombre annoncé par le chef : facultatif, juste pour limiter les essais (étiquette au-dessus sur petit écran) */}
+            <p className={`text-[13px] font-bold leading-tight ${timer === 0 ? "w-full min-[380px]:w-auto min-[380px]:min-w-0 min-[380px]:flex-1" : "w-full"}`} style={{ color: "rgba(255,255,255,0.85)" }}>{t.countLabel}</p>
+            <div className={`flex gap-1.5 ${timer === 0 ? "" : "min-w-0 flex-1"}`} role="group" aria-label={t.countLabel}>
+              {COUNTS.map((n) => {
+                const on = game.count === n;
+                return (
+                  <button
+                    key={n}
+                    type="button"
+                    aria-label={t.countAria(n)}
+                    aria-pressed={on}
+                    disabled={busy}
+                    onClick={() => pickCount(n)}
+                    className="cn-push grid h-11 w-11 shrink-0 place-items-center rounded-full text-[19px]"
+                    style={{ ...stk(on ? YELLOW : CARD_FACE, 3, 2.5), color: INK, ...DISPLAY, letterSpacing: 0 }}
+                  >
+                    {n}
+                  </button>
+                );
+              })}
+            </div>
+            {timer > 0 && (
               <div
-                className={`flex h-11 min-w-[64px] shrink-0 items-center justify-center gap-1 rounded-full px-2.5 tabular-nums ${lowTime ? "cn-pulse" : ""}`}
+                className={`flex h-11 min-w-[60px] shrink-0 items-center justify-center gap-1 rounded-full px-2 tabular-nums ${lowTime ? "cn-pulse" : ""}`}
                 style={{ ...stk(lowTime ? "#FF5A5F" : "#fff", 3), color: lowTime ? "#fff" : INK, fontSize: 18, ...DISPLAY, letterSpacing: 0 }}
                 aria-label={t.timeLeft}
               >
@@ -695,33 +719,6 @@ export default function MotsEspionsLocal({ onReturnToLobby }: GameProps) {
                 <RotateCcw size={20} strokeWidth={3} aria-hidden /> {t.replay}
               </Btn>
             </>
-          ) : game.stage === "clue" ? (
-            <>
-              <Btn
-                bg={VIOLET}
-                color="#fff"
-                disabled={busy}
-                onClick={() => {
-                  playSfx("open", { volume: 0.5 });
-                  setOverlay({ k: "gate", team, initial: false });
-                }}
-                className="flex-1"
-              >
-                <Eye size={19} strokeWidth={2.8} aria-hidden /> {t.seeKey}
-              </Btn>
-              <Btn
-                bg={TEAM[team].main}
-                color="#fff"
-                disabled={busy}
-                onClick={() => {
-                  playSfx("open", { volume: 0.5 });
-                  setClueOpen(true);
-                }}
-                className="flex-1"
-              >
-                <Pencil size={18} strokeWidth={2.8} aria-hidden /> {t.giveClue}
-              </Btn>
-            </>
           ) : selected !== null ? (
             <>
               <Btn bg="#fff" onClick={() => setSelected(null)} className="flex-1">
@@ -732,17 +729,24 @@ export default function MotsEspionsLocal({ onReturnToLobby }: GameProps) {
               </Btn>
             </>
           ) : (
-            <Btn
-              bg="#fff"
-              disabled={busy}
-              onClick={() => {
-                playSfx("toggle", { volume: 0.5 });
-                endTurnWith({ color: "info", title: t.vStop, sub: t.vStopSub }, 1300);
-              }}
-              className="flex-1"
-            >
-              <Hand size={19} strokeWidth={2.8} aria-hidden /> {t.stop}
-            </Btn>
+            <>
+              <Btn
+                bg={VIOLET}
+                color="#fff"
+                disabled={busy}
+                onClick={() => {
+                  playSfx("open", { volume: 0.5 });
+                  setOverlay({ k: "gate", team, initial: false });
+                }}
+                className="shrink-0 !px-3.5"
+                style={{ fontSize: 15 }}
+              >
+                <Eye size={18} strokeWidth={2.8} className="shrink-0" aria-hidden /> <span aria-hidden>{t.seeKeyShort}</span><span className="sr-only">{t.seeKey}</span>
+              </Btn>
+              <Btn bg={TEAM[other(team)].main} color="#fff" disabled={busy} onClick={passHand} className="min-w-0 flex-1 !px-3" style={{ fontSize: "clamp(14px, 4.2vw, 16px)" }}>
+                <span className="truncate">{t.passTo(t.team[other(team)].short)}</span> <ArrowRight size={19} strokeWidth={3} className="shrink-0 max-[360px]:hidden" aria-hidden />
+              </Btn>
+            </>
           )}
         </div>
         {ended && (
@@ -818,38 +822,11 @@ export default function MotsEspionsLocal({ onReturnToLobby }: GameProps) {
           counts={[remaining(team), remaining(other(team))]}
           onGo={() => {
             playSfx("whoosh", { volume: 0.5 });
-            setOverlay(null);
-          }}
-        />
-      )}
-      {overlay?.k === "announce" && game.clue && (
-        <Announce
-          team={team}
-          chiefName={chiefName}
-          chiefIndex={chiefs[team]}
-          clue={game.clue}
-          onGo={() => {
-            playSfx("whoosh", { volume: 0.5 });
-            setGame((g) => (g && g.clue ? { ...g, stage: "guess", tries: triesFor(g.clue.count) } : g));
+            // Le chrono (facultatif) repart pour ce tour
             timeRef.current = timer;
             setTimeLeft(timer);
             setOverlay(null);
           }}
-        />
-      )}
-      {clueOpen && (
-        <ClueSheet
-          team={team}
-          chiefName={chiefName}
-          grid={game.cards.filter((c) => !c.revealed).map((c) => c.word)}
-          lang={lang}
-          onSave={(c) => {
-            playSfx("pop", { volume: 0.6 });
-            setGame((g) => (g ? { ...g, clue: c } : g));
-            setClueOpen(false);
-            setOverlay({ k: "announce" });
-          }}
-          onClose={() => setClueOpen(false)}
         />
       )}
       {tools}
@@ -1139,128 +1116,6 @@ function PassTurn({ team, chief, players, members, first, counts, onGo }: { team
         </Btn>
       </div>
     </FullScreen>
-  );
-}
-
-// ── Annonce de l'indice : « Léa dit : PLAGE · 2 », puis elle se tait ──
-function Announce({ team, chiefName, chiefIndex, clue, onGo }: { team: Team; chiefName: string; chiefIndex: number; clue: Clue; onGo: () => void }) {
-  const t = useT(STR);
-  const tries = triesFor(clue.count);
-  return (
-    <FullScreen>
-      <div className="mx-auto flex w-full max-w-sm flex-1 flex-col items-center justify-center text-center cn-pop">
-        <PlayerBlob name={chiefName} colorIndex={chiefIndex} size={84} mood="laughing" arms />
-        <p className="mt-1 text-[18px] font-bold">{t.chiefSays(chiefName)}</p>
-        <div className="mt-2 w-full rounded-[26px] px-4 py-4" style={{ ...stk(YELLOW, 6, 3), color: INK, rotate: "-2deg" }}>
-          <p className="text-[40px] leading-none" style={{ ...DISPLAY, overflowWrap: "anywhere" }}>
-            {clue.word} <span style={{ color: TEAM[team].main }}>· {clue.count}</span>
-          </p>
-          <p className="mt-2 text-[16px] font-extrabold">{tries === null ? t.triesFree : t.triesMax(tries)}</p>
-        </div>
-        <p className="mt-6 text-[28px] leading-none" style={DISPLAY}>
-          {t.shutUp(chiefName)}
-        </p>
-        <p className="mt-2 text-[17px] font-semibold leading-snug" style={{ color: "rgba(255,255,255,0.9)" }}>
-          {t.othersTap(t.team[team].the)}
-        </p>
-        <Btn bg={TEAM[team].main} color="#fff" big onClick={onGo} className="mt-7 w-full">
-          {t.letsGo}
-        </Btn>
-      </div>
-    </FullScreen>
-  );
-}
-
-// ── Saisie de l'indice (mot + nombre) ─────────────────────
-function ClueSheet({
-  team,
-  chiefName,
-  grid,
-  lang,
-  onSave,
-  onClose,
-}: {
-  team: Team;
-  chiefName: string;
-  /** Mots encore cachés : interdits comme indice (casse, accents, pluriel ignorés selon la langue) */
-  grid: string[];
-  lang: Lang;
-  onSave: (c: Clue) => void;
-  onClose: () => void;
-}) {
-  const s = useT(STR);
-  const [word, setWord] = useState("");
-  const [count, setCount] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const c = TEAM[team];
-  const save = () => {
-    const w = word.trim();
-    if (!w) return setError(s.errNeedWord);
-    if (/\s/.test(w)) return setError(s.errOneWord);
-    if (isGridWord(w, grid, lang)) {
-      playSfx("wrong", { volume: 0.6 });
-      return setError(s.errGridWord);
-    }
-    if (!count) return setError(s.errNeedCount);
-    onSave({ word: w.toLocaleUpperCase(lang), count });
-  };
-  const tries = count ? triesFor(count) : undefined;
-  return (
-    <div className="absolute inset-0 z-[37] flex items-end sm:items-center sm:justify-center" style={{ background: "rgba(10,4,32,0.6)" }} onClick={onClose} role="dialog" aria-modal aria-label={s.clueTitle(chiefName)}>
-      <div
-        className="cn-sheet relative max-h-[92dvh] w-full overflow-y-auto px-5 pt-5 sm:max-w-md"
-        style={{ background: CARD_FACE, color: INK, borderRadius: "28px 28px 0 0", border: `3px solid ${INK}`, borderBottom: 0, paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 18px)" }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <button type="button" onClick={onClose} aria-label={s.close} className="absolute right-4 top-4 grid h-11 w-11 place-items-center rounded-full" style={{ background: "#fff", border: `2.5px solid ${INK}`, boxShadow: `0 3px 0 ${INK}` }}>
-          <X size={20} strokeWidth={3} />
-        </button>
-        <p className="pr-14 text-[28px] leading-[1.02]" style={DISPLAY}>
-          {s.clueTitle(chiefName)}
-        </p>
-        <p className="mt-1.5 pr-10 text-[15px] font-semibold leading-snug" style={{ color: "#4A3A66" }}>
-          {s.clueSub}
-        </p>
-        <input
-          value={word}
-          onChange={(e) => { setWord(e.target.value.slice(0, 24)); setError(null); }}
-          onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
-          placeholder={s.cluePlaceholder}
-          aria-label={s.clueAria}
-          aria-invalid={!!error}
-          autoCorrect="off" autoCapitalize="characters" autoComplete="off" spellCheck={false} enterKeyHint="done"
-          className="mt-4 w-full rounded-2xl px-4 py-3 font-bold outline-none"
-          style={{ fontSize: 18, background: "#fff", border: `2.5px solid ${error ? "#FF5A5F" : INK}`, color: INK }}
-        />
-        <p className="mt-4 text-[15px] font-bold">{s.howMany}</p>
-        <div className="mt-2 grid grid-cols-4 gap-2">
-          {COUNTS.map((n) => (
-            <button
-              key={n}
-              type="button"
-              aria-label={s.countAria(n)}
-              aria-pressed={count === n}
-              onClick={() => { setCount(n); setError(null); playSfx("toggle", { volume: 0.4 }); }}
-              className="cn-push h-12 rounded-full text-[20px]"
-              style={{ ...stk(count === n ? c.main : "#fff", 3), color: count === n ? "#fff" : INK, ...DISPLAY, letterSpacing: 0 }}
-            >
-              {n}
-            </button>
-          ))}
-        </div>
-        <p className="mt-2 min-h-[20px] text-[14px] font-semibold leading-snug" style={{ color: "#4A3A66" }}>
-          {tries === undefined ? "" : tries === null ? s.countHelpFree : s.countHelp(tries - 1)}
-        </p>
-        {error && (
-          <p role="alert" className="mt-1 text-[15px] font-bold" style={{ color: "#D62839" }}>
-            {error}
-          </p>
-        )}
-        <Btn bg={c.main} color="#fff" onClick={save} className="mt-3 w-full" big>
-          {s.announce}
-        </Btn>
-      </div>
-    </div>
   );
 }
 

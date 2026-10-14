@@ -7,14 +7,14 @@
 
 import { type I18n, useT } from "@/lib/i18n";
 import type { TutoSlide } from "@/components/games/game-tuto";
-import { Arrow, Blob, Bubble, CAST, Card, Finger, INK, Phone, SvgText, TutoSvg } from "@/components/games/game-tuto-art";
+import { Arrow, Blob, Bubble, CAST, Card, INK, Phone, SvgText, TutoSvg } from "@/components/games/game-tuto-art";
 
 /** Les textes SVG en police display collent les mots : on rétablit l'espace entre les mots. */
 const WS_CSS = ".gt-ws text{word-spacing:0.28em}";
 
 type S = {
   slides: { title: string; text: string }[];
-  sawNothing: string; question: string; answer: string; idea: string; caught: string;
+  sawNothing: string; question: string; answer: string; caught: string;
   pointsLine: string;
   voteTie: string;
   names: [string, string, string];
@@ -23,34 +23,34 @@ type S = {
 const STR: I18n<S> = {
   fr: {
     slides: [
-      { title: "Regarde la scène", text: "Chacun son tour, 5 secondes pour mémoriser une image. Sauf le Faux Témoin : lui ne voit rien !" },
-      { title: "Pose une question", text: "Tél au centre. Léa touche le prénom de Tom et demande : « Combien de mouettes ? ». Tom répond à voix haute." },
-      { title: "Démasquez-le", text: "À trois, pointez le suspect. Démasqué ? Une dernière bonne réponse et il gagne quand même. Sinon, les témoins gagnent." },
+      { title: "Regarde la scène", text: "Chacun son tour, 5 secondes pour mémoriser une image. Sauf le Faux Témoin : lui ne voit rien ! (Dès 6 joueurs, ils peuvent être plusieurs.)" },
+      { title: "Tout à l'oral", text: "L'app tire l'ordre : Léa → Tom, Tom → Inès… Léa demande « Combien de mouettes ? », Tom répond. Plus besoin de toucher le tél." },
+      { title: "Démasquez-le", text: "À trois, pointez le suspect. Démasqué ? Une dernière bonne réponse et il marque quand même. Sinon, les témoins gagnent." },
     ],
-    sawNothing: "Rien vu…", question: "Combien de mouettes ?", answer: "Euh… 5 ?", idea: "Une idée ?", caught: "DÉMASQUÉ",
-    pointsLine: "Points : Faux Témoin pas démasqué +3, démasqué mais bonne réponse +2, sinon +1 pour chaque témoin.",
+    sawNothing: "Rien vu…", question: "Combien de mouettes ?", answer: "Euh… 5 ?", caught: "DÉMASQUÉ",
+    pointsLine: "Points : Faux Témoin pas démasqué +3, démasqué mais bonne réponse +2, sinon +1 pour chaque témoin. Dès 6 joueurs, choisissez 2 Faux Témoins (3 dès 9) : on vote alors pour autant de suspects.",
     voteTie: "Égalité ? Revotez seulement entre les ex æquo.",
     names: ["Léa", "Tom", "Inès"],
   },
   en: {
     slides: [
-      { title: "Look at the scene", text: "One by one, you get 5 seconds to memorise a picture. Except the Fake Witness: they see nothing!" },
-      { title: "Ask a question", text: "Phone in the middle. Léa taps Tom's name and asks: \"How many seagulls?\". Tom answers out loud." },
-      { title: "Unmask them", text: "On three, point at the suspect. Caught? One last right answer and they still win. Otherwise, the witnesses win." },
+      { title: "Look at the scene", text: "One by one, you get 5 seconds to memorise a picture. Except the Fake Witness: they see nothing! (From 6 players, there can be more than one.)" },
+      { title: "All out loud", text: "The app picks the order: Léa → Tom, Tom → Inès… Léa asks \"How many seagulls?\", Tom answers. No need to touch the phone." },
+      { title: "Unmask them", text: "On three, point at the suspect. Caught? One last right answer and they still score. Otherwise, the witnesses win." },
     ],
-    sawNothing: "Saw nothing…", question: "How many seagulls?", answer: "Erm… 5?", idea: "An idea?", caught: "BUSTED",
-    pointsLine: "Points: Fake Witness not caught +3, caught but right answer +2, otherwise +1 for each witness.",
+    sawNothing: "Saw nothing…", question: "How many seagulls?", answer: "Erm… 5?", caught: "BUSTED",
+    pointsLine: "Points: Fake Witness not caught +3, caught but right answer +2, otherwise +1 for each witness. From 6 players, pick 2 Fake Witnesses (3 from 9): you then vote for that many suspects.",
     voteTie: "A tie? Vote again between the tied players only.",
     names: ["Léa", "Tom", "Inès"],
   },
   es: {
     slides: [
-      { title: "Mira la escena", text: "Por turnos, 5 segundos para memorizar una imagen. ¡Menos el Falso Testigo: él no ve nada!" },
-      { title: "Haz una pregunta", text: "Móvil en el centro. Léa toca el nombre de Tom y pregunta: «¿Cuántas gaviotas?». Tom responde en voz alta." },
-      { title: "Desenmascáralo", text: "A la de tres, señalad al sospechoso. ¿Pillado? Una última respuesta correcta y gana igual. Si no, ganan los testigos." },
+      { title: "Mira la escena", text: "Por turnos, 5 segundos para memorizar una imagen. ¡Menos el Falso Testigo: él no ve nada! (Desde 6 jugadores, pueden ser varios.)" },
+      { title: "Todo en voz alta", text: "La app sortea el orden: Léa → Tom, Tom → Inès… Léa pregunta «¿Cuántas gaviotas?» y Tom responde. No hace falta tocar el móvil." },
+      { title: "Desenmascáralo", text: "A la de tres, señalad al sospechoso. ¿Pillado? Una última respuesta correcta y puntúa igual. Si no, ganan los testigos." },
     ],
-    sawNothing: "No vi nada…", question: "¿Cuántas gaviotas?", answer: "Eh… ¿5?", idea: "¿Una idea?", caught: "PILLADO",
-    pointsLine: "Puntos: Falso Testigo no pillado +3, pillado pero acierta +2; si no, +1 para cada testigo.",
+    sawNothing: "No vi nada…", question: "¿Cuántas gaviotas?", answer: "Eh… ¿5?", caught: "PILLADO",
+    pointsLine: "Puntos: Falso Testigo no pillado +3, pillado pero acierta +2; si no, +1 para cada testigo. Desde 6 jugadores, elegid 2 Falsos Testigos (3 desde 9): se vota a tantos sospechosos.",
     voteTie: "¿Empate? Volved a votar solo entre los empatados.",
     names: ["Léa", "Tom", "Inès"],
   },
@@ -96,16 +96,14 @@ function ArtAsk({ s }: { s: S }) {
       <style>{WS_CSS}</style>
       <g className="gt-ws">
       <Phone x={82} y={46} w={56} h={92} screen="#FFF6E5">
-        {s.names.map((n, i) => (
-          <g key={n}>
-            <rect x={4} y={6 + i * 20} width={40} height={16} rx={8} fill={i === 1 ? "#FF6B5B" : "#fff"} stroke={INK} strokeWidth={1.5} />
-            <SvgText x={24} y={14.5 + i * 20} text={n} size={8.5} />
+        {/* L'ordre des questions tiré par l'app */}
+        {[[0, 1], [1, 2], [2, 0]].map(([a, b], i) => (
+          <g key={i}>
+            <rect x={3} y={8 + i * 22} width={42} height={18} rx={6} fill={i === 0 ? "#FFD23F" : "#fff"} stroke={INK} strokeWidth={1.5} />
+            <SvgText x={24} y={17.5 + i * 22} text={`${s.names[a]} → ${s.names[b]}`} size={6.5} />
           </g>
         ))}
-        <rect x={2} y={66} width={44} height={10} rx={5} fill="#FFD23F" stroke={INK} strokeWidth={1.2} />
-        <SvgText x={24} y={71.5} text={s.idea} size={6.5} />
       </Phone>
-      <Finger x={130} y={88} rot={-90} />
       <Blob x={34} y={150} s={44} color={CAST.lea} mood="talk" />
       <Bubble x={4} y={12} w={150} h={24} text={s.question} size={10} tailX={30} />
       <Blob x={186} y={150} s={44} color={CAST.tom} mood="panic" className="gt-shake" />

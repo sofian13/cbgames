@@ -346,21 +346,29 @@ export function questionsFor(s: Scene): Question[] {
 }
 
 /**
- * Plan de la manche : une question de dernière chance (jamais proposée en idée)
- * + la pile d'idées de questions pour les joueurs (sujets variés d'abord, au hasard).
+ * Plan de la manche : `nLast` questions de dernière chance (une par Faux Témoin, jamais
+ * proposées en idée, sujets différents) + la pile d'idées de questions (sujets variés d'abord).
  */
-export function planRound(s: Scene): { ideas: Question[]; last: Question } {
+export function planRound(s: Scene, nLast = 1): { ideas: Question[]; lasts: Question[] } {
   const all = shuffle(questionsFor(s));
   // Dernière chance : de préférence un QCM pur, sinon une question « classique »
-  const last = all.find((q) => q.qcmOnly) ?? all.find((q) => !q.oralOnly && q.q.t !== "countAcc" && q.q.t !== "colorAcc") ?? all[all.length - 1];
-  // Aucune idée ne doit trahir la réponse de la dernière chance (les réponses se disent à voix haute)
-  const leaks = (q: Question) =>
+  const good = (q: Question) => q.qcmOnly || (!q.oralOnly && q.q.t !== "countAcc" && q.q.t !== "colorAcc");
+  const cands = [...all.filter((q) => q.qcmOnly), ...all.filter((q) => !q.qcmOnly && good(q)), ...all.filter((q) => !good(q) && !q.oralOnly)];
+  const lasts: Question[] = [];
+  for (const q of cands) {
+    if (lasts.length >= nLast) break;
+    if (!lasts.some((l) => l.topic.split("-")[0] === q.topic.split("-")[0])) lasts.push(q);
+  }
+  for (const q of cands) if (lasts.length < nLast && !lasts.includes(q)) lasts.push(q);
+  if (!lasts.length) lasts.push(all[all.length - 1]);
+  // Aucune idée ne doit trahir la réponse d'une dernière chance (les réponses se disent à voix haute)
+  const leaksOne = (last: Question, q: Question) =>
     (last.q.t === "objectPresent" && last.answer.k === "obj" &&
       ((q.q.t === "objColor" && q.q.obj === last.answer.v) || (q.q.t === "tableItem" && sameAnswer(q.answer, last.answer)))) ||
     (last.q.t === "colorAcc" && q.q.t === "wear" && q.answer.v === last.q.acc) ||
     ((last.q.t === "colorSleeper" || last.q.t === "colorCheer" || last.q.t === "colorAcc") &&
       (q.q.t === "blobLeft" || q.q.t === "blobRight") && sameAnswer(q.answer, last.answer));
-  const oral = all.filter((q) => q !== last && !q.qcmOnly && !leaks(q));
+  const oral = all.filter((q) => !lasts.includes(q) && !q.qcmOnly && !lasts.some((l) => leaksOne(l, q)));
   // Sujets différents d'abord, le reste ensuite
   const first: Question[] = [];
   const rest: Question[] = [];
@@ -368,5 +376,5 @@ export function planRound(s: Scene): { ideas: Question[]; last: Question } {
     if (!first.some((a) => a.topic.split("-")[0] === q.topic.split("-")[0])) first.push(q);
     else rest.push(q);
   }
-  return { ideas: [...first, ...rest], last };
+  return { ideas: [...first, ...rest], lasts };
 }
