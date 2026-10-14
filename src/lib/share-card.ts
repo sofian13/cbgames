@@ -841,3 +841,213 @@ export async function shareBandCard(members: BandShareMember[], title: string, s
   }
   return shareCanvas(canvas, "zinzin-bande.png", text);
 }
+
+/* ───────── « Les stats de la bande » : la même chose en image story ───────── */
+export interface BandStatsShare {
+  /** « Les stats de la bande de … » */
+  title: string;
+  /** Gros chiffre : parties jouées */
+  games: { value: string; label: string };
+  /** Dernière soirée (« hier »…), optionnelle */
+  last?: { label: string; value: string };
+  /** Jeu préféré (blob déguisé du jeu), optionnel */
+  fav?: { id: string; label: string; name: string; value: string; color: string };
+  /** « Qui perd le plus » : 1 à 3 persos, du premier au troisième */
+  podium?: { title: string; people: { name: string; look: AvatarLook | null; value: string; label: string }[] };
+  /** Top des jeux (2-3 barres) */
+  top?: { title: string; rows: { name: string; n: number; color: string }[] };
+  /** Texte qui accompagne l'image */
+  text: string;
+}
+
+export async function renderBandStatsCard(c: BandStatsShare): Promise<HTMLCanvasElement> {
+  const s = STR[getLang()];
+  const canvas = document.createElement("canvas");
+  canvas.width = W;
+  canvas.height = H;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("canvas");
+  const people = (c.podium?.people ?? []).slice(0, 3);
+  const rows = (c.top?.rows ?? []).slice(0, 3);
+  await loadFonts([c.title, c.games.value, c.games.label, c.last?.label, c.last?.value, c.fav?.label, c.fav?.name, c.fav?.value,
+    c.podium?.title, ...people.flatMap((p) => [p.name, p.value, p.label]), c.top?.title, ...rows.map((r) => r.name), s.playOn, SHARE_SITE, "zinzin0123456789"]
+    .filter(Boolean).join(" "));
+  background(ctx);
+
+  // En-tête : logo + titre
+  logo(ctx, W / 2, 205, 150);
+  const tFit = fit(ctx, c.title, display, 860, 76, 44, 2);
+  ctx.font = display(tFit.px);
+  const tW = Math.min(980, Math.max(...tFit.lines.map((l) => measure(ctx, l))) + 100);
+  const tH = tFit.lines.length * tFit.px * 1.04 + 46;
+  const tY = 255;
+  sticker(ctx, (W - tW) / 2, tY, tW, tH, "#FFD23F", { r: 44, shadow: 12, tilt: -2.5, line: 7 });
+  ctx.save();
+  ctx.translate(W / 2, tY + tH / 2);
+  ctx.rotate((-2.5 * Math.PI) / 180);
+  drawLines(ctx, tFit.lines, 0, -tH / 2 + 23 + tFit.px * 0.86, tFit.px * 1.04, INK);
+  ctx.restore();
+
+  // Hauteurs des blocs, puis centrage vertical entre le titre et le pied
+  const HERO_H = 280, POD_H = 530, BAR_H = 74, GAP = 34;
+  const top = tY + tH + 46, bottom = 1685;
+  const barsOf = (n: number) => (n >= 2 ? 60 + n * BAR_H : 0);
+  const blocksOf = (n: number) => HERO_H + (people.length ? GAP + POD_H : 0) + (barsOf(n) ? GAP + barsOf(n) : 0);
+  // Pas la place : on retire des barres (jamais le pied ni le podium)
+  let nBars = rows.length;
+  while (nBars > 0 && blocksOf(nBars) > bottom - top) nBars = nBars > 2 ? nBars - 1 : 0;
+  rows.length = nBars;
+  const barsH = barsOf(nBars);
+  let y = top + Math.max(0, (bottom - top - blocksOf(nBars)) / 2);
+
+  // ── Gros chiffre + jeu préféré (ou dernière soirée)
+  const side = c.fav ?? null;
+  const gw = side || c.last ? 430 : 700;
+  const gx = side || c.last ? 70 : (W - gw) / 2;
+  sticker(ctx, gx, y, gw, HERO_H, "#FF3EA5", { r: 52, shadow: 14, tilt: -3, line: 7 });
+  ctx.save();
+  ctx.translate(gx + gw / 2, y + HERO_H / 2);
+  ctx.rotate((-3 * Math.PI) / 180);
+  const nFit = fit(ctx, c.games.value, display, gw - 60, 170, 90, 1);
+  ctx.font = display(nFit.px);
+  ctx.lineJoin = "round";
+  ctx.lineWidth = 12;
+  ctx.strokeStyle = INK;
+  ctx.textAlign = "center";
+  ctx.strokeText(tx(ctx, nFit.lines[0]), 0, 26);
+  drawLines(ctx, nFit.lines, 0, 26, 0, "#fff");
+  const lFit = fit(ctx, c.games.label, display, gw - 60, 46, 30, 1);
+  ctx.font = display(lFit.px);
+  drawLines(ctx, lFit.lines, 0, 98, 0, "#fff");
+  ctx.restore();
+
+  if (side) {
+    const fx = 540, fw = 470;
+    sticker(ctx, fx, y + 10, fw, HERO_H - 10, side.color, { r: 52, shadow: 14, tilt: 2.5, line: 7 });
+    const ink = inkOn(side.color);
+    const img = await loadSvg(blobSvg({ game: side.id, mood: "laughing" }));
+    const bs = 150;
+    if (img) ctx.drawImage(img, fx + fw / 2 - (bs * ART) / 2, y - 30 - bs * ART_PAD, bs * ART, bs * ART);
+    ctx.save();
+    ctx.translate(fx + fw / 2, y + 10 + (HERO_H - 10) / 2);
+    ctx.rotate((2.5 * Math.PI) / 180);
+    ctx.font = body(30);
+    ctx.globalAlpha = 0.8;
+    drawLines(ctx, [side.label.toUpperCase()], 0, 22, 0, ink);
+    ctx.globalAlpha = 1;
+    const fFit = fit(ctx, side.name, display, fw - 60, 50, 30, 1);
+    ctx.font = display(fFit.px);
+    drawLines(ctx, fFit.lines, 0, 74, 0, ink);
+    ctx.font = body(30, 700);
+    drawLines(ctx, [side.value], 0, 114, 0, ink);
+    ctx.restore();
+  } else if (c.last) {
+    const lx = 560, lw = 450;
+    sticker(ctx, lx, y + 40, lw, HERO_H - 80, "#4ECDC4", { r: 48, shadow: 12, tilt: 2.5, line: 7 });
+    ctx.save();
+    ctx.translate(lx + lw / 2, y + HERO_H / 2);
+    ctx.rotate((2.5 * Math.PI) / 180);
+    ctx.font = body(32);
+    drawLines(ctx, [c.last.label], 0, -12, 0, INK);
+    const vFit = fit(ctx, c.last.value, display, lw - 60, 64, 36, 1);
+    ctx.font = display(vFit.px);
+    drawLines(ctx, vFit.lines, 0, 60, 0, INK);
+    ctx.restore();
+  }
+  y += HERO_H;
+
+  // ── Podium « Qui perd le plus »
+  if (people.length && c.podium) {
+    y += GAP;
+    ctx.font = display(64);
+    ctx.lineJoin = "round";
+    ctx.lineWidth = 10;
+    ctx.strokeStyle = INK;
+    ctx.textAlign = "center";
+    ctx.strokeText(tx(ctx, c.podium.title), W / 2, y + 60);
+    drawLines(ctx, [c.podium.title], W / 2, y + 60, 0, "#fff");
+    // Places : 2e à gauche, 1er au centre, 3e à droite
+    const slots = [
+      { rank: 1, cx: W / 2, size: 200, ped: 165, bg: "#FF6B5B" },
+      { rank: 2, cx: W / 2 - 320, size: 165, ped: 130, bg: "#FFD23F" },
+      { rank: 3, cx: W / 2 + 320, size: 165, ped: 108, bg: "#A98BFF" },
+    ].slice(0, people.length);
+    const floor = y + POD_H;
+    const pw = 270;
+    for (const sl of slots) {
+      const p = people[sl.rank - 1];
+      const pedY = floor - sl.ped;
+      sticker(ctx, sl.cx - pw / 2, pedY, pw, sl.ped, sl.bg, { r: 26, shadow: 10, line: 7 });
+      ctx.font = display(sl.rank === 1 ? 70 : 58);
+      drawLines(ctx, [p.value], sl.cx, pedY + (sl.rank === 1 ? 72 : 62), 0, inkOn(sl.bg));
+      const lf = fit(ctx, p.label, (px) => body(px), pw - 40, 32, 22, 1);
+      ctx.font = body(lf.px);
+      drawLines(ctx, lf.lines, sl.cx, pedY + (sl.rank === 1 ? 112 : 96), 0, inkOn(sl.bg));
+      const look = p.look ? (isUnlockedNow() ? p.look : freeLook(p.look)) : baseLook(colorOf(sl.rank + 2));
+      const svg = avatarSvgMarkup(look, sl.rank === 1 ? "sad" : "laughing");
+      const img = svg ? await loadSvg(svg) : null;
+      const chipH = 64;
+      const blobTop = pedY - chipH - 6 - sl.size * 0.95;
+      if (img) ctx.drawImage(img, sl.cx - (sl.size * ART) / 2, blobTop - sl.size * ART_PAD, sl.size * ART, sl.size * ART);
+      const nf = fit(ctx, p.name, display, pw - 40, 42, 26, 1);
+      ctx.font = display(nf.px);
+      const cw = Math.min(pw + 20, measure(ctx, nf.lines[0]) + 48);
+      const tilt = sl.rank === 2 ? -3 : sl.rank === 3 ? 3 : -1;
+      sticker(ctx, sl.cx - cw / 2, pedY - chipH - 4, cw, chipH - 8, "#fff", { r: 999, shadow: 6, tilt, line: 5 });
+      ctx.save();
+      ctx.translate(sl.cx, pedY - chipH - 4 + (chipH - 8) / 2);
+      ctx.rotate((tilt * Math.PI) / 180);
+      drawLines(ctx, nf.lines, 0, nf.px * 0.36, 0, INK);
+      ctx.restore();
+    }
+    y = floor;
+  }
+
+  // ── Top des jeux en barres
+  if (barsH && c.top) {
+    y += GAP;
+    sticker(ctx, CX, y, CW, barsH, "#fff", { r: 44, shadow: 12, tilt: -1, line: 7 });
+    ctx.save();
+    ctx.translate(W / 2, y + barsH / 2);
+    ctx.rotate((-1 * Math.PI) / 180);
+    ctx.translate(-W / 2, -(y + barsH / 2));
+    ctx.font = display(42);
+    drawLines(ctx, [c.top.title], CX + 44, y + 54, 0, INK, "left");
+    const max = Math.max(...rows.map((r) => r.n), 1);
+    const x0 = CX + 44, full = CW - 88;
+    rows.forEach((r, i) => {
+      const by = y + 74 + i * BAR_H;
+      const bw = Math.max(250, full * (r.n / max));
+      rr(ctx, x0, by + 6, bw, BAR_H - 18, 999);
+      ctx.fillStyle = INK;
+      ctx.fill();
+      rr(ctx, x0, by, bw, BAR_H - 18, 999);
+      ctx.fillStyle = r.color;
+      ctx.fill();
+      ctx.lineWidth = 5;
+      ctx.strokeStyle = INK;
+      ctx.stroke();
+      const ink = inkOn(r.color);
+      const nf = fit(ctx, `${i + 1}. ${r.name}`, (px) => body(px), bw - 120, 34, 22, 1);
+      ctx.font = body(nf.px);
+      drawLines(ctx, nf.lines, x0 + 26, by + (BAR_H - 18) / 2 + nf.px * 0.36, 0, ink, "left");
+      ctx.font = display(38);
+      drawLines(ctx, [String(r.n)], x0 + bw - 26, by + (BAR_H - 18) / 2 + 14, 0, ink, "right");
+    });
+    ctx.restore();
+  }
+
+  footer(ctx, s);
+  return canvas;
+}
+
+/** Partage l'image « Les stats de la bande ». */
+export async function shareBandStatsCard(c: BandStatsShare): Promise<ShareOutcome> {
+  let canvas: HTMLCanvasElement;
+  try {
+    canvas = await renderBandStatsCard(c);
+  } catch {
+    return "error";
+  }
+  return shareCanvas(canvas, "zinzin-stats.png", c.text);
+}

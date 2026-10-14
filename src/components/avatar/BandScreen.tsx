@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ArrowDown, ArrowUp, ClipboardPaste, Clock3, Copy, Download, Gamepad2, Heart, Image as ImageIcon, Lock, Mic, Plus, Skull, Star, Volume2, X } from "lucide-react";
 import { useLang, useT, type Lang } from "@/lib/i18n";
-import { bandStatsGameName, favoriteGame, getBandStats, resetBandStats, subscribeBandStats, topLoser, type BandStats } from "@/lib/band-stats";
+import { bandStatsGameName, favoriteGame, topLoser, type BandStats } from "@/lib/band-stats";
 import { useUnlocked } from "@/lib/entitlements";
 import { playSfx } from "@/lib/sfx";
 import { BAND_MAX, baseLook, decodeBand, encodeBand, lookHasPremium, type AvatarLook, type BandMember } from "@/lib/avatar/look";
@@ -18,11 +18,10 @@ import { AvatarBlob } from "./AvatarBlob";
 import { AV_DISPLAY, AV_INK, AvatarEditor, AvatarLayer, RoundIconBtn, avSticker } from "./AvatarEditor";
 import { colorForIndexSafe } from "./colors";
 import { useBand } from "./PlayerBlob";
+import { BandStatsCard, BandStatsScreen, useBandStats } from "./BandStatsScreen";
 
 const lookOf = (e: { look: AvatarLook | null }, i: number) => e.look ?? baseLook(colorForIndexSafe(i));
 
-const EMPTY_STATS: BandStats = { games: 0, byGame: {}, losses: {}, last: 0 };
-const useBandStats = () => useSyncExternalStore(subscribeBandStats, getBandStats, () => EMPTY_STATS);
 
 /** Jours entiers (calendrier) depuis une date. */
 function daysSince(ms: number): number {
@@ -58,7 +57,7 @@ export function BandScreen({ onClose }: { onClose: () => void }) {
   const lang = useLang();
   const stats = useBandStats();
   const lines = statLines(stats, t, lang);
-  const [resetArmed, setResetArmed] = useState(false);
+  const [statsOpen, setStatsOpen] = useState(false);
   const [edit, setEdit] = useState<number | "new" | null>(null);
   const [voiceOf, setVoiceOf] = useState<number | null>(null);
   const [confirm, setConfirm] = useState<number | null>(null);
@@ -179,32 +178,8 @@ export function BandScreen({ onClose }: { onClose: () => void }) {
           </div>
         )}
 
-        {/* Stats de la bande : compactes, 100 % locales */}
-        {band.length > 0 && lines.length > 0 && (
-          <section className="mb-3 rounded-[20px] px-3.5 pb-2.5 pt-2" style={{ background: "rgba(255,255,255,0.06)", border: "2px solid rgba(255,255,255,0.1)" }} aria-label={t.statsTitle}>
-            <div className="flex items-center justify-between gap-2">
-              <h3 className="text-[12px] font-extrabold uppercase tracking-wider" style={{ color: "rgba(255,255,255,0.6)" }}>{t.statsTitle}</h3>
-              <button type="button"
-                onClick={() => {
-                  if (!resetArmed) { setResetArmed(true); return; }
-                  resetBandStats(); setResetArmed(false); toast(t.statsResetDone); playSfx("back", { volume: 0.4 });
-                }}
-                onBlur={() => setResetArmed(false)}
-                className="-mr-1 -my-1.5 min-h-11 px-1 text-[12px] font-bold underline decoration-1 underline-offset-2"
-                style={{ color: resetArmed ? "#FF9AA8" : "rgba(255,255,255,0.5)" }}>
-                {resetArmed ? t.statsResetSure : t.statsReset}
-              </button>
-            </div>
-            <ul className="mt-0.5 grid grid-cols-1 gap-x-3 gap-y-1">
-              {lines.map(({ key, icon: Icon, text }) => (
-                <li key={key} className="flex min-w-0 items-center gap-2 text-[13px] font-bold" style={{ color: "rgba(255,255,255,0.88)" }}>
-                  <Icon size={14} strokeWidth={2.8} className="shrink-0" style={{ color: key === "loser" ? "#FF9AA8" : key === "fav" ? "#FF7EC0" : "#FFD23F" }} aria-hidden />
-                  <span className="min-w-0 truncate">{text}</span>
-                </li>
-              ))}
-            </ul>
-          </section>
-        )}
+        {/* Stats de la bande : carte sticker → écran plein écran */}
+        {band.length > 0 && <BandStatsCard onOpen={() => setStatsOpen(true)} />}
 
         {band.length > 0 && (
           <button type="button" onClick={() => { setManage((m) => !m); setConfirm(null); playSfx("tap", { volume: 0.4 }); }}
@@ -313,6 +288,8 @@ export function BandScreen({ onClose }: { onClose: () => void }) {
         <VoiceSheet entry={band[voiceOf]} look={lookOf(band[voiceOf], voiceOf)} locked={!unlocked && !band[voiceOf].me}
           onClose={() => { stopVoice(); setVoiceOf(null); }} />
       )}
+
+      {statsOpen && <BandStatsScreen band={band} onClose={() => setStatsOpen(false)} onToast={toast} />}
 
       {importing && <ImportPanel band={band} onClose={() => setImporting(false)} onDone={(n) => { setImporting(false); toast(t.importDone(n)); }} />}
     </AvatarLayer>

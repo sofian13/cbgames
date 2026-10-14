@@ -3,7 +3,10 @@
  * dernière partie. 100 % local (localStorage), alimenté par le signal central de fin
  * de partie (src/lib/game-finished.ts) : aucun jeu n'écrit ici directement.
  * Pas de compteur de gorgées : aucun point central ne les connaît, on n'invente pas de chiffre.
+ * « played » (parties par prénom) n'est mesuré que pour les parties dont on connaît la table
+ * (écran des prénoms, duo, Soirée) : une partie sans prénoms ne compte pour personne.
  */
+import type { ReactNode } from "react";
 import { GAME_FINISHED_EVENT, getCurrentGame, type GameFinishedDetail } from "@/lib/game-finished";
 import type { Lang } from "@/lib/i18n";
 
@@ -19,12 +22,25 @@ export interface BandStats {
   losses: Record<string, { name: string; n: number }>;
   /** Date de la dernière partie terminée (ms), 0 si aucune */
   last: number;
+  /** Parties jouées par prénom (clé normalisée), quand la table est connue — optionnel (anciennes données) */
+  played: Record<string, { name: string; n: number }>;
 }
 
-const EMPTY: BandStats = { games: 0, byGame: {}, losses: {}, last: 0 };
+const EMPTY: BandStats = { games: 0, byGame: {}, losses: {}, last: 0, played: {} };
 
 const norm = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/\s+/g, " ").trim();
 const int = (v: unknown) => (typeof v === "number" && Number.isFinite(v) && v > 0 ? Math.floor(v) : 0);
+
+/** Compteurs par prénom ({ clé: { name, n } }), nettoyés. */
+function counts(v: unknown): Record<string, { name: string; n: number }> {
+  const out: Record<string, { name: string; n: number }> = {};
+  if (!v || typeof v !== "object") return out;
+  for (const [k, x] of Object.entries(v as Record<string, unknown>).slice(0, 200)) {
+    const o = x as { name?: unknown; n?: unknown } | null;
+    if (typeof o?.name === "string" && o.name.trim() && int(o.n)) out[k] = { name: o.name.trim().slice(0, 24), n: int(o.n) };
+  }
+  return out;
+}
 
 function parse(raw: string | null): BandStats {
   if (!raw) return EMPTY;
@@ -34,14 +50,7 @@ function parse(raw: string | null): BandStats {
     if (p.byGame && typeof p.byGame === "object") {
       for (const [k, v] of Object.entries(p.byGame as Record<string, unknown>).slice(0, 100)) if (int(v)) byGame[k.slice(0, 40)] = int(v);
     }
-    const losses: Record<string, { name: string; n: number }> = {};
-    if (p.losses && typeof p.losses === "object") {
-      for (const [k, v] of Object.entries(p.losses as Record<string, unknown>).slice(0, 200)) {
-        const o = v as { name?: unknown; n?: unknown } | null;
-        if (typeof o?.name === "string" && o.name.trim() && int(o.n)) losses[k] = { name: o.name.trim().slice(0, 24), n: int(o.n) };
-      }
-    }
-    return { games: int(p.games), byGame, losses, last: int(p.last) };
+    return { games: int(p.games), byGame, losses: counts(p.losses), last: int(p.last), played: counts(p.played) };
   } catch {
     return EMPTY;
   }
@@ -74,7 +83,7 @@ export function subscribeBandStats(cb: () => void): () => void {
 }
 
 /** Compte une partie terminée. */
-export function recordGame(gameId: string | undefined, loser?: string | null): void {
+export function recordGame(gameId: string | undefined, loser?: string | null, players?: string[]): void {
   const s = getBandStats();
   const byGame = { ...s.byGame };
   if (gameId) byGame[gameId] = (byGame[gameId] ?? 0) + 1;
@@ -84,7 +93,16 @@ export function recordGame(gameId: string | undefined, loser?: string | null): v
     const k = norm(name);
     losses[k] = { name: name.slice(0, 24), n: (losses[k]?.n ?? 0) + 1 };
   }
-  write({ games: s.games + 1, byGame, losses, last: Date.now() });
+  const played = { ...s.played };
+  const seen = new Set<string>();
+  for (const p of players ?? []) {
+    const n = typeof p === "string" ? p.trim() : "";
+    const k = norm(n);
+    if (!k || seen.has(k)) continue;
+    seen.add(k);
+    played[k] = { name: n.slice(0, 24), n: (played[k]?.n ?? 0) + 1 };
+  }
+  write({ games: s.games + 1, byGame, losses, last: Date.now(), played });
 }
 
 /** « Remettre à zéro ». */
@@ -110,6 +128,32 @@ export function topLoser(s: BandStats): { name: string; n: number } | null {
   return best && !tie ? best : null;
 }
 
+/** Clé de comparaison d'un prénom (la même que celle des compteurs). */
+export const bandStatsKey = norm;
+
+/** Les perdants, du plus au moins (égalités : ordre alphabétique). */
+export function losersRanking(s: BandStats): { name: string; n: number }[] {
+  return Object.values(s.losses).sort((a, b) => b.n - a.n || a.name.localeCompare(b.name));
+}
+
+/** Les jeux les plus joués (id + nombre), du plus au moins. */
+export function gamesRanking(s: BandStats): { id: string; n: number }[] {
+  return Object.entries(s.byGame).map(([id, n]) => ({ id, n })).sort((a, b) => b.n - a.n || a.id.localeCompare(b.id));
+}
+
+/* Blob déguisé d'un jeu + sa couleur : fournis par l'app (catalogue + ZBlob), sinon rien */
+export interface BandStatsGameArt {
+  art: (id: string, size: number) => ReactNode;
+  color: (id: string) => string | undefined;
+}
+let gameArt: BandStatsGameArt | null = null;
+export function setBandStatsGameArt(a: BandStatsGameArt) {
+  gameArt = a;
+}
+export function bandStatsGameArt(): BandStatsGameArt | null {
+  return gameArt;
+}
+
 /* Nom affiché d'un jeu : fourni par l'app (catalogue), sinon rien */
 let gameName: ((id: string, lang: Lang) => string | undefined) | null = null;
 export function setBandStatsGameNames(fn: (id: string, lang: Lang) => string | undefined) {
@@ -133,6 +177,6 @@ export function initBandStats() {
     const now = Date.now();
     if (now - lastEvent < 3000) return;
     lastEvent = now;
-    recordGame(d.gameId ?? getCurrentGame() ?? undefined, d.loser);
+    recordGame(d.gameId ?? getCurrentGame() ?? undefined, d.loser, Array.isArray(d.players) ? d.players : undefined);
   });
 }

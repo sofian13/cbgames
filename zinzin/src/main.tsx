@@ -12,6 +12,7 @@ import { initBandStats, setBandStatsGameNames } from "@/lib/band-stats";
 import { GAME_TEXT } from "./catalog-text";
 import { installFrenchTypo } from "./ui/typo";
 import "./share-art"; // blobs déguisés des images « Partager mon résultat »
+import "./band-stats-art"; // blobs déguisés des jeux dans « Les stats de la bande »
 import { getLang } from "@/lib/i18n";
 import { lockOrientation } from "@/lib/orientation";
 

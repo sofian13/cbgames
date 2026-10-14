@@ -6,6 +6,7 @@
  */
 import { BAND_MAX, cleanName, sanitizeLook, type AvatarLook } from "@/lib/avatar/look";
 import { deleteVoice, isVoiceId } from "@/lib/avatar/voice-store";
+import { setCurrentPlayers } from "@/lib/game-finished";
 
 const KEY = "zz-players-v1";
 const MAX_RECENT = 20;
@@ -129,6 +130,7 @@ export function getRecentNames(): string[] {
 export function savePlayers(names: string[]): void {
   const last = uniq(clean(names));
   if (!last.length) return;
+  setCurrentPlayers(last); // stats de la bande : qui joue cette partie
   const prev = read();
   write({ ...prev, last, recent: uniq([...last, ...prev.recent]).slice(0, MAX_RECENT) });
 }
@@ -157,6 +159,7 @@ export function getSavedDuo(): [string, string] {
 export function saveDuo(names: [string, string]): void {
   const [a, b] = names.map((n) => n.trim());
   if (!a || !b) return;
+  setCurrentPlayers([a, b]); // stats de la bande : qui joue cette partie
   try {
     localStorage.setItem(DUO_KEY, JSON.stringify([a, b]));
   } catch {
@@ -293,5 +296,6 @@ export function takePartyBand(min: number, max: number): string[] | null {
   const band = partyBand;
   partyBand = null;
   if (!band || band.length < min || band.length > max) return null;
+  setCurrentPlayers(band); // posée après l'ouverture du jeu (qui remet la table à zéro)
   return band;
 }

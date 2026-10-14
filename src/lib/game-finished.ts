@@ -15,20 +15,32 @@ export interface GameFinishedDetail {
   gameId?: string;
   /** Celui qui a le plus perdu la partie, si le jeu le sait sans ambiguïté */
   loser?: string | null;
+  /** Prénoms de la table (rempli tout seul avec la dernière table lancée dans ce jeu, voir setCurrentPlayers) */
+  players?: string[];
 }
 
 /* Jeu affiché en ce moment (posé par l'écran de jeu de l'app) : les jeux n'ont pas à connaître leur id */
 let currentGame: string | null = null;
 export function setCurrentGame(id: string | null) {
   currentGame = id;
+  currentPlayers = null; // nouvelle partie : on ne connaît pas encore la table
 }
 export function getCurrentGame(): string | null {
   return currentGame;
 }
 
+/* Table du jeu en cours : posée au lancement (« C'est parti », duo, bande de la Soirée).
+ * Un jeu sans écran de prénoms n'en pose pas : ses parties ne comptent pour personne. */
+let currentPlayers: string[] | null = null;
+export function setCurrentPlayers(names: string[] | null) {
+  currentPlayers = names && names.length ? names.slice(0, 24) : null;
+}
+
 export function emitGameFinished(detail: GameFinishedDetail = {}) {
   if (typeof window === "undefined") return;
-  const d: GameFinishedDetail = detail.soiree ? detail : { ...detail, gameId: detail.gameId ?? currentGame ?? undefined };
+  const d: GameFinishedDetail = detail.soiree
+    ? detail
+    : { ...detail, gameId: detail.gameId ?? currentGame ?? undefined, players: detail.players ?? currentPlayers ?? undefined };
   window.dispatchEvent(new CustomEvent<GameFinishedDetail>(GAME_FINISHED_EVENT, { detail: d }));
 }
 
