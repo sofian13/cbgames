@@ -3,13 +3,14 @@
 /**
  * Le Faux Témoin — jeu sur UN SEUL téléphone (3-10 joueurs).
  * Une scène illustrée (générée en SVG) passe de main en main : chacun la voit 5 s,
- * sauf le Faux Témoin qui ne voit rien. Téléphone au centre, le jeu pose des
- * questions sur la scène, chacun répond à voix haute, puis on vote pour démasquer
- * le Faux Témoin. Démasqué, il a une dernière chance (QCM) pour gagner quand même.
+ * sauf le Faux Témoin qui ne voit rien. Téléphone au centre, les joueurs s'interrogent
+ * à tour de rôle sur la scène (bouton « Une idée de question ? » tirée de la vraie scène,
+ * sans la réponse), le Faux Témoin compris, puis on vote pour le démasquer. Démasqué,
+ * il a une dernière chance (QCM) pour gagner quand même. À la fin : la scène + les réponses.
  */
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { BookOpen, Check, Eye, Megaphone, Volume2, VolumeX, X } from "lucide-react";
+import { BookOpen, Check, Eye, Lightbulb, Volume2, VolumeX, X } from "lucide-react";
 import type { GameProps } from "@/lib/games/types";
 import { useT } from "@/lib/i18n";
 import { playCombo, playSfx, preloadSfx } from "@/lib/sfx";
@@ -22,24 +23,28 @@ import {
 } from "@/components/games/local-kit";
 import { FT_STR, answerLabel, type FTStrings } from "./i18n";
 import { BlobFigure, SceneView } from "./scene-view";
-import { COLOR_HEX, DECOR_IDS, makeScene, planRound, sameAnswer, type DecorId, type Question, type Scene } from "./scene";
+import { COLOR_HEX, DECOR_IDS, makeScene, planRound, sameAnswer, type Answer, type DecorId, type Question, type Scene } from "./scene";
 import { useGameFinished } from "@/lib/game-finished";
 import { ShareResultButton } from "@/components/games/share-result-button";
 import { rankingCard } from "@/lib/share-cards";
 
 const ACCENT = "#4ECDC4";
 const VIEW_SEC = 5;
-const QUESTIONS = 3;
+/** Tours de table de questions (réglable : 1, 2 ou 3) */
+const LAPS = [1, 2, 3];
+const DEFAULT_LAPS = 2;
 /** Points : Faux Témoin pas démasqué / démasqué mais a trouvé / chaque témoin s'il est démasqué et rate */
 const PTS_ESCAPE = 3;
 const PTS_STEAL = 2;
 const PTS_WITNESS = 1;
 
 type Phase =
-  | "setup" | "howto" | "teaser" | "pass" | "view" | "center" | "question"
+  | "setup" | "howto" | "teaser" | "pass" | "view" | "center" | "ask"
   | "vote" | "suspense" | "verdict" | "last" | "reveal" | "scores" | "end";
 
-interface RoundPlan { asked: Question[]; last: Question; spare: Question[] }
+interface RoundPlan { ideas: Question[]; last: Question }
+/** Une question posée : qui → qui, et l'idée de l'app si elle a servi */
+interface Asked { asker: number; target: number; q: Question | null }
 
 const INK = GAME_INK;
 const rnd = (n: number) => Math.floor(Math.random() * n);
@@ -57,13 +62,19 @@ export default function FauxTemoinGame({ onReturnToLobby }: GameProps) {
   const [usedDecors, setUsedDecors] = useState<DecorId[]>([]);
   const [fake, setFake] = useState(0);
   const [viewer, setViewer] = useState(0);
-  const [qi, setQi] = useState(0);
+  const [laps, setLaps] = useState(DEFAULT_LAPS);
+  const [turn, setTurn] = useState(0);
+  const [target, setTarget] = useState<number | null>(null);
+  const [idea, setIdea] = useState<Question | null>(null);
+  const [ideaQueue, setIdeaQueue] = useState<Question[]>([]);
+  const [log, setLog] = useState<Asked[]>([]);
+  const [showAll, setShowAll] = useState(false);
   const [starter, setStarter] = useState(0);
   const [accused, setAccused] = useState<number | null>(null);
   const [lastPick, setLastPick] = useState<number | null>(null);
   const [showRules, setShowRules] = useState(false);
 
-  useScrollTopOn(`${phase}-${viewer}-${qi}`);
+  useScrollTopOn(`${phase}-${viewer}-${turn}`);
 
   useEffect(() => {
     preloadSfx(["whoosh", "whooshdown", "card-flip", "tick", "pop", "select", "drumroll", "drumroll-end", "gong", "tada", "applause", "buzzer", "crowd-aww", "correct", "coins"]);
@@ -73,7 +84,9 @@ export default function FauxTemoinGame({ onReturnToLobby }: GameProps) {
   const drawScene = (avoid: DecorId[]) => {
     const s = makeScene(avoid);
     setScene(s);
-    setPlan(planRound(s, QUESTIONS));
+    const p = planRound(s);
+    setPlan(p);
+    setIdeaQueue(p.ideas);
   };
 
   const startGame = (names: string[]) => {
@@ -105,7 +118,11 @@ export default function FauxTemoinGame({ onReturnToLobby }: GameProps) {
     setFakeCount((p) => p.map((c, i) => (i === f ? c + 1 : c)));
     setUsedDecors((p) => (p.includes(scene.decor) ? p : [...p, scene.decor]));
     setViewer(0);
-    setQi(0);
+    setTurn(0);
+    setTarget(null);
+    setIdea(null);
+    setLog([]);
+    setShowAll(false);
     setStarter(rnd(players.length));
     setAccused(null);
     setLastPick(null);
@@ -121,25 +138,39 @@ export default function FauxTemoinGame({ onReturnToLobby }: GameProps) {
     }
   };
 
-  const rerollQuestion = () => {
-    if (!plan || !plan.spare.length) return;
-    const cur = plan.asked[qi];
-    const topicOf = (q: Question) => q.topic.split("-")[0];
-    const others = plan.asked.filter((_, i) => i !== qi).map(topicOf);
-    const idx = Math.max(0, plan.spare.findIndex((q) => !others.includes(topicOf(q)) && topicOf(q) !== topicOf(cur)));
-    const next = plan.spare[idx];
-    setPlan({ ...plan, asked: plan.asked.map((q, i) => (i === qi ? next : q)), spare: plan.spare.filter((_, i) => i !== idx) });
+  // ── Questions entre joueurs ─────────────────────────────
+  const totalTurns = laps * players.length;
+  const askerAt = (k: number) => (starter + k) % players.length;
+
+  /** « Une idée de question ? » / « Une autre » : l'idée écartée repasse en fin de pile. */
+  const drawIdea = () => {
+    const queue = idea ? [...ideaQueue, idea] : ideaQueue;
+    if (!queue.length) return;
+    playSfx("card-flip", { volume: 0.5 });
+    setIdea(queue[0]);
+    setIdeaQueue(queue.slice(1));
   };
 
-  const nextQuestion = () => {
-    if (!plan) return;
-    if (qi + 1 < plan.asked.length) {
-      playSfx("pop", { volume: 0.5 });
-      setQi(qi + 1);
-    } else {
-      playSfx("whoosh", { volume: 0.5 });
-      setPhase("vote");
-    }
+  /** Note la question en cours (si une cible a été choisie) ; l'idée utilisée ne revient plus. */
+  const logTurn = () => {
+    if (target === null) return;
+    setLog((p) => [...p, { asker: askerAt(turn), target, q: idea }]);
+  };
+
+  const goVote = () => {
+    logTurn();
+    playSfx("whoosh", { volume: 0.5 });
+    setPhase("vote");
+  };
+
+  const nextTurn = () => {
+    if (target === null) return;
+    if (turn + 1 >= totalTurns) return goVote();
+    logTurn();
+    playSfx("pop", { volume: 0.5 });
+    setTurn(turn + 1);
+    setTarget(null);
+    setIdea(null);
   };
 
   const accuse = () => {
@@ -264,40 +295,90 @@ export default function FauxTemoinGame({ onReturnToLobby }: GameProps) {
   } else if (phase === "center") {
     body = (
       <div className="flex flex-1 flex-col items-center justify-center text-center">
-        <svg viewBox="-60 -80 120 92" width={170} aria-hidden>
+        <svg viewBox="-60 -80 120 92" width={150} aria-hidden>
           <g transform="translate(-30 0) scale(0.85)"><BlobFigure color="blue" /></g>
           <g transform="translate(30 0) scale(0.85)"><BlobFigure color="pink" acc="glasses" /></g>
           <g transform="translate(0 6)"><BlobFigure color="yellow" acc="hat" /></g>
         </svg>
-        <ZTitle size="clamp(36px, 10vw, 48px)" className="mt-4">{t.centerTitle}</ZTitle>
-        <p className="mt-3 max-w-sm text-[16px] font-semibold leading-snug" style={{ color: "rgba(255,255,255,0.88)" }}>{t.centerText(plan.asked.length)}</p>
-        <ZButton className="mt-8" bg={ZZ.yellow} onClick={() => { playSfx("pop", { volume: 0.5 }); setPhase("question"); }}>{t.centerBtn}</ZButton>
+        <ZTitle size="clamp(34px, 10vw, 46px)" className="mt-3">{t.centerTitle}</ZTitle>
+        <p className="mt-3 max-w-sm text-[16px] font-semibold leading-snug" style={{ color: "rgba(255,255,255,0.88)" }}>{t.centerText}</p>
+        <p className="mt-6 text-[16px] font-bold">{t.turnsLabel}</p>
+        <div className="mt-3 flex justify-center gap-3" role="radiogroup" aria-label={t.turnsLabel}>
+          {LAPS.map((n) => (
+            <ZChoice key={n} active={laps === n} onClick={() => setLaps(n)} color={ZZ.yellow} className="grid h-16 w-16 place-items-center !p-0 text-center" label={String(n)}>
+              <span style={{ ...DISPLAY, fontSize: 28 }}>{n}</span>
+            </ZChoice>
+          ))}
+        </div>
+        <ZButton className="mt-8" bg={ZZ.yellow} onClick={() => { playSfx("pop", { volume: 0.5 }); setPhase("ask"); }}>{t.centerBtn}</ZButton>
       </div>
     );
-  } else if (phase === "question") {
-    const q = plan.asked[qi];
-    const first = (starter + qi) % players.length;
+  } else if (phase === "ask") {
+    const n = players.length;
+    const asker = askerAt(turn);
+    const lap = Math.floor(turn / n) + 1;
+    const isLast = turn + 1 >= totalTurns;
+    const canVote = turn >= n && !isLast;
+    const noMore = !idea && !ideaQueue.length;
     body = (
       <>
-        <ZChip bg={ZZ.yellow}>{t.qCounter(qi + 1, plan.asked.length)}</ZChip>
-        <ZCard key={q.id} bg={ZZ.cream} tilt={-1.5} className="mt-5 px-5 py-7">
-          <span className="absolute -right-3 -top-4 grid h-12 w-12 place-items-center rounded-full" style={{ background: ZZ.pink, border: `3px solid ${INK}`, boxShadow: `0 3px 0 ${INK}`, color: "#fff" }}>
-            <Megaphone size={22} strokeWidth={2.8} aria-hidden />
-          </span>
-          <ZTitle size="clamp(27px, 8vw, 34px)" style={{ lineHeight: 1.05, textWrap: "balance" }}>{t.question(q.q)}</ZTitle>
-        </ZCard>
-        <div className="mt-6 flex items-center gap-3 rounded-[20px] p-3" style={{ background: "#fff", border: `3px solid ${INK}`, boxShadow: `0 4px 0 ${INK}`, color: INK }}>
-          <Mascot size={46} color={colorForIndex(first)} mood="happy" shadow={false} bob={false} />
-          <p className="text-[16px] font-bold leading-snug">{t.starts(players[first])}</p>
+        <ZChip bg={ZZ.yellow}>{t.turnChip(lap, laps)}</ZChip>
+        {/* Ordre de passage : le joueur dont c'est le tour est mis en avant */}
+        <div className="mt-3 flex flex-wrap justify-center gap-x-1 gap-y-1.5" aria-label={t.orderLabel} role="list">
+          {players.map((_, k) => {
+            const i = (starter + k) % n;
+            const cur = i === asker;
+            const done = k < turn % n;
+            return (
+              <div key={i} role="listitem" className="flex w-[48px] flex-col items-center" style={{ opacity: done ? 0.45 : 1 }} aria-current={cur || undefined}>
+                <span className="grid h-10 w-10 place-items-center rounded-full" style={{ background: cur ? "#fff" : "transparent", border: cur ? `3px solid ${INK}` : "3px solid transparent", boxShadow: cur ? `0 3px 0 ${INK}` : undefined }}>
+                  <Mascot size={cur ? 28 : 24} color={colorForIndex(i)} mood={cur ? "happy" : "sus"} shadow={false} bob={false} />
+                </span>
+                <span className="mt-0.5 w-full truncate text-center text-[12px] font-bold leading-tight" style={{ color: cur ? ZZ.yellow : "rgba(255,255,255,0.8)" }}>{players[i]}</span>
+              </div>
+            );
+          })}
         </div>
-        <p className="mt-4 text-[15px] font-semibold leading-snug" style={{ color: "rgba(255,255,255,0.85)" }}>{t.aloud}</p>
-        {plan.spare.length > 0 && (
-          <div className="mt-4 flex justify-center"><RerollButton label={t.rerollQ} onClick={rerollQuestion} /></div>
+        <ZCard bg="#fff" tilt={-1} className="mt-3 flex items-center gap-3 px-3.5 py-2.5">
+          <Mascot size={44} color={colorForIndex(asker)} mood="happy" shadow={false} bob={false} />
+          <ZTitle size="clamp(21px, 6.2vw, 26px)" style={{ lineHeight: 1.02, textWrap: "balance", overflowWrap: "anywhere" }}>{t.askTitle(players[asker])}</ZTitle>
+        </ZCard>
+        <p className="mt-4 text-[16px] font-bold">{t.askWho}</p>
+        <div className="mt-2 grid grid-cols-3 gap-2.5">
+          {players.map((p, i) => i === asker ? null : (
+            <ZChoice key={i} active={target === i} onClick={() => setTarget(i)} color={ZZ.pink} className="flex min-h-[48px] items-center justify-center gap-1.5 !px-1.5 !py-1.5 text-center" label={p}>
+              <Mascot size={24} color={colorForIndex(i)} mood={target === i ? "shocked" : "sus"} shadow={false} bob={false} />
+              <span className="min-w-0 truncate leading-tight" style={{ ...DISPLAY, fontSize: 15 }}>{p}</span>
+            </ZChoice>
+          ))}
+        </div>
+        {idea ? (
+          <ZCard key={idea.id} bg={ZZ.cream} tilt={1} className="mt-5 px-4 pb-3 pt-4">
+            <span className="absolute -left-2 -top-3.5 inline-flex min-h-7 items-center gap-1 rounded-full px-2.5 text-[13px] font-extrabold" style={{ background: ZZ.yellow, border: `2.5px solid ${INK}`, color: INK }}>
+              <Lightbulb size={14} strokeWidth={3} aria-hidden /> {t.ideaTag}
+            </span>
+            <ZTitle size="clamp(20px, 5.8vw, 24px)" style={{ lineHeight: 1.08, textWrap: "balance" }}>{t.ask(target === null ? null : players[target], t.question(idea.q))}</ZTitle>
+            {ideaQueue.length > 0 && (
+              <div className="mt-2.5 flex justify-end"><RerollButton label={t.ideaAnother} onClick={drawIdea} bg={ZZ.yellow} /></div>
+            )}
+          </ZCard>
+        ) : noMore ? (
+          <p className="mt-5 text-center text-[15px] font-bold" style={{ color: ZZ.yellow }}>{t.ideaNone}</p>
+        ) : (
+          <ZButton className="mt-5" size="md" bg={ZZ.yellow} onClick={drawIdea}>
+            <Lightbulb size={22} strokeWidth={2.8} aria-hidden /> {t.ideaBtn}
+          </ZButton>
         )}
-        <div className="min-h-6 flex-1" />
-        <ZButton className="mt-6" bg={qi + 1 < plan.asked.length ? ZZ.yellow : ZZ.pink} onClick={nextQuestion}>
-          {qi + 1 < plan.asked.length ? t.nextQ : t.toVote}
+        {target !== null && (
+          <p className="mt-3 text-center text-[14px] font-semibold leading-snug" style={{ color: "rgba(255,255,255,0.88)" }}>
+            {t.answersAloud(players[target])} {t.beware}
+          </p>
+        )}
+        <div className="min-h-4 flex-1" />
+        <ZButton className="mt-4" bg={isLast ? ZZ.pink : ACCENT} disabled={target === null} onClick={nextTurn}>
+          {target === null ? t.nextTurnPick : isLast ? t.toVote : t.nextTurn}
         </ZButton>
+        {canVote && <ZButton className="mt-2.5" size="sm" bg={ZZ.pink} onClick={goVote}>{t.toVote}</ZButton>}
       </>
     );
   } else if (phase === "vote") {
@@ -394,7 +475,9 @@ export default function FauxTemoinGame({ onReturnToLobby }: GameProps) {
   } else if (phase === "reveal") {
     const caught = accused === fake;
     const stole = caught && lastPick !== null && sameAnswer(plan.last.options[lastPick], plan.last.answer);
-    const list = caught ? [...plan.asked, plan.last] : plan.asked;
+    const asked = log.filter((a): a is Asked & { q: Question } => a.q !== null);
+    const usedIds = new Set(asked.map((a) => a.q.id));
+    const others = plan.ideas.filter((q) => !usedIds.has(q.id));
     body = (
       <>
         <div className="flex items-center justify-between gap-2">
@@ -405,19 +488,24 @@ export default function FauxTemoinGame({ onReturnToLobby }: GameProps) {
           <SceneView scene={scene} label={t.sceneLabel} />
         </ZCard>
         <ZChip bg={ZZ.pink} tilt={2} className="mt-4" style={{ whiteSpace: "normal", lineHeight: 1.2, padding: "8px 14px" }}>{t.revealWho(fakeName)}</ZChip>
-        <p className="mt-6" style={{ ...DISPLAY, fontSize: 24 }}>{t.answersTitle}</p>
+        <p className="mt-6" style={{ ...DISPLAY, fontSize: 24 }}>{t.askedTitle}</p>
         <div className="mt-3 flex flex-col gap-2.5">
-          {list.map((q, i) => (
-            <div key={q.id} className="rounded-[18px] px-4 py-3" style={{ background: i === plan.asked.length ? ZZ.yellow : "#fff", color: INK, border: `3px solid ${INK}`, boxShadow: `0 3px 0 ${INK}` }}>
-              {i === plan.asked.length && <p className="mb-1 text-[13px] font-extrabold">{t.lastTag}</p>}
-              <p className="text-[15px] font-semibold leading-snug">{t.question(q.q)}</p>
-              <p className="mt-1 flex items-center gap-2 text-[19px] leading-tight" style={DISPLAY}>
-                {q.answer.k === "color" && <span aria-hidden className="inline-block h-4 w-4 shrink-0 rounded-full" style={{ background: COLOR_HEX[q.answer.v], border: `2px solid ${INK}` }} />}
-                {answerLabel(t, q.answer)}
-              </p>
-            </div>
+          {asked.map((a, i) => (
+            <AnswerRow key={i} t={t} q={a.q} who={`${players[a.asker]} → ${players[a.target]}`} fake={a.asker === fake || a.target === fake} />
           ))}
+          {!asked.length && <p className="text-[15px] font-semibold leading-snug" style={{ color: "rgba(255,255,255,0.85)" }}>{t.noneAsked}</p>}
+          {caught && <AnswerRow t={t} q={plan.last} who={t.lastTag} bg={ZZ.yellow} />}
         </div>
+        {others.length > 0 && (showAll ? (
+          <>
+            <p className="mt-6" style={{ ...DISPLAY, fontSize: 22 }}>{t.moreDetails}</p>
+            <div className="mt-3 flex flex-col gap-2.5">
+              {others.map((q) => <AnswerRow key={q.id} t={t} q={q} />)}
+            </div>
+          </>
+        ) : (
+          <ZLink className="mt-3" onClick={() => { playSfx("pop", { volume: 0.4 }); setShowAll(true); }}>{t.moreDetails}</ZLink>
+        ))}
         <ZCard bg={ZZ.mint} tilt={-1} className="mt-5 px-4 py-3 text-center">
           <p className="text-[16px] font-bold leading-snug">
             {!caught ? t.ptsFake(fakeName, PTS_ESCAPE) : stole ? t.ptsFake(fakeName, PTS_STEAL) : t.ptsWitnesses}
@@ -463,6 +551,21 @@ export default function FauxTemoinGame({ onReturnToLobby }: GameProps) {
       <ZScreen bg={bg} sound={false} tools={tools}>{body}</ZScreen>
       {rulesSheet}
     </>
+  );
+}
+
+// ── Une question + sa vraie réponse (révélation) ─────────
+function AnswerRow({ t, q, who, fake, bg = "#fff" }: { t: FTStrings; q: Question; who?: string; fake?: boolean; bg?: string }) {
+  const a: Answer = q.answer;
+  return (
+    <div className="rounded-[18px] px-4 py-3" style={{ background: bg, color: INK, border: `3px solid ${INK}`, boxShadow: `0 3px 0 ${INK}` }}>
+      {who && <p className="mb-1 text-[13px] font-extrabold" style={{ color: fake ? "#C2185B" : "#4A3A66" }}>{who}</p>}
+      <p className="text-[15px] font-semibold leading-snug">{t.question(q.q)}</p>
+      <p className="mt-1 flex items-center gap-2 text-[19px] leading-tight" style={DISPLAY}>
+        {a.k === "color" && <span aria-hidden className="inline-block h-4 w-4 shrink-0 rounded-full" style={{ background: COLOR_HEX[a.v], border: `2px solid ${INK}` }} />}
+        {answerLabel(t, a)}
+      </p>
+    </div>
   );
 }
 
@@ -529,8 +632,8 @@ function HowtoCards({ t, scene }: { t: FTStrings; scene: Scene }) {
   const demo = useMemo(() => makeScene([scene.decor]), [scene.decor]);
   const pics: ReactNode[] = [
     <div key="a" className="overflow-hidden rounded-[12px]" style={{ border: `2.5px solid ${INK}`, width: 84 }}><SceneView scene={demo} label="" /></div>,
-    <svg key="b" viewBox="-40 -76 82 84" width={74} aria-hidden><BlobFigure color="yellow" blindfold /></svg>,
     <div key="c" className="flex items-end -space-x-3"><Mascot size={34} color="sky" mood="sus" shadow={false} bob={false} /><Mascot size={42} color="pink" mood="shocked" shadow={false} bob={false} /><Mascot size={34} color="mint" mood="sus" shadow={false} bob={false} /></div>,
+    <svg key="b" viewBox="-40 -76 82 84" width={74} aria-hidden><BlobFigure color="yellow" blindfold /></svg>,
   ];
   const fills = [ZZ.yellow, ZZ.pink, ZZ.sky];
   return (

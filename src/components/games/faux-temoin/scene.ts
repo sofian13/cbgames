@@ -192,7 +192,8 @@ export type Answer =
   | { k: "color"; v: ColorId }
   | { k: "hour"; v: number }
   | { k: "obj"; v: ObjId }
-  | { k: "pet"; v: PetId };
+  | { k: "pet"; v: PetId }
+  | { k: "acc"; v: Acc | "none" };
 
 export type QKind =
   | { t: "countBlobs" }
@@ -209,7 +210,10 @@ export type QKind =
   | { t: "tableItem" }
   | { t: "pet" }
   | { t: "objColor"; obj: ObjId }
-  | { t: "objectPresent" };
+  | { t: "objectPresent" }
+  | { t: "blobLeft" }
+  | { t: "blobRight" }
+  | { t: "wear"; color: ColorId };
 
 export interface Question {
   id: string;
@@ -221,6 +225,8 @@ export interface Question {
   options: Answer[];
   /** Seulement en QCM (pas à l'oral : la réponse n'est pas unique sans les choix) */
   qcmOnly?: boolean;
+  /** Seulement à l'oral (idées de questions) : jamais en dernière chance */
+  oralOnly?: boolean;
 }
 
 export const sameAnswer = (a: Answer, b: Answer) => a.k === b.k && a.v === b.v;
@@ -252,8 +258,8 @@ function objOptions(v: ObjId, absent: ObjId[]): Answer[] {
 /** Toutes les questions possibles sur la scène. */
 export function questionsFor(s: Scene): Question[] {
   const out: Question[] = [];
-  const add = (topic: string, q: QKind, answer: Answer, options: Answer[], qcmOnly = false) =>
-    out.push({ id: `${topic}-${q.t}`, topic, q, answer, options, qcmOnly });
+  const add = (topic: string, q: QKind, answer: Answer, options: Answer[], qcmOnly = false, oralOnly = false) =>
+    out.push({ id: `${topic}-${q.t}`, topic, q, answer, options, qcmOnly, oralOnly });
 
   const nb = s.blobs.length;
   add("blobs", { t: "countBlobs" }, { k: "num", v: nb }, numOptions(nb, 1, 8));
@@ -318,6 +324,18 @@ export function questionsFor(s: Scene): Question[] {
       add(`obj-${f.obj}`, { t: "objColor", obj: f.obj }, { k: "color", v: f.color }, colorOptions(f.color));
     }
   }
+  // Questions « entre joueurs » : le blob le plus à gauche / à droite, ce que portait tel blob
+  const byX = [...s.blobs].sort((a, b) => SLOTS[a.slot].x - SLOTS[b.slot].x);
+  if (byX.length >= 3) {
+    add("pos-l", { t: "blobLeft" }, { k: "color", v: byX[0].color }, blobColorOpts(byX[0].color), false, true);
+    add("pos-r", { t: "blobRight" }, { k: "color", v: byX[byX.length - 1].color }, blobColorOpts(byX[byX.length - 1].color), false, true);
+  }
+  for (const b of s.blobs) {
+    const v: Acc | "none" = b.acc ?? "none";
+    const opts = shuffle([v, ...shuffle<Acc | "none">([...ACCS, "none" as const].filter((a) => a !== v)).slice(0, 3)]);
+    add(`wear-${b.color}`, { t: "wear", color: b.color }, { k: "acc", v }, opts.map((a) => ({ k: "acc" as const, v: a })), false, true);
+  }
+
   // « Lequel de ces objets était dans la scène ? » : réservé au QCM
   const floorObjs = s.floor.filter((f): f is Extract<FloorThing, { kind: "obj" }> => f.kind === "obj");
   if (floorObjs.length) {
@@ -328,25 +346,27 @@ export function questionsFor(s: Scene): Question[] {
 }
 
 /**
- * Plan de la manche : `count` questions orales (sujets différents) + une question
- * de dernière chance jamais posée à l'oral + une réserve pour « Pas fou ? Une autre ».
+ * Plan de la manche : une question de dernière chance (jamais proposée en idée)
+ * + la pile d'idées de questions pour les joueurs (sujets variés d'abord, au hasard).
  */
-export function planRound(s: Scene, count: number): { asked: Question[]; last: Question; spare: Question[] } {
+export function planRound(s: Scene): { ideas: Question[]; last: Question } {
   const all = shuffle(questionsFor(s));
-  // Dernière chance : de préférence un QCM pur, sinon n'importe laquelle
-  const last = all.find((q) => q.qcmOnly) ?? all[all.length - 1];
-  // Aucune question orale ne doit trahir la réponse de la dernière chance
+  // Dernière chance : de préférence un QCM pur, sinon une question « classique »
+  const last = all.find((q) => q.qcmOnly) ?? all.find((q) => !q.oralOnly && q.q.t !== "countAcc" && q.q.t !== "colorAcc") ?? all[all.length - 1];
+  // Aucune idée ne doit trahir la réponse de la dernière chance (les réponses se disent à voix haute)
   const leaks = (q: Question) =>
-    last.q.t === "objectPresent" && last.answer.k === "obj" &&
-    ((q.q.t === "objColor" && q.q.obj === last.answer.v) || (q.q.t === "tableItem" && sameAnswer(q.answer, last.answer)));
+    (last.q.t === "objectPresent" && last.answer.k === "obj" &&
+      ((q.q.t === "objColor" && q.q.obj === last.answer.v) || (q.q.t === "tableItem" && sameAnswer(q.answer, last.answer)))) ||
+    (last.q.t === "colorAcc" && q.q.t === "wear" && q.answer.v === last.q.acc) ||
+    ((last.q.t === "colorSleeper" || last.q.t === "colorCheer" || last.q.t === "colorAcc") &&
+      (q.q.t === "blobLeft" || q.q.t === "blobRight") && sameAnswer(q.answer, last.answer));
   const oral = all.filter((q) => q !== last && !q.qcmOnly && !leaks(q));
-  const asked: Question[] = [];
-  const spare: Question[] = [];
+  // Sujets différents d'abord, le reste ensuite
+  const first: Question[] = [];
+  const rest: Question[] = [];
   for (const q of oral) {
-    if (asked.length < count && !asked.some((a) => a.topic.split("-")[0] === q.topic.split("-")[0])) asked.push(q);
-    else spare.push(q);
+    if (!first.some((a) => a.topic.split("-")[0] === q.topic.split("-")[0])) first.push(q);
+    else rest.push(q);
   }
-  // Pas assez de sujets différents : on complète avec la réserve
-  while (asked.length < count && spare.length) asked.push(spare.shift()!);
-  return { asked, last, spare };
+  return { ideas: [...first, ...rest], last };
 }

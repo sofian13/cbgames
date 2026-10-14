@@ -31,15 +31,25 @@ export interface FTStrings {
   fakeTitle: string;
   fakeText: string;
   secondsLeft: (n: number) => string;
-  // Questions
+  // Questions entre joueurs
   centerTitle: string;
-  centerText: (n: number) => string;
+  centerText: string;
+  turnsLabel: string;
   centerBtn: string;
-  qCounter: (i: number, n: number) => string;
-  starts: (name: string) => string;
-  aloud: string;
-  rerollQ: string;
-  nextQ: string;
+  turnChip: (i: number, n: number) => string;
+  orderLabel: string;
+  askTitle: (name: string) => string;
+  askWho: string;
+  answersAloud: (name: string) => string;
+  beware: string;
+  ideaBtn: string;
+  ideaAnother: string;
+  ideaNone: string;
+  ideaTag: string;
+  /** La question d'idée, adressée à la cible si elle est choisie */
+  ask: (name: string | null, q: string) => string;
+  nextTurn: string;
+  nextTurnPick: string;
   toVote: string;
   // Vote
   voteTitle: string;
@@ -64,7 +74,9 @@ export interface FTStrings {
   // Révélation / scores
   revealTitle: string;
   revealWho: (name: string) => string;
-  answersTitle: string;
+  askedTitle: string;
+  noneAsked: string;
+  moreDetails: string;
   lastTag: string;
   ptsFake: (name: string, pts: number) => string;
   ptsWitnesses: string;
@@ -85,9 +97,19 @@ export interface FTStrings {
   color: Record<ColorId, string>;
   obj: Record<ObjId, string>;
   pet: Record<PetId, string>;
+  acc: Record<Acc | "none", string>;
   hour: (h: number) => string;
   question: (q: QKind) => string;
 }
+
+/** « Tom, combien de… » : minuscule après le prénom (en sautant ¿ ¡ en espagnol). */
+const lcFirst = (q: string) => q.replace(/^([¿¡]?)(\p{L})/u, (_, p: string, c: string) => p + c.toLowerCase());
+const addressed = (name: string | null, q: string) => (name ? `${name}, ${lcFirst(q)}` : q);
+const COLOR_LC: Record<"fr" | "en" | "es", Record<ColorId, string>> = {
+  fr: { red: "rouge", yellow: "jaune", blue: "bleu", green: "vert", pink: "rose", purple: "violet", orange: "orange" },
+  en: { red: "red", yellow: "yellow", blue: "blue", green: "green", pink: "pink", purple: "purple", orange: "orange" },
+  es: { red: "rojo", yellow: "amarillo", blue: "azul", green: "verde", pink: "rosa", purple: "morado", orange: "naranja" },
+};
 
 // ── Français ─────────────────────────────────────────────
 const FEATURE_FR: Record<DecorId, string> = {
@@ -237,9 +259,9 @@ export const FT_STR: I18n<FTStrings> = {
     unmute: "Remettre le son",
     howtoTitle: "Comment on joue ?",
     howto: [
-      { title: "Regarde la scène", text: "Chacun son tour, tu as 5 secondes pour mémoriser une scène. Sauf un : le Faux Témoin, qui ne voit rien." },
-      { title: "Réponds à voix haute", text: "Téléphone au centre : le jeu pose des questions sur la scène. Chacun répond à son tour. Le Faux Témoin écoute… et bluffe." },
-      { title: "Démasquez-le", text: "Votez à main levée. S'il est démasqué, il a une dernière chance : une bonne réponse et il gagne quand même." },
+      { title: "Regarde la scène", text: "Chacun son tour, 5 secondes pour mémoriser une scène. Sauf le Faux Témoin, qui ne voit rien." },
+      { title: "Interrogez-vous", text: "À ton tour, pose une question sur la scène à qui tu veux. En panne ? Touche « Une idée de question ? »." },
+      { title: "Démasquez-le", text: "Le Faux Témoin pose et répond aussi… au bluff. Votez ! Démasqué, il a une dernière chance." },
     ],
     howtoGo: "C'est parti !",
     round: (n) => `Manche ${n}`,
@@ -253,17 +275,26 @@ export const FT_STR: I18n<FTStrings> = {
     witnessText: "Les couleurs, les objets, les détails…",
     fakeChip: "Chut…",
     fakeTitle: "Tu es le Faux Témoin : tu n'as rien vu !",
-    fakeText: "Bluffe. Écoute bien les autres et fais comme si.",
+    fakeText: "Bluffe : pose des questions crédibles et écoute bien les réponses.",
     secondsLeft: (n) => `${n} s`,
     centerTitle: "Téléphone au centre !",
-    centerText: (n) => `Tout le monde a vu la scène… enfin, presque. ${n} questions arrivent : répondez chacun votre tour, à voix haute.`,
+    centerText: "Chacun son tour, pose une question sur la scène à qui tu veux. Le Faux Témoin aussi… à vous de le griller !",
+    turnsLabel: "Combien de tours de table ?",
     centerBtn: "Première question",
-    qCounter: (i, n) => `Question ${i}/${n}`,
-    starts: (name) => `${name} répond en premier, puis on tourne.`,
-    aloud: "Chacun répond à voix haute, sans se concerter.",
-    rerollQ: "Pas fou ? Une autre",
-    nextQ: "Question suivante",
-    toVote: "On passe au vote",
+    turnChip: (i, n) => `Tour ${i}/${n}`,
+    orderLabel: "Ordre de passage",
+    askTitle: (name) => `${name}, pose ta question !`,
+    askWho: "Tu interroges qui ?",
+    answersAloud: (name) => `${name} répond à voix haute.`,
+    beware: "Réponse floue ? Question bizarre ? Méfiance…",
+    ideaBtn: "Une idée de question ?",
+    ideaAnother: "Une autre",
+    ideaNone: "Plus d'idées : invente ta question !",
+    ideaTag: "Idée",
+    ask: addressed,
+    nextTurn: "Répondu ! Au suivant",
+    nextTurnPick: "Touche qui tu interroges",
+    toVote: "On vote !",
     voteTitle: "Qui est le Faux Témoin ?",
     voteText: "À trois, tout le monde pointe quelqu'un du doigt. Touchez le prénom qui a le plus de voix.",
     voteBtn: "On l'accuse !",
@@ -284,7 +315,9 @@ export const FT_STR: I18n<FTStrings> = {
     lastLoseText: "Les témoins gagnent la manche.",
     revealTitle: "La scène",
     revealWho: (name) => `Le Faux Témoin : ${name}`,
-    answersTitle: "Les bonnes réponses",
+    askedTitle: "Les questions posées",
+    noneAsked: "Pas d'idée tirée cette fois : vérifiez vos questions sur la scène !",
+    moreDetails: "Tous les détails de la scène",
     lastTag: "Dernière chance",
     ptsFake: (name, pts) => `${name} remporte la manche : +${pts} points`,
     ptsWitnesses: "Les témoins marquent 1 point chacun",
@@ -315,6 +348,7 @@ export const FT_STR: I18n<FTStrings> = {
       trophy: "Une coupe", radio: "Une radio", cake: "Un gâteau", book: "Des livres",
     },
     pet: { cat: "Un chat", dog: "Un chien", duck: "Un canard" },
+    acc: { hat: "Un chapeau", glasses: "Des lunettes", crown: "Une couronne", bow: "Un nœud papillon", none: "Rien" },
     hour: (h) => `${h} h`,
     question: (q) => {
       switch (q.t) {
@@ -333,6 +367,9 @@ export const FT_STR: I18n<FTStrings> = {
         case "pet": return "Quel animal se cachait dans la scène ?";
         case "objColor": return OBJ_COLOR_FR[q.obj as ColorObj];
         case "objectPresent": return "Lequel de ces objets était dans la scène ?";
+        case "blobLeft": return "De quelle couleur était le blob tout à gauche ?";
+        case "blobRight": return "De quelle couleur était le blob tout à droite ?";
+        case "wear": return `Que portait le blob ${COLOR_LC.fr[q.color]} ?`;
       }
     },
   },
@@ -345,9 +382,9 @@ export const FT_STR: I18n<FTStrings> = {
     unmute: "Unmute",
     howtoTitle: "How to play",
     howto: [
-      { title: "Look at the scene", text: "One by one, you get 5 seconds to memorize a scene. Except one player: the Fake Witness, who sees nothing." },
-      { title: "Answer out loud", text: "Phone in the middle: the game asks questions about the scene. Everyone answers in turn. The Fake Witness listens… and bluffs." },
-      { title: "Unmask them", text: "Vote by pointing. If the Fake Witness gets caught, they get one last chance: a right answer and they still win." },
+      { title: "Look at the scene", text: "One by one, 5 seconds to memorize a scene. Except the Fake Witness, who sees nothing." },
+      { title: "Grill each other", text: "On your turn, ask anyone a question about the scene. Stuck? Tap \"Need a question idea?\"." },
+      { title: "Unmask them", text: "The Fake Witness asks and answers too… by bluffing. Vote! If caught, they get one last chance." },
     ],
     howtoGo: "Let's go!",
     round: (n) => `Round ${n}`,
@@ -361,17 +398,26 @@ export const FT_STR: I18n<FTStrings> = {
     witnessText: "Colors, objects, little details…",
     fakeChip: "Shh…",
     fakeTitle: "You're the Fake Witness: you saw nothing!",
-    fakeText: "Bluff. Listen closely to the others and play along.",
+    fakeText: "Bluff: ask believable questions and listen closely to the answers.",
     secondsLeft: (n) => `${n}s`,
     centerTitle: "Phone in the middle!",
-    centerText: (n) => `Everyone has seen the scene… well, almost. ${n} questions are coming: answer one at a time, out loud.`,
+    centerText: "Take turns asking anyone a question about the scene. The Fake Witness asks too… so catch them out!",
+    turnsLabel: "How many times around the table?",
     centerBtn: "First question",
-    qCounter: (i, n) => `Question ${i}/${n}`,
-    starts: (name) => `${name} answers first, then go around the circle.`,
-    aloud: "Everyone answers out loud, no conferring.",
-    rerollQ: "Meh? Another one",
-    nextQ: "Next question",
-    toVote: "Time to vote",
+    turnChip: (i, n) => `Lap ${i}/${n}`,
+    orderLabel: "Turn order",
+    askTitle: (name) => `${name}, ask a question!`,
+    askWho: "Who are you asking?",
+    answersAloud: (name) => `${name} answers out loud.`,
+    beware: "Vague answer? Weird question? Suspicious…",
+    ideaBtn: "Need a question idea?",
+    ideaAnother: "Another one",
+    ideaNone: "Out of ideas: make up your own!",
+    ideaTag: "Idea",
+    ask: addressed,
+    nextTurn: "Answered! Next",
+    nextTurnPick: "Tap who you're asking",
+    toVote: "Let's vote!",
     voteTitle: "Who's the Fake Witness?",
     voteText: "On three, everyone points at someone. Tap the name with the most fingers pointed at it.",
     voteBtn: "Accuse!",
@@ -392,7 +438,9 @@ export const FT_STR: I18n<FTStrings> = {
     lastLoseText: "The witnesses win the round.",
     revealTitle: "The scene",
     revealWho: (name) => `Fake Witness: ${name}`,
-    answersTitle: "The right answers",
+    askedTitle: "Questions asked",
+    noneAsked: "No idea cards drawn this time: check your questions against the scene!",
+    moreDetails: "Every detail of the scene",
     lastTag: "Last chance",
     ptsFake: (name, pts) => `${name} wins the round: +${pts} points`,
     ptsWitnesses: "Each witness scores 1 point",
@@ -423,6 +471,7 @@ export const FT_STR: I18n<FTStrings> = {
       trophy: "A trophy", radio: "A boombox", cake: "A cake", book: "Books",
     },
     pet: { cat: "A cat", dog: "A dog", duck: "A duck" },
+    acc: { hat: "A hat", glasses: "Glasses", crown: "A crown", bow: "A bow tie", none: "Nothing" },
     hour: (h) => `${h} o'clock`,
     question: (q) => {
       switch (q.t) {
@@ -441,6 +490,9 @@ export const FT_STR: I18n<FTStrings> = {
         case "pet": return "Which animal was hiding in the scene?";
         case "objColor": return OBJ_COLOR_EN[q.obj as ColorObj];
         case "objectPresent": return "Which of these things was in the scene?";
+        case "blobLeft": return "What color was the blob furthest to the left?";
+        case "blobRight": return "What color was the blob furthest to the right?";
+        case "wear": return `What was the ${COLOR_LC.en[q.color]} blob wearing?`;
       }
     },
   },
@@ -453,9 +505,9 @@ export const FT_STR: I18n<FTStrings> = {
     unmute: "Activar el sonido",
     howtoTitle: "¿Cómo se juega?",
     howto: [
-      { title: "Mira la escena", text: "Por turnos, tienes 5 segundos para memorizar una escena. Todos menos uno: el Falso Testigo, que no ve nada." },
-      { title: "Responde en voz alta", text: "Móvil en el centro: el juego hace preguntas sobre la escena. Cada uno responde por turnos. El Falso Testigo escucha… y se marca un farol." },
-      { title: "Desenmascáralo", text: "Votad señalando con el dedo. Si lo pilláis, tiene una última oportunidad: si acierta, gana igualmente." },
+      { title: "Mira la escena", text: "Por turnos, 5 segundos para memorizar una escena. Menos el Falso Testigo, que no ve nada." },
+      { title: "Interrogaos", text: "En tu turno, hazle una pregunta sobre la escena a quien quieras. ¿Sin ideas? Toca «¿Una idea de pregunta?»." },
+      { title: "Desenmascáralo", text: "El Falso Testigo también pregunta y responde… de farol. ¡Votad! Si lo pilláis, tiene una última oportunidad." },
     ],
     howtoGo: "¡Vamos!",
     round: (n) => `Ronda ${n}`,
@@ -469,16 +521,25 @@ export const FT_STR: I18n<FTStrings> = {
     witnessText: "Los colores, los objetos, los detalles…",
     fakeChip: "Chis…",
     fakeTitle: "Eres el Falso Testigo: ¡no has visto nada!",
-    fakeText: "Marca un farol. Escucha bien a los demás y disimula.",
+    fakeText: "Marca un farol: haz preguntas creíbles y escucha bien las respuestas.",
     secondsLeft: (n) => `${n} s`,
     centerTitle: "¡Móvil en el centro!",
-    centerText: (n) => `Todos han visto la escena… bueno, casi todos. Llegan ${n} preguntas: responded por turnos, en voz alta.`,
+    centerText: "Por turnos, hazle una pregunta sobre la escena a quien quieras. El Falso Testigo también… ¡a pillarlo!",
+    turnsLabel: "¿Cuántas vueltas de preguntas?",
     centerBtn: "Primera pregunta",
-    qCounter: (i, n) => `Pregunta ${i}/${n}`,
-    starts: (name) => `${name} responde primero y luego seguís en ronda.`,
-    aloud: "Cada uno responde en voz alta, sin ponerse de acuerdo.",
-    rerollQ: "¿No mola? Otra",
-    nextQ: "Siguiente pregunta",
+    turnChip: (i, n) => `Vuelta ${i}/${n}`,
+    orderLabel: "Orden de turnos",
+    askTitle: (name) => `${name}, ¡haz tu pregunta!`,
+    askWho: "¿A quién preguntas?",
+    answersAloud: (name) => `${name} responde en voz alta.`,
+    beware: "¿Respuesta vaga? ¿Pregunta rara? Sospechoso…",
+    ideaBtn: "¿Una idea de pregunta?",
+    ideaAnother: "Otra",
+    ideaNone: "No quedan ideas: ¡inventa tu pregunta!",
+    ideaTag: "Idea",
+    ask: addressed,
+    nextTurn: "¡Respondido! Siguiente",
+    nextTurnPick: "Toca a quién preguntas",
     toVote: "¡A votar!",
     voteTitle: "¿Quién es el Falso Testigo?",
     voteText: "A la de tres, todos señaláis a alguien. Tocad el nombre con más votos.",
@@ -500,7 +561,9 @@ export const FT_STR: I18n<FTStrings> = {
     lastLoseText: "Los testigos ganan la ronda.",
     revealTitle: "La escena",
     revealWho: (name) => `El Falso Testigo: ${name}`,
-    answersTitle: "Las respuestas correctas",
+    askedTitle: "Las preguntas hechas",
+    noneAsked: "Esta vez no salió ninguna idea: ¡comprobad vuestras preguntas en la escena!",
+    moreDetails: "Todos los detalles de la escena",
     lastTag: "Última oportunidad",
     ptsFake: (name, pts) => `${name} gana la ronda: +${pts} puntos`,
     ptsWitnesses: "Cada testigo gana 1 punto",
@@ -531,6 +594,7 @@ export const FT_STR: I18n<FTStrings> = {
       trophy: "Un trofeo", radio: "Un radiocasete", cake: "Una tarta", book: "Libros",
     },
     pet: { cat: "Un gato", dog: "Un perro", duck: "Un pato" },
+    acc: { hat: "Un sombrero", glasses: "Gafas", crown: "Una corona", bow: "Una pajarita", none: "Nada" },
     hour: (h) => (h === 1 ? "La una" : `Las ${h}`),
     question: (q) => {
       switch (q.t) {
@@ -549,6 +613,9 @@ export const FT_STR: I18n<FTStrings> = {
         case "pet": return "¿Qué animal se escondía en la escena?";
         case "objColor": return OBJ_COLOR_ES[q.obj as ColorObj];
         case "objectPresent": return "¿Cuál de estas cosas estaba en la escena?";
+        case "blobLeft": return "¿De qué color era el blob más a la izquierda?";
+        case "blobRight": return "¿De qué color era el blob más a la derecha?";
+        case "wear": return `¿Qué llevaba el blob ${COLOR_LC.es[q.color]}?`;
       }
     },
   },
@@ -562,5 +629,6 @@ export function answerLabel(t: FTStrings, a: Answer): string {
     case "hour": return t.hour(a.v);
     case "obj": return t.obj[a.v];
     case "pet": return t.pet[a.v];
+    case "acc": return t.acc[a.v];
   }
 }
