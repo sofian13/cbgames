@@ -53,6 +53,15 @@ export const AVATAR_STR: I18n<{
   bandOf: (n: string) => string;
   ourBand: string;
   bandShareText: (n: string) => string;
+  statsTitle: string;
+  statGames: (n: number) => string;
+  statFav: (game: string) => string;
+  statLoser: (name: string, n: number) => string;
+  /** d = nombre de jours depuis la dernière partie */
+  statLast: (d: number) => string;
+  statsReset: string;
+  statsResetSure: string;
+  statsResetDone: string;
   bandSubtitle: (n: number) => string;
 }> = {
   fr: {
@@ -106,6 +115,14 @@ export const AVATAR_STR: I18n<{
     bandOf: (n) => `La bande de ${n}`,
     ourBand: "Notre bande",
     bandShareText: (n) => `${n} : la bande au complet sur Zinzin !`,
+    statsTitle: "Les stats de la bande",
+    statGames: (n) => `${n} partie${n > 1 ? "s" : ""} jouée${n > 1 ? "s" : ""}`,
+    statFav: (g) => `Jeu préféré : ${g}`,
+    statLoser: (name, n) => `Qui perd le plus : ${name} (${n})`,
+    statLast: (d) => `Dernière partie : ${d === 0 ? "aujourd'hui" : d === 1 ? "hier" : d < 14 ? `il y a ${d} jours` : d < 60 ? `il y a ${Math.round(d / 7)} semaines` : `il y a ${Math.round(d / 30)} mois`}`,
+    statsReset: "Remettre à zéro",
+    statsResetSure: "Sûr ? Touche encore",
+    statsResetDone: "Stats remises à zéro",
     bandSubtitle: (n) => `${n} perso${n > 1 ? "s" : ""}, zéro sérieux`,
   },
   en: {
@@ -159,6 +176,14 @@ export const AVATAR_STR: I18n<{
     bandOf: (n) => `${n}'s crew`,
     ourBand: "Our crew",
     bandShareText: (n) => `${n}: the whole crew on Zinzin!`,
+    statsTitle: "Crew stats",
+    statGames: (n) => `${n} game${n > 1 ? "s" : ""} played`,
+    statFav: (g) => `Favourite game: ${g}`,
+    statLoser: (name, n) => `Loses the most: ${name} (${n})`,
+    statLast: (d) => `Last game: ${d === 0 ? "today" : d === 1 ? "yesterday" : d < 14 ? `${d} days ago` : d < 60 ? `${Math.round(d / 7)} weeks ago` : `${Math.round(d / 30)} months ago`}`,
+    statsReset: "Reset",
+    statsResetSure: "Sure? Tap again",
+    statsResetDone: "Stats reset",
     bandSubtitle: (n) => `${n} character${n > 1 ? "s" : ""}, zero chill`,
   },
   es: {
@@ -212,6 +237,14 @@ export const AVATAR_STR: I18n<{
     bandOf: (n) => `El grupo de ${n}`,
     ourBand: "Nuestro grupo",
     bandShareText: (n) => `${n}: ¡el grupo al completo en Zinzin!`,
+    statsTitle: "Las stats del grupo",
+    statGames: (n) => `${n} partida${n > 1 ? "s" : ""} jugada${n > 1 ? "s" : ""}`,
+    statFav: (g) => `Juego favorito: ${g}`,
+    statLoser: (name, n) => `El que más pierde: ${name} (${n})`,
+    statLast: (d) => `Última partida: ${d === 0 ? "hoy" : d === 1 ? "ayer" : d < 14 ? `hace ${d} días` : d < 60 ? `hace ${Math.round(d / 7)} semanas` : `hace ${Math.round(d / 30)} meses`}`,
+    statsReset: "Poner a cero",
+    statsResetSure: "¿Seguro? Toca otra vez",
+    statsResetDone: "Stats a cero",
     bandSubtitle: (n) => `${n} personaje${n > 1 ? "s" : ""}, cero seriedad`,
   },
 };

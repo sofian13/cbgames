@@ -8,6 +8,8 @@ import { App } from "./App";
 import { ErrorBoundary } from "./ui/ErrorBoundary";
 import { initPremium } from "./premium";
 import { initRating } from "./rating";
+import { initBandStats, setBandStatsGameNames } from "@/lib/band-stats";
+import { GAME_TEXT } from "./catalog-text";
 import { installFrenchTypo } from "./ui/typo";
 import "./share-art"; // blobs déguisés des images « Partager mon résultat »
 import { getLang } from "@/lib/i18n";
@@ -33,6 +35,9 @@ initPremium();
 void lockOrientation("portrait");
 // Demande de note automatique après les fins de partie (rare, natif uniquement)
 initRating();
+// Stats de « Ma bande » (parties, jeu préféré, qui perd le plus) : 100 % local
+initBandStats();
+setBandStatsGameNames((id, lang) => (GAME_TEXT as Record<string, Record<string, { name: string }>>)[id]?.[lang]?.name);
 // Langue du document (lecteurs d'écran, césure) : mise à jour ensuite par setLang()
 document.documentElement.lang = getLang();
 // Espaces insécables devant « ? ! : ; » partout en français (aucun « ? » orphelin en début de ligne)

@@ -19,7 +19,7 @@ import { playCombo, type LoopHandle } from "@/lib/sfx";
 import { Check, CupSoda, Drama, Flame, RotateCw, Vibrate } from "lucide-react";
 import { GameInlineIcon } from "../game-icon-button";
 import { MASCOT_PALETTE } from "@/components/Mascot";
-import { useGameFinished } from "@/lib/game-finished";
+import { uniqueMax, useGameFinished } from "@/lib/game-finished";
 
 // ── La Patate ──────────────────────────────────────────────
 // Le téléphone EST la patate chaude. Une catégorie, chacun dit une réponse
@@ -63,9 +63,10 @@ function fitName(name: string, base: string, vw: number): string {
 
 export default function PatateGame({ onReturnToLobby }: GameProps) {
   const [phase, setPhase] = useState<Phase>("setup");
-  useGameFinished(phase === "end"); // fin de partie → demande de note éventuelle (app)
   const [players, setPlayers] = useState<string[]>([]);
   const [losses, setLosses] = useState<number[]>([]);
+  // fin de partie → demande de note éventuelle + stats de la bande (app)
+  useGameFinished(phase === "end", { loser: uniqueMax(players, losses) });
   const [sipsOk] = useState(() => sipsAllowed(true)); // mode sans alcool / Soirée « Chill » : gages seulement
   const [penalty, setPenalty] = useState<Penalty>(() => (sipsOk ? "sips" : "dares"));
   const [spicy, setSpicy] = useState(() => adultDefault(false)); // pack 18+ selon l'ambiance de soirée

@@ -706,7 +706,7 @@ function bandRows(n: number): number[] {
   return out;
 }
 
-export async function renderBandCard(members: BandShareMember[], title: string, subtitle: string): Promise<HTMLCanvasElement> {
+export async function renderBandCard(members: BandShareMember[], title: string, subtitle: string, stats: string[] = []): Promise<HTMLCanvasElement> {
   const s = STR[getLang()];
   const canvas = document.createElement("canvas");
   canvas.width = W;
@@ -714,7 +714,8 @@ export async function renderBandCard(members: BandShareMember[], title: string, 
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("canvas");
   const list = members.slice(0, 16);
-  await loadFonts(`${title} ${subtitle} ${list.map((m) => m.name).join(" ")} ${s.playOn} ${SHARE_SITE} zinzin`);
+  const statLines = stats.slice(0, 3);
+  await loadFonts(`${title} ${subtitle} ${list.map((m) => m.name).join(" ")} ${statLines.join(" ")} ${s.playOn} ${SHARE_SITE} zinzin`);
   background(ctx);
 
   // En-tête : logo + « La bande de … »
@@ -734,7 +735,10 @@ export async function renderBandCard(members: BandShareMember[], title: string, 
   // Rangées (arrière → avant), centrées dans la zone libre
   const rows = bandRows(list.length);
   const areaTop = tY + tH + 70;
-  const areaBottom = 1545;
+  // Stats de la bande (2-3 lignes) : petit encart sous la photo, la photo se resserre un peu
+  const STAT_LH = 46;
+  const statsH = statLines.length ? statLines.length * STAT_LH + 34 : 0;
+  const areaBottom = 1545 - (statsH ? statsH + 14 : 0);
   const CHIP = 78;
   const sizes = rows.map((k, r) => {
     const depth = rows.length - 1 - r; // 0 = devant
@@ -796,6 +800,22 @@ export async function renderBandCard(members: BandShareMember[], title: string, 
     ctx.restore();
   }
 
+  if (statsH) {
+    const sY = 1549 - statsH;
+    ctx.font = body(34);
+    const sw0 = Math.min(900, Math.max(...statLines.map((l) => measure(ctx, l))) + 90);
+    sticker(ctx, (W - sw0) / 2, sY, sw0, statsH, "#fff", { r: 36, shadow: 8, tilt: -1, line: 6 });
+    ctx.save();
+    ctx.translate(W / 2, sY + statsH / 2);
+    ctx.rotate((-1 * Math.PI) / 180);
+    statLines.forEach((l, i) => {
+      const f = fit(ctx, l, (px) => body(px), sw0 - 70, 34, 24, 1);
+      ctx.font = body(f.px);
+      drawLines(ctx, f.lines, 0, -statsH / 2 + 17 + STAT_LH * i + STAT_LH * 0.68, 0, INK);
+    });
+    ctx.restore();
+  }
+
   // Sous-titre drôle
   const st = fit(ctx, subtitle, display, 820, 52, 34, 1);
   ctx.font = display(st.px);
@@ -812,10 +832,10 @@ export async function renderBandCard(members: BandShareMember[], title: string, 
 }
 
 /** Partage l'image « La bande de … » (feuille de partage du téléphone). */
-export async function shareBandCard(members: BandShareMember[], title: string, subtitle: string, text: string): Promise<ShareOutcome> {
+export async function shareBandCard(members: BandShareMember[], title: string, subtitle: string, text: string, stats: string[] = []): Promise<ShareOutcome> {
   let canvas: HTMLCanvasElement;
   try {
-    canvas = await renderBandCard(members, title, subtitle);
+    canvas = await renderBandCard(members, title, subtitle, stats);
   } catch {
     return "error";
   }

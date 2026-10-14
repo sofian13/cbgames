@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useSyncExternalStore, type CSSProperties } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type CSSProperties } from "react";
 import { Mascot, MascotAvatar, type MascotColor, type MascotMood } from "@/components/Mascot";
 import { useUnlocked } from "@/lib/entitlements";
 import { AVATAR_PALETTE, freeLook, type AvatarLook } from "@/lib/avatar/look";
@@ -109,10 +109,31 @@ export function PlayerBlob({
   sweat?: boolean;
   sparkle?: boolean;
   blink?: boolean;
-  /** Perso seulement : réserve de la place au-dessus (cheveux, chapeau) quand un texte est juste au-dessus */
-  headroom?: boolean;
+  /**
+   * Perso seulement : réserve de la place au-dessus (cheveux, chapeau) quand un texte est juste au-dessus.
+   * true = marge fixe (20 % de la taille) ; "auto" = juste ce qui dépasse vraiment (mesuré : coupe haute, chapeau, casque…).
+   */
+  headroom?: boolean | "auto";
 }) {
   const look = usePlayerLook(name);
+  const art = useRef<HTMLDivElement>(null);
+  const [overTop, setOverTop] = useState(0);
+  const lookKey = look ? JSON.stringify(look) : "";
+  // « auto » : on mesure le haut réel du dessin (il déborde de son repère) avant l'affichage
+  useLayoutEffect(() => {
+    if (headroom !== "auto") return;
+    const box = art.current?.parentElement;
+    const svg = art.current?.querySelector("svg");
+    if (!box || !svg || typeof svg.getBBox !== "function") { setOverTop(0); return; }
+    try {
+      const bb = svg.getBBox();
+      const r = svg.getBoundingClientRect();
+      const top = r.top + bb.y * (r.height / 120);
+      // + le contour et la respiration du perso (≈ 3 %)
+      const over = box.getBoundingClientRect().top - top + 4 + r.height * 0.03;
+      setOverTop(Math.max(0, Math.round(over)));
+    } catch { setOverTop(0); }
+  }, [headroom, lookKey, size, crown]);
   const voice = usePersoVoice(talk ? name : null);
   const { ref, mood: talkingMood, talking } = usePersoTalk(name, { auto: autoTalk });
   const m = talkingMood ?? mood;
@@ -133,9 +154,9 @@ export function PlayerBlob({
   const crownH = crown ? size * 0.3 : 0;
   const cheer = cheering && !talking ? { animation: "mascot-cheer 0.9s ease-in-out infinite", animationDelay: `${delay ?? 0}s`, transformOrigin: "50% 80%" } : null;
   return (
-    <div ref={ref} className={[cheer ? "pb-cheer" : "", className ?? ""].join(" ").trim() || undefined} style={{ position: "relative", width: size, height: k + crownH, flexShrink: 0, marginTop: headroom ? size * 0.2 : undefined, ...cheer, ...style }} {...tap}>
+    <div ref={ref} className={[cheer ? "pb-cheer" : "", className ?? ""].join(" ").trim() || undefined} style={{ position: "relative", width: size, height: k + crownH, flexShrink: 0, marginTop: headroom === "auto" ? overTop : headroom ? size * 0.2 : undefined, ...cheer, ...style }} {...tap}>
       {cheer && <style>{"@media (prefers-reduced-motion: reduce){.pb-cheer{animation:none!important}}"}</style>}
-      <div style={{ position: "absolute", left: (size - k) / 2, bottom: -k * 0.04 }}>
+      <div ref={art} style={{ position: "absolute", left: (size - k) / 2, bottom: -k * 0.04 }}>
         <AvatarBlob look={look} size={k} mood={m} animate={animate && bob !== false && !talking && !cheer} costume={crown ? (look.extra === "headphones" ? crownHighCostume : crownCostume) : undefined} />
       </div>
       {talk && voice && <VoiceBadge size={Math.max(16, Math.round(size * 0.3))} />}

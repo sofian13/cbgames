@@ -18,7 +18,7 @@ import { DIFF, LIQUIDS, VerreScene, type Difficulty, type LiquidStyle } from "./
 import { keepAwake, newTiltInput, requestMotionPermission, startSensors, vibrate, type TiltInput } from "./sensors";
 import { SpilledGlass } from "./art";
 import { Tools, TutoScreen } from "./ui";
-import { useGameFinished } from "@/lib/game-finished";
+import { uniqueMax, useGameFinished } from "@/lib/game-finished";
 import { ShareResultButton } from "../share-result-button";
 import { verreCard } from "@/lib/share-cards";
 
@@ -67,10 +67,11 @@ export default function VerreGame({ onReturnToLobby }: GameProps) {
   // Contenu figé dans la langue du début de partie (gages, noms des liquides)
   const [content] = useState(() => pick(VERRE_STR, getLang()));
   const [phase, setPhase] = useState<Phase>("setup");
-  useGameFinished(phase === "end"); // fin de partie → demande de note éventuelle (app)
   const [players, setPlayers] = useState<string[]>([]);
   const [scores, setScores] = useState<number[]>([]);
   const [spills, setSpills] = useState<number[]>([]);
+  // fin de partie → demande de note éventuelle + stats de la bande (app)
+  useGameFinished(phase === "end", { loser: uniqueMax(players, spills) });
   const [bank, setBank] = useState<number[]>([]);
   const [diff, setDiff] = useState<Difficulty>("normal");
   // Mode sans alcool / Soirée « Chill » : pas de gorgées (le verre virtuel reste) ; « Folle » : gorgées cochées d'office ; sinon gage par défaut

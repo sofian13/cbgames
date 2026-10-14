@@ -27,7 +27,7 @@ import {
   ArrowDown, ArrowLeft, ArrowUp, Check, CupSoda, Dices, Equal, Flame, Home, RotateCcw, Siren, TrainFront,
   Volume2, VolumeX, X, type LucideIcon,
 } from "lucide-react";
-import { useGameFinished } from "@/lib/game-finished";
+import { uniqueMax, useGameFinished } from "@/lib/game-finished";
 
 // ── DA sticker ────────────────────────────────────────────
 const INK = "#15082E";
@@ -194,9 +194,10 @@ export default function TgvGame({ onReturnToLobby }: GameProps) {
   const t = useT(STR);
   type Phase = "setup" | "config" | "pass" | "play" | "win" | "over";
   const [phase, setPhase] = useState<Phase>("setup");
-  useGameFinished(phase === "over"); // fin de partie → demande de note éventuelle (app)
   const [players, setPlayers] = useState<string[]>([]);
   const [losses, setLosses] = useState<number[]>([]);
+  // fin de partie → demande de note éventuelle + stats de la bande (app)
+  useGameFinished(phase === "over", { loser: uniqueMax(players, losses) });
   const [currentIdx, setCurrentIdx] = useState(0);
   const [numPiles, setNumPiles] = useState<number>(4);
   const [sipsOk] = useState(() => sipsAllowed(true)); // mode sans alcool / Soirée « Chill » : gages seulement

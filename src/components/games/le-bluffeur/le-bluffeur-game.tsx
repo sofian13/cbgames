@@ -20,7 +20,7 @@ import { getLang, useT } from "@/lib/i18n";
 import { STR, questionsFor } from "@/components/games/le-bluffeur/i18n";
 import { Smartphone, Target } from "lucide-react";
 import { GameInlineIcon } from "@/components/games/game-icon-button";
-import { useGameFinished } from "@/lib/game-finished";
+import { uniqueMin, useGameFinished } from "@/lib/game-finished";
 import { PlayerBlob } from "@/components/avatar/PlayerBlob";
 import { ShareResultButton } from "@/components/games/share-result-button";
 import { rankingCard } from "@/lib/share-cards";
@@ -102,9 +102,10 @@ function LeBluffeurLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) 
   // Vote final : un seul écran commun (tél au milieu), plus de passage de main en main
   type Phase = "setup" | "question" | "pass-write" | "write" | "table" | "vote" | "reveal" | "over";
   const [phase, setPhase] = useState<Phase>("setup");
-  useGameFinished(phase === "over"); // fin de partie → demande de note éventuelle (app)
   const [players, setPlayers] = useState<string[]>([]);
   const [scores, setScores] = useState<number[]>([]);
+  // fin de partie → demande de note éventuelle + stats de la bande (app)
+  useGameFinished(phase === "over", { loser: uniqueMin(players, scores) });
   const [round, setRound] = useState(0);
   const [questions, setQuestions] = useState(() => [...questionsFor(getLang())].sort(() => Math.random() - 0.5));
   const [fakes, setFakes] = useState<string[]>([]);

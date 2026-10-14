@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type CSSProperties } from "react";
-import { Lock, Mic, Play, Trash2, Volume2, VolumeX, X } from "lucide-react";
+import { Lock, Mic, Play, Trash2, Volume2, X } from "lucide-react";
 import { useT } from "@/lib/i18n";
 import { requestPaywall } from "@/lib/entitlements";
 import { playSfx } from "@/lib/sfx";
@@ -12,7 +12,7 @@ import { VOICE_MAX_S, getVoice, putVoice } from "@/lib/avatar/voice-store";
 import {
   VoiceRecorder, playClip, stopVoice, talkMood, useSpeaking, voiceKey, warmUpMic, type RecError,
 } from "@/lib/avatar/voice";
-import { setReceivedMute, setVoiceFor, type BandEntry } from "@/lib/saved-players";
+import { setVoiceFor, type BandEntry } from "@/lib/saved-players";
 import type { MascotMood } from "@/components/Mascot";
 import { AvatarBlob } from "./AvatarBlob";
 import { AV_DISPLAY, AV_INK, RoundIconBtn, avSticker } from "./AvatarEditor";
@@ -314,20 +314,6 @@ export function VoiceSheet({ entry, look, locked, onClose }: {
         <div className="mt-2 flex items-center justify-center" style={{ minHeight: 110 }}>
           <TalkingBlob look={look} size={96} speakKey={k} badge={!!entry.voice} onTap={entry.voice ? play : undefined} label={t.playAria(entry.name)} />
         </div>
-        {entry.from && (
-          <div className="mb-3 flex items-center justify-between gap-2 rounded-[18px] px-3 py-2" style={{ background: "rgba(255,255,255,0.1)" }}>
-            <span className="text-[14px] font-bold">{t.recvFrom(entry.from)}</span>
-            {entry.voice && (
-              <button type="button" onClick={() => { setReceivedMute(entry.name, !entry.mute); if (!entry.mute) stopVoice(); }}
-                aria-pressed={!!entry.mute} aria-label={entry.mute ? t.unmute(entry.name) : t.mute(entry.name)}
-                className="flex min-h-11 items-center gap-1.5 rounded-full px-3 text-[13px] font-bold"
-                style={{ ...avSticker(entry.mute ? "#FF6B5B" : "#fff", 3), color: entry.mute ? "#fff" : AV_INK }}>
-                {entry.mute ? <VolumeX size={16} strokeWidth={3} /> : <Volume2 size={16} strokeWidth={3} />}
-                {entry.mute ? t.muted : t.muteShort}
-              </button>
-            )}
-          </div>
-        )}
         <VoiceRecorderPanel name={entry.name} voiceId={entry.voice ?? null} locked={locked}
           onChange={(id) => setVoiceFor(entry.name, id)} />
       </div>

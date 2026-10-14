@@ -21,7 +21,7 @@ import { useUnlocked } from "@/lib/entitlements";
 import { LockedPack, PremiumNudge, fmtCount, useNudgeText } from "@/components/games/premium-nudge";
 import { THEMES, type ThemeState } from "@/components/games/top-ten/themes";
 import { TT_STR } from "@/components/games/top-ten/i18n";
-import { useGameFinished } from "@/lib/game-finished";
+import { uniqueMin, useGameFinished } from "@/lib/game-finished";
 import { ShareResultButton } from "@/components/games/share-result-button";
 import { rankingCard } from "@/lib/share-cards";
 
@@ -121,9 +121,10 @@ function TopTenLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) {
   const t = useT(TT_STR);
   type Phase = "setup" | "target" | "theme" | "pass-number" | "show-number" | "answer" | "pass-rank" | "rank" | "reveal" | "over";
   const [phase, setPhase] = useState<Phase>("setup");
-  useGameFinished(phase === "over"); // fin de partie → demande de note éventuelle (app)
   const [players, setPlayers] = useState<string[]>([]);
   const [scores, setScores] = useState<number[]>([]);
+  // fin de partie → demande de note éventuelle + stats de la bande (app)
+  useGameFinished(phase === "over", { loser: uniqueMin(players, scores) });
   const [round, setRound] = useState(0);
   const [numberRange, setNumberRange] = useState<10 | 25 | 50>(10);
   // 18+ jamais présélectionné, sauf en Soirée « Folle »

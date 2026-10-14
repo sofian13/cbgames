@@ -9,7 +9,8 @@ import { UI } from "../strings";
 import { Backdrop } from "./Backdrop";
 import { BandSlide } from "./BandSlide";
 import { ShakeRain } from "./ShakeRain";
-import { ZLogo } from "./Logo";
+import { TapLogo } from "./Logo";
+import { drawGreeting, greetingText } from "../greeting";
 import { SoireeEntry } from "./SoireeKit";
 import { resumable, useSoiree } from "../soiree";
 import { useNoAlcohol } from "@/lib/party-mood";
@@ -35,6 +36,8 @@ export function Home({
   const lang = useLang();
   const t = pick(UI, lang);
   const noAlc = useNoAlcohol();
+  // Tirée une fois par ouverture de l'app (l'accueil reste monté pendant les jeux)
+  const [greeting] = useState(() => drawGreeting());
   return (
     <div ref={scrollRef} className="zz-scroll zz-page zz-home fixed inset-0">
       <Backdrop scrollRef={scrollRef} />
@@ -42,11 +45,15 @@ export function Home({
       <ShakeRain homeRef={scrollRef} />
       <div className="relative mx-auto max-w-lg" style={{ zIndex: 1, paddingTop: "calc(var(--sat) + 10px)", paddingBottom: "calc(var(--sab) + 32px)" }}>
         {/* En-tête */}
-        <header className="flex items-center justify-between px-5">
+        <header className="relative flex items-center justify-between px-5">
           <div className="flex items-center gap-2">
-            <h1 className="leading-none"><ZLogo size={44} /></h1>
+            <h1 className="leading-none"><TapLogo size={44} /></h1>
             {premium && <Tag bg="#FFD23F" tilt={-6}>{t.premium}</Tag>}
           </div>
+          {/* Petite phrase selon l'heure : posée sous le logo, sans ajouter de hauteur */}
+          <p data-greet className="pointer-events-none absolute left-5 right-5 top-full mt-1 truncate text-[12.5px] font-semibold leading-tight" style={{ color: "var(--zz-dim)" }}>
+            {greetingText(greeting, lang)}
+          </p>
           <RoundBtn onClick={() => { haptic(); onSettings(); }} label={t.settings}>
             <Settings size={21} strokeWidth={2.5} />
           </RoundBtn>

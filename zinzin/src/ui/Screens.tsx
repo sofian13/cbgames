@@ -1,4 +1,4 @@
-import { Suspense, lazy, useState, type ComponentType, type LazyExoticComponent, type ReactNode } from "react";
+import { Suspense, lazy, useEffect, useState, type ComponentType, type LazyExoticComponent, type ReactNode } from "react";
 import type { GameProps } from "@/lib/games/types";
 import { Bell, ChevronLeft, CreditCard, GlassWater, Mail, RotateCcw, Share2, Sparkles, Star, Volume2, X } from "lucide-react";
 import { LANGS, notificationsOn, rateApp, setLang, setNotifications, shareApp, useLang } from "../settings";
@@ -15,6 +15,8 @@ import { APP_VERSION, haptic, setAgeOk } from "./util";
 import { setNoAlcohol, useNoAlcohol } from "@/lib/party-mood";
 import { NOALC_UI } from "../no-alcohol";
 import { markRatedManually } from "../rating";
+import { setCurrentGame } from "@/lib/game-finished";
+import { AppIconRow } from "./AppIconRow";
 import { BandScreen } from "@/components/avatar/BandScreen";
 import { AvatarBlob } from "@/components/avatar/AvatarBlob";
 import { useBand } from "@/components/avatar/PlayerBlob";
@@ -138,6 +140,9 @@ export function SettingsSheet({
 
           {/* Voix des persos en jeu (tour du joueur, gagnant) */}
           <VoicesToggle />
+
+          {/* Icône de l'app (Zinzin+) : masquée si l'appareil ne sait pas la changer */}
+          <AppIconRow premium={premium} toast={toast} />
 
           {/* Langue */}
           <LangPicker />
@@ -419,6 +424,8 @@ export function GameScreen({ id, onExit }: { id: string; onExit: () => void }) {
   const [Comp] = useState(() => lazyGame(id));
   const [confirm, setConfirm] = useState(false);
   const t = useT(UI);
+  // Jeu en cours : la fin de partie le signale avec son id (stats de la bande)
+  useEffect(() => { setCurrentGame(id); return () => setCurrentGame(null); }, [id]);
 
   return (
     <div className="zz-screen-in fixed inset-0 flex flex-col overflow-y-auto" style={{ background: "#0A0420", zIndex: 30 }}>

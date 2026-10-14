@@ -578,7 +578,7 @@ export function PassScreen({
       <p className="mb-2 text-[18px] font-bold" style={{ color: "rgba(255,255,255,0.85)" }}>{t.passTo}</p>
       <div ref={blob} onPointerDown={() => hop(blob.current)} className="relative z-[1] -mb-6">
         {/* Son tour : son perso dit son son (une fois, réglage « Voix des persos en jeu ») */}
-        <PlayerBlob name={toName} colorIndex={colorIndex} size={130} mood="wink" arms talk autoTalk />
+        <PlayerBlob name={toName} colorIndex={colorIndex} size={130} mood="wink" arms talk autoTalk headroom="auto" />
       </div>
       <h1
         className="rounded-[24px] px-6 pb-3 pt-7 text-center"

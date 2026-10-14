@@ -1,18 +1,17 @@
 "use client";
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
-import { ArrowDown, ArrowUp, ClipboardPaste, Copy, Download, FileUp, Image as ImageIcon, Lock, Mic, Plus, Send, Star, Volume2, VolumeX, X } from "lucide-react";
-import { useT } from "@/lib/i18n";
-import { requestPaywall, useUnlocked } from "@/lib/entitlements";
+import { ArrowDown, ArrowUp, ClipboardPaste, Clock3, Copy, Download, Gamepad2, Heart, Image as ImageIcon, Lock, Mic, Plus, Skull, Star, Volume2, X } from "lucide-react";
+import { useLang, useT, type Lang } from "@/lib/i18n";
+import { bandStatsGameName, favoriteGame, getBandStats, resetBandStats, subscribeBandStats, topLoser, type BandStats } from "@/lib/band-stats";
+import { useUnlocked } from "@/lib/entitlements";
 import { playSfx } from "@/lib/sfx";
 import { BAND_MAX, baseLook, decodeBand, encodeBand, lookHasPremium, type AvatarLook, type BandMember } from "@/lib/avatar/look";
 import { AVATAR_STR } from "@/lib/avatar/i18n";
-import { getMuteAllReceived, linkedVoiceIds, sameName, setBand, setMuteAllReceived, subscribePlayers, type BandEntry } from "@/lib/saved-players";
+import { linkedVoiceIds, sameName, setBand, type BandEntry } from "@/lib/saved-players";
 import { VOICE_STR } from "@/lib/avatar/voice-i18n";
 import { gcVoices, getVoice } from "@/lib/avatar/voice-store";
 import { playClip, stopVoice, voiceKey } from "@/lib/avatar/voice";
-import { BAND_FILE_EXT, BAND_FILE_MAX, buildBandFile, readBandBlob, sendBandFile, sendDialogTitle, type BandFileResult } from "@/lib/avatar/band-file";
-import { ReceivedBandScreen } from "./ReceivedBand";
 import { TalkingBlob, VoiceSheet } from "./VoiceUI";
 import { shareBandCard } from "@/lib/share-card";
 import { AvatarBlob } from "./AvatarBlob";
@@ -21,6 +20,31 @@ import { colorForIndexSafe } from "./colors";
 import { useBand } from "./PlayerBlob";
 
 const lookOf = (e: { look: AvatarLook | null }, i: number) => e.look ?? baseLook(colorForIndexSafe(i));
+
+const EMPTY_STATS: BandStats = { games: 0, byGame: {}, losses: {}, last: 0 };
+const useBandStats = () => useSyncExternalStore(subscribeBandStats, getBandStats, () => EMPTY_STATS);
+
+/** Jours entiers (calendrier) depuis une date. */
+function daysSince(ms: number): number {
+  const a = new Date(ms), b = new Date();
+  const d0 = Date.UTC(a.getFullYear(), a.getMonth(), a.getDate());
+  const d1 = Date.UTC(b.getFullYear(), b.getMonth(), b.getDate());
+  return Math.max(0, Math.round((d1 - d0) / 86_400_000));
+}
+
+/** Lignes de stats (écran et image partagée) : seulement ce qu'on sait vraiment. */
+function statLines(s: BandStats, t: (typeof AVATAR_STR)["fr"], lang: Lang) {
+  if (!s.games) return [];
+  const fav = favoriteGame(s);
+  const favName = fav ? bandStatsGameName(fav, lang) : undefined;
+  const loser = topLoser(s);
+  return [
+    { key: "games", icon: Gamepad2, text: t.statGames(s.games) },
+    ...(favName ? [{ key: "fav", icon: Heart, text: t.statFav(favName) }] : []),
+    ...(loser ? [{ key: "loser", icon: Skull, text: t.statLoser(loser.name, loser.n) }] : []),
+    ...(s.last ? [{ key: "last", icon: Clock3, text: t.statLast(daysSince(s.last)) }] : []),
+  ];
+}
 
 /**
  * « Ma bande » : jusqu'à 16 persos (prénom + look), dans l'ordre choisi.
@@ -31,12 +55,12 @@ export function BandScreen({ onClose }: { onClose: () => void }) {
   const tv = useT(VOICE_STR);
   const unlocked = useUnlocked();
   const band = useBand();
-  const muteAll = useSyncExternalStore(subscribePlayers, getMuteAllReceived, () => false);
+  const lang = useLang();
+  const stats = useBandStats();
+  const lines = statLines(stats, t, lang);
+  const [resetArmed, setResetArmed] = useState(false);
   const [edit, setEdit] = useState<number | "new" | null>(null);
   const [voiceOf, setVoiceOf] = useState<number | null>(null);
-  const [received, setReceived] = useState<BandFileResult | null>(null);
-  const [sending, setSending] = useState(false);
-  const fileInput = useRef<HTMLInputElement>(null);
   const [confirm, setConfirm] = useState<number | null>(null);
   const [importing, setImporting] = useState(false);
   const [code, setCode] = useState<string | null>(null);
@@ -54,7 +78,7 @@ export function BandScreen({ onClose }: { onClose: () => void }) {
     timer.current = setTimeout(() => setMsg(null), 2600);
   };
 
-  const save = (list: BandEntry[]) => setBand(list.map((e) => ({ name: e.name, look: e.look, me: e.me, voice: e.voice, from: e.from, mute: e.mute })));
+  const save = (list: BandEntry[]) => setBand(list.map((e) => ({ name: e.name, look: e.look, me: e.me, voice: e.voice })));
   const move = (i: number, d: -1 | 1) => {
     const j = i + d;
     if (j < 0 || j >= band.length) return;
@@ -70,14 +94,16 @@ export function BandScreen({ onClose }: { onClose: () => void }) {
   };
 
   const meName = band.find((b) => b.me)?.name ?? band[0]?.name;
-  const audible = (b: BandEntry) => !!b.voice && !b.mute && !(b.from && muteAll);
+  const audible = (b: BandEntry) => !!b.voice;
   const title = meName ? t.bandOf(meName) : t.ourBand;
 
   const shareImage = async () => {
     if (!band.length || sharing) return;
     setSharing(true);
     try {
-      await shareBandCard(band.map((b, i) => ({ name: b.name, look: lookOf(b, i) })), title, t.bandSubtitle(band.length), t.bandShareText(title));
+      // Image : 3 lignes de stats max (la date de la dernière partie reste sur l'écran)
+      const card = lines.filter((l) => l.key !== "last").slice(0, 3).map((l) => l.text);
+      await shareBandCard(band.map((b, i) => ({ name: b.name, look: lookOf(b, i) })), title, t.bandSubtitle(band.length), t.bandShareText(title), card);
     } finally {
       setSharing(false);
     }
@@ -85,32 +111,9 @@ export function BandScreen({ onClose }: { onClose: () => void }) {
 
   // Toucher un perso qui a un son : il le dit ; sinon on ouvre son éditeur
   const hear = async (b: BandEntry, i: number) => {
-    const id = b.mute || (b.from && muteAll) ? null : b.voice;
-    const clip = id ? await getVoice(id) : null;
+    const clip = b.voice ? await getVoice(b.voice) : null;
     if (!clip) { setVoiceOf(i); return; }
     if (!(await playClip(voiceKey(b.name), clip))) toast(tv.unreadable);
-  };
-
-  // Envoyer la bande AVEC les voix (Zinzin+) : fichier .zinzin → feuille de partage / téléchargement
-  const sendFile = async () => {
-    if (!band.length || sending) return;
-    if (!unlocked && !(await requestPaywall())) return;
-    setSending(true);
-    try {
-      const from = meName ?? band[0].name;
-      const content = await buildBandFile(from, band.map((b, i) => ({ name: b.name, look: lookOf(b, i), me: b.me, voice: b.mute ? null : b.voice })));
-      if (content.length > BAND_FILE_MAX) { toast(tv.tooHeavy); return; }
-      const r = await sendBandFile(content, tv.fileName(from), tv.sendText, sendDialogTitle());
-      if (r === "saved") toast(tv.fileSaved);
-      else if (r === "error") toast(tv.sendFail);
-    } finally {
-      setSending(false);
-    }
-  };
-
-  const pickFile = async (f: File | undefined) => {
-    if (!f) return;
-    setReceived(await readBandBlob(f));
   };
 
   const copyCode = async () => {
@@ -176,6 +179,33 @@ export function BandScreen({ onClose }: { onClose: () => void }) {
           </div>
         )}
 
+        {/* Stats de la bande : compactes, 100 % locales */}
+        {band.length > 0 && lines.length > 0 && (
+          <section className="mb-3 rounded-[20px] px-3.5 pb-2.5 pt-2" style={{ background: "rgba(255,255,255,0.06)", border: "2px solid rgba(255,255,255,0.1)" }} aria-label={t.statsTitle}>
+            <div className="flex items-center justify-between gap-2">
+              <h3 className="text-[12px] font-extrabold uppercase tracking-wider" style={{ color: "rgba(255,255,255,0.6)" }}>{t.statsTitle}</h3>
+              <button type="button"
+                onClick={() => {
+                  if (!resetArmed) { setResetArmed(true); return; }
+                  resetBandStats(); setResetArmed(false); toast(t.statsResetDone); playSfx("back", { volume: 0.4 });
+                }}
+                onBlur={() => setResetArmed(false)}
+                className="-mr-1 -my-1.5 min-h-11 px-1 text-[12px] font-bold underline decoration-1 underline-offset-2"
+                style={{ color: resetArmed ? "#FF9AA8" : "rgba(255,255,255,0.5)" }}>
+                {resetArmed ? t.statsResetSure : t.statsReset}
+              </button>
+            </div>
+            <ul className="mt-0.5 grid grid-cols-1 gap-x-3 gap-y-1">
+              {lines.map(({ key, icon: Icon, text }) => (
+                <li key={key} className="flex min-w-0 items-center gap-2 text-[13px] font-bold" style={{ color: "rgba(255,255,255,0.88)" }}>
+                  <Icon size={14} strokeWidth={2.8} className="shrink-0" style={{ color: key === "loser" ? "#FF9AA8" : key === "fav" ? "#FF7EC0" : "#FFD23F" }} aria-hidden />
+                  <span className="min-w-0 truncate">{text}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
         {band.length > 0 && (
           <button type="button" onClick={() => { setManage((m) => !m); setConfirm(null); playSfx("tap", { volume: 0.4 }); }}
             className="mb-3 flex min-h-[48px] w-full items-center justify-center gap-2 rounded-full text-[15px] font-bold"
@@ -195,7 +225,6 @@ export function BandScreen({ onClose }: { onClose: () => void }) {
               <button type="button" onClick={() => setEdit(i)} aria-label={t.editAria(b.name)} className="flex min-h-[60px] min-w-0 flex-1 flex-col justify-center text-left">
                 <span className="block w-full truncate" style={{ ...AV_DISPLAY, fontSize: b.name.length > 9 ? 16 : b.name.length > 6 ? 18 : 20 }}>{b.name}</span>
                 {b.me && <span className="mt-0.5 inline-flex items-center gap-1 text-[12px] font-extrabold"><Star size={12} strokeWidth={3} fill={AV_INK} /> {t.me}</span>}
-                {!b.me && b.from && <span className="mt-0.5 block w-full truncate text-[12px] font-bold" style={{ color: "#5B4A80" }}>{tv.fromShort(b.from)}</span>}
               </button>
               {confirm === i ? (
                 <div className="flex shrink-0 items-center gap-1">
@@ -205,7 +234,7 @@ export function BandScreen({ onClose }: { onClose: () => void }) {
               ) : (
                 <div className="flex shrink-0 items-center">
                   <button type="button" onClick={() => setVoiceOf(i)} aria-label={tv.micAria(b.name)} className="relative grid h-11 w-9 place-items-center">
-                    {b.voice ? (audible(b) ? <Volume2 size={19} strokeWidth={2.8} /> : <VolumeX size={19} strokeWidth={2.8} />) : <Mic size={19} strokeWidth={2.8} />}
+                    {b.voice ? <Volume2 size={19} strokeWidth={2.8} /> : <Mic size={19} strokeWidth={2.8} />}
                     {!b.voice && !b.me && !unlocked && (
                       <span className="absolute right-0.5 top-1 grid h-4 w-4 place-items-center rounded-full" style={{ background: "#FF3EA5", color: "#fff" }}><Lock size={9} strokeWidth={3.4} /></span>
                     )}
@@ -226,32 +255,8 @@ export function BandScreen({ onClose }: { onClose: () => void }) {
         </button>
         </>)}
 
-        {/* Voix reçues : tout couper d'un coup */}
-        {band.some((b) => b.from && b.voice) && (
-          <button type="button" role="switch" aria-checked={muteAll} onClick={() => { setMuteAllReceived(!muteAll); if (!muteAll) stopVoice(); playSfx("toggle", { volume: 0.4 }); }}
-            className="mt-3 flex w-full items-center gap-3 rounded-[20px] px-3.5 py-2.5 text-left" style={{ ...avSticker("#FFF6E5", 3), color: AV_INK }}>
-            <VolumeX size={22} strokeWidth={2.6} />
-            <span className="min-w-0 flex-1">
-              <span className="block text-[15px] font-extrabold leading-tight">{tv.muteAll}</span>
-              <span className="block text-[12px] font-semibold opacity-75">{tv.muteAllSub}</span>
-            </span>
-            <span className="relative h-8 w-14 shrink-0 rounded-full" style={{ background: muteAll ? "#3DDC97" : "#CFC6E3", border: `2.5px solid ${AV_INK}` }}>
-              <span className="absolute top-1/2 h-6 w-6 -translate-y-1/2 rounded-full bg-white transition-[left]" style={{ left: muteAll ? 26 : 2, border: `2.5px solid ${AV_INK}` }} />
-            </span>
-          </button>
-        )}
-
         {/* Partager la bande */}
         <h3 className="mt-7" style={{ ...AV_DISPLAY, fontSize: 24 }}>{t.shareBand}</h3>
-        <button type="button" onClick={sendFile} disabled={!band.length || sending}
-          className="mt-3 flex min-h-[64px] w-full items-center gap-3 rounded-[20px] px-3.5 py-2.5 text-left disabled:opacity-50"
-          style={{ ...avSticker("#FFD23F", 4), color: AV_INK, rotate: "-0.6deg" }}>
-          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full" style={{ background: AV_INK, color: "#FFD23F" }}>{unlocked ? <Send size={20} strokeWidth={2.6} /> : <Lock size={19} strokeWidth={2.8} />}</span>
-          <span className="min-w-0 flex-1">
-            <span className="block text-[16px] font-extrabold leading-tight">{tv.sendVoices}</span>
-            <span className="block text-[12px] font-semibold leading-snug opacity-80">{unlocked ? tv.sendVoicesSub : tv.sendLocked}</span>
-          </span>
-        </button>
         <div className="mt-3 grid grid-cols-2 gap-3">
           <button type="button" onClick={shareImage} disabled={!band.length || sharing}
             className="flex min-h-[64px] flex-col items-start justify-center gap-1 rounded-[20px] px-3.5 py-2.5 text-left text-[14px] font-bold leading-tight disabled:opacity-50"
@@ -274,13 +279,6 @@ export function BandScreen({ onClose }: { onClose: () => void }) {
           style={{ ...avSticker("#fff", 4), color: AV_INK }}>
           <Download size={19} strokeWidth={2.8} /> {t.importBand}
         </button>
-        <button type="button" onClick={() => fileInput.current?.click()}
-          className="mt-3 flex min-h-[52px] w-full items-center justify-center gap-2 rounded-full px-3 text-[15px] font-bold"
-          style={{ border: "2.5px dashed rgba(255,255,255,0.5)", color: "#fff" }}>
-          <FileUp size={19} strokeWidth={2.8} /> {tv.importFile}
-        </button>
-        <input ref={fileInput} type="file" accept={`.${BAND_FILE_EXT},application/json,application/octet-stream`} className="hidden" aria-hidden tabIndex={-1}
-          onChange={(e) => { void pickFile(e.target.files?.[0]); e.target.value = ""; }} />
       </div>
 
       {msg && (
@@ -302,7 +300,7 @@ export function BandScreen({ onClose }: { onClose: () => void }) {
           onSave={({ name, look, me, voice }) => {
             const idx = edit === "new" ? -1 : (edit as number);
             if (band.some((b, k) => k !== idx && sameName(b.name, name))) return t.nameTaken;
-            const entry: BandEntry = { name, look, me, voice: voice ?? null, from: editing.from ?? null, mute: editing.mute };
+            const entry: BandEntry = { name, look, me, voice: voice ?? null };
             let l = idx < 0 ? [...band, entry] : band.map((b, k) => (k === idx ? entry : b));
             if (me) l = l.map((b) => (b === entry ? b : { ...b, me: false }));
             save(l);
@@ -314,10 +312,6 @@ export function BandScreen({ onClose }: { onClose: () => void }) {
       {voiceOf !== null && band[voiceOf] && (
         <VoiceSheet entry={band[voiceOf]} look={lookOf(band[voiceOf], voiceOf)} locked={!unlocked && !band[voiceOf].me}
           onClose={() => { stopVoice(); setVoiceOf(null); }} />
-      )}
-
-      {received && (
-        <ReceivedBandScreen result={received} onClose={() => setReceived(null)} onDone={(m) => { setReceived(null); toast(m); }} />
       )}
 
       {importing && <ImportPanel band={band} onClose={() => setImporting(false)} onDone={(n) => { setImporting(false); toast(t.importDone(n)); }} />}

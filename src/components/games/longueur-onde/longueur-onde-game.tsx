@@ -21,7 +21,7 @@ import { IdeaButton, RerollButton } from "@/components/games/idea-button";
 import { playCombo, playSfx, preloadSfx } from "@/lib/sfx";
 import { getLang, pick, useT } from "@/lib/i18n";
 import { STR, TUTO } from "@/components/games/longueur-onde/i18n";
-import { useGameFinished } from "@/lib/game-finished";
+import { uniqueMin, useGameFinished } from "@/lib/game-finished";
 import { ShareResultButton } from "@/components/games/share-result-button";
 import { rankingCard } from "@/lib/share-cards";
 
@@ -163,9 +163,10 @@ function LongueurOndeLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }
   const t = useT(STR);
   type Phase = "howto" | "setup" | "pass" | "clue" | "guess" | "reveal" | "over";
   const [phase, setPhase] = useState<Phase>("howto");
-  useGameFinished(phase === "over"); // fin de partie → demande de note éventuelle (app)
   const [players, setPlayers] = useState<string[]>([]);
   const [scores, setScores] = useState<number[]>([]);
+  // fin de partie → demande de note éventuelle + stats de la bande (app)
+  useGameFinished(phase === "over", { loser: uniqueMin(players, scores) });
   const [round, setRound] = useState(0);
   const [psychic, setPsychic] = useState(0);
   const [pairs, setPairs] = useState<CursorPair[]>(() => buildDeck(getLang()));
