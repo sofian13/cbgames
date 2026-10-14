@@ -26,44 +26,90 @@ export const SAMPLE_BAND: AvatarLook[] = [
 ];
 
 /**
- * Composition « photo de groupe » selon la taille de la bande (1 à 4 persos montrés).
- * Unités libres (le « moi » fait ~100) : cx = centre horizontal, s = taille, raise = pieds
- * surélevés (profondeur), z = plan (plus grand = devant). `stack` : 2e rang, le perso se
- * tient derrière ceux qu'il chevauche, visage au-dessus de leur tête. Le 1er de chaque liste est « moi ».
+ * Composition « photo de groupe serrée » selon la taille de la bande (1 à 6 persos montrés).
+ * Unités libres (le « moi » fait ~100) : cx = centre horizontal, s = taille, row = rang
+ * (0 = devant ; un rang de derrière se tient juste derrière ceux qu'il chevauche, le visage
+ * au-dessus de leur tête), raise = pieds surélevés (rang 0), z = plan (plus grand = devant).
+ * Le 1er de chaque liste est « moi » : devant, au centre. Plusieurs variantes par taille :
+ * on garde celle qui donne les plus grands persos dans la place libre.
  */
-interface Spot { cx: number; s: number; raise: number; z: number; mood: MascotMood; stack?: boolean }
-const LAYOUTS: Record<1 | 2 | 3 | 4, Spot[][]> = {
-  1: [[{ cx: 0, s: 100, raise: 0, z: 4, mood: "laughing" }]],
+interface Spot { cx: number; s: number; row: number; z: number; mood: MascotMood; raise?: number }
+type N = 1 | 2 | 3 | 4 | 5 | 6;
+const MAX_SHOWN = 6;
+const LAYOUTS: Record<N, Spot[][]> = {
+  1: [[{ cx: 0, s: 100, row: 0, z: 9, mood: "laughing" }]],
   2: [
-    // En hauteur (place étroite) : le pote derrière, par-dessus l'épaule
+    // Le pote par-dessus l'épaule
     [
-      { cx: 16, s: 100, raise: 0, z: 4, mood: "laughing" },
-      { cx: -36, s: 80, raise: 0, z: 3, mood: "wink", stack: true },
+      { cx: 12, s: 100, row: 0, z: 9, mood: "laughing" },
+      { cx: -34, s: 82, row: 1, z: 5, mood: "wink" },
     ],
-    // Côte à côte
+    // Épaule contre épaule
     [
-      { cx: 14, s: 100, raise: 0, z: 4, mood: "laughing" },
-      { cx: -62, s: 80, raise: 16, z: 3, mood: "wink" },
+      { cx: 14, s: 100, row: 0, z: 9, mood: "laughing" },
+      { cx: -56, s: 84, row: 0, z: 5, mood: "wink", raise: 10 },
     ],
   ],
   3: [
+    // Pyramide : deux têtes derrière, de chaque côté
     [
-      { cx: -10, s: 96, raise: 0, z: 4, mood: "laughing" },
-      { cx: 54, s: 68, raise: 6, z: 3, mood: "wink" },
-      { cx: 36, s: 66, raise: 0, z: 2, mood: "happy", stack: true },
+      { cx: 0, s: 100, row: 0, z: 9, mood: "laughing" },
+      { cx: -36, s: 76, row: 1, z: 5, mood: "wink" },
+      { cx: 36, s: 74, row: 1, z: 4, mood: "happy" },
     ],
+    // En ligne serrée, « moi » un peu devant
     [
-      { cx: 0, s: 96, raise: 0, z: 4, mood: "laughing" },
-      { cx: -66, s: 76, raise: 14, z: 3, mood: "happy" },
-      { cx: 66, s: 72, raise: 26, z: 2, mood: "wink" },
+      { cx: 0, s: 100, row: 0, z: 9, mood: "laughing" },
+      { cx: -58, s: 80, row: 0, z: 5, mood: "wink", raise: 10 },
+      { cx: 58, s: 78, row: 0, z: 4, mood: "happy", raise: 12 },
     ],
   ],
   4: [
     [
-      { cx: -10, s: 92, raise: 0, z: 4, mood: "laughing" },
-      { cx: 56, s: 66, raise: 6, z: 3, mood: "wink" },
-      { cx: -50, s: 64, raise: 0, z: 2, mood: "happy", stack: true },
-      { cx: 40, s: 60, raise: 0, z: 1, mood: "love", stack: true },
+      { cx: 0, s: 100, row: 0, z: 9, mood: "laughing" },
+      { cx: -38, s: 74, row: 1, z: 5, mood: "wink" },
+      { cx: 38, s: 72, row: 1, z: 4, mood: "happy" },
+      { cx: 0, s: 64, row: 2, z: 2, mood: "love" },
+    ],
+    [
+      { cx: 0, s: 100, row: 0, z: 9, mood: "laughing" },
+      { cx: -56, s: 78, row: 0, z: 5, mood: "wink", raise: 10 },
+      { cx: 56, s: 76, row: 0, z: 4, mood: "happy", raise: 12 },
+      { cx: 0, s: 68, row: 1, z: 2, mood: "love" },
+    ],
+  ],
+  5: [
+    [
+      { cx: 0, s: 100, row: 0, z: 9, mood: "laughing" },
+      { cx: -38, s: 72, row: 1, z: 5, mood: "wink" },
+      { cx: 38, s: 70, row: 1, z: 4, mood: "happy" },
+      { cx: -24, s: 60, row: 2, z: 2, mood: "love" },
+      { cx: 24, s: 58, row: 2, z: 1, mood: "laughing" },
+    ],
+    [
+      { cx: 0, s: 100, row: 0, z: 9, mood: "laughing" },
+      { cx: -56, s: 76, row: 0, z: 5, mood: "wink", raise: 10 },
+      { cx: 56, s: 74, row: 0, z: 4, mood: "happy", raise: 12 },
+      { cx: -26, s: 64, row: 1, z: 2, mood: "love" },
+      { cx: 26, s: 62, row: 1, z: 1, mood: "laughing" },
+    ],
+  ],
+  6: [
+    [
+      { cx: 0, s: 100, row: 0, z: 9, mood: "laughing" },
+      { cx: -40, s: 70, row: 1, z: 5, mood: "wink" },
+      { cx: 40, s: 68, row: 1, z: 4, mood: "happy" },
+      { cx: -38, s: 56, row: 2, z: 3, mood: "love" },
+      { cx: 0, s: 56, row: 2, z: 2, mood: "laughing" },
+      { cx: 38, s: 54, row: 2, z: 1, mood: "wink" },
+    ],
+    [
+      { cx: 0, s: 100, row: 0, z: 9, mood: "laughing" },
+      { cx: -56, s: 76, row: 0, z: 5, mood: "wink", raise: 10 },
+      { cx: 56, s: 74, row: 0, z: 4, mood: "happy", raise: 12 },
+      { cx: -40, s: 62, row: 1, z: 3, mood: "love" },
+      { cx: 0, s: 62, row: 1, z: 2, mood: "laughing" },
+      { cx: 40, s: 60, row: 1, z: 1, mood: "wink" },
     ],
   ],
 };
@@ -71,28 +117,35 @@ const LAYOUTS: Record<1 | 2 | 3 | 4, Spot[][]> = {
 /** Étendue visible d'un perso (cheveux, chapeau, ombre compris), en fraction de sa taille. */
 interface Ext { l: number; r: number; t: number; b: number }
 const EXT0: Ext = { l: -0.12, r: 1.12, t: -0.5, b: 1.06 };
+/** Corps du blob dans son repère (fractions de la taille) : x 0,1 → 0,9 ; haut du corps à 0,88 au-dessus du bas. */
+const BODY_L = 0.12, BODY_R = 0.88, BODY_TOP = 0.88;
+/** Part du corps d'un perso de derrière cachée par la tête de devant (les yeux restent dégagés). */
+const HIDE = 0.3;
 
 /** Positions en unités : pieds (by), et boîte visible de chaque perso. */
 function compose(spots: Spot[], ext: Ext[]) {
-  const placed: { x: number; by: number; s: number; box: { l: number; r: number; t: number; b: number } }[] = [];
+  const placed: { x: number; by: number; s: number; row: number; box: { l: number; r: number; t: number; b: number } }[] = [];
   spots.forEach((sp, i) => {
     const e = ext[i] ?? EXT0;
     const x = sp.cx - sp.s / 2;
-    let by = sp.raise;
-    if (sp.stack) {
-      // Corps (sans les accessoires) : on se pose sur ceux qu'on chevauche vraiment
-      const bl = x + 0.12 * sp.s, br = x + 0.88 * sp.s;
+    let by = sp.raise ?? 0;
+    if (sp.row > 0) {
+      // Debout derrière ceux qu'on chevauche : le bas du corps passe derrière leur tête
+      // (chapeau / coupe comptés en partie seulement : un haut-de-forme ne repousse pas toute la rangée)
+      const bl = x + BODY_L * sp.s, br = x + BODY_R * sp.s;
+      by = -Infinity;
       for (const p of placed) {
-        const pl = p.x + 0.12 * p.s, pr = p.x + 0.88 * p.s;
-        // Debout derrière lui, sur une marche : le bas du corps passe derrière sa tête
-        // 2e rang : le bas du corps passe derrière le haut de sa silhouette (chapeau compris), le visage reste dégagé
-        // (un grand chapeau pointu ne compte qu'en partie : on se décale à côté de lui)
-        if (Math.min(br, pr) - Math.max(bl, pl) > 0.08 * Math.min(sp.s, p.s)) by = Math.max(by, Math.min(p.box.t, p.by + 1.1 * p.s) - 0.32 * sp.s);
+        if (p.row >= sp.row) continue;
+        const pl = p.x + BODY_L * p.s, pr = p.x + BODY_R * p.s;
+        if (Math.min(br, pr) - Math.max(bl, pl) > 0.08 * Math.min(sp.s, p.s)) {
+          by = Math.max(by, Math.min(p.box.t, p.by + (BODY_TOP + 0.22) * p.s) - HIDE * sp.s);
+        }
       }
+      if (by === -Infinity) by = sp.raise ?? 0;
     }
     // y vers le haut : bas de la boîte = by, haut = by + s
     placed.push({
-      x, by, s: sp.s,
+      x, by, s: sp.s, row: sp.row,
       box: { l: x + e.l * sp.s, r: x + e.r * sp.s, t: by + (1 - e.t) * sp.s, b: by + (1 - e.b) * sp.s },
     });
   });
@@ -101,12 +154,12 @@ function compose(spots: Spot[], ext: Ext[]) {
 
 /** Le groupe : mesuré (vraie silhouette de chaque perso) puis mis à l'échelle de la place libre. */
 function BandGroup({ looks, active }: { looks: AvatarLook[]; active: boolean }) {
-  const n = Math.max(1, Math.min(4, looks.length)) as 1 | 2 | 3 | 4;
+  const n = Math.max(1, Math.min(MAX_SHOWN, looks.length)) as N;
   const host = useRef<HTMLDivElement>(null);
   const blobs = useRef<(HTMLDivElement | null)[]>([]);
   const [ext, setExt] = useState<Ext[]>([]);
   const [area, setArea] = useState<{ x0: number; w: number; h: number } | null>(null);
-  const sig = looks.slice(0, 4).map((l) => JSON.stringify(l)).join("|");
+  const sig = looks.slice(0, MAX_SHOWN).map((l) => JSON.stringify(l)).join("|");
 
   // Silhouette réelle de chaque perso (le SVG déborde de sa boîte : chapeaux, cheveux…)
   useLayoutEffect(() => {
@@ -192,7 +245,7 @@ function useShownLooks(): { looks: AvatarLook[]; hasBand: boolean } {
   // « Moi » en premier (au centre), puis l'ordre de la bande
   const ordered = [...band].sort((a, b) => Number(b.me) - Number(a.me));
   return {
-    looks: ordered.slice(0, 4).map((b) => b.look ?? baseLook(colorForIndexSafe(band.indexOf(b)))),
+    looks: ordered.slice(0, MAX_SHOWN).map((b) => b.look ?? baseLook(colorForIndexSafe(band.indexOf(b)))),
     hasBand: true,
   };
 }

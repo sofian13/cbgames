@@ -6,5 +6,55 @@ import Capacitor
 class ZinzinBridgeViewController: CAPBridgeViewController {
     override func capacitorDidLoad() {
         bridge?.registerPluginInstance(AppIconPlugin())
+        // Pas de « Secouer pour annuler » (fenêtre système dans les champs) : la secousse est à l'accueil
+        UIApplication.shared.applicationSupportsShakeToEdit = false
+    }
+
+    // MARK: - Secousse (easter egg de l'accueil)
+    // Détection native d'iOS (la même que « secouer pour annuler ») : fiable, sans permission,
+    // déclenchée par une ou deux secousses franches. Le JS écoute l'événement window « zzshake ».
+
+    /// Pour recevoir les secousses quand rien d'autre n'a le focus. Un champ de texte de la webview
+    /// reprend le focus normalement (le clavier s'ouvre) ; les secousses remontent alors jusqu'ici
+    /// par la chaîne des répondeurs (contenu web → webview → ce contrôleur).
+    override var canBecomeFirstResponder: Bool { true }
+
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        regainShakeFocus()
+        if !observingActive {
+            observingActive = true
+            NotificationCenter.default.addObserver(self, selector: #selector(regainShakeFocus), name: UIApplication.didBecomeActiveNotification, object: nil)
+        }
+    }
+    private var observingActive = false
+
+    /// Retour au premier plan : on reprend le focus seulement si personne ne l'a (jamais au détriment d'un champ en saisie).
+    @objc private func regainShakeFocus() {
+        guard isViewLoaded, view.window != nil else { return }
+        if UIResponder.zzCurrentFirstResponder() == nil { becomeFirstResponder() }
+    }
+
+    override func motionEnded(_ motion: UIEvent.EventSubtype, with event: UIEvent?) {
+        if motion == .motionShake {
+            bridge?.triggerWindowJSEvent(eventName: "zzshake")
+        } else {
+            super.motionEnded(motion, with: event)
+        }
+    }
+}
+
+private extension UIResponder {
+    private static weak var zzFound: UIResponder?
+
+    /// Répondeur qui a le focus (nil si aucun).
+    static func zzCurrentFirstResponder() -> UIResponder? {
+        zzFound = nil
+        UIApplication.shared.sendAction(#selector(zzCaptureFirstResponder), to: nil, from: nil, for: nil)
+        return zzFound
+    }
+
+    @objc func zzCaptureFirstResponder() {
+        UIResponder.zzFound = self
     }
 }

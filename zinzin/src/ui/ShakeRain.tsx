@@ -6,27 +6,25 @@ import { playSfx } from "@/lib/sfx";
 import { haptic, reducedMotion } from "./util";
 
 /**
- * Secret de l'accueil : secouer FORT le téléphone → une pluie de blobs (ceux de « Ma bande »
+ * Secret de l'accueil : secouer le téléphone → une pluie de blobs (ceux de « Ma bande »
  * s'il y en a) tombe derrière le contenu, rebondit puis s'efface. Aucun texte, aucun indice.
- *
- * Détection : accélération linéaire ≥ 25 m/s² (hors gravité), au moins 3 pics en moins d'1 s
- * (un pic = passage au-dessus du seuil après être redescendu sous 15 m/s²), 4 s entre deux pluies.
- * La marche ou un geste normal reste très loin de ces valeurs.
- * Écoute active seulement quand l'accueil est affiché et l'app au premier plan.
- * - App iOS/Android : @capacitor/motion (événement « accel ») ; la webview Capacitor accorde
- *   l'accès au mouvement sans afficher de demande (WebViewDelegationHandler → .grant).
- * - Web : simple écoute de « devicemotion », sans jamais appeler requestPermission
- *   (pas de demande affichée : ne marche que si l'accès est déjà accordé, ou sans permission).
+ * Écoute active seulement quand l'accueil est affiché et l'app au premier plan ; 3 s entre deux pluies.
+ * - App iOS : détection NATIVE de la secousse (celle de « secouer pour annuler », fiable et sans
+ *   permission) : ZinzinBridgeViewController.motionEnded envoie l'événement window « zzshake ».
+ * - Web (hors app) : « devicemotion », accélération linéaire ≥ 18 m/s², 3 pics en 1,2 s ; sans
+ *   jamais appeler requestPermission (ne marche que si l'accès est déjà accordé, ou sans permission).
  */
 
-// Seuils réglés pour une vraie secousse « exprès » au poignet (pas la marche) :
+// Web : seuils réglés pour une vraie secousse « exprès » au poignet (pas la marche) :
 // ~1,8 g hors gravité, 3 pics en 1,2 s
 const THRESHOLD = 18;
 const REARM = 10;
 const PEAKS = 3;
 const WINDOW_MS = 1200;
-const COOLDOWN_MS = 4000;
+const COOLDOWN_MS = 3000;
 const G = 9.81;
+/** Événement window envoyé par l'app iOS à chaque secousse détectée par le système. */
+const NATIVE_SHAKE_EVENT = "zzshake";
 
 type Vec = { x?: number | null; y?: number | null; z?: number | null } | null | undefined;
 type MotionLike = { acceleration?: Vec; accelerationIncludingGravity?: Vec };
@@ -44,11 +42,10 @@ function magnitude(e: MotionLike): number | null {
   return null;
 }
 
-/** Détecteur de secousse : renvoie une fonction à nourrir avec chaque événement. */
+/** Détecteur de secousse (web) : renvoie une fonction à nourrir avec chaque événement. */
 function shakeDetector(onShake: () => void) {
   const peaks: number[] = [];
   let armed = true;
-  let lastFire = -Infinity;
   return (e: MotionLike) => {
     const m = magnitude(e);
     if (m == null) return;
@@ -58,55 +55,23 @@ function shakeDetector(onShake: () => void) {
     armed = false;
     peaks.push(now);
     while (peaks.length && now - peaks[0] > WINDOW_MS) peaks.shift();
-    if (peaks.length >= PEAKS && now - lastFire > COOLDOWN_MS) {
+    if (peaks.length >= PEAKS) {
       peaks.length = 0;
-      lastFire = now;
       onShake();
     }
   };
 }
 
-let motionAsked = false;
-/** Demande l'accès au mouvement au premier toucher de l'écran (une seule fois). */
-function armMotionPermission() {
-  if (motionAsked) return;
-  const DM = (window as unknown as { DeviceMotionEvent?: { requestPermission?: () => Promise<string> } }).DeviceMotionEvent;
-  if (typeof DM?.requestPermission !== "function") { motionAsked = true; return; }
-  const ask = () => {
-    if (motionAsked) return;
-    motionAsked = true;
-    window.removeEventListener("touchend", ask, true);
-    window.removeEventListener("click", ask, true);
-    DM.requestPermission!().then((r) => { if (r !== "granted") motionAsked = false; }).catch(() => { motionAsked = false; });
-  };
-  // touchend / click comptent comme « geste » pour iOS (pointerdown non)
-  window.addEventListener("touchend", ask, true);
-  window.addEventListener("click", ask, true);
-}
-
-/** Branche l'accéléromètre. Renvoie l'arrêt. */
-function listenMotion(feed: (e: MotionLike) => void): () => void {
-  let stopped = false;
-  const onWin = (e: Event) => feed(e as unknown as MotionLike);
-  const web = () => window.addEventListener("devicemotion", onWin);
-  let remove: (() => void) | null = null;
+/** Branche la détection de secousse (native dans l'app, accéléromètre sur le web). Renvoie l'arrêt. */
+function listenShake(onShake: () => void): () => void {
   if (isNative()) {
-    // iOS : les événements de mouvement n'arrivent qu'après requestPermission(), qui exige un
-    // geste. La webview Capacitor l'accorde sans afficher de fenêtre → on le fait au 1er toucher.
-    armMotionPermission();
-    import("@capacitor/motion")
-      .then(async ({ Motion }) => {
-        if (stopped) return;
-        const h = await Motion.addListener("accel", (e) => feed(e as unknown as MotionLike));
-        if (stopped) void h.remove();
-        else remove = () => void h.remove();
-      })
-      .catch(() => { if (!stopped) { web(); remove = () => window.removeEventListener("devicemotion", onWin); } });
-  } else {
-    web();
-    remove = () => window.removeEventListener("devicemotion", onWin);
+    window.addEventListener(NATIVE_SHAKE_EVENT, onShake);
+    return () => window.removeEventListener(NATIVE_SHAKE_EVENT, onShake);
   }
-  return () => { stopped = true; remove?.(); };
+  const feed = shakeDetector(onShake);
+  const onWin = (e: Event) => feed(e as unknown as MotionLike);
+  window.addEventListener("devicemotion", onWin);
+  return () => window.removeEventListener("devicemotion", onWin);
 }
 
 /* ───────── Pluie ───────── */
@@ -124,20 +89,23 @@ export function ShakeRain({ homeRef }: { homeRef: RefObject<HTMLElement | null> 
   useEffect(() => { looksRef.current = band.filter((b) => b.look).map((b) => b.look as AvatarLook); }, [band]);
   const busy = useRef(false);
 
-  // Écoute de l'accéléromètre, seulement quand l'accueil est affiché et l'app au premier plan
+  // Écoute de la secousse, seulement quand l'accueil est affiché et l'app au premier plan
   useEffect(() => {
     const el = layer.current;
     if (!el || typeof window === "undefined") return;
     let shown = false;
     let stop: (() => void) | null = null;
 
+    let lastFire = -Infinity;
     const fire = () => {
       if (busy.current || document.visibilityState !== "visible") return;
+      if (performance.now() - lastFire < COOLDOWN_MS) return;
       // L'accueil doit être au premier plan (pas de fiche, réglages, paywall… par-dessus)
       const home = homeRef.current;
       const top = document.elementFromPoint(innerWidth / 2, innerHeight / 2);
       if (!home || !top || !home.contains(top)) return;
       busy.current = true;
+      lastFire = performance.now();
       const reduce = reducedMotion();
       const n = reduce ? 10 : 24;
       const mine = looksRef.current;
@@ -154,11 +122,10 @@ export function ShakeRain({ homeRef }: { homeRef: RefObject<HTMLElement | null> 
       haptic("medium");
       try { navigator.vibrate?.([30, 50, 30]); } catch { /* indispo */ }
     };
-    const feed = shakeDetector(fire);
 
     const sync = () => {
       const want = shown && document.visibilityState === "visible";
-      if (want && !stop) stop = listenMotion(feed);
+      if (want && !stop) stop = listenShake(fire);
       else if (!want && stop) { stop(); stop = null; }
     };
     // Accueil masqué (jeu, soirée : display none) → plus d'intersection → écoute coupée
