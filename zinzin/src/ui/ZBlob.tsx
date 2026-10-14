@@ -1,4 +1,4 @@
-import { useId, useRef, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useId, useRef, type CSSProperties, type ReactNode } from "react";
 import type { MascotColor, MascotMood } from "@/components/Mascot";
 import { POTATO, costumeLayers, type ZCostume } from "./costumes";
 
@@ -85,18 +85,32 @@ export function hopEl(el: HTMLElement | null) {
 }
 
 /**
- * Les yeux de tous les blobs suivent le doigt : un seul écouteur global
- * pose --zz-lx / --zz-ly (-1…1) sur <html>, les pupilles s'y décalent en CSS.
+ * Les yeux de tous les blobs suivent le doigt : un seul écouteur global pose --zz-lx / --zz-ly
+ * (-1…1) sur chaque groupe de pupilles (.zb-follow), qui s'y décale en CSS.
+ * Posées sur <html>, ces variables (héritées) forçaient le recalcul du style de TOUTE la page à
+ * chaque toucher / glissé (~4 000 éléments) : ici seuls les yeux sont recalculés. Un blob monté
+ * ensuite reçoit la position courante dès son montage (ref applyLook), comme avant par héritage.
  */
+let lookX: string | null = null;
+let lookY: string | null = null;
+function applyLook(el: Element | null) {
+  if (!el || lookX == null || lookY == null) return;
+  const st = (el as SVGElement).style;
+  st.setProperty("--zz-lx", lookX);
+  st.setProperty("--zz-ly", lookY);
+}
+
 export function installLookAtFinger(): () => void {
   if (typeof window === "undefined") return () => {};
   if (matchMedia("(prefers-reduced-motion: reduce)").matches) return () => {};
-  const root = document.documentElement;
   let raf = 0, x = 0, y = 0;
   const flush = () => {
     raf = 0;
-    root.style.setProperty("--zz-lx", x.toFixed(2));
-    root.style.setProperty("--zz-ly", y.toFixed(2));
+    const nx = x.toFixed(2), ny = y.toFixed(2);
+    if (nx === lookX && ny === lookY) return;
+    lookX = nx;
+    lookY = ny;
+    document.querySelectorAll(".zb-follow").forEach(applyLook);
   };
   const on = (e: PointerEvent) => {
     x = Math.max(-1, Math.min(1, (e.clientX / innerWidth) * 2 - 1));
@@ -112,11 +126,35 @@ export function installLookAtFinger(): () => void {
   };
 }
 
+/**
+ * Animations en pause tant que l'élément est hors écran (carte d'un rail défilé, bas de l'accueil,
+ * accueil masqué pendant un jeu…), reprises dès qu'il réapparaît (64 px avant d'entrer).
+ * Rien ne change à l'écran : seules les animations invisibles s'arrêtent. Sans ça, l'accueil fait
+ * tourner ~300 animations SVG (yeux, pupilles, visage) recalculées et repeintes à chaque image.
+ * Un seul observateur partagé ; l'attribut est posé hors React (aucun rendu). CSS : [data-zz-off].
+ */
+let offscreenIO: IntersectionObserver | null | undefined;
+export function pauseWhenOffscreen(el: Element | null): () => void {
+  if (!el) return () => {};
+  if (offscreenIO === undefined) {
+    offscreenIO = typeof IntersectionObserver === "function"
+      ? new IntersectionObserver((entries) => {
+          for (const e of entries) e.target.toggleAttribute("data-zz-off", !e.isIntersecting);
+        }, { rootMargin: "64px" })
+      : null;
+  }
+  const io = offscreenIO;
+  if (!io) return () => {};
+  io.observe(el);
+  return () => { io.unobserve(el); el.removeAttribute("data-zz-off"); };
+}
+
 export function ZBlob({
   size = 96, color = "pink", mood = "happy", seed = 0, wobble = true, shadow = true,
   speed = 2.6, delay = 0, outline = false, crown = false, costume, hop = true, className, style,
 }: ZBlobProps) {
   const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => pauseWhenOffscreen(ref.current), []);
   const uid = useId().replace(/:/g, "");
   const c = costume === "potato" ? POTATO : (ZPALETTE[color] ?? ZPALETTE.pink);
   const s = Math.abs(Math.floor(seed));
@@ -167,7 +205,7 @@ export function ZBlob({
       <g className="zb-blink" style={{ animationDelay: `${(s % 5) * 0.7 + side * 0.08}s` }}>
         <ellipse cx={e.x} cy={e.y + 2.2} rx={e.r} ry={e.r} fill={c.deep} opacity={0.55} />
         <circle cx={e.x} cy={e.y} r={e.r} fill="#fff" />
-        <g className="zb-follow"><g className={side ? "zb-pupil-b" : "zb-pupil-a"} style={{ animationDelay: `${-(s % 7) * 0.9}s` }}>
+        <g className="zb-follow" ref={applyLook}><g className={side ? "zb-pupil-b" : "zb-pupil-a"} style={{ animationDelay: `${-(s % 7) * 0.9}s` }}>
           {mood === "mindblown" ? (
             <path
               transform={`translate(${px} ${py}) scale(${pr / 10})`}

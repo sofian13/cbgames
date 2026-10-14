@@ -1,7 +1,7 @@
 import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import { ArrowRight, Lock, Settings, Users } from "lucide-react";
 import { FEATURED, SECTIONS, getZGame, type ZFeatured, type ZGame } from "../catalog";
-import { ZBlob, ZPALETTE } from "./ZBlob";
+import { ZBlob, ZPALETTE, pauseWhenOffscreen } from "./ZBlob";
 import { RoundBtn, Tag } from "./common";
 import { gameInfo, haptic, reducedMotion } from "./util";
 import { type Lang, pick, useLang } from "@/lib/i18n";
@@ -187,6 +187,13 @@ function Featured({ onOpenGame, lang }: { onOpenGame: (id: string) => void; lang
       goTo(i + 1);
     }, AUTOPLAY_MS);
     return () => { clearInterval(t); clearTimeout(settleT.current); };
+  }, [n]);
+
+  // Cartes des slides hors écran (et de la copie de bouclage) : leurs animations (persos, étincelles…)
+  // en pause. Seulement la carte (1er enfant) : « Ma bande », ouverte depuis sa slide, n'est pas concernée.
+  useEffect(() => {
+    const stops = Array.from(ref.current?.querySelectorAll(":scope > * > :first-child") ?? [], pauseWhenOffscreen);
+    return () => stops.forEach((stop) => stop());
   }, [n]);
 
   if (!n) return null;

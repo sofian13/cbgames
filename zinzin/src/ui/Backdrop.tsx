@@ -1,5 +1,5 @@
 import { useEffect, useRef, type ReactNode, type RefObject } from "react";
-import { ZBlob } from "./ZBlob";
+import { ZBlob, pauseWhenOffscreen } from "./ZBlob";
 import { reducedMotion } from "./util";
 
 /**
@@ -58,6 +58,12 @@ export function Backdrop({ scrollRef }: { scrollRef: RefObject<HTMLElement | nul
     el.addEventListener("scroll", onScroll, { passive: true });
     return () => { el.removeEventListener("scroll", onScroll); cancelAnimationFrame(raf); };
   }, [scrollRef]);
+
+  // Dessins hors écran (le décor fait ~2,5 écrans de haut) : animations en pause jusqu'à leur retour
+  useEffect(() => {
+    const stops = Array.from(layer.current?.querySelectorAll(".zz-doodle, .zz-peek") ?? [], pauseWhenOffscreen);
+    return () => stops.forEach((stop) => stop());
+  }, []);
 
   return (
     <div aria-hidden className="pointer-events-none fixed inset-0 overflow-hidden" style={{ zIndex: 0 }}>

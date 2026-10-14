@@ -17,7 +17,7 @@ import {
 import { SOIREE } from "../strings";
 import { ZBlob, ZPALETTE } from "./ZBlob";
 import { BandBlob } from "./BandBlob";
-import { BigBtn, Tag } from "./common";
+import { BigBtn, Tag, useTapReady } from "./common";
 import { GameScreen } from "./Screens";
 import { CornerBtn, DiscoBall, SoireeStyles } from "./SoireeKit";
 import { gameInfo, haptic, playersLabel } from "./util";
@@ -70,7 +70,9 @@ function Intro({ s, onPause }: { s: SoireeState; onPause: () => void }) {
 
   useEffect(() => { playSfx("whoosh", { volume: 0.7 }); playSfx("cymbal", { volume: 0.35, delay: 0.25 }); }, []);
 
+  const ready = useTapReady();
   const go = () => {
+    if (!ready()) return;
     haptic("medium");
     playSfx("confirm");
     // La bande est validée toute seule dans l'écran « Qui joue ? » du jeu
@@ -138,11 +140,11 @@ function Intro({ s, onPause }: { s: SoireeState; onPause: () => void }) {
         <div className="sticky bottom-0 z-[2] -mx-5 px-5 pt-4" style={{ paddingBottom: "calc(var(--sab) + 4px)", marginBottom: "calc(-1 * (var(--sab) + 16px))", background: `linear-gradient(180deg, ${c.body}00 0px, ${c.body} 16px)` }}>
         <BigBtn onClick={go} bg="var(--zz-ink)" color="#fff">{t.go}</BigBtn>
         <div className="flex items-center justify-center gap-2">
-          <button type="button" onClick={() => { haptic(); playSfx("whoosh", { volume: 0.5 }); skipGame(); }} className="zz-tap min-h-11 px-3 text-[15px] font-bold underline decoration-2 underline-offset-4">
+          <button type="button" onClick={() => { if (!ready()) return; haptic(); playSfx("whoosh", { volume: 0.5 }); skipGame(); }} className="zz-tap min-h-11 px-3 text-[15px] font-bold underline decoration-2 underline-offset-4">
             {t.skip}
           </button>
           {s.index > 0 && (
-            <button type="button" onClick={() => { haptic(); endSoiree(); }} className="zz-tap min-h-11 px-3 text-[15px] font-bold underline decoration-2 underline-offset-4" style={{ opacity: 0.75 }}>
+            <button type="button" onClick={() => { if (!ready()) return; haptic(); endSoiree(); }} className="zz-tap min-h-11 px-3 text-[15px] font-bold underline decoration-2 underline-offset-4" style={{ opacity: 0.75 }}>
               {t.finishNow}
             </button>
           )}
@@ -160,7 +162,9 @@ function Winner({ s, onPause }: { s: SoireeState; onPause: () => void }) {
   const g = getZGame(s.playlist[s.index])!;
   const info = gameInfo(g, lang);
   const [picked, setPicked] = useState<string[]>([]);
+  const ready = useTapReady();
   const toggle = (name: string) => {
+    if (!ready()) return;
     haptic();
     playSfx(picked.includes(name) ? "pop2" : "pop", { volume: 0.6 });
     setPicked((p) => (p.includes(name) ? p.filter((x) => x !== name) : [...p, name]));
@@ -206,7 +210,7 @@ function Winner({ s, onPause }: { s: SoireeState; onPause: () => void }) {
         <div className="min-h-6 flex-1" />
         <div className="sticky bottom-0 z-[2] -mx-5 px-5 pt-5" style={{ paddingBottom: "calc(var(--sab) + 4px)", marginBottom: "calc(-1 * (var(--sab) + 16px))", background: "linear-gradient(180deg, rgba(33,16,82,0) 0px, #211052 20px)" }}>
         <BigBtn
-          onClick={() => { haptic("success"); playSfx("coins", { volume: 0.7 }); recordWinners(picked); }}
+          onClick={() => { if (!ready()) return; haptic("success"); playSfx("coins", { volume: 0.7 }); recordWinners(picked); }}
           bg="#FFD23F"
           disabled={!picked.length}
         >
@@ -214,7 +218,7 @@ function Winner({ s, onPause }: { s: SoireeState; onPause: () => void }) {
         </BigBtn>
         <button
           type="button"
-          onClick={() => { haptic(); playSfx("pop2", { volume: 0.5 }); recordWinners([]); }}
+          onClick={() => { if (!ready()) return; haptic(); playSfx("pop2", { volume: 0.5 }); recordWinners([]); }}
           className="zz-tap mt-1 min-h-12 w-full text-[16px] font-bold text-white underline decoration-2 underline-offset-4"
         >
           {t.nobody}
@@ -243,7 +247,9 @@ function End({ s, onHome, onNew, toast }: { s: SoireeState; onHome: () => void; 
   const order = podium.length === 3 ? [1, 0, 2] : podium.length === 2 ? [1, 0] : [0];
   const heights = [132, 96, 72];
 
+  const ready = useTapReady();
   const share = async () => {
+    if (!ready()) return;
     haptic();
     const lines = rows.map((r, i) => `${i === 0 ? "👑" : `${i + 1}.`} ${r.name} · ${t.pts(r.points)} · ${titleOf(i)}`);
     const games = s.playlist.slice(0, Math.max(1, s.index)).map((id) => gameInfo(getZGame(id)!, lang).name).join(", ");
@@ -314,9 +320,9 @@ function End({ s, onHome, onNew, toast }: { s: SoireeState; onHome: () => void; 
           <button type="button" onClick={share} className="zz-push zz-stk flex min-h-[58px] items-center justify-center gap-2 rounded-full text-[18px] font-bold" style={{ background: "#fff", color: "var(--zz-ink)" }}>
             <Share2 size={19} strokeWidth={2.8} aria-hidden /> <span className="zz-title text-[19px]">{t.share}</span>
           </button>
-          <BigBtn onClick={() => { haptic(); onNew(); }} bg="#FFD23F" style={{ height: 58, fontSize: 19 }}>{t.newSoiree}</BigBtn>
+          <BigBtn onClick={() => { if (!ready()) return; haptic(); onNew(); }} bg="#FFD23F" style={{ height: 58, fontSize: 19 }}>{t.newSoiree}</BigBtn>
         </div>
-        <button type="button" onClick={() => { haptic(); onHome(); }} className="zz-tap mt-2 flex min-h-12 w-full items-center justify-center gap-1.5 text-[16px] font-bold text-white underline decoration-2 underline-offset-4">
+        <button type="button" onClick={() => { if (!ready()) return; haptic(); onHome(); }} className="zz-tap mt-2 flex min-h-12 w-full items-center justify-center gap-1.5 text-[16px] font-bold text-white underline decoration-2 underline-offset-4">
           <HomeIcon size={16} strokeWidth={2.8} aria-hidden /> {t.home}
         </button>
       </div>

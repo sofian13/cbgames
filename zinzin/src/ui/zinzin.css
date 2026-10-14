@@ -78,7 +78,16 @@
   50% { transform: translate(4px, -6px); opacity: 0.95; }
 }
 
-/* Les pupilles suivent le doigt (--zz-lx/--zz-ly posés par installLookAtFinger) */
+/* Hors écran : animations en pause (pauseWhenOffscreen, ZBlob.tsx), reprises dès le retour à l'écran.
+ * Classes animées listées une à une (et non « * ») : basculer l'attribut ne recalcule que ces éléments. */
+[data-zz-off],
+[data-zz-off] .zb-wob, [data-zz-off] .zb-rofl, [data-zz-off] .zb-face, [data-zz-off] .zb-blink,
+[data-zz-off] .zb-pupil-a, [data-zz-off] .zb-pupil-b, [data-zz-off] .zb-heart, [data-zz-off] .zb-flame,
+[data-zz-off] .zb-drop, [data-zz-off] .zb-zz, [data-zz-off] .zc-nose, [data-zz-off] .zc-tick,
+[data-zz-off] .zc-wave, [data-zz-off] .zc-tray, [data-zz-off] .zz-band-bob, [data-zz-off] .av-wob,
+[data-zz-off] .av-blink { animation-play-state: paused !important; }
+
+/* Les pupilles suivent le doigt (--zz-lx/--zz-ly posés sur chaque .zb-follow par installLookAtFinger) */
 .zb-follow {
   transform: translate(calc(var(--zz-lx, 0) * 3.5px), calc(var(--zz-ly, 0) * 3px));
   transition: transform 320ms var(--zz-spring);

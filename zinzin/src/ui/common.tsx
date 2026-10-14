@@ -3,6 +3,18 @@ import { X } from "lucide-react";
 import { useT } from "@/lib/i18n";
 import { UI } from "../strings";
 
+/** Délai pendant lequel un fond qui vient d'apparaître ignore les taps (double tap sur le bouton d'ouverture). */
+export const TAP_GUARD_MS = 400;
+
+/**
+ * Écran qui vient d'apparaître : `ready()` est faux pendant TAP_GUARD_MS. Le 2e tap d'un double tap
+ * sur l'écran d'avant (même endroit) ne déclenche pas le bouton du nouvel écran (sauter un jeu…).
+ */
+export function useTapReady(): () => boolean {
+  const [at] = useState(() => performance.now());
+  return useCallback(() => performance.now() - at > TAP_GUARD_MS, [at]);
+}
+
 /** Bottom sheet avec animation d'entrée/sortie. `children` reçoit `close`. */
 export function Sheet({
   onClose, children, maxHeight = "92dvh", bg = "var(--zz-bg-2)", label,
@@ -19,10 +31,12 @@ export function Sheet({
     setOut(true);
     setTimeout(onClose, 250);
   }, [out, onClose]);
+  // Double tap sur le bouton qui ouvre la fiche : le 2e tap tombe sur le fond, il ne doit pas la refermer
+  const [openedAt] = useState(() => performance.now());
 
   return (
     <div className="fixed inset-0" style={{ zIndex: 40 }} role="dialog" aria-modal aria-label={label}>
-      <div className={`zz-backdrop ${out ? "is-out" : ""}`} onClick={close} />
+      <div className={`zz-backdrop ${out ? "is-out" : ""}`} onClick={() => { if (performance.now() - openedAt > TAP_GUARD_MS) close(); }} />
       <div
         className={`zz-sheet ${out ? "is-out" : ""} absolute inset-x-0 bottom-0 mx-auto flex w-full max-w-lg flex-col overflow-hidden`}
         style={{ maxHeight, background: bg, borderRadius: "32px 32px 0 0", border: "3px solid var(--zz-ink)", borderBottom: 0, boxShadow: "0 -20px 60px rgba(0,0,0,0.45)" }}

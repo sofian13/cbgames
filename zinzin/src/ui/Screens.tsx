@@ -1,4 +1,4 @@
-import { Suspense, lazy, useEffect, useState, type ComponentType, type LazyExoticComponent, type ReactNode } from "react";
+import { Suspense, lazy, useEffect, useRef, useState, type ComponentType, type LazyExoticComponent, type ReactNode } from "react";
 import type { GameProps } from "@/lib/games/types";
 import { Bell, ChevronLeft, CreditCard, GlassWater, Mail, RotateCcw, Share2, Sparkles, Star, Volume2, X } from "lucide-react";
 import { LANGS, notificationsOn, rateApp, setLang, setNotifications, shareApp, useLang } from "../settings";
@@ -9,7 +9,7 @@ import { pick, useT } from "@/lib/i18n";
 import { ONBOARDING, UI } from "../strings";
 import { IdeaButton } from "@/components/games/idea-button";
 import { ZBlob, ZPALETTE } from "./ZBlob";
-import { BigBtn, CloseBtn, RoundBtn, Sheet } from "./common";
+import { BigBtn, CloseBtn, RoundBtn, Sheet, TAP_GUARD_MS } from "./common";
 import { ErrorBoundary } from "./ErrorBoundary";
 import { APP_VERSION, haptic, setAgeOk } from "./util";
 import { setNoAlcohol, useNoAlcohol } from "@/lib/party-mood";
@@ -423,6 +423,8 @@ export function GameScreen({ id, onExit }: { id: string; onExit: () => void }) {
   const game = getZGame(id)!;
   const [Comp] = useState(() => lazyGame(id));
   const [confirm, setConfirm] = useState(false);
+  // Double tap sur la croix : le 2e tap tombe sur le fond de la confirmation, il ne doit pas la refermer
+  const confirmAt = useRef(0);
   const t = useT(UI);
   // Jeu en cours : la fin de partie le signale avec son id (stats de la bande)
   useEffect(() => { setCurrentGame(id); return () => setCurrentGame(null); }, [id]);
@@ -438,7 +440,7 @@ export function GameScreen({ id, onExit }: { id: string; onExit: () => void }) {
       {/* Quitter : discret, en haut à gauche (le coin droit reste aux jeux) */}
       <button
         type="button"
-        onClick={() => { haptic(); setConfirm(true); }}
+        onClick={() => { haptic(); confirmAt.current = performance.now(); setConfirm(true); }}
         aria-label={t.quitAria}
         className="zz-press fixed left-3 grid h-11 w-11 place-items-center rounded-full"
         // Même ligne et même marge que les boutons d'outils des jeux (GameTopRight : right-3, +10px)
@@ -449,7 +451,7 @@ export function GameScreen({ id, onExit }: { id: string; onExit: () => void }) {
 
       {confirm && (
         <div className="fixed inset-0 grid place-items-center px-8" style={{ zIndex: 70 }} role="alertdialog" aria-modal aria-label={t.quitTitle}>
-          <div className="zz-backdrop" onClick={() => setConfirm(false)} />
+          <div className="zz-backdrop" onClick={() => { if (performance.now() - confirmAt.current > TAP_GUARD_MS) setConfirm(false); }} />
           <div className="zz-pop zz-stk relative w-full max-w-[330px] rounded-[30px] px-5 pb-5 pt-4 text-center" style={{ background: "#fff", color: "var(--zz-ink)", rotate: "-1.5deg" }}>
             <div className="-mt-16 flex justify-center"><ZBlob size={104} color={game.color} mood="shocked" seed={3} outline shadow={false} costume={game.costume} /></div>
             <h2 className="zz-title mt-2" style={{ fontSize: 32 }}>{t.quitTitle}</h2>
