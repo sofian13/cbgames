@@ -34,6 +34,7 @@ export const UI: I18n<{
   howToPlay: string;
   rulesShow: string;
   rulesHide: string;
+  playWithTuto: string;
   adultNote: string;
   unlockGame: string;
   play: string;
@@ -122,6 +123,7 @@ export const UI: I18n<{
     howToPlay: "Comment on joue",
     rulesShow: "Les règles en détail",
     rulesHide: "Masquer les règles détaillées",
+    playWithTuto: "Lancer avec le tuto en images",
     adultNote: "Une gorgée de zinzin, c’est de ce que tu veux : eau, soft, jus… ou un gage. Avec modération.",
     unlockGame: "Débloquer ce jeu",
     play: "Jouer",
@@ -213,6 +215,7 @@ export const UI: I18n<{
     howToPlay: "How to play",
     rulesShow: "Full rules",
     rulesHide: "Hide full rules",
+    playWithTuto: "Play with the picture tutorial",
     adultNote: "A zinzin sip is whatever you like: water, soft drinks, juice… or a dare. In moderation.",
     unlockGame: "Unlock this game",
     play: "Play",
@@ -304,6 +307,7 @@ export const UI: I18n<{
     howToPlay: "Cómo se juega",
     rulesShow: "Reglas completas",
     rulesHide: "Ocultar las reglas completas",
+    playWithTuto: "Jugar con el tutorial ilustrado",
     adultNote: "Un trago de zinzin es de lo que quieras: agua, refresco, zumo… o un reto. Con moderación.",
     unlockGame: "Desbloquear este juego",
     play: "Jugar",

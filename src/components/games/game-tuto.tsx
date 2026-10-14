@@ -38,13 +38,22 @@ export const TUTO_COLORS = [ZZ.yellow, ZZ.sky, ZZ.coral, ZZ.mint, ZZ.pink];
 const tutoKey = (gameId: string) => `zz-${gameId}-tuto`;
 
 /** Le tuto de ce jeu a-t-il déjà été vu ? (stockage indispo = on ne l'impose pas) */
+/** Le tuto revient tout seul si le jeu n'a pas été joué depuis ce délai (règles oubliées). */
+const TUTO_FORGET_MS = 30 * 24 * 3600 * 1000;
+
 export function tutoSeen(gameId: string): boolean {
-  try { return localStorage.getItem(tutoKey(gameId)) === "1"; } catch { return true; }
+  try {
+    const v = localStorage.getItem(tutoKey(gameId));
+    if (!v) return false;
+    if (v === "1") return true; // ancien format : vu, date inconnue
+    const t = Number(v);
+    return Number.isFinite(t) && Date.now() - t < TUTO_FORGET_MS;
+  } catch { return true; }
 }
 
 /** Mémorise que le tuto a été vu (fin ou « Passer »). */
 export function markTutoSeen(gameId: string) {
-  try { localStorage.setItem(tutoKey(gameId), "1"); } catch { /* stockage indispo */ }
+  try { localStorage.setItem(tutoKey(gameId), String(Date.now())); } catch { /* stockage indispo */ }
 }
 
 /**
@@ -56,7 +65,8 @@ export function markTutoSeen(gameId: string) {
 export function useFirstTimeTuto(gameId: string) {
   const [open, setOpen] = useState(false);
   const showIfFirstTime = useCallback(() => {
-    if (tutoSeen(gameId)) return false;
+    // Déjà vu récemment : on rafraîchit la date (le jeu vient d'être joué) et on n'affiche rien
+    if (tutoSeen(gameId)) { markTutoSeen(gameId); return false; }
     setOpen(true);
     return true;
   }, [gameId]);

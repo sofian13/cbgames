@@ -6,6 +6,9 @@ import { UI } from "../strings";
 import { ZBlob, ZPALETTE, type ZColor } from "./ZBlob";
 import { BigBtn, CloseBtn, Sheet, Tag } from "./common";
 import { gameInfo, haptic, playersLabel } from "./util";
+
+/** Jeux qui ont un tuto en slides (clé localStorage zz-<id>-tuto). */
+const HAS_TUTO = new Set(["verre", "code-names", "category-chrono", "chut", "faux-temoin", "guess-word", "lache-pas", "le-bluffeur", "longueur-onde", "loup-garou", "make-guess", "pensez-pareil", "picolette", "purete", "tgv", "top-ten", "undercover"]);
 import { useNoAlcohol } from "@/lib/party-mood";
 
 /** Fiche d'un jeu : en-tête plein couleur, mini BD, étapes, bouton Jouer. */
@@ -138,11 +141,17 @@ export function GameSheet({
               <BigBtn onClick={() => { haptic("medium"); onUnlock(); }} bg="#FFD23F">
                 <Lock size={20} strokeWidth={3} /> {t.unlockGame}
               </BigBtn>
-            ) : (
+            ) : (<>
               <BigBtn onClick={() => { haptic("medium"); onPlay(id); }} bg={c.body} color={c.ink}>
                 <Play size={20} strokeWidth={3} fill="currentColor" /> {t.play}
               </BigBtn>
-            )}
+              {HAS_TUTO.has(id) && (
+                <button type="button" className="mx-auto mt-2 flex min-h-11 items-center justify-center text-[14px] font-bold underline underline-offset-4" style={{ color: "rgba(255,255,255,0.8)" }}
+                  onClick={() => { haptic("light"); try { localStorage.removeItem(`zz-${id}-tuto`); } catch { /* indispo */ } onPlay(id); }}>
+                  {t.playWithTuto}
+                </button>
+              )}
+            </>)}
           </div>
         </>
       )}
