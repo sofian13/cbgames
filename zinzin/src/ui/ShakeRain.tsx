@@ -19,10 +19,12 @@ import { haptic, reducedMotion } from "./util";
  *   (pas de demande affichée : ne marche que si l'accès est déjà accordé, ou sans permission).
  */
 
-const THRESHOLD = 25;
-const REARM = 15;
+// Seuils réglés pour une vraie secousse « exprès » au poignet (pas la marche) :
+// ~1,8 g hors gravité, 3 pics en 1,2 s
+const THRESHOLD = 18;
+const REARM = 10;
 const PEAKS = 3;
-const WINDOW_MS = 1000;
+const WINDOW_MS = 1200;
 const COOLDOWN_MS = 4000;
 const G = 9.81;
 
@@ -64,6 +66,24 @@ function shakeDetector(onShake: () => void) {
   };
 }
 
+let motionAsked = false;
+/** Demande l'accès au mouvement au premier toucher de l'écran (une seule fois). */
+function armMotionPermission() {
+  if (motionAsked) return;
+  const DM = (window as unknown as { DeviceMotionEvent?: { requestPermission?: () => Promise<string> } }).DeviceMotionEvent;
+  if (typeof DM?.requestPermission !== "function") { motionAsked = true; return; }
+  const ask = () => {
+    if (motionAsked) return;
+    motionAsked = true;
+    window.removeEventListener("touchend", ask, true);
+    window.removeEventListener("click", ask, true);
+    DM.requestPermission!().then((r) => { if (r !== "granted") motionAsked = false; }).catch(() => { motionAsked = false; });
+  };
+  // touchend / click comptent comme « geste » pour iOS (pointerdown non)
+  window.addEventListener("touchend", ask, true);
+  window.addEventListener("click", ask, true);
+}
+
 /** Branche l'accéléromètre. Renvoie l'arrêt. */
 function listenMotion(feed: (e: MotionLike) => void): () => void {
   let stopped = false;
@@ -71,9 +91,9 @@ function listenMotion(feed: (e: MotionLike) => void): () => void {
   const web = () => window.addEventListener("devicemotion", onWin);
   let remove: (() => void) | null = null;
   if (isNative()) {
-    // Accès accordé d'office par la webview Capacitor (aucune demande visible)
-    const DM = (window as unknown as { DeviceMotionEvent?: { requestPermission?: () => Promise<string> } }).DeviceMotionEvent;
-    if (typeof DM?.requestPermission === "function") DM.requestPermission().catch(() => {});
+    // iOS : les événements de mouvement n'arrivent qu'après requestPermission(), qui exige un
+    // geste. La webview Capacitor l'accorde sans afficher de fenêtre → on le fait au 1er toucher.
+    armMotionPermission();
     import("@capacitor/motion")
       .then(async ({ Motion }) => {
         if (stopped) return;
