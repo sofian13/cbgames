@@ -135,10 +135,9 @@ export default function MakeGuessGame({
 
   // ── Game state ──
   const [phase, setPhase] = useState<Phase>("setup");
-  // Tuto en slides : 1re partie (après la saisie des équipes), relançable depuis les règles
-  const tuto = useFirstTimeTuto("make-guess");
+  // Tuto en slides : 1re fois dès l'ouverture (avant les équipes), relançable depuis les règles
+  const tuto = useFirstTimeTuto("make-guess", { atMount: true });
   const tutoSlides = useMakeGuessTuto();
-  const showTutoFirstTime = tuto.showIfFirstTime;
   const [rulesOpen, setRulesOpen] = useState(false);
   useGameFinished(phase === "game-over"); // fin de partie → demande de note éventuelle (app)
   const [currentRound, setCurrentRound] = useState(1);
@@ -274,8 +273,7 @@ export default function MakeGuessGame({
     setSubTurn(0);
     setAllResults([]);
     setPhase("pre-turn");
-    showTutoFirstTime();
-  }, [selectedThemes, teams, lang, unlocked, showTutoFirstTime]);
+  }, [selectedThemes, teams, lang, unlocked]);
 
   // ── Turn handlers ──
   const startTurn = useCallback(() => {

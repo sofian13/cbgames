@@ -106,15 +106,15 @@ function findTitle(pair: CursorPair, t: (typeof STR)["fr"]): ReactNode {
   return t.findCat(pair.art ?? "un", pair.category);
 }
 
-/** Mode local : tuto 1re fois (après les joueurs) + feuille de règles par-dessus la partie. */
+/** Mode local : tuto 1re fois (dès l'ouverture, avant les joueurs) + feuille de règles par-dessus la partie. */
 function LongueurOndeLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) {
   const t = useT(STR);
-  const tuto = useFirstTimeTuto("longueur-onde");
+  const tuto = useFirstTimeTuto("longueur-onde", { atMount: true });
   const content = useCurseurTuto();
   const [rulesOpen, setRulesOpen] = useState(false);
   return (
     <>
-      <LocalGame onReturnToLobby={onReturnToLobby} onFirstTime={tuto.showIfFirstTime} onTuto={tuto.show}
+      <LocalGame onReturnToLobby={onReturnToLobby} onTuto={tuto.show}
         rulesBtn={<RulesIconButton onClick={() => setRulesOpen(true)} />} />
       {rulesOpen && <GameRulesSheet name={t.name} rules={content.rules} onClose={() => setRulesOpen(false)} onTuto={tuto.show} />}
       {tuto.open && <GameTuto slides={content.slides} onDone={tuto.close} />}
@@ -122,7 +122,7 @@ function LongueurOndeLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }
   );
 }
 
-function LocalGame({ onReturnToLobby, onFirstTime, onTuto, rulesBtn }: { onReturnToLobby?: () => void; onFirstTime: () => void; onTuto: () => void; rulesBtn: ReactNode }) {
+function LocalGame({ onReturnToLobby, onTuto, rulesBtn }: { onReturnToLobby?: () => void; onTuto: () => void; rulesBtn: ReactNode }) {
   const t = useT(STR);
   type Phase = "setup" | "pass" | "clue" | "guess" | "reveal" | "over";
   const [phase, setPhase] = useState<Phase>("setup");
@@ -160,7 +160,6 @@ function LocalGame({ onReturnToLobby, onFirstTime, onTuto, rulesBtn }: { onRetur
     // Langue figée au début de la partie
     setPairs(buildDeck(getLang()));
     startRound(1, 0);
-    onFirstTime();
   };
   // « Une autre paire » : la paire est retirée → une paire jamais vue prend sa place
   const rerollPair = () => {

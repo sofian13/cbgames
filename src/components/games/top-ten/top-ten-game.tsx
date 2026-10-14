@@ -120,22 +120,22 @@ export default function TopTenGame(props: GameProps) {
 const TT_SFX: SfxName[] = ["card-flip", "card-shuffle", "gong", "whoosh", "tock", "ding", "win", "powerup", "coins", "confirm", "select", "tap"];
 
 function TopTenLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) {
-  // Tuto 1re fois (après la saisie des joueurs) + feuille de règles, au-dessus de tous les écrans
-  const tuto = useFirstTimeTuto("top-ten");
+  // Tuto 1re fois (dès l'ouverture, avant les joueurs) + feuille de règles, au-dessus de tous les écrans
+  const tuto = useFirstTimeTuto("top-ten", { atMount: true });
   const slides = useTtTutoSlides();
   const x = useT(TT_EXTRA);
   const t = useT(TT_STR);
   const [rulesOpen, setRulesOpen] = useState(false);
   return (
     <>
-      <TopTenLocalGame onReturnToLobby={onReturnToLobby} tools={<RulesIconButton onClick={() => setRulesOpen(true)} />} onTuto={tuto.show} onPlayersReady={tuto.showIfFirstTime} />
+      <TopTenLocalGame onReturnToLobby={onReturnToLobby} tools={<RulesIconButton onClick={() => setRulesOpen(true)} />} onTuto={tuto.show} />
       {rulesOpen && <GameRulesSheet name={t.gameName} rules={x.rules} onClose={() => setRulesOpen(false)} onTuto={tuto.show} />}
       {tuto.open && <GameTuto slides={slides} onDone={tuto.close} />}
     </>
   );
 }
 
-function TopTenLocalGame({ onReturnToLobby, tools, onTuto, onPlayersReady }: { onReturnToLobby?: () => void; tools: React.ReactNode; onTuto: () => void; onPlayersReady: () => void }) {
+function TopTenLocalGame({ onReturnToLobby, tools, onTuto }: { onReturnToLobby?: () => void; tools: React.ReactNode; onTuto: () => void }) {
   const x = useT(TT_EXTRA);
   const t = useT(TT_STR);
   type Phase = "setup" | "target" | "theme" | "pass-number" | "show-number" | "answer" | "pass-rank" | "rank" | "reveal" | "over";
@@ -189,7 +189,6 @@ function TopTenLocalGame({ onReturnToLobby, tools, onTuto, onPlayersReady }: { o
     setPlayers(names); setScores(names.map(() => 0));
     setThemeCursor(0);
     setPhase("target"); // on choisit l'échelle avant la 1re manche
-    onPlayersReady();
   };
   const launch = () => {
     playSfx("card-shuffle", { volume: 0.8 });

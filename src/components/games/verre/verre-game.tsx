@@ -18,6 +18,7 @@ import { DIFF, LIQUIDS, VerreScene, type Difficulty, type LiquidStyle } from "./
 import { keepAwake, newTiltInput, requestMotionPermission, startSensors, vibrate, type TiltInput } from "./sensors";
 import { SpilledGlass } from "./art";
 import { Tools, TutoScreen } from "./ui";
+import { firstTimeNow, markTutoSeen } from "../game-tuto";
 import { uniqueMax, useGameFinished } from "@/lib/game-finished";
 import { ShareResultButton } from "../share-result-button";
 import { verreCard } from "@/lib/share-cards";
@@ -29,7 +30,8 @@ import { verreCard } from "@/lib/share-cards";
 
 const ACCENT = ZZ.sky;
 const INK = ZZ.ink;
-const TUTO_KEY = "zz-verre-tuto";
+// Tuto 1re fois : clé zz-verre-tuto (via game-tuto : même règle des 30 jours que les autres jeux)
+const TUTO_ID = "verre";
 const GAME_FR = "Le Verre Invisible";
 
 type Phase = "setup" | "tuto" | "config" | "intro" | "round" | "result" | "more" | "end";
@@ -66,7 +68,8 @@ export default function VerreGame({ onReturnToLobby }: GameProps) {
   const t = useT(VERRE_STR);
   // Contenu figé dans la langue du début de partie (gages, noms des liquides)
   const [content] = useState(() => pick(VERRE_STR, getLang()));
-  const [phase, setPhase] = useState<Phase>("setup");
+  // Tuto 1re fois dès l'ouverture, avant la saisie des joueurs
+  const [phase, setPhase] = useState<Phase>(() => (firstTimeNow(TUTO_ID) ? "tuto" : "setup"));
   const [players, setPlayers] = useState<string[]>([]);
   const [scores, setScores] = useState<number[]>([]);
   const [spills, setSpills] = useState<number[]>([]);
@@ -86,7 +89,7 @@ export default function VerreGame({ onReturnToLobby }: GameProps) {
   const input = useRef<TiltInput>(newTiltInput());
   const stopSensors = useRef<(() => void) | null>(null);
   const usedDares = useRef(new Set<string>());
-  const tutoNext = useRef<Phase>("config");
+  const tutoNext = useRef<Phase>(phase === "tuto" ? "setup" : "config"); // écran après le tuto
   // App sans Zinzin+ : une manche découverte, puis « Continuer la partie ? »
   const unlocked = useUnlocked();
   const [askingPlus, setAskingPlus] = useState(false);
@@ -102,14 +105,11 @@ export default function VerreGame({ onReturnToLobby }: GameProps) {
     setScores(names.map(() => 0));
     setSpills(names.map(() => 0));
     setBank(names.map(() => 0));
-    let seen = false;
-    try { seen = localStorage.getItem(TUTO_KEY) === "1"; } catch { /* stockage indispo */ }
-    tutoNext.current = "config";
-    setPhase(seen ? "config" : "tuto");
+    setPhase("config");
   };
 
   const tutoDone = () => {
-    try { localStorage.setItem(TUTO_KEY, "1"); } catch { /* stockage indispo */ }
+    markTutoSeen(TUTO_ID);
     setPhase(tutoNext.current);
   };
 

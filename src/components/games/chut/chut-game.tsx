@@ -159,8 +159,8 @@ export default function ChutGame({ onReturnToLobby }: GameProps) {
   const [plan, setPlan] = useState<Plan | null>(null);
   const [floor, setFloor] = useState<number | null>(null);
   const [rulesOpen, setRulesOpen] = useState(false);
-  // Tuto général 1re fois (après la saisie des joueurs), relançable depuis les règles / réglages
-  const tuto = useFirstTimeTuto("chut");
+  // Tuto général 1re fois (dès l'ouverture, avant les joueurs), relançable depuis les règles / réglages
+  const tuto = useFirstTimeTuto("chut", { atMount: true });
   const tutoSlides = useChutTuto();
   const [toast, setToast] = useState<string | null>(null);
 
@@ -391,6 +391,7 @@ export default function ChutGame({ onReturnToLobby }: GameProps) {
   // ══ Joueurs ══
   if (screen === "players") {
     return (
+      <>
       <PlayersSetup
         emoji="🤫"
         name={t.name}
@@ -402,10 +403,11 @@ export default function ChutGame({ onReturnToLobby }: GameProps) {
           // nouvelle liste de joueurs : équipes à refaire
           setSettings((s) => ({ ...s, teams: null, mode: s.mode === "whisper" && names.length < 4 ? "volume" : s.mode }));
           setScreen("modes");
-          tuto.showIfFirstTime();
         }}
         footer={<IdeaButton game={t.name} kind="carte" bg={ZZ.cream} />}
       />
+      {tuto.open && <GameTuto slides={tutoSlides} onDone={tuto.close} />}
+      </>
     );
   }
 

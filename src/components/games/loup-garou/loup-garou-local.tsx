@@ -105,8 +105,8 @@ export default function LoupGarouLocal({ onReturnToLobby }: GameProps) {
   const [phase, setPhase] = useState<Phase>({ k: "players" });
   useGameFinished(phase.k === "end"); // fin de partie → demande de note éventuelle (app)
   const [modal, setModal] = useState<null | "rules" | "history" | "sound">(null);
-  // Tuto en slides : 1re partie, juste après la saisie des joueurs
-  const tuto = useFirstTimeTuto("loup-garou");
+  // Tuto en slides : 1re partie, dès l'ouverture (avant la saisie des joueurs)
+  const tuto = useFirstTimeTuto("loup-garou", { atMount: true });
   const tutoSlides = useLgTutoSlides();
   // Chaque nouvel écran s'ouvre en haut (l'app garde le défilement entre deux écrans)
   useScrollTopOn(`${phase.k}-${"i" in phase ? phase.i : ""}-${"reveal" in phase ? phase.reveal : ""}-${game?.history.length ?? 0}`);
@@ -239,7 +239,6 @@ export default function LoupGarouLocal({ onReturnToLobby }: GameProps) {
           setNames(d);
           setComp(recommended(d.length));
           setPhase({ k: "roles" });
-          tuto.showIfFirstTime();
         }}
       />
     );

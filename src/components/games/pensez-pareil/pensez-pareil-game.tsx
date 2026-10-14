@@ -118,8 +118,8 @@ function PensezPareilLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }
 
   useEffect(() => { preloadSfx(["whoosh", "confirm", "success", "ding", "ding2", "wrong", "lose", "win", "powerup", "levelup", "card-flip", "gong", "tock"]); }, []);
   useScrollTopOn(`${phase}-${round}`);
-  // Tuto 1re fois (au lancement de la partie) + règles en jeu (bouton livre)
-  const tuto = useFirstTimeTuto("pensez-pareil");
+  // Tuto 1re fois (dès l'ouverture, avant les prénoms) + règles en jeu (bouton livre)
+  const tuto = useFirstTimeTuto("pensez-pareil", { atMount: true });
   const tutoSlides = usePPTuto();
   const rules = usePPRules();
   const [rulesOpen, setRulesOpen] = useState(false);
@@ -141,7 +141,6 @@ function PensezPareilLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }
     setNames(n); setPack(p); setDeck(buildDeck(p, l));
     setRound(0); setSyncs(0); setStreak(0); setBestStreak(0); setTeamScore(0);
     setPhase("passA");
-    tuto.showIfFirstTime();
   };
 
   // « Pas fou ? » : thème remplacé par un thème du même pack jamais tiré dans la partie

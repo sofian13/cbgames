@@ -116,8 +116,8 @@ function LeBluffeurLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) 
   const [options, setOptions] = useState<LocalOption[]>([]);
   const [votes, setVotes] = useState<number[]>([]); // optionId per player, -1 = none
   const [draft, setDraft] = useState("");
-  // Tuto 1re fois (après les prénoms) + règles en jeu (bouton livre, en haut à droite)
-  const tuto = useFirstTimeTuto("le-bluffeur");
+  // Tuto 1re fois (dès l'ouverture, avant les prénoms) + règles en jeu (bouton livre, en haut à droite)
+  const tuto = useFirstTimeTuto("le-bluffeur", { atMount: true });
   const tutoSlides = useBluffSlides();
   const [rulesOpen, setRulesOpen] = useState(false);
   const tools = (
@@ -204,8 +204,13 @@ function LeBluffeurLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) 
   };
 
   if (phase === "setup") {
-    return <PlayersSetup emoji="🎭" name={t.name} min={3} max={8} accent={BLUFF_COLOR} onStart={(names) => { begin(names); tuto.showIfFirstTime(); }} onBack={onReturnToLobby}
-      footer={<IdeaButton game="Le Bluffeur" kind="question" />} />;
+    return (
+      <>
+        <PlayersSetup emoji="🎭" name={t.name} min={3} max={8} accent={BLUFF_COLOR} onStart={begin} onBack={onReturnToLobby}
+          footer={<IdeaButton game="Le Bluffeur" kind="question" />} />
+        {tuto.open && <GameTuto slides={tutoSlides} onDone={tuto.close} />}
+      </>
+    );
   }
   if (phase === "question") {
     return (

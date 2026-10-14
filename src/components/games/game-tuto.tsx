@@ -7,7 +7,8 @@
  *
  * Utilisation type :
  *   const tuto = useFirstTimeTuto("top-ten");
- *   // à la fin de la saisie des joueurs :  tuto.showIfFirstTime();
+ *   // ou useFirstTimeTuto("top-ten", { atMount: true }) : dès « Jouer », avant les prénoms
+ *   // sinon, au moment voulu :  tuto.showIfFirstTime();
  *   {tuto.open && <GameTuto slides={slides} onDone={tuto.close} />}
  *   // dans les règles :  <TutoAgainButton onClick={tuto.show} />
  *
@@ -57,22 +58,39 @@ export function markTutoSeen(gameId: string) {
 }
 
 /**
+ * Au montage : faut-il ouvrir le tuto « 1re fois » ? (rendu serveur : non).
+ * Déjà vu récemment : on rafraîchit la date (le jeu vient d'être ouvert).
+ */
+export function firstTimeNow(gameId: string): boolean {
+  if (typeof window === "undefined") return false;
+  if (tutoSeen(gameId)) { markTutoSeen(gameId); return false; }
+  return true;
+}
+
+/**
  * État du tuto « 1re fois » d'un jeu.
- * - showIfFirstTime() : à appeler au moment voulu (après la saisie des joueurs) ; ouvre si jamais vu.
+ * - atMount : ouvre le tuto (si jamais vu) dès le montage, avant l'écran des joueurs.
+ *   À passer dans le composant du mode local (après le choix en ligne/local sur le site).
+ *   État initial (pas d'effet) : le tuto couvre l'écran dès la 1re peinture, sans flash des prénoms.
+ * - showIfFirstTime() : à appeler au moment voulu ; ouvre si jamais vu.
  * - show() : relance manuelle (« Revoir le tuto »).
  * - close() : ferme et mémorise.
+ * - auto : le tuto ouvert est celui de la 1re fois (pas une relance) → slides génériques,
+ *   indépendantes des réglages de la partie qui ne sont pas encore choisis.
  */
-export function useFirstTimeTuto(gameId: string) {
-  const [open, setOpen] = useState(false);
+export function useFirstTimeTuto(gameId: string, opts?: { atMount?: boolean }) {
+  const [open, setOpen] = useState(() => !!opts?.atMount && firstTimeNow(gameId));
+  const [auto, setAuto] = useState(open);
   const showIfFirstTime = useCallback(() => {
     // Déjà vu récemment : on rafraîchit la date (le jeu vient d'être joué) et on n'affiche rien
     if (tutoSeen(gameId)) { markTutoSeen(gameId); return false; }
+    setAuto(true);
     setOpen(true);
     return true;
   }, [gameId]);
-  const show = useCallback(() => { playSfx("open", { volume: 0.5 }); setOpen(true); }, []);
+  const show = useCallback(() => { playSfx("open", { volume: 0.5 }); setAuto(false); setOpen(true); }, []);
   const close = useCallback(() => { markTutoSeen(gameId); setOpen(false); }, [gameId]);
-  return { open, show, close, showIfFirstTime, seen: () => tutoSeen(gameId) };
+  return { open, auto, show, close, showIfFirstTime, seen: () => tutoSeen(gameId) };
 }
 
 /** Tuto plein écran en slides (surimpression). */

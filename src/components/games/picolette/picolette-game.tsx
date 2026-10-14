@@ -314,8 +314,8 @@ export default function PicoletteGame({ onReturnToLobby }: GameProps) {
   const [rouletteSpared, setRouletteSpared] = useState<number[]>([]); // perdants sauvés par leur bouclier
   const [lastLosers, setLastLosers] = useState<number[]>([]); // pour l'undo (plusieurs si camp perdant)
   const spinRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  // Tuto 1re fois (après les prénoms) + règles en jeu (bouton livre, en haut à droite)
-  const tuto = useFirstTimeTuto("picolette");
+  // Tuto 1re fois (dès l'ouverture, avant les prénoms) + règles en jeu (bouton livre, en haut à droite)
+  const tuto = useFirstTimeTuto("picolette", { atMount: true });
   const tutoSlides = useTourneeSlides();
   const [rulesOpen, setRulesOpen] = useState(false);
   const tools = (
@@ -386,7 +386,6 @@ export default function PicoletteGame({ onReturnToLobby }: GameProps) {
     setShields(names.map(() => false));
     setLastLosers([]);
     setPhase("packs");
-    tuto.showIfFirstTime();
   };
 
   const launch = () => {

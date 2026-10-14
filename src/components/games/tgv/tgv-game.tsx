@@ -215,8 +215,8 @@ export default function TgvGame({ onReturnToLobby }: GameProps) {
   const [suspense, setSuspense] = useState(false);
   const [penalty, setPenalty] = useState<Penalty | null>(null);
   const [spin, setSpin] = useState<SpinFace | null>(null); // roulette en cours
-  // Tuto 1re fois (après les prénoms) + feuille de règles en jeu
-  const tuto = useFirstTimeTuto("tgv");
+  // Tuto 1re fois (dès l'ouverture, avant les prénoms) + feuille de règles en jeu
+  const tuto = useFirstTimeTuto("tgv", { atMount: true });
   const tutoSlides = useTgvSlides();
   const [rulesOpen, setRulesOpen] = useState(false);
 
@@ -368,7 +368,6 @@ export default function TgvGame({ onReturnToLobby }: GameProps) {
             setLosses(names.map(() => 0));
             setCurrentIdx(0);
             setPhase("config");
-            tuto.showIfFirstTime();
           }}
         />
         {chrome}

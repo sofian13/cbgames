@@ -80,10 +80,8 @@ export default function LachePasGame({ onReturnToLobby }: GameProps) {
   const labelOf = (slot: number) => nameOf(slot) || colorName(slot);
   const [rulesOpen, setRulesOpen] = useState(false);
   // Tuto en slides : la 1re fois qu'on ouvre le jeu
-  const tuto = useFirstTimeTuto("lache-pas");
+  const tuto = useFirstTimeTuto("lache-pas", { atMount: true });
   const tutoSlides = useLpTutoSlides();
-  const { showIfFirstTime } = tuto;
-  useEffect(() => { showIfFirstTime(); }, [showIfFirstTime]);
   // Gages + provocations figés dans la langue du début de partie
   const [content] = useState(() => ({ dares: patateContent(getLang()).dares, taunts: pickLang(LACHE_PAS_STR).taunts }));
 

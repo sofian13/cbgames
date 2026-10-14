@@ -74,8 +74,8 @@ export default function GuessWordGame({ onReturnToLobby }: GameProps) {
   }, []);
 
   const [phase, setPhase] = useState<Phase>("setup");
-  // Tuto en slides : 1re partie (après la saisie des joueurs), relançable depuis les règles
-  const slidesTuto = useFirstTimeTuto("guess-word");
+  // Tuto en slides : 1re fois dès l'ouverture (avant les joueurs), relançable depuis les règles
+  const slidesTuto = useFirstTimeTuto("guess-word", { atMount: true });
   const tutoSlides = useGuessWordTuto();
   const [rulesOpen, setRulesOpen] = useState(false);
   useGameFinished(phase === "final"); // fin de partie → demande de note éventuelle (app)
@@ -239,7 +239,6 @@ export default function GuessWordGame({ onReturnToLobby }: GameProps) {
           onStart={(names) => {
             setPlayers(names);
             setPhase("config");
-            slidesTuto.showIfFirstTime();
           }}
         />
       </>

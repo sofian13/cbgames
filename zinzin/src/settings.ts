@@ -1,8 +1,9 @@
 import { getLang } from "@/lib/i18n";
 
 /**
- * Réglages de l'app : langue, rappels de soirée, évaluer, partager.
- * Tout est local (pas de serveur) : les rappels sont des notifications locales.
+ * Réglages de l'app : langue, notifications, évaluer, partager.
+ * Tout est local (pas de serveur) : pour l'instant les notifications = rappels de soirée locaux
+ * (le push distant « nouveaux jeux / nouveautés » viendra plus tard, même interrupteur).
  */
 
 const SHARE_URL = "https://zinzin-app.com";
@@ -11,7 +12,7 @@ const SHARE_URL = "https://zinzin-app.com";
 export { LANGS, setLang, useLang } from "@/lib/i18n";
 export type { Lang } from "@/lib/i18n";
 
-/* ───────── Rappels de soirée (notifications locales) ───────── */
+/* ───────── Notifications (aujourd'hui : rappels de soirée locaux) ───────── */
 const NOTIF_KEY = "zz-notif";
 const REMINDER_IDS = [5101, 5102];
 

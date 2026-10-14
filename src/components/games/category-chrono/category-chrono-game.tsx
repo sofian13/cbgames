@@ -94,8 +94,8 @@ export default function CategoryChronoGame({ onReturnToLobby }: GameProps) {
   const [timeLeft, setTimeLeft] = useState(0);
   const [lostIdx, setLostIdx] = useState(0);
   const endAt = useRef(0);
-  // Tuto 1re fois (après la saisie des joueurs) + feuille de règles en jeu
-  const tuto = useFirstTimeTuto("category-chrono");
+  // Tuto 1re fois (dès l'ouverture, avant les joueurs) + feuille de règles en jeu
+  const tuto = useFirstTimeTuto("category-chrono", { atMount: true });
   const tutoContent = useChronoTuto();
   const [rulesOpen, setRulesOpen] = useState(false);
 
@@ -225,18 +225,20 @@ export default function CategoryChronoGame({ onReturnToLobby }: GameProps) {
   // ── Écrans ─────────────────────────────────────────────
   if (phase === "setup") {
     return (
-      <PlayersSetup
-        emoji="⏱️"
-        name={t.title}
-        min={2}
-        max={12}
-        accent={ACCENT}
-        onStart={(list) => {
-          setNames(list);
-          setPhase("config");
-          tuto.showIfFirstTime();
-        }}
-      />
+      <>
+        <PlayersSetup
+          emoji="⏱️"
+          name={t.title}
+          min={2}
+          max={12}
+          accent={ACCENT}
+          onStart={(list) => {
+            setNames(list);
+            setPhase("config");
+          }}
+        />
+        {tuto.open && <GameTuto slides={tutoContent.slides} onDone={tuto.close} />}
+      </>
     );
   }
 

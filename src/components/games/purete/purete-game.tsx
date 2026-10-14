@@ -255,9 +255,8 @@ function Toggle({ on, onChange, label, sub, disabled }: { on: boolean; onChange:
 }
 
 // ── Tuto en slides (1re partie) : partagé par les écrans via un contexte ──
-const TutoCtx = createContext<{ show: () => void; showIfFirstTime: () => boolean; setMode: (m: Mode) => void }>({
+const TutoCtx = createContext<{ show: () => void; setMode: (m: Mode) => void }>({
   show: () => {},
-  showIfFirstTime: () => false,
   setMode: () => {},
 });
 
@@ -331,12 +330,13 @@ function QuestionCard({ text, index, total, k }: { text: string; index: number; 
 
 // ═════════════════════════════════════════════════════════
 export default function PureteGame(props: GameProps) {
-  // Tuto « 1re fois » : affiché au lancement de la 1re partie (après la saisie des joueurs)
-  const tuto = useFirstTimeTuto("purete");
+  // Tuto « 1re fois » : affiché dès l'ouverture du jeu (avant les réglages et les joueurs).
+  // 1re fois = version générique (mode par défaut « secret ») ; « Revoir le tuto » suit le mode choisi.
+  const tuto = useFirstTimeTuto("purete", { atMount: true });
   const [tutoMode, setTutoMode] = useState<Mode>("secret");
-  const slides = usePureteTuto(tutoMode);
-  const { show, showIfFirstTime } = tuto;
-  const ctx = useMemo(() => ({ show, showIfFirstTime, setMode: setTutoMode }), [show, showIfFirstTime]);
+  const slides = usePureteTuto(tuto.auto ? "secret" : tutoMode);
+  const { show } = tuto;
+  const ctx = useMemo(() => ({ show, setMode: setTutoMode }), [show]);
   return (
     <TutoCtx.Provider value={ctx}>
       <PureteBody {...props} />
@@ -434,7 +434,6 @@ function PureteBody({ onReturnToLobby }: GameProps) {
     setQuestions(deck);
     setAnswers(names.map(() => deck.map(() => false)));
     setCounts(deck.map(() => 0));
-    tutoCtx.showIfFirstTime();
     if (mode === "solo") setPhase({ k: "answer", p: 0, q: 0 });
     else if (mode === "secret") setPhase({ k: "pass", p: 0 });
     else setPhase({ k: "group", q: 0 });

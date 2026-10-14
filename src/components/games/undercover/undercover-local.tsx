@@ -134,9 +134,10 @@ export default function UndercoverLocal({ onReturnToLobby }: { onReturnToLobby?:
 
   useEffect(() => { preloadSfx(["card-shuffle", "card-flip", "whoosh", "tock", "gong", "boom", "wrong", "lose", "win", "powerup", "ding", "toggle", "select", "success"]); }, []);
   useScrollTopOn(`${phase}-${revealIdx}-${round}`);
-  // Tuto en slides : 1re fois, après la saisie des prénoms (slide « rôles bonus » si Fantôme/Bouffon)
-  const tuto = useFirstTimeTuto("undercover");
-  const tutoSlides = useUndercoverTuto(mrWhite || jester);
+  // Tuto en slides : 1re fois dès l'ouverture, avant les prénoms (version générique, sans les rôles
+  // bonus pas encore choisis) ; « Revoir le tuto » ajoute la slide « rôles bonus » si Fantôme/Bouffon
+  const tuto = useFirstTimeTuto("undercover", { atMount: true });
+  const tutoSlides = useUndercoverTuto(!tuto.auto && (mrWhite || jester));
   const tutoLayer = tuto.open ? <GameTuto slides={tutoSlides} onDone={tuto.close} /> : null;
 
   // ── Helpers ─────────────────────────────────────────────
@@ -161,7 +162,6 @@ export default function UndercoverLocal({ onReturnToLobby }: { onReturnToLobby?:
     else             { setUcCount(2); setMrWhite(true);  }
     setJester(false);
     setPhase("setup-roles");
-    tuto.showIfFirstTime();
   };
 
   // ── Distribution des rôles + mots ───────────────────────
@@ -372,8 +372,11 @@ export default function UndercoverLocal({ onReturnToLobby }: { onReturnToLobby?:
   // 1. Setup joueurs
   if (phase === "setup-players") {
     return (
-      <PlayersSetup emoji="🕶️" name={t.gameName} min={3} max={12} accent="#FF3EA5" onStart={handleStartNames} onBack={onReturnToLobby}
-        footer={<IdeaButton game={t.gameName} kind="mot" />} />
+      <>
+        <PlayersSetup emoji="🕶️" name={t.gameName} min={3} max={12} accent="#FF3EA5" onStart={handleStartNames} onBack={onReturnToLobby}
+          footer={<IdeaButton game={t.gameName} kind="mot" />} />
+        {tutoLayer}
+      </>
     );
   }
 
