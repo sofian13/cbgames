@@ -14,7 +14,15 @@ import { renderShareCard } from "@/lib/share-card";
 export function mountAvatarLab() {
   const q = new URLSearchParams(location.hash.split("?")[1] ?? "");
   const size = Number(q.get("size") ?? 48);
-  const slot = (q.get("slot") ?? "hair") as AvatarSlot | "color" | "costume" | "mix";
+  const slot = (q.get("slot") ?? "hair") as AvatarSlot | "color" | "costume" | "mix" | "matrix";
+  // Filtre facultatif : ids séparés par des virgules, ou « new:N » = les N derniers du catalogue
+  const only = q.get("items");
+  const pick = <T extends { id: string }>(list: T[]) => {
+    if (!only) return list;
+    if (only.startsWith("new:")) return list.slice(-Number(only.slice(4)));
+    const ids = only.split(",");
+    return list.filter((x) => ids.includes(x.id));
+  };
   const colors = (q.get("colors") ?? "pink,yellow,night,white").split(",");
   if (slot === ("kit" as string)) {
     const names = (q.get("names") ?? "Sofian,Léa,Max,Zoé").split(",");
@@ -49,8 +57,27 @@ export function mountAvatarLab() {
       { eyes: "determined", hair: "hero", face: "scar", extra: "cape" },
     ];
     rows.push({ label: "mix", looks: mixes.map((m, i) => ({ ...DEFAULT_LOOK, color: AVATAR_COLORS[i % AVATAR_COLORS.length], ...m })) });
+  } else if (slot === ("mix2" as string)) {
+    // Combinaisons des éléments v2 (manga) avec l'existant
+    const mixes: Partial<AvatarLook>[] = [
+      { hair: "ponytail", extra: "katana", face: "crossscar", eyes: "determined" }, { hair: "silver", hat: "crown", face: "earring" },
+      { hair: "messy", face: "bandages", hat: "cap" }, { hair: "mane", extra: "longscarf", hat: "horns" },
+      { hair: "twintails", hat: "bow", face: "blush" }, { hair: "sticks", hat: "halo", extra: "katana" },
+      { hair: "peekaboo", face: "mask", extra: "katana" }, { hair: "ahoge", extra: "headphones", eyes: "big" },
+      { hair: "mohawk", hat: "crown" }, { hair: "streak", face: "bandages", extra: "longscarf" },
+      { hair: "silver", extra: "headphones" }, { hair: "hedgehog", face: "crossscar", hat: "ninja" },
+      { hair: "ponytail", hat: "beanie", extra: "longscarf" }, { hair: "twintails", hat: "cowboy", face: "earring" },
+      { hair: "golden", hat: "crown", extra: "cape" }, { hair: "flame", hat: "tophat", face: "shades" },
+    ];
+    rows.push({ label: "mix2", looks: mixes.map((m, i) => ({ ...DEFAULT_LOOK, color: AVATAR_COLORS[(i * 3) % AVATAR_COLORS.length], ...m })) });
+  } else if (slot === "matrix") {
+    // Matrice coupes × chapeaux (contrôle des chapeaux posés sur chaque coupe)
+    const hats = AVATAR_ITEMS.hat;
+    for (const [i, h] of pick(AVATAR_ITEMS.hair).entries()) {
+      rows.push({ label: `hair.${h.id}`, looks: hats.map((t) => ({ ...DEFAULT_LOOK, color: colors[i % colors.length], hair: h.id, hat: t.id })) });
+    }
   } else {
-    for (const it of AVATAR_ITEMS[slot]) rows.push({ label: `${slot}.${it.id}${it.free ? "" : " 🔒"}`, looks: colors.map((c) => ({ ...DEFAULT_LOOK, color: c, [slot]: it.id })) });
+    for (const it of pick(AVATAR_ITEMS[slot])) rows.push({ label: `${slot}.${it.id}${it.free ? "" : " 🔒"}`, looks: colors.map((c) => ({ ...DEFAULT_LOOK, color: c, [slot]: it.id })) });
   }
   const cell = size * 1.6;
   createRoot(document.getElementById("root")!).render(

@@ -39,17 +39,26 @@ const HAIR_DEFAULT: Record<string, string> = {
   swoop: "#6B3E1F", afro: "#4A2E1C", mohawk: "#FF3EA5", bun: "#6B3E1F", pigtails: "#F5C842",
   golden: "#FFD84A", swordsman: "#3BAF5D", hero: "#221838", long: "#2A1B3D", buzz: "#2A1B3D",
   curly: "#E8642A", bowl: "#6B3E1F", emo: "#221838", flame: "#FF5A2E",
+  silver: "#EDEBF5", ponytail: "#2A1B3D", messy: "#E8304A", twintails: "#2FC7C0", sticks: "#221838",
+  hedgehog: "#6B3E1F", streak: "#221838", peekaboo: "#33407A", ahoge: "#C4622B", mane: "#2B2350",
 };
 
-/** Hauteur du sommet de la coupe (pour poser couronne, auréole, cône dessus). */
-const HAIR_TOP: Record<string, number> = {
-  none: 14, swoop: 7, afro: -10, mohawk: -12, bun: -14, pigtails: 8, golden: -24, swordsman: 9,
-  hero: -16, long: 7, buzz: 14, curly: -2, bowl: 4, emo: 6, flame: -18,
+/**
+ * Point d'appui des petits chapeaux (couronne, auréole, cône, cornes) : y où se
+ * pose la base, selon la coupe. Ce n'est pas toujours le sommet visible : sur
+ * une crête ou des pointes, la couronne entoure la base (elle s'y enfonce) au
+ * lieu de léviter au-dessus des pointes. Crâne nu = 18.
+ */
+const HAIR_SEAT: Record<string, number> = {
+  none: 18, swoop: 11, afro: -4, mohawk: 24, bun: 12, pigtails: 12, golden: 6, swordsman: 13,
+  hero: 4, long: 11, buzz: 18, curly: 1, bowl: 8, emo: 10, flame: 9,
+  silver: 11, ponytail: 12, messy: 8, twintails: 12, sticks: 12, hedgehog: 9,
+  streak: 12, peekaboo: 10, ahoge: 12, mane: 10,
 };
 
 /** Chapeaux qui couvrent le crâne : y du bord (les cheveux au-dessus sont cachés dessous). */
 const HAT_COVER: Record<string, number> = {
-  straw: 24, cap: 30, beanie: 32, bucket: 30, cowboy: 26, tophat: 20, bandana: 30,
+  straw: 24, cap: 30, beanie: 32, bucket: 30, cowboy: 26, tophat: 23, bandana: 30,
 };
 
 /* ───────── Styles CSS (une seule fois) ───────── */
@@ -228,7 +237,7 @@ function mouth(mood: MascotMood, clipId: string): ReactNode {
 /* ───────── Cheveux ───────── */
 const flip = "translate(120 0) scale(-1 1)";
 
-function hairLayers(id: string, hc: string): { back?: ReactNode; front?: ReactNode; skin?: ReactNode } {
+function hairLayers(id: string, hc: string, covered = false): { back?: ReactNode; front?: ReactNode; skin?: ReactNode } {
   const dark = mix(hc, INK, 0.35);
   const light = mix(hc, "#ffffff", 0.45);
   const P = (d: string, extra?: ReactNode) => (
@@ -351,16 +360,155 @@ function hairLayers(id: string, hc: string): { back?: ReactNode; front?: ReactNo
         front: P("M10 56 C6 28 30 6 62 6 C94 6 114 30 111 60 C109 73 101 80 94 79 C97 68 93 56 85 47 C71 40 51 36 37 36 C27 38 16 46 10 56Z", shine("M70 14 C86 18 98 28 104 44")),
       };
     case "flame":
+      // Sous un couvre-chef : flammèches courtes sur les côtés (pas de flammes coupées net)
+      if (covered) {
+        return {
+          front: P("M12 56 C7 46 9 36 15 27 C17 33 21 35 25 33 C25 30 27 28 30 27 L90 27 C93 28 95 30 95 33 C99 35 103 33 105 27 C111 36 113 46 108 56 C104 47 96 41 88 39 C76 35 66 37 60 41 C52 35 40 35 30 39 C22 41 16 47 12 56Z",
+            <path d="M16 46 C16 40 18 36 20 33 M104 46 C104 40 102 36 100 33" fill="none" stroke="#FFD23F" strokeWidth={2.6} strokeLinecap="round" opacity={0.9} />),
+        };
+      }
       return {
         front: P("M12 56 C4 40 6 24 16 12 C16 22 20 26 24 26 C20 12 28 -2 40 -8 C36 4 40 12 46 14 C46 0 54 -12 64 -18 C62 -6 66 4 72 8 C74 -2 82 -8 90 -10 C86 0 88 10 94 14 C100 10 104 6 108 2 C112 18 112 34 108 56 C104 47 96 41 88 39 C76 35 66 37 60 41 C52 35 40 35 30 39 C22 41 16 47 12 56Z",
           <path d="M30 30 C28 22 32 14 38 8 C38 16 42 20 46 22 C48 12 54 4 60 0 C60 10 64 16 70 18 C72 12 78 8 84 6 C82 14 84 20 90 24" fill="none" stroke="#FFD23F" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" opacity={0.9} />),
+      };
+    /* ── Coupes « manga » (v2) ── */
+    case "silver":
+      // Longs cheveux lisses, raie au milieu, deux longues mèches devant les épaules
+      return {
+        back: (
+          <g>
+            <path d="M60 4 C26 4 5 28 5 62 L3 114 L22 110 L34 117 L48 110 L60 117 L72 110 L86 117 L98 110 L117 114 L115 62 C115 28 94 4 60 4Z" fill={mix(hc, INK, 0.18)} stroke={INK} strokeWidth={SW} strokeLinejoin="round" />
+            <path d="M14 74 L13 104 M106 74 L107 104" fill="none" stroke={mix(hc, INK, 0.55)} strokeWidth={2} strokeLinecap="round" opacity={0.6} />
+          </g>
+        ),
+        front: (
+          <g>
+            {P("M9 64 C4 30 28 6 60 6 C92 6 116 30 111 64 C107 53 101 45 95 41 C93 47 92 53 92 58 C86 46 76 39 65 36 L60 27 L55 36 C44 39 34 46 28 58 C28 53 27 47 25 41 C19 45 13 53 9 64Z",
+              <>{shine("M24 26 C32 17 42 12 52 10")}<path d="M60 27 L60 9" stroke={dark} strokeWidth={2} strokeLinecap="round" /></>)}
+            <path d="M10 56 C7 74 8 92 12 108 L18 101 L23 108 C22 90 21 74 20 60Z" fill={hc} stroke={INK} strokeWidth={2.6} strokeLinejoin="round" />
+            <path d="M110 56 C113 74 112 92 108 108 L102 101 L97 108 C98 90 99 74 100 60Z" fill={hc} stroke={INK} strokeWidth={2.6} strokeLinejoin="round" />
+          </g>
+        ),
+      };
+    case "ponytail": {
+      // Queue de cheval haute (guerrier) ; sous un couvre-chef, elle part de la nuque
+      const tail = covered
+        ? "M100 46 C116 50 126 64 124 82 C123 94 127 102 133 110 C117 108 107 94 107 78 C107 64 103 58 97 54Z"
+        : "M84 8 C102 -8 126 -2 130 20 C134 40 122 60 132 86 C114 78 110 60 110 44 C110 30 102 20 88 18Z";
+      const tie = covered ? { x: 101, y: 50 } : { x: 88, y: 10 };
+      return {
+        back: (
+          <g>
+            <path d={tail} fill={hc} stroke={INK} strokeWidth={SW} strokeLinejoin="round" />
+            <path d={covered ? "M114 62 C118 74 118 88 124 100" : "M104 4 C118 6 124 18 122 34"} fill="none" stroke={light} strokeWidth={2.6} strokeLinecap="round" opacity={0.8} />
+            <path d={covered ? "M110 70 C112 84 114 94 120 104" : "M112 34 C114 50 118 64 124 78"} fill="none" stroke={dark} strokeWidth={2} strokeLinecap="round" opacity={0.6} />
+            <circle cx={tie.x} cy={tie.y} r={5.5} fill="#E8304A" stroke={INK} strokeWidth={2.4} />
+          </g>
+        ),
+        front: P("M12 54 C8 28 32 8 60 8 C88 8 112 28 108 54 C104 44 98 38 90 34 C80 31 68 31 58 32 C56 38 52 44 46 48 C47 42 47 37 45 33 C33 35 20 42 12 54Z",
+          <>{shine("M28 22 C38 14 50 11 62 11")}<path d="M66 14 C78 16 90 22 98 30 M54 18 C64 18 74 21 82 26" fill="none" stroke={dark} strokeWidth={2} strokeLinecap="round" opacity={0.55} /></>),
+      };
+    }
+    case "messy":
+      // Épis ébouriffés dans tous les sens
+      return {
+        front: P("M10 58 C6 51 1 46 -5 44 C3 41 7 38 9 35 C2 29 -1 21 0 13 C7 19 13 21 19 21 C15 13 16 3 21 -4 C26 6 31 10 37 11 C39 1 45 -6 54 -10 C53 0 56 6 60 8 C66 -2 74 -8 85 -9 C80 0 80 6 82 10 C90 4 100 2 111 4 C104 11 102 17 102 22 C110 22 118 26 124 33 C116 34 111 37 109 41 C115 45 119 51 121 59 C113 53 105 49 97 47 C98 52 96 56 92 59 C90 51 85 45 79 42 C79 47 76 51 72 53 C71 46 67 40 61 38 C57 42 51 44 45 44 C47 41 47 38 45 36 C37 38 29 42 23 48 C21 45 19 43 16 43 C13 48 11 52 10 58Z",
+          <path d="M26 6 C30 12 34 16 40 18 M58 -2 C58 6 60 12 64 16 M92 8 C90 14 90 20 92 24 M8 26 C14 28 20 30 24 32" fill="none" stroke={light} strokeWidth={2.6} strokeLinecap="round" />),
+      };
+    case "twintails": {
+      // Longues couettes attachées haut, frange droite
+      const tail = "M16 26 C-4 24 -17 44 -15 72 C-13 94 -3 106 -9 121 C7 113 15 97 11 77 C8 60 9 46 22 38Z";
+      return {
+        back: (
+          <g>
+            <path d={tail} fill={hc} stroke={INK} strokeWidth={SW} strokeLinejoin="round" />
+            <path d={tail} transform={flip} fill={hc} stroke={INK} strokeWidth={SW} strokeLinejoin="round" />
+            <path d="M0 42 C-7 56 -7 76 -3 96 M120 42 C127 56 127 76 123 96" fill="none" stroke={light} strokeWidth={2.4} strokeLinecap="round" opacity={0.8} />
+          </g>
+        ),
+        front: (
+          <g>
+            {P("M12 54 C8 28 32 8 60 8 C88 8 112 28 108 54 L102 54 C102 48 101 43 99 39 L92 44 L88 35 L80 42 L74 33 L66 40 L60 32 L54 40 L46 33 L40 42 L32 35 L28 44 L21 39 C19 43 18 48 18 54Z", shine("M28 22 C36 15 46 12 56 11"))}
+            <circle cx={17} cy={30} r={5.4} fill="#FF3EA5" stroke={INK} strokeWidth={2.4} />
+            <circle cx={103} cy={30} r={5.4} fill="#FF3EA5" stroke={INK} strokeWidth={2.4} />
+          </g>
+        ),
+      };
+    }
+    case "sticks":
+      // Chignon haut piqué de deux baguettes
+      return {
+        back: (
+          <g>
+            <path d="M34 -16 L88 10 M30 6 L84 -18" stroke={INK} strokeWidth={6.4} strokeLinecap="round" />
+            <path d="M34 -16 L88 10 M30 6 L84 -18" stroke="#E8304A" strokeWidth={3} strokeLinecap="round" />
+            <circle cx={60} cy={-1} r={15} fill={hc} stroke={INK} strokeWidth={SW} />
+            <path d="M49 -7 C53 -12 62 -13 68 -9" fill="none" stroke={light} strokeWidth={2.4} strokeLinecap="round" />
+            <path d="M48 4 C54 8 64 8 71 3" fill="none" stroke={dark} strokeWidth={2} strokeLinecap="round" />
+          </g>
+        ),
+        front: P("M12 52 C8 28 32 8 60 8 C88 8 112 28 108 52 C102 42 94 36 84 34 C74 32 66 28 60 21 C54 28 46 32 36 34 C26 36 18 42 12 52Z",
+          <>{shine("M26 24 C34 16 44 12 54 11")}<path d="M60 21 L60 10" stroke={dark} strokeWidth={2} strokeLinecap="round" /></>),
+      };
+    case "hedgehog": {
+      // Hérisson : petits piquants réguliers tout autour du crâne
+      const n = 11, pts: string[] = [];
+      for (let i = 0; i <= n * 2; i++) {
+        const a = ((196 + (148 * i) / (n * 2)) * Math.PI) / 180;
+        const r = i % 2 ? 58 : 47;
+        pts.push(`${(60 + Math.cos(a) * r).toFixed(1)} ${(60 + Math.sin(a) * r).toFixed(1)}`);
+      }
+      return {
+        front: P(`M${pts[0]} L${pts.slice(1).join(" L")} C102 40 94 34 84 34 L80 40 L74 33 L66 39 L60 32 L54 39 L46 33 L40 40 L36 34 C26 34 18 40 ${pts[0]}Z`,
+          <path d="M30 18 L34 24 M44 10 L46 18 M60 7 L60 15 M76 10 L74 18" fill="none" stroke={light} strokeWidth={2.4} strokeLinecap="round" />),
+      };
+    }
+    case "streak": {
+      // Frange balayée, une mèche de couleur vive (bleue, rose si les cheveux sont déjà bleus)
+      const sc = hc === HAIR_COLORS.blue ? "#FF3EA5" : "#3D9BFF";
+      return {
+        front: P("M10 56 C6 30 28 8 60 8 C92 8 114 30 110 56 C106 46 98 40 90 38 C80 31 66 30 53 34 L41 54 L39 38 C28 42 16 48 10 56Z",
+          <>
+            <path d="M60 11 C50 18 44 30 41 52 L47 37 C51 27 60 18 71 13Z" fill={sc} stroke={INK} strokeWidth={2.2} strokeLinejoin="round" />
+            <path d="M56 15 C52 22 49 28 47 34" fill="none" stroke="#fff" strokeWidth={2} strokeLinecap="round" opacity={0.6} />
+            {shine("M74 13 C86 16 96 22 102 30")}
+          </>),
+      };
+    }
+    case "peekaboo":
+      // Mèches pointues qui tombent sur un œil
+      return {
+        front: P("M10 54 C6 28 30 6 62 6 C94 6 115 28 112 56 L109 76 L101 61 L97 80 L89 62 L83 76 L77 57 L71 66 L66 42 C54 36 40 36 30 38 C22 42 14 48 10 54Z",
+          <>{shine("M30 18 C42 11 56 9 68 11")}<path d="M90 26 L96 52 M78 30 L82 50 M102 32 L104 50" fill="none" stroke={dark} strokeWidth={2} strokeLinecap="round" opacity={0.6} /></>),
+      };
+    case "ahoge":
+      // Coupe ronde avec une mèche « antenne » sur le dessus
+      return {
+        front: (
+          <g>
+            <path d="M57 11 C49 -5 57 -19 75 -17 C64 -12 62 -4 65 11Z" fill={hc} stroke={INK} strokeWidth={2.6} strokeLinejoin="round" />
+            <path d="M11 70 L13 50 L22 56Z M109 70 L107 50 L98 56Z" fill={hc} stroke={INK} strokeWidth={2.4} strokeLinejoin="round" />
+            {P("M11 56 C6 30 30 8 60 8 C90 8 114 30 109 56 C104 46 96 40 88 38 L84 46 L78 37 L68 42 L64 33 L56 42 L52 33 L42 40 L38 36 C26 40 16 46 11 56Z", shine("M28 22 C36 15 46 12 54 11"))}
+          </g>
+        ),
+      };
+    case "mane":
+      // Longue crinière en pointes dans le dos, frange pointue
+      return {
+        back: <path d="M60 -2 L44 -8 L36 3 L20 -1 L18 15 L2 17 L8 33 L-8 43 L4 55 L-8 69 L4 79 L-6 95 L10 97 L6 114 L24 106 L30 118 L42 106 L60 116 L78 106 L90 118 L96 106 L114 114 L110 97 L126 95 L116 79 L128 69 L116 55 L128 43 L112 33 L118 17 L102 15 L100 -1 L84 3 L76 -8Z" fill={mix(hc, INK, 0.18)} stroke={INK} strokeWidth={SW} strokeLinejoin="round" />,
+        front: P("M10 58 C6 30 30 8 60 8 C90 8 114 30 110 58 L102 46 L98 56 L90 40 L84 50 L78 36 L70 46 L64 34 L56 46 L50 34 L44 48 L38 36 L30 50 L26 42 L18 56 L16 48Z",
+          shine("M28 22 C38 14 50 11 62 11")),
       };
     default:
       return {};
   }
 }
 
-/* ───────── Chapeaux ───────── */
+/* ───────── Chapeaux ─────────
+ * dy = point d'appui de la coupe − crâne nu (HAIR_SEAT) : seuls les petits
+ * chapeaux (couronne, auréole, cône, cornes) en dépendent ; les couvre-chefs
+ * enveloppants restent sur le crâne et rangent les cheveux dessous (HAT_COVER).
+ */
 function hatLayer(id: string, dy: number, bc: string): ReactNode {
   const S = { stroke: INK, strokeWidth: SW, strokeLinejoin: "round" as const };
   switch (id) {
@@ -464,7 +612,8 @@ function hatLayer(id: string, dy: number, bc: string): ReactNode {
           <path d="M37 21 L39 -24 C50 -27 70 -27 81 -24 L83 21Z" fill="#2E2250" {...S} />
           <path d="M38 8 L82 8 L82.6 18 L37.4 18Z" fill="#E8304A" stroke={INK} strokeWidth={2.2} />
           <path d="M44 -20 L44 4" stroke="#5B4A8A" strokeWidth={2.4} strokeLinecap="round" />
-          <ellipse cx={60} cy={22} rx={39} ry={7} fill="#22183A" {...S} />
+          <ellipse cx={60} cy={22} rx={50} ry={8.5} fill="#22183A" {...S} />
+          <path d="M18 21 C34 17 86 17 102 21" fill="none" stroke="#3D3366" strokeWidth={2} strokeLinecap="round" />
         </g>
       );
     case "party":
@@ -493,7 +642,7 @@ function hatLayer(id: string, dy: number, bc: string): ReactNode {
 }
 
 /* ───────── Accessoires du visage ───────── */
-function faceLayer(id: string, c: { body: string; deep: string }, hc: string, bc: string): { skin?: ReactNode; over?: ReactNode } {
+function faceLayer(id: string, c: { body: string; deep: string }, hc: string, bc: string): { skin?: ReactNode; over?: ReactNode; top?: ReactNode } {
   const S = { stroke: INK, strokeWidth: SW, strokeLinejoin: "round" as const };
   switch (id) {
     case "shades":
@@ -608,13 +757,60 @@ function faceLayer(id: string, c: { body: string; deep: string }, hc: string, bc
             d="M17 50 C23 39 46 40 60 46 C74 40 97 39 103 50 C105 63 94 71 84 69 C74 67 66 61 60 59 C54 61 46 67 36 69 C26 71 15 63 17 50Z M33 57 a9 8 0 1 0 18 0 a9 8 0 1 0 -18 0Z M69 57 a9 8 0 1 0 18 0 a9 8 0 1 0 -18 0Z" />
         ),
       };
+    case "crossscar": {
+      // Cicatrice en croix sur la joue
+      const d = "M19 76 L33 90 M33 76 L19 90";
+      return {
+        skin: (
+          <g strokeLinecap="round" fill="none">
+            <path d={d} stroke={INK} strokeWidth={5.6} />
+            <path d={d} stroke="#FFB3C2" strokeWidth={2.6} />
+          </g>
+        ),
+      };
+    }
+    case "bandages":
+      // Bande enroulée en travers du front (par-dessus les cheveux) + compresse sur la joue
+      return {
+        top: (
+          <g>
+            <g clipPath={`url(#${bc})`}>
+              <path d="M0 40 L120 17 L120 29 L0 52Z" fill="#F6F1E6" stroke={INK} strokeWidth={2.6} strokeLinejoin="round" />
+              <path d="M18 43 L22 39 M40 39 L44 35 M62 35 L66 31 M84 30 L88 26" stroke="#D9CFBC" strokeWidth={1.8} strokeLinecap="round" />
+            </g>
+            <path d="M103 23 C111 21 117 25 123 33 L118 37 C114 31 109 29 104 29Z" fill="#F6F1E6" stroke={INK} strokeWidth={2.2} strokeLinejoin="round" />
+            <path d="M103 28 C109 31 112 37 113 45 L108 45 C107 39 105 35 101 33Z" fill="#EDE5D3" stroke={INK} strokeWidth={2.2} strokeLinejoin="round" />
+          </g>
+        ),
+        over: (
+          <g transform="translate(25 86) rotate(-12)">
+            <rect x={-8} y={-6} width={16} height={12} rx={2.5} fill="#F6F1E6" stroke={INK} strokeWidth={2.2} />
+            <path d="M-11 -4 L11 4 M-11 4 L11 -4" stroke="#E8C9A0" strokeWidth={3} strokeLinecap="round" />
+            <path d="M-11 -4 L11 4 M-11 4 L11 -4" stroke={INK} strokeWidth={0.9} strokeLinecap="round" opacity={0.5} />
+          </g>
+        ),
+      };
+    case "earring":
+      // Boucle d'oreille pendante (anneau + goutte), côté gauche
+      return {
+        over: (
+          <g>
+            <circle cx={13} cy={72} r={4.6} fill="#FFD23F" stroke={INK} strokeWidth={2.4} />
+            <path d="M13 76 L13 83" stroke={INK} strokeWidth={4} strokeLinecap="round" />
+            <path d="M13 76 L13 83" stroke="#FFD23F" strokeWidth={2} strokeLinecap="round" />
+            <path d="M13 81 C20 88 20 96 13 99 C6 96 6 88 13 81Z" fill="#3DDCC8" stroke={INK} strokeWidth={2.4} strokeLinejoin="round" />
+            <path d="M10.6 89 C10.6 87 11.4 85.6 12.2 85" stroke="#fff" strokeWidth={1.6} strokeLinecap="round" fill="none" />
+          </g>
+        ),
+      };
     default:
       return {};
   }
 }
 
 /* ───────── Accessoires du corps ───────── */
-function extraLayers(id: string, c: { body: string; deep: string }, top: number, bc: string): { back?: ReactNode; front?: ReactNode; top?: ReactNode } {
+/** mid = dans le dos mais par-dessus les cheveux longs (ex. sabre : la poignée reste visible). */
+function extraLayers(id: string, c: { body: string; deep: string }, seat: number, bc: string): { back?: ReactNode; mid?: ReactNode; front?: ReactNode; top?: ReactNode } {
   const S = { stroke: INK, strokeWidth: SW, strokeLinejoin: "round" as const };
   switch (id) {
     case "scarf":
@@ -683,7 +879,7 @@ function extraLayers(id: string, c: { body: string; deep: string }, top: number,
         ),
       };
     case "headphones": {
-      const t = Math.min(4, top - 6);
+      const t = Math.min(4, seat - 10);
       return {
         top: (
           <g>
@@ -727,6 +923,39 @@ function extraLayers(id: string, c: { body: string; deep: string }, top: number,
         ),
       };
     }
+    case "katana":
+      // Sabre dans le dos : poignée et garde au-dessus de l'épaule droite, pointe en bas à gauche
+      return {
+        mid: (
+          <g transform="rotate(45 60 60)">
+            <rect x={55} y={-2} width={10} height={124} rx={3} fill="#7A1F2E" stroke={INK} strokeWidth={2.6} />
+            <rect x={54} y={112} width={12} height={12} rx={3} fill="#FFD23F" stroke={INK} strokeWidth={2.4} />
+            <rect x={54} y={-26} width={12} height={24} rx={3} fill="#2A2342" stroke={INK} strokeWidth={2.6} />
+            <path d="M55 -22 L65 -16 M65 -22 L55 -16 M55 -13 L65 -7 M65 -13 L55 -7" stroke="#A99BE0" strokeWidth={1.8} />
+            <ellipse cx={60} cy={-1} rx={12.5} ry={4.2} fill="#FFD23F" stroke={INK} strokeWidth={2.4} />
+            <rect x={55.5} y={-32} width={9} height={7} rx={2} fill="#FFD23F" stroke={INK} strokeWidth={2} />
+          </g>
+        ),
+      };
+    case "longscarf":
+      // Écharpe longue qui flotte au vent (pans derrière, tour de cou devant)
+      return {
+        back: (
+          <g>
+            <path d="M92 92 C108 86 122 92 134 84 C140 80 146 80 152 82 C146 88 144 94 146 100 C136 98 128 104 116 104 C106 104 98 102 92 104Z" fill="#FF9A2E" {...S} />
+            <path d="M94 100 C108 104 118 110 130 106 C134 112 138 116 144 118 C132 122 120 122 108 118 C100 116 94 112 90 110Z" fill="#D2650A" {...S} />
+            <path d="M104 94 C114 92 124 94 132 90 M110 112 C118 114 126 116 134 116" fill="none" stroke="#FFD3A1" strokeWidth={2} strokeLinecap="round" opacity={0.8} />
+          </g>
+        ),
+        front: (
+          <g clipPath={`url(#${bc})`}>
+            <path d="M0 88 C30 97 90 97 120 88 L120 110 C90 118 30 118 0 110Z" fill="#FF9A2E" {...S} />
+            <path d="M10 99 C40 106 80 106 110 99" fill="none" stroke="#D2650A" strokeWidth={2} strokeLinecap="round" />
+            <path d="M14 93 C40 99 80 99 106 93" fill="none" stroke="#FFD3A1" strokeWidth={2.2} strokeLinecap="round" opacity={0.85} />
+          </g>
+        ),
+        top: <ellipse cx={96} cy={101} rx={7} ry={6} fill="#FF9A2E" {...S} />,
+      };
     default:
       return {};
   }
@@ -767,15 +996,16 @@ export function AvatarSvg({ look, size, mood = "happy", animate = false, shadow 
   const hc = HAIR_COLORS[look.hairColor] || HAIR_DEFAULT[look.hair] || "#6B3E1F";
   const cos = costume?.({ c, L: L0, R: R0, clip }) ?? {};
   // Costume avec couvre-chef : il gagne ; la coupe se réduit à une tonsure de sa couleur (rien ne dépasse)
-  const hair = cos.top && look.hair !== "none" ? { skin: hairLayers("buzz", hc).skin } : hairLayers(look.hair, hc);
-  const top = cos.top ? 14 : HAIR_TOP[look.hair] ?? 14;
   const hatId = cos.top ? "none" : look.hat;
   const cover = HAT_COVER[hatId];
+  const hair = cos.top && look.hair !== "none" ? { skin: hairLayers("buzz", hc).skin } : hairLayers(look.hair, hc, cover !== undefined);
+  // Point d'appui des petits chapeaux / du casque audio selon la coupe
+  const seat = cos.top ? 18 : HAIR_SEAT[look.hair] ?? 18;
   // Éliminé (mood « dead ») : yeux en croix + bouche zigzag, l'accessoire qui cache le visage est retiré
   const dead = mood === "dead";
   const faceId = dead && FACE_HIDDEN_WHEN_DEAD.has(look.face) ? "none" : look.face;
   const face = cos.face ? {} : faceLayer(faceId, c, look.hair !== "none" ? hc : "#5A3420", clip);
-  const extra = extraLayers(look.extra, c, top, clip);
+  const extra = extraLayers(look.extra, c, seat, clip);
   const hideEyes = { L: !cos.face && faceId === "shades", R: !cos.face && (faceId === "shades" || faceId === "patch") };
   const hideMouth = !cos.face && faceId === "mask";
   // Couvre-chef : les cheveux au-dessus du bord sont rangés dessous
@@ -803,6 +1033,7 @@ export function AvatarSvg({ look, size, mood = "happy", animate = false, shadow 
       {/* Dos */}
       {extra.back}
       {underHat(hair.back)}
+      {extra.mid}
       {cos.back}
 
       {/* Corps : ombre dure, dégradé, contour */}
@@ -827,7 +1058,8 @@ export function AvatarSvg({ look, size, mood = "happy", animate = false, shadow 
       {/* Devant */}
       {underHat(hair.front)}
       {extra.front}
-      {hatLayer(hatId, top - 14, clip)}
+      {face.top}
+      {hatLayer(hatId, seat - 18, clip)}
       {cos.top}
       {extra.top}
     </svg>

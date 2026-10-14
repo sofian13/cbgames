@@ -78,6 +78,11 @@ export const AVATAR_ITEMS: Record<AvatarSlot, AvatarItem[]> = {
     item("pigtails", false, "bun"), item("golden", false, "mohawk"), item("swordsman", false, "buzz"),
     item("hero", false, "mohawk"), item("long", false, "swoop"), item("buzz", true), item("curly", false, "afro"),
     item("bowl", false, "swoop"), item("emo", false, "swoop"), item("flame", false, "mohawk"),
+    // Coupes « manga » (ajout v2)
+    item("silver", false, "swoop"), item("ponytail", false, "bun"), item("messy", false, "mohawk"),
+    item("twintails", false, "bun"), item("sticks", false, "bun"), item("hedgehog", true),
+    item("streak", false, "swoop"), item("peekaboo", false, "swoop"), item("ahoge", false, "swoop"),
+    item("mane", false, "afro"),
   ],
   hat: [
     item("none", true), item("straw", false, "bucket"), item("cap", true), item("beanie", true), item("crown", false, "party"),
@@ -89,11 +94,13 @@ export const AVATAR_ITEMS: Record<AvatarSlot, AvatarItem[]> = {
     item("none", true), item("shades", true), item("round", true), item("moustache", false, "none"), item("scar", false, "plaster"),
     item("plaster", true), item("mask", false, "none"), item("patch", false, "shades"), item("blush", true),
     item("goggles", false, "round"), item("freckles", true), item("beard", false, "none"), item("domino", false, "shades"),
+    item("crossscar", false, "plaster"), item("bandages", true), item("earring", false, "none"),
   ],
   extra: [
     item("none", true), item("scarf", true), item("armband", false, "scarf"), item("necklace", true), item("bowtie", true),
     item("cape", false, "scarf"), item("tie", false, "bowtie"), item("headphones", false, "necklace"),
     item("wings", false, "none"), item("lei", false, "necklace"),
+    item("katana", false, "none"), item("longscarf", false, "scarf"),
   ],
 };
 
