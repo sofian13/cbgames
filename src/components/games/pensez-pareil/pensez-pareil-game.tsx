@@ -37,6 +37,9 @@ import {
   type Tier as PPTier,
 } from "@/components/games/pensez-pareil/pp-content";
 import { useGameFinished } from "@/lib/game-finished";
+import { GameRulesSheet, GameTuto, RulesIconButton, TutoAgainButton, useFirstTimeTuto } from "@/components/games/game-tuto";
+import { usePPRules, usePPTuto } from "@/components/games/pensez-pareil/tuto";
+import type { ReactNode } from "react";
 
 const SYNC_BASE = 100;
 const COMBO_STEP = 25;
@@ -115,6 +118,18 @@ function PensezPareilLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }
 
   useEffect(() => { preloadSfx(["whoosh", "confirm", "success", "ding", "ding2", "wrong", "lose", "win", "powerup", "levelup", "card-flip", "gong", "tock"]); }, []);
   useScrollTopOn(`${phase}-${round}`);
+  // Tuto 1re fois (au lancement de la partie) + règles en jeu (bouton livre)
+  const tuto = useFirstTimeTuto("pensez-pareil");
+  const tutoSlides = usePPTuto();
+  const rules = usePPRules();
+  const [rulesOpen, setRulesOpen] = useState(false);
+  const rulesTool = <RulesIconButton onClick={() => setRulesOpen(true)} />;
+  const layers = (
+    <>
+      {rulesOpen && <GameRulesSheet name={t.name} rules={rules} onClose={() => setRulesOpen(false)} onTuto={tuto.show} />}
+      {tuto.open && <GameTuto slides={tutoSlides} onDone={tuto.close} />}
+    </>
+  );
 
   const prompt = deck[round] ?? null;
   const nameA = names[0] || t.player(1);
@@ -126,6 +141,7 @@ function PensezPareilLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }
     setNames(n); setPack(p); setDeck(buildDeck(p, l));
     setRound(0); setSyncs(0); setStreak(0); setBestStreak(0); setTeamScore(0);
     setPhase("passA");
+    tuto.showIfFirstTime();
   };
 
   // « Pas fou ? » : thème remplacé par un thème du même pack jamais tiré dans la partie
@@ -160,17 +176,17 @@ function PensezPareilLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }
   };
 
   if (phase === "setup") {
-    return <CoupleSetup pack={pack} onBack={onReturnToLobby} onStart={begin} />;
+    return <><CoupleSetup pack={pack} onBack={onReturnToLobby} onStart={begin} tools={rulesTool} onTuto={tuto.show} />{layers}</>;
   }
   if (phase === "passA") {
-    return <PassScreen toName={nameA} colorIndex={0} accent={PP_COLOR}
+    return <><PassScreen toName={nameA} colorIndex={0} accent={PP_COLOR}
       hint={t.passA}
-      onReady={() => setPhase("typeA")} />;
+      onReady={() => setPhase("typeA")} />{layers}</>;
   }
   if (phase === "typeA") {
-    return <TypeScreen prompt={prompt} player={nameA} idx={0} round={round + 1}
-      value={inputA} onChange={setInputA} onReroll={rerollPrompt}
-      onSubmit={() => { playSfx("confirm", { volume: 0.7 }); setAnsA(inputA.trim()); setPhase("passB"); }} />;
+    return <><TypeScreen prompt={prompt} player={nameA} idx={0} round={round + 1}
+      value={inputA} onChange={setInputA} onReroll={rerollPrompt} tools={rulesTool}
+      onSubmit={() => { playSfx("confirm", { volume: 0.7 }); setAnsA(inputA.trim()); setPhase("passB"); }} />{layers}</>;
   }
   if (phase === "passB") {
     return <PassScreen toName={nameB} colorIndex={1} accent={PP_COLOR}
@@ -178,13 +194,15 @@ function PensezPareilLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }
       onReady={() => setPhase("typeB")} />;
   }
   if (phase === "typeB") {
-    return <TypeScreen prompt={prompt} player={nameB} idx={1} round={round + 1}
-      value={inputB} onChange={setInputB}
-      onSubmit={() => { const b = inputB.trim(); setAnsB(b); resolveReveal(b); setPhase("reveal"); }} />;
+    return <><TypeScreen prompt={prompt} player={nameB} idx={1} round={round + 1}
+      value={inputB} onChange={setInputB} tools={rulesTool}
+      onSubmit={() => { const b = inputB.trim(); setAnsB(b); resolveReveal(b); setPhase("reveal"); }} />{layers}</>;
   }
   if (phase === "reveal") {
     return (
+      <>
       <RevealScreen
+        tools={rulesTool}
         prompt={prompt} matched={lastResult.matched} points={lastResult.points} streak={lastResult.streak}
         names={[nameA, nameB]} answers={[ansA, ansB]}
         round={round + 1} total={TOTAL_ROUNDS} syncs={lastResult.syncs}
@@ -193,6 +211,8 @@ function PensezPareilLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }
           else { setRound((r) => r + 1); setPhase("passA"); }
         }}
       />
+      {layers}
+      </>
     );
   }
   // over
@@ -208,8 +228,10 @@ function PensezPareilLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }
 const cleanName = (n: string) => n.trim().replace(/[\s\-–'’.]+$/u, "");
 
 // ── Setup couple (2 joueurs + pack + niveau actuel) ───────
-function CoupleSetup({ pack, onStart, onBack }: {
+function CoupleSetup({ pack, onStart, onBack, tools, onTuto }: {
   pack: Pack;
+  tools?: ReactNode;
+  onTuto?: () => void;
   onStart: (names: [string, string], pack: Pack) => void;
   onBack?: () => void;
 }) {
@@ -223,7 +245,7 @@ function CoupleSetup({ pack, onStart, onBack }: {
   const COLORS: Record<Pack, string> = { soft: "#3DDC97", mix: "#FFD23F", hot: "#FF3EA5" };
 
   return (
-    <ZScreen>
+    <ZScreen tools={tools}>
       <div className="flex items-end gap-3">
         <ZTitle as="h1" size={48} style={{ lineHeight: 0.92 }}>{t.name}</ZTitle>
         <div className="-mb-1 shrink-0"><Mascot size={66} color="pink" mood="love" shadow={false} /></div>
@@ -261,6 +283,7 @@ function CoupleSetup({ pack, onStart, onBack }: {
       </div>
 
       <div className="mt-6 flex justify-center"><IdeaButton game="Pensez Pareil" kind="thème" /></div>
+      {onTuto && <TutoAgainButton onClick={onTuto} className="mt-2" />}
       <div className="min-h-6 flex-1" />
       <ZButton bg={PP_COLOR} disabled={!can} onClick={() => { if (!can) return; const n: [string, string] = [cleanName(a), cleanName(b)]; saveDuo(n); onStart(n, sel); }}>
         {can ? t.go : t.bothNames}
@@ -496,8 +519,9 @@ function RoundBar({ round, total, timeLeft, streak }: {
 
 // ── Reveal (sync ou raté) ─────────────────────────────────
 function RevealScreen({
-  prompt, matched, points, streak, names, answers, round, total, syncs, onNext, auto,
+  prompt, matched, points, streak, names, answers, round, total, syncs, onNext, auto, tools,
 }: {
+  tools?: ReactNode;
   prompt: Prompt | null; matched: boolean; points: number; streak: number;
   names: [string, string]; answers: [string, string];
   round: number; total: number; syncs: number;
@@ -505,7 +529,7 @@ function RevealScreen({
 }) {
   const t = useT(STR);
   return (
-    <ZScreen bg={matched ? PP_COLOR : undefined}>
+    <ZScreen bg={matched ? PP_COLOR : undefined} tools={tools}>
       {matched && <ConfettiBurst count={50} />}
       <div className="flex flex-wrap items-center gap-2">
         <ZChip bg="#fff" tilt={-2}>{t.round(round, total)}</ZChip>
@@ -623,13 +647,14 @@ function Stat({ label, value }: { label: string; value: string | number }) {
 }
 
 // ── Saisie (local) ────────────────────────────────────────
-function TypeScreen({ prompt, player, idx, round, value, onChange, onSubmit, onReroll }: {
+function TypeScreen({ prompt, player, idx, round, value, onChange, onSubmit, onReroll, tools }: {
+  tools?: ReactNode;
   prompt: Prompt | null; player: string; idx: number; round: number;
   value: string; onChange: (v: string) => void; onSubmit: () => void; onReroll?: () => void;
 }) {
   const t = useT(STR);
   return (
-    <ZScreen>
+    <ZScreen tools={tools}>
       <div className="flex flex-wrap items-center gap-2">
         <ZChip bg="#fff" tilt={-2}>{t.round(round, TOTAL_ROUNDS)}</ZChip>
         <ZChip bg={idx ? "#FF3EA5" : "#7A4EE8"} tilt={2}>{t.answers(player)}</ZChip>

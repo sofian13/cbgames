@@ -37,6 +37,8 @@ import { STR } from "./i18n";
 import { useGameFinished } from "@/lib/game-finished";
 import { ShareResultButton } from "@/components/games/share-result-button";
 import { tourneeCard } from "@/lib/share-cards";
+import { GameTuto, RulesIconButton, useFirstTimeTuto } from "@/components/games/game-tuto";
+import { TourneeRules, useTourneeSlides } from "./tuto";
 
 // ── DA sticker ────────────────────────────────────────────
 const INK = "#15082E";
@@ -120,11 +122,13 @@ function TextLink({ onClick, children }: { onClick: () => void; children: ReactN
 }
 
 /** Bouton son (coupure globale partagée par toute l'app). */
-function SoundToggle() {
+function SoundToggle({ onRules, children }: { onRules?: () => void; children?: ReactNode }) {
   const muted = useSyncExternalStore(subscribeSfxMuted, isSfxMuted, () => false);
   const t = useT(STR);
   return (
     <GameTopRight>
+      {onRules && <RulesIconButton onClick={onRules} />}
+      {children}
       <GameIconButton icon={muted ? VolumeX : Volume2} label={muted ? t.soundOn : t.soundOff} active={muted} onClick={() => setSfxMuted(!muted)} />
     </GameTopRight>
   );
@@ -310,6 +314,16 @@ export default function PicoletteGame({ onReturnToLobby }: GameProps) {
   const [rouletteSpared, setRouletteSpared] = useState<number[]>([]); // perdants sauvés par leur bouclier
   const [lastLosers, setLastLosers] = useState<number[]>([]); // pour l'undo (plusieurs si camp perdant)
   const spinRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Tuto 1re fois (après les prénoms) + règles en jeu (bouton livre, en haut à droite)
+  const tuto = useFirstTimeTuto("picolette");
+  const tutoSlides = useTourneeSlides();
+  const [rulesOpen, setRulesOpen] = useState(false);
+  const tools = (
+    <SoundToggle onRules={phase === "setup" ? undefined : () => setRulesOpen(true)}>
+      {rulesOpen && <TourneeRules onClose={() => setRulesOpen(false)} onTuto={tuto.show} />}
+      {tuto.open && <GameTuto slides={tutoSlides} onDone={tuto.close} />}
+    </SoundToggle>
+  );
 
   const card = deck[cardIdx];
   // App sans Zinzin+ : paquet découverte (60 cartes soft fixes) ; abonné / site : les packs choisis
@@ -372,6 +386,7 @@ export default function PicoletteGame({ onReturnToLobby }: GameProps) {
     setShields(names.map(() => false));
     setLastLosers([]);
     setPhase("packs");
+    tuto.showIfFirstTime();
   };
 
   const launch = () => {
@@ -540,7 +555,7 @@ export default function PicoletteGame({ onReturnToLobby }: GameProps) {
     return (
       <>
         <PlayersSetup emoji="🍻" name={tr.gameName} min={2} max={10} accent={ACCENT} onStart={begin} />
-        <SoundToggle />
+        {tools}
         <ScrollTop dep={phase} />
       </>
     );
@@ -554,7 +569,7 @@ export default function PicoletteGame({ onReturnToLobby }: GameProps) {
           penaltyMode={penaltyMode} setPenaltyMode={setPenaltyMode}
           onLaunch={launch} onBack={() => setPhase("setup")}
         />
-        <SoundToggle />
+        {tools}
         <ScrollTop dep={phase} />
       </>
     );
@@ -563,7 +578,7 @@ export default function PicoletteGame({ onReturnToLobby }: GameProps) {
   if (phase === "intro") {
     return (
       <div className="flex min-h-[100svh] flex-col px-5 text-white" style={{ ...PAGE, paddingTop: TOP, paddingBottom: BOTTOM }}>
-        <SoundToggle />
+        {tools}
         <ScrollTop dep={phase} />
         <div className="mx-auto flex w-full max-w-md flex-1 flex-col">
           <h1 style={{ ...DISPLAY, fontSize: 46, lineHeight: 0.95 }}>{tr.introTitle}</h1>
@@ -605,7 +620,7 @@ export default function PicoletteGame({ onReturnToLobby }: GameProps) {
     return (
       <div className="relative flex min-h-[100svh] flex-col px-4 text-white" style={{ ...PAGE, paddingTop: TOP, paddingBottom: BOTTOM }}>
         <style>{KEYFRAMES}</style>
-        <SoundToggle />
+        {tools}
         {/* Chaque nouvelle carte repart du haut (sinon on arrive au milieu de la carte sur petit écran) */}
         <ScrollTop dep={`${phase}-${cardIdx}-${card.text}`} />
 
@@ -638,6 +653,18 @@ export default function PicoletteGame({ onReturnToLobby }: GameProps) {
 
         {/* Carte */}
         <div className="flex flex-1 flex-col items-center justify-center py-3">
+          {/* Qui lit cette carte (à voix haute) : bien visible, au-dessus de la carte */}
+          {readerName && (
+            <p
+              key={`r-${cardIdx}`}
+              className="mb-3 flex max-w-full items-center gap-2 rounded-full py-1 pl-1 pr-4 text-[16px] font-extrabold leading-tight"
+              style={{ ...stk("#fff", 3, 2.5), color: INK, transform: "rotate(-1.5deg)", animation: "pt-pop .4s ease-out" }}
+              aria-label={tr.readsCardAria(readerName)}
+            >
+              <PlayerAvatar name={readerName} colorIndex={reader} size={30} mood="happy" border={false} />
+              <span className="min-w-0">{tr.readsAloud(readerName)}</span>
+            </p>
+          )}
 
           <div
             key={`${cardIdx}-${card.text}`}
@@ -648,12 +675,6 @@ export default function PicoletteGame({ onReturnToLobby }: GameProps) {
               <span className="inline-flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-3 text-[15px] font-extrabold" style={{ ...stk("#fff", 2, 2.5), color: INK, transform: "rotate(-3deg)" }}>
                 <TypeIcon size={17} strokeWidth={3} aria-hidden /> {t.label}
               </span>
-              {readerName && (
-                <span className="flex min-w-0 items-center gap-1.5 text-[14px] font-bold" style={{ opacity: 0.9 }} aria-label={tr.readsCardAria(readerName)}>
-                  <PlayerAvatar name={readerName} colorIndex={reader} size={26} mood="happy" border={false} />
-                  <span className="max-w-[118px] truncate">{tr.reads(readerName)}</span>
-                </span>
-              )}
             </div>
             <p className="mt-4 text-center" style={{ ...DISPLAY, fontSize: Math.min(shown.length > 90 ? 25 : shown.length > 55 ? 29 : 33, longName > 13 ? 25 : longName > 10 ? 29 : 33), lineHeight: 1.12, overflowWrap: "break-word", textWrap: "balance" }}>
               <RichText text={card.text} who={card.who} players={players} cardBg={look.bg} />
@@ -826,7 +847,7 @@ export default function PicoletteGame({ onReturnToLobby }: GameProps) {
   const top = ranking[0];
   return (
     <div className="relative flex min-h-[100svh] flex-col px-5 text-white" style={{ ...PAGE, paddingTop: TOP, paddingBottom: BOTTOM }}>
-      <SoundToggle />
+      {tools}
       <ScrollTop dep={phase} />
       <ConfettiBurst count={60} />
       <div className="mx-auto flex w-full max-w-md flex-1 flex-col">

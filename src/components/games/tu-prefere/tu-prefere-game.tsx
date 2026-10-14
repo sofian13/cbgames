@@ -27,6 +27,7 @@ import { TP_STR } from "@/components/games/tu-prefere/i18n";
 import { adultDefault, isNoAlcohol, sipsAllowed } from "@/lib/party-mood";
 import { useUnlocked } from "@/lib/entitlements";
 import { LockedPack, PremiumNudge, fmtCount, useNudgeText } from "@/components/games/premium-nudge";
+import { GameRulesSheet, RulesIconButton } from "@/components/games/game-tuto";
 
 type Cat = "classique" | "hot" | "absurde" | "couple";
 type Penalty = "dares" | "sips";
@@ -136,6 +137,10 @@ export default function TuPrefereGame({ onReturnToLobby }: GameProps) {
   // Peine du camp minoritaire. Soirée « Chill » : gages uniquement (pas de gorgées).
   const [sipsOk] = useState(() => sipsAllowed(true));
   const [penalty, setPenalty] = useState<Penalty>(() => (sipsOk ? "sips" : "dares"));
+  // Feuille de règles (bouton livre en haut à droite, sur tous les écrans du jeu)
+  const [rulesOpen, setRulesOpen] = useState(false);
+  const rulesBtn = <RulesIconButton onClick={() => setRulesOpen(true)} />;
+  const rulesSheet = rulesOpen && <GameRulesSheet name={t.title} rules={t.rules(sipsOk && penalty === "sips")} onClose={() => setRulesOpen(false)} />;
   const [dare, setDare] = useState("");
   const penaltyRef = useRef<HTMLDivElement>(null);
 
@@ -185,7 +190,8 @@ export default function TuPrefereGame({ onReturnToLobby }: GameProps) {
   // ── Choix d'ambiance ──
   if (!cat) {
     return (
-      <ZScreen>
+      <ZScreen tools={rulesBtn}>
+        {rulesSheet}
         <div className="flex items-end gap-3">
           <ZTitle as="h1" size={52} style={{ lineHeight: 0.92 }}>{t.title}</ZTitle>
           <div className="-mb-1 shrink-0"><Mascot size={74} color="sky" mood="thinking" shadow={false} /></div>
@@ -269,7 +275,8 @@ export default function TuPrefereGame({ onReturnToLobby }: GameProps) {
   const showNudge = revealed && !unlocked && (played === NUDGE_AT || (played < NUDGE_AT && idx + 1 >= deck.length));
 
   return (
-    <ZScreen tools={<IdeaButton game={t.gameName} kind="dilemme" compact bg="#fff" />}>
+    <ZScreen tools={<>{rulesBtn}<IdeaButton game={t.gameName} kind="dilemme" compact bg="#fff" /></>}>
+      {rulesSheet}
       {revealed && winner !== "tie" && total > 1 && Math.max(votes.a, votes.b) === total && <ConfettiBurst count={36} />}
       <div className="flex flex-wrap items-center gap-2">
         <button type="button" onClick={() => setCat(null)} className="min-h-11" aria-label={t.changeVibe}>

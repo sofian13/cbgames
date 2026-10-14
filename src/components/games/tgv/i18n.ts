@@ -104,6 +104,8 @@ interface TgvStrings {
   atStake: (n: number) => string;
   lastCard: string;
   nextWill: string;
+  /** Rappel de l'ordre des cartes sous la question */
+  order: string;
   higher: string;
   equal: string;
   lower: string;
@@ -139,7 +141,7 @@ export const STR: I18n<TgvStrings> = {
     muteOn: "Activer le son",
     muteOff: "Couper le son",
     step1: "Une carte est retournée : la suivante sera plus haute, plus basse ou égale ?",
-    step2: "Enchaîne tous les wagons sans te tromper pour arriver en gare.",
+    step2: "Un wagon = un bon pari. Enchaîne-les tous sans te tromper pour arriver en gare (l'As est la carte la plus forte).",
     step3: "Raté = une peine et retour au wagon 1. Plus tu tombes loin, plus elle grimpe (3 gorgées max, ou un gage).",
     titleTop: "Le Train",
     step3NoSips: "Raté = un gage et retour au wagon 1.",
@@ -163,6 +165,7 @@ export const STR: I18n<TgvStrings> = {
     atStake: (n) => `en jeu : ${n} gorgée${n > 1 ? "s" : ""} ou un gage`,
     lastCard: "Dernière carte…",
     nextWill: "La prochaine carte sera…",
+    order: "2 < 3 < … < 10 < V < D < R < As (le plus fort)",
     higher: "Plus haute",
     equal: "Égale",
     lower: "Plus basse",
@@ -171,8 +174,8 @@ export const STR: I18n<TgvStrings> = {
     nextWagon: "Wagon suivant",
     tie: "Égalité !",
     miss: "Raté !",
-    tieNote: "Petite peine, mais tu restes sur ce wagon.",
-    missNote: "Retour au wagon 1… après la peine.",
+    tieNote: "Même valeur sans avoir parié « Égale » : petite peine, mais tu restes sur ce wagon.",
+    missNote: "Retour au wagon 1 après la peine… et c'est encore toi qui joues.",
     endGame: "Terminer la partie",
     arrived: "Arrivé en gare !",
     winNote: "Tous les wagons d'un coup ! Tu distribues 2 gorgées (ou un gage) à qui tu veux.",
@@ -196,7 +199,7 @@ export const STR: I18n<TgvStrings> = {
     muteOn: "Turn sound on",
     muteOff: "Mute",
     step1: "A card is flipped: will the next one be higher, lower or equal?",
-    step2: "Clear every carriage without a single mistake to reach the station.",
+    step2: "One carriage = one right guess. Clear them all without a mistake to reach the station (Ace is the highest card).",
     step3: "Wrong = a penalty and back to carriage 1. The further you fall, the bigger it gets (3 sips max, or a dare).",
     titleTop: "The Crazy",
     step3NoSips: "Wrong = a dare and back to carriage 1.",
@@ -220,6 +223,7 @@ export const STR: I18n<TgvStrings> = {
     atStake: (n) => `at stake: ${n} sip${n > 1 ? "s" : ""} or a dare`,
     lastCard: "Last card…",
     nextWill: "The next card will be…",
+    order: "2 < 3 < … < 10 < J < Q < K < Ace (highest)",
     higher: "Higher",
     equal: "Equal",
     lower: "Lower",
@@ -228,8 +232,8 @@ export const STR: I18n<TgvStrings> = {
     nextWagon: "Next carriage",
     tie: "It's a tie!",
     miss: "Wrong!",
-    tieNote: "Small penalty, but you stay on this carriage.",
-    missNote: "Back to carriage 1… after the penalty.",
+    tieNote: "Same value but you didn't bet \"Equal\": small penalty, but you stay on this carriage.",
+    missNote: "Back to carriage 1 after the penalty… and you keep playing.",
     endGame: "End the game",
     arrived: "Station reached!",
     winNote: "Every carriage in one go! Hand out 2 sips (or a dare) to whoever you like.",
@@ -253,7 +257,7 @@ export const STR: I18n<TgvStrings> = {
     muteOn: "Activar el sonido",
     muteOff: "Silenciar",
     step1: "Se gira una carta: ¿la siguiente será más alta, más baja o igual?",
-    step2: "Supera todos los vagones sin fallar para llegar a la estación.",
+    step2: "Un vagón = un acierto. Supéralos todos sin fallar para llegar a la estación (el As es la carta más alta).",
     step3: "Fallo = un castigo y vuelta al vagón 1. Cuanto más lejos caigas, más sube (3 tragos máx., o un reto).",
     titleTop: "El Tren",
     step3NoSips: "Fallo = un reto y vuelta al vagón 1.",
@@ -277,6 +281,7 @@ export const STR: I18n<TgvStrings> = {
     atStake: (n) => `en juego: ${n} trago${n > 1 ? "s" : ""} o un reto`,
     lastCard: "Última carta…",
     nextWill: "La siguiente carta será…",
+    order: "2 < 3 < … < 10 < J < Q < K < As (la más alta)",
     higher: "Más alta",
     equal: "Igual",
     lower: "Más baja",
@@ -285,8 +290,8 @@ export const STR: I18n<TgvStrings> = {
     nextWagon: "Siguiente vagón",
     tie: "¡Empate!",
     miss: "¡Fallo!",
-    tieNote: "Castigo pequeño, pero sigues en este vagón.",
-    missNote: "Vuelta al vagón 1… después del castigo.",
+    tieNote: "Mismo valor sin haber apostado «Igual»: castigo pequeño, pero sigues en este vagón.",
+    missNote: "Vuelta al vagón 1 tras el castigo… y sigues jugando tú.",
     endGame: "Terminar la partida",
     arrived: "¡Llegada a la estación!",
     winNote: "¡Todos los vagones de una! Repartes 2 tragos (o un reto) a quien quieras.",

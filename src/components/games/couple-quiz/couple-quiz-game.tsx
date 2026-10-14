@@ -17,6 +17,8 @@ import { Mascot, MASCOT_PALETTE } from "@/components/Mascot";
 import { PlayerBlob } from "@/components/avatar/PlayerBlob";
 import { ArrowLeft, Brain, Check, Flame, Heart, Hourglass, House, MessageCircle, Pizza, RotateCcw, Sparkles, Volume2, VolumeX, type LucideIcon } from "lucide-react";
 import { GameIconButton, GameInlineIcon, GameTopRight } from "@/components/games/game-icon-button";
+import { GameRulesSheet, RulesIconButton } from "@/components/games/game-tuto";
+import { CQ_RULES } from "@/components/games/couple-quiz/rules";
 import { IdeaButton, RerollButton } from "@/components/games/idea-button";
 import { isSfxMuted, playCombo, playSfx, preloadSfx, setSfxMuted, subscribeSfxMuted } from "@/lib/sfx";
 import { ConfettiBurst } from "@/components/ConfettiBurst";
@@ -94,14 +96,18 @@ function useSfxMuted() {
 function Screen({ children, center, footer }: { children: ReactNode; center?: boolean; footer?: ReactNode }) {
   const muted = useSfxMuted();
   const t = useT(STR);
+  const r = useT(CQ_RULES);
+  const [rulesOpen, setRulesOpen] = useState(false);
   return (
     <div
       className="relative flex min-h-[100dvh] shrink-0 flex-col px-5 text-white"
       style={{ background: NIGHT, backgroundImage: DOTS, backgroundSize: "22px 22px", paddingTop: TOP_SAFE, paddingBottom: BOTTOM_SAFE }}
     >
       <GameTopRight>
+        <RulesIconButton onClick={() => setRulesOpen(true)} />
         <GameIconButton icon={muted ? VolumeX : Volume2} label={muted ? t.soundOn : t.soundOff} active={muted} onClick={() => setSfxMuted(!muted)} />
       </GameTopRight>
+      {rulesOpen && <GameRulesSheet name={t.name} rules={r.rules} onClose={() => setRulesOpen(false)} />}
       <div className={`mx-auto flex w-full max-w-md flex-col ${center ? "my-auto items-center" : ""}`}>{children}</div>
       {footer && (
         <div
@@ -154,6 +160,7 @@ function Who({ i, children }: { i: number; children: ReactNode }) {
 
 function CoupleQuizLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) {
   const t = useT(STR);
+  const rq = useT(CQ_RULES);
   // Langue figée pour la partie : packs de questions de cette langue (mêmes ids partout)
   const [lang] = useState<Lang>(getLang);
   const QPACKS = packsFor(lang);
@@ -449,7 +456,8 @@ function CoupleQuizLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) 
             <GameInlineIcon icon={MessageCircle} /> {t.explain(names[answerer])}
           </p>
         )}
-        <div className={`mt-5 grid w-full gap-3 ${longDuo ? "grid-cols-1" : "grid-cols-2"}`}>
+        <p className="mt-5 text-center text-[14px] font-bold text-white/80">{rq.scoreLabel}</p>
+        <div className={`mt-2 grid w-full gap-3 ${longDuo ? "grid-cols-1" : "grid-cols-2"}`}>
           <DuoScore name={names[0]} score={scores[0]} idx={0} />
           <DuoScore name={names[1]} score={scores[1]} idx={1} />
         </div>

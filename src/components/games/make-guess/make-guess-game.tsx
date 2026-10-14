@@ -10,7 +10,10 @@ import { getSavedPlayers, savePlayers } from "@/lib/saved-players";
 import { ArrowRight, Check, Crown, Lock, Plus, Undo2, X } from "lucide-react";
 import { GameIconBadge, GameIconButton, GameInlineIcon } from "@/components/games/game-icon-button";
 import { IdeaButton, RerollButton } from "@/components/games/idea-button";
-import { TopRightControls } from "@/components/games/patate/rules-sheet";
+import { SoundButton } from "@/components/games/patate/rules-sheet";
+import { GameTopRight } from "@/components/games/game-icon-button";
+import { GameRulesSheet, GameTuto, RulesIconButton, TutoAgainButton, useFirstTimeTuto } from "@/components/games/game-tuto";
+import { useMakeGuessTuto } from "./tuto";
 import { C, Chip, DISPLAY, INK, KitStyles, SectionTitle, StickerBtn, StickerCard, StickerScreen, BOTTOM_PAD, dotted, sticker } from "@/components/games/patate/sticker-kit";
 import { playCombo, playSfx, preloadSfx } from "@/lib/sfx";
 import { useLang, type Lang } from "@/lib/i18n";
@@ -132,6 +135,11 @@ export default function MakeGuessGame({
 
   // ── Game state ──
   const [phase, setPhase] = useState<Phase>("setup");
+  // Tuto en slides : 1re partie (après la saisie des équipes), relançable depuis les règles
+  const tuto = useFirstTimeTuto("make-guess");
+  const tutoSlides = useMakeGuessTuto();
+  const showTutoFirstTime = tuto.showIfFirstTime;
+  const [rulesOpen, setRulesOpen] = useState(false);
   useGameFinished(phase === "game-over"); // fin de partie → demande de note éventuelle (app)
   const [currentRound, setCurrentRound] = useState(1);
   const [currentTeamIndex, setCurrentTeamIndex] = useState(0);
@@ -266,7 +274,8 @@ export default function MakeGuessGame({
     setSubTurn(0);
     setAllResults([]);
     setPhase("pre-turn");
-  }, [selectedThemes, teams, lang, unlocked]);
+    showTutoFirstTime();
+  }, [selectedThemes, teams, lang, unlocked, showTutoFirstTime]);
 
   // ── Turn handlers ──
   const startTurn = useCallback(() => {
@@ -414,7 +423,12 @@ export default function MakeGuessGame({
   const controls = (
     <>
       <ScrollTop dep={phase} />
-      <TopRightControls title={t.title} rules={t.rules} accent={ACCENT} />
+      <GameTopRight>
+        <SoundButton />
+        <RulesIconButton onClick={() => setRulesOpen(true)} />
+      </GameTopRight>
+      {rulesOpen && <GameRulesSheet name={t.title} rules={t.rules} onClose={() => setRulesOpen(false)} onTuto={tuto.show} />}
+      {tuto.open && <GameTuto slides={tutoSlides} onDone={tuto.close} />}
     </>
   );
   const input = (bg: string, big = false): React.CSSProperties => ({
@@ -449,6 +463,7 @@ export default function MakeGuessGame({
             <li><GameInlineIcon icon={Check} />{t.howTo4[0]}<GameInlineIcon icon={ArrowRight} />{t.howTo4[1]}<GameInlineIcon icon={Undo2} />{t.howTo4[2]}</li>
           </ul>
         </StickerCard>
+        <TutoAgainButton onClick={tuto.show} className="mt-2" />
 
         {/* Équipes */}
         <div className="mt-6 w-full space-y-3">

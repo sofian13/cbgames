@@ -15,6 +15,8 @@ import { ArrowLeft, BookOpen, Check, Clapperboard, Flame, Heart, PartyPopper, Ro
 import { GameIconButton, GameInlineIcon, GameTopRight } from "@/components/games/game-icon-button";
 import { IdeaButton, RerollButton } from "@/components/games/idea-button";
 import { useGameFinished } from "@/lib/game-finished";
+import { GameRulesSheet, GameTuto, RulesIconButton, TutoAgainButton, useFirstTimeTuto } from "@/components/games/game-tuto";
+import { useChronoTuto } from "./tuto";
 
 // ── Catégorie Chrono ───────────────────────────────────────
 // Une catégorie s'affiche, le tél tourne : chacun doit donner un mot de la
@@ -38,7 +40,7 @@ interface P {
   lives: number;
 }
 
-type Phase = "setup" | "config" | "reveal" | "playing" | "lost" | "over";
+type Phase = "setup" | "config" | "reveal" | "playing" | "pass" | "lost" | "over";
 
 function shuffle<T>(arr: T[]): T[] {
   const a = [...arr];
@@ -92,6 +94,10 @@ export default function CategoryChronoGame({ onReturnToLobby }: GameProps) {
   const [timeLeft, setTimeLeft] = useState(0);
   const [lostIdx, setLostIdx] = useState(0);
   const endAt = useRef(0);
+  // Tuto 1re fois (après la saisie des joueurs) + feuille de règles en jeu
+  const tuto = useFirstTimeTuto("category-chrono");
+  const tutoContent = useChronoTuto();
+  const [rulesOpen, setRulesOpen] = useState(false);
 
   const pool = useMemo(() => PACKS.filter((p) => packs.includes(p.id)).flatMap((p) => p.items), [packs, PACKS]);
   const category = queue[catIdx];
@@ -158,17 +164,24 @@ export default function CategoryChronoGame({ onReturnToLobby }: GameProps) {
     }
   };
 
+  // Validé par les autres : le chrono s'arrête pendant le passage du tél (repart sur « Prêt »)
   const valid = () => {
     if (phase !== "playing") return;
     const n = streak + 1;
-    const t = turnTime(n);
-    endAt.current = Date.now() + t * 1000;
-    setTimeLeft(t);
     setStreak(n);
     setCur(nextAlive(cur, players));
+    setPhase("pass");
     playSfx("ding", { volume: 0.7, rate: 1 + Math.min(n, 12) * 0.04 });
     playSfx("whoosh", { volume: 0.35, rate: 1.2, delay: 0.05 });
     vib(25);
+  };
+
+  const ready = () => {
+    const tt = turnTime(streak);
+    endAt.current = Date.now() + tt * 1000;
+    setTimeLeft(tt);
+    setPhase("playing");
+    playSfx("confirm", { volume: 0.6 });
   };
 
   function lose() {
@@ -194,7 +207,9 @@ export default function CategoryChronoGame({ onReturnToLobby }: GameProps) {
   };
 
   const soundBtn = (
+    <>
     <GameTopRight>
+      <RulesIconButton onClick={() => setRulesOpen(true)} />
       <GameIconButton
         icon={muted ? VolumeX : Volume2}
         label={muted ? t.soundOn : t.soundOff}
@@ -202,6 +217,9 @@ export default function CategoryChronoGame({ onReturnToLobby }: GameProps) {
         onClick={() => setSfxMuted(!muted)}
       />
     </GameTopRight>
+    {rulesOpen && <GameRulesSheet name={t.title} rules={tutoContent.rules} onClose={() => setRulesOpen(false)} onTuto={tuto.show} />}
+    {tuto.open && <GameTuto slides={tutoContent.slides} onDone={tuto.close} />}
+    </>
   );
 
   // ── Écrans ─────────────────────────────────────────────
@@ -216,6 +234,7 @@ export default function CategoryChronoGame({ onReturnToLobby }: GameProps) {
         onStart={(list) => {
           setNames(list);
           setPhase("config");
+          tuto.showIfFirstTime();
         }}
       />
     );
@@ -301,8 +320,9 @@ export default function CategoryChronoGame({ onReturnToLobby }: GameProps) {
             ))}
           </div>
 
-          <div className="mt-6 flex justify-center">
+          <div className="mt-6 flex flex-col items-center gap-1">
             <IdeaButton game="Catégorie Chrono" kind="idée de catégorie" bg="#fff" />
+            <TutoAgainButton onClick={tuto.show} />
           </div>
         </div>
 
@@ -405,11 +425,46 @@ export default function CategoryChronoGame({ onReturnToLobby }: GameProps) {
           )}
         </div>
 
+        <p className="mx-auto mb-2.5 w-full max-w-md px-5 text-center text-[15px] font-bold leading-snug" style={{ color: "#FFD23F" }}>{t.judgeHint}</p>
         <div className="mx-auto flex w-full max-w-md gap-3 px-5">
           <PlayBtn bg="#3DDC97" onClick={valid} icon={<Check size={30} strokeWidth={3.5} />} label={t.valid} />
           <PlayBtn bg="#FF6B5B" onClick={lose} icon={<X size={30} strokeWidth={3.5} />} label={t.failed} />
         </div>
       </div>
+    );
+  }
+
+  // Passage du tél : chrono en pause jusqu'à « Prêt »
+  if (phase === "pass" && category) {
+    const col = colorForIndex(cur);
+    return (
+      <Page center>
+        <style>{KEYFRAMES}</style>
+        {soundBtn}
+        <Lives players={players} cur={cur} />
+        <div className="flex flex-1 flex-col items-center justify-center py-4 text-center">
+          <p className="rounded-full px-3 py-1 text-[15px] font-bold" style={{ ...sticker("#FFF6E5", 3), color: INK, overflowWrap: "anywhere" }}>{category.name}</p>
+          <p className="mt-5 text-[18px] font-semibold text-white/85">{t.passTo}</p>
+          <div key={cur} style={{ animation: "cc-pop .25s ease-out" }} className="flex flex-col items-center">
+            <div className="relative z-[1] -mb-5">
+              <PlayerBlob name={players[cur]?.name} color={col} size={96} mood="happy" arms headroom />
+            </div>
+            <h2
+              className="max-w-full rounded-[22px] px-6 pb-2 pt-6"
+              style={{ ...DISPLAY, ...sticker(MASCOT_PALETTE[col].body, 5), color: inkOn(MASCOT_PALETTE[col].body), fontSize: nameSize(players[cur]?.name ?? "", 50), lineHeight: 1, transform: "rotate(2deg)", overflowWrap: "anywhere" }}
+            >
+              {players[cur]?.name}
+            </h2>
+          </div>
+          <p className="mt-5 max-w-sm text-[16px] font-semibold leading-snug text-white/85">{t.passSub}</p>
+          <span className="mt-3 rounded-full px-3 py-1 text-[15px] font-bold" style={{ ...sticker("#FFD23F", 3), color: INK, transform: "rotate(-2deg)" }}>
+            {t.wordsSaid(streak)}
+          </span>
+        </div>
+        <BottomBar>
+          <BigBtn bg="#3DDC97" onClick={ready}>{t.ready}</BigBtn>
+        </BottomBar>
+      </Page>
     );
   }
 

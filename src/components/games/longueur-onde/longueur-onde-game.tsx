@@ -20,10 +20,12 @@ import { GameInlineIcon, GAME_INK } from "@/components/games/game-icon-button";
 import { IdeaButton, RerollButton } from "@/components/games/idea-button";
 import { playCombo, playSfx, preloadSfx } from "@/lib/sfx";
 import { getLang, pick, useT } from "@/lib/i18n";
-import { STR, TUTO } from "@/components/games/longueur-onde/i18n";
+import { STR } from "@/components/games/longueur-onde/i18n";
 import { uniqueMin, useGameFinished } from "@/lib/game-finished";
 import { ShareResultButton } from "@/components/games/share-result-button";
 import { rankingCard } from "@/lib/share-cards";
+import { GameRulesSheet, GameTuto, RulesIconButton, useFirstTimeTuto } from "@/components/games/game-tuto";
+import { useCurseurTuto } from "@/components/games/longueur-onde/tuto";
 
 // Un indice sans aucune lettre (ex. « 73 ») donnerait directement la cible
 function clueProblem(clue: string): string | null {
@@ -51,7 +53,7 @@ export default function LongueurOndeGame(props: GameProps) {
 }
 
 // ══════════════════════════════════════════════════════════
-// MODE LOCAL (un seul téléphone, Médium tournant)
+// MODE LOCAL (un seul téléphone, Devin tournant)
 // ══════════════════════════════════════════════════════════
 
 /** Pastille numérotée des étapes / vignettes. */
@@ -64,7 +66,7 @@ function StepNum({ n, bg = GAME_INK }: { n: number; bg?: string }) {
   );
 }
 
-/** Étape du Médium : pastille + phrase courte (+ contenu en dessous). */
+/** Étape du Devin : pastille + phrase courte (+ contenu en dessous). */
 function Step({ n, bg, tilt = 0, title, children }: { n: number; bg: string; tilt?: number; title: ReactNode; children?: ReactNode }) {
   return (
     <ZCard bg={bg} tilt={tilt} shadow={4} radius={22} className="px-3.5 py-3">
@@ -104,65 +106,26 @@ function findTitle(pair: CursorPair, t: (typeof STR)["fr"]): ReactNode {
   return t.findCat(pair.art ?? "un", pair.category);
 }
 
-/** Mini-tuto : 3 vignettes avec un exemple complet (Une destination : Nulle ↔ Géniale). */
-function HowTo({ onGo }: { onGo: () => void }) {
+/** Mode local : tuto 1re fois (après les joueurs) + feuille de règles par-dessus la partie. */
+function LongueurOndeLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) {
   const t = useT(STR);
-  const TUTO_PAIR: CursorPair = { ...useT(TUTO), ex: ["", "", "Bali"] };
+  const tuto = useFirstTimeTuto("longueur-onde");
+  const content = useCurseurTuto();
+  const [rulesOpen, setRulesOpen] = useState(false);
   return (
-    <ZScreen bg={WAVE_COLOR}>
-      <ZTitle size={40}>{t.name}</ZTitle>
-      <p className="mt-1 text-[17px] font-bold leading-snug">{t.howHow}</p>
-
-      <div className="mt-4 flex flex-col gap-3.5">
-        <ZCard bg="#fff" tilt={-1.2} shadow={4} radius={22} className="flex items-center gap-3 px-3 py-3">
-          <div className="w-[44%] shrink-0">
-            <CategorySticker pair={TUTO_PAIR} small className="mb-1.5" />
-            <CursorGauge left={TUTO_PAIR.left} right={TUTO_PAIR.right} target={88} small />
-          </div>
-          <div className="min-w-0">
-            <StepNum n={1} />
-            <p className="mt-1.5 text-[15px] font-bold leading-snug">{t.tuto1[0]}<b style={{ color: "#E0218A" }}>{t.tuto1[1]}</b>{t.tuto1[2]}</p>
-          </div>
-        </ZCard>
-
-        <ZCard bg="#FFD23F" tilt={1.2} shadow={4} radius={22} className="flex items-center gap-3 px-3 py-3">
-          <div className="flex w-[44%] shrink-0 flex-col items-center">
-            <span className="rounded-[14px] px-2.5 py-1.5 text-center text-[16px] leading-tight"
-              style={{ ...DISPLAY, background: "#fff", border: `2.5px solid ${GAME_INK}`, boxShadow: `0 3px 0 ${GAME_INK}`, rotate: "-3deg" }}>
-              {t.tutoClue}
-            </span>
-            <Mascot size={46} color="pink" mood="wink" shadow={false} bob={false} />
-          </div>
-          <div className="min-w-0">
-            <StepNum n={2} />
-            <p className="mt-1.5 text-[15px] font-bold leading-snug">{t.tuto2}</p>
-          </div>
-        </ZCard>
-
-        <ZCard bg="#3DDC97" tilt={-1} shadow={4} radius={22} className="flex items-center gap-3 px-3 py-3">
-          <div className="relative w-[44%] shrink-0">
-            <CursorGauge left={TUTO_PAIR.left} right={TUTO_PAIR.right} target={88} needle={86} small />
-          </div>
-          <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <StepNum n={3} />
-              <span className="rounded-full px-2.5 text-[20px]" style={{ ...DISPLAY, background: "#FF3EA5", border: `2.5px solid ${GAME_INK}`, rotate: "4deg" }}>+4</span>
-            </div>
-            <p className="mt-1.5 text-[15px] font-bold leading-snug">{t.tuto3}</p>
-          </div>
-        </ZCard>
-      </div>
-
-      <div className="min-h-6 flex-1" />
-      <ZButton bg={GAME_INK} className="mt-5" onClick={() => { playSfx("confirm", { volume: 0.6 }); onGo(); }}>{t.gotIt}</ZButton>
-    </ZScreen>
+    <>
+      <LocalGame onReturnToLobby={onReturnToLobby} onFirstTime={tuto.showIfFirstTime} onTuto={tuto.show}
+        rulesBtn={<RulesIconButton onClick={() => setRulesOpen(true)} />} />
+      {rulesOpen && <GameRulesSheet name={t.name} rules={content.rules} onClose={() => setRulesOpen(false)} onTuto={tuto.show} />}
+      {tuto.open && <GameTuto slides={content.slides} onDone={tuto.close} />}
+    </>
   );
 }
 
-function LongueurOndeLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) {
+function LocalGame({ onReturnToLobby, onFirstTime, onTuto, rulesBtn }: { onReturnToLobby?: () => void; onFirstTime: () => void; onTuto: () => void; rulesBtn: ReactNode }) {
   const t = useT(STR);
-  type Phase = "howto" | "setup" | "pass" | "clue" | "guess" | "reveal" | "over";
-  const [phase, setPhase] = useState<Phase>("howto");
+  type Phase = "setup" | "pass" | "clue" | "guess" | "reveal" | "over";
+  const [phase, setPhase] = useState<Phase>("setup");
   const [players, setPlayers] = useState<string[]>([]);
   const [scores, setScores] = useState<number[]>([]);
   // fin de partie → demande de note éventuelle + stats de la bande (app)
@@ -197,6 +160,7 @@ function LongueurOndeLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }
     // Langue figée au début de la partie
     setPairs(buildDeck(getLang()));
     startRound(1, 0);
+    onFirstTime();
   };
   // « Une autre paire » : la paire est retirée → une paire jamais vue prend sa place
   const rerollPair = () => {
@@ -207,14 +171,12 @@ function LongueurOndeLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }
     setTarget(randomTarget());
   };
 
-  if (phase === "howto") return <HowTo onGo={() => setPhase("setup")} />;
-
   if (phase === "setup") {
     return <PlayersSetup emoji="📡" name={t.name} min={2} max={8} accent={WAVE_COLOR} onStart={begin} onBack={onReturnToLobby}
       footer={
         <div className="flex flex-wrap items-center justify-center gap-3">
           <IdeaButton game="Le Curseur" kind="paire" />
-          <ZLink onClick={() => setPhase("howto")} className="!mx-0">{t.reviewExample}</ZLink>
+          <ZLink onClick={onTuto} className="!mx-0">{t.reviewExample}</ZLink>
         </div>
       } />;
   }
@@ -234,7 +196,7 @@ function LongueurOndeLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }
       setClue(writing ? clueInput.trim() : ""); setGuess(50); setPhase("guess");
     };
     return (
-      <ZScreen bg={WAVE_COLOR}>
+      <ZScreen bg={WAVE_COLOR} tools={rulesBtn}>
         <div className="flex items-center justify-between gap-2">
           <ZChip bg="#fff" tilt={-2}>{t.round(round, total)}</ZChip>
           <RerollButton label={t.otherPair} onClick={rerollPair} className="shrink-0" />
@@ -285,7 +247,7 @@ function LongueurOndeLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }
   if (phase === "guess") {
     const name = players[psychic];
     return (
-      <ZScreen bg={WAVE_COLOR}>
+      <ZScreen bg={WAVE_COLOR} tools={rulesBtn}>
         <ZTitle size={32}>{t.yourTurn}</ZTitle>
 
         <ZCard bg="#FFD23F" tilt={-1.5} shadow={5} radius={22} className="mt-3 flex items-center gap-3 px-4 py-2.5">
@@ -304,7 +266,7 @@ function LongueurOndeLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }
         <CategorySticker pair={pair} className="mt-3" />
         <CursorGauge left={pair.left} right={pair.right} needle={guess} onChange={setGuess} className="mx-auto mt-3 max-w-[340px]" />
         <p className="mt-3 text-[14px] font-semibold leading-snug" style={{ color: "#2A1A55" }}>
-          {t.oneCursor[0]}<span className="whitespace-nowrap">{t.oneCursor[1]}</span>{t.oneCursor[2]}
+          {t.oneCursor(name)}
         </p>
 
         <div className="min-h-2 flex-1" />
@@ -330,7 +292,7 @@ function LongueurOndeLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }
     const verdict = !shown ? t.verdictWait : bull ? t.bull : pts === 3 ? t.close : pts === 2 ? t.notFar : t.missed;
     const next = (psychic + 1) % total;
     return (
-      <ZScreen bg={shown && bull ? "#3DDC97" : WAVE_COLOR}>
+      <ZScreen bg={shown && bull ? "#3DDC97" : WAVE_COLOR} tools={rulesBtn}>
         {shown && bull && <ConfettiBurst count={40} />}
         <ZChip bg="#fff" tilt={-2}>{t.round(round, total)}</ZChip>
         <ZTitle size={38} className="mt-3">{verdict}</ZTitle>
@@ -369,7 +331,7 @@ function LongueurOndeLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }
   // over
   const ranking = players.map((name, i) => ({ name, score: scores[i], colorIndex: i })).sort((a, b) => b.score - a.score);
   return (
-    <ZScreen bg={WAVE_COLOR}>
+    <ZScreen bg={WAVE_COLOR} tools={rulesBtn}>
       <ConfettiBurst count={50} />
       <ZTitle size={(ranking[0]?.name.length ?? 0) > 9 ? 32 : 40} className="text-center">
         {/* prénom composé jamais coupé au trait d'union */}
@@ -458,7 +420,7 @@ function LongueurOndeOnline({ roomCode, playerId, playerName }: GameProps) {
       <div className="relative flex flex-1 flex-col items-center justify-center p-6 pt-[max(env(safe-area-inset-top),24px)]">
         <Sparkles count={10} />
         <p className="af-eyebrow mb-6">Manche {state.round} / {state.totalRounds}</p>
-        <p className="text-sm mb-4" style={{ color: "var(--text-dim)" }}>Le Médium de ce tour est</p>
+        <p className="text-sm mb-4" style={{ color: "var(--text-dim)" }}>Le Devin de ce tour est</p>
         <Mascot size={120} color={psychicColor} mood="wink" arms crown delay={0} />
         <h2 className="cb-display-xl mt-4" style={{ letterSpacing: -1.5, fontSize: "clamp(2rem, 7vw, 3.5rem)", textShadow: "0 0 40px rgba(91,54,214,0.5)" }}>
           {state.psychicName}
@@ -469,7 +431,7 @@ function LongueurOndeOnline({ roomCode, playerId, playerName }: GameProps) {
             ? "👀 Arrivé(e) en cours de partie : tu regardes, tu joueras à la prochaine."
             : state.amPsychic
             ? "Tu vas voir une cible secrète et donner un indice"
-            : "Tu devras deviner où le Médium vise sur le curseur"}
+            : "Tu devras deviner où le Devin vise sur le curseur"}
         </p>
       </div>
     );
@@ -500,7 +462,7 @@ function LongueurOndeOnline({ roomCode, playerId, playerName }: GameProps) {
       const total = state.players?.filter((p) => !p.isPsychic && p.present !== false).length ?? 0;
       return (
         <div className="flex flex-1 flex-col items-center p-5 pt-[max(env(safe-area-inset-top),20px)]">
-          <RoundHeader round={state.round} total={state.totalRounds} timeLeft={state.timeLeft} max={30} role="🔮 Médium" />
+          <RoundHeader round={state.round} total={state.totalRounds} timeLeft={state.timeLeft} max={30} role="🔮 Devin" />
           <ClueBadge clue={state.clue} authorName={state.psychicName} />
           <SpectrumDial spectrum={state.spectrum} target={state.myTarget} mode="psychic" />
           <Waiting text={`${guessed}/${total} ont placé leur curseur...`} />

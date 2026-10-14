@@ -10,7 +10,10 @@ import { ConfettiBurst } from "@/components/ConfettiBurst";
 import { ArrowDown, ArrowUp, Check, Crown, Smartphone, Speech, X } from "lucide-react";
 import { GameIconBadge, GameInlineIcon } from "@/components/games/game-icon-button";
 import { IdeaButton, RerollButton } from "@/components/games/idea-button";
-import { TopRightControls } from "@/components/games/patate/rules-sheet";
+import { SoundButton } from "@/components/games/patate/rules-sheet";
+import { GameTopRight } from "@/components/games/game-icon-button";
+import { GameRulesSheet, GameTuto, RulesIconButton, TutoAgainButton, useFirstTimeTuto } from "@/components/games/game-tuto";
+import { useGuessWordTuto } from "./tuto";
 import { C, Chip, DISPLAY, INK, KitStyles, SectionTitle, SoftLink, StickerBtn, StickerCard, StickerScreen, BOTTOM_PAD, dotted, sticker } from "@/components/games/patate/sticker-kit";
 import { playCombo, playSfx, preloadSfx } from "@/lib/sfx";
 import { useLang } from "@/lib/i18n";
@@ -71,6 +74,10 @@ export default function GuessWordGame({ onReturnToLobby }: GameProps) {
   }, []);
 
   const [phase, setPhase] = useState<Phase>("setup");
+  // Tuto en slides : 1re partie (après la saisie des joueurs), relançable depuis les règles
+  const slidesTuto = useFirstTimeTuto("guess-word");
+  const tutoSlides = useGuessWordTuto();
+  const [rulesOpen, setRulesOpen] = useState(false);
   useGameFinished(phase === "final"); // fin de partie → demande de note éventuelle (app)
   const [players, setPlayers] = useState<string[]>([]);
   const [scores, setScores] = useState<number[]>([]);
@@ -200,7 +207,16 @@ export default function GuessWordGame({ onReturnToLobby }: GameProps) {
   };
 
 
-  const controls = <TopRightControls title={t.title} rules={t.rules} accent={ACCENT} />;
+  const controls = (
+    <>
+      <GameTopRight>
+        <SoundButton />
+        <RulesIconButton onClick={() => setRulesOpen(true)} />
+      </GameTopRight>
+      {rulesOpen && <GameRulesSheet name={t.title} rules={t.rules} onClose={() => setRulesOpen(false)} onTuto={slidesTuto.show} />}
+      {slidesTuto.open && <GameTuto slides={tutoSlides} onDone={slidesTuto.close} />}
+    </>
+  );
   const replay = () => {
     setScores(players.map(() => 0));
     setTurn(0);
@@ -223,6 +239,7 @@ export default function GuessWordGame({ onReturnToLobby }: GameProps) {
           onStart={(names) => {
             setPlayers(names);
             setPhase("config");
+            slidesTuto.showIfFirstTime();
           }}
         />
       </>
@@ -245,6 +262,7 @@ export default function GuessWordGame({ onReturnToLobby }: GameProps) {
             <li><GameInlineIcon icon={ArrowDown} />{t.how3[0]}<b>{t.how3[1]}</b>{t.how3[2]}<b>{t.how3[3]}</b>{t.how3[4]}</li>
           </ul>
         </StickerCard>
+        <TutoAgainButton onClick={slidesTuto.show} className="mt-2" />
 
         <div className="mt-6 w-full">
           <SectionTitle>{t.themes} <span className="text-[17px]" style={{ color: "rgba(255,255,255,0.8)" }}>· {t.words(pool.length)}</span></SectionTitle>
@@ -317,7 +335,7 @@ export default function GuessWordGame({ onReturnToLobby }: GameProps) {
           toName={players[current]}
           colorIndex={current}
           accent={ACCENT}
-          hint={t.passHint(Math.floor(turn / players.length) + 1, tours, duration)}
+          hint={`${t.passHint(Math.floor(turn / players.length) + 1, tours, duration)} ${t.passTilt}`}
           buttonLabel={t.ready}
           onReady={() => {
             // Permission capteurs iOS (web) : à demander dans le geste, sans attendre

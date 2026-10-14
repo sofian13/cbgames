@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useCallback, useEffect, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { useGame } from "@/lib/party/use-game";
 import { useGameStore } from "@/lib/stores/game-store";
 import type { GameProps } from "@/lib/games/types";
@@ -24,6 +24,8 @@ import { uniqueMin, useGameFinished } from "@/lib/game-finished";
 import { PlayerBlob } from "@/components/avatar/PlayerBlob";
 import { ShareResultButton } from "@/components/games/share-result-button";
 import { rankingCard } from "@/lib/share-cards";
+import { GameTuto, RulesIconButton, useFirstTimeTuto } from "@/components/games/game-tuto";
+import { BluffRules, useBluffSlides } from "@/components/games/le-bluffeur/tuto";
 
 interface BluffPlayerState {
   id: string;
@@ -114,6 +116,17 @@ function LeBluffeurLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) 
   const [options, setOptions] = useState<LocalOption[]>([]);
   const [votes, setVotes] = useState<number[]>([]); // optionId per player, -1 = none
   const [draft, setDraft] = useState("");
+  // Tuto 1re fois (après les prénoms) + règles en jeu (bouton livre, en haut à droite)
+  const tuto = useFirstTimeTuto("le-bluffeur");
+  const tutoSlides = useBluffSlides();
+  const [rulesOpen, setRulesOpen] = useState(false);
+  const tools = (
+    <>
+      <RulesIconButton onClick={() => setRulesOpen(true)} />
+      {rulesOpen && <BluffRules onClose={() => setRulesOpen(false)} onTuto={tuto.show} />}
+      {tuto.open && <GameTuto slides={tutoSlides} onDone={tuto.close} />}
+    </>
+  );
 
   const total = players.length;
   const q = questions[(round - 1) % questions.length] ?? null;
@@ -191,12 +204,12 @@ function LeBluffeurLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) 
   };
 
   if (phase === "setup") {
-    return <PlayersSetup emoji="🎭" name={t.name} min={3} max={8} accent={BLUFF_COLOR} onStart={begin} onBack={onReturnToLobby}
+    return <PlayersSetup emoji="🎭" name={t.name} min={3} max={8} accent={BLUFF_COLOR} onStart={(names) => { begin(names); tuto.showIfFirstTime(); }} onBack={onReturnToLobby}
       footer={<IdeaButton game="Le Bluffeur" kind="question" />} />;
   }
   if (phase === "question") {
     return (
-      <TheatreScreen round={round} total={totalRounds}>
+      <TheatreScreen round={round} total={totalRounds} tools={tools}>
         <QuestionBillboard question={q?.question ?? null} />
         <p className="mt-6 text-[16px] font-semibold leading-snug">
           {t.intro}
@@ -217,7 +230,7 @@ function LeBluffeurLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) 
   }
   if (phase === "write") {
     return (
-      <TheatreScreen round={round} total={totalRounds}>
+      <TheatreScreen round={round} total={totalRounds} tools={tools}>
         <QuestionBillboard question={q?.question ?? null} />
         <div className="mt-6">
           <BluffInput value={draft} onChange={setDraft} autoFocus onSubmit={() => {}} />
@@ -241,7 +254,7 @@ function LeBluffeurLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) 
   if (phase === "table") {
     // Le dernier bluffeur pose le tél au centre : écran neutre, rien de secret
     return (
-      <TheatreScreen round={round} total={totalRounds}>
+      <TheatreScreen round={round} total={totalRounds} tools={tools}>
         <ZTitle size={38} className="mt-2 text-center">{t.tableTitle}</ZTitle>
         <div className="mt-6 flex justify-center gap-1.5">
           {players.map((n, i) => (
@@ -256,7 +269,7 @@ function LeBluffeurLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) 
   }
   if (phase === "vote") {
     return (
-      <CommonVote players={players} options={options} votes={votes} question={q?.question ?? ""}
+      <CommonVote tools={tools} players={players} options={options} votes={votes} question={q?.question ?? ""}
         onVote={(voter, optId) => { playSfx("select", { volume: 0.6 }); setVotes((v) => v.map((x, i) => (i === voter ? optId : x))); }}
         onReveal={() => resolve(votes)} />
     );
@@ -267,7 +280,7 @@ function LeBluffeurLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) 
     // (ceux qui ont écrit la vraie réponse sont cités à part, +15)
     const finders = truth ? votes.map((v, i) => (v === truth.id && !wroteTruth[i] ? players[i] : null)).filter(Boolean) : [];
     return (
-      <ZScreen>
+      <ZScreen tools={tools}>
         <ConfettiBurst count={30} />
         <ZChip bg="#fff" tilt={-2}>{t.round(round, totalRounds)}</ZChip>
         <ZTitle size={38} className="mt-3">{t.trueAnswer}</ZTitle>
@@ -307,7 +320,7 @@ function LeBluffeurLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) 
   // over
   const ranking = players.map((name, i) => ({ name, score: scores[i], colorIndex: i })).sort((a, b) => b.score - a.score);
   return (
-    <ZScreen bg={BLUFF_COLOR}>
+    <ZScreen bg={BLUFF_COLOR} tools={tools}>
       <ConfettiBurst count={50} />
       <ZTitle size={(ranking[0]?.name.length ?? 0) > 9 ? 30 : 40} className="text-center"><span className="whitespace-nowrap">{ranking[0]?.name},</span>{t.bluffAce}</ZTitle>
       <div className="mt-6"><ZRanking rows={ranking} /></div>
@@ -329,7 +342,8 @@ const LETTERS = "ABCDEFGHIJ";
  * Vote commun (tél au milieu de la table) : chacun vote À SON TOUR, devant tout le monde,
  * sur le même écran (propositions sans auteur, aucune info privée, rien à se repasser).
  */
-function CommonVote({ players, options, votes, question, onVote, onReveal }: {
+function CommonVote({ players, options, votes, question, onVote, onReveal, tools }: {
+  tools?: ReactNode;
   players: string[];
   options: LocalOption[];
   votes: number[];
@@ -353,7 +367,7 @@ function CommonVote({ players, options, votes, question, onVote, onReveal }: {
     for (let k = before - 1; k >= 0; k--) if (votes[k] >= 0) { setTurn(k); return; }
   };
   return (
-    <ZScreen>
+    <ZScreen tools={tools}>
       <ZChip bg={BLUFF_COLOR} tilt={-2}>{t.voteChip} · {t.votesCount(done, players.length)}</ZChip>
       <p className="mt-3 text-[16px] font-semibold leading-snug" style={{ color: "rgba(255,255,255,0.88)" }}>{question.replace(/\s*_{2,}\.?/g, "…")}</p>
       {/* Ordre de vote : celui qui vote est mis en avant */}

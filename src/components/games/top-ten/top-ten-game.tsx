@@ -21,6 +21,8 @@ import { useUnlocked } from "@/lib/entitlements";
 import { LockedPack, PremiumNudge, fmtCount, useNudgeText } from "@/components/games/premium-nudge";
 import { THEMES, type ThemeState } from "@/components/games/top-ten/themes";
 import { TT_STR } from "@/components/games/top-ten/i18n";
+import { GameRulesSheet, GameTuto, RulesIconButton, TutoAgainButton, useFirstTimeTuto } from "@/components/games/game-tuto";
+import { TT_EXTRA, useTtTutoSlides } from "@/components/games/top-ten/tuto";
 import { uniqueMin, useGameFinished } from "@/lib/game-finished";
 import { ShareResultButton } from "@/components/games/share-result-button";
 import { rankingCard } from "@/lib/share-cards";
@@ -118,6 +120,23 @@ export default function TopTenGame(props: GameProps) {
 const TT_SFX: SfxName[] = ["card-flip", "card-shuffle", "gong", "whoosh", "tock", "ding", "win", "powerup", "coins", "confirm", "select", "tap"];
 
 function TopTenLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) {
+  // Tuto 1re fois (après la saisie des joueurs) + feuille de règles, au-dessus de tous les écrans
+  const tuto = useFirstTimeTuto("top-ten");
+  const slides = useTtTutoSlides();
+  const x = useT(TT_EXTRA);
+  const t = useT(TT_STR);
+  const [rulesOpen, setRulesOpen] = useState(false);
+  return (
+    <>
+      <TopTenLocalGame onReturnToLobby={onReturnToLobby} tools={<RulesIconButton onClick={() => setRulesOpen(true)} />} onTuto={tuto.show} onPlayersReady={tuto.showIfFirstTime} />
+      {rulesOpen && <GameRulesSheet name={t.gameName} rules={x.rules} onClose={() => setRulesOpen(false)} onTuto={tuto.show} />}
+      {tuto.open && <GameTuto slides={slides} onDone={tuto.close} />}
+    </>
+  );
+}
+
+function TopTenLocalGame({ onReturnToLobby, tools, onTuto, onPlayersReady }: { onReturnToLobby?: () => void; tools: React.ReactNode; onTuto: () => void; onPlayersReady: () => void }) {
+  const x = useT(TT_EXTRA);
   const t = useT(TT_STR);
   type Phase = "setup" | "target" | "theme" | "pass-number" | "show-number" | "answer" | "pass-rank" | "rank" | "reveal" | "over";
   const [phase, setPhase] = useState<Phase>("setup");
@@ -170,6 +189,7 @@ function TopTenLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) {
     setPlayers(names); setScores(names.map(() => 0));
     setThemeCursor(0);
     setPhase("target"); // on choisit l'échelle avant la 1re manche
+    onPlayersReady();
   };
   const launch = () => {
     playSfx("card-shuffle", { volume: 0.8 });
@@ -207,18 +227,23 @@ function TopTenLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) {
   }
   if (phase === "target") {
     return (
-      <ZScreen>
+      <ZScreen tools={tools}>
         <RangePicker range={numberRange} onPick={setNumberRange} pack={pack} onPickPack={setPack} locked={!unlocked} onStart={launch} onBack={() => setPhase("setup")} />
+        <TutoAgainButton onClick={onTuto} />
       </ZScreen>
     );
   }
   if (phase === "theme") {
     return (
-      <ZScreen bg={TT_COLOR}>
+      <ZScreen bg={TT_COLOR} tools={tools}>
         <RoundChips round={round} total={totalRounds} range={numberRange} />
         <div className="mt-5 flex flex-1 flex-col justify-center">
           <ThemeCard theme={theme} range={numberRange} pack={pack} />
-          <div className="mt-6 flex justify-center">
+          <ZCard bg="#FFF6E5" tilt={1} shadow={4} radius={20} className="mt-5 px-4 py-3">
+            <p className="text-[15px] font-semibold leading-snug">{x.themeHelp(numberRange)}</p>
+            <p className="mt-2 text-[15px] font-bold leading-snug">{x.secretRule(t.scale[pack].low.toLowerCase(), numberRange, t.scale[pack].high.toLowerCase())}</p>
+          </ZCard>
+          <div className="mt-5 flex justify-center">
             <RerollButton label={t.rerollTheme} onClick={() => setThemeCursor((c) => c + 1)} />
           </div>
         </div>
@@ -238,7 +263,7 @@ function TopTenLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) {
   if (phase === "show-number") {
     const idx = passOrder[stepIdx];
     return (
-      <ZScreen>
+      <ZScreen tools={tools}>
         <ZTitle size={30} className="text-center">{t.yourNumber(players[idx])}</ZTitle>
         <div className="flex flex-1 flex-col items-center justify-center">
           <NumberCard myNumber={numbers[idx]} range={numberRange} pack={pack} />
@@ -252,14 +277,21 @@ function TopTenLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) {
   }
   if (phase === "answer") {
     return (
-      <ZScreen bg={TT_COLOR}>
+      <ZScreen bg={TT_COLOR} tools={tools}>
         <RoundChips round={round} total={totalRounds} range={numberRange} />
         <div className="mt-5"><ThemeCard theme={theme} range={numberRange} pack={pack} /></div>
         <ZCard bg="#FFF6E5" tilt={1.5} shadow={4} radius={20} className="mt-6 px-4 py-3.5">
           <p className="text-[16px] font-semibold leading-snug">
             {t.answerHelp[0]}<b>{t.answerHelp[1]}</b>{t.answerHelp[2]}<b>{t.answerHelp[3]}</b>{t.answerHelp[4]}
           </p>
+          <p className="mt-2 text-[16px] font-bold leading-snug">{x.neverSay}</p>
         </ZCard>
+        <p className="mt-5 text-[15px] font-bold">{x.speakOrder}</p>
+        <div className="mt-2 flex flex-wrap gap-2">
+          {passOrder.map((idx, k) => (
+            <ZChip key={idx} bg="#fff" tilt={k % 2 ? 2 : -2}>{k + 1}. {players[idx]}</ZChip>
+          ))}
+        </div>
         <div className="min-h-6 flex-1" />
         <ZButton bg="#FFD23F" onClick={() => { setStepIdx(0); setPhase("pass-rank"); }}>{t.everyoneSpoke}</ZButton>
       </ZScreen>
@@ -280,6 +312,7 @@ function TopTenLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) {
         colorOf={(id) => +id}
         rankerName={players[ranker]}
         round={round} total={totalRounds} range={numberRange} pack={pack}
+        theme={theme} tools={tools}
         onSubmit={(o) => {
           playSfx("confirm", { volume: 0.7 });
           const g = o.map(Number);
@@ -298,7 +331,7 @@ function TopTenLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) {
       .sort((a, b) => (b.points ?? 0) - (a.points ?? 0));
     const anyPerfect = perRound.some((p) => p.perfect);
     return (
-      <ZScreen>
+      <ZScreen tools={tools}>
         {anyPerfect && <ConfettiBurst count={40} />}
         <RoundChips round={round} total={totalRounds} range={numberRange} />
         <ZTitle size={38} className="mt-4">{t.trueRanking}</ZTitle>
@@ -319,6 +352,7 @@ function TopTenLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) {
         </div>
 
         <ZTitle size={28} className="mt-8">{t.whoNailedIt}</ZTitle>
+        <p className="mt-1 text-[14px] font-semibold leading-snug" style={{ color: "rgba(255,255,255,0.85)" }}>{x.scoreLine}</p>
         <div className="mt-3 flex flex-col gap-2.5">
           {perRound.map((p) => (
             <div key={p.i} className="flex items-center gap-3 rounded-[18px] px-3 py-2.5"
@@ -341,7 +375,7 @@ function TopTenLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) {
   // over
   const ranking = players.map((name, i) => ({ name, score: scores[i], colorIndex: i })).sort((a, b) => b.score - a.score);
   return (
-    <ZScreen bg={TT_COLOR}>
+    <ZScreen bg={TT_COLOR} tools={tools}>
       <ConfettiBurst count={50} />
       {/* Ex æquo en tête : pas de « X a le meilleur flair » arbitraire */}
       <ZTitle size={(ranking[0]?.name.length ?? 0) > 10 ? 32 : 40} className="text-center">
@@ -871,6 +905,8 @@ function OrderingBoard({
   playerCount,
   remainingMs,
   colorOf,
+  theme,
+  tools,
 }: {
   ids: string[];
   nameOf: (id: string) => string;
@@ -886,8 +922,12 @@ function OrderingBoard({
   submittedCount?: number;
   playerCount?: number;
   remainingMs?: number | null;
+  /** Mode local : rappel du thème et des repères (on ne classe pas de mémoire) */
+  theme?: ThemeState | null;
+  tools?: React.ReactNode;
 }) {
   const t = useT(TT_STR);
+  const x = useT(TT_EXTRA);
   const [order, setOrder] = useState<string[]>(ids);
   const [dragId, setDragId] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
@@ -948,14 +988,21 @@ function OrderingBoard({
 
   return (
     <div onPointerMove={handlePointerMove} onPointerUp={handlePointerUp} onPointerCancel={handlePointerUp} className="flex shrink-0 flex-col">
-    <ZScreen>
+    <ZScreen tools={tools}>
       <div className="flex flex-wrap items-center gap-2">
         <ZChip bg="#fff" tilt={-2}>{t.roundOf(round, total)}</ZChip>
         {rankerName && <ZChip bg={TT_COLOR} tilt={2}>{t.ranks(rankerName)}</ZChip>}
       </div>
+      {theme && (
+        <ZCard bg="#fff" tilt={-1} shadow={4} radius={20} className="mt-4 px-4 pb-3 pt-2.5">
+          <p className="text-[13px] font-bold uppercase tracking-wide" style={{ color: "#6B5A8E" }}>{x.themeReminder}</p>
+          <p className="mt-0.5 text-[18px] leading-tight" style={DISPLAY}>{nbNum(theme.theme)}</p>
+          <p className="mt-1.5 text-[13px] font-semibold leading-snug"><b>1</b> = {nbNum(theme.low)} · <b>{range}</b> = {nbNum(theme.high)}</p>
+        </ZCard>
+      )}
       <ZTitle size={30} className="mt-4">{t.scale[pack].rankTitle}</ZTitle>
       <p className="mt-2 text-[15px] font-semibold" style={{ color: "rgba(255,255,255,0.85)" }}>
-        {t.rankHelp}
+        {t.rankHelp}{theme ? ` ${x.inSpeakOrder}` : ""}
       </p>
       {remainingMs != null && <OrderCountdown key={round} remainingMs={remainingMs} />}
 

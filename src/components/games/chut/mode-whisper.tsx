@@ -408,6 +408,7 @@ function WhisperRound({ label, team, teamName, guessers, drawWord, floor, sens, 
       </div>
       {human && (
         <div className="mt-3 w-full max-w-md">
+          <p className="mb-1.5 text-center text-[14px] font-bold" style={{ color: ZZ.yellow }}>{m.wHumanBuzzWho}</p>
           <ZButton bg={ZZ.coral} onClick={buzz} className="min-h-[64px]">
             <Hand size={24} strokeWidth={2.8} aria-hidden /> {m.wHumanBuzz}
           </ZButton>

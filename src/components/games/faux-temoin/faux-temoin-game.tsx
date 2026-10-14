@@ -26,6 +26,8 @@ import { FT_STR, answerLabel, type FTStrings } from "./i18n";
 import { BlobFigure, SceneView } from "./scene-view";
 import { COLOR_HEX, DECOR_IDS, makeScene, planRound, sameAnswer, type Answer, type DecorId, type Question, type Scene } from "./scene";
 import { useGameFinished } from "@/lib/game-finished";
+import { GameTuto, TutoAgainButton, useFirstTimeTuto } from "@/components/games/game-tuto";
+import { useFTExtra, useFTTuto } from "@/components/games/faux-temoin/tuto";
 import { ShareResultButton } from "@/components/games/share-result-button";
 import { rankingCard } from "@/lib/share-cards";
 
@@ -40,7 +42,7 @@ const PTS_STEAL = 2;
 const PTS_WITNESS = 1;
 
 type Phase =
-  | "setup" | "howto" | "teaser" | "pass" | "view" | "center" | "ask"
+  | "setup" | "teaser" | "pass" | "view" | "center" | "ask"
   | "vote" | "suspense" | "verdict" | "last" | "reveal" | "scores" | "end";
 
 interface RoundPlan { ideas: Question[]; last: Question }
@@ -76,6 +78,10 @@ export default function FauxTemoinGame({ onReturnToLobby }: GameProps) {
   const [showRules, setShowRules] = useState(false);
 
   useScrollTopOn(`${phase}-${viewer}-${turn}`);
+  // Tuto en slides : 1re fois après la saisie des joueurs (remplace l'ancien « Comment on joue ? »)
+  const tuto = useFirstTimeTuto("faux-temoin");
+  const tutoSlides = useFTTuto();
+  const extra = useFTExtra();
 
   useEffect(() => {
     preloadSfx(["whoosh", "whooshdown", "card-flip", "tick", "pop", "select", "drumroll", "drumroll-end", "gong", "tada", "applause", "buzzer", "crowd-aww", "correct", "coins"]);
@@ -97,7 +103,8 @@ export default function FauxTemoinGame({ onReturnToLobby }: GameProps) {
     setRound(1);
     setUsedDecors([]);
     drawScene([]);
-    setPhase("howto");
+    setPhase("teaser");
+    tuto.showIfFirstTime();
   };
 
   const rerollScene = () => {
@@ -227,7 +234,12 @@ export default function FauxTemoinGame({ onReturnToLobby }: GameProps) {
   };
 
   const tools = <Tools t={t} onRules={() => { playSfx("open", { volume: 0.5 }); setShowRules(true); }} />;
-  const rulesSheet = showRules && <RulesSheet t={t} onClose={() => setShowRules(false)} />;
+  const rulesSheet = (
+    <>
+      {showRules && <RulesSheet t={t} pointsLine={extra.pointsLine} onTuto={() => { setShowRules(false); tuto.show(); }} onClose={() => setShowRules(false)} />}
+      {tuto.open && <GameTuto slides={tutoSlides} onDone={tuto.close} />}
+    </>
+  );
 
   // ── Écrans ────────────────────────────────────────────
   if (phase === "setup") {
@@ -259,16 +271,7 @@ export default function FauxTemoinGame({ onReturnToLobby }: GameProps) {
   let body: ReactNode = null;
   let bg: string = ZZ.night;
 
-  if (phase === "howto") {
-    body = (
-      <>
-        <ZTitle size="clamp(36px, 10vw, 48px)">{t.howtoTitle}</ZTitle>
-        <HowtoCards t={t} scene={scene} />
-        <div className="flex-1" />
-        <ZButton className="mt-6" bg={ACCENT} onClick={() => { playSfx("select", { volume: 0.5 }); setPhase("teaser"); }}>{t.howtoGo}</ZButton>
-      </>
-    );
-  } else if (phase === "teaser") {
+  if (phase === "teaser") {
     body = (
       <>
         <ZChip bg={ZZ.yellow}>{t.round(round)}</ZChip>
@@ -387,6 +390,7 @@ export default function FauxTemoinGame({ onReturnToLobby }: GameProps) {
       <>
         <ZTitle size="clamp(34px, 10vw, 46px)">{t.voteTitle}</ZTitle>
         <p className="mt-3 text-[16px] font-semibold leading-snug" style={{ color: "rgba(255,255,255,0.88)" }}>{t.voteText}</p>
+        <p className="mt-1.5 text-[15px] font-bold leading-snug" style={{ color: ZZ.yellow }}>{extra.voteTie}</p>
         <div className="mt-5 grid grid-cols-2 gap-3">
           {players.map((p, i) => (
             <ZChoice key={i} active={accused === i} onClick={() => setAccused(i)} color={ZZ.pink} tilt={i % 2 ? 1.2 : -1.2} className="flex min-h-[64px] items-center gap-2.5">
@@ -654,7 +658,7 @@ function HowtoCards({ t, scene }: { t: FTStrings; scene: Scene }) {
   );
 }
 
-function RulesSheet({ t, onClose }: { t: FTStrings; onClose: () => void }) {
+function RulesSheet({ t, onClose, onTuto, pointsLine }: { t: FTStrings; onClose: () => void; onTuto: () => void; pointsLine: string }) {
   const scene = useMemo(() => makeScene(), []);
   return (
     <div className="fixed inset-0 z-[120] flex items-end justify-center" role="dialog" aria-modal aria-label={t.rules}>
@@ -668,6 +672,8 @@ function RulesSheet({ t, onClose }: { t: FTStrings; onClose: () => void }) {
           <GameIconButton icon={X} label={t.close} onClick={onClose} />
         </div>
         <HowtoCards t={t} scene={scene} />
+        <p className="mt-5 text-[15px] font-semibold leading-snug" style={{ color: "rgba(255,255,255,0.88)" }}>{pointsLine}</p>
+        <TutoAgainButton onClick={onTuto} className="mt-3" />
       </div>
     </div>
   );

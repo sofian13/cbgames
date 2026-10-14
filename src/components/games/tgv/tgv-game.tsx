@@ -22,6 +22,8 @@ import { IdeaButton, RerollButton } from "@/components/games/idea-button";
 import { getLang, pick, useT } from "@/lib/i18n";
 import { GAGES, RANK_LABEL, RANK_NAME, STR } from "./i18n";
 import { CARD_FACE_CSS, CardFace, SUIT_KEY } from "./card-face";
+import { GameTuto, RulesIconButton, TutoAgainButton, useFirstTimeTuto } from "@/components/games/game-tuto";
+import { TgvRules, useTgvSlides } from "./tuto";
 import { isSfxMuted, playCombo, playSfx, preloadSfx, setSfxMuted, subscribeSfxMuted } from "@/lib/sfx";
 import {
   ArrowDown, ArrowLeft, ArrowUp, Check, CupSoda, Dices, Equal, Flame, Home, RotateCcw, Siren, TrainFront,
@@ -41,7 +43,7 @@ const TOP = "calc(env(safe-area-inset-top, 0px) + 72px)";
 const BOTTOM = "calc(env(safe-area-inset-bottom, 0px) + 16px)";
 // Hauteur des cartes : 184 px sur grand écran, réduite sur les petits (iPhone SE) pour que
 // les 3 paris + « Terminer la partie » tiennent sans défilement
-const CARD_H = "clamp(118px, calc(100svh - 522px), 184px)";
+const CARD_H = "clamp(86px, calc(100svh - 582px), 184px)";
 const DISPLAY: CSSProperties = { fontFamily: "var(--font-display), system-ui, sans-serif", fontWeight: 700, letterSpacing: "-0.03em", wordSpacing: "0.1em" };
 const stk = (bg: string, shadow = 4, border = 3): CSSProperties => ({ background: bg, border: `${border}px solid ${INK}`, boxShadow: `0 ${shadow}px 0 ${INK}` });
 
@@ -105,11 +107,12 @@ function TextLink({ onClick, children }: { onClick: () => void; children: ReactN
 }
 
 /** Bouton son (coupure globale partagée par toute l'app). */
-function SoundToggle() {
+function SoundToggle({ onRules }: { onRules?: () => void }) {
   const muted = useSyncExternalStore(subscribeSfxMuted, isSfxMuted, () => false);
   const t = useT(STR);
   return (
     <GameTopRight>
+      {onRules && <RulesIconButton onClick={onRules} />}
       <GameIconButton icon={muted ? VolumeX : Volume2} label={muted ? t.muteOn : t.muteOff} active={muted} onClick={() => setSfxMuted(!muted)} />
     </GameTopRight>
   );
@@ -212,6 +215,10 @@ export default function TgvGame({ onReturnToLobby }: GameProps) {
   const [suspense, setSuspense] = useState(false);
   const [penalty, setPenalty] = useState<Penalty | null>(null);
   const [spin, setSpin] = useState<SpinFace | null>(null); // roulette en cours
+  // Tuto 1re fois (après les prénoms) + feuille de règles en jeu
+  const tuto = useFirstTimeTuto("tgv");
+  const tutoSlides = useTgvSlides();
+  const [rulesOpen, setRulesOpen] = useState(false);
 
   useEffect(() => {
     preloadSfx(["card-flip", "card-place", "success", "wrong", "lose", "twotone", "tick", "tock", "ding2", "win", "powerup", "ding", "whoosh", "toggle", "card-shuffle"]);
@@ -340,8 +347,10 @@ export default function TgvGame({ onReturnToLobby }: GameProps) {
   // ── Écrans ─────────────────────────────────────────────
   const chrome = (
     <>
-      <SoundToggle />
+      <SoundToggle onRules={phase === "setup" ? undefined : () => setRulesOpen(true)} />
       <ScrollTop dep={phase} />
+      {rulesOpen && <TgvRules onClose={() => setRulesOpen(false)} onTuto={tuto.show} />}
+      {tuto.open && <GameTuto slides={tutoSlides} onDone={tuto.close} />}
     </>
   );
 
@@ -359,6 +368,7 @@ export default function TgvGame({ onReturnToLobby }: GameProps) {
             setLosses(names.map(() => 0));
             setCurrentIdx(0);
             setPhase("config");
+            tuto.showIfFirstTime();
           }}
         />
         {chrome}
@@ -447,6 +457,7 @@ export default function TgvGame({ onReturnToLobby }: GameProps) {
             {t.launch} <TrainFront size={22} strokeWidth={3} aria-hidden />
           </Push>
           <TextLink onClick={() => setPhase("setup")}><ArrowLeft size={17} strokeWidth={3} aria-hidden /> {t.editPlayers}</TextLink>
+          <TutoAgainButton onClick={tuto.show} className="-mt-1" />
         </div>
       </Page>
     );
@@ -488,7 +499,7 @@ export default function TgvGame({ onReturnToLobby }: GameProps) {
             {isLast ? <br /> : " · "}<span className="whitespace-nowrap">{sipsOk ? t.atStake(sipsAtStake) : t.atStakeDare}</span>
           </p>
 
-          <div className="flex flex-1 items-center justify-center gap-4 py-4" style={{ perspective: 800 }}>
+          <div className="flex flex-1 items-center justify-center gap-4 py-2" style={{ perspective: 800 }}>
             <PlayingCard card={card} dim={!!nextCard && !suspense} />
             {nextCard && (suspense ? <MysteryCard /> : <PlayingCard key={`${nextCard.r}${nextCard.s}`} card={nextCard} ring={verdict === "win" ? "#3DDC97" : verdict === "tie" ? "#FFD23F" : ACCENT} />)}
           </div>
@@ -500,7 +511,10 @@ export default function TgvGame({ onReturnToLobby }: GameProps) {
               </div>
             ) : !verdict ? (
               <div className="flex flex-col gap-2.5">
-                <p className="text-center text-[16px] font-bold" style={{ color: "rgba(255,255,255,0.85)" }}>{t.nextWill}</p>
+                <p className="text-center text-[16px] font-bold leading-tight" style={{ color: "rgba(255,255,255,0.85)" }}>
+                  {t.nextWill}
+                  <span className="mt-0.5 block text-[13px] font-semibold" style={{ color: "rgba(255,255,255,0.72)" }}>{t.order}</span>
+                </p>
                 <BetButton label={t.higher} icon={ArrowUp} bg="#FF6B5B" onClick={() => makeBet("plus")} />
                 <BetButton label={t.equal} icon={Equal} bg="#FFD23F" onClick={() => makeBet("egal")} />
                 <BetButton label={t.lower} icon={ArrowDown} bg="#4ECDC4" onClick={() => makeBet("moins")} />

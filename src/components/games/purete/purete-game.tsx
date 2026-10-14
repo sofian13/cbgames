@@ -8,7 +8,7 @@
  * Pureté = % de « jamais ». 100 % = ange, 0 % = démon. 100 % local, aucune donnée envoyée.
  */
 
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import type { GameProps } from "@/lib/games/types";
 import { PlayersSetup, PassScreen, colorForIndex } from "@/components/games/local-kit";
 import { MASCOT_PALETTE, type MascotColor, type MascotMood } from "@/components/Mascot";
@@ -16,7 +16,9 @@ import { PlayerAvatar, PlayerBlob, usePlayerLook } from "@/components/avatar/Pla
 import { ConfettiBurst } from "@/components/ConfettiBurst";
 import { playCombo, playSfx, preloadSfx } from "@/lib/sfx";
 import { IdeaButton, RerollButton } from "@/components/games/idea-button";
-import { TopRightControls } from "@/components/games/patate/rules-sheet";
+import { SoundButton } from "@/components/games/patate/rules-sheet";
+import { GameRulesSheet, GameTuto, RulesIconButton, TutoAgainButton, useFirstTimeTuto } from "@/components/games/game-tuto";
+import { usePureteTuto } from "./tuto";
 import { pureteContent, type PackId } from "@/components/games/purete/questions";
 import { officielQuestions, OFFICIEL_COUNT } from "@/components/games/purete/officiel";
 import { getLang, useT } from "@/lib/i18n";
@@ -25,7 +27,7 @@ import { PURETE_STR } from "./i18n";
 import { ArrowLeft, Award, EyeOff, Flame, Hand, Heart, Lock, PartyPopper, RotateCcw, Shuffle, Target, User, type LucideIcon } from "lucide-react";
 import { isUnlockedNow, requestPaywall, useUnlocked } from "@/lib/entitlements";
 import { PLUS_STR, PremiumNudge, useNudgeText } from "@/components/games/premium-nudge";
-import { GameIconBadge, GameInlineIcon } from "@/components/games/game-icon-button";
+import { GameIconBadge, GameInlineIcon, GameTopRight } from "@/components/games/game-icon-button";
 import { useGameFinished } from "@/lib/game-finished";
 import { ShareResultButton } from "@/components/games/share-result-button";
 import { pureteGroupCard, pureteSoloCard, pureteTableCard } from "@/lib/share-cards";
@@ -252,10 +254,27 @@ function Toggle({ on, onChange, label, sub, disabled }: { on: boolean; onChange:
   );
 }
 
-// ── Règles (bouton i) + son ──
+// ── Tuto en slides (1re partie) : partagé par les écrans via un contexte ──
+const TutoCtx = createContext<{ show: () => void; showIfFirstTime: () => boolean; setMode: (m: Mode) => void }>({
+  show: () => {},
+  showIfFirstTime: () => false,
+  setMode: () => {},
+});
+
+// ── Règles (livre) + son ──
 function RulesButton() {
   const t = useT(PURETE_STR);
-  return <TopRightControls title={t.name} rules={t.rules} accent={CREAM} />;
+  const tuto = useContext(TutoCtx);
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <GameTopRight>
+        <SoundButton />
+        <RulesIconButton onClick={() => setOpen(true)} />
+      </GameTopRight>
+      {open && <GameRulesSheet name={t.name} rules={t.rules} onClose={() => setOpen(false)} onTuto={tuto.show} />}
+    </>
+  );
 }
 
 // ── Écran plein, fond uni ──
@@ -311,11 +330,30 @@ function QuestionCard({ text, index, total, k }: { text: string; index: number; 
 }
 
 // ═════════════════════════════════════════════════════════
-export default function PureteGame({ onReturnToLobby }: GameProps) {
+export default function PureteGame(props: GameProps) {
+  // Tuto « 1re fois » : affiché au lancement de la 1re partie (après la saisie des joueurs)
+  const tuto = useFirstTimeTuto("purete");
+  const [tutoMode, setTutoMode] = useState<Mode>("secret");
+  const slides = usePureteTuto(tutoMode);
+  const { show, showIfFirstTime } = tuto;
+  const ctx = useMemo(() => ({ show, showIfFirstTime, setMode: setTutoMode }), [show, showIfFirstTime]);
+  return (
+    <TutoCtx.Provider value={ctx}>
+      <PureteBody {...props} />
+      {tuto.open && <GameTuto slides={slides} onDone={tuto.close} />}
+    </TutoCtx.Provider>
+  );
+}
+
+function PureteBody({ onReturnToLobby }: GameProps) {
+  const tutoCtx = useContext(TutoCtx);
   // Réglages
   // Ambiance de la Soirée Zinzin (null hors soirée), lue une seule fois
   const [mood] = useState(getPartyMood);
   const [mode, setMode] = useState<Mode>("secret");
+  // Le tuto s'adapte au mode choisi (slide 2)
+  const setTutoMode = tutoCtx.setMode;
+  useEffect(() => { setTutoMode(mode); }, [mode, setTutoMode]);
   // Ambiance « chill » : rien de 18+ → au hasard, Soft seulement (le Test Officiel contient des questions adultes)
   // App sans Zinzin+ : test classique (au hasard, Soft + Soirée) ; Test Officiel et pack Coquin = Zinzin+
   const unlocked = useUnlocked();
@@ -396,6 +434,7 @@ export default function PureteGame({ onReturnToLobby }: GameProps) {
     setQuestions(deck);
     setAnswers(names.map(() => deck.map(() => false)));
     setCounts(deck.map(() => 0));
+    tutoCtx.showIfFirstTime();
     if (mode === "solo") setPhase({ k: "answer", p: 0, q: 0 });
     else if (mode === "secret") setPhase({ k: "pass", p: 0 });
     else setPhase({ k: "group", q: 0 });
@@ -587,6 +626,7 @@ export default function PureteGame({ onReturnToLobby }: GameProps) {
           <div className="flex justify-center pt-1">
             <IdeaButton game="Test de pureté" kind="question" bg={CREAM} />
           </div>
+          <TutoAgainButton onClick={tutoCtx.show} />
         </div>
       </Screen>
     );

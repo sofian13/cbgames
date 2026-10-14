@@ -32,6 +32,8 @@ import { CAUSE_LABEL, ROLE_TEXT, STR, WIN_TEXT, type LgStrings } from "./lg-loca
 import { RoleBlob } from "./lg-role-blob";
 import { NightSleepers, WinnersParade } from "./lg-role-fx";
 import { useGameFinished } from "@/lib/game-finished";
+import { GameTuto, useFirstTimeTuto } from "@/components/games/game-tuto";
+import { useLgTutoSlides } from "./tuto";
 
 // ── Réglages persistants ──────────────────────────────────
 interface Settings {
@@ -103,6 +105,9 @@ export default function LoupGarouLocal({ onReturnToLobby }: GameProps) {
   const [phase, setPhase] = useState<Phase>({ k: "players" });
   useGameFinished(phase.k === "end"); // fin de partie → demande de note éventuelle (app)
   const [modal, setModal] = useState<null | "rules" | "history" | "sound">(null);
+  // Tuto en slides : 1re partie, juste après la saisie des joueurs
+  const tuto = useFirstTimeTuto("loup-garou");
+  const tutoSlides = useLgTutoSlides();
   // Chaque nouvel écran s'ouvre en haut (l'app garde le défilement entre deux écrans)
   useScrollTopOn(`${phase.k}-${"i" in phase ? phase.i : ""}-${"reveal" in phase ? phase.reveal : ""}-${game?.history.length ?? 0}`);
 
@@ -234,6 +239,7 @@ export default function LoupGarouLocal({ onReturnToLobby }: GameProps) {
           setNames(d);
           setComp(recommended(d.length));
           setPhase({ k: "roles" });
+          tuto.showIfFirstTime();
         }}
       />
     );
@@ -278,14 +284,23 @@ export default function LoupGarouLocal({ onReturnToLobby }: GameProps) {
     content = (
       <Screen tone="night" center>
         <div className="text-center">
-          <SkyBadge tone="night" size={84} />
-          <div className="mt-5"><NightSleepers size={78} /></div>
-          <div className="mt-6"><Tag bg="#2A1866" color="#fff" tilt={-2}>{first ? t.everyoneHasCard : t.endOfDay(game.night)}</Tag></div>
-          <Title size={40} className="mt-3">{t.putPhone}</Title>
-          <p className="mx-auto mt-4 max-w-xs text-[17px] font-semibold" style={{ color: "rgba(255,255,255,0.78)" }}>
+          <SkyBadge tone="night" size={64} />
+          <div className="mt-3"><NightSleepers size={66} /></div>
+          <div className="mt-4"><Tag bg="#2A1866" color="#fff" tilt={-2}>{first ? t.everyoneHasCard : t.endOfDay(game.night)}</Tag></div>
+          <Title size={32} className="mt-3">{t.putPhone}</Title>
+          <p className="mx-auto mt-3 max-w-xs text-[16px] font-semibold leading-snug" style={{ color: "rgba(255,255,255,0.78)" }}>
             {settings.voice && speechAvailable() ? t.faceUpVoice : t.faceUpNoVoice}
           </p>
-          <div className="mt-10">
+          {/* Consigne claire avant la nuit : on ferme les yeux */}
+          <div className="mx-auto mt-5 max-w-xs rounded-[22px] px-4 py-3" style={{ background: "#FFD23F", color: "#15082E", border: "3px solid #15082E", boxShadow: "0 4px 0 #15082E", rotate: "-1.5deg" }}>
+            <p className="flex items-center justify-center gap-2 text-[21px] leading-tight" style={{ fontFamily: "var(--font-display), system-ui, sans-serif", fontWeight: 700 }}>
+              <EyeOff size={24} strokeWidth={2.8} aria-hidden /> {t.closeEyes}
+            </p>
+            <p className="mt-1 text-[15px] font-semibold leading-snug">
+              {settings.voice && speechAvailable() ? t.closeEyesVoice : t.closeEyesNoVoice}
+            </p>
+          </div>
+          <div className="mt-6">
             <BigButton onClick={first ? goNight : nextNight}><GameInlineIcon icon={Moon} /> {t.letNightFall}</BigButton>
           </div>
         </div>
@@ -438,7 +453,7 @@ export default function LoupGarouLocal({ onReturnToLobby }: GameProps) {
       </GameTopRight>
 
       {modal === "rules" && (
-        <Modal title={t.rulesTitle} onClose={() => setModal(null)}><RulesContent /></Modal>
+        <Modal title={t.rulesTitle} onClose={() => setModal(null)}><RulesContent onTuto={() => { setModal(null); tuto.show(); }} /></Modal>
       )}
       {modal === "sound" && (
         <Modal title={t.sound} onClose={() => setModal(null)}>
@@ -448,6 +463,7 @@ export default function LoupGarouLocal({ onReturnToLobby }: GameProps) {
       {modal === "history" && game && (
         <HistoryModal game={game} spoilerFree={phase.k === "end"} onClose={() => setModal(null)} />
       )}
+      {tuto.open && <GameTuto slides={tutoSlides} onDone={tuto.close} />}
     </div>
   );
 }

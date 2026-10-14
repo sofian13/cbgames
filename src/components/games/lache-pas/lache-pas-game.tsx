@@ -7,7 +7,7 @@ import { colorForIndex } from "@/components/games/local-kit";
 import { Mascot, MascotAvatar, MASCOT_PALETTE } from "@/components/Mascot";
 import { ConfettiBurst } from "@/components/ConfettiBurst";
 import { buzz, preloadObjectSfx, sfxBoom, sfxCount, sfxHeart, sfxLift, sfxPop, startFuse, unlockAudio } from "@/components/games/patate/fx";
-import { ScrollReset, TopRightControls } from "@/components/games/patate/rules-sheet";
+import { ScrollReset } from "@/components/games/patate/rules-sheet";
 import { patateContent, pick } from "@/components/games/patate/categories";
 import { decimal } from "@/components/games/patate/i18n";
 import { getLang, pick as pickLang, useT } from "@/lib/i18n";
@@ -16,7 +16,11 @@ import { BombBlob, C, DISPLAY, INK, KitStyles, OptionCard, SectionTitle, SoftLin
 import { IdeaButton, RerollButton } from "@/components/games/idea-button";
 import { playCombo, playSfx, type LoopHandle } from "@/lib/sfx";
 import { Crown, CupSoda, Drama, Fingerprint } from "lucide-react";
-import { GameInlineIcon } from "@/components/games/game-icon-button";
+import { GameInlineIcon, GameTopRight } from "@/components/games/game-icon-button";
+import { SoundButton } from "@/components/games/local-kit";
+import { GameRulesSheet, GameTuto, RulesIconButton, useFirstTimeTuto } from "@/components/games/game-tuto";
+import { getSavedPlayers } from "@/lib/saved-players";
+import { LP_EXTRA, useLpTutoSlides } from "./tuto";
 import { useGameFinished } from "@/lib/game-finished";
 
 // ── Lâche pas ! ────────────────────────────────────────────
@@ -65,6 +69,21 @@ export default function LachePasGame({ onReturnToLobby }: GameProps) {
   const [outcome, setOutcome] = useState<Outcome | null>(null);
   const [stats, setStats] = useState({ rounds: 0, boomed: 0, cowards: 0 });
   const t = useT(LACHE_PAS_STR);
+  const x = useT(LP_EXTRA);
+  // Prénoms facultatifs : le n-ième doigt posé (slot n) porte le n-ième prénom
+  const [names, setNames] = useState<string[]>(() => {
+    const saved = typeof window === "undefined" ? [] : getSavedPlayers().slice(0, MAX_FINGERS);
+    return Array.from({ length: MAX_FINGERS }, (_, i) => saved[i] ?? "");
+  });
+  const nameOf = (slot: number) => names[slot]?.trim() || "";
+  const colorName = (slot: number) => t.colors[colorForIndex(slot)] ?? colorForIndex(slot);
+  const labelOf = (slot: number) => nameOf(slot) || colorName(slot);
+  const [rulesOpen, setRulesOpen] = useState(false);
+  // Tuto en slides : la 1re fois qu'on ouvre le jeu
+  const tuto = useFirstTimeTuto("lache-pas");
+  const tutoSlides = useLpTutoSlides();
+  const { showIfFirstTime } = tuto;
+  useEffect(() => { showIfFirstTime(); }, [showIfFirstTime]);
   // Gages + provocations figés dans la langue du début de partie
   const [content] = useState(() => ({ dares: patateContent(getLang()).dares, taunts: pickLang(LACHE_PAS_STR).taunts }));
 
@@ -265,7 +284,12 @@ export default function LachePasGame({ onReturnToLobby }: GameProps) {
 
   const controls = (
     <>
-      <TopRightControls title={t.name} rules={t.rules} accent={ACCENT} />
+      <GameTopRight>
+        <SoundButton />
+        <RulesIconButton onClick={() => setRulesOpen(true)} />
+      </GameTopRight>
+      {rulesOpen && <GameRulesSheet name={t.name} rules={[...t.rules, x.ruleNames]} onClose={() => setRulesOpen(false)} onTuto={tuto.show} />}
+      {tuto.open && <GameTuto slides={tutoSlides} onDone={tuto.close} />}
       <ScrollReset dep={phase} />
     </>
   );
@@ -300,6 +324,27 @@ export default function LachePasGame({ onReturnToLobby }: GameProps) {
             <OptionCard on={penalty === "sips"} onClick={() => setPenalty("sips")} icon={CupSoda} title={t.sipsTitle} sub={t.sipsSub} onBg={ACCENT} />
           </div>
         )}
+
+        <div className="mt-6 w-full space-y-2">
+          <SectionTitle>{x.whoPlays}</SectionTitle>
+          <p className="text-[14px] font-semibold leading-snug" style={{ color: "rgba(255,255,255,0.8)" }}>{x.whoPlaysSub}</p>
+          <div className="grid grid-cols-1 gap-2">
+            {names.map((n, i) => (
+              <label key={i} className="flex items-center gap-2.5 rounded-full py-1 pl-1 pr-3" style={{ ...sticker("#fff", { radius: 999, shadow: 3, border: 2.5 }) }}>
+                <MascotAvatar color={colorForIndex(i)} size={34} mood="happy" border={false} />
+                <input
+                  value={n}
+                  maxLength={14}
+                  onChange={(e) => setNames(names.map((v, k) => (k === i ? e.target.value : v)))}
+                  placeholder={`${x.namePh(i + 1)} · ${colorName(i)}`}
+                  aria-label={x.namePh(i + 1)}
+                  className="min-h-10 min-w-0 flex-1 bg-transparent text-[16px] font-bold outline-none placeholder:font-semibold"
+                  style={{ color: INK }}
+                />
+              </label>
+            ))}
+          </div>
+        </div>
 
         <div className="mt-auto w-full pt-7">
           <StickerBtn
@@ -400,6 +445,7 @@ export default function LachePasGame({ onReturnToLobby }: GameProps) {
             return (
               <div key={f.id} className="flex flex-col items-center" style={{ opacity: lost || won ? 1 : 0.6 }}>
                 <Mascot size={lost || won ? (crowd ? 58 : 68) : crowd ? 44 : 54} color={colorForIndex(f.slot)} mood={lost ? (caught ? "dead" : "sad") : won ? "cool" : "happy"} crown={won} bob={false} shadow={false} />
+                {nameOf(f.slot) && <span className="mt-1 max-w-[84px] truncate text-[14px] leading-tight" style={DISPLAY}>{nameOf(f.slot)}</span>}
                 <span className="mt-1 whitespace-nowrap px-2 py-0.5 text-[13px] font-bold" style={{ ...sticker(lost ? INK : "#fff", { radius: 999, shadow: 0, border: 2, color: lost ? "#fff" : INK }) }}>
                   {f.liftedAt == null ? t.caught : `${decimal(f.liftedAt / 1000, 1, t.dec)}\u00a0s`}
                 </span>
@@ -416,7 +462,11 @@ export default function LachePasGame({ onReturnToLobby }: GameProps) {
               ))}
               {/* Plus de 2 perdants : le titre passe sous la rangée de blobs */}
               <span className={`text-[20px] leading-tight ${outcome.losers.length > 2 ? "basis-full" : "ml-1"}`} style={DISPLAY}>
-                {caught ? (outcome.losers.length > 1 ? t.theseLost : t.thisLost) : t.firstLost}
+                {outcome.losers.every((sl) => nameOf(sl))
+                  ? caught
+                    ? x.lost(outcome.losers.map(nameOf).join(x.and))
+                    : x.firstLostName(nameOf(outcome.losers[0]))
+                  : caught ? (outcome.losers.length > 1 ? t.theseLost : t.thisLost) : t.firstLost}
               </span>
             </div>
             {outcome.sips != null ? (
@@ -431,7 +481,7 @@ export default function LachePasGame({ onReturnToLobby }: GameProps) {
             </div>
             {outcome.winner != null && (
               <p className="mt-3 text-[14px] font-bold leading-snug" style={{ color: "#4A3A66" }}>
-                <GameInlineIcon icon={Crown} /> {t.winner(t.colors[colorForIndex(outcome.winner)] ?? colorForIndex(outcome.winner))}
+                <GameInlineIcon icon={Crown} /> {nameOf(outcome.winner) ? x.winnerName(nameOf(outcome.winner)) : t.winner(colorName(outcome.winner))}
               </p>
             )}
             <div className="mt-4 flex gap-2.5">
@@ -451,6 +501,11 @@ export default function LachePasGame({ onReturnToLobby }: GameProps) {
   const secs = elapsed / 1000;
   // L'ambiance monte avec le temps écoulé (jamais avec la mèche réelle)
   const heat = Math.min(1, secs / 18);
+  // Prochain doigt attendu (slot libre le plus bas) et son prénom
+  const usedSlots = new Set(fingers.map((f) => f.slot));
+  let nextSlot = 0;
+  while (usedSlots.has(nextSlot)) nextSlot++;
+  const nextName = nameOf(nextSlot);
   const boardBg = !live ? C.night : heat < 0.45 ? "#3A1450" : heat < 0.8 ? "#5E1640" : "#7E1A2E";
   return (
     <>
@@ -484,6 +539,11 @@ export default function LachePasGame({ onReturnToLobby }: GameProps) {
             <p className="mt-4 text-[34px] leading-none" style={{ ...DISPLAY, textShadow: `3px 3px 0 ${INK}` }}>
               {fingers.length === 0 ? t.lobby0 : fingers.length === 1 ? t.lobby1 : t.lobbyN(fingers.length)}
             </p>
+            {nextName && fingers.length < MAX_FINGERS && (
+              <p className="mt-3 inline-block px-3 py-1 text-[17px] font-bold" style={{ ...sticker(MASCOT_PALETTE[colorForIndex(nextSlot)].body, { radius: 999, shadow: 3, border: 2.5, color: INK }) }}>
+                {x.nextFinger(nextName)}
+              </p>
+            )}
             <p className="mt-3 text-[16px] font-semibold" style={{ color: "rgba(255,255,255,0.85)" }}>
               {fingers.length >= MAX_FINGERS ? t.maxFingers : t.autoStart}
             </p>
@@ -524,8 +584,9 @@ export default function LachePasGame({ onReturnToLobby }: GameProps) {
                 animation: lifted ? undefined : `lp-ring ${live ? 0.6 : 1.2}s ease-in-out infinite`,
               }}
             />
-            <div className="absolute flex flex-col items-center" style={{ left: -32, top: -128, width: 64, opacity: lifted ? 0.55 : 1 }}>
+            <div className="absolute flex flex-col items-center" style={{ left: -32, top: -150, width: 64, opacity: lifted ? 0.55 : 1 }}>
               <Mascot size={64} color={c} mood={lifted ? "cool" : live ? (heat > 0.5 ? "shocked" : "sus") : "happy"} sweat={live && !lifted} bob={false} shadow={false} />
+              <span className="mt-0.5 max-w-[110px] truncate whitespace-nowrap rounded-full px-2 text-[14px] font-bold" style={{ background: MASCOT_PALETTE[c].body, color: INK, border: `2px solid ${INK}` }}>{labelOf(f.slot)}</span>
               {lifted && <span className="mt-0.5 whitespace-nowrap rounded-full bg-white px-2 text-[13px] font-bold" style={{ color: INK, border: `2px solid ${INK}` }}>{decimal(f.liftedAt! / 1000, 1, t.dec)}&nbsp;s</span>}
             </div>
           </div>

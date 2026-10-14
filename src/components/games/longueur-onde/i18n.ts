@@ -31,7 +31,7 @@ export const STR: I18n<{
   clueOf: (name: string) => string;
   saidAloud: (name: string) => string;
   dragHint: string;
-  oneCursor: [string, string, string];
+  oneCursor: (name: string) => string;
   validate: string;
   verdictWait: string;
   bull: string;
@@ -53,7 +53,7 @@ export const STR: I18n<{
 }> = {
   fr: {
     name: "Le Curseur",
-    tagline: "Un Médium voit en secret où est la cible sur une échelle (froid ↔ chaud…), dit UN indice, et les autres placent le curseur.",
+    tagline: "Un Devin voit en secret où est la cible sur une échelle (froid ↔ chaud…), dit UN indice, et les autres placent le curseur.",
     noDigits: "Pas de chiffres seuls : donne un mot ou un exemple !",
     howHow: "Comment on joue, en 3 images :",
     tuto1: ["Léa voit en secret la cible : ", "tout à droite", ", côté génial."],
@@ -63,7 +63,7 @@ export const STR: I18n<{
     tuto3: "Les autres placent le curseur. Pile dans la cible : +4 !",
     gotIt: "Compris, on joue !",
     reviewExample: "Revoir l'exemple",
-    passHint: "Tu es le Médium : toi seul vas voir où est la cible. Cache bien l'écran !",
+    passHint: "Tu es le Devin : toi seul vas voir où est la cible. Cache bien l'écran !",
     round: (r, t) => `Manche ${r}/${t}`,
     otherPair: "Une autre paire",
     lookTarget: (name) => `${name}, regarde où est la cible `,
@@ -81,7 +81,7 @@ export const STR: I18n<{
     clueOf: (name) => `L'indice ${/^[aeiouyàâäéèêëîïôöùûü]/i.test(name) ? `d'${name}` : `de ${name}`} :`,
     saidAloud: (name) => `${name} vous a dit son indice à voix haute.`,
     dragHint: "Faites glisser le curseur là où vous pensez que l'indice se place.",
-    oneCursor: ["Un seul curseur pour toute la table : ", "mettez-vous", " d'accord\u00a0!"],
+    oneCursor: (name) => `Tout le monde sauf ${name}\u00a0: bougez le curseur ensemble, mettez-vous d'accord, puis touchez «\u00a0Valider\u00a0».`,
     validate: "Valider",
     verdictWait: "Alors… ?",
     bull: "Dans le mille !",
@@ -93,8 +93,8 @@ export const STR: I18n<{
     pointsFor: (name) => `points pour ${name}`,
     tooBad: "Dommage, ça arrive !",
     seeScores: "Voir les scores",
-    nextPsychic: (name) => `Médium suivant : ${name}`,
-    bestPsychic: " meilleur Médium !",
+    nextPsychic: (name) => `Devin suivant : ${name}`,
+    bestPsychic: " meilleur Devin !",
     scoreNote: "Chacun marque les points trouvés grâce à son indice.",
     playAgain: "Rejouer",
     changePlayers: "Changer les joueurs",
@@ -131,7 +131,7 @@ export const STR: I18n<{
     clueOf: (name) => `${name}'s clue:`,
     saidAloud: (name) => `${name} said their clue out loud.`,
     dragHint: "Drag the needle to where you think the clue belongs.",
-    oneCursor: ["One dial for the whole table: ", "agree", " together!"],
+    oneCursor: (name) => `Everyone except ${name}: move the dial together, agree, then tap “Lock it in”.`,
     validate: "Lock it in",
     verdictWait: "So…?",
     bull: "Bullseye!",
@@ -153,7 +153,7 @@ export const STR: I18n<{
   },
   es: {
     name: "El Dial",
-    tagline: "Un Médium ve en secreto dónde está el objetivo en una escala (frío ↔ caliente…), da UNA pista y los demás mueven el dial.",
+    tagline: "Un Adivino ve en secreto dónde está el objetivo en una escala (frío ↔ caliente…), da UNA pista y los demás mueven el dial.",
     noDigits: "Nada de números solos: ¡di una palabra o un ejemplo!",
     howHow: "Cómo se juega, en 3 imágenes:",
     tuto1: ["Lea ve en secreto el objetivo: ", "a la derecha del todo", ", en lo genial."],
@@ -163,7 +163,7 @@ export const STR: I18n<{
     tuto3: "Los demás mueven el dial. Justo en el objetivo: ¡+4!",
     gotIt: "¡Entendido, a jugar!",
     reviewExample: "Ver el ejemplo otra vez",
-    passHint: "Eres el Médium: solo tú vas a ver dónde está el objetivo. ¡Tapa bien la pantalla!",
+    passHint: "Eres el Adivino: solo tú vas a ver dónde está el objetivo. ¡Tapa bien la pantalla!",
     round: (r, t) => `Ronda ${r}/${t}`,
     otherPair: "Otra escala",
     lookTarget: (name) => `${name}, mira dónde está el objetivo `,
@@ -181,7 +181,7 @@ export const STR: I18n<{
     clueOf: (name) => `La pista de ${name}:`,
     saidAloud: (name) => `${name} ya dijo su pista en voz alta.`,
     dragHint: "Mueve la aguja hasta donde creas que va la pista.",
-    oneCursor: ["Un solo dial para toda la mesa: ", "¡hay que", " ponerse de acuerdo!"],
+    oneCursor: (name) => `Todos menos ${name}: moved el dial juntos, poneos de acuerdo y tocad «Confirmar».`,
     validate: "Confirmar",
     verdictWait: "¿Y bien…?",
     bull: "¡En el blanco!",
@@ -193,8 +193,8 @@ export const STR: I18n<{
     pointsFor: (name) => `puntos para ${name}`,
     tooBad: "¡Qué pena, pasa!",
     seeScores: "Ver puntuaciones",
-    nextPsychic: (name) => `Siguiente Médium: ${name}`,
-    bestPsychic: " ¡mejor Médium!",
+    nextPsychic: (name) => `Siguiente Adivino: ${name}`,
+    bestPsychic: " ¡mejor Adivino!",
     scoreNote: "Cada uno se lleva los puntos que consiguió con su pista.",
     playAgain: "Volver a jugar",
     changePlayers: "Cambiar jugadores",

@@ -43,6 +43,8 @@ export interface GuessWordStrings {
   tutoOk: string;
   /** Rappel discret pendant le compte à rebours */
   tiltHint: string;
+  /** Rappel des gestes sur l'écran de passage (chaque devineur) */
+  passTilt: string;
   /** Flash plein écran */
   flashFound: string;
   flashPass: string;
@@ -94,6 +96,7 @@ export const STR: I18n<GuessWordStrings> = {
     tutoNoSensor: "Pas de capteurs ? Les boutons en bas de l'écran marchent aussi.",
     tutoOk: "Compris, on y va !",
     tiltHint: "Avant = trouvé · Arrière = passer",
+    passTilt: "Rappel : penche la tête en avant = trouvé, en arrière = passer.",
     flashFound: "TROUVÉ !",
     flashPass: "PASSE !",
   },
@@ -141,6 +144,7 @@ export const STR: I18n<GuessWordStrings> = {
     tutoNoSensor: "No motion sensors? The buttons at the bottom work too.",
     tutoOk: "Got it, let's go!",
     tiltHint: "Forward = got it · Back = skip",
+    passTilt: "Reminder: tip your head forward = got it, back = skip.",
     flashFound: "GOT IT!",
     flashPass: "SKIP!",
   },
@@ -188,6 +192,7 @@ export const STR: I18n<GuessWordStrings> = {
     tutoNoSensor: "¿Sin sensores? Los botones de abajo también funcionan.",
     tutoOk: "¡Entendido, vamos!",
     tiltHint: "Delante = acertada · Atrás = pasar",
+    passTilt: "Recuerda: cabeza hacia delante = acertada, hacia atrás = pasar.",
     flashFound: "¡ACERTADA!",
     flashPass: "¡PASO!",
   },

@@ -65,6 +65,8 @@ interface ChutStr {
   ambLoud: string;
   loudTip: string;
   tryIt: string;
+  calibMeter: string;
+  calibLoud: string;
   testHit: string;
   recalibrate: string;
   calibOk: string;
@@ -217,8 +219,10 @@ export const CHUT_STR: I18n<ChutStr> = {
     ambMid: "Un peu de bruit",
     ambLoud: "Ça fait la fête ici",
     loudTip: "Beaucoup de bruit : choisis Boîte de nuit ou éloignez-vous de la musique.",
-    tryIt: "Teste : pouffe un coup, l'aiguille doit passer dans le rouge.",
-    testHit: "Craqué ! Le micro t'a entendu.",
+    tryIt: "Teste : fais un petit bruit, l'aiguille doit bouger.",
+    calibMeter: "Niveau du micro",
+    calibLoud: "Fort",
+    testHit: "Le micro t'entend !",
     recalibrate: "Recalibrer",
     calibOk: "C'est bon !",
     micErrTitle: "Micro indisponible",
@@ -363,8 +367,10 @@ export const CHUT_STR: I18n<ChutStr> = {
     ambMid: "A bit of noise",
     ambLoud: "Party in here",
     loudTip: "Lots of noise: pick Nightclub or move away from the music.",
-    tryIt: "Test it: snort once, the needle should hit the red.",
-    testHit: "Cracked! The mic heard you.",
+    tryIt: "Test it: make a little noise, the needle should move.",
+    calibMeter: "Mic level",
+    calibLoud: "Loud",
+    testHit: "The mic can hear you!",
     recalibrate: "Recalibrate",
     calibOk: "All good!",
     micErrTitle: "Mic unavailable",
@@ -509,8 +515,10 @@ export const CHUT_STR: I18n<ChutStr> = {
     ambMid: "Algo de ruido",
     ambLoud: "Aquí hay fiesta",
     loudTip: "Mucho ruido: elige Discoteca o alejaos de la música.",
-    tryIt: "Prueba: suelta una risita, la aguja debe llegar al rojo.",
-    testHit: "¡Pillado! El micro te ha oído.",
+    tryIt: "Prueba: haz un pequeño ruido, la aguja debe moverse.",
+    calibMeter: "Nivel del micro",
+    calibLoud: "Alto",
+    testHit: "¡El micro te oye!",
     recalibrate: "Recalibrar",
     calibOk: "¡Listo!",
     micErrTitle: "Micro no disponible",

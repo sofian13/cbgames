@@ -31,6 +31,8 @@ import { ChutBlob, NoiseMeter } from "./visuals";
 import { useGameFinished } from "@/lib/game-finished";
 import { ShareResultButton } from "@/components/games/share-result-button";
 import { chutCard } from "@/lib/share-cards";
+import { GameTuto, TutoAgainButton, useFirstTimeTuto } from "@/components/games/game-tuto";
+import { useChutTuto } from "./tuto";
 
 // ── Chut ! ────────────────────────────────────────────────
 // Jeux au micro, au choix : « Le bon volume » (mode phare), « Chuchote-le ! »,
@@ -157,6 +159,9 @@ export default function ChutGame({ onReturnToLobby }: GameProps) {
   const [plan, setPlan] = useState<Plan | null>(null);
   const [floor, setFloor] = useState<number | null>(null);
   const [rulesOpen, setRulesOpen] = useState(false);
+  // Tuto général 1re fois (après la saisie des joueurs), relançable depuis les règles / réglages
+  const tuto = useFirstTimeTuto("chut");
+  const tutoSlides = useChutTuto();
   const [toast, setToast] = useState<string | null>(null);
 
   // Duel
@@ -373,7 +378,8 @@ export default function ChutGame({ onReturnToLobby }: GameProps) {
   const tools = <GameIconButton icon={BookOpen} label={t.rulesLabel} onClick={() => setRulesOpen(true)} />;
   const overlays = (
     <>
-      {rulesOpen && <RulesSheet mode={screen === "modes" || screen === "players" ? null : settings.mode} onClose={() => setRulesOpen(false)} />}
+      {rulesOpen && <RulesSheet mode={screen === "modes" || screen === "players" ? null : settings.mode} onClose={() => setRulesOpen(false)} onTuto={() => { setRulesOpen(false); tuto.show(); }} />}
+      {tuto.open && <GameTuto slides={tutoSlides} onDone={tuto.close} />}
       {toast && (
         <div className="fixed inset-x-0 z-50 flex justify-center px-5" style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 24px)" }}>
           <ZCard bg={ZZ.yellow} className="px-4 py-3 text-center text-[15px] font-bold" shadow={4}>{toast}</ZCard>
@@ -396,6 +402,7 @@ export default function ChutGame({ onReturnToLobby }: GameProps) {
           // nouvelle liste de joueurs : équipes à refaire
           setSettings((s) => ({ ...s, teams: null, mode: s.mode === "whisper" && names.length < 4 ? "volume" : s.mode }));
           setScreen("modes");
+          tuto.showIfFirstTime();
         }}
         footer={<IdeaButton game={t.name} kind="carte" bg={ZZ.cream} />}
       />
@@ -498,6 +505,7 @@ export default function ChutGame({ onReturnToLobby }: GameProps) {
             ))}
           </ol>
         </ZCard>
+        <TutoAgainButton className="mt-1" onClick={tuto.show} />
 
         {(mode === "volume" || mode === "souffle") && (
           <Section title={m.secTours}>
@@ -931,7 +939,7 @@ function MatchLine({ m, players }: { m: Match; players: string[] }) {
   );
 }
 
-function RulesSheet({ mode, onClose }: { mode: ModeId | null; onClose: () => void }) {
+function RulesSheet({ mode, onClose, onTuto }: { mode: ModeId | null; onClose: () => void; onTuto: () => void }) {
   const t = useT(CHUT_STR);
   const m = useT(MODES_STR);
   const rules = mode ? m.rules[mode] : MODE_IDS.map((id) => m.labelled(m.modeName[id], m.modeSub[id]));
@@ -954,6 +962,7 @@ function RulesSheet({ mode, onClose }: { mode: ModeId | null; onClose: () => voi
         <p className="mt-4 flex items-center gap-1.5 text-[14px] font-semibold" style={{ color: "#4A3A66" }}>
           <ShieldCheck size={16} strokeWidth={2.6} aria-hidden /> {t.privacy}
         </p>
+        <TutoAgainButton color={INK} className="mt-2" onClick={onTuto} />
       </div>
     </div>
   );
@@ -1039,7 +1048,7 @@ function Calibration({ sens, tools, onDone, onHuman }: { sens: Sensitivity; tool
 
       {(phase === "listening" || phase === "done") && (
         <div className="mt-3 flex justify-center">
-          <NoiseMeter value={g} width={260} crackLabel={t.crack} label={t.meter} />
+          <NoiseMeter value={g} width={260} crackLabel={t.calibLoud} label={t.calibMeter} />
         </div>
       )}
 

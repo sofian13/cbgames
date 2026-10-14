@@ -44,7 +44,7 @@ export interface ZSection {
 export const GAMES: ZGame[] = [
   { id: "undercover", costume: "groucho", color: "pink", mood: "sus", free: true, players: "3-12",
     load: () => import("@/components/games/undercover/undercover-game") },
-  { id: "top-ten", costume: "ten", color: "coral", mood: "laughing", free: true, players: "2-10",
+  { id: "top-ten", costume: "ten", color: "coral", mood: "laughing", free: true, players: "3-10",
     load: () => import("@/components/games/top-ten/top-ten-game") },
   { id: "tu-prefere", costume: "split", color: "sky", mood: "thinking", free: true, players: "2+",
     load: () => import("@/components/games/tu-prefere/tu-prefere-game") },
@@ -52,7 +52,7 @@ export const GAMES: ZGame[] = [
     load: () => import("@/components/games/patate/patate-game") },
   { id: "purete", costume: "angeldevil", color: "lavender", mood: "wink", isNew: true, free: true, players: "1-12",
     load: () => import("@/components/games/purete/purete-game") },
-  { id: "lache-pas", costume: "fuse", color: "coral", mood: "sus", isNew: true, players: "2-10",
+  { id: "lache-pas", costume: "fuse", color: "coral", mood: "sus", isNew: true, players: "2-5",
     load: () => import("@/components/games/lache-pas/lache-pas-game") },
   { id: "verre", costume: "waiter", color: "mint", mood: "shocked", isNew: true, free: true, players: "2-10",
     load: () => import("@/components/games/verre/verre-game") },
@@ -64,7 +64,7 @@ export const GAMES: ZGame[] = [
     load: () => import("@/components/games/loup-garou/loup-garou-local") },
   { id: "faux-temoin", costume: "blindfold", color: "sky", mood: "sus", isNew: true, players: "3-10",
     load: () => import("@/components/games/faux-temoin/faux-temoin-game") },
-  { id: "le-bluffeur", costume: "pinocchio", color: "yellow", mood: "wink", players: "2-8",
+  { id: "le-bluffeur", costume: "pinocchio", color: "yellow", mood: "wink", players: "3-8",
     load: () => import("@/components/games/le-bluffeur/le-bluffeur-game") },
   { id: "longueur-onde", costume: "antenna", color: "lavender", mood: "mindblown", players: "2-8",
     load: () => import("@/components/games/longueur-onde/longueur-onde-game") },
@@ -82,7 +82,7 @@ export const GAMES: ZGame[] = [
     load: () => import("@/components/games/couple-quiz/couple-quiz-game") },
   { id: "picolette", costume: "beer", color: "yellow", mood: "rofl", adult: true, free: true, players: "2-10",
     load: () => import("@/components/games/picolette/picolette-game") },
-  { id: "tgv", costume: "train", color: "purple", mood: "rofl", adult: true, players: "2-8",
+  { id: "tgv", costume: "train", color: "purple", mood: "rofl", adult: true, players: "2-10",
     load: () => import("@/components/games/tgv/tgv-game") },
 ];
 

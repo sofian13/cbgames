@@ -110,6 +110,7 @@ interface ModesStr {
   wSkipN: (n: number) => string;
   wNext: string;
   wHumanBuzz: string;
+  wHumanBuzzWho: string;
   wHumanHint: string;
   wWinner: (team: string) => string;
   wTie: string;
@@ -269,7 +270,7 @@ export const MODES_STR: I18n<ModesStr> = {
     fallsSub: "La partie s'arrête à la dernière chute",
     humanSub: {
       volume: "Sans micro : la table juge chaque phrase",
-      whisper: "Sans micro : l'autre équipe appuie sur BUZZ",
+      whisper: "Sans micro : un joueur de l'autre équipe voit l'écran et appuie sur BUZZ",
       crescendo: "Sans micro : la table juge chaque son",
       souffle: "Sans micro : la table arrête le chrono",
       duel: "Sans micro : un joueur appuie sur « Il a ri ! »",
@@ -341,7 +342,8 @@ export const MODES_STR: I18n<ModesStr> = {
     wSkipN: (n) => (n > 1 ? `${n} passés` : `${n} passé`),
     wNext: "Manche suivante",
     wHumanBuzz: "BUZZ ! Trop fort",
-    wHumanHint: "Sans micro : l'autre équipe appuie sur BUZZ au moindre éclat de voix.",
+    wHumanBuzzWho: "Bouton de l'AUTRE équipe :",
+    wHumanHint: "Sans micro : un joueur de l'AUTRE équipe s'assoit à côté du chuchoteur, regarde l'écran et appuie sur BUZZ au moindre éclat de voix. Ton équipe, elle, ne regarde pas l'écran !",
     wWinner: (team) => `${team} gagnent !`,
     wTie: "Égalité parfaite !",
     wTieNote: "Pas de peine cette fois. Revanche ?",
@@ -496,7 +498,7 @@ export const MODES_STR: I18n<ModesStr> = {
     fallsSub: "The game ends on the last miss",
     humanSub: {
       volume: "No mic: the table judges each line",
-      whisper: "No mic: the other team taps BUZZ",
+      whisper: "No mic: a player from the other team watches the screen and taps BUZZ",
       crescendo: "No mic: the table judges each sound",
       souffle: "No mic: the table stops the clock",
       duel: "No mic: a player taps \"They laughed!\"",
@@ -568,7 +570,8 @@ export const MODES_STR: I18n<ModesStr> = {
     wSkipN: (n) => `${n} skipped`,
     wNext: "Next round",
     wHumanBuzz: "BUZZ! Too loud",
-    wHumanHint: "No mic: the other team taps BUZZ at any loud burst.",
+    wHumanBuzzWho: "For the OTHER team:",
+    wHumanHint: "No mic: a player from the OTHER team sits next to the whisperer, watches the screen and taps BUZZ at any loud burst. Your own team doesn't look at the screen!",
     wWinner: (team) => `${team} win!`,
     wTie: "Perfect tie!",
     wTieNote: "No penalty this time. Rematch?",
@@ -723,7 +726,7 @@ export const MODES_STR: I18n<ModesStr> = {
     fallsSub: "La partida termina con el último fallo",
     humanSub: {
       volume: "Sin micro: la mesa juzga cada frase",
-      whisper: "Sin micro: el otro equipo pulsa BUZZ",
+      whisper: "Sin micro: alguien del otro equipo mira la pantalla y pulsa BUZZ",
       crescendo: "Sin micro: la mesa juzga cada sonido",
       souffle: "Sin micro: la mesa para el crono",
       duel: "Sin micro: un jugador pulsa «¡Se rió!»",
@@ -795,7 +798,8 @@ export const MODES_STR: I18n<ModesStr> = {
     wSkipN: (n) => (n === 1 ? "1 pasada" : `${n} pasadas`),
     wNext: "Siguiente ronda",
     wHumanBuzz: "¡BUZZ! Demasiado alto",
-    wHumanHint: "Sin micro: el otro equipo pulsa BUZZ a la mínima voz alta.",
+    wHumanBuzzWho: "Para el OTRO equipo:",
+    wHumanHint: "Sin micro: alguien del OTRO equipo se sienta al lado del que susurra, mira la pantalla y pulsa BUZZ a la mínima voz alta. ¡Tu equipo no mira la pantalla!",
     wWinner: (team) => `¡Ganan ${team}!`,
     wTie: "¡Empate perfecto!",
     wTieNote: "Esta vez no hay castigo. ¿Revancha?",

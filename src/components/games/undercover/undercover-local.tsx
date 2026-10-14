@@ -17,6 +17,8 @@ import { getLang, useT, type Lang } from "@/lib/i18n";
 import { FREE_CAT_IDS, allWordPairs, freePairs, wordCategories, type WordCategory } from "@/components/games/undercover/words";
 import { UC_STR } from "@/components/games/undercover/i18n";
 import { useGameFinished } from "@/lib/game-finished";
+import { GameTuto, TutoAgainButton, useFirstTimeTuto } from "@/components/games/game-tuto";
+import { useUndercoverTuto } from "@/components/games/undercover/tuto";
 
 /* ─────────────────────────────────────────────────────────────
    L'INTRUS LOCAL — Pass-and-play (un seul téléphone)
@@ -132,6 +134,10 @@ export default function UndercoverLocal({ onReturnToLobby }: { onReturnToLobby?:
 
   useEffect(() => { preloadSfx(["card-shuffle", "card-flip", "whoosh", "tock", "gong", "boom", "wrong", "lose", "win", "powerup", "ding", "toggle", "select", "success"]); }, []);
   useScrollTopOn(`${phase}-${revealIdx}-${round}`);
+  // Tuto en slides : 1re fois, après la saisie des prénoms (slide « rôles bonus » si Fantôme/Bouffon)
+  const tuto = useFirstTimeTuto("undercover");
+  const tutoSlides = useUndercoverTuto(mrWhite || jester);
+  const tutoLayer = tuto.open ? <GameTuto slides={tutoSlides} onDone={tuto.close} /> : null;
 
   // ── Helpers ─────────────────────────────────────────────
   const alive = players.filter((p) => !p.isEliminated);
@@ -155,6 +161,7 @@ export default function UndercoverLocal({ onReturnToLobby }: { onReturnToLobby?:
     else             { setUcCount(2); setMrWhite(true);  }
     setJester(false);
     setPhase("setup-roles");
+    tuto.showIfFirstTime();
   };
 
   // ── Distribution des rôles + mots ───────────────────────
@@ -388,6 +395,8 @@ export default function UndercoverLocal({ onReturnToLobby }: { onReturnToLobby?:
         setSelectedCats={setSelectedCats}
         onStart={distributeRoles}
         onBack={() => setPhase("setup-players")}
+        onTuto={tuto.show}
+        tutoLayer={tutoLayer}
       />
     );
   }
@@ -561,7 +570,7 @@ export default function UndercoverLocal({ onReturnToLobby }: { onReturnToLobby?:
 
 // — SETUP ROLES (composition)
 function SetupRoles({
-  players, ucCount, setUcCount, mrWhite, setMrWhite, jester, setJester, selectedCats, setSelectedCats, cats, lang, unlocked, onStart, onBack,
+  players, ucCount, setUcCount, mrWhite, setMrWhite, jester, setJester, selectedCats, setSelectedCats, cats, lang, unlocked, onStart, onBack, onTuto, tutoLayer,
 }: {
   players: LocalPlayer[];
   ucCount: number; setUcCount: (v: number) => void;
@@ -571,6 +580,7 @@ function SetupRoles({
   cats: WordCategory[]; lang: Lang;
   unlocked: boolean;
   onStart: () => void; onBack: () => void;
+  onTuto: () => void; tutoLayer: ReactNode;
 }) {
   const t = useT(UC_STR);
   const toggleCat = (id: string) => {
@@ -713,7 +723,8 @@ function SetupRoles({
         </>
       )}
 
-      <RulesCard jester={jSlots > 0} />
+      <RulesCard jester={jSlots > 0} onTuto={onTuto} />
+      {tutoLayer}
 
       <div style={{ marginTop: "auto", paddingTop: 8 }}>
         <Btn tone="gold" disabled={!valid} onClick={onStart} icon={<Shuffle size={20} strokeWidth={2.6} aria-hidden />}>
@@ -1452,7 +1463,7 @@ function PassScreenUC({ toName, colorIdx, label, players, currentIdx, buttonLabe
 }
 
 // Règles visibles avant la distribution (repliables).
-function RulesCard({ jester }: { jester: boolean }) {
+function RulesCard({ jester, onTuto }: { jester: boolean; onTuto: () => void }) {
   const t = useT(UC_STR);
   const [open, setOpen] = useState(false);
   const items = [...t.rulesItems, ...(jester ? [t.ruleJester] : [])];
@@ -1470,6 +1481,7 @@ function RulesCard({ jester }: { jester: boolean }) {
           {items.map((it) => <li key={it}>{it}</li>)}
         </ul>
       )}
+      {open && <TutoAgainButton onClick={onTuto} className="mt-2" />}
     </FileCard>
   );
 }

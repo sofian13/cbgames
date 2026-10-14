@@ -14,6 +14,7 @@ import { ROLES, SPECIALS, type Player, type RoleId } from "./lg-local-data";
 import { Check, X } from "lucide-react";
 import { GameIconButton } from "@/components/games/game-icon-button";
 import { useT } from "@/lib/i18n";
+import { TutoAgainButton } from "@/components/games/game-tuto";
 import { ROLE_TEXT, STR } from "./lg-local-i18n";
 
 export type Tone = "night" | "day" | "dusk";
@@ -279,7 +280,7 @@ export function SectionTitle({ children, className = "", style }: { children: Re
   return <h3 className={className} style={{ ...DISPLAY, fontSize: 24, lineHeight: 1.05, ...style }}>{children}</h3>;
 }
 
-export function RulesContent() {
+export function RulesContent({ onTuto }: { onTuto?: () => void } = {}) {
   const t = useT(STR);
   const roles = useT(ROLE_TEXT);
   const [g0, g1, g2, g3, g4] = t.rulesGoalText;
@@ -293,6 +294,7 @@ export function RulesContent() {
         <SectionTitle className="mb-1">{t.rulesPhone}</SectionTitle>
         <p>{t.rulesPhoneText}</p>
         <p className="mt-2">{t.rulesPhoneText2}</p>
+        <p className="mt-2">{t.rulesNoVoice}</p>
       </section>
       <section>
         <SectionTitle className="mb-1">{t.rulesDay}</SectionTitle>
@@ -313,9 +315,14 @@ export function RulesContent() {
         </div>
       </section>
       <section>
+        <SectionTitle className="mb-1">{t.rulesLove}</SectionTitle>
+        <p>{t.rulesLoveText}</p>
+      </section>
+      <section>
         <SectionTitle className="mb-1">{t.rulesGold}</SectionTitle>
         <p>{t.rulesGoldText}</p>
       </section>
+      {onTuto && <TutoAgainButton color={INK} onClick={onTuto} />}
     </div>
   );
 }

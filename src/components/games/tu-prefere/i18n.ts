@@ -8,6 +8,8 @@ interface TPStrings {
   /** Titre de l'écran d'accueil du jeu */
   title: string;
   intro: string;
+  /** Feuille de règles (bouton livre) ; la ligne de peine dépend du réglage */
+  rules: (sips: boolean) => string[];
   vibe: string;
   packs: Record<Cat, { label: string; tag: string }>;
   backHome: string;
@@ -61,6 +63,15 @@ export const TP_STR: I18n<TPStrings> = {
     gameName: "Tu préfères",
     title: "Tu préfères ?",
     intro: "Lisez le dilemme à voix haute. À 3, chacun lève la main pour A ou B, on compte les mains sur l'écran… et le camp minoritaire prend la peine. Égalité ou unanimité ? Tout le monde prend !",
+    rules: (sips) => [
+      "Lisez le dilemme à voix haute : « Tu préfères A… ou B ? »",
+      "À 3, chacun lève la main pour A ou B. Une personne compte : un tap sur la carte A ou B par main levée. Le bouton − corrige une erreur.",
+      "Touchez « Voir le résultat » : le pourcentage de la table s'affiche.",
+      sips
+        ? "Le camp minoritaire prend la peine : 1 à 2 gorgées de zinzin chacun (eau acceptée) ou un gage. Égalité ou unanimité : tout le monde prend !"
+        : "Le camp minoritaire fait un gage. Égalité ou unanimité : tout le monde fait le gage !",
+      "« Dilemme suivant » pour continuer. Touche l'étiquette d'ambiance en haut pour en changer.",
+    ],
     vibe: "L'ambiance",
     packs: {
       classique: { label: "Classique", tag: "Pour tout le monde" },
@@ -132,6 +143,15 @@ export const TP_STR: I18n<TPStrings> = {
     gameName: "Would You Rather",
     title: "Would You Rather?",
     intro: "Read the dilemma out loud. On 3, everyone raises a hand for A or B, you count the hands on screen… and the minority side takes the penalty. A tie or everyone agrees? Everyone takes it!",
+    rules: (sips) => [
+      "Read the dilemma out loud: \"Would you rather A… or B?\"",
+      "On 3, everyone raises a hand for A or B. One person counts: one tap on card A or B per raised hand. The − button fixes a mistake.",
+      "Tap \"See the result\": the table's percentage shows up.",
+      sips
+        ? "The minority side takes the penalty: 1 to 2 zinzin sips each (water's fine) or a dare. A tie or everyone agrees? Everyone takes it!"
+        : "The minority side does a dare. A tie or everyone agrees? Everyone does the dare!",
+      "\"Next dilemma\" to keep going. Tap the vibe tag at the top to change it.",
+    ],
     vibe: "Pick a vibe",
     packs: {
       classique: { label: "Classic", tag: "For everyone" },
@@ -203,6 +223,15 @@ export const TP_STR: I18n<TPStrings> = {
     gameName: "¿Qué prefieres?",
     title: "¿Qué prefieres?",
     intro: "Lee el dilema en voz alta. A la de 3, cada uno levanta la mano por la A o la B, se cuentan las manos en la pantalla… y el bando minoritario paga. ¿Empate o unanimidad? ¡Paga todo el mundo!",
+    rules: (sips) => [
+      "Leed el dilema en voz alta: «¿Qué prefieres, A… o B?»",
+      "A la de 3, cada uno levanta la mano por la A o la B. Una persona cuenta: un toque en la carta A o B por cada mano. El botón − corrige un error.",
+      "Tocad «Ver el resultado»: aparece el porcentaje de la mesa.",
+      sips
+        ? "El bando minoritario paga: 1 o 2 tragos de zinzin cada uno (vale agua) o un reto. ¿Empate o unanimidad? ¡Paga todo el mundo!"
+        : "El bando minoritario hace un reto. ¿Empate o unanimidad? ¡Todo el mundo hace el reto!",
+      "«Siguiente dilema» para seguir. Toca la etiqueta de ambiente de arriba para cambiarlo.",
+    ],
     vibe: "El ambiente",
     packs: {
       classique: { label: "Clásico", tag: "Para todo el mundo" },

@@ -31,6 +31,8 @@ type Str = {
   someoneCracked: [string, string];
   readsCardAria: (name: string) => string;
   reads: (name: string) => string;
+  /** Bandeau au-dessus de la carte : qui la lit à voix haute */
+  readsAloud: (name: string) => string;
   answer: (a: string) => string;
   showAnswer: string;
   handUp: string;
@@ -137,6 +139,7 @@ export const STR: I18n<Str> = {
     someoneCracked: ["Quelqu'un", "a craqué"],
     readsCardAria: (n) => `${n} lit la carte`,
     reads: (n) => `${n} lit`,
+    readsAloud: (n) => `${n} lit la carte à voix haute`,
     answer: (a) => `Réponse : ${a}`,
     showAnswer: "Voir la réponse",
     handUp: "Main en haut",
@@ -240,6 +243,7 @@ export const STR: I18n<Str> = {
     someoneCracked: ["Someone", "slipped up"],
     readsCardAria: (n) => `${n} reads the card`,
     reads: (n) => `${n} reads`,
+    readsAloud: (n) => `${n} reads the card out loud`,
     answer: (a) => `Answer: ${a}`,
     showAnswer: "Show the answer",
     handUp: "Hand up",
@@ -343,6 +347,7 @@ export const STR: I18n<Str> = {
     someoneCracked: ["Alguien", "ha fallado"],
     readsCardAria: (n) => `${n} lee la carta`,
     reads: (n) => `Lee ${n}`,
+    readsAloud: (n) => `${n} lee la carta en voz alta`,
     answer: (a) => `Respuesta: ${a}`,
     showAnswer: "Ver la respuesta",
     handUp: "Mano arriba",
