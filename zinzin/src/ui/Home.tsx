@@ -1,4 +1,4 @@
-import { Fragment, useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { Fragment, useCallback, useEffect, useRef, useState, useSyncExternalStore, type CSSProperties } from "react";
 import { ArrowRight, Lock, Settings, Users, Volume2, VolumeX } from "lucide-react";
 import { FEATURED, SECTIONS, getZGame, type ZFeatured, type ZGame } from "../catalog";
 import { ZBlob, ZPALETTE, pauseWhenOffscreen } from "./ZBlob";
@@ -348,10 +348,14 @@ function GameCard({
       <div className="relative px-4 pb-4">
         {/* Étiquettes juste au-dessus du titre (jamais sous le blob) */}
         {(game.isNew || game.adult || showFree) && (
-          <div className="mb-2 flex flex-wrap items-center gap-1.5">
-            {game.isNew && <Tag bg="#fff" tilt={-4}>{t.tagNew}</Tag>}
-            {game.adult && <Tag bg="var(--zz-ink)" color="#fff" tilt={3}>18+</Tag>}
-            {showFree && <Tag bg="#fff" tilt={3}>{t.tagFree}</Tag>}
+          // Une seule ligne d'étiquettes compactes : « Nouveau » et « Gratuit » fusionnent si les deux
+          <div className="mb-2 flex flex-nowrap items-center gap-1.5">
+            {(game.isNew || showFree) && (
+              <Tag bg={showFree ? "#3DDC97" : "#fff"} tilt={-3} style={TAG_SM}>
+                {game.isNew && showFree ? `${t.tagNew} · ${t.tagFree}` : game.isNew ? t.tagNew : t.tagFree}
+              </Tag>
+            )}
+            {game.adult && <Tag bg="var(--zz-ink)" color="#fff" tilt={3} style={TAG_SM}>18+</Tag>}
           </div>
         )}
         <div className="zz-title" style={{ fontSize: big ? 30 : longWord ? 21 : 24, lineHeight: 0.95 }}>
@@ -370,6 +374,8 @@ function GameCard({
     </button>
   );
 }
+
+const TAG_SM: CSSProperties = { height: 24, paddingInline: 8, fontSize: 12 };
 
 const SOUND_LABEL: Record<Lang, { off: string; on: string }> = {
   fr: { off: "Couper le son", on: "Remettre le son" },
