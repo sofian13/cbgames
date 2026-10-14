@@ -34,6 +34,18 @@ export interface GuessWordStrings {
   playAgain: string;
   themesBtn: string;
   quit: string;
+  /** Tuto des gestes (avant la 1re manche) */
+  tutoTitle: string;
+  tutoIntro: string;
+  tutoForward: [string, string];
+  tutoBack: [string, string];
+  tutoNoSensor: string;
+  tutoOk: string;
+  /** Rappel discret pendant le compte à rebours */
+  tiltHint: string;
+  /** Flash plein écran */
+  flashFound: string;
+  flashPass: string;
 }
 
 export const STR: I18n<GuessWordStrings> = {
@@ -42,12 +54,12 @@ export const STR: I18n<GuessWordStrings> = {
     rules: [
       "Mets le tél sur ton front, écran vers les autres.",
       "Ils te font deviner le mot sans le dire.",
-      "Tape à gauche si tu trouves, à droite pour passer.",
+      "Penche la tête en avant (écran vers le sol) si tu trouves, en arrière (écran vers le plafond) pour passer.",
       "Le plus de mots trouvés gagne.",
     ],
     how1: [" Mets le tél ", "sur ton front", ", écran vers les autres."],
     how2: [" Ils te font deviner le mot ", "sans le dire", " (mime, indices, bruitages)."],
-    how3: [" Tape ", "à gauche", " si tu trouves, ", "à droite", " pour passer "],
+    how3: [" Penche ", "en avant", " si tu trouves, ", "en arrière", " pour passer."],
     themes: "Les thèmes",
     words: (n) => `${n} mot${n > 1 ? "s" : ""}`,
     timePerPlayer: "Temps par joueur",
@@ -75,18 +87,27 @@ export const STR: I18n<GuessWordStrings> = {
     playAgain: "Rejouer",
     themesBtn: "Les thèmes",
     quit: "Quitter",
+    tutoTitle: "Pas besoin de toucher l'écran",
+    tutoIntro: "Le tél sur le front, en travers (paysage). Tu réponds d'un mouvement de tête :",
+    tutoForward: ["Penche en avant", "écran vers le sol = TROUVÉ"],
+    tutoBack: ["Penche en arrière", "écran vers le plafond = PASSER"],
+    tutoNoSensor: "Pas de capteurs ? Les boutons en bas de l'écran marchent aussi.",
+    tutoOk: "Compris, on y va !",
+    tiltHint: "Avant = trouvé · Arrière = passer",
+    flashFound: "TROUVÉ !",
+    flashPass: "PASSE !",
   },
   en: {
     title: "Guess the Word",
     rules: [
       "Hold the phone to your forehead, screen facing the others.",
       "They get you to guess the word without saying it.",
-      "Tap left if you get it, right to skip.",
+      "Tip your head forward (screen to the floor) if you get it, back (screen to the ceiling) to skip.",
       "Most words guessed wins.",
     ],
     how1: [" Hold the phone ", "to your forehead", ", screen facing the others."],
     how2: [" They get you to guess the word ", "without saying it", " (miming, clues, sound effects)."],
-    how3: [" Tap ", "left", " if you get it, ", "right", " to skip "],
+    how3: [" Tip ", "forward", " if you get it, ", "back", " to skip."],
     themes: "Themes",
     words: (n) => `${n} word${n === 1 ? "" : "s"}`,
     timePerPlayer: "Time per player",
@@ -113,18 +134,27 @@ export const STR: I18n<GuessWordStrings> = {
     playAgain: "Play again",
     themesBtn: "Themes",
     quit: "Quit",
+    tutoTitle: "No need to touch the screen",
+    tutoIntro: "Phone on your forehead, sideways (landscape). Answer with a nod:",
+    tutoForward: ["Tip forward", "screen to the floor = GOT IT"],
+    tutoBack: ["Tip back", "screen to the ceiling = SKIP"],
+    tutoNoSensor: "No motion sensors? The buttons at the bottom work too.",
+    tutoOk: "Got it, let's go!",
+    tiltHint: "Forward = got it · Back = skip",
+    flashFound: "GOT IT!",
+    flashPass: "SKIP!",
   },
   es: {
     title: "Adivina la Palabra",
     rules: [
       "Ponte el móvil en la frente, con la pantalla hacia los demás.",
       "Te hacen adivinar la palabra sin decirla.",
-      "Toca a la izquierda si aciertas, a la derecha para pasar.",
+      "Inclina la cabeza hacia delante (pantalla al suelo) si aciertas, hacia atrás (pantalla al techo) para pasar.",
       "Gana quien acierte más palabras.",
     ],
     how1: [" Ponte el móvil ", "en la frente", ", con la pantalla hacia los demás."],
     how2: [" Te hacen adivinar la palabra ", "sin decirla", " (mímica, pistas, ruidos)."],
-    how3: [" Toca ", "a la izquierda", " si aciertas, ", "a la derecha", " para pasar "],
+    how3: [" Inclina ", "hacia delante", " si aciertas, ", "hacia atrás", " para pasar."],
     themes: "Los temas",
     words: (n) => `${n} palabra${n === 1 ? "" : "s"}`,
     timePerPlayer: "Tiempo por jugador",
@@ -151,5 +181,14 @@ export const STR: I18n<GuessWordStrings> = {
     playAgain: "Volver a jugar",
     themesBtn: "Los temas",
     quit: "Salir",
+    tutoTitle: "No hace falta tocar la pantalla",
+    tutoIntro: "El móvil en la frente, de lado (horizontal). Respondes con la cabeza:",
+    tutoForward: ["Inclina hacia delante", "pantalla al suelo = ACERTADA"],
+    tutoBack: ["Inclina hacia atrás", "pantalla al techo = PASAR"],
+    tutoNoSensor: "¿Sin sensores? Los botones de abajo también funcionan.",
+    tutoOk: "¡Entendido, vamos!",
+    tiltHint: "Delante = acertada · Atrás = pasar",
+    flashFound: "¡ACERTADA!",
+    flashPass: "¡PASO!",
   },
 };

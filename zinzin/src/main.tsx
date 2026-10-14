@@ -11,6 +11,7 @@ import { initRating } from "./rating";
 import { installFrenchTypo } from "./ui/typo";
 import "./share-art"; // blobs déguisés des images « Partager mon résultat »
 import { getLang } from "@/lib/i18n";
+import { lockOrientation } from "@/lib/orientation";
 
 // navigator.vibrate n'existe pas dans la webview iOS : on le branche sur Haptics
 // pour que toutes les vibrations des jeux marchent sur iPhone.
@@ -28,6 +29,8 @@ if (cap?.isNativePlatform?.()) {
 }
 
 initPremium();
+// Toute l'app en portrait (seul « Deviner le Mot » passe en paysage pendant la manche)
+void lockOrientation("portrait");
 // Demande de note automatique après les fins de partie (rare, natif uniquement)
 initRating();
 // Langue du document (lecteurs d'écran, césure) : mise à jour ensuite par setLang()

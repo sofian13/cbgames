@@ -21,6 +21,7 @@ import { STR, questionsFor } from "@/components/games/le-bluffeur/i18n";
 import { Smartphone, Target } from "lucide-react";
 import { GameInlineIcon } from "@/components/games/game-icon-button";
 import { useGameFinished } from "@/lib/game-finished";
+import { PlayerBlob } from "@/components/avatar/PlayerBlob";
 import { ShareResultButton } from "@/components/games/share-result-button";
 import { rankingCard } from "@/lib/share-cards";
 
@@ -98,7 +99,8 @@ const TOTAL_LOCAL_ROUNDS = 5;
 
 function LeBluffeurLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) {
   const t = useT(STR);
-  type Phase = "setup" | "question" | "pass-write" | "write" | "pass-vote" | "vote" | "reveal" | "over";
+  // Vote final : un seul écran commun (tél au milieu), plus de passage de main en main
+  type Phase = "setup" | "question" | "pass-write" | "write" | "table" | "vote" | "reveal" | "over";
   const [phase, setPhase] = useState<Phase>("setup");
   useGameFinished(phase === "over"); // fin de partie → demande de note éventuelle (app)
   const [players, setPlayers] = useState<string[]>([]);
@@ -116,7 +118,7 @@ function LeBluffeurLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) 
   const q = questions[(round - 1) % questions.length] ?? null;
   const totalRounds = Math.min(TOTAL_LOCAL_ROUNDS, questions.length);
 
-  useEffect(() => { preloadSfx(["card-flip", "card-shuffle", "confirm", "select", "whoosh", "gong", "coins", "win", "powerup", "ding", "wrong"]); }, []);
+  useEffect(() => { preloadSfx(["card-flip", "card-shuffle", "confirm", "select", "whoosh", "gong", "coins", "win", "powerup", "ding", "wrong", "tick"]); }, []);
   useScrollTopOn(`${phase}-${turnIdx}-${round}`);
 
   // « Pas fou ? » : la question est retirée de la pioche → la suivante (jamais vue) prend sa place
@@ -167,21 +169,17 @@ function LeBluffeurLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) 
     return { opts: shuffled, wt };
   };
 
-  // Prochain votant : on saute ceux qui ont écrit la vraie réponse (ils la connaissent)
-  const nextVoter = (from: number, wt: boolean[]) => {
-    for (let i = from + 1; i < total; i++) if (!wt[i]) return i;
-    return -1;
-  };
-
   const resolve = (finalVotes: number[], opts: LocalOption[] = options, wt: boolean[] = wroteTruth) => {
     const pts = players.map(() => 0);
     finalVotes.forEach((optId, voter) => {
       if (optId < 0) return;
+      // Ceux qui ont écrit la vraie réponse votent comme tout le monde (pour ne rien trahir), sans effet
       if (wt[voter]) return;
       const opt = opts.find((o) => o.id === optId);
       if (!opt) return;
       if (opt.isTruth) pts[voter] += 30;
-      else opt.authors.forEach((a) => { pts[a] += 20; });
+      // Voter pour son propre bluff ne rapporte rien (le vote est public : on ne peut pas l'interdire sans trahir l'auteur)
+      else if (!opt.authors.includes(voter)) opt.authors.forEach((a) => { pts[a] += 20; });
     });
     wt.forEach((w, i) => { if (w) pts[i] += 15; });
     setScores((s) => s.map((v, i) => v + pts[i]));
@@ -230,57 +228,43 @@ function LeBluffeurLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) 
           if (turnIdx < total - 1) { setTurnIdx(turnIdx + 1); setDraft(""); setPhase("pass-write"); }
           else {
             const built = buildOptions(nf, q?.answer ?? "");
-            const first = nextVoter(-1, built.wt);
             playSfx("card-shuffle", { volume: 0.7, delay: 0.15 });
-            if (first < 0) resolve(players.map(() => -1), built.opts, built.wt);
-            else { setTurnIdx(first); setPhase("pass-vote"); }
+            // Tout le monde a écrit la vraie réponse : rien à voter
+            if (built.wt.every(Boolean)) resolve(players.map(() => -1), built.opts, built.wt);
+            else { setVotes(players.map(() => -1)); setPhase("table"); }
           }
         }}>{t.validateBluff}</ZButton>
       </TheatreScreen>
     );
   }
-  if (phase === "pass-vote") {
-    return <PassScreen toName={players[turnIdx]} colorIndex={turnIdx} accent={BLUFF_COLOR}
-      buttonLabel={t.meVote} hint={t.passVote} onReady={() => setPhase("vote")} />;
+  if (phase === "table") {
+    // Le dernier bluffeur pose le tél au centre : écran neutre, rien de secret
+    return (
+      <TheatreScreen round={round} total={totalRounds}>
+        <ZTitle size={38} className="mt-2 text-center">{t.tableTitle}</ZTitle>
+        <div className="mt-6 flex justify-center gap-1.5">
+          {players.map((n, i) => (
+            <PlayerBlob key={i} name={n} colorIndex={i} size={players.length > 6 ? 34 : 42} mood={i % 2 ? "shifty" : "sus"} delay={i * 0.15} />
+          ))}
+        </div>
+        <p className="mt-6 text-center text-[16px] font-semibold leading-snug">{t.tableHint}</p>
+        <div className="min-h-8 flex-1" />
+        <ZButton bg={GAME_INK} onClick={() => { playSfx("whoosh", { volume: 0.5 }); setPhase("vote"); }}>{t.tableBtn}</ZButton>
+      </TheatreScreen>
+    );
   }
   if (phase === "vote") {
-    const voter = turnIdx;
     return (
-      <ZScreen>
-        <ZChip bg={BLUFF_COLOR} tilt={-2}>{t.votes(players[voter])}</ZChip>
-        <ZTitle size={34} className="mt-3">{t.whichTrue}</ZTitle>
-        <p className="mt-2 text-[16px] font-semibold leading-snug" style={{ color: "rgba(255,255,255,0.88)" }}>{q?.question?.replace(/\s*_{2,}\.?/g, "…")}</p>
-        <div className="mt-5 flex flex-col gap-3">
-          {options.map((o, i) => {
-            const own = o.authors.includes(voter);
-            return (
-              <button key={o.id} type="button" disabled={own}
-                onClick={() => {
-                  playSfx("select", { volume: 0.6 });
-                  const nv = [...votes]; nv[voter] = o.id; setVotes(nv);
-                  const next = nextVoter(voter, wroteTruth);
-                  if (next >= 0) { setTurnIdx(next); setPhase("pass-vote"); }
-                  else { resolve(nv); }
-                }}
-                className="min-h-[56px] w-full break-words rounded-[20px] px-4 py-3 text-left text-[18px] transition-[translate,box-shadow] shadow-[0_4px_0_#15082E] active:translate-y-[3px] active:shadow-[0_1px_0_#15082E] disabled:shadow-none"
-                style={{
-                  ...DISPLAY, letterSpacing: "-0.01em",
-                  background: own ? "transparent" : "#fff", color: own ? "rgba(255,255,255,0.75)" : GAME_INK,
-                  border: own ? "2.5px dashed rgba(255,255,255,0.5)" : `3px solid ${GAME_INK}`,
-                  rotate: own ? undefined : `${i % 2 ? 0.8 : -0.8}deg`,
-                }}>
-                {o.text}{own && <span className="mt-1 block text-[14px] font-semibold" style={{ fontFamily: "'DM Sans', system-ui, sans-serif", letterSpacing: 0 }}>{t.yourBluff}</span>}
-              </button>
-            );
-          })}
-        </div>
-      </ZScreen>
+      <CommonVote players={players} options={options} votes={votes} question={q?.question ?? ""}
+        onVote={(voter, optId) => { playSfx("select", { volume: 0.6 }); setVotes((v) => v.map((x, i) => (i === voter ? optId : x))); }}
+        onReveal={() => resolve(votes)} />
     );
   }
   if (phase === "reveal") {
     const truth = options.find((o) => o.isTruth);
     const bluffs = options.filter((o) => !o.isTruth);
-    const finders = truth ? votes.map((v, i) => (v === truth.id ? players[i] : null)).filter(Boolean) : [];
+    // (ceux qui ont écrit la vraie réponse sont cités à part, +15)
+    const finders = truth ? votes.map((v, i) => (v === truth.id && !wroteTruth[i] ? players[i] : null)).filter(Boolean) : [];
     return (
       <ZScreen>
         <ConfettiBurst count={30} />
@@ -297,7 +281,8 @@ function LeBluffeurLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) 
         {bluffs.length > 0 && <ZTitle size={28} className="mt-8">{t.theBluffs}</ZTitle>}
         <div className="mt-3 flex flex-col gap-3">
           {bluffs.map((o, i) => {
-            const voters = votes.map((v, k) => (v === o.id ? players[k] : null)).filter(Boolean);
+            // Un vote pour son propre bluff ne compte pas
+            const voters = votes.map((v, k) => (v === o.id && !o.authors.includes(k) && !wroteTruth[k] ? players[k] : null)).filter(Boolean);
             return (
               <ZCard key={o.id} bg={voters.length ? "#FF3EA5" : "#fff"} tilt={i % 2 ? 1 : -1} shadow={4} radius={20} className="px-4 py-3">
                 <div className="flex items-start justify-between gap-3">
@@ -333,6 +318,92 @@ function LeBluffeurLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) 
         <ShareResultButton card={() => rankingCard("le-bluffeur", ranking)} />
       </div>
       {onReturnToLobby && <ZLink onClick={onReturnToLobby} color={GAME_INK} className="mt-2">{t.backHome}</ZLink>}
+    </ZScreen>
+  );
+}
+
+const LETTERS = "ABCDEFGHIJ";
+
+/**
+ * Vote commun (tél au milieu de la table) : les propositions s'affichent sans
+ * auteur ; au « 3, 2, 1 » chacun montre sa lettre, puis on touche la lettre de
+ * chaque joueur. Aucune info privée à l'écran, rien à se repasser.
+ */
+function CommonVote({ players, options, votes, question, onVote, onReveal }: {
+  players: string[];
+  options: LocalOption[];
+  votes: number[];
+  question: string;
+  onVote: (voter: number, optId: number) => void;
+  onReveal: () => void;
+}) {
+  const t = useT(STR);
+  const [count, setCount] = useState<number | null>(null);
+  // Décompte « 3, 2, 1… montrez ! » (0 = « Montrez ! », puis disparaît)
+  useEffect(() => {
+    if (count === null) return;
+    if (count > 0) playSfx("tick", { volume: 0.8 });
+    else playSfx("gong", { volume: 0.6, rate: 1.2 });
+    const id = setTimeout(() => setCount(count > 0 ? count - 1 : null), count > 0 ? 750 : 1100);
+    return () => clearTimeout(id);
+  }, [count]);
+  const done = votes.filter((v) => v >= 0).length;
+  const letterOf = (optId: number) => LETTERS[options.findIndex((o) => o.id === optId)] ?? "?";
+  return (
+    <ZScreen>
+      {count !== null && (
+        <div className="fixed inset-0 z-50 grid place-items-center" style={{ background: "rgba(14,8,40,0.88)" }} onClick={() => setCount(null)}>
+          <span key={count} className="px-4 text-center leading-none" style={{ ...DISPLAY, fontSize: count > 0 ? 160 : 64, color: count > 0 ? "#fff" : BLUFF_COLOR, textShadow: `5px 5px 0 ${GAME_INK}`, animation: "reaction-pop .4s ease-out" }}>
+            {count > 0 ? count : t.countdownGo}
+          </span>
+        </div>
+      )}
+      <ZChip bg={BLUFF_COLOR} tilt={-2}>{t.voteChip}</ZChip>
+      <ZTitle size={34} className="mt-3">{t.whichTrue}</ZTitle>
+      <p className="mt-2 text-[16px] font-semibold leading-snug" style={{ color: "rgba(255,255,255,0.88)" }}>{question.replace(/\s*_{2,}\.?/g, "…")}</p>
+      {/* Propositions : une lettre chacune, aucun auteur affiché */}
+      <div className="mt-5 flex flex-col gap-3">
+        {options.map((o, i) => (
+          <div key={o.id} className="flex items-center gap-3 rounded-[20px] px-3 py-2.5"
+            style={{ background: "#fff", color: GAME_INK, border: `3px solid ${GAME_INK}`, boxShadow: `0 4px 0 ${GAME_INK}`, rotate: `${i % 2 ? 0.6 : -0.6}deg` }}>
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full text-[20px]" style={{ ...DISPLAY, background: BLUFF_COLOR, border: `2.5px solid ${GAME_INK}` }}>{LETTERS[i]}</span>
+            <span className="min-w-0 break-words text-[18px] leading-tight" style={{ ...DISPLAY, letterSpacing: "-0.01em" }}>{o.text}</span>
+          </div>
+        ))}
+      </div>
+      <p className="mt-5 text-[15px] font-semibold leading-snug" style={{ color: "rgba(255,255,255,0.9)" }}>{t.voteHow}</p>
+      <ZButton size="sm" bg="#fff" className="mt-3" onClick={() => setCount(3)}>{t.countdownBtn}</ZButton>
+      <div className="mt-7 flex items-baseline justify-between gap-3">
+        <ZTitle size={26}>{t.theVotes}</ZTitle>
+        <span className="shrink-0 text-[15px] font-bold" style={{ color: done === players.length ? "#3DDC97" : "rgba(255,255,255,0.8)" }}>{t.votesCount(done, players.length)}</span>
+      </div>
+      <div className="mt-3 flex flex-col gap-2.5">
+        {players.map((name, p) => (
+          <div key={p} className="flex items-center gap-3 rounded-[20px] px-3 py-2" role="group" aria-label={t.votedFor(name)}
+            style={{ background: "rgba(255,255,255,0.08)", border: `2px solid ${votes[p] >= 0 ? "rgba(61,220,151,0.7)" : "rgba(255,255,255,0.18)"}` }}>
+            <PlayerBlob name={name} colorIndex={p} size={40} mood={votes[p] >= 0 ? "happy" : "thinking"} bob={false} />
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-[16px] font-bold leading-tight">{name}</p>
+              <div className="mt-1.5 flex flex-wrap gap-1.5">
+                {options.map((o, i) => {
+                  const on = votes[p] === o.id;
+                  return (
+                    <button key={o.id} type="button" aria-pressed={on} aria-label={`${name} : ${LETTERS[i]}`}
+                      onClick={() => onVote(p, o.id)}
+                      className="grid h-11 w-11 place-items-center rounded-full text-[19px] transition-transform active:scale-95"
+                      style={{ ...DISPLAY, background: on ? BLUFF_COLOR : "#fff", color: GAME_INK, border: `2.5px solid ${GAME_INK}`, boxShadow: on ? `0 1px 0 ${GAME_INK}` : `0 3px 0 ${GAME_INK}`, translate: on ? "0 2px" : undefined }}>
+                      {LETTERS[i]}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            {votes[p] >= 0 && <span className="sr-only">{letterOf(votes[p])}</span>}
+          </div>
+        ))}
+      </div>
+      <p className="mt-3 text-[14px] font-semibold" style={{ color: "rgba(255,255,255,0.7)" }}>{t.ownNote}</p>
+      <ZButton bg={GAME_INK} className="mt-6" disabled={done < players.length} onClick={onReveal}>{t.revealBtn}</ZButton>
     </ZScreen>
   );
 }

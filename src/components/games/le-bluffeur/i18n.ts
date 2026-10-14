@@ -18,11 +18,20 @@ export const STR: I18n<{
   action: string;
   passWrite: string;
   validateBluff: string;
-  meVote: string;
-  passVote: string;
-  votes: (name: string) => string;
   whichTrue: string;
-  yourBluff: string;
+  /** Vote commun : téléphone au milieu, tout le monde regarde le même écran */
+  tableTitle: string;
+  tableHint: string;
+  tableBtn: string;
+  voteChip: string;
+  voteHow: string;
+  countdownBtn: string;
+  countdownGo: string;
+  theVotes: string;
+  votedFor: (name: string) => string;
+  ownNote: string;
+  votesCount: (n: number, t: number) => string;
+  revealBtn: string;
   round: (r: number, t: number) => string;
   trueAnswer: string;
   foundBy: string;
@@ -51,11 +60,19 @@ export const STR: I18n<{
     action: "Action ! On invente",
     passWrite: "Toi seul : invente une fausse réponse crédible, sans la montrer aux autres.",
     validateBluff: "Valider mon bluff",
-    meVote: "C'est moi, je vote",
-    passVote: "Trouve la VRAIE réponse parmi les propositions.",
-    votes: (name) => `${name} vote`,
     whichTrue: "Laquelle est la vraie ?",
-    yourBluff: "C'est ton bluff",
+    tableTitle: "Téléphone au milieu !",
+    tableHint: "Tous les bluffs sont écrits. Posez le tél au centre : on vote tous ensemble sur le même écran, rien de secret ne s'affiche.",
+    tableBtn: "On vote !",
+    voteChip: "Vote à main levée",
+    voteHow: "Choisissez en silence. Au « 3, 2, 1 », tout le monde montre sa lettre en même temps, puis touchez la lettre de chacun.",
+    countdownBtn: "3, 2, 1… montrez !",
+    countdownGo: "Montrez !",
+    theVotes: "Qui vote quoi ?",
+    votedFor: (name) => `Vote de ${name}`,
+    ownNote: "Voter pour son propre bluff ne rapporte rien.",
+    votesCount: (n, t) => `${n}/${t} votes`,
+    revealBtn: "Révéler la vraie réponse",
     round: (r, t) => `Manche ${r}/${t}`,
     trueAnswer: "La vraie réponse",
     foundBy: "Trouvée par ",
@@ -84,11 +101,19 @@ export const STR: I18n<{
     action: "Action! Start bluffing",
     passWrite: "Just you: make up a believable fake answer, and don't show anyone.",
     validateBluff: "Lock in my bluff",
-    meVote: "It's me, I'm voting",
-    passVote: "Find the REAL answer among the options.",
-    votes: (name) => `${name} votes`,
     whichTrue: "Which one is real?",
-    yourBluff: "That's your bluff",
+    tableTitle: "Phone in the middle!",
+    tableHint: "All the bluffs are in. Put the phone in the middle: everyone votes together on the same screen, nothing secret is shown.",
+    tableBtn: "Let's vote!",
+    voteChip: "Show of hands",
+    voteHow: "Pick in silence. On \"3, 2, 1\", everyone shows their letter at the same time, then tap each player's letter.",
+    countdownBtn: "3, 2, 1… show!",
+    countdownGo: "Show!",
+    theVotes: "Who votes what?",
+    votedFor: (name) => `${name}'s vote`,
+    ownNote: "Voting for your own bluff scores nothing.",
+    votesCount: (n, t) => `${n}/${t} votes`,
+    revealBtn: "Reveal the real answer",
     round: (r, t) => `Round ${r}/${t}`,
     trueAnswer: "The real answer",
     foundBy: "Found by ",
@@ -117,11 +142,19 @@ export const STR: I18n<{
     action: "¡Acción! A inventar",
     passWrite: "Solo tú: inventa una respuesta falsa creíble, sin enseñársela a nadie.",
     validateBluff: "Confirmar mi farol",
-    meVote: "Soy yo, voto",
-    passVote: "Encuentra la respuesta VERDADERA entre las opciones.",
-    votes: (name) => `Vota ${name}`,
     whichTrue: "¿Cuál es la verdadera?",
-    yourBluff: "Es tu farol",
+    tableTitle: "¡Móvil en el centro!",
+    tableHint: "Ya están todos los faroles. Dejad el móvil en el centro: votáis todos juntos en la misma pantalla, no se muestra nada secreto.",
+    tableBtn: "¡A votar!",
+    voteChip: "Votación a mano alzada",
+    voteHow: "Elegid en silencio. Al «3, 2, 1», todos enseñáis vuestra letra a la vez y luego tocad la letra de cada uno.",
+    countdownBtn: "3, 2, 1… ¡enseñad!",
+    countdownGo: "¡Enseñad!",
+    theVotes: "¿Quién vota qué?",
+    votedFor: (name) => `Voto de ${name}`,
+    ownNote: "Votar tu propio farol no da puntos.",
+    votesCount: (n, t) => `${n}/${t} votos`,
+    revealBtn: "Revelar la respuesta verdadera",
     round: (r, t) => `Ronda ${r}/${t}`,
     trueAnswer: "La respuesta verdadera",
     foundBy: "La encontró: ",

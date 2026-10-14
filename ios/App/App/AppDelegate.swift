@@ -39,6 +39,17 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         // Called when the application is about to terminate. Save data if appropriate. See also applicationDidEnterBackground:.
     }
 
+    // Orientation : l'app est verrouillée en portrait (plugin ScreenOrientation), sauf
+    // « Deviner le Mot » qui passe en paysage. On applique le verrou de la vue Capacitor
+    // à toute la fenêtre (feuilles présentées comprises). Fenêtre lue depuis le paramètre :
+    // avec UIScene (Capacitor 8.5+), self.window de l'AppDelegate est toujours nil.
+    func application(_ application: UIApplication, supportedInterfaceOrientationsFor window: UIWindow?) -> UIInterfaceOrientationMask {
+        guard let bridgeViewController = window?.rootViewController as? CAPBridgeViewController else {
+            return .all
+        }
+        return bridgeViewController.supportedInterfaceOrientations
+    }
+
     func application(_ application: UIApplication,
                      configurationForConnecting connectingSceneSession: UISceneSession,
                      options: UIScene.ConnectionOptions) -> UISceneConfiguration {

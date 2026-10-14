@@ -3,29 +3,35 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { adultDefault } from "@/lib/party-mood";
 import type { GameProps } from "@/lib/games/types";
-import { PlayersSetup, PassScreen, colorForIndex } from "@/components/games/local-kit";
-import { Mascot, MascotAvatar } from "@/components/Mascot";
+import { PlayersSetup, PassScreen } from "@/components/games/local-kit";
+import { Mascot } from "@/components/Mascot";
+import { PlayerBlob } from "@/components/avatar/PlayerBlob";
 import { ConfettiBurst } from "@/components/ConfettiBurst";
-import { ArrowLeft, ArrowRight, Check, Crown, Smartphone, Speech, X } from "lucide-react";
+import { ArrowDown, ArrowUp, Check, Crown, Smartphone, Speech, X } from "lucide-react";
 import { GameIconBadge, GameInlineIcon } from "@/components/games/game-icon-button";
 import { IdeaButton, RerollButton } from "@/components/games/idea-button";
 import { TopRightControls } from "@/components/games/patate/rules-sheet";
-import { C, Chip, DISPLAY, INK, KitStyles, SectionTitle, SoftLink, StickerBtn, StickerCard, StickerScreen, TOP_PAD, BOTTOM_PAD, dotted, sticker } from "@/components/games/patate/sticker-kit";
+import { C, Chip, DISPLAY, INK, KitStyles, SectionTitle, SoftLink, StickerBtn, StickerCard, StickerScreen, BOTTOM_PAD, dotted, sticker } from "@/components/games/patate/sticker-kit";
 import { playCombo, playSfx, preloadSfx } from "@/lib/sfx";
 import { useLang } from "@/lib/i18n";
 import { PACKS_BY_LANG } from "./words";
 import { STR } from "./i18n";
 import { useGameFinished } from "@/lib/game-finished";
+import { landscapeWhile } from "@/lib/orientation";
+import { requestMotionPermission } from "@/components/games/verre/sensors";
+import { useTiltGestures } from "./tilt";
 
 // ── Deviner le Mot ─────────────────────────────────────────
 // Un joueur met le tél sur son front (écran vers les autres), les autres le
-// font deviner sans dire le mot. Il tape à gauche s'il trouve, à droite pour
-// passer. Chacun son tour, on cumule les mots trouvés.
+// font deviner sans dire le mot. Pendant la manche l'écran passe en paysage :
+// il penche la tête en avant (écran vers le sol) s'il trouve, en arrière
+// (écran vers le plafond) pour passer — boutons tactiles en secours.
+// Chacun son tour, on cumule les mots trouvés.
 
 const ACCENT = "#4ECDC4";
 const DURATIONS = [30, 60, 90] as const;
 
-type Phase = "setup" | "config" | "pass" | "countdown" | "playing" | "turn-end" | "final";
+type Phase = "setup" | "config" | "pass" | "tuto" | "countdown" | "playing" | "turn-end" | "final";
 type WordResult = { word: string; ok: boolean };
 
 function shuffle<T>(arr: T[]): T[] {
@@ -47,7 +53,10 @@ const vib = (p: number | number[]) => {
 
 const KEYFRAMES = `
 @keyframes gw-pop { 0% { transform: scale(.6); opacity: 0 } 70% { transform: scale(1.06); opacity: 1 } 100% { transform: scale(1) } }
-@keyframes gw-flash { from { opacity: .55 } to { opacity: 0 } }
+@keyframes gw-flash { 0% { opacity: 0 } 12% { opacity: .96 } 65% { opacity: .96 } 100% { opacity: 0 } }
+@keyframes gw-flash-txt { 0% { transform: scale(.7) rotate(-4deg) } 30% { transform: scale(1.08) rotate(-4deg) } 100% { transform: scale(1) rotate(-4deg) } }
+@keyframes gw-nod-f { 0%, 30% { transform: rotate(0) } 55%, 80% { transform: rotate(38deg) } 100% { transform: rotate(0) } }
+@keyframes gw-nod-b { 0%, 30% { transform: rotate(0) } 55%, 80% { transform: rotate(-38deg) } 100% { transform: rotate(0) } }
 `;
 
 export default function GuessWordGame({ onReturnToLobby }: GameProps) {
@@ -76,6 +85,8 @@ export default function GuessWordGame({ onReturnToLobby }: GameProps) {
   const [count, setCount] = useState(3);
   const [results, setResults] = useState<WordResult[]>([]);
   const [flash, setFlash] = useState<{ ok: boolean; n: number } | null>(null);
+  // Tuto des gestes : une fois par partie, avant la 1re manche
+  const [tutoSeen, setTutoSeen] = useState(false);
 
   const current = players.length ? turn % players.length : 0;
   const totalTurns = players.length * tours;
@@ -144,9 +155,9 @@ export default function GuessWordGame({ onReturnToLobby }: GameProps) {
       setFlash({ ok, n: Date.now() });
       if (sound) {
         if (ok) playSfx("success", { volume: 0.75 });
-        else playSfx("whooshdown", { volume: 0.6 });
+        else playSfx("whoosh", { volume: 0.7 });
       }
-      vib(ok ? 40 : [30, 40, 30]);
+      vib(ok ? 60 : [30, 40, 30]);
       if (ok) setScores((s) => s.map((v, i) => (i === current ? v + 1 : v)));
       if (wordIdx + 1 >= deck.length) {
         // Pioche épuisée : on remélange plutôt que de bloquer
@@ -156,6 +167,18 @@ export default function GuessWordGame({ onReturnToLobby }: GameProps) {
     },
     [phase, deck, wordIdx, sound, current, pool]
   );
+
+  // Manche (compte à rebours + jeu) en paysage, retour au portrait ensuite / en quittant
+  const inRound = phase === "countdown" || phase === "playing";
+  useEffect(() => landscapeWhile(inRound), [inRound]);
+  // Gestes de tête : capteurs écoutés dès le compte à rebours (calibrage au « GO »)
+  const { live: tiltLive } = useTiltGestures(inRound, phase === "playing", (g) => answer(g === "found"));
+  // Le flash plein écran s'efface tout seul
+  useEffect(() => {
+    if (!flash) return;
+    const id = setTimeout(() => setFlash(null), 700);
+    return () => clearTimeout(id);
+  }, [flash]);
 
   // « Mot nul ? » : change le 1er mot du tour sans le compter (avant toute réponse)
   const rerollWord = () => {
@@ -219,7 +242,7 @@ export default function GuessWordGame({ onReturnToLobby }: GameProps) {
           <ul className="space-y-1.5 text-[15px] font-semibold leading-snug">
             <li><GameInlineIcon icon={Smartphone} />{t.how1[0]}<b>{t.how1[1]}</b>{t.how1[2]}</li>
             <li><GameInlineIcon icon={Speech} />{t.how2[0]}<b>{t.how2[1]}</b>{t.how2[2]}</li>
-            <li><GameInlineIcon icon={ArrowLeft} />{t.how3[0]}<b>{t.how3[1]}</b>{t.how3[2]}<b>{t.how3[3]}</b>{t.how3[4]}<GameInlineIcon icon={ArrowRight} /></li>
+            <li><GameInlineIcon icon={ArrowDown} />{t.how3[0]}<b>{t.how3[1]}</b>{t.how3[2]}<b>{t.how3[3]}</b>{t.how3[4]}</li>
           </ul>
         </StickerCard>
 
@@ -296,9 +319,50 @@ export default function GuessWordGame({ onReturnToLobby }: GameProps) {
           accent={ACCENT}
           hint={t.passHint(Math.floor(turn / players.length) + 1, tours, duration)}
           buttonLabel={t.ready}
-          onReady={startTurn}
+          onReady={() => {
+            // Permission capteurs iOS (web) : à demander dans le geste, sans attendre
+            void requestMotionPermission();
+            if (tutoSeen) startTurn();
+            else setPhase("tuto");
+          }}
         />
       </>
+    );
+  }
+
+  if (phase === "tuto") {
+    return (
+      <StickerScreen bg={C.night}>
+        {controls}
+        <style>{KEYFRAMES}</style>
+        <h1 className="text-center text-[clamp(30px,9vw,40px)] leading-[0.95]" style={{ ...DISPLAY, textShadow: `3px 3px 0 ${INK}` }}>{t.tutoTitle}</h1>
+        <p className="mt-3 text-center text-[16px] font-semibold leading-snug" style={{ color: "rgba(255,255,255,0.9)" }}>{t.tutoIntro}</p>
+        <div className="mt-5 grid w-full gap-3">
+          {([
+            { txt: t.tutoForward, bg: C.mint, icon: ArrowDown, anim: "gw-nod-f" },
+            { txt: t.tutoBack, bg: C.orange, icon: ArrowUp, anim: "gw-nod-b" },
+          ] as const).map((r, i) => (
+            <StickerCard key={i} bg={r.bg} radius={22} shadow={5} tilt={i ? 1 : -1} className="flex items-center gap-4 p-4">
+              {/* Tél de profil qui bascule (vue de côté) */}
+              <span aria-hidden className="grid h-16 w-16 shrink-0 place-items-center rounded-full" style={{ background: "rgba(255,255,255,0.55)", border: `2.5px solid ${INK}` }}>
+                <span style={{ display: "block", width: 12, height: 40, borderRadius: 4, background: INK, transformOrigin: "50% 100%", animation: `${r.anim} 2.2s ease-in-out infinite` }} />
+              </span>
+              <span className="min-w-0">
+                <span className="block text-[22px] leading-tight" style={DISPLAY}><GameInlineIcon icon={r.icon} /> {r.txt[0]}</span>
+                <span className="mt-0.5 block text-[15px] font-bold leading-snug">{r.txt[1]}</span>
+              </span>
+            </StickerCard>
+          ))}
+        </div>
+        <p className="mt-4 text-center text-[14px] font-semibold" style={{ color: "rgba(255,255,255,0.75)" }}>{t.tutoNoSensor}</p>
+        <div className="mt-auto flex w-full flex-col items-center pt-7">
+          <StickerBtn big bg={ACCENT} onClick={() => {
+            void requestMotionPermission();
+            setTutoSeen(true);
+            startTurn();
+          }}>{t.tutoOk}</StickerBtn>
+        </div>
+      </StickerScreen>
     );
   }
 
@@ -307,9 +371,10 @@ export default function GuessWordGame({ onReturnToLobby }: GameProps) {
       <StickerScreen bg={ACCENT} light center>
         <style>{KEYFRAMES}</style>
         <p className="text-[24px]" style={DISPLAY}><GameInlineIcon icon={Smartphone} />{t.phoneOnForehead}</p>
-        <p key={count} className="mt-4 leading-none" style={{ ...DISPLAY, fontSize: 170, color: "#fff", textShadow: `6px 6px 0 ${INK}`, WebkitTextStroke: `3px ${INK}`, animation: "gw-pop .5s ease-out" }}>
+        <p key={count} className="mt-2 leading-none" style={{ ...DISPLAY, fontSize: "min(170px, 42vh)", color: "#fff", textShadow: `6px 6px 0 ${INK}`, WebkitTextStroke: `3px ${INK}`, animation: "gw-pop .5s ease-out" }}>
           {count > 0 ? count : "GO"}
         </p>
+        <p className="mt-3 text-[16px] font-bold">{t.tiltHint}</p>
       </StickerScreen>
     );
   }
@@ -319,51 +384,73 @@ export default function GuessWordGame({ onReturnToLobby }: GameProps) {
     const urgent = timeLeft <= 10;
     const found = results.filter((r) => r.ok).length;
     const long = word.length > 14;
-    // le mot le plus long doit tenir sur une ligne (pas de « Antarc-tique »)
+    // le mot le plus long doit tenir sur une ligne (pas de « Antarc-tique ») ; en paysage la hauteur borne aussi
     const longestWord = Math.max(1, ...word.split(/\s+/).map((w) => w.length));
+    const sidePad = "max(env(safe-area-inset-left, 0px), env(safe-area-inset-right, 0px), 12px)";
     return (
       <div className="relative flex min-h-[100dvh] shrink-0 select-none flex-col overflow-hidden" style={{ ...dotted(urgent ? "#5E1640" : C.night), color: "#fff", touchAction: "manipulation", transition: "background-color .5s" }}>
         <KitStyles />
         <style>{KEYFRAMES}</style>
+        {/* Retour du geste : flash plein écran + mot géant (vu par toute la table) */}
         {flash && (
           <div
             key={flash.n}
-            className="pointer-events-none absolute inset-0 z-20"
-            style={{ background: flash.ok ? C.mint : C.coral, animation: "gw-flash .4s ease-out forwards" }}
-          />
+            role="status"
+            className="pointer-events-none absolute inset-0 z-40 grid place-items-center"
+            style={{ background: flash.ok ? C.mint : C.orange, animation: "gw-flash .7s ease-out forwards" }}
+          >
+            <span className="px-4 text-center leading-none" style={{ ...DISPLAY, fontSize: "min(22vw, 30vh)", color: "#fff", WebkitTextStroke: `3px ${INK}`, textShadow: `6px 6px 0 ${INK}`, animation: "gw-flash-txt .35s ease-out both" }}>
+              {flash.ok ? t.flashFound : t.flashPass}
+            </span>
+          </div>
         )}
         {/* Chrono et score centrés : coins du haut laissés libres */}
-        <div className="pointer-events-none absolute inset-x-0 z-10 flex flex-col items-center" style={{ top: "calc(env(safe-area-inset-top, 0px) + 12px)" }}>
-          <span className="px-4 py-0.5 tabular-nums leading-tight" style={{ ...sticker(urgent ? C.coral : "#fff", { radius: 999, shadow: 3 }), ...DISPLAY, fontSize: 40 }}>
+        <div className="pointer-events-none absolute inset-x-0 z-10 flex flex-col items-center" style={{ top: "calc(env(safe-area-inset-top, 0px) + 10px)" }}>
+          <span className="px-4 py-0.5 tabular-nums leading-tight" style={{ ...sticker(urgent ? C.coral : "#fff", { radius: 999, shadow: 3 }), ...DISPLAY, fontSize: 34 }}>
             {timeLeft}
           </span>
-          <span className="mt-2 text-[15px] font-bold">
+          <span className="mt-1.5 text-[15px] font-bold">
             {players[current]} · {t.found(found)}
           </span>
         </div>
 
-        {results.length === 0 && (
-          <div className="absolute inset-x-0 z-30 flex justify-center" style={{ top: "calc(env(safe-area-inset-top, 0px) + 112px)" }}>
-            <RerollButton onClick={rerollWord} label={t.reroll} />
+        {tiltLive ? (
+          /* Capteurs actifs : boutons de secours discrets en bas (pour la table) */
+          <div className="absolute inset-x-0 bottom-0 z-30 flex items-end justify-between gap-3" style={{ paddingLeft: sidePad, paddingRight: sidePad, paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 10px)" }}>
+            <button type="button" onClick={() => answer(true)} className="zk-push inline-flex min-h-[44px] items-center gap-1.5 px-3.5 text-[15px] font-bold" style={{ ...sticker(C.mint, { radius: 999, shadow: 3, border: 2.5 }), opacity: 0.85 }} aria-label={t.got}>
+              <Check size={16} strokeWidth={3.5} aria-hidden /> {t.got}
+            </button>
+            {results.length === 0 && <RerollButton onClick={rerollWord} label={t.reroll} />}
+            <button type="button" onClick={() => answer(false)} className="zk-push inline-flex min-h-[44px] items-center gap-1.5 px-3.5 text-[15px] font-bold" style={{ ...sticker(C.orange, { radius: 999, shadow: 3, border: 2.5 }), opacity: 0.85 }} aria-label={t.skip}>
+              <X size={16} strokeWidth={3.5} aria-hidden /> {t.skip}
+            </button>
           </div>
+        ) : (
+          <>
+            {results.length === 0 && (
+              <div className="absolute inset-x-0 bottom-[calc(env(safe-area-inset-bottom,0px)+96px)] z-30 flex justify-center landscape:bottom-[calc(env(safe-area-inset-bottom,0px)+14px)]">
+                <RerollButton onClick={rerollWord} label={t.reroll} />
+              </div>
+            )}
+            {/* Sans capteurs (web, ordinateur) : deux grandes moitiés tactiles */}
+            <div className="absolute inset-0 flex gap-0">
+              <button type="button" onClick={() => answer(true)} className="flex flex-1 flex-col items-center justify-end" style={{ background: "rgba(61,220,151,0.16)", borderRight: `3px solid ${INK}`, paddingBottom: BOTTOM_PAD }} aria-label={t.got}>
+                <GameIconBadge icon={Check} bg={C.mint} size={56} />
+                <span className="mt-1 text-[19px]" style={DISPLAY}>{t.got}</span>
+              </button>
+              <button type="button" onClick={() => answer(false)} className="flex flex-1 flex-col items-center justify-end" style={{ background: "rgba(255,138,61,0.16)", paddingBottom: BOTTOM_PAD }} aria-label={t.skip}>
+                <GameIconBadge icon={X} bg={C.orange} size={56} />
+                <span className="mt-1 text-[19px]" style={DISPLAY}>{t.skip}</span>
+              </button>
+            </div>
+          </>
         )}
-        {/* Deux grandes moitiés tactiles : à l'aveugle, le front collé au tél */}
-        <div className="absolute inset-0 flex gap-0">
-          <button type="button" onClick={() => answer(true)} className="flex flex-1 flex-col items-center justify-end" style={{ background: "rgba(61,220,151,0.16)", borderRight: `3px solid ${INK}`, paddingBottom: BOTTOM_PAD }} aria-label={t.got}>
-            <GameIconBadge icon={Check} bg={C.mint} size={64} />
-            <span className="mt-1.5 text-[20px]" style={DISPLAY}>{t.got}</span>
-          </button>
-          <button type="button" onClick={() => answer(false)} className="flex flex-1 flex-col items-center justify-end" style={{ background: "rgba(255,107,91,0.16)", paddingBottom: BOTTOM_PAD }} aria-label={t.skip}>
-            <GameIconBadge icon={X} bg={C.coral} size={64} />
-            <span className="mt-1.5 text-[20px]" style={DISPLAY}>{t.skip}</span>
-          </button>
-        </div>
 
-        <div className="pointer-events-none relative z-10 flex flex-1 items-center justify-center px-4" style={{ paddingTop: TOP_PAD }}>
-          <div key={wordIdx + deck.length} className="max-w-full px-5 py-4 text-center" style={{ ...sticker(C.cream, { radius: 26, shadow: 6 }), transform: "rotate(-2deg)", animation: "gw-pop .25s ease-out" }}>
+        <div className="pointer-events-none relative z-10 flex flex-1 items-center justify-center" style={{ paddingTop: 84, paddingBottom: 64, paddingLeft: sidePad, paddingRight: sidePad }}>
+          <div key={wordIdx + deck.length} className="max-w-full px-6 py-3 text-center" style={{ ...sticker(C.cream, { radius: 26, shadow: 6 }), transform: "rotate(-2deg)", animation: "gw-pop .25s ease-out" }}>
             <h2
               lang={lang}
-              style={{ ...DISPLAY, fontSize: `min(${long ? "10vw, 3rem" : "14vw, 4.2rem"}, ${(130 / longestWord).toFixed(1)}vw)`, lineHeight: 1.02, overflowWrap: "anywhere", hyphens: "auto" }}
+              style={{ ...DISPLAY, fontSize: `min(${long ? "10vw, 17vh" : "14vw, 24vh"}, ${(130 / longestWord).toFixed(1)}vw)`, lineHeight: 1.02, overflowWrap: "anywhere", hyphens: "auto" }}
             >
               {word}
             </h2>
@@ -383,7 +470,7 @@ export default function GuessWordGame({ onReturnToLobby }: GameProps) {
           {t.timeUp}
         </span>
         <div className="mt-3">
-          <MascotAvatar color={colorForIndex(current)} size={70} mood={found >= 8 ? "fire" : found >= 4 ? "happy" : "sad"} border={false} />
+          <PlayerBlob name={players[current]} colorIndex={current} size={70} mood={found >= 8 ? "fire" : found >= 4 ? "happy" : "sad"} bob={false} />
         </div>
         <h2 className="mt-1 max-w-full truncate text-center leading-none" style={{ ...DISPLAY, fontSize: `min(40px, ${(110 / Math.max(1, players[current]?.length ?? 1)).toFixed(1)}vw)`, textShadow: `3px 3px 0 ${INK}` }}>{players[current]}</h2>
         <div className="mt-3 px-6 py-1.5 text-center" style={{ ...sticker(ACCENT, { radius: 22, shadow: 5 }), transform: "rotate(-2deg)" }}>
@@ -429,8 +516,10 @@ export default function GuessWordGame({ onReturnToLobby }: GameProps) {
       <span className="px-3.5 py-1 text-[17px]" style={{ ...sticker(C.yellow, { radius: 999, shadow: 3, border: 2.5 }), ...DISPLAY, transform: "rotate(-3deg)" }}>
         {tie ? t.tieTop : t.bestGuesser}
       </span>
-      <div className="mt-3">
-        <Mascot size={100} color={colorForIndex(top?.i ?? 0)} mood="cool" arms crown shadow={false} />
+      <div className="relative mt-5">
+        {/* Couronne posée au-dessus du perso (le perso personnalisé n'a pas de couronne intégrée) */}
+        <Crown aria-hidden size={34} strokeWidth={2.6} fill={C.yellow} color={INK} className="absolute -top-6 left-1/2 z-10 -translate-x-1/2 -rotate-6" />
+        <PlayerBlob name={top?.name} colorIndex={top?.i ?? 0} size={100} mood="cool" arms talk autoTalk />
       </div>
       <h2 className="mt-1 max-w-full break-words text-center leading-[0.95]" style={{ ...DISPLAY, fontSize: `min(54px, 11vw, ${(110 / Math.max(1, ...(tie ? ranking.filter((r) => r.s === top.s) : [top]).map((r) => r?.name.length ?? 1))).toFixed(1)}vw)`, textShadow: `4px 4px 0 ${INK}` }}>
         {tie
@@ -461,7 +550,7 @@ function Standings({ players, scores, big }: { players: string[]; scores: number
         return (
           <div key={r.i} className="flex items-center gap-3 px-3" style={{ ...sticker(lead ? C.yellow : C.cream, { radius: 18, shadow: 3 }), minHeight: big ? 54 : 48 }}>
             <span className="grid w-6 place-items-center text-[18px]" style={DISPLAY}>{lead ? <Crown size={18} strokeWidth={2.8} aria-hidden /> : k + 1}</span>
-            <MascotAvatar color={colorForIndex(r.i)} size={30} border={false} />
+            <PlayerBlob name={r.name} colorIndex={r.i} size={30} mood="happy" bob={false} />
             <span className="min-w-0 flex-1 truncate text-[18px]" style={DISPLAY}>{r.name}</span>
             <span className="text-[19px]" style={DISPLAY}>{r.s}</span>
           </div>
