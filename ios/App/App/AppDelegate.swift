@@ -10,7 +10,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         // Jeu de soirée : les sons doivent s'entendre même si l'iPhone est en mode silencieux,
         // sans couper la musique qui tourne déjà (mixWithOthers).
-        try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .default, options: [.mixWithOthers])
+        // Lecture + enregistrement dès le départ : le micro (Chut !, voix des persos) marche du premier coup,
+        // le son sort sur le haut-parleur, se mélange à la musique et ignore le bouton silencieux.
+        try? AVAudioSession.sharedInstance().setCategory(.playAndRecord, mode: .default, options: [.mixWithOthers, .defaultToSpeaker, .allowBluetoothA2DP])
         try? AVAudioSession.sharedInstance().setActive(true)
         return true
     }

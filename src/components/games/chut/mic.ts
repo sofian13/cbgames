@@ -56,9 +56,18 @@ export class MicMeter {
       return;
     }
     this.stream = stream;
-    if (ctx.state === "suspended") await ctx.resume().catch(() => {});
-    const src = ctx.createMediaStreamSource(stream);
-    const an = ctx.createAnalyser();
+    // iOS : à l'ouverture du micro, la session audio bascule en lecture+enregistrement et peut
+    // « interrompre » le contexte créé juste avant → on le relance, sinon on en recrée un neuf.
+    let live: AudioContext = ctx;
+    if (live.state !== "running") await live.resume().catch(() => {});
+    if (live.state !== "running") {
+      void live.close().catch(() => {});
+      live = new AC();
+      this.ctx = live;
+      await live.resume().catch(() => {});
+    }
+    const src = live.createMediaStreamSource(stream);
+    const an = live.createAnalyser();
     an.fftSize = 2048;
     an.smoothingTimeConstant = 0;
     src.connect(an); // pas relié aux haut-parleurs : aucun retour

@@ -125,6 +125,7 @@ export class VoiceRecorder {
       const C = AC();
       if (C) {
         const ctx = new C();
+        if (ctx.state !== "running") void ctx.resume().catch(() => {});
         const an = ctx.createAnalyser();
         an.fftSize = 1024;
         ctx.createMediaStreamSource(stream).connect(an);
