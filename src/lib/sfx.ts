@@ -13,6 +13,8 @@ export type SfxName =
   | "confirm" | "success" | "error" | "wrong" | "question"
   | "pop" | "pop2" | "ding" | "ding2" | "gong" | "tick" | "tock" | "scratch" | "pluck" | "pluck2"
   | "whoosh" | "whooshdown"
+  // interface de l'app, style « blob » (bloop = toucher un jeu/perso, bloop2 = petit choix, swoop = fiche qui s'ouvre/se ferme)
+  | "bloop" | "bloop2" | "swoop-up" | "swoop-down"
   // objets
   | "card-place" | "card-slide" | "card-shuffle" | "card-fan" | "card-flip"
   | "dice-shake" | "dice-throw" | "coin" | "coins"
@@ -93,9 +95,13 @@ function load(name: SfxName): Promise<AudioBuffer | null> {
   return p;
 }
 
+/** Samples des sons composés (playCombo) : préchargés avec n'importe quel jeu, pour que la fanfare,
+ * le roulement ou l'échec ne partent pas en retard la première fois. */
+const COMBO_SFX: SfxName[] = ["tada", "applause", "buzzer", "crowd-aww", "whoosh", "gong", "drumroll", "drumroll-end"];
+
 /** Précharge des sons (à appeler au montage d'un jeu pour éviter la latence du 1er son). */
 export function preloadSfx(names: SfxName[]) {
-  names.forEach((n) => void load(n));
+  [...names, ...COMBO_SFX].forEach((n) => void load(n));
 }
 
 export interface SfxOptions {

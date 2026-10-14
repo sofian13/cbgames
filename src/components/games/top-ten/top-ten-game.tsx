@@ -143,7 +143,7 @@ function TopTenLocalGame({ onReturnToLobby, tools, onTuto }: { onReturnToLobby?:
   const [players, setPlayers] = useState<string[]>([]);
   const [scores, setScores] = useState<number[]>([]);
   // fin de partie → demande de note éventuelle + stats de la bande (app)
-  useGameFinished(phase === "over", { loser: uniqueMin(players, scores) });
+  useGameFinished(phase === "over", { loser: uniqueMin(players, scores), scores: { names: players, values: scores } });
   const [round, setRound] = useState(0);
   const [numberRange, setNumberRange] = useState<10 | 25 | 50>(10);
   // 18+ jamais présélectionné, sauf en Soirée « Folle »

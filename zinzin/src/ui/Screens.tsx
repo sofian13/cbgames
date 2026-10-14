@@ -25,6 +25,7 @@ import { baseLook } from "@/lib/avatar/look";
 import { setVoicesInGame, useVoicesInGame } from "@/lib/avatar/voice";
 import { VOICE_STR } from "@/lib/avatar/voice-i18n";
 import { clearVoices } from "@/lib/avatar/voice-store";
+import { uiSfx } from "@/lib/ui-sfx";
 
 export type LegalPage = "cgu" | "confidentialite" | "mentions";
 
@@ -52,7 +53,7 @@ export function AgeGate({ onOk }: { onOk: () => void }) {
       </p>
       <div className="flex-1" />
       <div className="zz-rise" style={{ ["--d" as string]: "260ms" }}>
-        <BigBtn onClick={() => { haptic("medium"); setAgeOk(); setOut(true); setTimeout(onOk, 240); }} bg="#FFD23F">
+        <BigBtn onClick={() => { haptic("medium"); uiSfx.primary(); setAgeOk(); setOut(true); setTimeout(onOk, 240); }} bg="#FFD23F">
           {t.ageOk}
         </BigBtn>
       </div>
@@ -166,9 +167,9 @@ export function SettingsSheet({
           {/* Liens légaux, discrets */}
           {/* Liens soulignés espacés, sans « · » qui resterait seul en fin de ligne sur petit écran */}
           <div className="mt-6 flex flex-wrap items-center justify-center gap-x-1 text-[14px] font-semibold" style={{ color: "var(--zz-dim)" }}>
-            <button type="button" className="zz-tap min-h-11 px-2 underline decoration-2 underline-offset-4" onClick={() => onLegal("cgu")}>{t.terms}</button>
-            <button type="button" className="zz-tap min-h-11 px-2 underline decoration-2 underline-offset-4" onClick={() => onLegal("confidentialite")}>{t.privacy}</button>
-            <button type="button" className="zz-tap min-h-11 px-2 underline decoration-2 underline-offset-4" onClick={() => onLegal("mentions")}>{t.legalNotice}</button>
+            <button type="button" className="zz-tap min-h-11 px-2 underline decoration-2 underline-offset-4" onClick={() => { uiSfx.open(); onLegal("cgu"); }}>{t.terms}</button>
+            <button type="button" className="zz-tap min-h-11 px-2 underline decoration-2 underline-offset-4" onClick={() => { uiSfx.open(); onLegal("confidentialite"); }}>{t.privacy}</button>
+            <button type="button" className="zz-tap min-h-11 px-2 underline decoration-2 underline-offset-4" onClick={() => { uiSfx.open(); onLegal("mentions"); }}>{t.legalNotice}</button>
           </div>
           <EraseData />
           <p className="text-center text-[13px]" style={{ color: "var(--zz-mute)" }}>
@@ -190,7 +191,7 @@ function BandTile() {
     <>
       <button
         type="button"
-        onClick={() => { haptic(); setOpen(true); }}
+        onClick={() => { haptic(); uiSfx.open(); setOpen(true); }}
         className="zz-push zz-stk mt-6 flex w-full items-center gap-3 rounded-[24px] py-3 pl-4 pr-3 text-left"
         style={{ background: "#3DDC97", color: "var(--zz-ink)", rotate: "1deg" }}
       >
@@ -235,7 +236,7 @@ function NoAlcoholToggle() {
   return (
     <button
       type="button"
-      onClick={() => { haptic(); setNoAlcohol(!on); }}
+      onClick={() => { haptic(); uiSfx.choice(); setNoAlcohol(!on); }}
       className="zz-push zz-stk mt-3.5 flex w-full items-center gap-3 rounded-[22px] px-4 py-3.5 text-left"
       style={{ background: "#FFF6E5", color: "var(--zz-ink)" }}
       role="switch"
@@ -259,7 +260,7 @@ function VoicesToggle() {
   return (
     <button
       type="button"
-      onClick={() => { haptic(); setVoicesInGame(!on); }}
+      onClick={() => { haptic(); uiSfx.choice(); setVoicesInGame(!on); }}
       className="zz-push zz-stk mt-3.5 flex w-full items-center gap-3 rounded-[22px] px-4 py-3.5 text-left"
       style={{ background: "#FFF6E5", color: "var(--zz-ink)" }}
       role="switch"
@@ -287,6 +288,7 @@ function NotifToggle({ toast }: { toast: (m: string) => void }) {
       disabled={busy}
       onClick={async () => {
         haptic();
+        uiSfx.choice();
         setBusy(true);
         const res = await setNotifications(!on);
         setBusy(false);
@@ -321,7 +323,7 @@ function LangPicker() {
           <button
             key={l.id}
             type="button"
-            onClick={() => { haptic(); setLang(l.id); }}
+            onClick={() => { haptic(); if (lang !== l.id) uiSfx.choice(); setLang(l.id); }}
             aria-pressed={lang === l.id}
             className="zz-push zz-stk-sm flex min-h-12 flex-col items-center justify-center rounded-[18px] py-2 text-[14px] font-extrabold"
             style={{ background: lang === l.id ? "#FFD23F" : "#fff", color: "var(--zz-ink)", rotate: lang === l.id ? "-2deg" : undefined }}
@@ -362,7 +364,7 @@ export function LegalScreen({ page, onClose }: { page: LegalPage; onClose: () =>
   return (
     <div className="zz-screen-in zz-scroll zz-page fixed inset-0" style={{ zIndex: 70 }} role="dialog" aria-modal aria-label={doc.title}>
       <div className="mx-auto max-w-lg px-5" style={{ paddingTop: "calc(var(--sat) + 8px)", paddingBottom: "calc(var(--sab) + 24px)" }}>
-        <RoundBtn onClick={onClose} label={t.back}><ChevronLeft size={24} strokeWidth={3} /></RoundBtn>
+        <RoundBtn onClick={() => { uiSfx.close(); onClose(); }} label={t.back}><ChevronLeft size={24} strokeWidth={3} /></RoundBtn>
         <div className="relative mt-6">
           <h1 className="zz-title pr-20 text-white" style={{ fontSize: 36 }}>{doc.title}</h1>
           <div className="absolute -top-4 right-0"><ZBlob size={70} color="sky" mood="thinking" seed={3} outline shadow={false} /></div>
@@ -459,7 +461,7 @@ export function GameScreen({ id, onExit }: { id: string; onExit: () => void }) {
             <BigBtn onClick={() => setConfirm(false)} bg={ZPALETTE[game.color].body} color={ZPALETTE[game.color].ink} className="mt-5">
               {t.keepPlaying}
             </BigBtn>
-            <button type="button" onClick={() => { haptic("medium"); onExit(); }} className="zz-tap mt-2 h-12 w-full rounded-full text-[16px] font-bold underline decoration-2 underline-offset-4">
+            <button type="button" onClick={() => { haptic("medium"); uiSfx.close(); onExit(); }} className="zz-tap mt-2 h-12 w-full rounded-full text-[16px] font-bold underline decoration-2 underline-offset-4">
               {t.quit}
             </button>
           </div>

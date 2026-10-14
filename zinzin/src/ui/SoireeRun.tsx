@@ -4,16 +4,17 @@ import { ConfettiBurst } from "@/components/ConfettiBurst";
 import { colorForIndex } from "@/components/games/local-kit";
 import { armPartyBand, disarmPartyBand } from "@/lib/saved-players";
 import { setPartyMood } from "@/lib/party-mood";
-import { emitGameFinished } from "@/lib/game-finished";
+import { emitGameFinished, GAME_FINISHED_EVENT, type GameFinishedDetail } from "@/lib/game-finished";
 import { pick, useLang } from "@/lib/i18n";
 import { playCombo, playSfx, preloadSfx } from "@/lib/sfx";
 import { GAME_KIND, getZGame } from "../catalog";
 import { shareApp } from "../settings";
-import { shareResultCard } from "@/lib/share-card";
+import { shareResultCard, shareTrophyCard } from "@/lib/share-card";
 import { soberKind } from "../no-alcohol";
 import {
-  endSoiree, ranking, recordWinners, setPhase, skipGame, useSoiree, type SoireeState,
+  captureFinished, endSoiree, ranking, recordWinners, setPhase, skipGame, useSoiree, type SoireeState,
 } from "../soiree";
+import { allTrophies, Ceremony, TROPHY_STR, TrophyList, trophyText } from "./SoireeTrophies";
 import { SOIREE } from "../strings";
 import { ZBlob, ZPALETTE } from "./ZBlob";
 import { BandBlob } from "./BandBlob";
@@ -34,8 +35,11 @@ export function SoireeRun({ onHome, onNew, toast }: { onHome: () => void; onNew:
 
   useEffect(() => {
     preloadSfx(["whoosh", "confirm", "pop", "coin", "coins", "tada", "applause", "drumroll", "cymbal", "select"]);
+    // Fin d'un jeu de la playlist : on garde ce qu'il sait (gagnants, perdant, classement) pour les trophées
+    const onFinished = (e: Event) => captureFinished((e as CustomEvent<GameFinishedDetail>).detail ?? {});
+    window.addEventListener(GAME_FINISHED_EVENT, onFinished);
     // On ne laisse jamais la bande « armée » derrière soi
-    return () => { disarmPartyBand(); setPartyMood(null); };
+    return () => { window.removeEventListener(GAME_FINISHED_EVENT, onFinished); disarmPartyBand(); setPartyMood(null); };
   }, []);
 
   if (!s) return null;
@@ -51,7 +55,11 @@ export function SoireeRun({ onHome, onNew, toast }: { onHome: () => void; onNew:
     );
   }
   if (s.phase === "winner") return <Winner key={s.index} s={s} onPause={pause} />;
-  if (s.phase === "end") return <End s={s} onHome={onHome} onNew={onNew} toast={toast} />;
+  if (s.phase === "end") {
+    // Cérémonie des trophées d'abord (si au moins un jeu a été joué et validé), puis le récap
+    if (!s.awards?.done && s.band.length >= 2 && (s.outcomes ?? []).some(Boolean)) return <Ceremony s={s} />;
+    return <End s={s} onHome={onHome} onNew={onNew} toast={toast} />;
+  }
   return <Intro key={s.index} s={s} onPause={pause} />;
 }
 
@@ -161,7 +169,9 @@ function Winner({ s, onPause }: { s: SoireeState; onPause: () => void }) {
   const t = pick(SOIREE, lang);
   const g = getZGame(s.playlist[s.index])!;
   const info = gameInfo(g, lang);
-  const [picked, setPicked] = useState<string[]>([]);
+  // Le jeu a peut-être déjà désigné le(s) gagnant(s) : pré-sélectionnés, la table valide
+  const suggested = (s.pending?.winners ?? []).filter((w) => s.band.includes(w));
+  const [picked, setPicked] = useState<string[]>(suggested);
   const ready = useTapReady();
   const toggle = (name: string) => {
     if (!ready()) return;
@@ -179,6 +189,9 @@ function Winner({ s, onPause }: { s: SoireeState; onPause: () => void }) {
         </div>
         <h1 className="zz-title mt-3 text-white" style={{ fontSize: 42 }}>{t.winnerTitle}</h1>
         <p className="mt-1.5 text-[15px] font-semibold" style={{ color: "var(--zz-dim)" }}>{t.winnerSub}</p>
+        {suggested.length > 0 && (
+          <p className="mt-1 text-[14px] font-bold" style={{ color: "#FFD23F" }}>{pick(TROPHY_STR, lang).suggested}</p>
+        )}
 
         <div className="mt-6 grid grid-cols-2 gap-x-3 gap-y-4 min-[400px]:grid-cols-3">
           {s.band.map((name, i) => {
@@ -235,6 +248,9 @@ function End({ s, onHome, onNew, toast }: { s: SoireeState; onHome: () => void; 
   const t = pick(SOIREE, lang);
   const rows = ranking(s);
   const titleOf = (i: number) => (i >= 3 && i === rows.length - 1 ? t.lastTitle : t.titles[i % t.titles.length]);
+  // Trophées mesurés (+ prix du public) : remplacent le podium quand il y en a
+  const trophies = allTrophies(s);
+  const tt = pick(TROPHY_STR, lang);
 
   useEffect(() => {
     playCombo("fanfare");
@@ -254,8 +270,19 @@ function End({ s, onHome, onNew, toast }: { s: SoireeState; onHome: () => void; 
     const lines = rows.map((r, i) => `${i === 0 ? "👑" : `${i + 1}.`} ${r.name} · ${t.pts(r.points)} · ${titleOf(i)}`);
     const games = s.playlist.slice(0, Math.max(1, s.index)).map((id) => gameInfo(getZGame(id)!, lang).name).join(", ");
     const text = `${t.shareHead} 🪩\n${lines.join("\n")}\n${t.shareGames}${lang === "fr" ? "\u00a0:" : ":"} ${games}\n`;
-    // Image story du podium (grand vainqueur + jeux joués) ; texte seul en secours
+    // Image story des trophées (ou du podium) ; texte seul en secours
     const top = rows[0];
+    if (trophies.length) {
+      const tl = trophies.map((x) => { const tx = trophyText(x, lang); return {
+        label: tx.name, name: x.name, note: tx.quip, colorIndex: Math.max(0, s.band.indexOf(x.name)),
+        ...(x.id === "king" ? { bg: "#FFD23F" } : x.id === "naze" ? { bg: "#D9D4F0", mood: "sad" as const } : {}),
+      }; });
+      const ttext = `${t.shareHead} 🪩\n${tl.map((x) => `🏆 ${x.label}${lang === "fr" ? "\u00a0:" : ":"} ${x.name}`).join("\n")}\n${t.shareGames}${lang === "fr" ? "\u00a0:" : ":"} ${games}\n`;
+      const r2 = await shareTrophyCard({ chip: t.name, title: tt.recapTitle, trophies: tl, text: ttext.trim() });
+      if (r2 === "shared" || r2 === "saved") toast(t.shared);
+      else if (r2 === "error" && await shareApp(ttext)) toast(t.shared);
+      return;
+    }
     const res = top ? await shareResultCard({
       game: "soiree", chip: t.name, crown: true, mood: "laughing", color: colorOf(s, top.name),
       hero: { kicker: titleOf(0), title: top.name, sub: `${t.shareGames}${lang === "fr" ? "\u00a0:" : ":"} ${games}` },
@@ -275,8 +302,15 @@ function End({ s, onHome, onNew, toast }: { s: SoireeState; onHome: () => void; 
         <h1 className="zz-title pr-24" style={{ fontSize: 44, color: "#fff" }}>{t.endTitle}</h1>
         <p className="mt-2 text-[16px] font-bold" style={{ color: "#FFD23F" }}>{t.endSub(s.played ?? s.index)}</p>
 
-        {/* Podium */}
-        <div className="mt-8 flex items-end justify-center gap-2.5">
+        {trophies.length > 0 && (
+          <>
+            <h2 className="zz-title mt-6 text-[26px]" style={{ color: "#fff" }}>{tt.recapTitle}</h2>
+            <TrophyList s={s} trophies={trophies} />
+          </>
+        )}
+
+        {/* Podium (sans trophées mesurés) */}
+        {trophies.length === 0 && <div className="mt-8 flex items-end justify-center gap-2.5">
           {order.map((k) => {
             const r = podium[k];
             if (!r) return null;
@@ -298,10 +332,10 @@ function End({ s, onHome, onNew, toast }: { s: SoireeState; onHome: () => void; 
               </div>
             );
           })}
-        </div>
+        </div>}
 
         {/* Les titres de chacun */}
-        <ol className="zz-stk -mt-px flex flex-col gap-0 overflow-hidden rounded-[22px]" style={{ background: "#fff", color: "var(--zz-ink)" }}>
+        <ol className={`zz-stk ${trophies.length ? "mt-6" : "-mt-px"} flex flex-col gap-0 overflow-hidden rounded-[22px]`} style={{ background: "#fff", color: "var(--zz-ink)" }}>
           {rows.map((r, i) => (
             <li key={r.name} className="flex items-center gap-3 px-3.5 py-2.5" style={{ borderTop: i ? "2px solid rgba(21,8,46,0.1)" : undefined }}>
               <span className="zz-title w-6 text-center text-[20px]">{r.rank}</span>

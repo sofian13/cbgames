@@ -1051,3 +1051,154 @@ export async function shareBandStatsCard(c: BandStatsShare): Promise<ShareOutcom
   }
   return shareCanvas(canvas, "zinzin-stats.png", c.text);
 }
+
+/* ───────── Trophées de fin de Soirée Zinzin ───────── */
+export interface ShareTrophy {
+  /** Nom du trophée (« Le roi de la soirée ») */
+  label: string;
+  /** Prénom du gagnant */
+  name: string;
+  /** Petite ligne mesurée (« 3 victoires ») */
+  note?: string;
+  colorIndex?: number;
+  /** Fond du sticker */
+  bg?: string;
+  /** Humeur du perso (ex. « sad » pour le grand perdant) */
+  mood?: MascotMood;
+}
+
+/** Coupe de trophée (repère centré, ~120 de haut) : dorée, contour encre, ombre décalée. */
+function drawCup(ctx: Ctx, cx: number, cy: number, size: number) {
+  const k = size / 120;
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.scale(k, k);
+  ctx.lineJoin = "round";
+  ctx.lineCap = "round";
+  const cup = new Path2D("M-34 -48 H34 V-18 C34 10 18 22 0 22 C-18 22 -34 10 -34 -18Z");
+  const handles = new Path2D("M-34 -38 C-56 -38 -56 -6 -26 2 M34 -38 C56 -38 56 -6 26 2");
+  const stem = new Path2D("M-8 20 H8 V36 H-8Z");
+  const base = new Path2D("M-28 36 H28 V52 H-28Z");
+  ctx.translate(0, 7);
+  ctx.fillStyle = INK;
+  for (const p of [cup, stem, base]) ctx.fill(p);
+  ctx.translate(0, -7);
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = 7;
+  ctx.stroke(handles);
+  ctx.fillStyle = "#FFD23F";
+  for (const p of [stem, base, cup]) { ctx.fill(p); ctx.lineWidth = 6; ctx.stroke(p); }
+  ctx.fillStyle = "#FFF3B8";
+  ctx.fill(new Path2D("M-22 -40 h8 v26 c0 6 -4 8 -8 4z"));
+  // Étoile sur la coupe
+  ctx.translate(0, -16);
+  ctx.scale(1.2, 1.2);
+  ctx.translate(-12, -12);
+  const star = new Path2D(PATHS.star);
+  ctx.fillStyle = "#FF3EA5";
+  ctx.fill(star);
+  ctx.lineWidth = 2.4;
+  ctx.stroke(star);
+  ctx.restore();
+}
+
+/** Carte story « Les trophées de la soirée » : un sticker par trophée, perso + prénom. */
+export async function renderTrophyCard(c: { chip: string; title: string; trophies: ShareTrophy[] }): Promise<HTMLCanvasElement> {
+  const s = STR[getLang()];
+  const canvas = document.createElement("canvas");
+  canvas.width = W;
+  canvas.height = H;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("canvas");
+  const list = c.trophies.slice(0, 10);
+  await loadFonts(`${c.chip} ${c.title} ${list.flatMap((t) => [t.label, t.name, t.note ?? ""]).join(" ")} ${s.playOn} ${SHARE_SITE} zinzin0123456789`);
+  background(ctx);
+  logo(ctx, W / 2, 262, 190);
+
+  // Étiquette
+  const chipFit = fit(ctx, c.chip, display, 760, 54, 36, 1);
+  ctx.font = display(chipFit.px);
+  const chipW = Math.min(860, measure(ctx, chipFit.lines[0]) + 90);
+  const chipY = 330;
+  sticker(ctx, (W - chipW) / 2, chipY, chipW, chipFit.px + 50, "#fff", { r: 999, shadow: 9, tilt: -2, line: 6 });
+  ctx.save();
+  ctx.translate(W / 2, chipY + (chipFit.px + 50) / 2);
+  ctx.rotate((-2 * Math.PI) / 180);
+  ctx.textBaseline = "middle";
+  drawLines(ctx, chipFit.lines, 0, chipFit.px * 0.06, 0, INK);
+  ctx.restore();
+
+  // Titre en blanc contouré
+  let y = chipY + chipFit.px + 50 + 40;
+  const tf = fit(ctx, c.title, display, CW, list.length > 6 ? 76 : 92, 52, list.length > 6 ? 1 : 2);
+  ctx.font = display(tf.px);
+  ctx.lineJoin = "round";
+  ctx.lineWidth = 12;
+  ctx.strokeStyle = INK;
+  ctx.textAlign = "center";
+  tf.lines.forEach((l, i) => ctx.strokeText(tx(ctx, l), W / 2, y + tf.px * 0.86 + i * tf.px * 1.02));
+  drawLines(ctx, tf.lines, W / 2, y + tf.px * 0.86, tf.px * 1.02, "#fff");
+  y += tf.lines.length * tf.px * 1.02 + 34;
+
+  // Trophées
+  const gap = list.length > 7 ? 14 : 22;
+  const avail = 1650 - y;
+  const rowH = Math.min(190, Math.floor((avail - (list.length - 1) * gap) / Math.max(1, list.length)));
+  y += Math.max(0, (avail - (rowH * list.length + gap * (list.length - 1))) / 2);
+  const BGS = ["#fff", "#A4F2CC", "#FFA5CD", "#9FE7E1", "#D9CCFF", "#FFD23F"];
+  const minis: { x: number; y: number; size: number; o: ShareBlobOpts }[] = [];
+  list.forEach((t, i) => {
+    const bg = t.bg ?? BGS[i % BGS.length];
+    const ink = inkOn(bg);
+    const tilt = i % 2 ? 1 : -1;
+    sticker(ctx, CX, y, CW, rowH, bg, { r: 40, shadow: 10, tilt, line: 6 });
+    ctx.save();
+    ctx.translate(W / 2, y + rowH / 2);
+    ctx.rotate((tilt * Math.PI) / 180);
+    ctx.translate(-W / 2, -(y + rowH / 2));
+    const nx = CX + rowH + 40;
+    const nw = CW - (nx - CX) - rowH * 0.7 - 20;
+    // Tailles proportionnelles à la hauteur du sticker (8 persos et plus : stickers plus fins)
+    const k = Math.min(1, rowH / 170);
+    const lab = fit(ctx, t.label, (p) => body(p), nw, 34 * k, 22 * k, 1);
+    const nm = fit(ctx, t.name, display, nw, 60 * k, 34 * k, 1);
+    const nt = t.note ? fit(ctx, t.note, (p) => body(p, 700), nw, 28 * k, 19 * k, 1) : null;
+    const blockH = lab.px * 1.15 + nm.px * 1.02 + (nt ? nt.px * 1.2 : 0);
+    let ty = y + (rowH - blockH) / 2;
+    ctx.font = body(lab.px);
+    ctx.globalAlpha = 0.85;
+    drawLines(ctx, lab.lines, nx, ty + lab.px * 0.9, 0, ink, "left");
+    ctx.globalAlpha = 1;
+    ty += lab.px * 1.15;
+    ctx.font = display(nm.px);
+    drawLines(ctx, nm.lines, nx, ty + nm.px * 0.86, 0, ink, "left");
+    ty += nm.px * 1.02;
+    if (nt) {
+      ctx.font = body(nt.px, 700);
+      ctx.globalAlpha = 0.75;
+      drawLines(ctx, nt.lines, nx, ty + nt.px * 0.95, 0, ink, "left");
+      ctx.globalAlpha = 1;
+    }
+    drawCup(ctx, CX + CW - rowH * 0.42 - 14, y + rowH / 2 - 4, rowH * 0.66);
+    ctx.restore();
+    minis.push({ x: CX + 22, y: y + rowH * 0.1, size: rowH * 0.8, o: { name: t.name, color: colorOf(t.colorIndex), mood: t.mood ?? "laughing", seed: i + 2, crown: false } });
+    y += rowH + gap;
+  });
+  const imgs = await Promise.all(minis.map((m) => loadSvg(blobSvg(m.o))));
+  minis.forEach((m, i) => {
+    const img = imgs[i];
+    if (img) ctx.drawImage(img, m.x - m.size * ART_PAD, m.y - m.size * ART_PAD, m.size * ART, m.size * ART);
+  });
+  footer(ctx, s);
+  return canvas;
+}
+
+export async function shareTrophyCard(c: { chip: string; title: string; trophies: ShareTrophy[]; text: string }): Promise<ShareOutcome> {
+  let canvas: HTMLCanvasElement;
+  try {
+    canvas = await renderTrophyCard(c);
+  } catch {
+    return "error";
+  }
+  return shareCanvas(canvas, "zinzin-trophees.png", c.text);
+}

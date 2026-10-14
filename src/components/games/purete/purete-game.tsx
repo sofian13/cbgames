@@ -91,10 +91,11 @@ const vibrate = (ms: number) => {
 };
 // Sons du jeu (vrais samples, coupure globale gérée par sfx.ts)
 const SFX = {
-  yes: () => playSfx("pop", { volume: 0.8, rate: 0.9 }),
-  no: () => playSfx("pop2", { volume: 0.6, rate: 1.15 }),
+  // une réponse par question (jusqu'à 50 d'affilée) : discret
+  yes: () => playSfx("pop", { volume: 0.5, rate: 0.9 }),
+  no: () => playSfx("pop2", { volume: 0.4, rate: 1.15 }),
   tick: () => playSfx("tick", { volume: 0.4, rate: 1.1 }),
-  drum: () => playCombo("drumroll"),
+  drum: (seconds: number) => playCombo("drumroll", { duration: seconds }),
   reveal: () => playCombo("reveal"),
   pure: () => playSfx("success", { volume: 0.8 }),
   demon: () => { playSfx("gong", { volume: 0.7, rate: 0.85 }); playSfx("lose", { volume: 0.5, delay: 0.1 }); },
@@ -180,7 +181,7 @@ function useCountdown(target: number, run: boolean, dur = 2600) {
       const val = Math.round(100 - (100 - target) * e);
       if (val !== last) {
         last = val;
-        if (val % 5 === 0) SFX.tick();
+        if (val % 10 === 0) SFX.tick();
       }
       setV(val);
       if (x < 1) raf = requestAnimationFrame(tick);
@@ -1013,11 +1014,14 @@ function SuspenseReveal({ label, name, color, purity, last, onNext, nextLabel }:
   const s = useT(PURETE_STR);
   const titleFor = useTitleFor();
   const [go, setGo] = useState(false);
+  const dur = last ? 3600 : 2600;
   useEffect(() => {
-    const t = window.setTimeout(() => { setGo(true); SFX.drum(); }, 700);
-    return () => window.clearTimeout(t);
-  }, []);
-  const { v, done } = useCountdown(purity, go, last ? 3600 : 2600);
+    const t = window.setTimeout(() => setGo(true), 700);
+    // le roulement (2,3 s max) part pour que sa cymbale tombe pile à la fin du compteur
+    const d = window.setTimeout(() => SFX.drum(2.55), 700 + Math.max(0, dur - 2300));
+    return () => { window.clearTimeout(t); window.clearTimeout(d); };
+  }, [dur]);
+  const { v, done } = useCountdown(purity, go, dur);
   useEffect(() => {
     if (!done) return;
     vibrate(purity < 40 ? 120 : 40);

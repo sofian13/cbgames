@@ -322,3 +322,40 @@ export async function playPersoVoice(name: string, { auto = false }: { auto?: bo
   if (!clip) return false;
   return playClip(voiceKey(name), clip, { volume: auto ? 0.7 : 0.95 });
 }
+
+/**
+ * Voix d'un perso, chargée d'avance pour être jouée en superposition (pluie de blobs de l'accueil).
+ * null si le perso n'a pas de son (ou si sa voix est coupée).
+ */
+export async function loadPersoVoice(name: string): Promise<Pick<VoiceClip, "data" | "gain"> | null> {
+  const id = getVoiceFor(name);
+  if (!id) return null;
+  try { return await getVoice(id); } catch { return null; }
+}
+
+/**
+ * Joue une voix PAR-DESSUS les autres (sans couper la voix en cours, sans animer de bouche).
+ * Respecte la coupure du son global. Volume modéré par défaut.
+ */
+export async function playVoiceLayer(clip: Pick<VoiceClip, "data" | "gain">, { volume = 0.6 }: { volume?: number } = {}): Promise<boolean> {
+  const out = sfxOutput();
+  if (!out) return false;
+  const { ctx, master } = out;
+  let buf = decoded.get(clip.data);
+  if (!buf) {
+    try {
+      buf = await ctx.decodeAudioData(clip.data.slice(0));
+      decoded.set(clip.data, buf);
+    } catch {
+      return false;
+    }
+  }
+  const src = ctx.createBufferSource();
+  src.buffer = buf;
+  const g = ctx.createGain();
+  g.gain.value = Math.max(0, Math.min(5, clip.gain || 1)) * Math.max(0, Math.min(1, volume));
+  src.connect(g).connect(master);
+  src.onended = () => { try { src.disconnect(); g.disconnect(); } catch { /* ignore */ } };
+  src.start(ctx.currentTime, 0, VOICE_MAX_S + 0.3);
+  return true;
+}

@@ -173,7 +173,7 @@ export default function TuPrefereGame({ onReturnToLobby }: GameProps) {
     const n = Math.max(0, Math.min(99, votes[side] + d));
     if (n === votes[side]) return;
     // Une main de plus : « pop » qui monte avec le nombre de mains
-    if (d > 0) playSfx(side === "a" ? "pop" : "pop2", { volume: 0.6, rate: Math.min(1.6, 0.9 + n * 0.06) });
+    if (d > 0) playSfx(side === "a" ? "pop" : "pop2", { volume: 0.45, rate: Math.min(1.6, 0.9 + n * 0.06) });
     setVotes({ ...votes, [side]: n });
   };
   const reveal = () => {
@@ -183,7 +183,6 @@ export default function TuPrefereGame({ onReturnToLobby }: GameProps) {
     const pool = all ? t.groupDares : t.dares;
     setDare(pool[Math.floor(Math.random() * pool.length)]);
     setPlayed((n) => n + 1);
-    if (!tie && Math.max(votes.a, votes.b) === total) playSfx("win", { volume: 0.6, delay: 0.35 }); // unanimité
     setRevealed(true);
   };
 

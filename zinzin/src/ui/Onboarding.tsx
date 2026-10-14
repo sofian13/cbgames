@@ -6,6 +6,7 @@ import { ZBlob, type ZColor } from "./ZBlob";
 import type { ZCostume } from "./costumes";
 import { BigBtn } from "./common";
 import { haptic, reducedMotion } from "./util";
+import { uiSfx } from "@/lib/ui-sfx";
 
 /**
  * Tutoriel du premier lancement : 3 écrans courts (swipe ou « Suivant »),
@@ -126,7 +127,7 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
           ))}
         </div>
         <BigBtn
-          onClick={() => { haptic(last ? "medium" : "light"); if (last) finish(); else goTo(page + 1); }}
+          onClick={() => { haptic(last ? "medium" : "light"); uiSfx.primary(); if (last) finish(); else goTo(page + 1); }}
           bg={last ? "#FF3EA5" : "#FFD23F"}
           color={last ? "#fff" : "var(--zz-ink)"}
         >

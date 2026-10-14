@@ -6,6 +6,8 @@ import { TRIAL, UI } from "../strings";
 import { ZBlob } from "./ZBlob";
 import { BigBtn, CloseBtn, Tag } from "./common";
 import { haptic } from "./util";
+import { playSfx } from "@/lib/sfx";
+import { uiSfx } from "@/lib/ui-sfx";
 
 /** Couleurs des 4 avantages (textes : UI.perks) */
 const PERK_COLORS = ["#FF3EA5", "#FFD23F", "#7A4EE8", "#3DDC97"];
@@ -63,7 +65,7 @@ export function Paywall({
     setBusy("buy");
     const ok = await buy(plan);
     setBusy(null);
-    if (ok) { haptic("success"); toast(plan.trialDays ? tr.started(plan.trialDays) : t.welcome); leave(onUnlocked); }
+    if (ok) { haptic("success"); playSfx("chime", { volume: 0.9 }); toast(plan.trialDays ? tr.started(plan.trialDays) : t.welcome); leave(onUnlocked); }
     else toast(t.buyFailed);
   };
 
@@ -73,7 +75,7 @@ export function Paywall({
     setBusy("restore");
     const ok = await restore();
     setBusy(null);
-    if (ok) { toast(t.restored); leave(onUnlocked); }
+    if (ok) { haptic("success"); playSfx("chime", { volume: 0.9 }); toast(t.restored); leave(onUnlocked); }
     else toast(t.nothingToRestore);
   };
 
@@ -86,7 +88,7 @@ export function Paywall({
       aria-label={t.premium}
     >
       <div className="absolute right-3 z-10" style={{ top: "calc(var(--sat) + 8px)" }}>
-        <CloseBtn onClick={() => { haptic(); leave(onClose); }} />
+        <CloseBtn onClick={() => { haptic(); uiSfx.close(); leave(onClose); }} />
       </div>
 
       <div className="relative mx-auto flex w-full max-w-md flex-1 flex-col px-5" style={{ paddingTop: "calc(var(--sat) + 14px)", paddingBottom: "calc(var(--sab) + 12px)" }}>
@@ -204,9 +206,9 @@ export function Paywall({
             {busy === "restore" ? t.restoring : t.restore}
           </button>
           <span aria-hidden style={{ color: "var(--zz-mute)" }}>·</span>
-          <a href="#cgu" className="zz-tap flex min-h-11 items-center px-2.5" onClick={(e) => { e.preventDefault(); onLegal("cgu"); }}>{t.terms}</a>
+          <a href="#cgu" className="zz-tap flex min-h-11 items-center px-2.5" onClick={(e) => { e.preventDefault(); uiSfx.open(); onLegal("cgu"); }}>{t.terms}</a>
           <span aria-hidden style={{ color: "var(--zz-mute)" }}>·</span>
-          <a href="#confidentialite" className="zz-tap flex min-h-11 items-center px-2.5" onClick={(e) => { e.preventDefault(); onLegal("confidentialite"); }}>{t.privacy}</a>
+          <a href="#confidentialite" className="zz-tap flex min-h-11 items-center px-2.5" onClick={(e) => { e.preventDefault(); uiSfx.open(); onLegal("confidentialite"); }}>{t.privacy}</a>
         </div>
 
         {test && (

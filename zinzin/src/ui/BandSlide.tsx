@@ -13,6 +13,7 @@ import { useBand } from "@/components/avatar/PlayerBlob";
 import { colorForIndexSafe } from "@/components/avatar/colors";
 import { baseLook, type AvatarLook } from "@/lib/avatar/look";
 import { setBand } from "@/lib/saved-players";
+import { uiSfx } from "@/lib/ui-sfx";
 
 /**
  * Bande d'exemple (bande vide ou sans looks) : déjà déguisée pour donner envie,
@@ -265,6 +266,7 @@ export function BandSlide({ f, lang, active, hidden }: { f: ZFeatured; lang: Lan
 
   const onOpen = () => {
     haptic();
+    uiSfx.open();
     setOpen(band.length ? "band" : "create");
   };
 

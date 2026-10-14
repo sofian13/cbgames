@@ -200,7 +200,7 @@ export default function TgvGame({ onReturnToLobby }: GameProps) {
   const [players, setPlayers] = useState<string[]>([]);
   const [losses, setLosses] = useState<number[]>([]);
   // fin de partie → demande de note éventuelle + stats de la bande (app)
-  useGameFinished(phase === "over", { loser: uniqueMax(players, losses) });
+  useGameFinished(phase === "over", { loser: uniqueMax(players, losses), scores: { names: players, values: losses, lowerWins: true } });
   const [currentIdx, setCurrentIdx] = useState(0);
   const [numPiles, setNumPiles] = useState<number>(4);
   const [sipsOk] = useState(() => sipsAllowed(true)); // mode sans alcool / Soirée « Chill » : gages seulement
@@ -261,7 +261,7 @@ export default function TgvGame({ onReturnToLobby }: GameProps) {
   // Suspense sur la dernière carte du train (roulement de tambour)
   useEffect(() => {
     if (!suspense) return;
-    playCombo("drumroll");
+    playCombo("drumroll", { duration: 1.85 }); // la cymbale tombe sur la révélation (1,6 s)
     const t = setTimeout(() => setSuspense(false), 1600);
     return () => clearTimeout(t);
   }, [suspense]);
@@ -338,8 +338,7 @@ export default function TgvGame({ onReturnToLobby }: GameProps) {
 
   const nextPlayer = () => {
     setCurrentIdx((currentIdx + 1) % players.length);
-    playSfx("whoosh", { volume: 0.6 });
-    setPhase("pass");
+    setPhase("pass"); // l'écran « passe le tél » fait déjà son whoosh
   };
 
   const endGame = () => { playSfx("win", { volume: 0.7 }); setPhase("over"); };
@@ -452,7 +451,7 @@ export default function TgvGame({ onReturnToLobby }: GameProps) {
 
         <div className="min-h-6 flex-1" />
         <div className="sticky bottom-0 -mx-5 mt-4 px-5 pt-4" style={{ paddingBottom: BOTTOM, background: "linear-gradient(180deg, transparent, #1E1250 35%)" }}>
-          <Push big bg={ACCENT} onClick={() => { playSfx("whoosh", { volume: 0.6 }); setCurrentIdx(0); setPhase("pass"); }} className="w-full">
+          <Push big bg={ACCENT} onClick={() => { setCurrentIdx(0); setPhase("pass"); }} className="w-full">
             {t.launch} <TrainFront size={22} strokeWidth={3} aria-hidden />
           </Push>
           <TextLink onClick={() => setPhase("setup")}><ArrowLeft size={17} strokeWidth={3} aria-hidden /> {t.editPlayers}</TextLink>

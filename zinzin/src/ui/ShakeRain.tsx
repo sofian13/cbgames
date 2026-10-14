@@ -2,7 +2,9 @@ import { useEffect, useRef, useState, type RefObject } from "react";
 import { AvatarBlob } from "@/components/avatar/AvatarBlob";
 import { useBand } from "@/components/avatar/PlayerBlob";
 import { randomLook, type AvatarLook } from "@/lib/avatar/look";
-import { playSfx } from "@/lib/sfx";
+import { loadPersoVoice, playVoiceLayer } from "@/lib/avatar/voice";
+import { getVoiceFor } from "@/lib/saved-players";
+import { isSfxMuted, playSfx } from "@/lib/sfx";
 import { haptic, reducedMotion } from "./util";
 
 /**
@@ -75,18 +77,25 @@ function listenShake(onShake: () => void): () => void {
 }
 
 /* ───────── Pluie ───────── */
-type Drop = { key: number; look: AvatarLook; size: number; mood: "laughing" | "shocked" };
+/** `voice` : perso de la bande dont la voix part quand ce blob touche le sol */
+type Drop = { key: number; look: AvatarLook; size: number; mood: "laughing" | "shocked"; voice?: string };
+type VoiceClipLite = NonNullable<Awaited<ReturnType<typeof loadPersoVoice>>>;
 type Body = { x: number; y: number; vx: number; vy: number; r: number; vr: number; t0: number; bounces: number };
 
 const DURATION = 3400;
 const FADE = 700;
+/** Voix de la bande dans une pluie : 5 max, décalées (léger chevauchement) */
+const MAX_VOICES = 5;
+const VOICE_GAP_MS = 450;
 
 export function ShakeRain({ homeRef }: { homeRef: RefObject<HTMLElement | null> }) {
   const band = useBand();
   const layer = useRef<HTMLDivElement>(null);
   const [drops, setDrops] = useState<Drop[] | null>(null);
-  const looksRef = useRef<AvatarLook[]>([]);
-  useEffect(() => { looksRef.current = band.filter((b) => b.look).map((b) => b.look as AvatarLook); }, [band]);
+  const looksRef = useRef<{ name: string; look: AvatarLook }[]>([]);
+  useEffect(() => { looksRef.current = band.filter((b) => b.look).map((b) => ({ name: b.name, look: b.look as AvatarLook })); }, [band]);
+  // Voix chargées pour la pluie en cours (nom → son)
+  const clips = useRef(new Map<string, Promise<VoiceClipLite | null>>());
   const busy = useRef(false);
 
   // Écoute de la secousse, seulement quand l'accueil est affiché et l'app au premier plan
@@ -112,13 +121,23 @@ export function ShakeRain({ homeRef }: { homeRef: RefObject<HTMLElement | null> 
       const list: Drop[] = Array.from({ length: n }, (_, i) => ({
         key: Date.now() + i,
         // Bande de l'utilisateur : ~2 blobs sur 3 sont ses persos, le reste au hasard
-        look: mine.length && i % 3 !== 2 ? mine[i % mine.length] : randomLook(),
+        look: mine.length && i % 3 !== 2 ? mine[i % mine.length].look : randomLook(),
         size: Math.round(46 + Math.random() * 40),
         mood: Math.random() < 0.5 ? "laughing" : "shocked",
       }));
+      // Persos qui ont une voix (non coupée) : chacun crie en touchant le sol, répartis dans la pluie
+      const voiced = isSfxMuted() ? [] : mine.filter((m) => getVoiceFor(m.name)).slice(0, MAX_VOICES);
+      clips.current = new Map(voiced.map((m) => [m.name, loadPersoVoice(m.name)]));
+      voiced.forEach((m, k) => {
+        const d = list[Math.floor((k * n) / voiced.length)];
+        d.look = m.look;
+        d.voice = m.name;
+        d.mood = "laughing";
+      });
       setDrops(list);
       playSfx("whooshdown", { volume: 0.5 });
-      setTimeout(() => playSfx("pop", { volume: 0.6 }), 380);
+      // Sans voix enregistrée : le « pop » d'arrivée habituel
+      if (!voiced.length) setTimeout(() => playSfx("pop", { volume: 0.6 }), 380);
       haptic("medium");
       try { navigator.vibrate?.([30, 50, 30]); } catch { /* indispo */ }
     };
@@ -166,6 +185,16 @@ export function ShakeRain({ homeRef }: { homeRef: RefObject<HTMLElement | null> 
     const gravity = 2400;
     let last = start;
     let raf = 0;
+    // Voix : au 1er rebond du blob, jamais moins de VOICE_GAP_MS après la précédente
+    let nextVoiceAt = 0;
+    const timers: number[] = [];
+    const shout = (name: string) => {
+      const at = Math.max(performance.now(), nextVoiceAt);
+      nextVoiceAt = at + VOICE_GAP_MS;
+      timers.push(window.setTimeout(() => {
+        void clips.current.get(name)?.then((clip) => { if (clip) void playVoiceLayer(clip, { volume: 0.6 }); });
+      }, at - performance.now()));
+    };
     const step = (now: number) => {
       const dt = Math.min(0.033, (now - last) / 1000);
       last = now;
@@ -184,6 +213,8 @@ export function ShakeRain({ homeRef }: { homeRef: RefObject<HTMLElement | null> 
         if (b.y > floor) {
           b.y = floor;
           b.bounces++;
+          const v = drops[i].voice;
+          if (b.bounces === 1 && v) shout(v);
           b.vy = -Math.abs(b.vy) * (reduce ? 0.25 : 0.55);
           b.vx *= 0.8;
           b.vr = -b.vr * 0.6;
@@ -198,7 +229,7 @@ export function ShakeRain({ homeRef }: { homeRef: RefObject<HTMLElement | null> 
       else { setDrops(null); busy.current = false; }
     };
     raf = requestAnimationFrame(step);
-    return () => { cancelAnimationFrame(raf); busy.current = false; };
+    return () => { cancelAnimationFrame(raf); timers.forEach((x) => clearTimeout(x)); busy.current = false; };
   }, [drops]);
 
   return (

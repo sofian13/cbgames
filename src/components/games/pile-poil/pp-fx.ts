@@ -5,7 +5,7 @@ import { playCombo, playSfx, preloadSfx } from "@/lib/sfx";
 
 /** Précharge les sons du jeu (au montage). */
 export function fxPreload() {
-  preloadSfx(["tick", "tock", "tap", "select", "error", "buzzer", "crowd-aww", "correct", "tada", "applause", "crowd-cheer", "drumroll", "drumroll-end", "whoosh", "gong"]);
+  preloadSfx(["tick", "tock", "tap", "select", "error", "buzzer", "crowd-aww", "correct", "tada", "applause", "crowd-cheer", "drumroll", "drumroll-end", "whoosh", "gong", "ding2"]);
 }
 
 /** Gardé pour compat : sfx.ts réveille déjà l'audio au premier toucher. */
@@ -38,10 +38,14 @@ export function fxBad() {
   playCombo("fail");
 }
 
-/** PILE POIL : « ta-da », applaudissements et la foule qui crie. */
+/** PILE POIL : « ta-da » et applaudissements (la foule en plus faisait trop). */
 export function fxPerfect() {
   playCombo("fanfare");
-  playSfx("crowd-cheer", { volume: 0.55, delay: 0.45 });
+}
+
+/** Essai noté sans verdict (cible mystère encore cachée) : simple « ding » neutre. */
+export function fxNeutral() {
+  playSfx("ding2", { volume: 0.6 });
 }
 
 /** Vrai roulement de tambour (cible mystère, suspense), en crescendo, arrêté net après `seconds`. */

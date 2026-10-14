@@ -288,7 +288,7 @@ export default function UndercoverLocal({ onReturnToLobby }: { onReturnToLobby?:
     setEliminatedIdx(id);
     // Roulement de tambour… puis le verdict (imposteur démasqué = gong, innocent = raté)
     playCombo("drumroll");
-    if (target.role === "undercover") { playSfx("gong", { volume: 0.9, delay: 1.05 }); playSfx("success", { volume: 0.6, delay: 1.2 }); }
+    if (target.role === "undercover") { playSfx("gong", { volume: 0.85, delay: 1.05 }); }
     else if (target.role === "jester") { playSfx("win", { volume: 0.9, delay: 1.05 }); }
     else if (target.role === "mrwhite") { playSfx("gong", { volume: 0.8, delay: 1.05 }); }
     else { playSfx("wrong", { volume: 0.8, delay: 1.05 }); playSfx("lose", { volume: 0.5, delay: 1.12 }); }

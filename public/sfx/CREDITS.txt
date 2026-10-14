@@ -1,5 +1,5 @@
 Sons de Zinzin — bruitages réels, tous sous licence CC0 1.0 ou dans le domaine public.
-Usage commercial libre (app payante comprise), crédit NON obligatoire. Licence vérifiée sur la page source de chaque fichier (13/10/2026).
+Usage commercial libre (app payante comprise), crédit NON obligatoire. Licence vérifiée sur la page source de chaque fichier (13/10/2026 ; sons d'interface Kenney ajoutés le 15/10/2026).
 Traitement : découpe, fondus, filtrage, superposition, normalisation du volume ; AAC .m4a mono 44,1 kHz 96 kbit/s.
 Noms partagés (alias dans src/lib/sfx.ts) : success→correct, wrong→buzzer, question→pop2, powerup→chime, win/levelup→tada, lose→crowd-aww.
 
@@ -50,3 +50,5 @@ fizz (boucle)      | Wikimedia Commons « Zzrrrp sizzle.ogg » (stephan, pdsound
 fizz (boucle)      | + Wikimedia Commons « Water vaporizing on hot stones.ogg » (natalie, pdsounds.org) | Dom. public | https://commons.wikimedia.org/wiki/File:Water_vaporizing_on_hot_stones.ogg
 laugh              | OpenGameArt « Group giggling » (Nocturnal_Vanguard / AuraVoice)       | CC0          | https://opengameart.org/content/group-giggling
 laugh              | + Wikimedia Commons « Laughter(s).ogg » (sagetyrtle)                  | CC0          | https://commons.wikimedia.org/wiki/File:Laughter(s).ogg
+bloop, bloop2       | Kenney « Interface Sounds » (drop_004, drop_002)                       | CC0          | https://kenney.nl/assets/interface-sounds
+swoop-up, swoop-down | Kenney « Interface Sounds » (maximize_008, minimize_008)             | CC0          | https://kenney.nl/assets/interface-sounds

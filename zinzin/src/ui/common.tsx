@@ -3,6 +3,7 @@ import { X } from "lucide-react";
 import { useT } from "@/lib/i18n";
 import { UI } from "../strings";
 import { reducedMotion } from "./util";
+import { uiSfx } from "@/lib/ui-sfx";
 
 /** Délai pendant lequel un fond qui vient d'apparaître ignore les taps (double tap sur le bouton d'ouverture). */
 export const TAP_GUARD_MS = 400;
@@ -157,6 +158,7 @@ export function Sheet({
   const [dragged, setDragged] = useState(false);
   const close = useCallback(() => {
     if (out || dragged) return;
+    uiSfx.close();
     setOut(true);
     setTimeout(onClose, 250);
   }, [out, dragged, onClose]);
@@ -166,6 +168,7 @@ export function Sheet({
   const backdrop = useRef<HTMLDivElement>(null);
   const dismissDragged = useCallback(() => {
     if (out || dragged) return;
+    uiSfx.close();
     setDragged(true);
     setTimeout(onClose, reducedMotion() ? 0 : 240);
   }, [out, dragged, onClose]);

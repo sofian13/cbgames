@@ -292,9 +292,9 @@ export default function PicoletteGame({ onReturnToLobby }: GameProps) {
   const tr = useT(STR);
   type Phase = "setup" | "packs" | "intro" | "play" | "over";
   const [phase, setPhase] = useState<Phase>("setup");
-  useGameFinished(phase === "over"); // fin de partie → demande de note éventuelle (app)
   const [players, setPlayers] = useState<string[]>([]);
   const [losses, setLosses] = useState<number[]>([]);
+  useGameFinished(phase === "over", { scores: { names: players, values: losses, lowerWins: true } }); // fin de partie → note éventuelle + Soirée (app)
   const [shields, setShields] = useState<boolean[]>([]);
   // Coquin / Trash (18+) ne sont PAS cochés par défaut (sauf en Soirée « Folle »)
   const [packs, setPacks] = useState<Set<Pack>>(() => new Set<Pack>(adultDefault(false) ? ["soft", "quiz", "pop", "coquin", "trash"] : ["soft", "quiz", "pop"]));
@@ -357,6 +357,7 @@ export default function PicoletteGame({ onReturnToLobby }: GameProps) {
       const t = Date.now();
       setNow(t);
       if (t >= activeRule.endsAt) {
+        playSfx("ding2", { volume: 0.6 }); // fin de la règle : personne ne regarde l'écran
         setActiveRule(null);
         setRuleToast(pick(STR).ruleEnded(activeRule.text));
       }
@@ -403,7 +404,7 @@ export default function PicoletteGame({ onReturnToLobby }: GameProps) {
   // ── Avancer dans le deck ──────────────────────────────────
   // rule : règle lancée par la carte qu'on quitte ; readerTo : lecteur imposé (joker Passe-main)
   const nextCard = (opts: { rule?: ActiveRule; readerTo?: number } = {}) => {
-    playSfx("card-flip", { volume: 0.8 });
+    playSfx("card-flip", { volume: 0.6 }); // l'action la plus fréquente : discret
     const t = turn + 1;
     setTurn(t);
     setReader(opts.readerTo ?? (reader + 1) % Math.max(1, players.length));
@@ -411,6 +412,7 @@ export default function PicoletteGame({ onReturnToLobby }: GameProps) {
     if (opts.rule) {
       setActiveRule(opts.rule);
     } else if (activeRule?.kind === "cards" && t >= activeRule.endTurn) {
+      playSfx("ding2", { volume: 0.5, delay: 0.2 });
       setActiveRule(null);
       setRuleToast(tr.ruleEnded(activeRule.text));
     }

@@ -107,7 +107,7 @@ function LeBluffeurLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) 
   const [players, setPlayers] = useState<string[]>([]);
   const [scores, setScores] = useState<number[]>([]);
   // fin de partie → demande de note éventuelle + stats de la bande (app)
-  useGameFinished(phase === "over", { loser: uniqueMin(players, scores) });
+  useGameFinished(phase === "over", { loser: uniqueMin(players, scores), scores: { names: players, values: scores } });
   const [round, setRound] = useState(0);
   const [questions, setQuestions] = useState(() => [...questionsFor(getLang())].sort(() => Math.random() - 0.5));
   const [fakes, setFakes] = useState<string[]>([]);

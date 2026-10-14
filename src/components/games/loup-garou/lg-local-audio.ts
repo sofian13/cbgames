@@ -71,7 +71,7 @@ export type Mood = "night" | "day" | "off";
 
 /** Sons du jeu, préchargés au montage */
 export function preloadLgSfx() {
-  preloadSfx(["tick", "tock", "gong", "whooshdown", "whoosh", "bell", "thump", "boom", "card-flip", "lose", "win", "powerup", "ding", "wrong", "pop", "success"]);
+  preloadSfx(["tick", "tock", "gong", "whooshdown", "whoosh", "bell", "thump", "boom", "card-flip", "lose", "win", "powerup", "ding", "wrong", "pop", "success", "twotone"]);
 }
 
 /** Bruitages des grands moments (jamais pendant les actions de nuit : ça trahirait qui joue). */

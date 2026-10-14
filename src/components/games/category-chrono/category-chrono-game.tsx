@@ -126,7 +126,7 @@ export default function CategoryChronoGame({ onReturnToLobby }: GameProps) {
       // tic-tac sur les 3 dernières secondes, de plus en plus aigu
       if (left > 0 && s <= 3 && s !== lastTick) {
         lastTick = s;
-        playSfx(s % 2 ? "tick" : "tock", { volume: 0.9, rate: 1 + (3 - s) * 0.15 });
+        playSfx(s % 2 ? "tick" : "tock", { volume: 0.65, rate: 1 + (3 - s) * 0.15 });
       }
       if (left <= 0) {
         clearInterval(id);
@@ -193,7 +193,8 @@ export default function CategoryChronoGame({ onReturnToLobby }: GameProps) {
     const over = updated.filter((p) => p.lives > 0).length <= 1;
     if (out) playCombo("explosion");
     else playCombo("fail");
-    if (over) setTimeout(() => playCombo("fanfare"), 700);
+    // fanfare après la traîne de l'explosion (2,8 s), pas par-dessus
+    if (over) setTimeout(() => playCombo("fanfare"), out ? 1700 : 900);
     vib([200, 80, 200]);
     setPhase(over ? "over" : "lost");
   }

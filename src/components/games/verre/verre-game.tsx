@@ -74,7 +74,7 @@ export default function VerreGame({ onReturnToLobby }: GameProps) {
   const [scores, setScores] = useState<number[]>([]);
   const [spills, setSpills] = useState<number[]>([]);
   // fin de partie → demande de note éventuelle + stats de la bande (app)
-  useGameFinished(phase === "end", { loser: uniqueMax(players, spills) });
+  useGameFinished(phase === "end", { loser: uniqueMax(players, spills), scores: { names: players, values: scores } });
   const [bank, setBank] = useState<number[]>([]);
   const [diff, setDiff] = useState<Difficulty>("normal");
   // Mode sans alcool / Soirée « Chill » : pas de gorgées (le verre virtuel reste) ; « Folle » : gorgées cochées d'office ; sinon gage par défaut
@@ -610,10 +610,9 @@ function RoundPlay({
     playSfx("whooshdown", { volume: 0.7 });
     playSfx("thump", { volume: 0.9, delay: 0.05 });
     playSfx("plate", { volume: 0.5, delay: 0.12, rate: 0.8 });
-    playSfx("splash", { volume: 1 });
-    playCombo("fail");
-    playSfx("crowd-cheer", { volume: 0.5, delay: 0.75 });
-    playSfx("laugh", { volume: 0.8, delay: 0.55 });
+    playSfx("splash", { volume: 0.85 });
+    // le verre qui tombe + les rires suffisent (plus de buzzer/« oh » ni d'acclamation par-dessus)
+    playSfx("laugh", { volume: 0.75, delay: 0.55 });
     vibrate([90, 40, 220]);
   }, [setPhaseSub]);
 

@@ -129,7 +129,7 @@ function LocalGame({ onReturnToLobby, onTuto, rulesBtn }: { onReturnToLobby?: ()
   const [players, setPlayers] = useState<string[]>([]);
   const [scores, setScores] = useState<number[]>([]);
   // fin de partie → demande de note éventuelle + stats de la bande (app)
-  useGameFinished(phase === "over", { loser: uniqueMin(players, scores) });
+  useGameFinished(phase === "over", { loser: uniqueMin(players, scores), scores: { names: players, values: scores } });
   const [round, setRound] = useState(0);
   const [psychic, setPsychic] = useState(0);
   const [pairs, setPairs] = useState<CursorPair[]>(() => buildDeck(getLang()));

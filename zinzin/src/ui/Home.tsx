@@ -1,5 +1,5 @@
-import { Fragment, useCallback, useEffect, useRef, useState } from "react";
-import { ArrowRight, Lock, Settings, Users } from "lucide-react";
+import { Fragment, useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { ArrowRight, Lock, Settings, Users, Volume2, VolumeX } from "lucide-react";
 import { FEATURED, SECTIONS, getZGame, type ZFeatured, type ZGame } from "../catalog";
 import { ZBlob, ZPALETTE, pauseWhenOffscreen } from "./ZBlob";
 import { RoundBtn, Tag } from "./common";
@@ -15,6 +15,8 @@ import { SoireeEntry } from "./SoireeKit";
 import { resumable, useSoiree } from "../soiree";
 import { useNoAlcohol } from "@/lib/party-mood";
 import { NOALC_UI } from "../no-alcohol";
+import { isSfxMuted, setSfxMuted, subscribeSfxMuted } from "@/lib/sfx";
+import { preloadUiSfx, uiSfx } from "@/lib/ui-sfx";
 
 export function isLocked(g: ZGame, premium: boolean) {
   return !premium && !g.free;
@@ -38,6 +40,10 @@ export function Home({
   const noAlc = useNoAlcohol();
   // Tirée une fois par ouverture de l'app (l'accueil reste monté pendant les jeux)
   const [greeting] = useState(() => drawGreeting());
+  useEffect(() => { preloadUiSfx(); }, []);
+  // Très petit écran (iPhone SE 1re gén., 320 px) : logo un peu plus petit pour laisser la place
+  // au badge Zinzin+ et aux deux boutons ronds
+  const [narrow] = useState(() => typeof window !== "undefined" && window.innerWidth < 340);
   return (
     <div ref={scrollRef} className="zz-scroll zz-page zz-home fixed inset-0">
       <Backdrop scrollRef={scrollRef} />
@@ -47,16 +53,19 @@ export function Home({
         {/* En-tête */}
         <header className="relative flex items-center justify-between px-5">
           <div className="flex items-center gap-2">
-            <h1 className="leading-none"><TapLogo size={44} /></h1>
+            <h1 className="leading-none"><TapLogo size={narrow ? 38 : 44} /></h1>
             {premium && <Tag bg="#FFD23F" tilt={-6}>{t.premium}</Tag>}
           </div>
           {/* Petite phrase selon l'heure : posée sous le logo, sans ajouter de hauteur */}
           <p data-greet className="pointer-events-none absolute left-5 right-5 top-full mt-1 truncate text-[12.5px] font-semibold leading-tight" style={{ color: "var(--zz-dim)" }}>
             {greetingText(greeting, lang)}
           </p>
-          <RoundBtn onClick={() => { haptic(); onSettings(); }} label={t.settings}>
-            <Settings size={21} strokeWidth={2.5} />
-          </RoundBtn>
+          <div className={`flex shrink-0 items-center ${narrow ? "gap-1.5" : "gap-2"}`}>
+            <SoundBtn lang={lang} />
+            <RoundBtn onClick={() => { haptic(); uiSfx.open(); onSettings(); }} label={t.settings}>
+              <Settings size={21} strokeWidth={2.5} />
+            </RoundBtn>
+          </div>
         </header>
 
         <Featured onOpenGame={onOpenGame} lang={lang} />
@@ -73,7 +82,7 @@ export function Home({
         {!premium && (
           <button
             type="button"
-            onClick={() => { haptic(); onUnlock(); }}
+            onClick={() => { haptic(); uiSfx.open(); onUnlock(); }}
             className="zz-push zz-stk zz-rise relative mx-5 mt-5 flex w-[calc(100%-40px)] items-center gap-3 rounded-[26px] py-3.5 pl-[86px] pr-3.5 text-left"
             style={{ background: "#FFD23F", color: "var(--zz-ink)", rotate: "-1deg", ["--d" as string]: "80ms" }}
           >
@@ -115,7 +124,7 @@ export function Home({
                     locked={isLocked(g, premium)}
                     showFree={!premium && Boolean(g.free)}
                     delay={big ? 100 + i * 70 : 0}
-                    onClick={() => { haptic(); onOpenGame(g.id); }}
+                    onClick={() => { haptic(); uiSfx.blob(); onOpenGame(g.id); }}
                   />
                 ))}
               </div>
@@ -165,6 +174,8 @@ function Featured({ onOpenGame, lang }: { onOpenGame: (id: string) => void; lang
     const el = ref.current;
     if (!el) return;
     const i = Math.round(el.scrollLeft / el.clientWidth);
+    // Carte suivante amenée au doigt (pas le défilement auto) : petit souffle
+    if (i % n !== idx && (hold.current || Date.now() - lastTouch.current < 1200)) uiSfx.swipe();
     setIdx(i % n);
     clearTimeout(settleT.current);
     settleT.current = setTimeout(settle, 140);
@@ -214,7 +225,7 @@ function Featured({ onOpenGame, lang }: { onOpenGame: (id: string) => void; lang
         {track.map((f, i) => (
           f.band
             ? <BandSlide key={f.id} f={f} lang={lang} active={i % n === idx} hidden={i >= n} />
-            : <Slide key={f.id} f={f} lang={lang} active={i % n === idx} hidden={i >= n} onOpen={f.gameId ? () => { haptic(); onOpenGame(f.gameId!); } : undefined} />
+            : <Slide key={f.id} f={f} lang={lang} active={i % n === idx} hidden={i >= n} onOpen={f.gameId ? () => { haptic(); uiSfx.blob(); onOpenGame(f.gameId!); } : undefined} />
         ))}
       </div>
 
@@ -357,5 +368,30 @@ function GameCard({
         </p>
       </div>
     </button>
+  );
+}
+
+const SOUND_LABEL: Record<Lang, { off: string; on: string }> = {
+  fr: { off: "Couper le son", on: "Remettre le son" },
+  en: { off: "Mute sound", on: "Turn sound on" },
+  es: { off: "Silenciar", on: "Activar el sonido" },
+};
+
+/** Couper / remettre le son (état global de sfx.ts, le même que le bouton son des jeux). */
+function SoundBtn({ lang }: { lang: Lang }) {
+  const muted = useSyncExternalStore(subscribeSfxMuted, isSfxMuted, () => false);
+  const l = SOUND_LABEL[lang] ?? SOUND_LABEL.fr;
+  return (
+    <RoundBtn
+      label={muted ? l.on : l.off}
+      onClick={() => {
+        haptic();
+        setSfxMuted(!muted);
+        // pas de son quand on coupe ; un petit bloop quand on remet
+        if (muted) uiSfx.choice();
+      }}
+    >
+      {muted ? <VolumeX size={21} strokeWidth={2.5} /> : <Volume2 size={21} strokeWidth={2.5} />}
+    </RoundBtn>
   );
 }

@@ -733,7 +733,11 @@ function DeathsScreen({
     say([intro, ...lines].filter(Boolean).join(" "));
     if (context === "dawn") lgSfx.dawn();
     else if (deaths.length) lgSfx.verdict();
-    const t = setTimeout(() => (deaths.length ? lgSfx.death() : lgSfx.spared()), context === "dawn" ? 700 : 350);
+    // au vote, le verdict (boom) suffit : pas de 2e impact + « oh » par-dessus
+    const t = setTimeout(() => {
+      if (!deaths.length) lgSfx.spared();
+      else if (context === "dawn") lgSfx.death();
+    }, context === "dawn" ? 700 : 350);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

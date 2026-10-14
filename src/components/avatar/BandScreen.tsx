@@ -6,6 +6,7 @@ import { useLang, useT, type Lang } from "@/lib/i18n";
 import { bandStatsGameName, favoriteGame, topLoser, type BandStats } from "@/lib/band-stats";
 import { useUnlocked } from "@/lib/entitlements";
 import { playSfx } from "@/lib/sfx";
+import { uiSfx } from "@/lib/ui-sfx";
 import { BAND_MAX, baseLook, decodeBand, encodeBand, lookHasPremium, type AvatarLook, type BandMember } from "@/lib/avatar/look";
 import { AVATAR_STR } from "@/lib/avatar/i18n";
 import { linkedVoiceIds, sameName, setBand, type BandEntry } from "@/lib/saved-players";
@@ -148,7 +149,7 @@ export function BandScreen({ onClose }: { onClose: () => void }) {
           <h2 style={{ ...AV_DISPLAY, fontSize: 32, lineHeight: 1 }}>{t.myBand}</h2>
           <p className="mt-1 text-[13px] font-bold" style={{ color: "rgba(255,255,255,0.75)" }}>{t.bandCount(band.length, BAND_MAX)}</p>
         </div>
-        <RoundIconBtn onClick={onClose} label={t.close}><X size={22} strokeWidth={3} /></RoundIconBtn>
+        <RoundIconBtn onClick={() => { uiSfx.close(); onClose(); }} label={t.close}><X size={22} strokeWidth={3} /></RoundIconBtn>
       </div>
 
       <div className="mx-auto w-full max-w-lg min-h-0 flex-1 overflow-y-auto px-4 pt-4" style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 20px)", overscrollBehavior: "contain" }}>
@@ -197,7 +198,7 @@ export function BandScreen({ onClose }: { onClose: () => void }) {
                 <TalkingBlob look={lookOf(b, i)} size={46} animate={false} speakKey={voiceKey(b.name)} badge={audible(b)}
                   onTap={() => void hear(b, i)} label={audible(b) ? tv.playAria(b.name) : t.editAria(b.name)} />
               </span>
-              <button type="button" onClick={() => setEdit(i)} aria-label={t.editAria(b.name)} className="flex min-h-[60px] min-w-0 flex-1 flex-col justify-center text-left">
+              <button type="button" onClick={() => { uiSfx.blob(); setEdit(i); }} aria-label={t.editAria(b.name)} className="flex min-h-[60px] min-w-0 flex-1 flex-col justify-center text-left">
                 <span className="block w-full truncate" style={{ ...AV_DISPLAY, fontSize: b.name.length > 9 ? 16 : b.name.length > 6 ? 18 : 20 }}>{b.name}</span>
                 {b.me && <span className="mt-0.5 inline-flex items-center gap-1 text-[12px] font-extrabold"><Star size={12} strokeWidth={3} fill={AV_INK} /> {t.me}</span>}
               </button>
@@ -223,7 +224,7 @@ export function BandScreen({ onClose }: { onClose: () => void }) {
           ))}
         </ol>
 
-        <button type="button" onClick={() => setEdit("new")} disabled={band.length >= BAND_MAX}
+        <button type="button" onClick={() => { uiSfx.open(); setEdit("new"); }} disabled={band.length >= BAND_MAX}
           className="mt-3 flex min-h-[56px] w-full items-center justify-center gap-2 rounded-[22px] text-[16px] font-bold disabled:opacity-50"
           style={{ border: "2.5px dashed rgba(255,255,255,0.45)", color: "#fff" }}>
           <Plus size={20} strokeWidth={3} /> {band.length >= BAND_MAX ? t.bandFull : t.addMember}
@@ -249,7 +250,7 @@ export function BandScreen({ onClose }: { onClose: () => void }) {
             className="mt-3 h-20 w-full resize-none rounded-[16px] p-3 font-mono text-[16px] leading-snug outline-none"
             style={{ background: "rgba(255,255,255,0.1)", color: "#fff", border: "2px solid rgba(255,255,255,0.3)", wordBreak: "break-all" }} />
         )}
-        <button type="button" onClick={() => setImporting(true)}
+        <button type="button" onClick={() => { uiSfx.open(); setImporting(true); }}
           className="mt-3 flex min-h-[52px] w-full items-center justify-center gap-2 rounded-full text-[16px] font-bold"
           style={{ ...avSticker("#fff", 4), color: AV_INK }}>
           <Download size={19} strokeWidth={2.8} /> {t.importBand}

@@ -17,7 +17,16 @@ export interface GameFinishedDetail {
   loser?: string | null;
   /** Prénoms de la table (rempli tout seul avec la dernière table lancée dans ce jeu, voir setCurrentPlayers) */
   players?: string[];
+  /** Gagnant(s) d'après le jeu (meilleur score), seulement si le jeu a un classement net — optionnel */
+  winners?: string[];
+  /** Classement mesuré par le jeu (rang 1 = meilleur, ex æquo = même rang) — optionnel */
+  ranking?: GameRank[];
 }
+
+export interface GameRank { name: string; rank: number }
+
+/** Scores d'une partie, dans l'ordre des prénoms (lowerWins : le plus petit gagne, ex. nombre de défaites). */
+export interface GameScores { names: string[]; values: number[]; lowerWins?: boolean }
 
 /* Jeu affiché en ce moment (posé par l'écran de jeu de l'app) : les jeux n'ont pas à connaître leur id */
 let currentGame: string | null = null;
@@ -46,14 +55,37 @@ export function emitGameFinished(detail: GameFinishedDetail = {}) {
 
 /**
  * Une ligne dans le jeu : `useGameFinished(phase === "end")` → émis à chaque arrivée sur l'écran de fin.
- * Optionnel : `{ loser }` (lu au moment de la fin).
+ * Optionnel : `{ loser }` et `{ scores }` (classement + gagnants), lus au moment de la fin.
  */
-export function useGameFinished(finished: boolean, info?: { loser?: string | null }) {
+export function useGameFinished(finished: boolean, info?: { loser?: string | null; scores?: GameScores }) {
   const latest = useRef(info);
   useEffect(() => { latest.current = info; });
   useEffect(() => {
-    if (finished) emitGameFinished({ loser: latest.current?.loser ?? null });
+    if (!finished) return;
+    const sc = latest.current?.scores;
+    const ranking = sc ? rankByScores(sc.names, sc.values, sc.lowerWins) : [];
+    emitGameFinished({
+      loser: latest.current?.loser ?? null,
+      ...(ranking.length >= 2 ? { ranking, winners: topOf(ranking) } : {}),
+    });
   }, [finished]);
+}
+
+/** Classement « compétition » (1, 2, 2, 4) à partir des scores ; prénoms vides ignorés. */
+export function rankByScores(names: string[], values: number[], lowerWins = false): GameRank[] {
+  const rows = names
+    .map((name, i) => ({ name: (name ?? "").trim(), v: Number.isFinite(values[i]) ? values[i] : 0 }))
+    .filter((r) => r.name);
+  const better = (a: number, b: number) => (lowerWins ? a < b : a > b);
+  return rows
+    .map((r) => ({ name: r.name, rank: 1 + rows.filter((x) => better(x.v, r.v)).length }))
+    .sort((a, b) => a.rank - b.rank);
+}
+
+/** Les premiers ex æquo, seulement si c'est un vrai podium (pas la moitié de la table ou plus). */
+export function topOf(ranking: GameRank[]): string[] {
+  const top = ranking.filter((r) => r.rank === 1).map((r) => r.name);
+  return top.length && top.length <= Math.max(1, Math.floor(ranking.length / 2)) ? top : [];
 }
 
 /** Le joueur au plus grand compteur (pertes, verres renversés…), seulement s'il est seul en tête et > 0. */

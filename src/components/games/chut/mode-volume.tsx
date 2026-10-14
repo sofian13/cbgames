@@ -78,7 +78,7 @@ export function VolumeMode({ plan, ...c }: ModeCommon & { plan: VolumeTurnPlan[]
   };
   const contest = () => {
     setScores((s) => s.map((x, i) => (i === s.length - 1 ? { ...x, contested: true } : x)));
-    playSfx("crowd-aww", { volume: 0.5 });
+    playSfx("pop2", { volume: 0.5 }); // contester = action neutre, pas une déception
   };
   const totals = () => c.players.map((_, p) => scores.filter((s) => s.player === p).reduce((a, s) => a + scoreOf(s), 0));
   const finish = () => {

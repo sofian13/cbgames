@@ -206,7 +206,14 @@ function PensezPareilLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }
         names={[nameA, nameB]} answers={[ansA, ansB]}
         round={round + 1} total={TOTAL_ROUNDS} syncs={lastResult.syncs}
         onNext={() => {
-          if (round + 1 >= TOTAL_ROUNDS) { playCombo("fanfare"); setPhase("over"); }
+          if (round + 1 >= TOTAL_ROUNDS) {
+            // fin de partie : le son suit le verdict affiché (même seuils que l'écran final)
+            const s = lastResult.syncs;
+            if (s >= TOTAL_ROUNDS * 0.75) playCombo("fanfare");
+            else if (s >= TOTAL_ROUNDS / 2) playSfx("win", { volume: 0.7 });
+            else playSfx("lose", { volume: 0.6 });
+            setPhase("over");
+          }
           else { setRound((r) => r + 1); setPhase("passA"); }
         }}
       />
@@ -580,7 +587,7 @@ function GameOverScreen({
     if (recordedRef.current) return;
     recordedRef.current = true;
     const r = recordGame({ syncs, bestStreak, perfect: syncs === total && total > 0 });
-    if (r.leveledUp) playSfx("levelup", { volume: 0.9, delay: 0.8 });
+    if (r.leveledUp) playSfx("chime", { volume: 0.8, delay: 1.6 }); // après la fanfare, pas par-dessus
     setResult(r);
   }, [syncs, bestStreak, total]);
 

@@ -32,7 +32,7 @@ export function unlockAudio() {
  */
 export function sfxTick(high: boolean, urgency = 0) {
   const u = Math.max(0, Math.min(1, urgency));
-  playSfx(high ? "bomb-tick" : "bomb-tock", { volume: 0.55 + u * 0.45, rate: 1 + u * 0.22 });
+  playSfx(high ? "bomb-tick" : "bomb-tock", { volume: 0.45 + u * 0.35, rate: 1 + u * 0.22 });
 }
 
 /**
@@ -77,7 +77,7 @@ export function sfxPop() {
 
 /** Battement de cœur (boum-boum) ; `rate` > 1 quand le cœur s'emballe. */
 export function sfxHeart(rate = 1) {
-  playSfx("heartbeat", { volume: 0.8, rate: Math.max(0.8, Math.min(1.6, rate)) });
+  playSfx("heartbeat", { volume: 0.6, rate: Math.max(0.8, Math.min(1.6, rate)) });
 }
 
 /** Petit « ding » positif. */

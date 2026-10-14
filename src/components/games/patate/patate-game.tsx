@@ -66,7 +66,7 @@ export default function PatateGame({ onReturnToLobby }: GameProps) {
   const [players, setPlayers] = useState<string[]>([]);
   const [losses, setLosses] = useState<number[]>([]);
   // fin de partie → demande de note éventuelle + stats de la bande (app)
-  useGameFinished(phase === "end", { loser: uniqueMax(players, losses) });
+  useGameFinished(phase === "end", { loser: uniqueMax(players, losses), scores: { names: players, values: losses, lowerWins: true } });
   const [sipsOk] = useState(() => sipsAllowed(true)); // mode sans alcool / Soirée « Chill » : gages seulement
   const [penalty, setPenalty] = useState<Penalty>(() => (sipsOk ? "sips" : "dares"));
   const [spicy, setSpicy] = useState(() => adultDefault(false)); // pack 18+ selon l'ambiance de soirée

@@ -13,7 +13,7 @@ import { C, Chip as KitChip, DISPLAY, INK, KitStyles, NameTag, OptionCard, Secti
 import { getLang, pick as pickLang, useT } from "@/lib/i18n";
 import { sipsAllowed, soberLines } from "@/lib/party-mood";
 import { CHALLENGES as CHALLENGE_TEXT, CHALLENGE_IDS, GAGES as GAGES_I18N, PP_STR } from "./i18n";
-import { fxBad, fxDrum, fxGood, fxOver, fxPerfect, fxPreload, fxReveal, fxTap, fxTick, fxUnlock, vibrate } from "./pp-fx";
+import { fxBad, fxDrum, fxGood, fxNeutral, fxOver, fxPerfect, fxPreload, fxReveal, fxTap, fxTick, fxUnlock, vibrate } from "./pp-fx";
 import { useGameFinished } from "@/lib/game-finished";
 
 // ── Pile Poil · mode Tournoi (tout sur un seul téléphone) ─────────────────
@@ -144,9 +144,9 @@ export function Tournament({ net, onExit }: { net?: TournamentNet; onExit?: () =
   // Défis figés dans la langue du début de partie
   const [CHALLENGES] = useState(() => challengesFor());
   const [phase, setPhase] = useState<Phase>("setup");
-  useGameFinished(phase === "final"); // fin de partie → demande de note éventuelle (app)
   const [players, setPlayers] = useState<string[]>([]);
   const [points, setPoints] = useState<number[]>([]);
+  useGameFinished(phase === "final", { scores: { names: players, values: points } }); // fin de partie → note éventuelle + Soirée (app)
   const [mode, setMode] = useState<PPMode>("closest");
   const [totalRounds, setTotalRounds] = useState(5);
   const [autoTargets, setAutoTargets] = useState(true);
@@ -739,7 +739,7 @@ function Reveal({
     if (!done || reacted.current) return;
     reacted.current = true;
     if (mystery) {
-      if (sound) fxGood();
+      if (sound) fxNeutral();
       return;
     }
     if (perfect) {
@@ -861,7 +861,7 @@ function Board({
   const [rollShown, setRollShown] = useState(0);
   useEffect(() => {
     if (!mystery) return;
-    if (sound) fxDrum(1.6); // fin du roulement = cible révélée
+    if (sound) fxDrum(1.85); // la cymbale de fin tombe sur la révélation (1,6 s)
     const iv = setInterval(() => setRollShown(3 + Math.random() * 17), 70);
     const to = setTimeout(() => {
       clearInterval(iv);

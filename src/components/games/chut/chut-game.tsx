@@ -75,7 +75,7 @@ interface Match { a: number; b: number; legs: DuelResult[]; winner: number | nul
 interface Ko { round: number; left: number; matches: Match[]; bye: number | null; cur: number; out: number[][]; byes: number[]; champion: number | null }
 type Screen = "players" | "modes" | "config" | "calib" | "play" | "pass" | "arena" | "result" | "bracket" | "table" | "tableWho" | "tableResult" | "end";
 
-const SFX: SfxName[] = ["ding", "correct", "wrong", "rise", "confirm", "buzzer", "crowd-cheer", "laugh", "drumroll", "drumroll-end", "tada", "applause", "whistle", "pop", "card-flip", "whoosh", "select", "scratch", "pluck", "boom", "coin", "twotone", "glass", "thump", "bell", "pep", "rise", "pop2", "crowd-aww", "firecracker", "gong"];
+const SFX: SfxName[] = ["ding", "correct", "wrong", "rise", "confirm", "buzzer", "crowd-cheer", "laugh", "drumroll", "drumroll-end", "tada", "applause", "whistle", "pop", "card-flip", "whoosh", "select", "scratch", "pluck", "boom", "coin", "twotone", "glass", "thump", "bell", "pep", "pop2", "crowd-aww", "firecracker", "gong", "explosion", "back", "card-shuffle"];
 
 /** Rotation : chacun passe Sérieux une fois par tour, face à un Clown différent à chaque tour. */
 function buildRotation(n: number, tours: number): Duel[] {
@@ -295,9 +295,8 @@ export default function ChutGame({ onReturnToLobby }: GameProps) {
     }
     if (cracked) {
       setSentence(newSentence());
-      playSfx("buzzer", { volume: 0.9 });
-      playSfx("crowd-cheer", { volume: 0.7, delay: 0.35 });
-    playSfx("laugh", { volume: 0.8, delay: 0.25 });
+      playSfx("buzzer", { volume: 0.8 });
+      playSfx("laugh", { volume: 0.8, delay: 0.25 });
       vibrate([70, 50, 260]);
     } else {
       setSentence(null);
@@ -349,8 +348,7 @@ export default function ChutGame({ onReturnToLobby }: GameProps) {
   // ── Toute la table ──
   const tableCrack = (elapsed: number) => {
     setTableElapsed(elapsed);
-    playSfx("buzzer", { volume: 0.9 });
-    playSfx("crowd-cheer", { volume: 0.7, delay: 0.35 });
+    playSfx("buzzer", { volume: 0.8 });
     playSfx("laugh", { volume: 0.8, delay: 0.25 });
     vibrate([70, 50, 260]);
     setScreen("tableWho");

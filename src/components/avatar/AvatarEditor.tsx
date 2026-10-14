@@ -6,6 +6,7 @@ import { Check, Dices, Lock, RotateCcw, Star, X } from "lucide-react";
 import { useT } from "@/lib/i18n";
 import { requestPaywall, useUnlocked } from "@/lib/entitlements";
 import { playSfx } from "@/lib/sfx";
+import { uiSfx } from "@/lib/ui-sfx";
 import {
   AVATAR_COLORS, AVATAR_ITEMS, AVATAR_PALETTE, HAIR_COLORS, HAIR_COLOR_IDS, baseLook, cleanName,
   lookHasPremium, randomLook, type AvatarLook, type AvatarSlot, type AvatarTab,
@@ -118,12 +119,12 @@ export function AvatarEditor({
   const set = (patch: Partial<AvatarLook>) => {
     setLook((l) => ({ ...l, ...patch }));
     setErr(null);
-    playSfx("select", { volume: 0.4 });
+    uiSfx.choice();
     bump();
   };
   const goTab = (x: AvatarTab) => {
     setTab(x);
-    playSfx("tap", { volume: 0.35 });
+    uiSfx.choice();
     grid.current?.scrollTo({ top: 0 });
   };
 
@@ -157,7 +158,7 @@ export function AvatarEditor({
       {/* En-tête */}
       <div className="mx-auto flex w-full max-w-lg items-center gap-3 px-4" style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 10px)" }}>
         <h2 className="min-w-0 flex-1 truncate" style={{ ...AV_DISPLAY, fontSize: "clamp(22px, 6.4vw, 28px)", lineHeight: 1.05 }}>{title}</h2>
-        <RoundIconBtn onClick={onClose} label={t.close}><X size={22} strokeWidth={3} /></RoundIconBtn>
+        <RoundIconBtn onClick={() => { uiSfx.close(); onClose(); }} label={t.close}><X size={22} strokeWidth={3} /></RoundIconBtn>
       </div>
 
       {/* Aperçu */}
@@ -193,7 +194,7 @@ export function AvatarEditor({
             />
           )}
           {showMe && (
-            <button type="button" onClick={() => { setMe((v) => !v); playSfx("toggle", { volume: 0.4 }); }} aria-pressed={me}
+            <button type="button" onClick={() => { setMe((v) => !v); uiSfx.choice(); }} aria-pressed={me}
               className="flex h-11 shrink-0 items-center gap-1.5 rounded-full px-3.5 text-[14px] font-bold active:translate-y-[2px]"
               style={{ ...avSticker(me ? "#FFD23F" : "#2A1F5C", 3), color: me ? AV_INK : "#fff" }}>
               <Star size={16} strokeWidth={2.8} fill={me ? AV_INK : "none"} /> {t.itsMe}

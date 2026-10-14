@@ -78,9 +78,9 @@ export default function GuessWordGame({ onReturnToLobby }: GameProps) {
   const slidesTuto = useFirstTimeTuto("guess-word", { atMount: true });
   const tutoSlides = useGuessWordTuto();
   const [rulesOpen, setRulesOpen] = useState(false);
-  useGameFinished(phase === "final"); // fin de partie → demande de note éventuelle (app)
   const [players, setPlayers] = useState<string[]>([]);
   const [scores, setScores] = useState<number[]>([]);
+  useGameFinished(phase === "final", { scores: { names: players, values: scores } }); // fin de partie → note éventuelle + Soirée (app)
   const [packs, setPacks] = useState<string[]>(() => PACKS.filter((p) => (p.adult ? adultDefault(!!p.defaultOn) : p.defaultOn)).map((p) => p.id)); // pack 18+ selon l'ambiance de soirée
   const [duration, setDuration] = useState<number>(60);
   const [tours, setTours] = useState(2);
