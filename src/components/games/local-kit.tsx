@@ -7,10 +7,13 @@
  */
 
 import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type ReactNode } from "react";
-import { getRecentNames, getSavedPlayers, sameName, savePlayers, takePartyBand } from "@/lib/saved-players";
+import { getBand, getPlayerLook, getRecentNames, getSavedPlayers, playersVersion, sameName, savePlayers, setPlayerLook, subscribePlayers, takePartyBand } from "@/lib/saved-players";
+import { PlayerBlob, usePlayerLook } from "@/components/avatar/PlayerBlob";
+import { AvatarEditor } from "@/components/avatar/AvatarEditor";
+import { AVATAR_PALETTE } from "@/lib/avatar/look";
 import { isOfflineApp } from "@/lib/offline-app";
 import { Mascot, MASCOT_COLORS, MASCOT_PALETTE, type MascotColor } from "@/components/Mascot";
-import { ArrowLeft, Check, Crown, Smartphone, Volume2, VolumeX, Wifi, X } from "lucide-react";
+import { ArrowLeft, Check, Crown, Pencil, Smartphone, Volume2, VolumeX, Wifi, X } from "lucide-react";
 import { GameIconBadge, GameIconButton, GameInlineIcon, GameTopRight } from "@/components/games/game-icon-button";
 import { isSfxMuted, playSfx, setSfxMuted, subscribeSfxMuted } from "@/lib/sfx";
 import { type I18n, useLang, useT } from "@/lib/i18n";
@@ -42,6 +45,7 @@ const STR: I18n<{
   itsMe: string;
   soundOn: string;
   soundOff: string;
+  editLook: (n: string) => string;
   /** Placeholders drôles (à la place de « Joueur 1 ») */
   funny: string[];
 }> = {
@@ -69,6 +73,7 @@ const STR: I18n<{
     itsMe: "C'est moi !",
     soundOn: "Remettre le son",
     soundOff: "Couper le son",
+    editLook: (n) => `Personnaliser le perso de ${n}`,
     funny: [
       "Le pote en retard", "Reine du karaoké", "Ramène rien", "Le roi du bluff", "Dort déjà", "Le DJ du soir",
       "Mauvais perdant", "Le +1 surprise", "Rit trop fort", "Toujours au tél", "Le chef du barbeuc", "Triche un peu",
@@ -99,6 +104,7 @@ const STR: I18n<{
     itsMe: "It's me!",
     soundOn: "Turn sound on",
     soundOff: "Mute sound",
+    editLook: (n) => `Customise ${n}'s character`,
     funny: [
       "Always late", "Karaoke queen", "Brings nothing", "Bluff master", "Already asleep", "Tonight's DJ",
       "Sore loser", "Surprise +1", "Laughs too loud", "Always on the phone", "BBQ boss", "Cheats a bit",
@@ -129,6 +135,7 @@ const STR: I18n<{
     itsMe: "¡Soy yo!",
     soundOn: "Activar el sonido",
     soundOff: "Silenciar",
+    editLook: (n) => `Personalizar el personaje de ${n}`,
     funny: [
       "El que llega tarde", "Reina del karaoke", "No trae nada", "Rey del farol", "Ya está dormido", "El DJ de la noche",
       "Mal perdedor", "El +1 sorpresa", "Se ríe muy alto", "Siempre con el móvil", "Jefe de la barbacoa", "Hace trampas",
@@ -275,6 +282,10 @@ export function PlayersSetup({
   const inputs = useRef<(HTMLInputElement | null)[]>([]);
   const blobs = useRef<(HTMLDivElement | null)[]>([]);
   const focusNext = useRef<number | null>(null);
+  // Éditeur de perso ouvert (index du joueur)
+  const [editing, setEditing] = useState<number | null>(null);
+  // Re-rendu quand un perso change (couleur de l'étiquette du prénom)
+  useSyncExternalStore(subscribePlayers, playersVersion, () => "");
 
   // Dernière table + prénoms récents (avant le 1er paint, côté client uniquement)
   useLayoutEffect(() => {
@@ -287,7 +298,8 @@ export function PlayersSetup({
       setNames(last);
       setSameBand(true);
     }
-    setRecent(getRecentNames());
+    // Prénoms récents + « Ma bande » (persos personnalisés)
+    setRecent(Array.from(new Set([...getRecentNames(), ...getBand().map((b) => b.name)])).filter((r, k, a) => a.findIndex((x) => sameName(x, r)) === k));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -379,13 +391,25 @@ export function PlayersSetup({
         <div className="mt-4 grid grid-cols-2 gap-x-3 gap-y-3 sm:grid-cols-3 lg:grid-cols-4">
           {names.map((n, i) => {
             const col = colorForIndex(i);
-            const pal = MASCOT_PALETTE[col];
+            const lk = n.trim() ? getPlayerLook(n.trim()) : null;
+            const pal = lk ? AVATAR_PALETTE[lk.color] ?? MASCOT_PALETTE[col] : MASCOT_PALETTE[col];
             const ink = inkOn(pal.body);
             const canRemove = names.length > min || n.trim() !== "";
             return (
               <div key={i} className="relative flex flex-col items-center" style={{ transform: `rotate(${i % 2 ? 1.5 : -1.5}deg)` }}>
                 <div className="relative z-[1] -mb-5" ref={(el) => { blobs.current[i] = el; }} onPointerDown={() => hop(blobs.current[i])}>
-                  <Mascot size={56} color={col} mood={n.trim() ? (i % 3 === 0 ? "laughing" : i % 3 === 1 ? "happy" : "wink") : "thinking"} shadow={false} delay={i * 0.2} />
+                  <PlayerBlob name={n.trim()} colorIndex={i} size={56} mood={n.trim() ? (i % 3 === 0 ? "laughing" : i % 3 === 1 ? "happy" : "wink") : "thinking"} delay={i * 0.2} />
+                  {/* Crayon : personnaliser le perso de ce joueur */}
+                  {n.trim() && (
+                    <button
+                      type="button"
+                      onClick={() => setEditing(i)}
+                      aria-label={t.editLook(n.trim())}
+                      className="absolute -left-6 -top-3 grid h-11 w-11 place-items-center"
+                    >
+                      <span className="grid h-7 w-7 place-items-center rounded-full" style={{ background: "#FFD23F", color: INK, border: `2.5px solid ${INK}` }}><Pencil size={13} strokeWidth={3} aria-hidden /></span>
+                    </button>
+                  )}
                   {canRemove && (
                     <button
                       type="button"
@@ -503,6 +527,15 @@ export function PlayersSetup({
           )}
         </div>
       </div>
+      {editing !== null && names[editing]?.trim() && (
+        <AvatarEditor
+          name={names[editing].trim()}
+          look={getPlayerLook(names[editing].trim())}
+          colorHint={colorForIndex(editing)}
+          onClose={() => setEditing(null)}
+          onSave={({ name: who, look }) => setPlayerLook(who, look)}
+        />
+      )}
       <style>{`.zz-name::placeholder{color:var(--ph);opacity:1;font-family:"DM Sans",system-ui,sans-serif;font-weight:600;letter-spacing:0;word-spacing:0}`}</style>
     </div>
   );
@@ -526,7 +559,9 @@ export function PassScreen({
 }) {
   void accent; // gardé pour l'API : fond violet nuit commun
   const col = colorForIndex(colorIndex);
-  const pal = MASCOT_PALETTE[col];
+  const look = usePlayerLook(toName);
+  // Perso personnalisé : l'étiquette prend sa couleur
+  const pal = look ? AVATAR_PALETTE[look.color] ?? MASCOT_PALETTE[col] : MASCOT_PALETTE[col];
   const blob = useRef<HTMLDivElement | null>(null);
   const t = useT(STR);
   // Le téléphone change de main : petit « whoosh »
@@ -542,7 +577,7 @@ export function PassScreen({
     >
       <p className="mb-2 text-[18px] font-bold" style={{ color: "rgba(255,255,255,0.85)" }}>{t.passTo}</p>
       <div ref={blob} onPointerDown={() => hop(blob.current)} className="relative z-[1] -mb-6">
-        <Mascot size={130} color={col} mood="wink" arms shadow={false} />
+        <PlayerBlob name={toName} colorIndex={colorIndex} size={130} mood="wink" arms />
       </div>
       <h1
         className="rounded-[24px] px-6 pb-3 pt-7 text-center"
@@ -893,7 +928,7 @@ export function ZRanking({
             <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-[17px]" style={{ ...DISPLAY, background: first ? INK : "#F1ECFF", color: first ? "#FFD23F" : INK }}>
               {first ? <Crown size={18} strokeWidth={2.8} aria-hidden /> : rank}
             </span>
-            <Mascot size={38} color={colorForIndex(r.colorIndex)} mood={first ? "laughing" : "happy"} shadow={false} bob={false} />
+            <PlayerBlob name={r.name} colorIndex={r.colorIndex} size={38} mood={first ? "laughing" : "happy"} bob={false} />
             <div className="min-w-0 flex-1">
               {/* Prénom long : plus petit et sur 2 lignes max plutôt que tronqué */}
               <p className="line-clamp-2 leading-tight" style={{ ...DISPLAY, fontSize: r.name.length > 12 ? 16 : 19, overflowWrap: "anywhere" }}>{r.name}</p>

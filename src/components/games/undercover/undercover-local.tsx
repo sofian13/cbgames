@@ -1,5 +1,6 @@
 "use client";
 
+import { PlayerBlob } from "@/components/avatar/PlayerBlob";
 import { useMemo, useState, useEffect, type CSSProperties, type ReactNode } from "react";
 import { Mascot, MASCOT_COLORS, MASCOT_PALETTE, type MascotColor, type MascotMood } from "@/components/Mascot";
 import { registerSoftReplay } from "@/lib/game-replay";
@@ -833,7 +834,7 @@ function TableScreen({
               display: "flex", alignItems: "center", justifyContent: "center",
               ...DISPLAY, fontSize: 17, background: d ? "transparent" : ZZ.ink, color: d ? "#FF3EA5" : "#fff",
             }}>{d ? "✕" : n}</span>
-            <Mascot size={40} color={colorByIdx(p.idx)} mood={d ? "dead" : "happy"} bob={false} shadow={false} />
+            <PlayerBlob name={p.name} colorIndex={p.idx} size={40} mood={d ? "dead" : "happy"} bob={false} />
             <span style={{ flex: 1, ...DISPLAY, fontSize: 20, textDecoration: d ? "line-through" : "none" }}>{p.name}</span>
             {n === 1 && <span style={{ fontSize: 13, fontWeight: 800 }}>{t.starts}</span>}
           </div>
@@ -881,7 +882,7 @@ function ReviewPick({
             display: "flex", flexDirection: "column", alignItems: "center", gap: 8,
             fontFamily: "inherit",
           }}>
-            <Mascot color={colorByIdx(p.idx)} size={56} mood="neutral" bob={false} />
+            <PlayerBlob name={p.name} colorIndex={p.idx} size={56} mood="neutral" bob={false} />
             <div style={{ ...DISPLAY, fontSize: p.name.length > 13 ? 15 : p.name.length > 10 ? 17 : 20, lineHeight: 1.05, overflowWrap: "anywhere" }}>{p.name}</div>
             <div style={{ fontSize: 13, fontWeight: 700, color: "#6B5C88" }}>{t.tapToReview}</div>
           </button>
@@ -932,7 +933,7 @@ function GroupVoteScreen({
                 color: ZZ.ink, textAlign: "center", fontFamily: "inherit", cursor: "pointer",
               }}>
               <div style={{ display: "flex", justifyContent: "center", marginTop: 4 }}>
-                <Mascot color={colorByIdx(p.idx)} size={64} mood={isPicked ? "shocked" : "shifty"} arms bob={false} />
+                <PlayerBlob name={p.name} colorIndex={p.idx} size={64} mood={isPicked ? "shocked" : "shifty"} arms bob={false} />
               </div>
               <div style={{ ...DISPLAY, fontSize: p.name.length > 13 ? 15 : p.name.length > 10 ? 17 : 21, marginTop: 8, lineHeight: 1.05, overflowWrap: "anywhere", minHeight: 34, display: "flex", alignItems: "center", justifyContent: "center" }}>{p.name}</div>
               <div style={{ marginTop: 6, fontSize: 13, fontWeight: 800, color: isPicked ? ZZ.ink : "#6B5C88" }}>
@@ -1027,7 +1028,7 @@ function MrWhiteGuess({ player, onSubmit }: { player: LocalPlayer; onSubmit: (g:
         marginBottom: 18,
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-          <Mascot color={colorByIdx(player.idx)} size={68} mood="thinking" arms />
+          <PlayerBlob name={player.name} colorIndex={player.idx} size={68} mood="thinking" arms />
           <div>
             <div style={{ fontSize: 15, fontWeight: 700 }}>{t.ghostEliminated}</div>
             <div style={{ ...DISPLAY, fontSize: player.name.length > 12 ? 21 : 28, marginTop: 2, lineHeight: 1.05, overflowWrap: "anywhere" }}>{player.name}</div>
@@ -1149,7 +1150,7 @@ function GameOverScreen({
               border: `3px solid ${ZZ.ink}`, boxShadow: `0 3px 0 ${ZZ.ink}`,
             }}>
               <span style={{ width: 22, ...DISPLAY, fontSize: 17 }}>{i + 1}</span>
-              <Mascot color={colorByIdx(p.idx)} size={28} mood={win ? "wink" : "dead"} bob={false} shadow={false} />
+              <PlayerBlob name={p.name} colorIndex={p.idx} size={28} mood={win ? "wink" : "dead"} bob={false} />
               <span style={{ flex: 1, minWidth: 0, ...DISPLAY, fontSize: 18, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</span>
               <span style={{
                 fontSize: 13, padding: "3px 9px", borderRadius: 99,
@@ -1411,7 +1412,7 @@ function PassScreenUC({ toName, colorIdx, label, players, currentIdx, buttonLabe
       <NavBar sub={label} right={<Tag color="#3DDC97">{tag ?? t.rolesReady}</Tag>} />
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12, marginTop: 8 }}>
         <div style={{ position: "relative" }}>
-          <Mascot size={110} color={MASCOT_COLORS[colorIdx % MASCOT_COLORS.length]} mood="wink" arms shadow={false} />
+          <PlayerBlob name={toName} colorIndex={colorIdx} size={110} mood="wink" arms />
         </div>
         <div style={{ fontSize: 18, fontWeight: 700, color: "rgba(255,255,255,0.9)", marginTop: 4 }}>{t.passPhoneTo}</div>
         <div style={{ ...DISPLAY, fontSize: `clamp(32px, ${Math.min(14, 110 / Math.max(1, toName.length)).toFixed(1)}vw, 54px)`, lineHeight: 1.05, textAlign: "center", overflowWrap: "anywhere", maxWidth: "100%", padding: "8px 22px 10px", borderRadius: 24, background: MASCOT_PALETTE[MASCOT_COLORS[colorIdx % MASCOT_COLORS.length]].body, color: ZZ.ink, border: `3px solid ${ZZ.ink}`, boxShadow: `0 6px 0 ${ZZ.ink}`, rotate: "-2deg" }}>{toName}</div>
@@ -1430,7 +1431,7 @@ function PassScreenUC({ toName, colorIdx, label, players, currentIdx, buttonLabe
                     width: 46, height: 46, margin: "0 auto", borderRadius: "50%", display: "grid", placeItems: "center",
                     border: active ? `3px solid ${ZZ.yellow}` : "3px solid transparent", boxSizing: "border-box",
                   }}>
-                    <Mascot size={32} color={MASCOT_COLORS[p.idx % MASCOT_COLORS.length]} mood="happy" bob={false} shadow={false} style={{ display: "block" }} />
+                    <PlayerBlob name={p.name} colorIndex={p.idx} size={32} mood="happy" bob={false} style={{ display: "block" }} />
                   </div>
                   <div style={{ fontSize: 13, marginTop: 3, color: active ? "#FFD23F" : "rgba(255,255,255,0.85)", fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</div>
                 </div>

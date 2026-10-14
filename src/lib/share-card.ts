@@ -1,6 +1,10 @@
 import { MASCOT_COLORS, MASCOT_PALETTE, type MascotColor, type MascotMood } from "@/components/Mascot";
 import { GAME_NAMES } from "@/lib/games/game-names-i18n";
 import { type I18n, getLang, pick } from "@/lib/i18n";
+import { getPlayerLook } from "@/lib/saved-players";
+import { isUnlockedNow } from "@/lib/entitlements";
+import { baseLook, freeLook, type AvatarLook } from "@/lib/avatar/look";
+import { avatarSvgMarkup } from "@/components/avatar/avatar-markup";
 
 /**
  * « Partager mon résultat » : carte image verticale 1080×1920 (format story)
@@ -53,12 +57,16 @@ export interface ShareCard {
   text: string;
   /** Blob principal */
   color?: MascotColor;
+  /** Prénom du blob principal : son perso personnalisé (« Ma bande ») s'il en a un */
+  name?: string;
   mood?: MascotMood;
   crown?: boolean;
 }
 
 /* ───────── Rendu des blobs (fourni par l'app) ───────── */
 export interface ShareBlobOpts {
+  /** Prénom du joueur : son perso personnalisé remplace le blob s'il existe */
+  name?: string;
   game?: string;
   color?: MascotColor;
   mood?: MascotMood;
@@ -324,8 +332,17 @@ async function loadSvg(svg: string): Promise<HTMLImageElement | null> {
   }
 }
 
+/** Perso enregistré pour ce prénom (sans Zinzin+ : version gratuite). */
+function lookOf(name?: string): AvatarLook | null {
+  const l = name ? getPlayerLook(name) : null;
+  return l && !isUnlockedNow() ? freeLook(l) : l;
+}
+
 function blobSvg(o: ShareBlobOpts): string {
   try {
+    const look = lookOf(o.name);
+    const av = look ? avatarSvgMarkup(look, o.mood ?? "laughing") : null;
+    if (av) return av;
     return blobArt?.(o) ?? fallbackBlob(o);
   } catch {
     return fallbackBlob(o);
@@ -493,7 +510,7 @@ export async function renderShareCard(card: ShareCard): Promise<HTMLCanvasElemen
     ctx.font = display(nm.px);
     drawLines(ctx, nm.lines, tx, y + 72 + nm.px * 0.9, 0, ink, "left");
     ctx.restore();
-    minis.push({ x: CX + 30, y: y + 25, size: 120, o: { color: colorOf(a.colorIndex), mood: a.mood ?? "laughing", seed: i + 2 } });
+    minis.push({ x: CX + 30, y: y + 25, size: 120, o: { name: a.name, color: colorOf(a.colorIndex), mood: a.mood ?? "laughing", seed: i + 2 } });
     y += AWARD_H + 22;
   });
   if (awards.length) y += gap - 22;
@@ -541,7 +558,7 @@ export async function renderShareCard(card: ShareCard): Promise<HTMLCanvasElemen
       drawLines(ctx, nm.lines, nx, y + ROW_H / 2 + nm.px * 0.34, 0, INK, "left");
     }
     ctx.restore();
-    minis.push({ x: CX + 104, y: y + 18, size: 92, o: { color: colorOf(r.colorIndex), mood: first ? "laughing" : "happy", seed: i, crown: false } });
+    minis.push({ x: CX + 104, y: y + 18, size: 92, o: { name: r.name, color: colorOf(r.colorIndex), mood: first ? "laughing" : "happy", seed: i, crown: false } });
     y += ROW_H + 16;
   });
   if (rows.length) {
@@ -568,7 +585,7 @@ export async function renderShareCard(card: ShareCard): Promise<HTMLCanvasElemen
   }
 
   // Blobs (après les blocs : ils débordent par-dessus)
-  const main = await loadSvg(blobSvg({ game: card.game, color: card.color, mood: card.mood, crown: card.crown, seed: 1 }));
+  const main = await loadSvg(blobSvg({ name: card.name, game: card.game, color: card.color, mood: card.mood, crown: card.crown, seed: 1 }));
   if (main) ctx.drawImage(main, (W - blob * ART) / 2, blobY - blob * ART_PAD, blob * ART, blob * ART);
   const imgs = await Promise.all(minis.map((m) => loadSvg(blobSvg(m.o))));
   minis.forEach((m, i) => {
@@ -576,7 +593,12 @@ export async function renderShareCard(card: ShareCard): Promise<HTMLCanvasElemen
     if (img) ctx.drawImage(img, m.x - m.size * ART_PAD, m.y - m.size * ART_PAD, m.size * ART, m.size * ART);
   });
 
-  // ── Pied : « Joue sur Zinzin · zinzin-app.com »
+  footer(ctx, s);
+  return canvas;
+}
+
+/** Pied : « Joue sur Zinzin · zinzin-app.com » */
+function footer(ctx: Ctx, s: (typeof STR)["fr"]) {
   ctx.font = display(64);
   ctx.textBaseline = "alphabetic";
   ctx.lineJoin = "round";
@@ -595,8 +617,6 @@ export async function renderShareCard(card: ShareCard): Promise<HTMLCanvasElemen
   ctx.font = body(44);
   drawLines(ctx, [SHARE_SITE], 0, 2, 0, INK);
   ctx.restore();
-
-  return canvas;
 }
 
 /* ───────── Partage ───────── */
@@ -613,15 +633,19 @@ const cancelled = (e: unknown) => /cancel|abort/i.test(String((e as { message?: 
  * - web : Web Share API avec fichier, sinon téléchargement du PNG.
  */
 export async function shareResultCard(card: ShareCard): Promise<ShareOutcome> {
-  const s = STR[getLang()];
-  const text = `${card.text}\n${s.tail} https://${SHARE_SITE}`;
   let canvas: HTMLCanvasElement;
   try {
     canvas = await renderShareCard(card);
   } catch {
     return "error";
   }
-  const name = `zinzin-${card.game}.png`;
+  return shareCanvas(canvas, `zinzin-${card.game}.png`, card.text);
+}
+
+/** Ouvre la feuille de partage pour une image déjà dessinée. */
+async function shareCanvas(canvas: HTMLCanvasElement, name: string, msg: string): Promise<ShareOutcome> {
+  const s = STR[getLang()];
+  const text = `${msg}\n${s.tail} https://${SHARE_SITE}`;
 
   if (isNative()) {
     const { Share } = await import("@capacitor/share");
@@ -660,4 +684,140 @@ export async function shareResultCard(card: ShareCard): Promise<ShareOutcome> {
   a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 4000);
   return "saved";
+}
+
+/* ───────── « La bande de … » : photo de groupe des persos ───────── */
+export interface BandShareMember { name: string; look: AvatarLook | null }
+
+const BAND_MOODS: MascotMood[] = ["laughing", "happy", "wink", "cool", "shocked", "love", "laughing", "thinking"];
+
+/** Rangées de la photo (de l'arrière vers l'avant) : les plus grands devant. */
+function bandRows(n: number): number[] {
+  const rows = n <= 3 ? 1 : n <= 8 ? 2 : 3;
+  const front = Math.floor(n / rows);
+  const out: number[] = [];
+  let left = n - front;
+  for (let r = 0; r < rows - 1; r++) {
+    const take = Math.ceil(left / (rows - 1 - r));
+    out.push(take);
+    left -= take;
+  }
+  out.push(front);
+  return out;
+}
+
+export async function renderBandCard(members: BandShareMember[], title: string, subtitle: string): Promise<HTMLCanvasElement> {
+  const s = STR[getLang()];
+  const canvas = document.createElement("canvas");
+  canvas.width = W;
+  canvas.height = H;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("canvas");
+  const list = members.slice(0, 16);
+  await loadFonts(`${title} ${subtitle} ${list.map((m) => m.name).join(" ")} ${s.playOn} ${SHARE_SITE} zinzin`);
+  background(ctx);
+
+  // En-tête : logo + « La bande de … »
+  logo(ctx, W / 2, 250, 170);
+  const tFit = fit(ctx, title, display, 860, 92, 48, 2);
+  ctx.font = display(tFit.px);
+  const tW = Math.min(980, Math.max(...tFit.lines.map((l) => measure(ctx, l))) + 100);
+  const tH = tFit.lines.length * tFit.px * 1.04 + 50;
+  const tY = 310;
+  sticker(ctx, (W - tW) / 2, tY, tW, tH, "#FFD23F", { r: 48, shadow: 12, tilt: -2.5, line: 7 });
+  ctx.save();
+  ctx.translate(W / 2, tY + tH / 2);
+  ctx.rotate((-2.5 * Math.PI) / 180);
+  drawLines(ctx, tFit.lines, 0, -tH / 2 + 25 + tFit.px * 0.86, tFit.px * 1.04, INK);
+  ctx.restore();
+
+  // Rangées (arrière → avant), centrées dans la zone libre
+  const rows = bandRows(list.length);
+  const areaTop = tY + tH + 70;
+  const areaBottom = 1545;
+  const CHIP = 78;
+  const sizes = rows.map((k, r) => {
+    const depth = rows.length - 1 - r; // 0 = devant
+    const maxW = (980 / k) * 1.18;
+    return Math.min(depth === 0 ? 400 : depth === 1 ? 300 : 240, maxW) * (1 - depth * 0.06);
+  });
+  let total = sizes.reduce((a, b) => a + b * 0.92 + CHIP, 0);
+  const avail = areaBottom - areaTop;
+  const k = total > avail ? avail / total : 1;
+  const sz = sizes.map((x) => x * k);
+  total = sz.reduce((a, b) => a + b * 0.92 + CHIP, 0);
+  let y = areaTop + (avail - total) / 2;
+
+  // Sol / projecteur sous le premier rang
+  const lastS = sz[sz.length - 1];
+  const floorY = y + total - CHIP - lastS * 0.05;
+  const g = ctx.createRadialGradient(W / 2, floorY, 10, W / 2, floorY, 560);
+  g.addColorStop(0, "rgba(255,210,63,0.30)");
+  g.addColorStop(1, "rgba(255,210,63,0)");
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, W, H);
+
+  // Blobs de l'arrière vers l'avant, puis tous les prénoms par-dessus (toujours lisibles)
+  const chips: { name: string; cx: number; cy: number; step: number; size: number; tilt: number }[] = [];
+  let idx = 0;
+  for (let r = 0; r < rows.length; r++) {
+    const n = rows[r];
+    const size = sz[r];
+    const step = Math.min(size * 0.86, 1000 / n);
+    const x0 = W / 2 - (step * (n - 1)) / 2;
+    const imgs = await Promise.all(
+      list.slice(idx, idx + n).map((m, j) => {
+        const i = idx + j;
+        const look = m.look ? (isUnlockedNow() ? m.look : freeLook(m.look)) : baseLook(colorOf(i));
+        const svg = avatarSvgMarkup(look, BAND_MOODS[i % BAND_MOODS.length]);
+        return svg ? loadSvg(svg) : Promise.resolve(null);
+      }),
+    );
+    // Repère 180 % : la tête du blob commence à 25 % de l'image
+    imgs.forEach((img, j) => {
+      const cx = x0 + j * step + (j % 2 ? 6 : -6);
+      const bob = (j % 3) * size * 0.03;
+      if (img) ctx.drawImage(img, cx - (size * 1.5) / 2, y - size * 0.25 + bob, size * 1.5, size * 1.5);
+      chips.push({ name: list[idx + j].name, cx, cy: y + size * 0.86 + bob * 0.5, step, size, tilt: (idx + j) % 2 ? 3 : -3 });
+    });
+    y += size * 0.92 + CHIP;
+    idx += n;
+  }
+  for (const c of chips) {
+    const f = fit(ctx, c.name, display, Math.max(120, c.step - 18), Math.min(46, c.size * 0.2), 24, 1);
+    ctx.font = display(f.px);
+    const w = Math.min(c.step - 6, measure(ctx, f.lines[0]) + 40);
+    const h = f.px + 26;
+    sticker(ctx, c.cx - w / 2, c.cy, w, h, "#fff", { r: 999, shadow: 6, tilt: c.tilt, line: 5 });
+    ctx.save();
+    ctx.translate(c.cx, c.cy + h / 2);
+    ctx.rotate((c.tilt * Math.PI) / 180);
+    drawLines(ctx, f.lines, 0, f.px * 0.36, 0, INK);
+    ctx.restore();
+  }
+
+  // Sous-titre drôle
+  const st = fit(ctx, subtitle, display, 820, 52, 34, 1);
+  ctx.font = display(st.px);
+  const sw = Math.min(940, measure(ctx, st.lines[0]) + 80);
+  sticker(ctx, (W - sw) / 2, 1572, sw, st.px + 40, "#FF6B5B", { r: 999, shadow: 9, tilt: 1.5, line: 6 });
+  ctx.save();
+  ctx.translate(W / 2, 1572 + (st.px + 40) / 2);
+  ctx.rotate((1.5 * Math.PI) / 180);
+  drawLines(ctx, st.lines, 0, st.px * 0.36, 0, "#fff");
+  ctx.restore();
+
+  footer(ctx, s);
+  return canvas;
+}
+
+/** Partage l'image « La bande de … » (feuille de partage du téléphone). */
+export async function shareBandCard(members: BandShareMember[], title: string, subtitle: string, text: string): Promise<ShareOutcome> {
+  let canvas: HTMLCanvasElement;
+  try {
+    canvas = await renderBandCard(members, title, subtitle);
+  } catch {
+    return "error";
+  }
+  return shareCanvas(canvas, "zinzin-bande.png", text);
 }

@@ -15,6 +15,11 @@ import { APP_VERSION, haptic, setAgeOk } from "./util";
 import { setNoAlcohol, useNoAlcohol } from "@/lib/party-mood";
 import { NOALC_UI } from "../no-alcohol";
 import { markRatedManually } from "../rating";
+import { BandScreen } from "@/components/avatar/BandScreen";
+import { AvatarBlob } from "@/components/avatar/AvatarBlob";
+import { useBand } from "@/components/avatar/PlayerBlob";
+import { AVATAR_STR } from "@/lib/avatar/i18n";
+import { baseLook } from "@/lib/avatar/look";
 
 export type LegalPage = "cgu" | "confidentialite" | "mentions";
 
@@ -99,8 +104,11 @@ export function SettingsSheet({
             )}
           </div>
 
+          {/* Ma bande : les persos personnalisés */}
+          <BandTile />
+
           {/* Tuiles */}
-          <div className="mt-6 grid grid-cols-2 gap-3.5">
+          <div className="mt-3.5 grid grid-cols-2 gap-3.5">
             <Tile bg="#3DDC97" tilt={1.5} icon={<RotateCcw size={26} strokeWidth={2.6} />} label={t.restore} onClick={async () => {
               haptic();
               const ok = await restore();
@@ -158,6 +166,38 @@ export function SettingsSheet({
         </div>
       )}
     </Sheet>
+  );
+}
+
+/** Tuile « Ma bande » des Réglages : aperçu des persos, ouvre l'éditeur. */
+function BandTile() {
+  const [open, setOpen] = useState(false);
+  const band = useBand();
+  const t = useT(AVATAR_STR);
+  const shown = band.length ? band.slice(0, 3) : [{ name: "", look: baseLook("yellow"), me: true }];
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => { haptic(); setOpen(true); }}
+        className="zz-push zz-stk mt-6 flex w-full items-center gap-3 rounded-[24px] py-3 pl-4 pr-3 text-left"
+        style={{ background: "#3DDC97", color: "var(--zz-ink)", rotate: "1deg" }}
+      >
+        <span className="flex shrink-0 items-end" style={{ height: 56 }}>
+          {shown.map((b, i) => (
+            <span key={b.name || i} style={{ marginLeft: i ? -16 : 0, zIndex: 3 - i }}>
+              <AvatarBlob look={b.look ?? baseLook()} size={i ? 36 : 50} mood={i ? "happy" : "laughing"} animate={i === 0} />
+            </span>
+          ))}
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="zz-title block text-[22px]">{t.myBand}</span>
+          <span className="block text-[13px] font-semibold leading-snug opacity-80">{t.myBandSub}</span>
+        </span>
+        <ChevronLeft size={22} strokeWidth={3} style={{ transform: "rotate(180deg)" }} aria-hidden />
+      </button>
+      {open && <BandScreen onClose={() => setOpen(false)} />}
+    </>
   );
 }
 

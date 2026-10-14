@@ -16,6 +16,7 @@ import {
 } from "../soiree";
 import { SOIREE } from "../strings";
 import { ZBlob, ZPALETTE } from "./ZBlob";
+import { BandBlob } from "./BandBlob";
 import { BigBtn, Tag } from "./common";
 import { GameScreen } from "./Screens";
 import { CornerBtn, DiscoBall, SoireeStyles } from "./SoireeKit";
@@ -194,7 +195,7 @@ function Winner({ s, onPause }: { s: SoireeState; onPause: () => void }) {
                     <Check size={17} strokeWidth={3.4} aria-hidden />
                   </span>
                 )}
-                <ZBlob size={58} color={col} mood={on ? "laughing" : "happy"} seed={i} outline shadow={false} crown={on} hop={false} />
+                <BandBlob name={name} size={58} color={col} mood={on ? "laughing" : "happy"} seed={i} outline shadow={false} crown={on} hop={false} />
                 <span className="zz-title mt-1 w-full truncate text-center" style={{ fontSize: name.length > 10 ? 16 : 20 }}>{name}</span>
                 <span className="text-[13px] font-bold" style={{ opacity: 0.7 }}>{t.pts(s.points[name] ?? 0)}</span>
               </button>
@@ -278,7 +279,7 @@ function End({ s, onHome, onNew, toast }: { s: SoireeState; onHome: () => void; 
             return (
               <div key={r.name} className="flex w-[31%] min-w-0 flex-col items-center">
                 <div className={k === 0 ? "zzs-dance" : undefined}>
-                  <ZBlob size={k === 0 ? 92 : 70} color={col} mood={k === 0 ? "laughing" : k === 1 ? "happy" : "wink"} seed={k + 3} crown={k === 0} outline shadow={false} wobble={k !== 0} />
+                  <BandBlob name={r.name} size={k === 0 ? 92 : 70} color={col} mood={k === 0 ? "laughing" : k === 1 ? "happy" : "wink"} seed={k + 3} crown={k === 0} outline shadow={false} wobble={k !== 0} />
                 </div>
                 <div className="zz-title mt-1 w-full truncate text-center text-white" style={{ fontSize: r.name.length > 9 ? 17 : 22 }}>{r.name}</div>
                 <div
@@ -298,7 +299,7 @@ function End({ s, onHome, onNew, toast }: { s: SoireeState; onHome: () => void; 
           {rows.map((r, i) => (
             <li key={r.name} className="flex items-center gap-3 px-3.5 py-2.5" style={{ borderTop: i ? "2px solid rgba(21,8,46,0.1)" : undefined }}>
               <span className="zz-title w-6 text-center text-[20px]">{r.rank}</span>
-              <ZBlob size={36} color={colorOf(s, r.name)} mood={i === 0 ? "cool" : "happy"} seed={i} outline shadow={false} wobble={false} hop={false} />
+              <BandBlob name={r.name} size={36} color={colorOf(s, r.name)} mood={i === 0 ? "cool" : "happy"} seed={i} outline shadow={false} wobble={false} hop={false} />
               <span className="min-w-0 flex-1">
                 <span className="zz-title block truncate text-[19px]">{r.name}</span>
                 <span className="block text-[14px] font-bold" style={{ color: i === 0 ? "#C2187A" : "rgba(21,8,46,0.7)" }}>{titleOf(i)}</span>

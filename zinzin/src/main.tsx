@@ -35,7 +35,10 @@ document.documentElement.lang = getLang();
 // Espaces insécables devant « ? ! : ; » partout en français (aucun « ? » orphelin en début de ligne)
 installFrenchTypo();
 
-createRoot(document.getElementById("root")!).render(
+// Planche de contrôle des persos (développement uniquement, absente du build)
+if (import.meta.env.DEV && location.hash.startsWith("#avatar-lab")) {
+  void import("./avatar-lab").then((m) => m.mountAvatarLab());
+} else createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <ErrorBoundary onBack={() => location.reload()}>
       <App />

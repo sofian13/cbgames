@@ -136,6 +136,7 @@ export function pureteGroupCard(rows: { name: string; purity: number; verdict: s
   return {
     game: "purete",
     color: colorOf(top?.colorIndex ?? 0),
+    name: tie ? undefined : top?.name,
     mood: "wink",
     hero: { kicker: tie ? undefined : t.angel, title: tie ? t.tie : top?.name, sub: tie ? undefined : `${pct(top.purity, lang)} · ${top.verdict}` },
     rows: sorted.map((x, i) => ({ name: x.name, value: pct(x.purity, lang), note: x.verdict, colorIndex: x.colorIndex, rank: r[i] })),
@@ -165,6 +166,7 @@ export function verreCard(ranking: { name: string; score: number; spills: number
   return {
     game: "verre",
     color: colorOf(best?.colorIndex ?? 0),
+    name: tie ? undefined : best?.name,
     crown: true,
     mood: "laughing",
     hero: { kicker: tie ? undefined : t.bestWaiter, title: tie ? t.tie : best?.name },
@@ -182,6 +184,7 @@ export function tourneeCard(ranking: { name: string; losses: number; colorIndex:
   return {
     game: "picolette",
     color: colorOf(top?.colorIndex ?? 0),
+    name: top?.name,
     mood: "rofl",
     crown: true,
     hero: { kicker: t.star, title: top?.name, sub: top ? t.penalties(top.losses) : undefined },
@@ -197,6 +200,7 @@ export function chutCard(awards: { title: string; sub: string; name: string; col
   return {
     game: "chut",
     color: first ? colorOf(first.colorIndex) : undefined,
+    name: first?.name,
     mood: first ? "cool" : "laughing",
     hero: first ? { kicker: first.title, title: first.name, sub: first.sub, bg: first.bg } : undefined,
     awards: others.map((a): ShareAward => ({ label: `${a.title} · ${a.sub}`, name: a.name, colorIndex: a.colorIndex, bg: a.bg, mood: "rofl" })),
@@ -215,6 +219,7 @@ export function rankingCard(game: string, rows: { name: string; score: number | 
   return {
     game,
     color: colorOf(top?.colorIndex ?? 0),
+    name: tie ? undefined : top?.name,
     crown: !tie,
     mood: "laughing",
     hero: { kicker: tie ? undefined : t.winner, title: tie ? t.tie : top?.name },
