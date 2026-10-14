@@ -1,15 +1,15 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
-import { BookOpen, Crown, CupSoda, Drama, Ear, Hand, Library, MicOff, Music, ShieldCheck, Skull, Sofa, Sparkles, Swords, Trophy, Users, X } from "lucide-react";
+import { ArrowLeft, BookOpen, Crown, CupSoda, Drama, Ear, Hand, Library, Mic, MicOff, Music, ShieldCheck, Shuffle, Skull, Sofa, Sparkles, Star, TrendingDown, TrendingUp, Trophy, Users, X } from "lucide-react";
 import type { GameProps } from "@/lib/games/types";
 import { getLang, useT } from "@/lib/i18n";
 import { adultDefault, sipsAllowed } from "@/lib/party-mood";
 import { playCombo, playSfx, preloadSfx, type SfxName } from "@/lib/sfx";
 import { Mascot } from "@/components/Mascot";
 import { ConfettiBurst } from "@/components/ConfettiBurst";
-import { GameIconButton, GameInlineIcon, GameTopRight } from "@/components/games/game-icon-button";
-import { IdeaButton, RerollButton } from "@/components/games/idea-button";
+import { GameIconButton, GameTopRight } from "@/components/games/game-icon-button";
+import { IdeaButton } from "@/components/games/idea-button";
 import {
   DISPLAY, PassScreen, PlayersSetup, SoundButton, ZButton, ZCard, ZChip, ZChoice, ZLink, ZRanking, ZScreen, ZTitle, ZZ,
   colorForIndex, inkOn, useScrollTopOn,
@@ -17,17 +17,29 @@ import {
 import { CHUT_STR, chutContent } from "./i18n";
 import type { Ammo, ChutContent } from "./types";
 import { MicMeter, floorFrom, gaugeOf, holdMsFor, thresholdFor, type MicError, type Sensitivity } from "./mic";
+import { MODES_STR } from "./modes-i18n";
+import { MODE_IDS, pickOne, roll3, secs, shuffle, vibrate, type ModeCommon, type ModeId, type Penalty } from "./modes";
+import { modesContent } from "./content-modes";
+import { ChutStyles, Countdown, Section, SentenceCard, useReducedMotion, type Sentence } from "./shared";
+import { ModeArt } from "./gauges";
+import { VolumeMode, buildVolume, type VolumeTurnPlan } from "./mode-volume";
+import { WhisperMode, TEAM_COLORS, splitTeams, type WhisperPlan } from "./mode-whisper";
+import { CrescendoMode, type CrescendoPlan } from "./mode-crescendo";
+import { SouffleMode, type SoufflePlan } from "./mode-souffle";
 import { ChutBlob, NoiseMeter } from "./visuals";
 import { useGameFinished } from "@/lib/game-finished";
 import { ShareResultButton } from "@/components/games/share-result-button";
 import { chutCard } from "@/lib/share-cards";
 
 // ── Chut ! ────────────────────────────────────────────────
-// Duel « Ne ris pas ! » arbitré par le micro : le Clown a 30 s pour faire craquer
-// le Sérieux. Le Clown ne parle qu'en maintenant « À moi ! » (micro en pause), puis
-// 3 s de « silence qui tue ». Mode « Toute la table » : tout le monde se tait pendant
-// que le téléphone attaque. Le micro ne mesure que le volume (rien n'est enregistré)
-// et il est libéré dès que la manche finit. Sans micro : arbitre humain.
+// Jeux au micro, au choix : « Le bon volume » (mode phare), « Chuchote-le ! »,
+// « Crescendo », « Le Souffle » (mode-*.tsx), le duel « Ne ris pas ! » et « Silence
+// total » (ici). Le micro entend un bruit mais pas QUI l'a fait : chaque mode écoute
+// soit celui qui tient le tél près de sa bouche, soit une équipe, soit toute la table.
+// Duel : le Clown a 30 s pour faire craquer le Sérieux ; il ne parle qu'en maintenant
+// « À moi ! » (micro en pause), puis 3 s de « silence qui tue ». Le micro ne mesure que
+// le volume (rien n'est enregistré) et il est libéré dès que la manche finit.
+// Calibrage une fois par partie. Sans micro : la table arbitre avec des boutons.
 
 const INK = ZZ.ink;
 const ACCENT = ZZ.pink;
@@ -38,34 +50,29 @@ const SILENCE_MS = 3000;
 const MAX_TALK_MS = 8000;
 const TICK = 50;
 
-type Mode = "duel" | "table";
 type Format = "rotation" | "ko";
-type Penalty = "dares" | "sips";
-interface Settings { mode: Mode; format: Format; tours: number; sens: Sensitivity; penalty: Penalty; adult: boolean; human: boolean }
+interface Settings {
+  mode: ModeId; format: Format; tours: number; sens: Sensitivity; penalty: Penalty; adult: boolean; human: boolean;
+  /** Le bon volume / Le Souffle : nombre de tours */
+  vTours: number;
+  /** Chuchote-le ! : équipes et manches par équipe */
+  teams: [number[], number[]] | null; wRounds: number;
+  /** Crescendo : sens et nombre de chutes */
+  up: boolean; falls: number;
+}
+type Plan =
+  | { mode: "volume"; turns: VolumeTurnPlan[] }
+  | { mode: "whisper"; plan: WhisperPlan }
+  | { mode: "crescendo"; plan: CrescendoPlan }
+  | { mode: "souffle"; plan: SoufflePlan };
 
 interface Duel { serious: number; clown: number; ms: number; sudden?: boolean }
 interface DuelResult { serious: number; clown: number; heldMs: number; cracked: boolean; ms: number }
 interface Match { a: number; b: number; legs: DuelResult[]; winner: number | null; coin: boolean }
 interface Ko { round: number; left: number; matches: Match[]; bye: number | null; cur: number; out: number[][]; byes: number[]; champion: number | null }
-interface Sentence { sips: number | null; dare: string }
+type Screen = "players" | "modes" | "config" | "calib" | "play" | "pass" | "arena" | "result" | "bracket" | "table" | "tableWho" | "tableResult" | "end";
 
-type Screen = "players" | "config" | "calib" | "pass" | "arena" | "result" | "bracket" | "table" | "tableWho" | "tableResult" | "end";
-
-const SFX: SfxName[] = ["buzzer", "crowd-cheer", "laugh", "drumroll", "drumroll-end", "tada", "applause", "whistle", "pop", "card-flip", "whoosh", "select", "scratch", "pluck", "boom", "coin", "twotone", "glass", "thump", "bell", "pep", "rise", "pop2", "crowd-aww", "firecracker", "gong"];
-
-// ── Petits utilitaires (appelés uniquement dans des gestionnaires d'événements) ──
-function shuffle<T>(a: T[]): T[] {
-  const r = [...a];
-  for (let i = r.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [r[i], r[j]] = [r[j], r[i]];
-  }
-  return r;
-}
-const roll3 = () => 1 + Math.floor(Math.random() * 3);
-const pickOne = <T,>(a: T[]): T => a[Math.floor(Math.random() * a.length)];
-const vibrate = (p: number | number[]) => { try { navigator.vibrate?.(p); } catch { /* indispo */ } };
-const secs = (ms: number, dec: string) => (Math.round(ms / 100) / 10).toFixed(1).replace(".", dec);
+const SFX: SfxName[] = ["ding", "correct", "wrong", "rise", "confirm", "buzzer", "crowd-cheer", "laugh", "drumroll", "drumroll-end", "tada", "applause", "whistle", "pop", "card-flip", "whoosh", "select", "scratch", "pluck", "boom", "coin", "twotone", "glass", "thump", "bell", "pep", "rise", "pop2", "crowd-aww", "firecracker", "gong"];
 
 /** Rotation : chacun passe Sérieux une fois par tour, face à un Clown différent à chaque tour. */
 function buildRotation(n: number, tours: number): Duel[] {
@@ -135,14 +142,18 @@ const SKETCHES: { s: [SfxName, number, number][]; len: number }[] = [
 // ══════════════════════════════════════════════════════════
 export default function ChutGame({ onReturnToLobby }: GameProps) {
   const t = useT(CHUT_STR);
+  const m = useT(MODES_STR);
+  const reduced = useReducedMotion();
   const [sipsOk] = useState(() => sipsAllowed(true)); // mode sans alcool / Soirée « Chill » : gages seulement
   const [players, setPlayers] = useState<string[]>([]);
   const [screen, setScreen] = useState<Screen>("players");
   useGameFinished(screen === "end"); // fin de partie → demande de note éventuelle (app)
   const [settings, setSettings] = useState<Settings>(() => ({
-    mode: "duel", format: "rotation", tours: 1, sens: "living",
+    mode: "volume", format: "rotation", tours: 1, sens: "living",
     penalty: sipsOk ? "sips" : "dares", adult: adultDefault(false), human: false,
+    vTours: 2, teams: null, wRounds: 2, up: true, falls: 3,
   }));
+  const [plan, setPlan] = useState<Plan | null>(null);
   const [floor, setFloor] = useState<number | null>(null);
   const [rulesOpen, setRulesOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
@@ -191,13 +202,15 @@ export default function ChutGame({ onReturnToLobby }: GameProps) {
     return d.list[d.i++];
   }, []);
   const newSentence = (): Sentence => ({
-    sips: settings.penalty === "sips" ? roll3() : null,
+    sips: settings.penalty === "sips" && sipsOk ? roll3() : null,
     dare: pickOne((content.current ?? chutContent(getLang())).dares),
   });
+  const otherDare = (s: Sentence): Sentence => {
+    const dares = (content.current ?? chutContent(getLang())).dares.filter((d) => d !== s.dare);
+    return { ...s, dare: pickOne(dares) };
+  };
   const rerollDare = () => {
-    if (!sentence) return;
-    const dares = (content.current ?? chutContent(getLang())).dares.filter((d) => d !== sentence.dare);
-    setSentence({ ...sentence, dare: pickOne(dares) });
+    if (sentence) setSentence(otherDare(sentence));
   };
   const flash = (msg: string) => {
     setToast(msg);
@@ -210,6 +223,16 @@ export default function ChutGame({ onReturnToLobby }: GameProps) {
     deck.current = { list: [], i: 0 };
     scenes.current = { list: [], i: 0 };
     setResults([]);
+    if (s.mode === "volume" || s.mode === "whisper" || s.mode === "crescendo" || s.mode === "souffle") {
+      const mc = modesContent(getLang());
+      const n = players.length;
+      if (s.mode === "volume") setPlan({ mode: "volume", turns: buildVolume(n, s.vTours, mc) });
+      else if (s.mode === "whisper") setPlan({ mode: "whisper", plan: { teams: s.teams ?? splitTeams(n), rounds: s.wRounds, words: shuffle(mc.words) } });
+      else if (s.mode === "crescendo") setPlan({ mode: "crescendo", plan: { up: s.up, falls: s.falls, order: shuffle([...Array(n).keys()]) } });
+      else setPlan({ mode: "souffle", plan: { order: shuffle([...Array(n).keys()]), tours: s.vTours } });
+      setScreen("play");
+      return;
+    }
     if (s.mode === "table") {
       setTableRound(1);
       setTableCracks(players.map(() => 0));
@@ -239,8 +262,14 @@ export default function ChutGame({ onReturnToLobby }: GameProps) {
   };
   const afterConfig = () => {
     playSfx("confirm", { volume: 0.6 });
-    if (settings.human) begin();
+    // calibrage une seule fois par partie (gardé pour les revanches et changements de mode)
+    if (settings.human || floor != null) begin();
     else setScreen("calib");
+  };
+  const pickMode = (id: ModeId) => {
+    playSfx("select", { volume: 0.5 });
+    setSettings((s) => ({ ...s, mode: id, teams: id === "whisper" && !s.teams ? splitTeams(players.length) : s.teams }));
+    setScreen("config");
   };
   const micFailed = (e: MicError) => {
     void e;
@@ -343,7 +372,7 @@ export default function ChutGame({ onReturnToLobby }: GameProps) {
   const tools = <GameIconButton icon={BookOpen} label={t.rulesLabel} onClick={() => setRulesOpen(true)} />;
   const overlays = (
     <>
-      {rulesOpen && <RulesSheet onClose={() => setRulesOpen(false)} />}
+      {rulesOpen && <RulesSheet mode={screen === "modes" || screen === "players" ? null : settings.mode} onClose={() => setRulesOpen(false)} />}
       {toast && (
         <div className="fixed inset-x-0 z-50 flex justify-center px-5" style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 24px)" }}>
           <ZCard bg={ZZ.yellow} className="px-4 py-3 text-center text-[15px] font-bold" shadow={4}>{toast}</ZCard>
@@ -361,43 +390,189 @@ export default function ChutGame({ onReturnToLobby }: GameProps) {
         min={2}
         max={12}
         accent={ACCENT}
-        onStart={(names) => { setPlayers(names); setScreen("config"); }}
+        onStart={(names) => {
+          setPlayers(names);
+          // nouvelle liste de joueurs : équipes à refaire
+          setSettings((s) => ({ ...s, teams: null, mode: s.mode === "whisper" && names.length < 4 ? "volume" : s.mode }));
+          setScreen("modes");
+        }}
         footer={<IdeaButton game={t.name} kind="carte" bg={ZZ.cream} />}
       />
     );
   }
 
-  // ══ Réglages ══
-  if (screen === "config") {
-    const nDuels = settings.format === "rotation" ? players.length * settings.tours : null;
-    const set = (p: Partial<Settings>) => setSettings((s) => ({ ...s, ...p }));
+  // ══ Choix du mode ══
+  if (screen === "modes") {
+    const tint: Record<ModeId, string> = { volume: ZZ.yellow, whisper: ZZ.pink, crescendo: ZZ.coral, souffle: ZZ.mint, duel: ZZ.sky, table: ZZ.cream };
     return (
       <ZScreen tools={tools}>
         {overlays}
+        <ChutStyles />
         <div className="flex items-end gap-3">
-          <ChutBlob size={92} color="yellow" state="calm" />
-          <div className="pb-2">
-            <ZTitle size="clamp(40px, 12vw, 54px)" as="h1">{t.name}</ZTitle>
-            <p className="mt-1 text-[15px] font-semibold" style={{ color: "rgba(255,255,255,0.85)" }}>{t.tagline}</p>
+          <ChutBlob size={84} color="yellow" state="calm" />
+          <div className="min-w-0 pb-1">
+            <ZTitle size="clamp(34px, 10.5vw, 46px)" as="h1">{m.modesTitle}</ZTitle>
+          </div>
+        </div>
+        <p className="mt-2 text-[15px] font-semibold leading-snug" style={{ color: "rgba(255,255,255,0.85)" }}>{m.modesSub}</p>
+        <div className="mt-5 flex flex-col gap-3">
+          {MODE_IDS.map((id, i) => {
+            const locked = id === "whisper" && players.length < 4;
+            return (
+              <button
+                key={id}
+                type="button"
+                disabled={locked}
+                onClick={() => pickMode(id)}
+                className="relative flex min-h-[92px] w-full items-center gap-3 rounded-[24px] p-3 text-left transition-[translate,box-shadow] duration-100 active:translate-y-[3px] active:shadow-[0_1px_0_#15082E] disabled:active:translate-y-0"
+                style={{
+                  background: locked ? "#3A2C6E" : tint[id],
+                  color: locked ? "rgba(255,255,255,0.75)" : ZZ.ink,
+                  border: `3px solid ${ZZ.ink}`,
+                  boxShadow: `0 ${i === 0 ? 6 : 4}px 0 ${ZZ.ink}`,
+                  rotate: i % 2 ? "0.6deg" : "-0.6deg",
+                  touchAction: "manipulation",
+                }}
+              >
+                {i === 0 && (
+                  <span className="absolute -right-2 -top-3 inline-flex min-h-7 items-center gap-1 rounded-full px-2.5 text-[13px] font-extrabold" style={{ background: ZZ.pink, color: "#fff", border: `2.5px solid ${ZZ.ink}`, rotate: "4deg" }}>
+                    <Star size={13} strokeWidth={3} aria-hidden /> {m.star}
+                  </span>
+                )}
+                <span className="grid h-[68px] w-[68px] shrink-0 place-items-center rounded-[18px]" style={{ background: ZZ.night, border: `2.5px solid ${ZZ.ink}` }}>
+                  <ModeArt mode={id} size={54} />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[22px] leading-tight" style={DISPLAY}>{m.modeName[id]}</span>
+                  <span className="mt-0.5 block text-[14px] font-semibold leading-snug">{m.modeSub[id]}</span>
+                  <span className="mt-1 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[12px] font-extrabold" style={{ background: locked ? "transparent" : "rgba(255,255,255,0.7)", border: `2px solid ${locked ? "rgba(255,255,255,0.5)" : ZZ.ink}` }}>
+                    {id === "whisper" || id === "table" ? <Users size={12} strokeWidth={3} aria-hidden /> : <Mic size={12} strokeWidth={3} aria-hidden />}
+                    {locked ? m.min4 : m.modeWho[id]}
+                  </span>
+                </span>
+              </button>
+            );
+          })}
+        </div>
+        <div className="mt-auto pt-6">
+          <p className="flex items-center justify-center gap-1.5 text-[14px] font-semibold" style={{ color: "rgba(255,255,255,0.8)" }}>
+            <ShieldCheck size={16} strokeWidth={2.6} aria-hidden /> {t.noRecord}
+          </p>
+          <div className="mt-2 flex justify-center"><IdeaButton game={t.name} kind="carte" bg={ZZ.cream} /></div>
+        </div>
+      </ZScreen>
+    );
+  }
+
+  // ══ Réglages du mode choisi ══
+  if (screen === "config") {
+    const mode = settings.mode;
+    const nDuels = settings.format === "rotation" ? players.length * settings.tours : null;
+    const set = (p: Partial<Settings>) => setSettings((s) => ({ ...s, ...p }));
+    const mic = mode !== "duel" && mode !== "table";
+    const teams = settings.teams;
+    return (
+      <ZScreen tools={tools}>
+        {overlays}
+        <ChutStyles />
+        <div className="flex items-center gap-3">
+          <span className="grid h-[84px] w-[84px] shrink-0 place-items-center rounded-[22px]" style={{ background: ZZ.night, border: `3px solid ${ZZ.ink}`, boxShadow: `0 4px 0 ${ZZ.ink}`, rotate: "-3deg" }}>
+            <ModeArt mode={mode} size={66} />
+          </span>
+          <div className="min-w-0">
+            <ZTitle size="clamp(32px, 10vw, 44px)" as="h1">{m.modeName[mode]}</ZTitle>
+            <p className="mt-1 text-[15px] font-semibold leading-snug" style={{ color: "rgba(255,255,255,0.85)" }}>{m.modeSub[mode]}</p>
           </div>
         </div>
 
-        <Section title={t.secMode}>
-          <div className="grid grid-cols-2 gap-3">
-            <ZChoice active={settings.mode === "duel"} onClick={() => set({ mode: "duel" })} color={ZZ.yellow} tilt={-1.5}>
-              <Swords size={24} strokeWidth={2.6} aria-hidden />
-              <p className="mt-1 text-[20px] leading-none" style={DISPLAY}>{t.modeDuel}</p>
-              <p className="mt-1 text-[13px] font-semibold leading-snug">{t.modeDuelSub}</p>
-            </ZChoice>
-            <ZChoice active={settings.mode === "table"} onClick={() => set({ mode: "table" })} color={ZZ.sky} tilt={1.5}>
-              <Users size={24} strokeWidth={2.6} aria-hidden />
-              <p className="mt-1 text-[20px] leading-none" style={DISPLAY}>{t.modeTable}</p>
-              <p className="mt-1 text-[13px] font-semibold leading-snug">{t.modeTableSub}</p>
-            </ZChoice>
-          </div>
-        </Section>
+        {/* Le tuto : 3 étapes */}
+        <ZCard bg={ZZ.cream} className="mt-5 p-4" shadow={5} radius={24} tilt={-0.6}>
+          <p className="text-[19px]" style={DISPLAY}>{m.howTo}</p>
+          <ol className="mt-2 flex flex-col gap-2">
+            {m.steps[mode].map((step, i) => (
+              <li key={i} className="flex gap-2.5 text-[15px] font-semibold leading-snug">
+                <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full text-[14px]" style={{ ...DISPLAY, background: [ZZ.yellow, ZZ.pink, ZZ.sky][i % 3], border: `2.5px solid ${ZZ.ink}` }}>{i + 1}</span>
+                <span>{step}</span>
+              </li>
+            ))}
+          </ol>
+        </ZCard>
 
-        {settings.mode === "duel" && (
+        {(mode === "volume" || mode === "souffle") && (
+          <Section title={m.secTours}>
+            <div className="flex flex-wrap items-center gap-2">
+              {[1, 2, 3].map((n) => (
+                <ZChoice key={n} active={settings.vTours === n} onClick={() => set({ vTours: n })} color={ZZ.mint} className="px-3.5 py-2 text-center text-[15px] font-bold" style={{ borderRadius: 999 }}>
+                  {m.tours(n)}
+                </ZChoice>
+              ))}
+              <span className="text-[14px] font-semibold" style={{ color: "rgba(255,255,255,0.8)" }}>{m.phrasesCount(players.length * settings.vTours)}</span>
+            </div>
+          </Section>
+        )}
+
+        {mode === "whisper" && teams && (
+          <Section title={m.secTeams}>
+            <div className="grid grid-cols-2 gap-3">
+              {teams.map((list, k) => (
+                <ZCard key={k} bg={TEAM_COLORS[k]} tilt={k ? 1 : -1} shadow={4} className="p-3">
+                  <p className="text-[18px] leading-tight" style={DISPLAY}>{m.teamNames[k]}</p>
+                  <ul className="mt-1.5 flex flex-col gap-0.5">
+                    {list.map((p) => <li key={p} className="truncate text-[15px] font-bold">{players[p]}</li>)}
+                  </ul>
+                </ZCard>
+              ))}
+            </div>
+            <div className="mt-3 flex justify-center">
+              <ZButton size="sm" bg="#fff" className="w-auto" onClick={() => { playSfx("card-shuffle", { volume: 0.5 }); set({ teams: splitTeams(players.length) }); }}>
+                <Shuffle size={16} strokeWidth={2.8} aria-hidden /> {m.shuffleTeams}
+              </ZButton>
+            </div>
+          </Section>
+        )}
+        {mode === "whisper" && (
+          <Section title={m.secRounds}>
+            <div className="flex flex-wrap items-center gap-2">
+              {[1, 2, 3].map((n) => (
+                <ZChoice key={n} active={settings.wRounds === n} onClick={() => set({ wRounds: n })} color={ZZ.mint} label={m.roundsPerTeam(n)} className="min-w-12 px-3.5 py-2 text-center text-[17px] font-bold" style={{ borderRadius: 999 }}>
+                  {n}
+                </ZChoice>
+              ))}
+              <span className="text-[14px] font-semibold" style={{ color: "rgba(255,255,255,0.8)" }}>{m.roundsPerTeam(settings.wRounds)} · 60 s</span>
+            </div>
+          </Section>
+        )}
+
+        {mode === "crescendo" && (
+          <>
+            <Section title={m.secDirection}>
+              <div className="grid grid-cols-2 gap-3">
+                <ZChoice active={settings.up} onClick={() => set({ up: true })} color={ZZ.coral} tilt={-1.5}>
+                  <TrendingUp size={24} strokeWidth={2.6} aria-hidden />
+                  <p className="mt-1 text-[19px] leading-none" style={DISPLAY}>{m.dirUp}</p>
+                  <p className="mt-1 text-[13px] font-semibold leading-snug">{m.dirUpSub}</p>
+                </ZChoice>
+                <ZChoice active={!settings.up} onClick={() => set({ up: false })} color={ZZ.sky} tilt={1.5}>
+                  <TrendingDown size={24} strokeWidth={2.6} aria-hidden />
+                  <p className="mt-1 text-[19px] leading-none" style={DISPLAY}>{m.dirDown}</p>
+                  <p className="mt-1 text-[13px] font-semibold leading-snug">{m.dirDownSub}</p>
+                </ZChoice>
+              </div>
+            </Section>
+            <Section title={m.secFalls}>
+              <div className="flex flex-wrap items-center gap-2">
+                {[3, 5, 7].map((n) => (
+                  <ZChoice key={n} active={settings.falls === n} onClick={() => set({ falls: n })} color={ZZ.mint} className="px-3.5 py-2 text-center text-[15px] font-bold" style={{ borderRadius: 999 }}>
+                    {m.falls(n)}
+                  </ZChoice>
+                ))}
+              </div>
+              <p className="mt-2 text-[14px] font-semibold" style={{ color: "rgba(255,255,255,0.8)" }}>{m.fallsSub}</p>
+            </Section>
+          </>
+        )}
+
+        {mode === "duel" && (
           <Section title={t.secFormat}>
             <div className="flex flex-col gap-3">
               <ZChoice active={settings.format === "rotation"} onClick={() => set({ format: "rotation" })} color={ZZ.mint}>
@@ -422,9 +597,18 @@ export default function ChutGame({ onReturnToLobby }: GameProps) {
           </Section>
         )}
 
-        <Section title={t.secSens}>
+        <Section title={mic ? m.secMic : t.secSens}>
           <div className="flex flex-col gap-2.5">
-            {([
+            {mic && mode !== "whisper" && (
+              <ZChoice active={!settings.human} onClick={() => set({ human: false })} color={ZZ.yellow} className="flex items-center gap-3 px-3.5 py-2.5">
+                <Mic size={24} strokeWidth={2.6} aria-hidden className="shrink-0" />
+                <span className="min-w-0">
+                  <span className="block text-[18px] leading-tight" style={DISPLAY}>{m.micOn}</span>
+                  <span className="block text-[14px] font-semibold leading-snug">{m.micOnSub}</span>
+                </span>
+              </ZChoice>
+            )}
+            {(!mic || mode === "whisper") && ([
               { id: "library", icon: Library, title: t.sensLibrary, sub: t.sensLibrarySub, c: ZZ.mint },
               { id: "living", icon: Sofa, title: t.sensLiving, sub: t.sensLivingSub, c: ZZ.yellow },
               { id: "club", icon: Music, title: t.sensClub, sub: t.sensClubSub, c: ZZ.coral },
@@ -433,7 +617,7 @@ export default function ChutGame({ onReturnToLobby }: GameProps) {
                 <o.icon size={24} strokeWidth={2.6} aria-hidden className="shrink-0" />
                 <span className="min-w-0">
                   <span className="block text-[18px] leading-tight" style={DISPLAY}>{o.title}</span>
-                  <span className="block text-[14px] font-semibold leading-snug">{o.sub}</span>
+                  <span className="block text-[14px] font-semibold leading-snug">{mode === "whisper" ? m.wSens[o.id] : o.sub}</span>
                 </span>
               </ZChoice>
             ))}
@@ -441,13 +625,13 @@ export default function ChutGame({ onReturnToLobby }: GameProps) {
               <MicOff size={24} strokeWidth={2.6} aria-hidden className="shrink-0" />
               <span className="min-w-0">
                 <span className="block text-[18px] leading-tight" style={DISPLAY}>{t.humanTitle}</span>
-                <span className="block text-[14px] font-semibold leading-snug">{t.humanSub}</span>
+                <span className="block text-[14px] font-semibold leading-snug">{m.humanSub[mode]}</span>
               </span>
             </ZChoice>
           </div>
         </Section>
 
-        {sipsOk && <Section title={t.secPenalty}>
+        {sipsOk && <Section title={mode === "whisper" ? m.secPenaltyTeam : mode === "duel" || mode === "table" || mode === "crescendo" ? t.secPenalty : m.secPenaltyLast}>
           <div className="grid grid-cols-2 gap-3">
             <ZChoice active={settings.penalty === "dares"} onClick={() => set({ penalty: "dares" })} color={ZZ.sky}>
               <Drama size={22} strokeWidth={2.6} aria-hidden />
@@ -462,21 +646,30 @@ export default function ChutGame({ onReturnToLobby }: GameProps) {
           </div>
         </Section>}
 
-        <Section title={t.secAmmo}>
-          <div className="flex flex-col gap-3">
-            <ZChoice active={settings.adult} onClick={() => set({ adult: !settings.adult })} color={ZZ.pink}>
-              <p className="text-[18px] leading-none" style={DISPLAY}>{t.adultTitle}</p>
-              <p className="mt-1 text-[14px] font-semibold leading-snug">{t.adultSub}</p>
-            </ZChoice>
-          </div>
-        </Section>
+        {mode === "duel" && (
+          <Section title={t.secAmmo}>
+            <div className="flex flex-col gap-3">
+              <ZChoice active={settings.adult} onClick={() => set({ adult: !settings.adult })} color={ZZ.pink}>
+                <p className="text-[18px] leading-none" style={DISPLAY}>{t.adultTitle}</p>
+                <p className="mt-1 text-[14px] font-semibold leading-snug">{t.adultSub}</p>
+              </ZChoice>
+            </div>
+          </Section>
+        )}
 
         <div className="mt-auto pt-7">
-          <ZButton bg={ACCENT} onClick={afterConfig}>{settings.human ? t.go : t.toCalib}</ZButton>
-          <p className="mt-3 flex items-center justify-center gap-1.5 text-[14px] font-semibold" style={{ color: "rgba(255,255,255,0.8)" }}>
+          <ZButton bg={ACCENT} onClick={afterConfig}>{settings.human || floor != null ? t.go : t.toCalib}</ZButton>
+          {!settings.human && floor != null && (
+            <ZLink onClick={() => { playSfx("select", { volume: 0.5 }); setScreen("calib"); }}>
+              <Ear size={16} strokeWidth={2.6} aria-hidden /> {m.calibrated} · {m.recalib}
+            </ZLink>
+          )}
+          <ZLink onClick={() => { playSfx("back", { volume: 0.5 }); setScreen("modes"); }}>
+            <ArrowLeft size={16} strokeWidth={2.6} aria-hidden /> {m.changeMode}
+          </ZLink>
+          <p className="mt-1 flex items-center justify-center gap-1.5 text-[14px] font-semibold" style={{ color: "rgba(255,255,255,0.8)" }}>
             <ShieldCheck size={16} strokeWidth={2.6} aria-hidden /> {t.noRecord}
           </p>
-          <div className="mt-2 flex justify-center"><IdeaButton game={t.name} kind="carte" bg={ZZ.cream} /></div>
         </div>
       </ZScreen>
     );
@@ -495,6 +688,21 @@ export default function ChutGame({ onReturnToLobby }: GameProps) {
         />
       </>
     );
+  }
+
+  // ══ Modes micro (Le bon volume, Chuchote-le !, Crescendo, Le Souffle) ══
+  if (screen === "play" && plan) {
+    const common: ModeCommon = {
+      players, floor, human: settings.human, sens: settings.sens, tools, overlays,
+      onMicFail: micFailed,
+      onReplay: () => { playSfx("whoosh", { volume: 0.5 }); setPlan(null); setScreen("modes"); },
+      onQuit: onReturnToLobby,
+      newSentence, rerollDare: otherDare, flash,
+    };
+    if (plan.mode === "volume") return <VolumeMode {...common} plan={plan.turns} />;
+    if (plan.mode === "whisper") return <WhisperMode {...common} plan={plan.plan} />;
+    if (plan.mode === "crescendo") return <CrescendoMode {...common} plan={plan.plan} />;
+    return <SouffleMode {...common} plan={plan.plan} />;
   }
 
   // ══ Passage du téléphone au Clown ══
@@ -546,7 +754,7 @@ export default function ChutGame({ onReturnToLobby }: GameProps) {
     return (
       <ZScreen bg={last.cracked ? ZZ.coral : ZZ.mint} tools={tools}>
         {overlays}
-        {!last.cracked && <ConfettiBurst count={40} />}
+        {!last.cracked && !reduced && <ConfettiBurst count={40} />}
         <div className="flex flex-col items-center text-center">
           {last.cracked
             ? <ChutBlob size={150} color={colorForIndex(last.serious)} state="burst" />
@@ -659,7 +867,7 @@ export default function ChutGame({ onReturnToLobby }: GameProps) {
     return (
       <ZScreen bg={culprit != null ? ZZ.coral : ZZ.mint} tools={tools}>
         {overlays}
-        {culprit == null && <ConfettiBurst count={40} />}
+        {culprit == null && !reduced && <ConfettiBurst count={40} />}
         <div className="flex flex-col items-center text-center">
           <ZChip bg="#fff" className="self-center">{t.tableRound(tableRound)}</ZChip>
           {culprit != null
@@ -690,7 +898,7 @@ export default function ChutGame({ onReturnToLobby }: GameProps) {
         tableCracks={tableCracks}
         tools={tools}
         overlays={overlays}
-        onReplay={() => { setScreen("config"); }}
+        onReplay={() => { setScreen("modes"); }}
         onQuit={onReturnToLobby}
       />
     );
@@ -701,37 +909,6 @@ export default function ChutGame({ onReturnToLobby }: GameProps) {
 
 // ══════════════════════════════════════════════════════════
 // Composants
-
-function Section({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <section className="mt-6">
-      <ZTitle size={24} as="h2" className="mb-3">{title}</ZTitle>
-      {children}
-    </section>
-  );
-}
-
-function SentenceCard({ name, colorIndex, sentence, onReroll }: { name: string; colorIndex: number; sentence: Sentence; onReroll: () => void }) {
-  const t = useT(CHUT_STR);
-  return (
-    <ZCard bg={ZZ.cream} className="mt-5 p-4 text-center" shadow={6} radius={26} tilt={-1}>
-      <div className="flex items-center justify-center gap-2">
-        <Mascot size={34} color={colorForIndex(colorIndex)} mood="dead" bob={false} shadow={false} />
-        <span className="text-[22px] leading-tight" style={DISPLAY}>{t.penaltyFor(name)}</span>
-      </div>
-      {sentence.sips != null ? (
-        <p className="mt-2 text-[17px] font-semibold leading-snug">
-          <b style={DISPLAY}><GameInlineIcon icon={CupSoda} /> {t.sips(sentence.sips)}</b> {t.orDare} {sentence.dare}
-        </p>
-      ) : (
-        <p className="mt-2 text-[17px] font-semibold leading-snug"><GameInlineIcon icon={Drama} /> {sentence.dare}</p>
-      )}
-      <div className="mt-3 flex justify-center">
-        <RerollButton onClick={onReroll} label={t.rerollDare} bg={ZZ.yellow} />
-      </div>
-    </ZCard>
-  );
-}
 
 function MatchLine({ m, players }: { m: Match; players: string[] }) {
   const t = useT(CHUT_STR);
@@ -753,8 +930,10 @@ function MatchLine({ m, players }: { m: Match; players: string[] }) {
   );
 }
 
-function RulesSheet({ onClose }: { onClose: () => void }) {
+function RulesSheet({ mode, onClose }: { mode: ModeId | null; onClose: () => void }) {
   const t = useT(CHUT_STR);
+  const m = useT(MODES_STR);
+  const rules = mode ? m.rules[mode] : MODE_IDS.map((id) => m.labelled(m.modeName[id], m.modeSub[id]));
   return (
     <div className="fixed inset-0 flex items-end justify-center" style={{ zIndex: 200 }} role="dialog" aria-modal aria-label={t.rulesTitle}>
       <div className="absolute inset-0" style={{ background: "rgba(10,4,32,0.6)" }} onClick={onClose} />
@@ -762,8 +941,9 @@ function RulesSheet({ onClose }: { onClose: () => void }) {
         style={{ background: ZZ.cream, color: INK, borderRadius: "28px 28px 0 0", border: `3px solid ${INK}`, borderBottom: 0, paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 20px)" }}>
         <div className="absolute right-4 top-4"><GameIconButton icon={X} label={t.close} onClick={onClose} /></div>
         <ZTitle size={32} className="pr-14">{t.rulesTitle}</ZTitle>
+        <p className="mt-1 text-[17px]" style={DISPLAY}>{mode ? m.modeName[mode] : m.allModes}</p>
         <ol className="mt-4 flex flex-col gap-2.5">
-          {t.rules.map((r, i) => (
+          {rules.map((r, i) => (
             <li key={i} className="flex gap-2.5 text-[16px] font-semibold leading-snug">
               <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full text-[14px]" style={{ ...DISPLAY, background: [ZZ.yellow, ZZ.pink, ZZ.sky, ZZ.mint][i % 4], border: `2.5px solid ${INK}` }}>{i + 1}</span>
               <span>{r}</span>
@@ -926,18 +1106,6 @@ function roundFloor(cal: number | null, samples: number[]): number {
   const base = cal ?? floorFrom(samples);
   if (!samples.length) return base;
   return Math.min(Math.max(base, floorFrom(samples)), base + 12);
-}
-
-function Countdown({ n, sub }: { n: number; sub: string }) {
-  return (
-    <div className="pointer-events-none fixed inset-0 z-30 grid place-items-center" style={{ background: "rgba(11,6,32,0.72)" }}>
-      <div className="text-center">
-        <p key={n} className="leading-none" style={{ ...DISPLAY, fontSize: 150, color: ZZ.yellow, WebkitTextStroke: `3px ${INK}`, textShadow: `6px 6px 0 ${INK}`, animation: "chut-pop 0.35s ease-out" }}>{n}</p>
-        <p className="mt-2 text-[18px] font-bold text-white">{sub}</p>
-      </div>
-      <style>{`@keyframes chut-pop { 0% { transform: scale(0.4); opacity: 0; } 70% { transform: scale(1.12); } 100% { transform: scale(1); opacity: 1; } }`}</style>
-    </div>
-  );
 }
 
 // ── Arène du duel ──
@@ -1358,7 +1526,7 @@ function TableArena({
       </div>
 
       {/* La scène absurde */}
-      <ZCard key={sceneKey} bg={[ZZ.yellow, ZZ.mint, ZZ.sky, ZZ.pink, ZZ.cream][sceneKey % 5]} tilt={sceneKey % 2 ? 1.5 : -1.5} shadow={6} radius={28} className="mt-5 w-full max-w-md p-5" style={{ animation: "chut-card 0.35s ease-out" }}>
+      <ZCard key={sceneKey} bg={[ZZ.yellow, ZZ.mint, ZZ.sky, ZZ.pink, ZZ.cream][sceneKey % 5]} tilt={sceneKey % 2 ? 1.5 : -1.5} shadow={6} radius={28} className="chut-card mt-5 w-full max-w-md p-5">
         <p className="text-[clamp(22px,6.6vw,28px)] leading-[1.12]" style={{ ...DISPLAY, textWrap: "balance" }}>{scene}</p>
       </ZCard>
 
@@ -1379,17 +1547,18 @@ function TableArena({
           </ZButton>
         </div>
       )}
-      <style>{`@keyframes chut-card { 0% { transform: scale(0.85) rotate(-6deg); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }`}</style>
+      <ChutStyles />
     </div>
   );
 }
 
 // ── Le verdict ──
 function EndScreen({ players, mode, results, ko, tableCracks, tools, overlays, onReplay, onQuit }: {
-  players: string[]; mode: Mode; results: DuelResult[]; ko: Ko | null; tableCracks: number[];
+  players: string[]; mode: ModeId; results: DuelResult[]; ko: Ko | null; tableCracks: number[];
   tools: ReactNode; overlays: ReactNode; onReplay: () => void; onQuit?: () => void;
 }) {
   const t = useT(CHUT_STR);
+  const reduced = useReducedMotion();
   const idx = [...players.keys()];
   let rows: { name: string; score: number | string; colorIndex: number; note?: ReactNode }[];
   let tomb: number | null = null;
@@ -1448,7 +1617,7 @@ function EndScreen({ players, mode, results, ko, tableCracks, tools, overlays, o
   return (
     <ZScreen tools={tools}>
       {overlays}
-      <ConfettiBurst count={50} />
+      {!reduced && <ConfettiBurst count={50} />}
       <ZTitle size="clamp(42px, 13vw, 58px)" as="h1" className="text-center">{t.endTitle}</ZTitle>
       <div className="mt-5 flex flex-col gap-3">
         {awards.map((a, i) => (

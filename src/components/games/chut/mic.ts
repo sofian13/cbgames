@@ -112,3 +112,84 @@ export function gaugeOf(db: number, floor: number, threshold: number): number {
   const span = Math.max(4, threshold - floor);
   return Math.max(0, Math.min(1, ((db - floor) / span) * 0.75));
 }
+
+// ── Niveau de voix (modes « Le bon volume », « Chuchote-le ! », « Crescendo », « Sans souffle ») ──
+
+/** Plafond de l'échelle : au-delà, le micro du téléphone sature. */
+const TOP_DB = -4;
+
+/**
+ * Niveau de voix 0..1 relatif au bruit ambiant calibré :
+ * 0 = bruit de la pièce, ~0.25 = murmure près du micro, ~0.5 = voix normale,
+ * ~0.7 = voix forte, ~0.9 = cri. Rien d'absolu : seulement des proportions.
+ */
+export function voiceLevel(db: number, floor: number): number {
+  const span = Math.max(30, TOP_DB - floor);
+  return Math.max(0, Math.min(1, (db - floor - 2) / span));
+}
+
+/** Seuil « chuchotement » de Chuchote-le ! selon la sensibilité choisie. */
+export function whisperMax(sens: Sensitivity): number {
+  return sens === "library" ? 0.32 : sens === "club" ? 0.48 : 0.4;
+}
+
+/**
+ * Écoute lissée du niveau de voix (moyenne glissante ~150 ms) avec « bouchons » :
+ * pendant `gate()`, le niveau renvoyé est 0 (sons joués par le téléphone, tap sur l'écran…).
+ */
+export class VoiceListener {
+  private mic: MicMeter | null = null;
+  private smooth = 0;
+  private gateUntil = 0;
+  floor = -70;
+
+  get running() {
+    return this.mic?.running ?? false;
+  }
+
+  /** À appeler dans le geste (tap). */
+  async open(floor: number | null): Promise<void> {
+    this.close();
+    const m = new MicMeter();
+    this.mic = m;
+    await m.start();
+    if (this.mic !== m) { m.stop(); return; }
+    this.floor = floor ?? -70;
+    this.smooth = 0;
+  }
+
+  close() {
+    this.mic?.stop();
+    this.mic = null;
+  }
+
+  gate(ms: number) {
+    this.gateUntil = Math.max(this.gateUntil, performance.now() + ms);
+  }
+
+  get gated() {
+    return performance.now() < this.gateUntil;
+  }
+
+  /** Niveau brut en dBFS (mesure du bruit ambiant avant une manche). */
+  db(): number {
+    return this.mic?.db() ?? SILENT_DB;
+  }
+
+  /** Plancher de la manche : jamais sous le calibrage, au plus +12 dB au-dessus. */
+  refloor(calibrated: number | null, samples: number[]) {
+    const base = calibrated ?? floorFrom(samples);
+    this.floor = samples.length ? Math.min(Math.max(base, floorFrom(samples)), base + 12) : base;
+  }
+
+  /** Niveau 0..1 lissé (0 pendant un bouchon). */
+  level(): number {
+    if (!this.mic) return 0;
+    const raw = voiceLevel(this.mic.db(), this.floor);
+    if (this.gated) { this.smooth = 0; return 0; }
+    // montée rapide, descente un peu plus lente : l'aiguille reste lisible
+    const a = raw > this.smooth ? 0.55 : 0.3;
+    this.smooth += (raw - this.smooth) * a;
+    return this.smooth;
+  }
+}
