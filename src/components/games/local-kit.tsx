@@ -577,7 +577,8 @@ export function PassScreen({
     >
       <p className="mb-2 text-[18px] font-bold" style={{ color: "rgba(255,255,255,0.85)" }}>{t.passTo}</p>
       <div ref={blob} onPointerDown={() => hop(blob.current)} className="relative z-[1] -mb-6">
-        <PlayerBlob name={toName} colorIndex={colorIndex} size={130} mood="wink" arms />
+        {/* Son tour : son perso dit son son (une fois, réglage « Voix des persos en jeu ») */}
+        <PlayerBlob name={toName} colorIndex={colorIndex} size={130} mood="wink" arms talk autoTalk />
       </div>
       <h1
         className="rounded-[24px] px-6 pb-3 pt-7 text-center"
@@ -928,7 +929,8 @@ export function ZRanking({
             <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-[17px]" style={{ ...DISPLAY, background: first ? INK : "#F1ECFF", color: first ? "#FFD23F" : INK }}>
               {first ? <Crown size={18} strokeWidth={2.8} aria-hidden /> : rank}
             </span>
-            <PlayerBlob name={r.name} colorIndex={r.colorIndex} size={38} mood={first ? "laughing" : "happy"} bob={false} />
+            {/* Le gagnant (1re ligne) dit son son une fois ; toucher un blob = l'entendre */}
+            <PlayerBlob name={r.name} colorIndex={r.colorIndex} size={38} mood={first ? "laughing" : "happy"} bob={false} talk autoTalk={i === 0} />
             <div className="min-w-0 flex-1">
               {/* Prénom long : plus petit et sur 2 lignes max plutôt que tronqué */}
               <p className="line-clamp-2 leading-tight" style={{ ...DISPLAY, fontSize: r.name.length > 12 ? 16 : 19, overflowWrap: "anywhere" }}>{r.name}</p>

@@ -3,6 +3,8 @@
 <plist version="1.0">
 <dict>
 	<!-- Zinzin : aucun pistage, aucune publicité. Les achats sont déclarés par le SDK RevenueCat. -->
+	<!-- Sons des persos (micro) : enregistrés et gardés sur l'appareil uniquement, jamais transmis au développeur
+	     (envoi seulement si l'utilisateur partage lui-même un fichier) : pas de donnée « collectée » à déclarer. -->
 	<key>NSPrivacyTracking</key>
 	<false/>
 	<key>NSPrivacyTrackingDomains</key>
@@ -24,7 +26,8 @@
 	</array>
 	<key>NSPrivacyAccessedAPITypes</key>
 	<array>
-		<!-- @capacitor/filesystem (image « Partager mon résultat » écrite dans le cache de l'app) -->
+		<!-- @capacitor/filesystem : image « Partager mon résultat » et fichier de bande « .zinzin » écrits dans
+		     le cache de l'app ; fichier de bande reçu lu (taille) dans Documents/Inbox. Fichiers du conteneur de l'app uniquement. -->
 		<dict>
 			<key>NSPrivacyAccessedAPIType</key>
 			<string>NSPrivacyAccessedAPICategoryFileTimestamp</string>

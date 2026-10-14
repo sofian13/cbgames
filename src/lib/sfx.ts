@@ -283,3 +283,14 @@ export function subscribeSfxMuted(cb: () => void) {
   listeners.add(cb);
   return () => { listeners.delete(cb); };
 }
+
+/**
+ * Sortie Web Audio partagée (contexte + volume général), pour les lecteurs annexes
+ * (voix des persos) : même contexte réveillé au premier toucher, même coupure.
+ * null si le son est coupé ou Web Audio indisponible.
+ */
+export function sfxOutput(): { ctx: AudioContext; master: GainNode } | null {
+  if (muted) return null;
+  const ac = audio();
+  return ac && master ? { ctx: ac, master } : null;
+}

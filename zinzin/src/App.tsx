@@ -15,6 +15,9 @@ import { isAgeOk } from "./ui/util";
 import { SoireeSetup } from "./ui/SoireeSetup";
 import { SoireeRun } from "./ui/SoireeRun";
 import { clearSoiree, getSoiree, resumeSoiree, startSoiree } from "./soiree";
+import { initBandFileOpen } from "./band-open";
+import type { BandFileResult } from "@/lib/avatar/band-file";
+import { ReceivedBandScreen } from "@/components/avatar/ReceivedBand";
 
 type Phase = "splash" | "age" | "tuto" | "app";
 
@@ -35,6 +38,9 @@ export function App() {
   const [soiree, setSoiree] = useState<"setup" | "run" | null>(null);
   // Tuto revu depuis les Réglages (événement « zz:onboarding »)
   const [replayTuto, setReplayTuto] = useState(false);
+  // Bande reçue en fichier (.zinzin) : aperçu après l'âge / le tuto
+  const [received, setReceived] = useState<BandFileResult | null>(null);
+  useEffect(() => initBandFileOpen(setReceived), []);
 
   // Les yeux des blobs suivent le doigt
   useEffect(() => installLookAtFinger(), []);
@@ -146,6 +152,10 @@ export function App() {
             else { setPhase("app"); afterIntro(); }
           }}
         />
+      )}
+
+      {phase === "app" && received && (
+        <ReceivedBandScreen result={received} onClose={() => setReceived(null)} onDone={(m) => { setReceived(null); toast.show(m); }} />
       )}
 
       {legal && <LegalScreen page={legal} onClose={() => setLegal(null)} />}

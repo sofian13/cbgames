@@ -186,11 +186,11 @@ const ORDER: { key: keyof AvatarLook; list: () => string[] }[] = [
   { key: "extra", list: () => AVATAR_ITEMS.extra.map((x) => x.id) },
 ];
 
-function packLook(l: AvatarLook): string {
+export function packLook(l: AvatarLook): string {
   return ORDER.map(({ key, list }) => Math.max(0, list().indexOf(l[key])).toString(36)).join("");
 }
 
-function unpackLook(s: string): AvatarLook {
+export function unpackLook(s: string): AvatarLook {
   const look: AvatarLook = { ...DEFAULT_LOOK };
   ORDER.forEach(({ key, list }, i) => {
     const n = parseInt(s[i] ?? "", 36);

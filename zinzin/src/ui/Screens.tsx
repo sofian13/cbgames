@@ -1,6 +1,6 @@
 import { Suspense, lazy, useState, type ComponentType, type LazyExoticComponent, type ReactNode } from "react";
 import type { GameProps } from "@/lib/games/types";
-import { Bell, ChevronLeft, CreditCard, GlassWater, Mail, RotateCcw, Share2, Sparkles, Star, X } from "lucide-react";
+import { Bell, ChevronLeft, CreditCard, GlassWater, Mail, RotateCcw, Share2, Sparkles, Star, Volume2, X } from "lucide-react";
 import { LANGS, notificationsOn, rateApp, setLang, setNotifications, shareApp, useLang } from "../settings";
 import { getZGame } from "../catalog";
 import { isTestMode, resetPremiumForTests, restore } from "../premium";
@@ -20,6 +20,9 @@ import { AvatarBlob } from "@/components/avatar/AvatarBlob";
 import { useBand } from "@/components/avatar/PlayerBlob";
 import { AVATAR_STR } from "@/lib/avatar/i18n";
 import { baseLook } from "@/lib/avatar/look";
+import { setVoicesInGame, useVoicesInGame } from "@/lib/avatar/voice";
+import { VOICE_STR } from "@/lib/avatar/voice-i18n";
+import { clearVoices } from "@/lib/avatar/voice-store";
 
 export type LegalPage = "cgu" | "confidentialite" | "mentions";
 
@@ -133,6 +136,9 @@ export function SettingsSheet({
           {/* Mode sans alcool : toutes les peines deviennent des gages */}
           <NoAlcoholToggle />
 
+          {/* Voix des persos en jeu (tour du joueur, gagnant) */}
+          <VoicesToggle />
+
           {/* Langue */}
           <LangPicker />
 
@@ -234,6 +240,30 @@ function NoAlcoholToggle() {
       <span className="flex-1">
         <span className="zz-title block text-[19px]">{t.title}</span>
         <span className="block text-[13px] font-semibold opacity-75">{t.sub}</span>
+      </span>
+      <span className="relative h-8 w-14 shrink-0 rounded-full" style={{ background: on ? "#3DDC97" : "#CFC6E3", border: "2.5px solid var(--zz-ink)" }}>
+        <span className="absolute top-1/2 h-6 w-6 -translate-y-1/2 rounded-full bg-white transition-[left]" style={{ left: on ? 26 : 2, border: "2.5px solid var(--zz-ink)" }} />
+      </span>
+    </button>
+  );
+}
+
+function VoicesToggle() {
+  const on = useVoicesInGame();
+  const t = useT(VOICE_STR);
+  return (
+    <button
+      type="button"
+      onClick={() => { haptic(); setVoicesInGame(!on); }}
+      className="zz-push zz-stk mt-3.5 flex w-full items-center gap-3 rounded-[22px] px-4 py-3.5 text-left"
+      style={{ background: "#FFF6E5", color: "var(--zz-ink)" }}
+      role="switch"
+      aria-checked={on}
+    >
+      <Volume2 size={26} strokeWidth={2.6} />
+      <span className="flex-1">
+        <span className="zz-title block text-[19px]">{t.inGame}</span>
+        <span className="block text-[13px] font-semibold opacity-75">{t.inGameSub}</span>
       </span>
       <span className="relative h-8 w-14 shrink-0 rounded-full" style={{ background: on ? "#3DDC97" : "#CFC6E3", border: "2.5px solid var(--zz-ink)" }}>
         <span className="absolute top-1/2 h-6 w-6 -translate-y-1/2 rounded-full bg-white transition-[left]" style={{ left: on ? 26 : 2, border: "2.5px solid var(--zz-ink)" }} />
@@ -357,9 +387,11 @@ function EraseData() {
   return (
     <button
       type="button"
-      onClick={() => {
+      onClick={async () => {
         if (!armed) { setArmed(true); haptic(); return; }
         try { localStorage.clear(); sessionStorage.clear(); } catch { /* indispo */ }
+        // Les sons des persos (IndexedDB) aussi
+        await clearVoices().catch(() => {});
         location.reload();
       }}
       className="zz-tap mx-auto mt-1 block min-h-11 px-3 text-[14px] font-semibold underline decoration-2 underline-offset-4"

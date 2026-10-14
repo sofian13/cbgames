@@ -1,5 +1,7 @@
 import { AvatarBlob, type AvatarCostumeCtx, type AvatarCostumeLayers } from "@/components/avatar/AvatarBlob";
-import { usePlayerLook } from "@/components/avatar/PlayerBlob";
+import { usePersoTalk, usePlayerLook } from "@/components/avatar/PlayerBlob";
+import { VoiceBadge } from "@/components/avatar/VoiceUI";
+import { playPersoVoice, usePersoVoice } from "@/lib/avatar/voice";
 import { costumeLayers, type ZCostume } from "./costumes";
 import { ZBlob, type ZBlobProps } from "./ZBlob";
 
@@ -16,15 +18,28 @@ const CROWN: AvatarCostumeLayers = {
 /**
  * Blob d'un joueur dans l'app (Soirée Zinzin) : son perso « Ma bande » s'il en a un,
  * sinon le ZBlob coloré. Costume de jeu ou couronne : prioritaires sur son chapeau.
+ * `talk` : toucher = il dit son son ; `autoTalk` : il le dit une fois à l'apparition (podium).
  */
-export function BandBlob({ name, costume, crown, ...p }: ZBlobProps & { name: string; costume?: ZCostume }) {
+export function BandBlob({ name, costume, crown, talk = false, autoTalk = false, talkDelay, ...p }: ZBlobProps & {
+  name: string; costume?: ZCostume; talk?: boolean; autoTalk?: boolean; talkDelay?: number;
+}) {
   const look = usePlayerLook(name);
-  if (!look) return <ZBlob {...p} costume={costume} crown={crown} />;
+  const voice = usePersoVoice(talk ? name : null);
+  const { ref, mood: talking } = usePersoTalk(name, { auto: autoTalk, delay: talkDelay });
+  const mood = talking ?? p.mood;
   const size = p.size ?? 96;
   const cos = costume
     ? (ctx: AvatarCostumeCtx) => costumeLayers(costume, ctx)
     : crown ? () => CROWN : undefined;
+  const blob = look
+    ? <AvatarBlob look={look} size={size} mood={mood} animate={p.wobble !== false && !talking} costume={cos} className={p.className} style={p.style} />
+    : <ZBlob {...p} mood={mood} costume={costume} crown={crown} />;
+  if (!talk && !autoTalk) return blob;
   return (
-    <AvatarBlob look={look} size={size} mood={p.mood} animate={p.wobble !== false} costume={cos} className={p.className} style={p.style} />
+    <div ref={ref} style={{ position: "relative", display: "inline-block" }}
+      {...(talk && voice ? { onClick: () => void playPersoVoice(name), role: "button", tabIndex: 0, "aria-label": name } : {})}>
+      {blob}
+      {talk && voice && <VoiceBadge size={Math.max(18, Math.round(size * 0.26))} />}
+    </div>
   );
 }

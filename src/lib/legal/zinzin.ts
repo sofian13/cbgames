@@ -11,13 +11,13 @@
 
 import type { I18n, Lang } from "@/lib/i18n";
 
-export const LEGAL_UPDATED_AT = "13 octobre 2026";
+export const LEGAL_UPDATED_AT = "14 octobre 2026";
 
 /** Date de mise à jour, écrite dans chaque langue. */
 export const LEGAL_UPDATED_AT_I18N: I18n<string> = {
   fr: LEGAL_UPDATED_AT,
-  en: "October 13, 2026",
-  es: "13 de octubre de 2026",
+  en: "October 14, 2026",
+  es: "14 de octubre de 2026",
 };
 
 export function getLegalUpdatedAt(lang: Lang): string {
@@ -111,7 +111,9 @@ export const LEGAL_DOCS: Record<LegalDocId, LegalDoc> = {
           "Les prénoms que tu saisis pour jouer, la dernière « bande » de joueurs et les prénoms récents (pour te les reproposer), tes réglages (sons, packs choisis…), la confirmation que tu as 18 ans et l'état de ton abonnement.",
           "Ces informations sont enregistrées uniquement dans le stockage local de l'application, sur ton appareil. Nous n'y avons pas accès et elles ne sont envoyées nulle part. Évite d'y saisir autre chose que des prénoms ou surnoms.",
           "Le bouton « Partager mon résultat » crée une image (prénoms et scores affichés à l'écran) sur ton téléphone ; elle ne part que vers l'appli que tu choisis dans la feuille de partage, jamais vers nous.",
-          "Tu peux les effacer à tout moment en supprimant l'application (ou depuis les réglages de l'app quand l'option est disponible).",
+          "Les sons de tes persos (« Ma bande ») : si tu choisis d'en enregistrer un, le micro n'est utilisé que pendant que tu maintiens le bouton, après ton autorisation. Chaque enregistrement (5 secondes maximum) reste dans le stockage de l'application, sur ton téléphone. Il ne quitte ton téléphone que si tu envoies toi-même ta bande (bouton « Envoyer ma bande »), sous forme de fichier, par l'appli et au destinataire que tu choisis dans la feuille de partage. Rien n'est envoyé automatiquement : Zinzin ne reçoit aucun enregistrement et n'y a pas accès.",
+          "Une bande reçue (fichier « .zinzin ») n'est lue que sur ton téléphone, quand tu l'ouvres ; elle n'est ajoutée à ta bande que si tu le choisis, avec la mention de son expéditeur. Tu peux couper ses voix ou supprimer ses persos à tout moment.",
+          "Tu peux tout effacer à tout moment : un son ou un perso depuis « Ma bande », ou toutes tes données avec « Effacer mes données » dans les réglages de l'app (ou en supprimant l'application).",
         ],
       },
       {
@@ -128,7 +130,7 @@ export const LEGAL_DOCS: Record<LegalDocId, LegalDoc> = {
         paragraphs: [
           "Pas de publicité, pas de mesure d'audience, pas de pistage entre applis ou sites (aucune demande « App Tracking Transparency »), pas de revente de données, pas de cookies dans l'application.",
           "Si tu nous proposes une idée (bouton « Propose ton idée ») ou nous écris, le message part depuis ton application mail : nous recevons alors ton adresse e-mail et ton message, utilisés uniquement pour te lire et te répondre, puis supprimés au plus tard 3 ans après le dernier échange. Base légale : notre intérêt légitime à améliorer l'app. Les idées retenues peuvent être intégrées au jeu, sans mention de ton nom.",
-          "L'application n'accède ni à tes contacts, ni à ta position, ni à ta caméra. Certains jeux utilisent les capteurs de mouvement du téléphone (ex. « Le Verre Invisible », « Ne secoue pas la patate ») : la mesure est traitée instantanément sur l'appareil et n'est jamais enregistrée ni transmise. Le jeu « Chut ! » utilise le micro, uniquement pendant une manche et après ton autorisation, pour mesurer le niveau sonore en direct : aucun son n'est enregistré, conservé ni envoyé, et tu peux jouer sans micro (arbitre humain). La voix du narrateur est générée par le système de ton téléphone.",
+          "L'application n'accède ni à tes contacts, ni à ta position, ni à ta caméra. Certains jeux utilisent les capteurs de mouvement du téléphone (ex. « Le Verre Invisible », « Ne secoue pas la patate ») : la mesure est traitée instantanément sur l'appareil et n'est jamais enregistrée ni transmise. Le jeu « Chut ! » utilise le micro, uniquement pendant une manche et après ton autorisation, pour mesurer le niveau sonore en direct : aucun son n'est enregistré, conservé ni envoyé, et tu peux jouer sans micro (arbitre humain). En dehors de ce jeu, le micro ne sert qu'à enregistrer le son de tes persos, uniquement quand tu le demandes (voir plus haut). La voix du narrateur est générée par le système de ton téléphone.",
         ],
       },
       {
@@ -198,6 +200,7 @@ export const LEGAL_DOCS: Record<LegalDocId, LegalDoc> = {
           "Les « gorgées » proposées par certains jeux sont toujours facultatives : elles peuvent être remplacées par un gage, et se jouer avec de l'eau ou une boisson sans alcool. Personne n'est obligé de boire. L'abus d'alcool est dangereux pour la santé : à consommer avec modération. Ne conduis jamais après avoir bu.",
           "Les défis et gages doivent rester dans le respect de chacun : tout participant peut refuser un défi. Ne réalise jamais un défi dangereux, illégal ou qui met mal à l'aise quelqu'un. Chaque joueur reste responsable de ses actes et de sa consommation.",
           "Certains jeux (ex. « La Patate ») invitent à se passer le téléphone : fais-le avec précaution. Nous ne pouvons être tenus responsables de la casse d'un appareil.",
+          "Sons et bandes partagés : tu es seul responsable de ce que tu enregistres et de ce que tu envoies. N'enregistre et ne partage la voix de personne sans son accord, et rien d'injurieux, de haineux, de harcelant, d'obscène ou d'illégal ; respecte les autres. Une bande reçue affiche son expéditeur : tu peux couper ses voix ou la supprimer à tout moment. Zinzin n'héberge ni ne transmet aucun de ces contenus.",
         ],
       },
       {
@@ -311,7 +314,9 @@ const DOCS_EN: Record<LegalDocId, LegalDoc> = {
           "The names you enter to play, your last \"crew\" of players and recent names (so we can suggest them again), your settings (sounds, chosen packs, language…), the confirmation that you are 18 or older and your subscription status.",
           "This information is stored only in the app's local storage, on your device. We have no access to it and it is not sent anywhere. Please don't enter anything other than first names or nicknames.",
           "The \"Share my result\" button creates an image (names and scores shown on screen) on your phone; it only goes to the app you pick in the share sheet, never to us.",
-          "You can erase it at any time by deleting the app (or from the app's settings when the option is available).",
+          "Your characters' sounds (\"My crew\"): if you choose to record one, the microphone is only used while you hold the button, after you allow it. Each recording (5 seconds maximum) stays in the app's storage, on your phone. It only leaves your phone if you send your crew yourself (\"Send my crew\" button), as a file, through the app and to the person you pick in the share sheet. Nothing is sent automatically: Zinzin receives no recordings and has no access to them.",
+          "A crew you receive (a \".zinzin\" file) is only read on your phone, when you open it; it is only added to your crew if you choose so, showing who sent it. You can mute its voices or delete its characters at any time.",
+          "You can erase everything at any time: a sound or a character from \"My crew\", or all your data with \"Erase my data\" in the app's settings (or by deleting the app).",
         ],
       },
       {
@@ -328,7 +333,7 @@ const DOCS_EN: Record<LegalDocId, LegalDoc> = {
         paragraphs: [
           "No advertising, no audience measurement, no tracking across apps or websites (no \"App Tracking Transparency\" request), no selling of data, no cookies in the app.",
           "If you suggest an idea (\"Suggest an idea\" button) or write to us, the message is sent from your email app: we then receive your email address and your message, used only to read and reply to you, and deleted no later than 3 years after our last exchange. Legal basis: our legitimate interest in improving the app. Ideas we keep may be added to the game, without mentioning your name.",
-          "The app does not access your contacts, location or camera. Some games use the phone's motion sensors (e.g. \"The Invisible Glass\", \"Don't shake the potato\"): the reading is processed instantly on the device and is never stored or sent. The game \"Shh!\" uses the microphone, only during a round and after you allow it, to measure the sound level live: no audio is recorded, kept or sent, and you can play without the microphone (human referee). The narrator's voice is generated by your phone's system.",
+          "The app does not access your contacts, location or camera. Some games use the phone's motion sensors (e.g. \"The Invisible Glass\", \"Don't shake the potato\"): the reading is processed instantly on the device and is never stored or sent. The game \"Shh!\" uses the microphone, only during a round and after you allow it, to measure the sound level live: no audio is recorded, kept or sent, and you can play without the microphone (human referee). Apart from this game, the microphone is only used to record your characters' sounds, only when you ask (see above). The narrator's voice is generated by your phone's system.",
         ],
       },
       {
@@ -399,6 +404,7 @@ const DOCS_EN: Record<LegalDocId, LegalDoc> = {
           "The \"sips\" suggested by some games are always optional: they can be replaced by a dare, and played with water or a non-alcoholic drink. Nobody has to drink. Alcohol abuse is dangerous for your health: drink in moderation. Never drive after drinking.",
           "Challenges and dares must respect everyone: any participant can refuse a dare. Never do a dare that is dangerous, illegal or makes someone uncomfortable. Each player remains responsible for their own actions and consumption.",
           "Some games (e.g. \"Hot Potato\") involve passing the phone around: do it carefully. We cannot be held responsible for a broken device.",
+          "Shared sounds and crews: you alone are responsible for what you record and what you send. Don't record or share anyone's voice without their consent, and nothing insulting, hateful, harassing, obscene or illegal; respect others. A crew you receive shows who sent it: you can mute its voices or delete it at any time. Zinzin neither hosts nor transmits any of this content.",
         ],
       },
       {
@@ -492,7 +498,9 @@ const DOCS_ES: Record<LegalDocId, LegalDoc> = {
           "Los nombres que escribes para jugar, tu último «grupo» de jugadores y los nombres recientes (para volver a proponértelos), tus ajustes (sonidos, packs elegidos, idioma…), la confirmación de que tienes 18 años o más y el estado de tu suscripción.",
           "Esta información se guarda únicamente en el almacenamiento local de la aplicación, en tu dispositivo. No tenemos acceso a ella y no se envía a ningún sitio. Evita escribir algo que no sean nombres o apodos.",
           "El botón «Compartir mi resultado» crea una imagen (nombres y puntuaciones que se ven en pantalla) en tu móvil; solo se envía a la app que elijas en el menú de compartir, nunca a nosotros.",
-          "Puedes borrarla en cualquier momento eliminando la aplicación (o desde los ajustes de la app cuando la opción esté disponible).",
+          "Los sonidos de tus personajes («Mi grupo»): si decides grabar uno, el micrófono solo se usa mientras mantienes pulsado el botón, y con tu permiso. Cada grabación (5 segundos como máximo) se queda en el almacenamiento de la aplicación, en tu móvil. Solo sale de tu móvil si tú mismo envías tu grupo (botón «Enviar mi grupo»), como archivo, por la app y a la persona que elijas en el menú de compartir. No se envía nada automáticamente: Zinzin no recibe ninguna grabación ni tiene acceso a ellas.",
+          "Un grupo que recibes (archivo «.zinzin») solo se lee en tu móvil, cuando lo abres; solo se añade a tu grupo si tú lo decides, indicando quién lo envió. Puedes silenciar sus voces o borrar sus personajes en cualquier momento.",
+          "Puedes borrarlo todo en cualquier momento: un sonido o un personaje desde «Mi grupo», o todos tus datos con «Borrar mis datos» en los ajustes de la app (o eliminando la aplicación).",
         ],
       },
       {
@@ -509,7 +517,7 @@ const DOCS_ES: Record<LegalDocId, LegalDoc> = {
         paragraphs: [
           "Sin publicidad, sin medición de audiencia, sin rastreo entre apps o sitios web (ninguna solicitud de «App Tracking Transparency»), sin venta de datos, sin cookies en la aplicación.",
           "Si nos propones una idea (botón «Propón una idea») o nos escribes, el mensaje sale desde tu aplicación de correo: entonces recibimos tu dirección de correo y tu mensaje, que solo usamos para leerte y responderte, y que se eliminan como máximo 3 años después del último intercambio. Base jurídica: nuestro interés legítimo en mejorar la app. Las ideas seleccionadas pueden incorporarse al juego, sin mencionar tu nombre.",
-          "La aplicación no accede a tus contactos, ni a tu ubicación, ni a tu cámara. Algunos juegos usan los sensores de movimiento del móvil (p. ej. «El Vaso Invisible», «No agites la patata»): la medición se procesa al instante en el dispositivo y nunca se guarda ni se envía. El juego «¡Chis!» usa el micrófono, solo durante una ronda y con tu permiso, para medir el nivel de ruido en directo: no se graba, guarda ni envía ningún sonido, y puedes jugar sin micrófono (árbitro humano). La voz del narrador la genera el sistema de tu móvil.",
+          "La aplicación no accede a tus contactos, ni a tu ubicación, ni a tu cámara. Algunos juegos usan los sensores de movimiento del móvil (p. ej. «El Vaso Invisible», «No agites la patata»): la medición se procesa al instante en el dispositivo y nunca se guarda ni se envía. El juego «¡Chis!» usa el micrófono, solo durante una ronda y con tu permiso, para medir el nivel de ruido en directo: no se graba, guarda ni envía ningún sonido, y puedes jugar sin micrófono (árbitro humano). Fuera de ese juego, el micrófono solo sirve para grabar el sonido de tus personajes, únicamente cuando tú lo pides (ver más arriba). La voz del narrador la genera el sistema de tu móvil.",
         ],
       },
       {
@@ -580,6 +588,7 @@ const DOCS_ES: Record<LegalDocId, LegalDoc> = {
           "Los «tragos» que proponen algunos juegos son siempre opcionales: pueden sustituirse por un reto y jugarse con agua o una bebida sin alcohol. Nadie está obligado a beber. El abuso de alcohol es peligroso para la salud: consúmelo con moderación. No conduzcas nunca después de haber bebido.",
           "Los desafíos y retos deben respetar a todo el mundo: cualquier participante puede negarse a hacer un reto. No hagas nunca un reto peligroso, ilegal o que incomode a alguien. Cada jugador es responsable de sus actos y de su consumo.",
           "Algunos juegos (p. ej. «La Patata Caliente») consisten en pasarse el móvil: hazlo con cuidado. No nos hacemos responsables de la rotura de un dispositivo.",
+          "Sonidos y grupos compartidos: eres el único responsable de lo que grabas y de lo que envías. No grabes ni compartas la voz de nadie sin su consentimiento, ni nada insultante, de odio, acosador, obsceno o ilegal; respeta a los demás. Un grupo recibido indica quién lo envió: puedes silenciar sus voces o borrarlo en cualquier momento. Zinzin no aloja ni transmite ninguno de estos contenidos.",
         ],
       },
       {

@@ -12,6 +12,8 @@ import {
 } from "@/lib/avatar/look";
 import { AVATAR_NAMES, AVATAR_STR } from "@/lib/avatar/i18n";
 import { AvatarBlob } from "./AvatarBlob";
+import { VoiceRecorderPanel } from "./VoiceUI";
+import { talkMood, useSpeaking, voiceKey } from "@/lib/avatar/voice";
 
 export const AV_INK = "#15082E";
 export const AV_NIGHT = "#1E1250";
@@ -53,7 +55,7 @@ export function RoundIconBtn({ onClick, label, children, bg = "#fff" }: { onClic
 
 const TABS: AvatarTab[] = ["color", "eyes", "hair", "hat", "face", "extra"];
 
-export interface AvatarEditorResult { name: string; look: AvatarLook; me: boolean }
+export interface AvatarEditorResult { name: string; look: AvatarLook; me: boolean; voice?: string | null }
 
 /**
  * Éditeur de perso : aperçu animé, onglets à vignettes, hasard, réinitialiser.
@@ -61,7 +63,7 @@ export interface AvatarEditorResult { name: string; look: AvatarLook; me: boolea
  * `onSave` renvoie un message d'erreur (prénom déjà pris…) ou rien.
  */
 export function AvatarEditor({
-  name, look: initial, colorHint, editName = false, showMe = false, isMe = false, onSave, onClose,
+  name, look: initial, colorHint, editName = false, showMe = false, isMe = false, voice: initialVoice, onSave, onClose,
 }: {
   name: string;
   look: AvatarLook | null;
@@ -72,6 +74,8 @@ export function AvatarEditor({
   /** Interrupteur « C'est moi » */
   showMe?: boolean;
   isMe?: boolean;
+  /** Son du perso (« Ma bande ») : absent = pas de ligne « Son » */
+  voice?: { id: string | null };
   onSave: (r: AvatarEditorResult) => string | void;
   onClose: () => void;
 }) {
@@ -85,6 +89,7 @@ export function AvatarEditor({
   const [me, setMe] = useState(isMe);
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [voiceId, setVoiceId] = useState<string | null>(initialVoice?.id ?? null);
   const grid = useRef<HTMLDivElement>(null);
   const preview = useRef<HTMLDivElement>(null);
   // Aperçu à la taille de l'écran (iPhone SE → Pro Max)
@@ -98,6 +103,8 @@ export function AvatarEditor({
 
   const locked = !unlocked && lookHasPremium(look);
   const cleanNm = cleanName(nm);
+  // Bouche animée pendant la réécoute du son
+  const talk = useSpeaking(voiceKey(cleanNm || name || "?"));
   const canSave = !busy && (!editName || cleanNm.length > 0);
 
   const bump = () => {
@@ -128,7 +135,7 @@ export function AvatarEditor({
       setBusy(false);
       if (!ok) return; // pas d'abonnement : on reste dans l'éditeur, rien n'est perdu
     }
-    const e = onSave({ name: editName ? cleanNm : name, look, me });
+    const e = onSave({ name: editName ? cleanNm : name, look, me, ...(initialVoice ? { voice: voiceId } : {}) });
     if (e) { setErr(e); return; }
     playSfx("confirm", { volume: 0.5 });
     onClose();
@@ -162,7 +169,7 @@ export function AvatarEditor({
         <div className="relative grid h-full flex-1 place-items-center">
           <div className="absolute bottom-[4%] h-[12%] w-[46%] rounded-[50%]" style={{ background: "rgba(0,0,0,0.28)" }} />
           <div ref={preview} style={{ marginTop: "10%" }}>
-            <AvatarBlob look={look} size={pv} mood="happy" />
+            <AvatarBlob look={look} size={pv} mood={talk !== null ? talkMood(talk) : "happy"} animate={talk === null} />
           </div>
         </div>
         <div className="flex flex-col items-center gap-1.5">
@@ -192,6 +199,13 @@ export function AvatarEditor({
               <Star size={16} strokeWidth={2.8} fill={me ? AV_INK : "none"} /> {t.itsMe}
             </button>
           )}
+        </div>
+      )}
+
+      {/* Son du perso : gratuit pour « moi », Zinzin+ pour les autres */}
+      {initialVoice && (
+        <div className="mx-auto w-full max-w-lg px-4 pb-2">
+          <VoiceRecorderPanel compact name={cleanNm || name || "?"} voiceId={voiceId} locked={!unlocked && !me} onChange={setVoiceId} />
         </div>
       )}
 

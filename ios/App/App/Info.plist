@@ -22,12 +22,54 @@
 	<string>$(MARKETING_VERSION)</string>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>CFBundleDocumentTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeName</key>
+			<string>Bande Zinzin</string>
+			<key>CFBundleTypeRole</key>
+			<string>Viewer</string>
+			<key>LSHandlerRank</key>
+			<string>Owner</string>
+			<key>LSItemContentTypes</key>
+			<array>
+				<string>fr.zinzin.band</string>
+			</array>
+		</dict>
+	</array>
+	<key>LSSupportsOpeningDocumentsInPlace</key>
+	<false/>
+	<key>UTExportedTypeDeclarations</key>
+	<array>
+		<dict>
+			<key>UTTypeIdentifier</key>
+			<string>fr.zinzin.band</string>
+			<key>UTTypeDescription</key>
+			<string>Bande Zinzin</string>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.json</string>
+				<string>public.data</string>
+			</array>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>public.filename-extension</key>
+				<array>
+					<string>zinzin</string>
+				</array>
+				<key>public.mime-type</key>
+				<array>
+					<string>application/x-zinzin-band</string>
+				</array>
+			</dict>
+		</dict>
+	</array>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Zinzin utilise le micro uniquement pendant le jeu « Chut ! » pour mesurer le bruit en direct. Rien n’est enregistré ni envoyé.</string>
+	<string>Zinzin utilise le micro seulement quand tu le demandes : pendant le jeu « Chut ! » pour mesurer le bruit en direct (rien n’est enregistré), et pour enregistrer le son de tes persos, qui reste sur ton téléphone.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>Zinzin enregistre dans tes photos l’image de ton résultat, seulement si tu choisis « Enregistrer l’image » en la partageant.</string>
 	<key>NSMotionUsageDescription</key>

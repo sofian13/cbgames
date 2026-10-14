@@ -5,6 +5,7 @@
  * Migration douce : les anciennes données (sans looks ni bande) restent valides.
  */
 import { BAND_MAX, cleanName, sanitizeLook, type AvatarLook } from "@/lib/avatar/look";
+import { deleteVoice, isVoiceId } from "@/lib/avatar/voice-store";
 
 const KEY = "zz-players-v1";
 const MAX_RECENT = 20;
@@ -21,10 +22,26 @@ interface Stored {
   band: string[];
   /** Le joueur principal (« Moi »), parmi la bande — optionnel */
   me: string | null;
+  /** Son enregistré par perso de la bande (clé : prénom normalisé → id du son dans IndexedDB) — optionnel */
+  voices: Record<string, string>;
+  /** Persos reçus d'une bande partagée : expéditeur + voix coupée — optionnel */
+  recv: Record<string, { from: string; mute?: boolean }>;
+  /** « Couper toutes les voix reçues » */
+  muteRecv: boolean;
 }
 
-/** Un perso de « Ma bande ». */
-export interface BandEntry { name: string; look: AvatarLook | null; me: boolean }
+/** Un perso de « Ma bande » (+ son éventuel, + expéditeur s'il vient d'une bande reçue). */
+export interface BandEntry {
+  name: string;
+  look: AvatarLook | null;
+  me: boolean;
+  /** Id du son (IndexedDB), ou null */
+  voice?: string | null;
+  /** Prénom de l'expéditeur si le perso vient d'une bande reçue */
+  from?: string | null;
+  /** Voix de ce perso reçu coupée */
+  mute?: boolean;
+}
 
 /** Clé de comparaison : sans casse, sans accents, espaces normalisés. */
 function norm(s: string): string {
@@ -36,7 +53,7 @@ function clean(names: unknown): string[] {
   return names.filter((n): n is string => typeof n === "string").map((n) => n.trim()).filter(Boolean);
 }
 
-const EMPTY: Stored = { last: [], recent: [], looks: {}, band: [], me: null };
+const EMPTY: Stored = { last: [], recent: [], looks: {}, band: [], me: null, voices: {}, recv: {}, muteRecv: false };
 
 function parse(raw: string | null): Stored {
   if (!raw) return EMPTY;
@@ -51,7 +68,20 @@ function parse(raw: string | null): Stored {
     }
     const band = uniq(clean(p.band).map(cleanName)).slice(0, BAND_MAX);
     const me = typeof p.me === "string" && band.some((b) => norm(b) === norm(p.me as string)) ? (p.me as string) : null;
-    return { last: clean(p.last), recent: clean(p.recent), looks, band, me };
+    const inBand = new Set(band.map(norm));
+    const voices: Record<string, string> = {};
+    if (p.voices && typeof p.voices === "object") {
+      for (const [k, v] of Object.entries(p.voices as Record<string, unknown>)) if (inBand.has(norm(k)) && isVoiceId(v)) voices[norm(k)] = v;
+    }
+    const recv: Record<string, { from: string; mute?: boolean }> = {};
+    if (p.recv && typeof p.recv === "object") {
+      for (const [k, v] of Object.entries(p.recv as Record<string, unknown>)) {
+        const o = v as { from?: unknown; mute?: unknown } | null;
+        const from = cleanName(o?.from);
+        if (inBand.has(norm(k)) && from) recv[norm(k)] = o?.mute === true ? { from, mute: true } : { from };
+      }
+    }
+    return { last: clean(p.last), recent: clean(p.recent), looks, band, me, voices, recv, muteRecv: p.muteRecv === true };
   } catch {
     return EMPTY;
   }
@@ -187,7 +217,11 @@ export function setPlayerLook(name: string, look: AvatarLook | null): void {
 /** « Ma bande » dans l'ordre (16 max). */
 export function getBand(): BandEntry[] {
   const s = read();
-  return s.band.map((name) => ({ name, look: s.looks[norm(name)] ?? null, me: s.me !== null && norm(s.me) === norm(name) }));
+  return s.band.map((name) => {
+    const k = norm(name);
+    const r = s.recv[k];
+    return { name, look: s.looks[k] ?? null, me: s.me !== null && norm(s.me) === k, voice: s.voices[k] ?? null, from: r?.from ?? null, mute: !!r?.mute };
+  });
 }
 
 /** Prénom du joueur principal (« Moi »), ou null. */
@@ -199,11 +233,13 @@ export function getMeName(): string | null {
  * Remplace toute la bande (ajout, suppression, ordre, renommage, import).
  * Les looks des persos retirés sont oubliés ; ceux des autres prénoms (tables récentes) restent.
  */
-export function setBand(entries: { name: string; look: AvatarLook | null; me?: boolean }[]): void {
+export function setBand(entries: { name: string; look: AvatarLook | null; me?: boolean; voice?: string | null; from?: string | null; mute?: boolean }[]): void {
   const prev = read();
   const looks = { ...prev.looks };
   for (const b of prev.band) delete looks[norm(b)];
   const band: string[] = [];
+  const voices: Record<string, string> = {};
+  const recv: Record<string, { from: string; mute?: boolean }> = {};
   let me: string | null = null;
   for (const e of entries) {
     const n = cleanName(e.name);
@@ -212,8 +248,62 @@ export function setBand(entries: { name: string; look: AvatarLook | null; me?: b
     band.push(n);
     if (e.look) looks[k] = e.look;
     if (e.me && !me) me = n;
+    if (isVoiceId(e.voice)) voices[k] = e.voice;
+    const from = cleanName(e.from);
+    if (from) recv[k] = e.mute ? { from, mute: true } : { from };
   }
-  write({ ...prev, looks, band, me });
+  // Les sons qui ne sont plus liés à personne sont effacés du téléphone
+  const kept = new Set(Object.values(voices));
+  for (const id of Object.values(prev.voices)) if (!kept.has(id)) void deleteVoice(id);
+  write({ ...prev, looks, band, me, voices, recv, muteRecv: Object.keys(recv).length ? prev.muteRecv : false });
+}
+
+/* ── Sons des persos ── */
+
+/** Son d'un perso de la bande (id IndexedDB), s'il doit être joué (voix reçue coupée = null). */
+export function getVoiceFor(name: string): string | null {
+  const s = read();
+  const k = norm(name);
+  const id = k ? s.voices[k] : undefined;
+  if (!id) return null;
+  const r = s.recv[k];
+  if (r && (r.mute || s.muteRecv)) return null;
+  return id;
+}
+
+/** Associe (ou retire avec null) un son à un perso de la bande. */
+export function setVoiceFor(name: string, id: string | null): void {
+  const prev = read();
+  const k = norm(name);
+  if (!k || !prev.band.some((b) => norm(b) === k)) return;
+  const voices = { ...prev.voices };
+  const old = voices[k];
+  if (id && isVoiceId(id)) voices[k] = id;
+  else delete voices[k];
+  if (old && old !== voices[k]) void deleteVoice(old);
+  write({ ...prev, voices });
+}
+
+/** Coupe / rétablit la voix d'un perso reçu. */
+export function setReceivedMute(name: string, mute: boolean): void {
+  const prev = read();
+  const k = norm(name);
+  const r = prev.recv[k];
+  if (!r) return;
+  write({ ...prev, recv: { ...prev.recv, [k]: mute ? { from: r.from, mute: true } : { from: r.from } } });
+}
+
+/** « Couper toutes les voix reçues ». */
+export function getMuteAllReceived(): boolean {
+  return read().muteRecv;
+}
+export function setMuteAllReceived(v: boolean): void {
+  write({ ...read(), muteRecv: v });
+}
+
+/** Tous les ids de sons encore liés (pour le ménage d'IndexedDB). */
+export function linkedVoiceIds(): string[] {
+  return Object.values(read().voices);
 }
 
 /* ── Soirée Zinzin (app) : la bande enchaîne les jeux sans retaper les prénoms ──

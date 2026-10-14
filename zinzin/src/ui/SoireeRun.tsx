@@ -279,7 +279,7 @@ function End({ s, onHome, onNew, toast }: { s: SoireeState; onHome: () => void; 
             return (
               <div key={r.name} className="flex w-[31%] min-w-0 flex-col items-center">
                 <div className={k === 0 ? "zzs-dance" : undefined}>
-                  <BandBlob name={r.name} size={k === 0 ? 92 : 70} color={col} mood={k === 0 ? "laughing" : k === 1 ? "happy" : "wink"} seed={k + 3} crown={k === 0} outline shadow={false} wobble={k !== 0} />
+                  <BandBlob name={r.name} size={k === 0 ? 92 : 70} color={col} mood={k === 0 ? "laughing" : k === 1 ? "happy" : "wink"} seed={k + 3} crown={k === 0} outline shadow={false} wobble={k !== 0} talk autoTalk={k === 0} talkDelay={1600} />
                 </div>
                 <div className="zz-title mt-1 w-full truncate text-center text-white" style={{ fontSize: r.name.length > 9 ? 17 : 22 }}>{r.name}</div>
                 <div

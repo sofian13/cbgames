@@ -1,3 +1,4 @@
-"NSMicrophoneUsageDescription" = "Zinzin usa el micrófono solo durante el juego «¡Chis!» para medir el nivel de ruido en directo. No se graba ni se envía nada.";
+"NSMicrophoneUsageDescription" = "Zinzin usa el micrófono solo cuando tú lo pides: durante el juego «¡Chis!» para medir el ruido en directo (no se graba nada) y para grabar los sonidos de tus personajes, que se quedan en tu móvil.";
 "NSMotionUsageDescription" = "Zinzin usa los sensores de movimiento para juegos como El Vaso Invisible o La Patata Caliente. No se graba nada.";
 "NSPhotoLibraryAddUsageDescription" = "Zinzin guarda en tus fotos la imagen de tu resultado, solo si eliges «Guardar imagen» al compartirla.";
+"Bande Zinzin" = "Grupo de Zinzin";
