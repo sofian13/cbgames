@@ -271,3 +271,35 @@
   .zz-trial { display: none; }
   .zz-pw-perks { gap: 2px; margin-top: 16px; }
 }
+
+/* ── Slide « Ma bande » (BandSlide.tsx) : la bande sautille doucement ── */
+.zz-band-bob { animation: zz-band-bob 2.4s ease-in-out infinite; animation-delay: var(--d, 0ms); }
+@keyframes zz-band-bob {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  50%      { transform: translate3d(0, -5px, 0); }
+}
+@media (prefers-reduced-motion: reduce) { .zz-band-bob { animation: none !important; } }
+/* Colonne de texte / groupe de persos : la bande rétrécit sur les petits écrans (SE) */
+.zz-band-txt { max-width: 58%; }
+.zz-band-sub { font-size: 14px; }
+.zz-band-cta { font-size: 14px; padding: 0 14px; }
+.zz-band-grp { transform-origin: 100% 100%; }
+@media (max-width: 400px) { .zz-band-grp { transform: scale(0.9); } .zz-band-sub { font-size: 13.5px; } }
+@media (max-width: 360px) {
+  .zz-band-txt { max-width: 64%; }
+  .zz-band-sub { font-size: 13px; }
+  .zz-band-cta { font-size: 13px; padding: 0 11px; }
+  .zz-band-grp { transform: scale(0.68); }
+}
+
+/* ── Pas de glissement horizontal de la page ──
+ * Seuls le carrousel et les rails de jeux défilent en largeur. Un conteneur en overflow-y: auto
+ * passe implicitement en overflow-x: auto : sur iOS (WKWebView), le moindre débordement
+ * (blob, ombre, rotation, police un peu plus large) laissait glisser TOUTE la page.
+ * `clip` sur html/body : coupe sans créer de conteneur de défilement (sans effet sur les jeux). */
+html, body { overflow-x: clip; overscroll-behavior-x: none; }
+.zz-home { overflow-x: hidden; overscroll-behavior-x: none; touch-action: pan-y; }
+/* Carrousel / rails : défilent en largeur seulement. overflow-x: auto rend aussi overflow-y « auto » :
+ * un blob qui dépasse en bas leur donnait quelques px de défilement vertical (la carte « bougeait »
+ * et un swipe vertical posé dessus ne faisait plus défiler la page). Rendu identique (déjà coupé). */
+.zz-home .zz-carousel, .zz-home .zz-rail { overflow-y: hidden; touch-action: pan-x pan-y; }

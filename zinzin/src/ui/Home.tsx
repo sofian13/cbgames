@@ -7,6 +7,8 @@ import { gameInfo, haptic, reducedMotion } from "./util";
 import { type Lang, pick, useLang } from "@/lib/i18n";
 import { UI } from "../strings";
 import { Backdrop } from "./Backdrop";
+import { BandSlide } from "./BandSlide";
+import { ShakeRain } from "./ShakeRain";
 import { ZLogo } from "./Logo";
 import { SoireeEntry } from "./SoireeKit";
 import { resumable, useSoiree } from "../soiree";
@@ -34,8 +36,10 @@ export function Home({
   const t = pick(UI, lang);
   const noAlc = useNoAlcohol();
   return (
-    <div ref={scrollRef} className="zz-scroll zz-page fixed inset-0">
+    <div ref={scrollRef} className="zz-scroll zz-page zz-home fixed inset-0">
       <Backdrop scrollRef={scrollRef} />
+      {/* Secret : secouer le tél → pluie de blobs (derrière le contenu, devant le fond) */}
+      <ShakeRain homeRef={scrollRef} />
       <div className="relative mx-auto max-w-lg" style={{ zIndex: 1, paddingTop: "calc(var(--sat) + 10px)", paddingBottom: "calc(var(--sab) + 32px)" }}>
         {/* En-tête */}
         <header className="flex items-center justify-between px-5">
@@ -194,7 +198,9 @@ function Featured({ onOpenGame, lang }: { onOpenGame: (id: string) => void; lang
         aria-label={t.featuredLabel}
       >
         {track.map((f, i) => (
-          <Slide key={f.id} f={f} lang={lang} active={i % n === idx} hidden={i >= n} onOpen={f.gameId ? () => { haptic(); onOpenGame(f.gameId!); } : undefined} />
+          f.band
+            ? <BandSlide key={f.id} f={f} lang={lang} active={i % n === idx} hidden={i >= n} />
+            : <Slide key={f.id} f={f} lang={lang} active={i % n === idx} hidden={i >= n} onOpen={f.gameId ? () => { haptic(); onOpenGame(f.gameId!); } : undefined} />
         ))}
       </div>
 

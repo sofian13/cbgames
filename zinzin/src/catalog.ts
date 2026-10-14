@@ -132,15 +132,18 @@ export interface ZFeatured {
   buddy?: { color: MascotColor; mood: MascotMood };
   /** Déguisement du blob (par défaut : celui du jeu) */
   costume?: ZCostume;
+  /** Slide « Ma bande » (visuel = les persos de l'utilisateur, ouvre la personnalisation) */
+  band?: true;
 }
 
 export const FEATURED: ZFeatured[] = [
-  { id: "hero",
-    kicker: { fr: "Ce soir", en: "Tonight", es: "Esta noche" },
-    title: { fr: "On joue à quoi ce soir ?", en: "What are we playing tonight?", es: "¿A qué jugamos esta noche?" },
-    subtitle: { fr: "Un seul téléphone, tout le monde joue.", en: "One phone, everyone plays.", es: "Un solo móvil y juega todo el mundo." },
+  // Ma bande : visuel = les persos de l'utilisateur (ou une bande d'exemple), ouvre la personnalisation
+  { id: "band", band: true,
+    kicker: { fr: "Nouveau · Ma bande", en: "New · My crew", es: "Nuevo · Mi grupo" },
+    title: { fr: "Personnalise ta bande", en: "Customize your crew", es: "Personaliza tu grupo" },
+    subtitle: { fr: "Coupes, chapeaux, voix… dans tous les jeux.", en: "Hair, hats, voices… in every game.", es: "Peinados, gorros, voces… en cada juego." },
     bg: "linear-gradient(135deg,#7A4EE8 0%,#B743D8 55%,#FF3EA5 100%)", ink: "#fff",
-    blob: "yellow", mood: "laughing", buddy: { color: "mint", mood: "shocked" } },
+    blob: "yellow", mood: "laughing" },
   { id: "verre", gameId: "verre", costume: "waiter",
     kicker: { fr: "Nouveau · tiens-le bien droit", en: "New · keep it steady", es: "Nuevo · mantenlo recto" },
     title: { fr: "Le Verre Invisible", en: "The Invisible Glass", es: "El Vaso Invisible" },

@@ -723,3 +723,26 @@ export const ONBOARDING: I18n<{
     replay: "Ver el tutorial otra vez",
   },
 };
+
+/** Slide « Ma bande » de l'accueil (ui/BandSlide.tsx). */
+export const BAND_SLIDE: I18n<{
+  create: string;
+  see: string;
+  aria: (action: string) => string;
+}> = {
+  fr: {
+    create: "Créer ma bande",
+    see: "Voir ma bande",
+    aria: (action) => `Ma bande : ${action}`,
+  },
+  en: {
+    create: "Create my crew",
+    see: "See my crew",
+    aria: (action) => `My crew: ${action}`,
+  },
+  es: {
+    create: "Crear mi grupo",
+    see: "Ver mi grupo",
+    aria: (action) => `Mi grupo: ${action}`,
+  },
+};
