@@ -45,6 +45,17 @@ let currentGame: string | null = null;
 export function setCurrentGame(id: string | null) {
   currentGame = id;
   currentPlayers = null; // nouvelle partie : on ne connaît pas encore la table
+  live = null;
+}
+
+/* Classement EN COURS du jeu affiché (jeux à scores) : sert à la Soirée quand on quitte un jeu
+ * avant son écran de fin (croix « Quitter ») — le classement du moment compte, comme « S'arrêter là ». */
+let live: { game: string | null; detail: GameFinishedDetail } | null = null;
+/** Classement en cours du jeu `gameId` (null si le jeu n'en a pas ou s'il n'y a encore personne devant). */
+export function takeLiveFinished(gameId: string): GameFinishedDetail | null {
+  const l = live;
+  live = null;
+  return l && l.game === gameId && (l.detail.winners?.length ?? 0) > 0 ? l.detail : null;
 }
 export function getCurrentGame(): string | null {
   return currentGame;
@@ -74,7 +85,14 @@ export function emitGameFinished(detail: GameFinishedDetail = {}) {
  */
 export function useGameFinished(finished: boolean, info?: FinishedInfo) {
   const latest = useRef(info);
-  useEffect(() => { latest.current = info; });
+  useEffect(() => {
+    latest.current = info;
+    // En cours de partie : on garde le classement du moment (scores seulement, jamais des gagnants
+    // désignés qui ne valent qu'à la fin : camp, dernier en vie…)
+    if (!finished && info?.scores && !info.noWinner && !(info.winners ?? []).some((w) => (w ?? "").trim())) {
+      live = { game: currentGame, detail: { ...finishedPayload(info, currentPlayers), gameId: currentGame ?? undefined, players: currentPlayers ?? undefined } };
+    }
+  });
   useEffect(() => {
     if (!finished) return;
     emitGameFinished(finishedPayload(latest.current, currentPlayers));

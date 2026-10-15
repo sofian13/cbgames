@@ -39,7 +39,7 @@ export function SoireeSetup({ onClose, onLaunch }: {
 
   const toRecap = () => {
     haptic();
-    playSfx("card-shuffle", { volume: 0.6 });
+    playSfx("card-shuffle", { volume: 0.6, duration: 0.7 }); // court : juste un « frrt », pas tout le mélange
     setPlaylist(generatePlaylist(band.length, vibe, length));
     setStep(2);
   };

@@ -4,7 +4,7 @@ import { ConfettiBurst } from "@/components/ConfettiBurst";
 import { colorForIndex } from "@/components/games/local-kit";
 import { armPartyBand, disarmPartyBand } from "@/lib/saved-players";
 import { setPartyMood } from "@/lib/party-mood";
-import { emitGameFinished, GAME_FINISHED_EVENT, type GameFinishedDetail } from "@/lib/game-finished";
+import { emitGameFinished, GAME_FINISHED_EVENT, takeLiveFinished, type GameFinishedDetail } from "@/lib/game-finished";
 import { getLang, pick, useLang, useT, type I18n } from "@/lib/i18n";
 import { playCombo, playSfx, preloadSfx } from "@/lib/sfx";
 import { GAME_KIND, getZGame } from "../catalog";
@@ -12,7 +12,7 @@ import { shareApp } from "../settings";
 import { shareResultCard, shareTrophyCard } from "@/lib/share-card";
 import { soberKind } from "../no-alcohol";
 import {
-  announced, announcedGains, captureFinished, courageFor, endSoiree, kingsOf, ranking, recapTitles, recordWinners, setPhase, skipGame, unluckyOf, useSoiree, type SoireeState,
+  announced, announcedGains, captureFinished, courageFor, endSoiree, getSoiree, kingsOf, ranking, recapTitles, recordWinners, setPhase, skipGame, unluckyOf, useSoiree, type SoireeState,
 } from "../soiree";
 import { allTrophies, Ceremony, TROPHY_STR, TrophyList, trophyText } from "./SoireeTrophies";
 import { SOIREE } from "../strings";
@@ -47,7 +47,10 @@ export function SoireeRun({ onHome, onNew, toast }: { onHome: () => void; onNew:
 
   if (s.phase === "playing") {
     const t = pick(SOIREE, getLang());
-    const toWinner = () => { disarmPartyBand(); setPartyMood(null); playSfx("whoosh", { volume: 0.6 }); setPhase("winner"); };
+    const toWinner = () => {
+      // Jeu quitté avant son écran de fin : le classement du moment compte (s'il y en a un)
+      if (!getSoiree()?.pending) { const d = takeLiveFinished(s.playlist[s.index]); if (d) captureFinished(d); }
+      disarmPartyBand(); setPartyMood(null); playSfx("whoosh", { volume: 0.6 }); setPhase("winner"); };
     return (
       <GameScreen
         key={`${s.index}-${s.playlist[s.index]}`}
