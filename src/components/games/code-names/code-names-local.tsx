@@ -542,7 +542,7 @@ export default function MotsEspionsLocal({ onReturnToLobby }: GameProps) {
   if (step === "players") {
     return (
       <>
-        <PlayersSetup emoji="🕵️" name={t.title} min={4} max={12} accent={PINK} onStart={onPlayers} footer={<IdeaButton game="Mots Espions" kind="mot" />} />
+        <PlayersSetup emoji="🕵️" name={t.title} min={4} max={16} accent={PINK} onStart={onPlayers} footer={<IdeaButton game="Mots Espions" kind="mot" />} />
         {tools}
         {sheets}
       </>

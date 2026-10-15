@@ -138,7 +138,9 @@ export function SouffleMode({ plan, ...c }: ModeCommon & { plan: SoufflePlan }) 
   return (
     <ModeEnd
       rows={rows}
-      result={{ scores: { names: ids.map((p) => c.players[p]), values: ids.map((p) => tot[p]) } }}
+      // Au 1/10 s, comme affiché : deux temps égaux à l'écran sont ex æquo
+      result={{ scores: { names: ids.map((p) => c.players[p]), values: ids.map((p) => Math.round(tot[p] / 100)) } }}
+      complete={ids.length === c.players.length}
       unit={t.unitS}
       loser={loser ? { name: c.players[loser.p], colorIndex: loser.p, sentence: loser.s, onReroll: () => setLoser({ ...loser, s: c.rerollDare(loser.s) }), title: `${m.lastPenalty} · ${c.players[loser.p]}` } : null}
       tieNote={ids.length > 1 ? m.tieBottom : null}

@@ -19,7 +19,8 @@ import { keepAwake, newTiltInput, requestMotionPermission, startSensors, vibrate
 import { SpilledGlass } from "./art";
 import { Tools, TutoScreen } from "./ui";
 import { firstTimeNow, markTutoSeen } from "../game-tuto";
-import { uniqueMax, useGameFinished } from "@/lib/game-finished";
+import { rankingOf, uniqueMax, useGameFinished, winnersOf, type GameScores } from "@/lib/game-finished";
+import { WIN_STR } from "@/lib/winners-text";
 import { ShareResultButton } from "../share-result-button";
 import { verreCard } from "@/lib/share-cards";
 import { SoireeNextButton } from "@/components/games/soiree-next";
@@ -67,6 +68,7 @@ const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
 
 export default function VerreGame({ onReturnToLobby }: GameProps) {
   const t = useT(VERRE_STR);
+  const w = useT(WIN_STR);
   // Contenu figé dans la langue du début de partie (gages, noms des liquides)
   const [content] = useState(() => pick(VERRE_STR, getLang()));
   // Tuto 1re fois dès l'ouverture, avant la saisie des joueurs
@@ -74,8 +76,10 @@ export default function VerreGame({ onReturnToLobby }: GameProps) {
   const [players, setPlayers] = useState<string[]>([]);
   const [scores, setScores] = useState<number[]>([]);
   const [spills, setSpills] = useState<number[]>([]);
-  // fin de partie → demande de note éventuelle + stats de la bande (app)
-  useGameFinished(phase === "end", { loser: uniqueMax(players, spills), scores: { names: players, values: scores } });
+  // fin de partie → note éventuelle + Soirée (app) : points, ex æquo départagés par le moins de
+  // verres renversés (exactement comme le classement de l'écran de fin)
+  const endScores: GameScores = { names: players, values: scores, tiebreak: spills, tiebreakLowerWins: true };
+  useGameFinished(phase === "end", { loser: uniqueMax(players, spills), scores: endScores });
   const [bank, setBank] = useState<number[]>([]);
   const [diff, setDiff] = useState<Difficulty>("normal");
   // Mode sans alcool / Soirée « Chill » : pas de gorgées (le verre virtuel reste) ; « Folle » : gorgées cochées d'office ; sinon gage par défaut
@@ -413,22 +417,28 @@ export default function VerreGame({ onReturnToLobby }: GameProps) {
     );
   }
 
-  // ── Fin ──
-  const best = ranking[0];
+  // ── Fin ── (couronnés = règle unique des gagnants, la même que la Soirée)
+  const winners = winnersOf(endScores);
+  const ranks = rankingOf(endScores);
+  const rankOf = (name: string) => ranks.find((r) => r.name === name.trim())?.rank;
+  const crowned = ranking.filter((r) => winners.includes(r.name));
+  const best = crowned[0];
   const king = [...ranking].sort((a, b) => b.sp - a.sp)[0];
   return (
     <Screen>
       <Tools />
       <ConfettiBurst count={60} />
       <div className="flex justify-center">
-        <PlayerBlob name={best?.name} colorIndex={best?.i ?? 0} size={118} mood="laughing" crown arms shadow />
+        {crowned.length ? crowned.map((r) => (
+          <PlayerBlob key={r.i} name={r.name} colorIndex={r.i} size={crowned.length > 1 ? 84 : 118} mood="laughing" crown arms shadow />
+        )) : <Mascot size={110} color="mint" mood="shocked" arms shadow={false} />}
       </div>
       <h1 className="mt-3 text-center text-[clamp(38px,11vw,54px)] leading-[0.95]" style={{ ...DISPLAY, textShadow: `4px 4px 0 ${INK}`, overflowWrap: "anywhere" }}>
-        {t.winner(best?.name ?? "")}
+        {best ? (crowned.length > 1 ? w.win(crowned.map((r) => r.name)) : t.winner(best.name)) : w.allTied}
       </h1>
-      <p className="mt-2 text-center text-[19px]" style={{ ...DISPLAY, color: ZZ.yellow }}>{t.bestBarman}</p>
+      <p className="mt-2 text-center text-[19px]" style={{ ...DISPLAY, color: ZZ.yellow }}>{best ? t.bestBarman : w.allTiedSub}</p>
       <div className="mt-5">
-        <ZRanking rows={ranking.map((r) => ({ name: r.name, score: r.s, colorIndex: r.i, note: t.spills(r.sp) }))} unit="pts" />
+        <ZRanking rows={ranking.map((r) => ({ name: r.name, score: r.s, colorIndex: r.i, note: t.spills(r.sp), rank: rankOf(r.name) }))} unit="pts" winners={winners} />
       </div>
       <ZCard bg={ZZ.coral} tilt={1.5} shadow={4} radius={20} className="mt-5 px-4 py-3 text-center">
         <p className="text-[18px] leading-tight" style={DISPLAY}>{king && king.sp > 0 ? t.spillKing(king.name, king.sp) : t.noSpill}</p>

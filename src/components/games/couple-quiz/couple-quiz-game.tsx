@@ -15,7 +15,7 @@ import { useGameStore } from "@/lib/stores/game-store";
 import { LocalShell, ModeSelect, colorForIndex, type GameMode } from "@/components/games/local-kit";
 import { Mascot, MASCOT_PALETTE } from "@/components/Mascot";
 import { PlayerBlob } from "@/components/avatar/PlayerBlob";
-import { ArrowLeft, Brain, Check, Flame, Heart, Hourglass, House, MessageCircle, Pizza, RotateCcw, Sparkles, Volume2, VolumeX, type LucideIcon } from "lucide-react";
+import { ArrowLeft, Brain, Check, Crown, Flame, Heart, Hourglass, House, MessageCircle, Pizza, RotateCcw, Sparkles, Volume2, VolumeX, type LucideIcon } from "lucide-react";
 import { GameIconButton, GameInlineIcon, GameTopRight } from "@/components/games/game-icon-button";
 import { GameRulesSheet, RulesIconButton } from "@/components/games/game-tuto";
 import { CQ_RULES } from "@/components/games/couple-quiz/rules";
@@ -26,7 +26,7 @@ import type { Q } from "./questions";
 import { getLang, pick, useT, type Lang } from "@/lib/i18n";
 import { STR, packsFor } from "./i18n";
 import { getSavedDuo, saveDuo } from "@/lib/saved-players";
-import { useGameFinished } from "@/lib/game-finished";
+import { useGameFinished, winnersOf } from "@/lib/game-finished";
 import { SoireeNextButton } from "@/components/games/soiree-next";
 
 const ACCENT = "#FF6BAE";
@@ -471,6 +471,7 @@ function CoupleQuizLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) 
     const total = scores[0] + scores[1];
     const pct = deck.length ? Math.round((total / deck.length) * 100) : 0;
     const verdict = verdictFor(pct, t.verdicts);
+    const duoWinners = winnersOf({ names: [...names], values: [...scores] });
     return (
       <Screen
         footer={
@@ -502,8 +503,9 @@ function CoupleQuizLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) 
             {t.goodAnswers(total, deck.length)}
           </p>
           <div className={`mt-5 grid w-full gap-3 ${longDuo ? "grid-cols-1" : "grid-cols-2"}`}>
-            <DuoScore name={names[0]} score={scores[0]} idx={0} big />
-            <DuoScore name={names[1]} score={scores[1]} idx={1} big />
+            {/* Couronne = meilleur devineur (règle unique, la même que la Soirée ; égalité = personne) */}
+            <DuoScore name={names[0]} score={scores[0]} idx={0} big crown={duoWinners.includes(names[0].trim())} />
+            <DuoScore name={names[1]} score={scores[1]} idx={1} big crown={duoWinners.includes(names[1].trim())} />
           </div>
           <div className="mt-7">
             <IdeaButton game="Tu me connais ?" kind="idée de question" bg="#fff" />
@@ -552,7 +554,7 @@ function StickerChoice({ a, b, onPick }: { a: string; b: string; onPick: (p: "a"
   );
 }
 
-function DuoScore({ name, score, idx, big }: { name: string; score: number; idx: number; big?: boolean }) {
+function DuoScore({ name, score, idx, big, crown }: { name: string; score: number; idx: number; big?: boolean; crown?: boolean }) {
   const bg = bodyOf(idx);
   return (
     <div
@@ -562,7 +564,8 @@ function DuoScore({ name, score, idx, big }: { name: string; score: number; idx:
       <span className="grid shrink-0 place-items-center rounded-[12px]" style={{ ...sticker("#fff", 2), ...DISPLAY, color: INK, width: big ? 46 : 38, height: big ? 46 : 38, fontSize: big ? 26 : 21 }}>
         {score}
       </span>
-      <span className="min-w-0 text-[15px] font-bold leading-tight" style={{ overflowWrap: "break-word" }}>{name}</span>
+      <span className="min-w-0 flex-1 text-[15px] font-bold leading-tight" style={{ overflowWrap: "break-word" }}>{name}</span>
+      {crown && <Crown size={20} strokeWidth={2.8} className="shrink-0" aria-hidden />}
     </div>
   );
 }

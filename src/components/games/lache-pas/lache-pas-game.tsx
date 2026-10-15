@@ -21,7 +21,7 @@ import { SoundButton } from "@/components/games/local-kit";
 import { GameRulesSheet, GameTuto, RulesIconButton, useFirstTimeTuto } from "@/components/games/game-tuto";
 import { getSavedPlayers } from "@/lib/saved-players";
 import { LP_EXTRA, useLpTutoSlides } from "./tuto";
-import { useGameFinished } from "@/lib/game-finished";
+import { rankingOf, uniqueMax, useGameFinished, winnersOf, type GameScores } from "@/lib/game-finished";
 import { SoireeNextButton } from "@/components/games/soiree-next";
 
 // ── Lâche pas ! ────────────────────────────────────────────
@@ -76,13 +76,23 @@ export default function LachePasGame({ onReturnToLobby }: GameProps) {
     return Array.from({ length: MAX_FINGERS }, (_, i) => saved[i] ?? "");
   });
   const nameOf = (slot: number) => names[slot]?.trim() || "";
-  // Fin de manche → note éventuelle + Soirée (app) : le doigt couronné gagne, le seul doigt pris perd
-  useGameFinished(phase === "end", {
-    winners: outcome?.winner != null && nameOf(outcome.winner) ? [nameOf(outcome.winner)] : [],
-    loser: outcome && outcome.losers.length === 1 ? nameOf(outcome.losers[0]) || null : null,
-  });
+  // Bilan de la PARTIE (toutes les manches) par doigt : couronnes, défaites, a joué au moins une manche
+  const [crowns, setCrowns] = useState<number[]>(() => Array(MAX_FINGERS).fill(0));
+  const [burns, setBurns] = useState<number[]>(() => Array(MAX_FINGERS).fill(0));
+  const [inGame, setInGame] = useState<boolean[]>(() => Array(MAX_FINGERS).fill(false));
   const colorName = (slot: number) => t.colors[colorForIndex(slot)] ?? colorForIndex(slot);
   const labelOf = (slot: number) => nameOf(slot) || colorName(slot);
+  // Classement de la partie (même calcul pour l'écran de fin et la Soirée) : le plus de couronnes,
+  // ex æquo départagés par le moins de défaites ; doigts sans prénom désignés par leur couleur
+  const slots = inGame.map((on, k) => (on ? k : -1)).filter((k) => k >= 0);
+  const gameScores: GameScores = { names: slots.map(labelOf), values: slots.map((k) => crowns[k]), tiebreak: slots.map((k) => burns[k]), tiebreakLowerWins: true };
+  const champs = winnersOf(gameScores);
+  const allNamed = slots.every((k) => nameOf(k));
+  // Fin de partie → note éventuelle + Soirée (app) : le résultat de la partie entière, pas de la dernière manche
+  useGameFinished(phase === "end", allNamed
+    ? { scores: gameScores, loser: uniqueMax(slots.map(nameOf), slots.map((k) => burns[k])) }
+    // Un doigt sans prénom : seuls les couronnés qui ont un prénom comptent (jamais un autre à leur place)
+    : { winners: slots.filter((k) => champs.includes(labelOf(k)) && nameOf(k)).map(nameOf), loser: null });
   const [rulesOpen, setRulesOpen] = useState(false);
   // Tuto en slides : la 1re fois qu'on ouvre le jeu
   const tuto = useFirstTimeTuto("lache-pas", { atMount: true });
@@ -146,6 +156,10 @@ export default function LachePasGame({ onReturnToLobby }: GameProps) {
         buzz("warn");
       }
       setOutcome({ fuse, losers, coward, winner, fingers: fs, sips, dare: pick(content.dares) });
+      // Bilan de la partie : +1 couronne au plus courageux, +1 défaite à chaque perdant
+      if (winner != null) setCrowns((c) => c.map((v, k) => (k === winner ? v + 1 : v)));
+      setBurns((b) => b.map((v, k) => (losers.includes(k) ? v + 1 : v)));
+      setInGame((g) => g.map((v, k) => v || fs.some((f) => f.slot === k)));
       setStats((s) => ({ rounds: s.rounds + 1, boomed: s.boomed + (still.length > 0 ? still.length : 0), cowards: s.cowards + (coward != null ? 1 : 0) }));
       go("result");
     },
@@ -395,6 +409,28 @@ export default function LachePasGame({ onReturnToLobby }: GameProps) {
             </div>
           ))}
         </div>
+        {/* Classement de la partie : couronnés = gagnants (les mêmes que la Soirée) */}
+        {slots.length >= 2 && (
+          <div className="mt-6 w-full">
+            <p className="text-center text-[18px] leading-tight" style={{ ...DISPLAY, color: C.yellow }}>
+              {champs.length ? x.champ(champs.join(x.and)) : x.noChamp}
+            </p>
+            <div className="mt-3 flex flex-col gap-2">
+              {[...slots].sort((a, b) => crowns[b] - crowns[a] || burns[a] - burns[b] || a - b).map((k) => {
+                const won = champs.includes(labelOf(k));
+                const rank = rankingOf(gameScores).find((r) => r.name === labelOf(k))?.rank ?? 0;
+                return (
+                  <div key={k} className="flex items-center gap-2.5 px-3 py-2" style={{ ...sticker(won ? C.yellow : "#fff", { radius: 18, shadow: 3, border: 2.5 }), color: INK }}>
+                    <span className="w-6 text-center text-[18px]" style={DISPLAY}>{won ? <Crown size={18} strokeWidth={3} aria-hidden /> : rank}</span>
+                    <MascotAvatar color={colorForIndex(k)} size={30} mood={won ? "cool" : "happy"} border={false} />
+                    <span className="min-w-0 flex-1 truncate text-[17px]" style={DISPLAY}>{labelOf(k)}</span>
+                    <span className="shrink-0 text-right text-[13px] font-bold leading-tight">{x.crowns(crowns[k])}<br />{x.losses(burns[k])}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
         <div className="mt-auto flex w-full flex-col items-center gap-1 pt-7">
           <SoireeNextButton className="mb-2" />
           <StickerBtn
@@ -402,7 +438,11 @@ export default function LachePasGame({ onReturnToLobby }: GameProps) {
             bg={ACCENT}
             color="#fff"
             onClick={() => {
+              // Nouvelle partie : bilan remis à zéro (jamais cumulé avec la précédente)
               setStats({ rounds: 0, boomed: 0, cowards: 0 });
+              setCrowns(Array(MAX_FINGERS).fill(0));
+              setBurns(Array(MAX_FINGERS).fill(0));
+              setInGame(Array(MAX_FINGERS).fill(false));
               newRound();
             }}
           >

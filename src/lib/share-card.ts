@@ -856,6 +856,8 @@ export interface BandStatsShare {
   podium?: { title: string; people: { name: string; look: AvatarLook | null; value: string; label: string }[] };
   /** Top des jeux (2-3 barres) */
   top?: { title: string; rows: { name: string; n: number; color: string }[] };
+  /** Champion(s) du mois (« Champion d'octobre » · « 6 victoires ce mois-ci »), optionnel */
+  champion?: { label: string; names: string; value: string; people: { name: string; look: AvatarLook | null }[] };
   /** Texte qui accompagne l'image */
   text: string;
 }
@@ -870,7 +872,8 @@ export async function renderBandStatsCard(c: BandStatsShare): Promise<HTMLCanvas
   const people = (c.podium?.people ?? []).slice(0, 3);
   const rows = (c.top?.rows ?? []).slice(0, 3);
   await loadFonts([c.title, c.games.value, c.games.label, c.last?.label, c.last?.value, c.fav?.label, c.fav?.name, c.fav?.value,
-    c.podium?.title, ...people.flatMap((p) => [p.name, p.value, p.label]), c.top?.title, ...rows.map((r) => r.name), s.playOn, SHARE_SITE, "zinzin0123456789"]
+    c.podium?.title, ...people.flatMap((p) => [p.name, p.value, p.label]), c.top?.title, ...rows.map((r) => r.name),
+    c.champion?.label, c.champion?.names, c.champion?.value, s.playOn, SHARE_SITE, "zinzin0123456789"]
     .filter(Boolean).join(" "));
   background(ctx);
 
@@ -889,10 +892,10 @@ export async function renderBandStatsCard(c: BandStatsShare): Promise<HTMLCanvas
   ctx.restore();
 
   // Hauteurs des blocs, puis centrage vertical entre le titre et le pied
-  const HERO_H = 280, POD_H = 530, BAR_H = 74, GAP = 34;
+  const HERO_H = 280, POD_H = 530, BAR_H = 74, GAP = 34, CHAMP_H = 150;
   const top = tY + tH + 46, bottom = 1685;
   const barsOf = (n: number) => (n >= 2 ? 60 + n * BAR_H : 0);
-  const blocksOf = (n: number) => HERO_H + (people.length ? GAP + POD_H : 0) + (barsOf(n) ? GAP + barsOf(n) : 0);
+  const blocksOf = (n: number) => HERO_H + (c.champion ? GAP + CHAMP_H : 0) + (people.length ? GAP + POD_H : 0) + (barsOf(n) ? GAP + barsOf(n) : 0);
   // Pas la place : on retire des barres (jamais le pied ni le podium)
   let nBars = rows.length;
   while (nBars > 0 && blocksOf(nBars) > bottom - top) nBars = nBars > 2 ? nBars - 1 : 0;
@@ -955,6 +958,39 @@ export async function renderBandStatsCard(c: BandStatsShare): Promise<HTMLCanvas
     ctx.restore();
   }
   y += HERO_H;
+
+  // ── Champion(s) du mois : bandeau doré, blobs couronnés à gauche
+  if (c.champion) {
+    y += GAP;
+    const ch = c.champion;
+    sticker(ctx, CX, y, CW, CHAMP_H, "#FFD23F", { r: 44, shadow: 12, tilt: 1.5, line: 7 });
+    const crew = ch.people.slice(0, 3);
+    const bs = crew.length > 1 ? 96 : 108, step = bs * 0.78;
+    const artW = bs + step * (crew.length - 1);
+    for (let i = 0; i < crew.length; i++) {
+      const p = crew[i];
+      const look = p.look ? (isUnlockedNow() ? p.look : freeLook(p.look)) : baseLook(colorOf(i + 1));
+      const svg = avatarSvgMarkup(look, "happy");
+      const img = svg ? await loadSvg(svg) : null;
+      const bx = CX + 40 + i * step, by = y + CHAMP_H - bs - 6;
+      if (img) ctx.drawImage(img, bx + bs / 2 - (bs * ART) / 2, by - bs * ART_PAD, bs * ART, bs * ART);
+      crownAt(ctx, bx + bs / 2, by + bs * 0.12, bs * 0.42);
+    }
+    const tx0 = CX + 40 + artW + 34, tw = CX + CW - 40 - tx0;
+    ctx.save();
+    ctx.globalAlpha = 0.8;
+    const lf = fit(ctx, ch.label.toUpperCase(), (px) => body(px), tw, 30, 22, 1);
+    ctx.font = body(lf.px);
+    drawLines(ctx, lf.lines, tx0, y + 46, 0, INK, "left");
+    ctx.globalAlpha = 1;
+    const nf = fit(ctx, ch.names, display, tw, 50, 30, 1);
+    ctx.font = display(nf.px);
+    drawLines(ctx, nf.lines, tx0, y + 94, 0, INK, "left");
+    ctx.font = body(28, 700);
+    drawLines(ctx, [ch.value], tx0, y + 130, 0, INK, "left");
+    ctx.restore();
+    y += CHAMP_H;
+  }
 
   // ── Podium « Qui perd le plus »
   if (people.length && c.podium) {
@@ -1039,6 +1075,36 @@ export async function renderBandStatsCard(c: BandStatsShare): Promise<HTMLCanvas
 
   footer(ctx, s);
   return canvas;
+}
+
+/** Petite couronne dorée (bandeau du champion du mois). */
+function crownAt(ctx: Ctx, cx: number, baseY: number, w: number) {
+  const h = w * 0.7;
+  ctx.save();
+  ctx.translate(cx, baseY);
+  ctx.rotate((-8 * Math.PI) / 180);
+  ctx.beginPath();
+  ctx.moveTo(-w / 2, 0);
+  ctx.lineTo(-w * 0.6, -h);
+  ctx.lineTo(-w * 0.25, -h * 0.45);
+  ctx.lineTo(0, -h * 1.1);
+  ctx.lineTo(w * 0.25, -h * 0.45);
+  ctx.lineTo(w * 0.6, -h);
+  ctx.lineTo(w / 2, 0);
+  ctx.closePath();
+  ctx.fillStyle = "#FFD23F";
+  ctx.fill();
+  ctx.lineJoin = "round";
+  ctx.lineWidth = 6;
+  ctx.strokeStyle = INK;
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(0, -h * 0.35, w * 0.09, 0, Math.PI * 2);
+  ctx.fillStyle = "#FF3EA5";
+  ctx.fill();
+  ctx.lineWidth = 3;
+  ctx.stroke();
+  ctx.restore();
 }
 
 /** Partage l'image « Les stats de la bande ». */

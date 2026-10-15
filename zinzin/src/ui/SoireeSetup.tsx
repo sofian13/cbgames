@@ -5,7 +5,7 @@ import { pick, useLang } from "@/lib/i18n";
 import { playSfx, preloadSfx } from "@/lib/sfx";
 import { GAME_KIND, getZGame } from "../catalog";
 import type { ZGameId } from "../catalog-text";
-import { LENGTHS, VIBES, generatePlaylist, moveGame, swapGame, type SoireeLength, type Vibe } from "../soiree";
+import { LENGTHS, VIBES, generatePlaylist, moveGame, swapGame, uniqueBand, type SoireeLength, type Vibe } from "../soiree";
 import { SOIREE, UI } from "../strings";
 import { ZBlob, ZPALETTE } from "./ZBlob";
 import { BigBtn, Tag } from "./common";
@@ -58,7 +58,7 @@ export function SoireeSetup({ onClose, onLaunch }: {
           min={2}
           max={16}
           accent={SOIREE_BG}
-          onStart={(names) => { preloadSfx(["card-shuffle", "whoosh", "confirm"]); setBand(names); setStep(1); }}
+          onStart={(names) => { preloadSfx(["card-shuffle", "whoosh", "confirm"]); setBand(uniqueBand(names)); setStep(1); }}
         />
       )}
 

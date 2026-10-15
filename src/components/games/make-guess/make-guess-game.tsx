@@ -22,7 +22,8 @@ import { STR } from "./i18n";
 import { DEFAULT_THEME_IDS, FREE_THEME_IDS, OPT_IN_THEME_IDS, THEME_IDS, WORDS, freeWords, type ThemeId } from "./words";
 import { requestPaywall, useUnlocked } from "@/lib/entitlements";
 import { PremiumNudge, fmtCount, useNudgeText } from "../premium-nudge";
-import { useGameFinished } from "@/lib/game-finished";
+import { useGameFinished, winnersOf } from "@/lib/game-finished";
+import { WIN_STR } from "@/lib/winners-text";
 import { SoireeNextButton } from "@/components/games/soiree-next";
 
 const ACCENT = "#FFD23F";
@@ -118,7 +119,8 @@ export default function MakeGuessGame({
   // Équipes pré-remplies avec la dernière bande (mémoire des prénoms), 2 par équipe
   const [teams, setTeams] = useState<Team[]>(() => {
     const saved = getSavedPlayers();
-    const count = Math.max(2, Math.floor(saved.length / 2));
+    // Bande impaire : une équipe de plus avec une place libre (personne n'est écarté sans prévenir)
+    const count = Math.max(2, Math.ceil(saved.length / 2));
     return Array.from({ length: count }, (_, i) => ({
       name: STR[lang].teamName(i + 1),
       player1: saved[i * 2] ?? "",
@@ -408,6 +410,8 @@ export default function MakeGuessGame({
   });
 
   const sortedFinal = [...finalScores].sort((a, b) => b.score - a.score);
+  // Équipes couronnées = règle unique (ex æquo en tête = toutes, toutes à égalité = aucune) : mêmes joueurs que la Soirée
+  const teamWinners = winnersOf({ names: finalScores.map((f) => `#${f.idx}`), values: finalScores.map((f) => f.score) }).map((k) => Number(k.slice(1)));
   // Fin de partie → note éventuelle + Soirée (app) : chaque joueur prend le score de son équipe
   // (équipe seule en tête = ses deux joueurs gagnent ; égalité en tête = pas de gagnant désigné)
   useGameFinished(phase === "game-over", {
@@ -734,7 +738,7 @@ export default function MakeGuessGame({
       </span>
       {sortedFinal[0] && (
         <h2 className="mt-3 text-center text-[clamp(36px,10vw,48px)] leading-[0.95]" style={{ ...DISPLAY, textShadow: `4px 4px 0 ${INK}` }}>
-          {sortedFinal[1] && sortedFinal[1].score === sortedFinal[0].score ? t.tie : t.wins(sortedFinal[0].name)}
+          {teamWinners.length === 0 ? t.tie : teamWinners.length === 1 ? t.wins(teams[teamWinners[0]].name) : WIN_STR[lang].win(teamWinners.map((k) => teams[k].name))}
         </h2>
       )}
 
@@ -747,7 +751,7 @@ export default function MakeGuessGame({
             const place = sortedFinal.findIndex((x) => x.score === row.score) + 1;
             return (
               <div key={row.idx} className="flex flex-col items-center">
-                <TeamBlob team={teams[row.idx]} size={place === 1 ? 72 : 54} color={TEAM_BLOB[row.idx % TEAM_BLOB.length]} mood="happy" arms cheering={place === 1} crown={place === 1} delay={place * 0.12} />
+                <TeamBlob team={teams[row.idx]} size={place === 1 ? 72 : 54} color={TEAM_BLOB[row.idx % TEAM_BLOB.length]} mood="happy" arms cheering={teamWinners.includes(row.idx)} crown={teamWinners.includes(row.idx)} delay={place * 0.12} />
                 <div className="mt-1 flex w-full flex-col items-center pt-2" style={{ ...sticker(PODIUM_BG[place], { radius: 18, shadow: 4 }), borderBottomLeftRadius: 6, borderBottomRightRadius: 6, minHeight: heights[place] }}>
                   <div className="leading-none" style={{ ...DISPLAY, fontSize: place === 1 ? 32 : 24 }}>{place}</div>
                   <div className="mt-1 line-clamp-2 w-full px-1.5 text-center text-[14px] font-bold leading-tight" lang={lang} style={{ hyphens: "auto", overflowWrap: "anywhere" }}>{row.name}</div>

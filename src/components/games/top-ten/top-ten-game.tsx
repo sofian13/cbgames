@@ -23,7 +23,8 @@ import { THEMES, type ThemeState } from "@/components/games/top-ten/themes";
 import { TT_STR } from "@/components/games/top-ten/i18n";
 import { GameRulesSheet, GameTuto, RulesIconButton, TutoAgainButton, useFirstTimeTuto } from "@/components/games/game-tuto";
 import { TT_EXTRA, useTtTutoSlides } from "@/components/games/top-ten/tuto";
-import { uniqueMax, useGameFinished } from "@/lib/game-finished";
+import { uniqueMax, useGameFinished, winnersOf } from "@/lib/game-finished";
+import { WIN_STR } from "@/lib/winners-text";
 import { ShareResultButton } from "@/components/games/share-result-button";
 import { rankingCard } from "@/lib/share-cards";
 import { SoireeNextButton } from "@/components/games/soiree-next";
@@ -139,6 +140,7 @@ function TopTenLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) {
 function TopTenLocalGame({ onReturnToLobby, tools, onTuto }: { onReturnToLobby?: () => void; tools: React.ReactNode; onTuto: () => void }) {
   const x = useT(TT_EXTRA);
   const t = useT(TT_STR);
+  const w = useT(WIN_STR);
   // Numéros distribués en passant le tél (seul moment où il circule), puis UN classement commun
   type Phase = "setup" | "target" | "theme" | "pass-number" | "show-number" | "answer" | "rank" | "reveal" | "over";
   const [phase, setPhase] = useState<Phase>("setup");
@@ -384,14 +386,15 @@ function TopTenLocalGame({ onReturnToLobby, tools, onTuto }: { onReturnToLobby?:
     .map((name, i) => ({ name, score: scores[i] ?? 0, colorIndex: i, note: x.gapNote(gapTotals[i] ?? 0) }))
     .sort((a, b) => b.score - a.score);
   const worstAll = uniqueMax(players, gapTotals);
-  const tieTop = ranking.length > 1 && ranking[1].score === ranking[0]?.score;
+  // Couronnés = règle unique (la même que la Soirée) : ex æquo en tête = tous, toute la table = personne
+  const winners = winnersOf({ names: players, values: scores });
   const teamPct = teamMax > 0 ? teamScore / teamMax : 0;
   return (
     <ZScreen bg={TT_COLOR} tools={tools}>
       <ConfettiBurst count={50} />
       {/* Ex æquo en tête : pas de « X a été le mieux compris » arbitraire */}
-      <ZTitle size={(ranking[0]?.name.length ?? 0) > 10 ? 32 : 40} className="text-center">
-        {tieTop ? t.tieTop : x.bestUnderstood(ranking[0]?.name ?? "")}
+      <ZTitle size={winners.length > 1 || (winners[0]?.length ?? 0) > 10 ? 32 : 40} className="text-center">
+        {winners.length === 0 ? w.allTied : winners.length === 1 ? x.bestUnderstood(winners[0]) : w.win(winners)}
       </ZTitle>
       {/* Score d'équipe de la partie */}
       <ZCard bg="#fff" tilt={-1.5} shadow={5} radius={22} className="mt-5 px-4 py-3">
@@ -404,7 +407,7 @@ function TopTenLocalGame({ onReturnToLobby, tools, onTuto }: { onReturnToLobby?:
           <p className="shrink-0 text-[28px] leading-none" style={DISPLAY}>{teamScore}<span className="text-[15px]">/{teamMax}</span></p>
         </div>
       </ZCard>
-      <div className="mt-5"><ZRanking rows={ranking} /></div>
+      <div className="mt-5"><ZRanking rows={ranking} winners={winners} /></div>
       {worstAll && (
         <ZCard bg="#FFD23F" tilt={1} shadow={4} radius={20} className="mt-4 flex items-center gap-3 px-3 py-2.5">
           <PlayerBlob name={worstAll} colorIndex={players.indexOf(worstAll)} size={38} mood="shocked" bob={false} />

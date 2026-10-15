@@ -16,11 +16,12 @@ import { TheatreScreen, QuestionBillboard, RecWave, BLUFF_COLOR } from "@/compon
 import { GAME_INK } from "@/components/games/game-icon-button";
 import { IdeaButton, RerollButton } from "@/components/games/idea-button";
 import { playCombo, playSfx, preloadSfx } from "@/lib/sfx";
-import { getLang, useT } from "@/lib/i18n";
+import { getLang, pick as pickLang, useT } from "@/lib/i18n";
 import { STR, questionsFor } from "@/components/games/le-bluffeur/i18n";
 import { Smartphone, Target } from "lucide-react";
 import { GameInlineIcon } from "@/components/games/game-icon-button";
-import { uniqueMin, useGameFinished } from "@/lib/game-finished";
+import { uniqueMin, useGameFinished, winnersOf } from "@/lib/game-finished";
+import { WIN_STR } from "@/lib/winners-text";
 import { PlayerBlob } from "@/components/avatar/PlayerBlob";
 import { ShareResultButton } from "@/components/games/share-result-button";
 import { rankingCard } from "@/lib/share-cards";
@@ -325,11 +326,14 @@ function LeBluffeurLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) 
   }
   // over
   const ranking = players.map((name, i) => ({ name, score: scores[i], colorIndex: i })).sort((a, b) => b.score - a.score);
+  // Couronnés = règle unique (la même que la Soirée) : ex æquo en tête = tous, toute la table = personne
+  const winners = winnersOf({ names: players, values: scores });
+  const wt = pickLang(WIN_STR);
   return (
     <ZScreen bg={BLUFF_COLOR} tools={tools}>
       <ConfettiBurst count={50} />
-      <ZTitle size={(ranking[0]?.name.length ?? 0) > 9 ? 30 : 40} className="text-center"><span className="whitespace-nowrap">{ranking[0]?.name},</span>{t.bluffAce}</ZTitle>
-      <div className="mt-6"><ZRanking rows={ranking} /></div>
+      <ZTitle size={wt.names(winners).length > 9 ? 30 : 40} className="text-center">{winners.length ? <><span className="whitespace-nowrap">{wt.names(winners)},</span>{t.bluffAce}</> : wt.allTied}</ZTitle>
+      <div className="mt-6"><ZRanking rows={ranking} winners={winners} /></div>
       <div className="min-h-8 flex-1" />
       <SoireeNextButton className="mb-3" />
       <ZButton bg={GAME_INK} onClick={() => begin(players)}>{t.playAgain}</ZButton>

@@ -34,7 +34,8 @@ import { useUnlocked } from "@/lib/entitlements";
 import { LockedPack, PremiumNudge, fmtCount, useNudgeText } from "@/components/games/premium-nudge";
 import { pick, useLang, useT } from "@/lib/i18n";
 import { STR } from "./i18n";
-import { useGameFinished } from "@/lib/game-finished";
+import { uniqueMax, useGameFinished, winnersOf } from "@/lib/game-finished";
+import { WIN_STR } from "@/lib/winners-text";
 import { ShareResultButton } from "@/components/games/share-result-button";
 import { tourneeCard } from "@/lib/share-cards";
 import { GameTuto, RulesIconButton, useFirstTimeTuto } from "@/components/games/game-tuto";
@@ -291,11 +292,13 @@ const pickGage = (exclude?: string) => {
 
 export default function PicoletteGame({ onReturnToLobby }: GameProps) {
   const tr = useT(STR);
+  const wt = useT(WIN_STR);
   type Phase = "setup" | "packs" | "intro" | "play" | "over";
   const [phase, setPhase] = useState<Phase>("setup");
   const [players, setPlayers] = useState<string[]>([]);
   const [losses, setLosses] = useState<number[]>([]);
-  useGameFinished(phase === "over", { scores: { names: players, values: losses, lowerWins: true } }); // fin de partie → note éventuelle + Soirée (app)
+  // Fin de partie → note éventuelle + Soirée (app) : le moins de peines gagne (comme l'écran de fin), le plus de peines perd
+  useGameFinished(phase === "over", { loser: uniqueMax(players, losses), scores: { names: players, values: losses, lowerWins: true } });
   const [shields, setShields] = useState<boolean[]>([]);
   // Coquin / Trash (18+) ne sont PAS cochés par défaut (sauf en Soirée « Folle »)
   const [packs, setPacks] = useState<Set<Pack>>(() => new Set<Pack>(adultDefault(false) ? ["soft", "quiz", "pop", "coquin", "trash"] : ["soft", "quiz", "pop"]));
@@ -843,10 +846,14 @@ export default function PicoletteGame({ onReturnToLobby }: GameProps) {
   }
 
   // FIN
+  // Du moins de peines au plus ; couronnés = règle unique des gagnants (la même que la Soirée)
   const ranking = players
-    .map((name, i) => ({ name, i, losses: losses[i] }))
-    .sort((a, b) => b.losses - a.losses);
-  const top = ranking[0];
+    .map((name, i) => ({ name, i, losses: losses[i] ?? 0 }))
+    .sort((a, b) => a.losses - b.losses);
+  const winners = winnersOf({ names: players, values: losses, lowerWins: true });
+  const tops = ranking.filter((p) => winners.includes(p.name));
+  const top = tops[0];
+  const rest = ranking.filter((p) => !winners.includes(p.name));
   return (
     <div className="relative flex min-h-[100svh] flex-col px-5 text-white" style={{ ...PAGE, paddingTop: TOP, paddingBottom: BOTTOM }}>
       {tools}
@@ -858,20 +865,24 @@ export default function PicoletteGame({ onReturnToLobby }: GameProps) {
           {tr.overSub}
         </p>
 
-        {top && (
+        {top ? (
           <div className="relative mt-16 rounded-[26px] px-5 pb-4 pt-[52px] text-center" style={{ ...stk(ACCENT, 6), color: INK, transform: "rotate(-2deg)" }}>
-            <div className="absolute -top-[62px] left-1/2 -translate-x-1/2"><PlayerBlob name={top.name} colorIndex={top.i} size={76} mood="rofl" crown arms /></div>
+            <div className="absolute -top-[62px] left-1/2 flex -translate-x-1/2 gap-1">
+              {tops.map((p) => <PlayerBlob key={p.i} name={p.name} colorIndex={p.i} size={tops.length > 1 ? 60 : 76} mood="rofl" crown arms />)}
+            </div>
             <p className="text-[15px] font-bold">{tr.overStar}</p>
-            <p style={{ ...DISPLAY, fontSize: top.name.length > 11 ? 32 : 40, lineHeight: 1, overflowWrap: "anywhere" }}>{top.name}</p>
+            <p style={{ ...DISPLAY, fontSize: tops.length > 1 || top.name.length > 11 ? 32 : 40, lineHeight: 1, overflowWrap: "anywhere" }}>{wt.names(tops.map((p) => p.name))}</p>
             <p className="mt-1 text-[15px] font-bold">{tr.penalties(top.losses)}</p>
           </div>
+        ) : (
+          <p className="mt-6 text-center text-[20px]" style={DISPLAY}>{wt.allTiedSub}</p>
         )}
 
         <div className="mt-5 space-y-2.5">
-          {ranking.slice(1).map((p, k) => (
+          {rest.map((p, k) => (
             <div key={p.i} className="flex items-center gap-3 rounded-[18px] px-3.5" style={{ ...stk("#fff", 3, 2.5), color: INK, minHeight: 54, transform: `rotate(${k % 2 ? 0.8 : -0.8}deg)` }}>
               {/* Ex aequo = même rang */}
-              <span className="w-7 text-[18px]" style={DISPLAY}>{1 + ranking.filter((x) => x.losses > p.losses).length}</span>
+              <span className="w-7 text-[18px]" style={DISPLAY}>{1 + ranking.filter((x) => x.losses < p.losses).length}</span>
               <PlayerAvatar name={p.name} colorIndex={p.i} size={32} mood="happy" />
               <span className="min-w-0 flex-1 truncate text-[17px] font-bold">{p.name}</span>
               <span className="text-[15px] font-bold">{tr.penalties(p.losses)}</span>
@@ -883,7 +894,7 @@ export default function PicoletteGame({ onReturnToLobby }: GameProps) {
         {/* Version découverte : une seule petite bannière, en fin de partie */}
         {!unlocked && <PremiumNudge style={{ marginTop: 16 }} text={nudge.picolette(fmtCount(cardsFor(lang).length - freeDeck(lang).length, lang))} />}
         <div className="mt-4 flex flex-wrap justify-center gap-3">
-          <ShareResultButton card={() => tourneeCard(ranking.map((p) => ({ name: p.name, losses: p.losses, colorIndex: p.i })))} />
+          <ShareResultButton card={() => tourneeCard(ranking.map((p) => ({ name: p.name, losses: p.losses, colorIndex: p.i })), tops.length > 0)} />
           <IdeaButton game={tr.gameName} kind={tr.ideaKind} />
         </div>
 

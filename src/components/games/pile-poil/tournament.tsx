@@ -14,7 +14,8 @@ import { getLang, pick as pickLang, useT } from "@/lib/i18n";
 import { sipsAllowed, soberLines } from "@/lib/party-mood";
 import { CHALLENGES as CHALLENGE_TEXT, CHALLENGE_IDS, GAGES as GAGES_I18N, PP_STR } from "./i18n";
 import { fxBad, fxDrum, fxGood, fxNeutral, fxOver, fxPerfect, fxPreload, fxReveal, fxTap, fxTick, fxUnlock, vibrate } from "./pp-fx";
-import { useGameFinished } from "@/lib/game-finished";
+import { rankingOf, useGameFinished, winnersOf, type GameScores } from "@/lib/game-finished";
+import { WIN_STR } from "@/lib/winners-text";
 import { SoireeNextButton } from "@/components/games/soiree-next";
 
 // ── Pile Poil · mode Tournoi (tout sur un seul téléphone) ─────────────────
@@ -134,6 +135,14 @@ const KEYFRAMES = `
 @keyframes pp-flash { 0% { opacity: .9 } 100% { opacity: 0 } }
 `;
 
+/** Scores de fin (pur) : points, départage = écart cumulé le plus petit (même calcul pour l'écran et la Soirée). */
+export function finalScores(players: string[], points: number[], history: { round: Round; attempts: Attempt[] }[]): GameScores {
+  const gaps = players.map((_, i) =>
+    history.reduce((s, h) => s + h.attempts.filter((a) => a.pi === i).reduce((x, a) => x + Math.abs(a.elapsedMs - h.round.target * 1000), 0), 0)
+  );
+  return { names: players, values: points, tiebreak: gaps, tiebreakLowerWins: true };
+}
+
 export function Tournament({ net, onExit }: { net?: TournamentNet; onExit?: () => void }) {
   // La coupure du son est globale (sfx.ts) : on joue toujours, sfx.ts filtre
   const sound = true;
@@ -147,7 +156,6 @@ export function Tournament({ net, onExit }: { net?: TournamentNet; onExit?: () =
   const [phase, setPhase] = useState<Phase>("setup");
   const [players, setPlayers] = useState<string[]>([]);
   const [points, setPoints] = useState<number[]>([]);
-  useGameFinished(phase === "final", { scores: { names: players, values: points } }); // fin de partie → note éventuelle + Soirée (app)
   const [mode, setMode] = useState<PPMode>("closest");
   const [totalRounds, setTotalRounds] = useState(5);
   const [autoTargets, setAutoTargets] = useState(true);
@@ -156,6 +164,8 @@ export function Tournament({ net, onExit }: { net?: TournamentNet; onExit?: () =
   const [turn, setTurn] = useState(0); // position dans round.order
   const [attempts, setAttempts] = useState<Attempt[]>([]);
   const [history, setHistory] = useState<{ round: Round; attempts: Attempt[] }[]>([]);
+  // Fin de partie → note éventuelle + Soirée (app) : points, ex æquo départagés à l'écart cumulé (comme le podium)
+  useGameFinished(phase === "final", { scores: finalScores(players, points, history) });
   const startRef = useRef(0);
 
   const pi = round ? round.order[turn] : 0;
@@ -1002,12 +1012,17 @@ function FinalScreen({
     fxPerfect();
   }, []);
 
-  // Écart cumulé = départage en cas d'égalité de points
-  const totalGap = players.map((_, i) =>
-    history.reduce((s, h) => s + h.attempts.filter((a) => a.pi === i).reduce((x, a) => x + Math.abs(a.elapsedMs - h.round.target * 1000), 0), 0)
-  );
-  const standings = players.map((name, i) => ({ name, i, pts: points[i] ?? 0, gap: totalGap[i] })).sort((a, b) => b.pts - a.pts || a.gap - b.gap);
-  const champ = standings[0];
+  const w = useT(WIN_STR);
+  // Écart cumulé = départage en cas d'égalité de points ; champions = règle unique (la même que la Soirée)
+  const sc = finalScores(players, points, history);
+  const totalGap = sc.tiebreak ?? [];
+  const winners = winnersOf(sc);
+  const ranks = rankingOf(sc);
+  const standings = players.map((name, i) => ({ name, i, pts: points[i] ?? 0, gap: totalGap[i] ?? 0, rank: ranks.find((r) => r.name === name.trim())?.rank ?? i + 1 }))
+    .sort((a, b) => b.pts - a.pts || a.gap - b.gap);
+  const champs = standings.filter((x) => winners.includes(x.name));
+  const champ = champs[0];
+  const champLabel = champs.length > 1 ? w.names(champs.map((x) => x.name)) : champ?.name ?? w.allTied;
 
   const all = history.flatMap((h) => h.attempts.map((a) => ({ ...a, gap: Math.abs(a.elapsedMs - h.round.target * 1000), target: h.round.target })));
   const best = all.length ? all.reduce((m, a) => (a.gap < m.gap ? a : m)) : null;
@@ -1021,19 +1036,24 @@ function FinalScreen({
         {t.champ}
       </span>
       <div className="mt-3" style={{ animation: "pp-pop .6s ease-out" }}>
-        <PlayerBlob name={champ?.name} colorIndex={champ?.i ?? 0} size={104} mood="cool" arms crown />
+        {champs.length ? (
+          <div className="flex justify-center gap-1">
+            {champs.map((c) => <PlayerBlob key={c.i} name={c.name} colorIndex={c.i} size={champs.length > 1 ? 80 : 104} mood="cool" arms crown />)}
+          </div>
+        ) : <PlayerBlob name={standings[0]?.name} colorIndex={standings[0]?.i ?? 0} size={92} mood="shocked" arms />}
       </div>
-      <h2 className="mt-1 max-w-full break-words text-center leading-[0.95]" style={{ ...DISPLAY, fontSize: `min(clamp(40px,12vw,56px), max(26px, ${(88 / (Math.max((champ?.name ?? "").length, 1) * 0.6)).toFixed(2)}vw))`, textShadow: `4px 4px 0 ${INK}` }}>{champ?.name ?? "—"}</h2>
+      <h2 className="mt-1 max-w-full break-words text-center leading-[0.95]" style={{ ...DISPLAY, fontSize: `min(clamp(40px,12vw,56px), max(26px, ${(88 / (Math.max(champLabel.length, 1) * 0.6)).toFixed(2)}vw))`, textShadow: `4px 4px 0 ${INK}` }}>{champLabel}</h2>
       <p className="mt-2 text-center text-[16px] font-bold">
-        {t.points(champ?.pts ?? 0)}
-        {standings[1] && standings[1].pts === champ?.pts ? t.tieBreak : ""}
+        {champ ? t.points(champ.pts) : w.allTiedSub}
+        {/* « départagé à l'écart » : seulement si un ex æquo aux points a vraiment été départagé */}
+        {champ && standings.some((x) => x.pts === champ.pts && !winners.includes(x.name)) ? t.tieBreak : ""}
       </p>
 
       <div className="mt-4 w-full space-y-2">
         {standings.map((s, i) => (
-          <div key={s.i} className="flex items-center gap-3 px-3 py-2" style={{ ...sticker(i === 0 ? GOLD : C.cream, { radius: 18, shadow: 3 }), animation: `pp-rise .35s ${i * 0.07}s ease-out both` }}>
-            <span className="w-6 text-center text-[20px]" style={DISPLAY}>{i + 1}</span>
-            <PlayerAvatar name={s.name} colorIndex={s.i} size={32} mood={i === 0 ? "cool" : "happy"} border={false} />
+          <div key={s.i} className="flex items-center gap-3 px-3 py-2" style={{ ...sticker(winners.includes(s.name) ? GOLD : C.cream, { radius: 18, shadow: 3 }), animation: `pp-rise .35s ${i * 0.07}s ease-out both` }}>
+            <span className="w-6 text-center text-[20px]" style={DISPLAY}>{s.rank}</span>
+            <PlayerAvatar name={s.name} colorIndex={s.i} size={32} mood={winners.includes(s.name) ? "cool" : "happy"} border={false} />
             <span className="min-w-0 flex-1 text-[18px] leading-tight" style={{ ...DISPLAY, overflowWrap: "anywhere" }}>{s.name}</span>
             <span className="shrink-0 whitespace-nowrap text-[18px]" style={DISPLAY}>{t.pts(s.pts)}</span>
           </div>

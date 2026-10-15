@@ -12,6 +12,7 @@ import { ShakeRain } from "./ShakeRain";
 import { GoldenBlob } from "./GoldenBlob";
 import { PullBlob } from "./PullBlob";
 import { CardBlob } from "./CardBlob";
+import { SleepyBlob } from "./SleepyBlob";
 import { TapLogo } from "./Logo";
 import { drawGreeting, greetingText } from "../greeting";
 import { SoireeEntry } from "./SoireeKit";
@@ -56,6 +57,8 @@ export function Home({
       {/* Secrets : blob doré (rare, derrière les cartes) ; blob suspendu quand on tire l'accueil vers le bas */}
       <GoldenBlob homeRef={scrollRef} />
       <PullBlob homeRef={scrollRef} contentRef={contentRef} />
+      {/* Secret : ~90 s sans toucher → le blob d'une carte s'endort (réveil au premier toucher) */}
+      <SleepyBlob homeRef={scrollRef} />
       <div ref={contentRef} className="relative mx-auto max-w-lg" style={{ zIndex: 1, paddingTop: "calc(var(--sat) + 10px)", paddingBottom: "calc(var(--sab) + 32px)" }}>
         {/* En-tête */}
         <header className="relative flex items-center justify-between px-5">
@@ -200,6 +203,8 @@ function Featured({ onOpenGame, lang }: { onOpenGame: (id: string) => void; lang
     const t = setInterval(() => {
       const el = ref.current;
       if (!el || hold.current || document.hidden || el.offsetParent === null) return;
+      // Le blob de la carte s'est endormi (SleepyBlob) : on ne le fait pas glisser hors de l'écran
+      if (el.querySelector(".zz-dozing")) return;
       if (Date.now() - lastTouch.current < 3000) return;
       const i = Math.round(el.scrollLeft / el.clientWidth);
       goTo(i + 1);

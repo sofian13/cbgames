@@ -21,7 +21,8 @@ import { IdeaButton, RerollButton } from "@/components/games/idea-button";
 import { playCombo, playSfx, preloadSfx } from "@/lib/sfx";
 import { getLang, pick, useT } from "@/lib/i18n";
 import { STR } from "@/components/games/longueur-onde/i18n";
-import { uniqueMin, useGameFinished } from "@/lib/game-finished";
+import { uniqueMin, useGameFinished, winnersOf } from "@/lib/game-finished";
+import { WIN_STR } from "@/lib/winners-text";
 import { ShareResultButton } from "@/components/games/share-result-button";
 import { rankingCard } from "@/lib/share-cards";
 import { GameRulesSheet, GameTuto, RulesIconButton, useFirstTimeTuto } from "@/components/games/game-tuto";
@@ -330,15 +331,18 @@ function LocalGame({ onReturnToLobby, onTuto, rulesBtn }: { onReturnToLobby?: ()
 
   // over
   const ranking = players.map((name, i) => ({ name, score: scores[i], colorIndex: i })).sort((a, b) => b.score - a.score);
+  // Couronnés = règle unique (la même que la Soirée) : ex æquo en tête = tous, toute la table = personne
+  const winners = winnersOf({ names: players, values: scores });
+  const wt = pick(WIN_STR);
   return (
     <ZScreen bg={WAVE_COLOR} tools={rulesBtn}>
       <ConfettiBurst count={50} />
-      <ZTitle size={(ranking[0]?.name.length ?? 0) > 9 ? 32 : 40} className="text-center">
+      <ZTitle size={wt.names(winners).length > 9 ? 32 : 40} className="text-center">
         {/* prénom composé jamais coupé au trait d'union */}
-        <span className="whitespace-nowrap">{ranking[0]?.name},</span>{t.bestPsychic}
+        {winners.length ? <><span className="whitespace-nowrap">{wt.names(winners)},</span>{t.bestPsychic}</> : wt.allTied}
       </ZTitle>
       <p className="mt-2 text-center text-[15px] font-bold" style={{ textWrap: "balance" }}>{t.scoreNote}</p>
-      <div className="mt-6"><ZRanking rows={ranking} /></div>
+      <div className="mt-6"><ZRanking rows={ranking} winners={winners} /></div>
       <div className="min-h-8 flex-1" />
       <SoireeNextButton className="mt-6 -mb-3" />
       <ZButton bg={GAME_INK} className="mt-6" onClick={() => begin(players)}>{t.playAgain}</ZButton>

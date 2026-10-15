@@ -105,9 +105,94 @@ export function recordGame(gameId: string | undefined, loser?: string | null, pl
   write({ games: s.games + 1, byGame, losses, last: Date.now(), played });
 }
 
-/** « Remettre à zéro ». */
+/** « Remettre à zéro » (compteurs + victoires datées). */
 export function resetBandStats(): void {
+  try { localStorage.removeItem(WINS_KEY); } catch { /* stockage indisponible */ }
   write(null);
+}
+
+/* ───────── Victoires datées (trophée du mois) ─────────
+ * Clé à part (« zz-band-stats-v1 » garde son format) : par mois (« 2026-10 »), victoires par prénom.
+ * Alimenté par les gagnants du signal de fin de partie (règle unique decideWinners), à partir de
+ * cette version : les parties plus anciennes n'ont pas de date, elles ne comptent pour aucun mois. */
+const WINS_KEY = "zz-band-wins-v1";
+const WINS_MONTHS = 12;
+
+/** Victoires par mois (« AAAA-MM ») puis par prénom (clé normalisée). */
+export type BandWins = Record<string, Record<string, { name: string; n: number }>>;
+const NO_WINS: BandWins = {};
+
+/** Mois civil local d'une date (« 2026-10 »). */
+export function bandMonthKey(d: Date = new Date()): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function parseWins(raw: string | null): BandWins {
+  if (!raw) return NO_WINS;
+  try {
+    const p = JSON.parse(raw) as unknown;
+    if (!p || typeof p !== "object") return NO_WINS;
+    const out: BandWins = {};
+    for (const [m, v] of Object.entries(p as Record<string, unknown>)) {
+      if (!/^\d{4}-\d{2}$/.test(m)) continue;
+      const c = counts(v);
+      if (Object.keys(c).length) out[m] = c;
+    }
+    return out;
+  } catch {
+    return NO_WINS;
+  }
+}
+
+let winsRaw: string | null | undefined;
+let winsCache: BandWins = NO_WINS;
+
+/** Instantané stable des victoires datées (pour useSyncExternalStore, avec subscribeBandStats). */
+export function getBandWins(): BandWins {
+  let raw: string | null = null;
+  try { raw = typeof localStorage !== "undefined" ? localStorage.getItem(WINS_KEY) : null; } catch { raw = null; }
+  if (raw !== winsRaw) { winsRaw = raw; winsCache = parseWins(raw); }
+  return winsCache;
+}
+
+/** Compte une victoire datée pour chaque gagnant d'une partie (ex æquo : chacun la sienne). */
+export function recordWins(winners: string[] | undefined, at: number = Date.now()): void {
+  const names = Array.from(new Map((winners ?? [])
+    .map((w) => (typeof w === "string" ? w.trim() : ""))
+    .filter(Boolean)
+    .map((n) => [norm(n), n] as const)).entries());
+  if (!names.length) return;
+  const all = { ...getBandWins() };
+  const m = bandMonthKey(new Date(at));
+  const month = { ...(all[m] ?? {}) };
+  for (const [k, n] of names) month[k] = { name: n.slice(0, 24), n: (month[k]?.n ?? 0) + 1 };
+  all[m] = month;
+  // On ne garde que les derniers mois
+  const keep = Object.keys(all).sort().slice(-WINS_MONTHS);
+  const out: BandWins = {};
+  for (const k of keep) out[k] = all[k];
+  try { localStorage.setItem(WINS_KEY, JSON.stringify(out)); } catch { /* stockage indisponible */ }
+  if (typeof window !== "undefined") window.dispatchEvent(new Event(EVENT));
+}
+
+/** Champion(s) d'un mois : le plus de victoires (égalité : co-champions, ordre alphabétique), ou null. */
+export function monthChampions(w: BandWins, month: string): { names: string[]; n: number } | null {
+  const rows = Object.values(w[month] ?? {});
+  const n = Math.max(0, ...rows.map((r) => r.n));
+  if (!n) return null;
+  return { names: rows.filter((r) => r.n === n).map((r) => r.name).sort((a, b) => a.localeCompare(b)), n };
+}
+
+/** Champions des mois précédents (du plus récent au plus ancien). */
+export function pastChampions(w: BandWins, current: string, limit = 3): { month: string; names: string[]; n: number }[] {
+  return Object.keys(w)
+    .filter((m) => m < current)
+    .sort((a, b) => b.localeCompare(a))
+    .flatMap((m) => {
+      const c = monthChampions(w, m);
+      return c ? [{ month: m, ...c }] : [];
+    })
+    .slice(0, limit);
 }
 
 /** Le jeu le plus joué (id), seulement s'il est seul en tête. */
@@ -178,5 +263,6 @@ export function initBandStats() {
     if (now - lastEvent < 3000) return;
     lastEvent = now;
     recordGame(d.gameId ?? getCurrentGame() ?? undefined, d.loser, Array.isArray(d.players) ? d.players : undefined);
+    if (Array.isArray(d.winners)) recordWins(d.winners);
   });
 }

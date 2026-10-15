@@ -19,7 +19,8 @@ import { playCombo, playSfx, preloadSfx } from "@/lib/sfx";
 import { useLang } from "@/lib/i18n";
 import { PACKS_BY_LANG } from "./words";
 import { STR } from "./i18n";
-import { useGameFinished } from "@/lib/game-finished";
+import { useGameFinished, winnersOf } from "@/lib/game-finished";
+import { WIN_STR } from "@/lib/winners-text";
 import { landscapeWhile } from "@/lib/orientation";
 import { requestMotionPermission } from "@/components/games/verre/sensors";
 import { useTiltGestures } from "./tilt";
@@ -67,6 +68,7 @@ export default function GuessWordGame({ onReturnToLobby }: GameProps) {
   // Langue courante : interface + paquets de mots (même ids dans toutes les langues)
   const lang = useLang();
   const t = STR[lang];
+  const wt = WIN_STR[lang];
   const PACKS = PACKS_BY_LANG[lang];
   // Coupure du son globale (sfx.ts) : on joue toujours, sfx.ts filtre
   const sound = true;
@@ -235,7 +237,7 @@ export default function GuessWordGame({ onReturnToLobby }: GameProps) {
           emoji=""
           name={t.title}
           min={2}
-          max={12}
+          max={16}
           accent={ACCENT}
           onStart={(names) => {
             setPlayers(names);
@@ -508,7 +510,8 @@ export default function GuessWordGame({ onReturnToLobby }: GameProps) {
           <StickerBtn big bg={ACCENT} onClick={nextTurn}>
             {last ? t.finalRanking : t.nextPlayer(players[(turn + 1) % players.length])}
           </StickerBtn>
-          {!last && (
+          {/* « Terminer » seulement en fin de tour de table : chacun a fait deviner autant de fois */}
+          {!last && (turn + 1) % players.length === 0 && (
             <SoftLink
               onClick={() => {
                 playCombo("fanfare");
@@ -525,26 +528,31 @@ export default function GuessWordGame({ onReturnToLobby }: GameProps) {
 
   // ── Classement final ──
   const ranking = players.map((name, i) => ({ name, i, s: scores[i] ?? 0 })).sort((a, b) => b.s - a.s);
-  const top = ranking[0];
-  const tie = ranking.length > 1 && ranking[1].s === top?.s;
+  // Couronnés = règle unique des gagnants (la même que la Soirée) : ex æquo en tête = tous, toute la table = personne
+  const winners = winnersOf({ names: players, values: scores });
+  const tops = ranking.filter((r) => winners.includes(r.name));
+  const top = tops[0] ?? ranking[0];
+  const tie = tops.length > 1;
   return (
     <StickerScreen bg={C.night}>
       {controls}
       <ConfettiBurst count={60} />
       <span className="px-3.5 py-1 text-[17px]" style={{ ...sticker(C.yellow, { radius: 999, shadow: 3, border: 2.5 }), ...DISPLAY, transform: "rotate(-3deg)" }}>
-        {tie ? t.tieTop : t.bestGuesser}
+        {!tops.length ? wt.allTied : tie ? t.tieTop : t.bestGuesser}
       </span>
       <div className="relative mt-5">
         {/* Couronne posée au-dessus du perso (le perso personnalisé n'a pas de couronne intégrée) */}
-        <Crown aria-hidden size={34} strokeWidth={2.6} fill={C.yellow} color={INK} className="absolute -top-6 left-1/2 z-10 -translate-x-1/2 -rotate-6" />
+        {tops.length > 0 && <Crown aria-hidden size={34} strokeWidth={2.6} fill={C.yellow} color={INK} className="absolute -top-6 left-1/2 z-10 -translate-x-1/2 -rotate-6" />}
         <PlayerBlob name={top?.name} colorIndex={top?.i ?? 0} size={100} mood="cool" arms talk autoTalk />
       </div>
-      <h2 className="mt-1 max-w-full break-words text-center leading-[0.95]" style={{ ...DISPLAY, fontSize: `min(54px, 11vw, ${(110 / Math.max(1, ...(tie ? ranking.filter((r) => r.s === top.s) : [top]).map((r) => r?.name.length ?? 1))).toFixed(1)}vw)`, textShadow: `4px 4px 0 ${INK}` }}>
-        {tie
-          ? ranking.filter((r) => r.s === top.s).map((r, k) => <Fragment key={r.i}>{k ? " & " : ""}<span className="whitespace-nowrap">{r.name}</span></Fragment>)
-          : top?.name}
+      <h2 className="mt-1 max-w-full break-words text-center leading-[0.95]" style={{ ...DISPLAY, fontSize: `min(54px, 11vw, ${(110 / Math.max(1, ...(tie ? tops : [top]).map((r) => r?.name.length ?? 1))).toFixed(1)}vw)`, textShadow: `4px 4px 0 ${INK}` }}>
+        {!tops.length
+          ? wt.allTiedSub
+          : tie
+            ? tops.map((r, k) => <Fragment key={r.i}>{k ? " & " : ""}<span className="whitespace-nowrap">{r.name}</span></Fragment>)
+            : top?.name}
       </h2>
-      <Standings players={players} scores={scores} big />
+      <Standings players={players} scores={scores} big winners={winners} />
       <div className="mt-auto flex w-full flex-col items-center pt-7">
         <SoireeNextButton className="mb-3" />
         <StickerBtn big bg={ACCENT} onClick={replay}>{t.playAgain}</StickerBtn>
@@ -560,12 +568,14 @@ export default function GuessWordGame({ onReturnToLobby }: GameProps) {
   );
 }
 
-function Standings({ players, scores, big }: { players: string[]; scores: number[]; big?: boolean }) {
+function Standings({ players, scores, big, winners }: { players: string[]; scores: number[]; big?: boolean; winners?: string[] }) {
   const rows = players.map((name, i) => ({ name, i, s: scores[i] ?? 0 })).sort((a, b) => b.s - a.s);
   return (
     <div className="mt-5 w-full space-y-2">
-      {rows.map((r, k) => {
-        const lead = k === 0 && r.s > 0;
+      {rows.map((r) => {
+        // Fin : les gagnants (règle unique) ; en cours : les meneurs ex æquo ; rang de compétition (1, 2, 2, 4)
+        const lead = winners ? winners.includes(r.name.trim()) : r.s > 0 && r.s === rows[0].s;
+        const k = rows.filter((x) => x.s > r.s).length;
         return (
           <div key={r.i} className="flex items-center gap-3 px-3" style={{ ...sticker(lead ? C.yellow : C.cream, { radius: 18, shadow: 3 }), minHeight: big ? 54 : 48 }}>
             <span className="grid w-6 place-items-center text-[18px]" style={DISPLAY}>{lead ? <Crown size={18} strokeWidth={2.8} aria-hidden /> : k + 1}</span>

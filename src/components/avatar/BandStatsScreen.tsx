@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useSyncExternalStore, type CSSProperties, type ReactNode } from "react";
+import { useMemo, useState, useSyncExternalStore, type CSSProperties, type ReactNode } from "react";
 import { ArrowLeft, ChevronRight, Image as ImageIcon } from "lucide-react";
 import { useLang, useT, type I18n, type Lang } from "@/lib/i18n";
 import {
-  bandStatsGameArt, bandStatsGameName, bandStatsKey, favoriteGame, gamesRanking, getBandStats, losersRanking,
-  resetBandStats, subscribeBandStats, type BandStats,
+  bandMonthKey, bandStatsGameArt, bandStatsGameName, bandStatsKey, favoriteGame, gamesRanking, getBandStats, getBandWins,
+  losersRanking, monthChampions, pastChampions, resetBandStats, subscribeBandStats, type BandStats, type BandWins,
 } from "@/lib/band-stats";
 import { useUnlocked } from "@/lib/entitlements";
 import { playSfx } from "@/lib/sfx";
@@ -24,6 +24,8 @@ import { colorForIndexSafe } from "./colors";
 
 const EMPTY: BandStats = { games: 0, byGame: {}, losses: {}, last: 0, played: {} };
 export const useBandStats = () => useSyncExternalStore(subscribeBandStats, getBandStats, () => EMPTY);
+const NO_WINS: BandWins = {};
+const useBandWins = () => useSyncExternalStore(subscribeBandStats, getBandWins, () => NO_WINS);
 
 const YELLOW = "#FFD23F", PINK = "#FF3EA5", MINT = "#3DDC97", SKY = "#4ECDC4", CORAL = "#FF6B5B", LAVENDER = "#A98BFF";
 const CARD_COLORS = [YELLOW, SKY, PINK, MINT, LAVENDER, CORAL];
@@ -62,6 +64,14 @@ interface Str {
   back: string;
   emptyTitle: string;
   emptyText: string;
+  /** Trophée du mois (month = nom du mois en minuscules, dans la langue) */
+  champTitle: (month: string, tie: boolean) => string;
+  champWins: (n: number, each: boolean) => string;
+  champEmpty: string;
+  champEmptyHint: string;
+  champPast: string;
+  champLine: (month: string, names: string) => string;
+  and: string;
 }
 
 const STR: I18n<Str> = {
@@ -99,6 +109,13 @@ const STR: I18n<Str> = {
     back: "Retour",
     emptyTitle: "Zéro partie au compteur",
     emptyText: "Finissez une partie et les stats tombent ici. Les défaites aussi.",
+    champTitle: (m, tie) => `${tie ? "Co-champions" : "Champion"} ${/^[aeiouyàâäéèêëîïôöûüh]/i.test(m) ? "d'" : "de "}${m}`,
+    champWins: (n, each) => `${n} victoire${n > 1 ? "s" : ""}${each ? " chacun" : ""} ce mois-ci`,
+    champEmpty: "Le trône est vide ce mois-ci…",
+    champEmptyHint: "Gagnez une partie pour vous asseoir dessus.",
+    champPast: "Les anciens rois",
+    champLine: (m, n) => `${m} : ${n}`,
+    and: "&",
   },
   en: {
     title: "Crew stats",
@@ -134,6 +151,13 @@ const STR: I18n<Str> = {
     back: "Back",
     emptyTitle: "Zero games on the clock",
     emptyText: "Finish a game and the stats land here. The losses too.",
+    champTitle: (m, tie) => `${m.charAt(0).toUpperCase()}${m.slice(1)} ${tie ? "co-champions" : "champion"}`,
+    champWins: (n, each) => `${n} win${n > 1 ? "s" : ""}${each ? " each" : ""} this month`,
+    champEmpty: "The throne is empty this month…",
+    champEmptyHint: "Win a game to claim it.",
+    champPast: "Former rulers",
+    champLine: (m, n) => `${m}: ${n}`,
+    and: "&",
   },
   es: {
     title: "Las stats del grupo",
@@ -169,6 +193,13 @@ const STR: I18n<Str> = {
     back: "Volver",
     emptyTitle: "Cero partidas en el marcador",
     emptyText: "Terminad una partida y las stats caen aquí. Las derrotas también.",
+    champTitle: (m, tie) => `${tie ? "Cocampeones" : "Campeón"} de ${m}`,
+    champWins: (n, each) => `${n} victoria${n > 1 ? "s" : ""}${each ? " cada uno" : ""} este mes`,
+    champEmpty: "El trono está vacío este mes…",
+    champEmptyHint: "Ganad una partida para ocuparlo.",
+    champPast: "Antiguos reyes",
+    champLine: (m, n) => `${m}: ${n}`,
+    and: "y",
   },
 };
 
@@ -189,6 +220,21 @@ function lookFor(name: string, band: BandEntry[], unlocked: boolean): AvatarLook
   const raw = i >= 0 ? band[i].look ?? baseLook(colorForIndexSafe(i)) : getPlayerLook(name) ?? baseLook(colorForIndexSafe(hash(k)));
   return unlocked ? raw : freeLook(raw);
 }
+
+/** Nom du mois (« 2026-10 » → « octobre »), en minuscules, dans la langue de l'app. */
+const LOCALES: Record<string, string> = { fr: "fr-FR", en: "en-GB", es: "es-ES" };
+function monthName(key: string, lang: Lang): string {
+  const [y, m] = key.split("-").map(Number);
+  try {
+    return new Intl.DateTimeFormat(LOCALES[lang] ?? lang, { month: "long" }).format(new Date(y, m - 1, 15)).toLowerCase();
+  } catch {
+    return key;
+  }
+}
+const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+/** « Malik », « Malik & Inès », « Malik, Inès & Sam ». */
+const joinNames = (names: string[], and: string) =>
+  names.length < 2 ? names.join("") : `${names.slice(0, -1).join(", ")} ${and} ${names[names.length - 1]}`;
 
 /** Nom affiché d'un jeu (catalogue de l'app), ou null si inconnu (jeu retiré…). */
 const gameLabel = (id: string, lang: Lang) => bandStatsGameName(id, lang) ?? null;
@@ -272,6 +318,13 @@ export function BandStatsScreen({ band, onClose, onToast }: { band: BandEntry[];
   const colorOf = (id: string, i: number) => art?.color(id) ?? CARD_COLORS[i % CARD_COLORS.length];
   const days = s.last ? daysSince(s.last) : null;
   const tracked = Object.keys(s.played).length > 0;
+  // Trophée du mois (victoires datées)
+  const wins = useBandWins();
+  const monthKey = useMemo(() => bandMonthKey(), []);
+  const champ = monthChampions(wins, monthKey);
+  const champTie = !!champ && champ.names.length > 1;
+  const champTitle = t.champTitle(monthName(monthKey, lang), champTie);
+  const past = pastChampions(wins, monthKey, 3);
 
   const share = async () => {
     if (sharing) return;
@@ -284,6 +337,12 @@ export function BandStatsScreen({ band, onClose, onToast }: { band: BandEntry[];
         fav: favId && favName ? { id: favId, label: t.favTitle, name: favName, value: t.favTimes(s.byGame[favId] ?? 0), color: colorOf(favId, 0) } : undefined,
         podium: podium.length ? { title: t.loserTitle, people: podium.map((p) => ({ name: p.name, look: lookFor(p.name, band, true), value: String(p.n), label: t.lossesShort(p.n) })) } : undefined,
         top: ranking.length >= 2 ? { title: t.topTitle, rows: ranking.slice(0, 3).map((g, i) => ({ name: gameLabel(g.id, lang) ?? "", n: g.n, color: colorOf(g.id, i) })) } : undefined,
+        champion: champ ? {
+          label: champTitle,
+          names: joinNames(champ.names.slice(0, 3), t.and),
+          value: t.champWins(champ.n, champTie),
+          people: champ.names.slice(0, 3).map((n) => ({ name: n, look: lookFor(n, band, true) })),
+        } : undefined,
         text: t.shareText(title),
       });
       if (out === "error") onToast(t.shareFail);
@@ -334,6 +393,21 @@ export function BandStatsScreen({ band, onClose, onToast }: { band: BandEntry[];
               </div>
             )}
           </div>
+
+          {/* Trophée du mois */}
+          <Section title={champTitle} i={k++}>
+            <MonthChampion champ={champ} band={band} unlocked={unlocked} t={t} />
+            {past.length > 0 && (
+              <div className="mt-3 flex flex-wrap items-center justify-center gap-1.5 text-[12px] font-bold" style={{ color: "rgba(255,255,255,0.7)" }}>
+                <span className="font-extrabold uppercase tracking-wide">{t.champPast}</span>
+                {past.map((p) => (
+                  <span key={p.month} className="max-w-full truncate rounded-full px-2.5 py-0.5" style={{ background: "rgba(255,255,255,0.1)", border: "1.5px solid rgba(255,255,255,0.18)" }}>
+                    {t.champLine(cap(monthName(p.month, lang)), joinNames(p.names.slice(0, 2), t.and) + (p.names.length > 2 ? "…" : ""))}
+                  </span>
+                ))}
+              </div>
+            )}
+          </Section>
 
           {/* Podium « Qui perd le plus » */}
           <Section title={t.loserTitle} i={k++}>
@@ -441,6 +515,82 @@ function Section({ title, i, children }: { title: string; i: number; children: R
       <h3 className="mb-3" style={{ ...AV_DISPLAY, fontSize: 24, lineHeight: 1.05 }}>{title}</h3>
       {children}
     </section>
+  );
+}
+
+/** Champion(s) du mois : blob(s) couronné(s) + trophée doré ; sinon le trône vide. */
+function MonthChampion({ champ, band, unlocked, t }: { champ: { names: string[]; n: number } | null; band: BandEntry[]; unlocked: boolean; t: Str }) {
+  if (!champ) {
+    return (
+      <div className="flex items-center gap-3 rounded-[24px] py-3 pl-3 pr-4" style={{ ...avSticker("#fff", 4), color: AV_INK, rotate: "1deg" }}>
+        <EmptyThrone />
+        <div className="min-w-0 flex-1">
+          <p style={{ ...AV_DISPLAY, fontSize: 21, lineHeight: 1.05 }}>{t.champEmpty}</p>
+          <p className="mt-1 text-[14px] font-bold leading-snug" style={{ opacity: 0.75 }}>{t.champEmptyHint}</p>
+        </div>
+      </div>
+    );
+  }
+  const crew = champ.names.slice(0, 3);
+  const size = crew.length === 1 ? 104 : crew.length === 2 ? 82 : 68;
+  const names = joinNames(crew, t.and) + (champ.names.length > 3 ? "…" : "");
+  return (
+    <div className="relative flex items-center gap-2 rounded-[26px] py-3 pl-2 pr-4" style={{ ...avSticker(YELLOW, 5), color: AV_INK, rotate: "-1.5deg" }}>
+      <div className="flex shrink-0 items-end" style={{ paddingTop: size * 0.3 }}>
+        {crew.map((n, i) => (
+          <div key={n} className="relative" style={{ marginLeft: i ? -size * 0.22 : 0, zIndex: crew.length - i }}>
+            <Crown size={size * 0.46} />
+            <AvatarBlob look={lookFor(n, band, unlocked)} name={n} size={size} mood="happy" animate={i === 0} />
+          </div>
+        ))}
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="break-words" style={{ ...AV_DISPLAY, fontSize: names.length > 16 ? 20 : 26, lineHeight: 1.02 }}>{names}</p>
+        <p className="mt-2 inline-flex items-center gap-1.5 rounded-[18px] py-1 pl-1.5 pr-3 text-[13px] font-extrabold leading-tight" style={{ ...avSticker("#fff", 2), rotate: "2deg" }}>
+          <Trophy size={22} /> <span>{t.champWins(champ.n, crew.length > 1)}</span>
+        </p>
+      </div>
+    </div>
+  );
+}
+
+/** Petite couronne posée sur la tête du champion. */
+function Crown({ size }: { size: number }) {
+  return (
+    <svg width={size} height={size * 0.72} viewBox="-26 -24 52 32" className="absolute left-1/2 z-[2] -translate-x-1/2" style={{ top: -size * 0.42, rotate: "-8deg" }} aria-hidden>
+      <path d="M-20 4 L-24 -16 L-11 -6 L0 -22 L11 -6 L24 -16 L20 4Z" fill={YELLOW} stroke={AV_INK} strokeWidth={3.4} strokeLinejoin="round" />
+      <circle cx={0} cy={-6} r={3.2} fill={PINK} stroke={AV_INK} strokeWidth={1.6} />
+    </svg>
+  );
+}
+
+/** Petit trophée doré. */
+function Trophy({ size }: { size: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" className="shrink-0" aria-hidden>
+      <path d="M7 4h10v4.5a5 5 0 0 1-10 0z" fill={YELLOW} stroke={AV_INK} strokeWidth={1.8} strokeLinejoin="round" />
+      <path d="M7 5.5H4.2c0 3 1.2 4.6 3.3 4.9M17 5.5h2.8c0 3-1.2 4.6-3.3 4.9" fill="none" stroke={AV_INK} strokeWidth={1.8} strokeLinecap="round" />
+      <path d="M12 13.5v3.2M8.5 20h7l-.8-3.3H9.3z" fill="#E09A00" stroke={AV_INK} strokeWidth={1.8} strokeLinejoin="round" />
+      <path d="M9.4 6v2.2" stroke="#fff" strokeWidth={1.4} strokeLinecap="round" opacity={0.8} />
+    </svg>
+  );
+}
+
+/** Trône vide (une toile d'araignée au coin) : personne n'a gagné ce mois-ci. */
+function EmptyThrone() {
+  return (
+    <svg width={72} height={80} viewBox="0 0 72 80" className="shrink-0" aria-hidden>
+      <path d="M14 8 Q36 -2 58 8 L56 46 H16Z" fill={LAVENDER} stroke={AV_INK} strokeWidth={3} strokeLinejoin="round" />
+      <path d="M22 14 Q36 8 50 14 L49 42 H23Z" fill="#C9B8FF" opacity={0.7} />
+      <rect x={8} y={44} width={56} height={14} rx={6} fill={PINK} stroke={AV_INK} strokeWidth={3} />
+      <path d="M14 58 V74 M58 58 V74" stroke={AV_INK} strokeWidth={4} strokeLinecap="round" />
+      <path d="M30 5 L36 0 L42 5" fill={YELLOW} stroke={AV_INK} strokeWidth={2.2} strokeLinejoin="round" />
+      {/* Toile d'araignée */}
+      <g stroke="rgba(21,8,46,0.55)" strokeWidth={1.1} fill="none">
+        <path d="M58 8 L44 20 M58 8 L50 24 M58 8 L56 26" />
+        <path d="M51 14 Q53 17 52 20 M47 18 Q51 21 53 22" />
+      </g>
+    </svg>
   );
 }
 

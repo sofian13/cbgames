@@ -40,6 +40,7 @@ const STR: I18n<{
   recent: string;
   go: string;
   missing: (n: number) => string;
+  dup: (name: string) => string;
   changeMode: string;
   passTo: string;
   itsMe: string;
@@ -68,6 +69,7 @@ const STR: I18n<{
     recent: "Ils ont déjà joué, un tap et c'est réglé :",
     go: "C'est parti !",
     missing: (n) => `Encore ${n} joueur${n > 1 ? "s" : ""} !`,
+    dup: (n) => `« ${n} » est en double`,
     changeMode: "Changer de mode",
     passTo: "Passe le téléphone à…",
     itsMe: "C'est moi !",
@@ -99,6 +101,7 @@ const STR: I18n<{
     recent: "They've played before, one tap and they're in:",
     go: "Let's go!",
     missing: (n) => `${n} more player${n > 1 ? "s" : ""}!`,
+    dup: (n) => `“${n}” is in twice`,
     changeMode: "Change mode",
     passTo: "Pass the phone to…",
     itsMe: "It's me!",
@@ -130,6 +133,7 @@ const STR: I18n<{
     recent: "Ya han jugado, un toque y listo:",
     go: "¡Vamos!",
     missing: (n) => (n > 1 ? `¡Faltan ${n} jugadores!` : `¡Falta ${n} jugador!`),
+    dup: (n) => `«${n}» está repetido`,
     changeMode: "Cambiar de modo",
     passTo: "Pásale el móvil a…",
     itsMe: "¡Soy yo!",
@@ -311,7 +315,9 @@ export function PlayersSetup({
 
   // Prénom coupé à 16 caractères : pas de tiret / espace qui traîne à la fin (« Jean-Christophe- »)
   const filled = names.map((n) => n.trim().replace(/[\s\-–'’.]+$/u, "")).filter(Boolean);
-  const canStart = filled.length >= min;
+  // Deux fois le même prénom (casse / accents ignorés) : interdit, sinon les points et stats se mélangent
+  const dupName = filled.find((n, i) => filled.findIndex((x) => sameName(x, n)) !== i) ?? null;
+  const canStart = filled.length >= min && !dupName;
   const missing = Math.max(0, min - filled.length);
 
   const update = (i: number, v: string) => setNames((p) => p.map((n, idx) => (idx === i ? v.slice(0, 16) : n)));
@@ -517,7 +523,7 @@ export function PlayersSetup({
               letterSpacing: "-0.01em",
             }}
           >
-            {canStart ? t.go : t.missing(missing)}
+            {canStart ? t.go : dupName ? t.dup(dupName) : t.missing(missing)}
           </button>
           {/* Dans l'app, la croix « quitter » fait déjà le retour */}
           {onBack && !isOfflineApp() && (
@@ -908,17 +914,21 @@ export function ZChoice({
 export function ZRanking({
   rows,
   unit = "pts",
+  winners,
 }: {
-  rows: { name: string; score: number | string; colorIndex: number; note?: ReactNode }[];
+  rows: { name: string; score: number | string; colorIndex: number; note?: ReactNode; rank?: number }[];
   unit?: string;
+  /** Couronnés (règle unique des gagnants, src/lib/game-finished.ts) : sinon tous les rang 1 */
+  winners?: string[];
 }) {
   return (
     <div className="flex w-full flex-col gap-3">
       {rows.map((r, i) => {
-        // Ex æquo : même score que la ligne précédente → même rang (et même couronne si 1er)
+        // Ex æquo : même score que la ligne précédente → même rang (sauf rang fourni : départage du jeu)
         let rank = 1;
         for (let k = 1; k <= i; k++) if (rows[k].score !== rows[k - 1].score) rank = k + 1;
-        const first = rank === 1;
+        if (r.rank != null) rank = r.rank;
+        const first = winners ? winners.includes(r.name) : rank === 1;
         const bg = first ? "#FFD23F" : "#fff";
         return (
           <div

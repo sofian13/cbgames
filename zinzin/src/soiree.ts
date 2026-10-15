@@ -34,8 +34,12 @@ export interface SoireeState {
   startedAt: number;
   /** Ce qui a été mesuré par jeu (même index que la playlist) — absent des anciennes sauvegardes */
   outcomes?: (SoireeOutcome | null)[];
-  /** Fin du jeu en cours reçue du jeu lui-même (signal de fin de partie), en attente du « Qui a gagné ? » */
-  pending?: Omit<SoireeOutcome, "winners"> & { winners?: string[] };
+  /**
+   * Fin du jeu en cours reçue du jeu lui-même (signal de la DERNIÈRE partie terminée de ce jeu),
+   * en attente de l'annonce. winners = exactement ceux que le jeu a désignés (vide = pas de gagnant) ;
+   * unknown = gagnants du jeu introuvables dans la bande (à corriger, jamais perdus en silence).
+   */
+  pending?: Omit<SoireeOutcome, "winners"> & { winners?: string[]; unknown?: string[] };
   /** Cérémonie des trophées déjà vue ? */
   awards?: { done: boolean };
 }
@@ -66,6 +70,8 @@ export function eligible(g: ZGame, players: number, vibe: Vibe): boolean {
   if (kind === "duo" && players !== 2) return false;
   // Jeux à boire : uniquement en soirée folle
   if (kind === "boire" && vibe !== "folle") return false;
+  // Mime : équipes de deux, une bande impaire laisserait quelqu'un sans équipe
+  if (g.id === "make-guess" && players % 2 !== 0) return false;
   // Chill : ni alcool ni questions coquines
   if (vibe === "chill" && (g.adult || g.id === "purete")) return false;
   return true;
@@ -174,7 +180,18 @@ export function resumable(s: SoireeState | null): s is SoireeState {
   return Boolean(s && s.phase !== "end" && s.index < s.playlist.length);
 }
 
-export function startSoiree(band: string[], vibe: Vibe, length: SoireeLength, playlist: ZGameId[]) {
+/** Bande sans doublons (casse, accents et espaces ignorés), 1re écriture gardée. */
+export function uniqueBand(names: string[]): string[] {
+  const out: string[] = [];
+  for (const raw of names) {
+    const n = (raw ?? "").replace(/\s+/g, " ").trim();
+    if (n && !out.some((x) => norm(x) === norm(n))) out.push(n);
+  }
+  return out;
+}
+
+export function startSoiree(names: string[], vibe: Vibe, length: SoireeLength, playlist: ZGameId[]) {
+  const band = uniqueBand(names);
   commit({
     v: 1, band, vibe, length, playlist, index: 0, phase: "intro",
     points: Object.fromEntries(band.map((n) => [n, 0])),
@@ -184,13 +201,15 @@ export function startSoiree(band: string[], vibe: Vibe, length: SoireeLength, pl
   });
 }
 
-/** Reprise : un jeu interrompu repart de son écran de transition. */
+/** Reprise : un jeu interrompu repart de son écran de transition (le résultat d'avant la fermeture est oublié). */
 export function resumeSoiree() {
-  if (state && state.phase === "playing") commit({ ...state, phase: "intro" });
+  if (state && state.phase === "playing") commit({ ...state, phase: "intro", pending: undefined });
 }
 
 export function setPhase(phase: SoireePhase) {
-  if (state) commit({ ...state, phase });
+  if (!state) return;
+  // Lancement d'un jeu : aucun résultat ne peut venir d'avant
+  commit(phase === "playing" && state.phase !== "playing" ? { ...state, phase, pending: undefined } : { ...state, phase });
 }
 
 /** Passe au jeu suivant (ou au podium). */
@@ -203,10 +222,11 @@ export function skipGame() {
   if (state) commit(advance({ ...state, pending: undefined }));
 }
 
-const norm = (x: string) => x.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+/** Comparaison tolérante des prénoms : accents, casse et espaces ignorés. */
+const norm = (x: string) => x.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/\s+/g, " ").trim();
 /** Prénom du jeu → prénom de la bande (null si inconnu). */
-function inBand(band: string[], name: string | null | undefined): string | null {
-  if (!name) return null;
+export function inBand(band: string[], name: string | null | undefined): string | null {
+  if (!name || !name.trim()) return null;
   return band.find((b) => b === name) ?? band.find((b) => norm(b) === norm(name)) ?? null;
 }
 
@@ -218,20 +238,39 @@ export function captureFinished(d: GameFinishedDetail) {
   const ranking = (d.ranking ?? [])
     .map((r) => ({ name: inBand(band, r.name), rank: r.rank }))
     .filter((r): r is GameRank => Boolean(r.name));
-  const winners = (d.winners ?? []).map((w) => inBand(band, w)).filter((w): w is string => Boolean(w));
+  // Les gagnants sont ceux que le jeu a désignés (règle unique, src/lib/game-finished.ts) : on ne les
+  // recalcule jamais ici. Un prénom introuvable dans la bande est gardé à part (annonce + « Corriger »).
+  const named = (d.winners ?? []).map((w) => (w ?? "").trim()).filter(Boolean);
+  const winners = Array.from(new Set(named.map((w) => inBand(band, w)).filter((w): w is string => Boolean(w))));
+  const unknown = Array.from(new Set(named.filter((w) => !inBand(band, w))));
   commit({
     ...state,
     pending: {
       loser: inBand(band, d.loser),
       ...(ranking.length >= 2 ? { ranking } : {}),
-      ...(winners.length ? { winners: Array.from(new Set(winners)) } : {}),
+      winners,
+      ...(unknown.length ? { unknown } : {}),
     },
   });
 }
 
+/**
+ * Ce que l'écran gagnant annonce : EXACTEMENT les gagnants désignés par le jeu (dernière partie terminée),
+ * jamais déduits d'un classement ; + les prénoms du jeu introuvables dans la bande (à corriger).
+ */
+export function announced(s: SoireeState): { winners: string[]; unknown: string[] } {
+  return {
+    winners: (s.pending?.winners ?? []).filter((w) => s.band.includes(w)),
+    unknown: s.pending?.unknown ?? [],
+  };
+}
+
 /** Enregistre les gagnants du jeu en cours (+1 point chacun) puis passe à la suite. */
-export function recordWinners(winners: string[]) {
-  if (!state) return;
+export function recordWinners(names: string[]) {
+  // Garde : une seule fois par jeu de la playlist (écran « gagnant » du jeu en cours uniquement)
+  if (!state || state.phase !== "winner" || state.index >= state.playlist.length) return;
+  const band = state.band;
+  const winners = Array.from(new Set(names.map((n) => inBand(band, n)).filter((n): n is string => Boolean(n))));
   const points = { ...state.points };
   for (const w of winners) points[w] = (points[w] ?? 0) + 1;
   const results = [...state.results];
@@ -262,6 +301,32 @@ export function ranking(s: SoireeState): { name: string; points: number; rank: n
   return rows.map((r) => ({ name: r.name, points: r.points, rank: rows.findIndex((x) => x.points === r.points) + 1 }));
 }
 
+/**
+ * Rois de la soirée = même règle que les jeux : le(s) 1er(s) au nombre de points (ex æquo = co-rois),
+ * personne si toute la bande est à égalité ou si personne n'a de point.
+ */
+export function kingsOf(s: SoireeState): string[] {
+  const rows = ranking(s);
+  if (!rows.length || rows[0].points <= 0) return [];
+  const top = rows.filter((r) => r.rank === 1).map((r) => r.name);
+  return top.length < rows.length ? top : [];
+}
+
+/** Titre de chaque ligne du récap, selon le RANG (jamais « Roi » pour un non-roi, jamais « fair-play » pour un 1er). */
+export function recapTitles(s: SoireeState, titles: string[], lastTitle: string): string[] {
+  const rows = ranking(s);
+  const kings = kingsOf(s);
+  const lastRank = rows.length ? rows[rows.length - 1].rank : 0;
+  let k = 0;
+  return rows.map((r) => {
+    if (kings.includes(r.name)) return titles[0];
+    if (rows.length >= 4 && lastRank > 1 && r.rank === lastRank) return lastTitle;
+    // Titres « fun » sans notion de rang, chacun le sien
+    const fun = titles.slice(1);
+    return fun[k++ % fun.length];
+  });
+}
+
 /* ───────── Trophées de fin de soirée ───────── */
 
 /**
@@ -276,7 +341,7 @@ export type TrophyId = "king" | "naze" | "game" | "comeback" | "second" | "casca
 export interface Trophy {
   id: TrophyId;
   name: string;
-  /** Jeux concernés (king : gagnés · second : finis 2e · cascadeur : finis derniers) */
+  /** Jeux concernés (king / game : gagnés · second : finis 2e · cascadeur : finis derniers) */
   games?: ZGameId[];
   /** game / comeback : le jeu gagné */
   game?: ZGameId;
@@ -309,15 +374,8 @@ export function computeTrophies(s: SoireeState): Trophy[] {
   const seconds: Record<string, ZGameId[]> = Object.fromEntries(band.map((n) => [n, []]));
   const rankSum: Record<string, number> = Object.fromEntries(band.map((n) => [n, 0]));
   const ranked: Record<string, number> = Object.fromEntries(band.map((n) => [n, 0]));
-  /** Perdant d'un jeu : désigné par le jeu, sinon le seul dernier de son classement */
-  const loserOf = (o: SoireeOutcome): string | null => {
-    if (o.loser) return o.loser;
-    const r = o.ranking;
-    if (!r || r.length < 3) return null;
-    const last = Math.max(...r.map((x) => x.rank));
-    const at = r.filter((x) => x.rank === last);
-    return at.length === 1 && last > 1 ? at[0].name : null;
-  };
+  /** Perdant d'un jeu : seulement celui désigné par le jeu (même source que les stats « Ma bande ») */
+  const loserOf = (o: SoireeOutcome): string | null => o.loser ?? null;
   for (const g of games) {
     for (const w of new Set(g.o.winners)) won[w]?.push(g.id);
     const l = loserOf(g.o);
@@ -344,18 +402,18 @@ export function computeTrophies(s: SoireeState): Trophy[] {
   const v = (name: string, id: string) => hash(`${s.startedAt}|${name}|${id}`);
   const out = new Map<string, Trophy>();
 
-  // Le Roi : le plus de victoires (départage : le moins de défaites, puis le meilleur classement moyen)
-  // (puis le plus de victoires en solo, puis celui qui a gagné le plus récemment)
-  const solo = (n: string) => games.filter((g) => g.o.winners.length === 1 && g.o.winners[0] === n).length;
-  const lastWin = (n: string) => Math.max(-1, ...games.map((g, i) => (g.o.winners.includes(n) ? i : -1)));
-  const king = Math.max(...band.map(W)) > 0 ? unique(band, W, (n) => -L(n), solo, (n) => -avgRank(n), lastWin) : null;
-  if (king) out.set(king, { id: "king", name: king, games: won[king], v: v(king, "king") });
+  // Le(s) Roi(s) : le plus de POINTS (comme le récap) ; ex æquo en tête = co-rois ; toute la bande à égalité = aucun
+  const P = (n: string) => s.points[n] ?? 0;
+  const kings = kingsOf(s);
+  for (const k of kings) out.set(k, { id: "king", name: k, games: won[k], v: v(k, "king") });
 
-  // Le Plus Gros Naze : parmi ceux qui n'ont rien gagné (sinon toute la bande), le plus de défaites puis le pire classement
-  const zeroWin = band.filter((n) => W(n) === 0 && n !== king);
-  const nazePool = zeroWin.length ? zeroWin : band.filter((n) => n !== king);
-  const naze = nazePool.length && (zeroWin.length || Math.max(...nazePool.map(L)) > 0)
-    ? unique(nazePool, L, (n) => -W(n), avgRank) : null;
+  // Le Plus Gros Naze : seulement parmi les DERNIERS aux points (jamais à égalité avec un roi) ;
+  // ex æquo en bas : départage par le plus de défaites, puis le pire classement moyen (sinon personne)
+  const minP = Math.min(...band.map(P));
+  const maxP = Math.max(...band.map(P));
+  const nazePool = minP < maxP ? band.filter((n) => P(n) === minP && !out.has(n)) : [];
+  const naze = nazePool.length && (minP === 0 || Math.max(...nazePool.map(L)) > 0)
+    ? unique(nazePool, L, avgRank) : null;
   if (naze) {
     out.set(naze, W(naze) === 0
       ? { id: "naze", name: naze, n: games.length, allLost: true, v: v(naze, "naze") }
@@ -376,7 +434,7 @@ export function computeTrophies(s: SoireeState): Trophy[] {
       if (after) { out.set(n, { id: "comeback", name: n, game: after.id, lostGame: games[lostIdx].id, v: v(n, "comeback") }); continue; }
     }
     takenGames.add(best);
-    out.set(n, { id: "game", name: n, game: best, v: v(n, `game-${best}`) });
+    out.set(n, { id: "game", name: n, game: best, games: won[n], v: v(n, `game-${best}`) });
   }
 
   // Les autres (aucune victoire) : un prix de consolation mesuré, si possible chacun le sien

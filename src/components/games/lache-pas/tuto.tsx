@@ -24,6 +24,12 @@ interface LpExtra {
   /** Règles ajoutées */
   ruleNames: string;
   and: string;
+  /** Écran de fin : classement de la partie (couronnes, départage au moins de défaites) */
+  rankTitle: string;
+  crowns: (n: number) => string;
+  losses: (n: number) => string;
+  champ: (names: string) => string;
+  noChamp: string;
 }
 
 export const LP_EXTRA: I18n<LpExtra> = {
@@ -44,6 +50,11 @@ export const LP_EXTRA: I18n<LpExtra> = {
     winnerName: (n) => `${n} a lâché en dernier : il choisit qui fait un gage en plus !`,
     ruleNames: "Entrez vos prénoms avant de jouer (facultatif) et posez vos doigts dans cet ordre : chaque doigt garde son prénom et sa couleur.",
     and: " et ",
+    rankTitle: "Classement de la partie",
+    crowns: (n) => `${n} couronne${n > 1 ? "s" : ""}`,
+    losses: (n) => `${n} défaite${n > 1 ? "s" : ""}`,
+    champ: (n) => `${n} : le plus de couronnes !`,
+    noChamp: "Égalité parfaite : pas de gagnant",
   },
   en: {
     slides: [
@@ -62,6 +73,11 @@ export const LP_EXTRA: I18n<LpExtra> = {
     winnerName: (n) => `${n} let go last: they pick someone to do an extra dare!`,
     ruleNames: "Enter your names before playing (optional) and put your fingers down in that order: each finger keeps its name and colour.",
     and: " and ",
+    rankTitle: "Game standings",
+    crowns: (n) => `${n} crown${n > 1 ? "s" : ""}`,
+    losses: (n) => `${n} loss${n > 1 ? "es" : ""}`,
+    champ: (n) => `${n}: the most crowns!`,
+    noChamp: "Perfect tie: no winner",
   },
   es: {
     slides: [
@@ -80,6 +96,11 @@ export const LP_EXTRA: I18n<LpExtra> = {
     winnerName: (n) => `${n} soltó el último: ¡elige quién hace un reto extra!`,
     ruleNames: "Escribid vuestros nombres antes de jugar (opcional) y poned los dedos en ese orden: cada dedo conserva su nombre y su color.",
     and: " y ",
+    rankTitle: "Clasificación de la partida",
+    crowns: (n) => `${n} corona${n > 1 ? "s" : ""}`,
+    losses: (n) => `${n} derrota${n > 1 ? "s" : ""}`,
+    champ: (n) => `${n}: ¡el que más coronas tiene!`,
+    noChamp: "Empate total: no hay ganador",
   },
 };
 

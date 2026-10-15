@@ -303,7 +303,7 @@ export function trophyText(t: Trophy, lang: Lang): { name: string; fact: string;
   const variants = t.id === "game" ? (t.game ? s.games[t.game] : undefined) ?? s.prizes.touriste : s.prizes[t.id];
   const [name, quip] = variants[t.v % variants.length];
   const fact =
-    t.id === "king" || t.id === "game" ? s.fact.won(t.id === "king" ? list(t.games) : gameName(t.game, lang))
+    t.id === "king" || t.id === "game" ? s.fact.won(t.id === "king" || t.games?.length ? list(t.games) : gameName(t.game, lang))
       : t.id === "naze" ? (t.allLost ? s.fact.nazeAll(t.n ?? 0) : s.fact.nazeLoss(t.n ?? 0))
         : t.id === "comeback" ? s.fact.comeback(gameName(t.lostGame, lang), gameName(t.game, lang))
           : t.id === "second" ? s.fact.second(list(t.games))

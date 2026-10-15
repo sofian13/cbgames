@@ -131,7 +131,9 @@ export function WhisperMode({ plan, ...c }: ModeCommon & { plan: WhisperPlan }) 
 
   // ── Fin ──
   const s: [number, number] = [score(0), score(1)];
-  const win = s[0] === s[1] ? null : s[0] > s[1] ? 0 : 1;
+  // Autant de manches pour chaque équipe, sinon pas de gagnant (« Terminer » au milieu d'un tour)
+  const complete = res.length >= 2 && res.length % 2 === 0;
+  const win = !complete || s[0] === s[1] ? null : s[0] > s[1] ? 0 : 1;
   const lose = win == null ? null : ((1 - win) as 0 | 1);
   const rows: EndRow[] = ([0, 1] as const)
     .map((k) => ({ k, s: s[k] }))
@@ -147,9 +149,10 @@ export function WhisperMode({ plan, ...c }: ModeCommon & { plan: WhisperPlan }) 
     });
   return (
     <ModeEnd
-      title={win == null ? m.wTie : m.wWinner(m.teamNames[win])}
+      title={!complete ? undefined : win == null ? m.wTie : m.wWinner(m.teamNames[win])}
       rows={rows}
       result={{ winners: win == null ? [] : plan.teams[win].map((p) => c.players[p]) }}
+      complete={complete}
       unit={m.unitPts}
       loser={null}
       top={lose != null && sentence ? (
@@ -161,7 +164,7 @@ export function WhisperMode({ plan, ...c }: ModeCommon & { plan: WhisperPlan }) 
           title={m.wPenaltyTeam(m.teamNames[lose])}
         />
       ) : null}
-      tieNote={win == null ? m.wTieNote : null}
+      tieNote={complete && win == null ? m.wTieNote : null}
       tools={c.tools}
       overlays={c.overlays}
       onReplay={c.onReplay}

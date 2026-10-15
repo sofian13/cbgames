@@ -28,7 +28,8 @@ import { WhisperMode, TEAM_COLORS, splitTeams, type WhisperPlan } from "./mode-w
 import { CrescendoMode, type CrescendoPlan } from "./mode-crescendo";
 import { SouffleMode, type SoufflePlan } from "./mode-souffle";
 import { ChutBlob, NoiseMeter } from "./visuals";
-import { useGameFinished } from "@/lib/game-finished";
+import { rankingOf, useGameFinished, winnersOf, type GameScores } from "@/lib/game-finished";
+import { WIN_STR } from "@/lib/winners-text";
 import { ShareResultButton } from "@/components/games/share-result-button";
 import { chutCard } from "@/lib/share-cards";
 import { GameTuto, TutoAgainButton, useFirstTimeTuto } from "@/components/games/game-tuto";
@@ -1568,9 +1569,14 @@ function EndScreen({ players, mode, results, ko, tableCracks, tools, overlays, o
   tools: ReactNode; overlays: ReactNode; onReplay: () => void; onQuit?: () => void;
 }) {
   const t = useT(CHUT_STR);
+  const wt = useT(WIN_STR);
   const reduced = useReducedMotion();
   const idx = [...players.keys()];
-  let rows: { name: string; score: number | string; colorIndex: number; note?: ReactNode }[];
+  let rows: { name: string; score: number | string; colorIndex: number; note?: ReactNode; rank?: number }[];
+  // Scores de la partie (hors élimination directe, où le champion est désigné) : règle unique des gagnants
+  let sc: GameScores | null = null;
+  // Duels arrêtés (« Terminer ») avant que chacun ait fait le sérieux : pas de gagnant
+  let incomplete = false;
   let tomb: number | null = null;
   let weak: number | null = null;
   let gold: number | null = null;
@@ -1580,6 +1586,7 @@ function EndScreen({ players, mode, results, ko, tableCracks, tools, overlays, o
     const order = [...idx].sort((a, b) => tableCracks[a] - tableCracks[b]);
     rows = order.map((p) => ({ name: players[p], score: tableCracks[p] ?? 0, colorIndex: p, note: t.noteTable(tableCracks[p] ?? 0) }));
     unit = "";
+    sc = { names: players, values: idx.map((p) => tableCracks[p] ?? 0), lowerWins: true };
     tomb = order.length > 1 && tableCracks[order[1]] === tableCracks[order[0]] ? null : order[0];
     const w = order[order.length - 1];
     const wTie = order.length > 1 && tableCracks[order[order.length - 2]] === tableCracks[w];
@@ -1606,14 +1613,17 @@ function EndScreen({ players, mode, results, ko, tableCracks, tools, overlays, o
     } else {
       order = [...st].sort((a, b) => a.cracks - b.cracks || b.ms - a.ms);
     }
+    // Sans élimination directe : le moins de craquages, ex æquo départagés au temps tenu (au 1/10 s, comme affiché)
+    incomplete = !ko && !idx.every((p) => results.some((r) => r.serious === p));
+    if (!ko && !incomplete) sc = { names: players, values: idx.map((p) => st[p].cracks), lowerWins: true, tiebreak: idx.map((p) => st[p].ms) };
     rows = order.map((s) => ({ name: players[s.p], score: secs(s.ms, t.dec), colorIndex: s.p, note: t.noteDuel(s.cracks, s.held) }));
     const tTie = !ko && order[1] && order[1].cracks === order[0].cracks && order[1].ms === order[0].ms;
-    tomb = tTie ? null : order[0]?.p ?? null;
+    tomb = tTie || incomplete ? null : order[0]?.p ?? null;
     // Prix décernés seulement s'il n'y a pas d'ex æquo
     const ws = [...st].sort((a, b) => b.cracks - a.cracks || a.ms - b.ms);
     const w = ws[0];
     const wTie = ws[1] && ws[1].cracks === w.cracks && ws[1].ms === w.ms;
-    weak = w && w.cracks > 0 && w.p !== tomb && !wTie ? w.p : null;
+    weak = w && w.cracks > 0 && w.p !== tomb && !wTie && !incomplete ? w.p : null;
     const gs = [...st].sort((a, b) => b.caused - a.caused);
     gold = gs[0] && gs[0].caused > 0 && !(gs[1] && gs[1].caused === gs[0].caused) ? gs[0].p : null;
   }
@@ -1623,8 +1633,12 @@ function EndScreen({ players, mode, results, ko, tableCracks, tools, overlays, o
     weak != null && { icon: Drama, title: t.weakest, sub: t.weakestSub, p: weak, bg: ZZ.coral, mood: "rofl" as const },
     gold != null && { icon: Sparkles, title: t.goldClown, sub: t.goldClownSub, p: gold, bg: ZZ.pink, mood: "laughing" as const },
   ].filter(Boolean) as { icon: typeof Crown; title: string; sub: string; p: number; bg: string; mood: "cool" | "rofl" | "laughing" }[];
-  // Fin de partie → note éventuelle + Soirée (app) : le couronné en tête gagne, « le plus faible » perd
-  useGameFinished(true, { winners: tomb != null ? [players[tomb]] : [], loser: weak != null ? players[weak] : null });
+  // Couronnés à l'écran = gagnants de la Soirée (règle unique : ex æquo en tête = tous, toute la table = personne)
+  const ranks = sc ? rankingOf(sc) : [];
+  const winners = incomplete ? [] : sc ? winnersOf(sc) : tomb != null ? [players[tomb]] : [];
+  if (sc) rows = rows.map((r) => ({ ...r, rank: ranks.find((x) => x.name === r.name.trim())?.rank }));
+  // Fin de partie → note éventuelle + Soirée (app) : mêmes gagnants que l'écran, « le plus faible » perd
+  useGameFinished(true, incomplete ? { noWinner: true } : sc ? { scores: sc, loser: weak != null ? players[weak] : null } : { winners, loser: weak != null ? players[weak] : null });
 
   return (
     <ZScreen tools={tools}>
@@ -1644,8 +1658,9 @@ function EndScreen({ players, mode, results, ko, tableCracks, tools, overlays, o
         ))}
       </div>
       <div className="mt-6">
-        <ZRanking rows={rows} unit={unit} />
+        <ZRanking rows={rows} unit={unit} winners={winners} />
       </div>
+      {incomplete && <p className="mt-4 text-center text-[15px] font-bold" style={{ color: "rgba(255,255,255,0.9)" }}>{wt.incomplete}</p>}
       <div className="mt-auto flex flex-col items-center gap-1 pt-7">
         <SoireeNextButton className="mb-2" />
         <ZButton bg={ACCENT} onClick={onReplay}>{t.replay}</ZButton>

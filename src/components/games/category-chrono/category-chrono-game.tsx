@@ -253,7 +253,7 @@ export default function CategoryChronoGame({ onReturnToLobby }: GameProps) {
           emoji="⏱️"
           name={t.title}
           min={2}
-          max={12}
+          max={16}
           accent={ACCENT}
           onStart={(list) => {
             setNames(list);

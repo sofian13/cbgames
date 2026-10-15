@@ -179,6 +179,7 @@ export function VolumeMode({ plan, ...c }: ModeCommon & { plan: VolumeTurnPlan[]
     <ModeEnd
       rows={rows}
       result={{ scores: { names: ids.map((p) => c.players[p]), values: ids.map((p) => tot[p]) } }}
+      complete={ids.length === c.players.length}
       unit={m.unitPts}
       loser={loser ? { name: c.players[loser.p], colorIndex: loser.p, sentence: loser.s, onReroll: () => setLoser({ ...loser, s: c.rerollDare(loser.s) }), title: `${m.lastPenalty} · ${c.players[loser.p]}` } : null}
       tieNote={ids.length > 1 ? m.tieBottom : null}

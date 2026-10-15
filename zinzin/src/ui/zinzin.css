@@ -117,7 +117,7 @@
 /* Fond de page : violet profond + pois discrets (pas de noir « tech ») */
 .zz-page {
   background-color: var(--zz-bg);
-  background-image: radial-gradient(rgba(255,255,255,0.055) 1.4px, transparent 1.6px);
+  background-image: radial-gradient(var(--zz-dot, rgba(255,255,255,0.055)) 1.4px, transparent 1.6px);
   background-size: 22px 22px;
 }
 
@@ -361,4 +361,78 @@ html, body { overflow-x: clip; overscroll-behavior-x: none; }
   .zb-gloss, .zz-gold-glow, .zz-gold-spk, .zz-hey { animation: none !important; }
   .zz-gold-in, .zz-gold-out { animation-duration: 1ms !important; }
   .zz-sulk, .zz-sulk-off { transition: none; }
+}
+
+/* ── Thèmes de fond secrets (bg-theme.ts, 10 touchers rapides sur le logo) ──
+ * Posés sur <html data-zz-theme>, appliqués à l'accueil seulement : fond, pois, lueurs et gris
+ * de texte. Les cartes de jeux gardent leurs couleurs ; fonds sombres → textes blancs lisibles. */
+.zz-home { transition: background-color 700ms ease; }
+.zz-home .zz-glow { background: var(--zz-glow, #FF3EA5); transition: background-color 700ms ease, opacity 700ms ease; }
+.zz-home .zz-glow + .zz-glow { background: var(--zz-glow-2, #7A4EE8); }
+:root[data-zz-theme="sunset"] .zz-home {
+  --zz-bg: #3A1233; --zz-dot: rgba(255, 196, 150, 0.1); --zz-glow: #FF7A2F; --zz-glow-2: #FF3E8A;
+  --zz-dim: #E6BCC6; --zz-mute: #CB9DAD;
+}
+:root[data-zz-theme="ocean"] .zz-home {
+  --zz-bg: #0B2A50; --zz-dot: rgba(150, 228, 255, 0.09); --zz-glow: #1FD1E8; --zz-glow-2: #2E6BFF;
+  --zz-dim: #AFCBE2; --zz-mute: #90AFCB;
+}
+:root[data-zz-theme="neon"] .zz-home {
+  --zz-bg: #07090B; --zz-dot: rgba(57, 255, 136, 0.11); --zz-glow: #2BFF7E; --zz-glow-2: #B6FF2E;
+  --zz-dim: #A9CDB7; --zz-mute: #86A994;
+}
+:root[data-zz-theme="candy"] .zz-home {
+  --zz-bg: #5A2253; --zz-dot: rgba(255, 205, 238, 0.13); --zz-glow: #FFA8DA; --zz-glow-2: #A8EEFF;
+  --zz-dim: #F0C9E2; --zz-mute: #D6A7C7;
+}
+:root[data-zz-theme] .zz-home .zz-glow { opacity: 0.24; }
+:root[data-zz-theme="neon"] .zz-home .zz-glow { opacity: 0.18; }
+:root[data-zz-theme="sunset"] .zz-home .zz-glow, :root[data-zz-theme="candy"] .zz-home .zz-glow { opacity: 0.32; }
+
+/* Logo : indice au 5e toucher (« … ? ») */
+.zz-logo-hint { animation: zz-pop 380ms var(--zz-spring) both; rotate: 8deg; }
+
+/* ── Le blob qui dort (SleepyBlob.tsx) : paupières qui tombent, respiration, Zzz ── */
+.zz-dozing { transform-origin: 50% 92%; animation: zz-breathe 3.4s ease-in-out 1.6s infinite; }
+@keyframes zz-breathe {
+  0%, 100% { transform: scale(1, 1); }
+  50%      { transform: translateY(1.5%) scale(1.04, 0.965); }
+}
+.zz-dozing .zb-blink { animation: zz-lids 5.5s ease-in-out forwards !important; }
+@keyframes zz-lids {
+  0%   { transform: scaleY(1); }
+  28%  { transform: scaleY(0.5); }
+  38%  { transform: scaleY(0.8); }
+  66%  { transform: scaleY(0.3); }
+  74%  { transform: scaleY(0.45); }
+  100% { transform: scaleY(0.14); }
+}
+/* Fin de l'endormissement : l'œil devient un trait d'encre (paupière fermée), les pupilles s'effacent */
+.zz-dozing .zb-blink > circle { animation: zz-lid-ink 5.5s ease-in forwards; }
+@keyframes zz-lid-ink { 0%, 80% { fill: #fff; } 100% { fill: #1A0B33; } }
+.zz-dozing .zb-follow { animation: zz-lid-hide 5.5s ease-in forwards; }
+@keyframes zz-lid-hide { 0%, 80% { opacity: 1; } 100% { opacity: 0; } }
+.zz-dozing .zb-pupil-a, .zz-dozing .zb-pupil-b { animation-play-state: paused; }
+.zz-startled .zb-blink { animation: zz-eyes-pop 520ms var(--zz-spring) !important; }
+@keyframes zz-eyes-pop { 0% { transform: scale(0.2, 0.1); } 45% { transform: scale(1.3); } 100% { transform: scale(1); } }
+.zz-zzz { position: fixed; z-index: 2; pointer-events: none; width: 0; height: 0; }
+.zz-zzz > span {
+  position: absolute; left: 0; bottom: 0; color: #fff; font-family: var(--font-display); font-weight: 700; line-height: 1;
+  -webkit-text-stroke: 0.08em var(--zz-ink); paint-order: stroke fill;
+  opacity: 0; animation: zz-zzz 3.3s ease-out infinite both;
+}
+/* --zz-dx : vers la droite (1) ou vers la gauche (-1) quand le blob est au bord de l'écran */
+@keyframes zz-zzz {
+  0%   { opacity: 0; transform: translate(0, 0) rotate(calc(var(--zz-dx, 1) * -10deg)) scale(0.6); }
+  20%  { opacity: 1; }
+  100% { opacity: 0; transform: translate(calc(var(--zz-dx, 1) * 26px), -58px) rotate(calc(var(--zz-dx, 1) * 14deg)) scale(1.15); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .zz-dozing { animation: none !important; }
+  .zz-dozing .zb-blink { animation: none !important; transform: scaleY(0.14); }
+  .zz-dozing .zb-blink > circle { animation: none; fill: #1A0B33; }
+  .zz-dozing .zb-follow { animation: none; opacity: 0; }
+  .zz-startled .zb-blink, .zz-logo-hint { animation: none !important; }
+  .zz-zzz > span { animation: none !important; opacity: 0.9; }
+  .zz-home, .zz-home .zz-glow { transition: none; }
 }

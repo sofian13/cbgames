@@ -67,9 +67,9 @@ export function Backdrop({ scrollRef }: { scrollRef: RefObject<HTMLElement | nul
 
   return (
     <div aria-hidden className="pointer-events-none fixed inset-0 overflow-hidden" style={{ zIndex: 0 }}>
-      {/* Lueurs colorées qui dérivent */}
-      <div className="zz-glow" style={{ background: "#FF3EA5", left: "-30%", top: "8%", animationDelay: "0s" }} />
-      <div className="zz-glow" style={{ background: "#7A4EE8", right: "-35%", top: "45%", animationDelay: "-9s" }} />
+      {/* Lueurs colorées qui dérivent (couleurs : --zz-glow / --zz-glow-2, changées par les thèmes secrets) */}
+      <div className="zz-glow" style={{ left: "-30%", top: "8%", animationDelay: "0s" }} />
+      <div className="zz-glow" style={{ right: "-35%", top: "45%", animationDelay: "-9s" }} />
 
       <div ref={layer} className="absolute inset-x-0 top-0" style={{ height: 2700, willChange: "transform" }}>
         {DOODLES.map((d, i) => (

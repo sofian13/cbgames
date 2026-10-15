@@ -615,7 +615,10 @@ export default function PatateGame({ onReturnToLobby }: GameProps) {
         {t.roundsPlayed(round)}
       </span>
       <div className="mt-4 flex items-end">
-        <PlayerBlob name={anyBoom ? hero?.name : undefined} colorIndex={anyBoom ? hero?.i ?? 0 : 0} size={110} mood="cool" crown={anyBoom} shadow />
+        {/* Ex æquo en tête : tous couronnés (ce sont eux qui gagnent, comme dans la Soirée) */}
+        {anyBoom && leaders.length > 1
+          ? leaders.map((r) => <PlayerBlob key={r.i} name={r.name} colorIndex={r.i} size={leaders.length > 2 ? 64 : 84} mood="cool" crown shadow />)
+          : <PlayerBlob name={anyBoom ? hero?.name : undefined} colorIndex={anyBoom ? hero?.i ?? 0 : 0} size={110} mood="cool" crown={anyBoom} shadow />}
         <PotatoBlob size={70} face="smug" style={{ marginLeft: -18 }} />
       </div>
       {(() => {

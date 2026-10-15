@@ -28,7 +28,7 @@ import { ArrowLeft, Award, EyeOff, Flame, Hand, Heart, Lock, PartyPopper, Rotate
 import { isUnlockedNow, requestPaywall, useUnlocked } from "@/lib/entitlements";
 import { PLUS_STR, PremiumNudge, useNudgeText } from "@/components/games/premium-nudge";
 import { GameIconBadge, GameInlineIcon, GameTopRight } from "@/components/games/game-icon-button";
-import { uniqueMin, useGameFinished } from "@/lib/game-finished";
+import { uniqueMin, useGameFinished, winnersOf } from "@/lib/game-finished";
 import { ShareResultButton } from "@/components/games/share-result-button";
 import { pureteGroupCard, pureteSoloCard, pureteTableCard } from "@/lib/share-cards";
 import { SoireeNextButton } from "@/components/games/soiree-next";
@@ -456,8 +456,11 @@ function PureteBody({ onReturnToLobby }: GameProps) {
     return Math.round(100 * (1 - yes / (questions.length * nbPlayers)));
   }, [yesCounts, questions, nbPlayers]);
   // Fin de partie → note éventuelle + Soirée (app). Comme l'écran de fin : le plus pur en tête,
-  // le moins pur (le démon, qui prend la peine) perd. Rien en solo ni quand les résultats sont anonymes.
-  const namedResults = mode !== "solo" && !anonymousMode && !(mode === "secret" && anonymous) && players.length >= 2;
+  // le moins pur (le démon, qui prend la peine) perd. Rien en solo ni en mode « table anonyme ».
+  // (« Révélations anonymes » cache seulement qui a répondu oui : le classement nominatif reste affiché.)
+  const namedResults = mode !== "solo" && !anonymousMode && players.length >= 2;
+  // Couronnés à l'écran = gagnants de la Soirée (règle unique : ex æquo en tête = tous, toute la table = personne)
+  const pureWinners = useMemo(() => (namedResults ? winnersOf({ names: players, values: purities }) : []), [namedResults, players, purities]);
   useGameFinished(phase.k === "results", namedResults ? { loser: uniqueMin(players, purities), scores: { names: players, values: purities } } : undefined);
   // Ordre de révélation : du plus pur au moins pur (le démon en dernier)
   const order = useMemo(() => players.map((_, i) => i).sort((a, b) => purities[b] - purities[a]), [players, purities]);
@@ -850,11 +853,14 @@ function PureteBody({ onReturnToLobby }: GameProps) {
         ) : (
           order.map((pi, rank) => {
             const pur = purities[pi];
+            // Rang de compétition (ex æquo = même rang)
+            const shownRank = 1 + purities.filter((p) => p > pur).length;
+            const crowned = pureWinners.includes(players[pi]);
             const tt = titleFor(pur);
             const c = MASCOT_PALETTE[colorForIndex(pi)].body;
             return (
-              <div key={pi} className="pur-rise flex items-center gap-3 p-3" style={{ ...block(rank === 0 ? YELLOW : CREAM, 20, 4), animationDelay: `${rank * 0.08}s` }}>
-                <span className="w-7 text-center text-[24px]" style={DISPLAY}>{rank + 1}</span>
+              <div key={pi} className="pur-rise flex items-center gap-3 p-3" style={{ ...block(crowned ? YELLOW : CREAM, 20, 4), animationDelay: `${rank * 0.08}s` }}>
+                <span className="w-7 text-center text-[24px]" style={DISPLAY}>{shownRank}</span>
                 <PlayerAvatar name={players[pi]} colorIndex={pi} size={42} mood={moodFor(pur)} border={false} />
                 <div className="min-w-0 flex-1">
                   <div className="flex items-baseline justify-between gap-2">

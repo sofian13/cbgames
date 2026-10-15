@@ -44,9 +44,9 @@ const T: I18n<{
     spilled: (n, k) => `${n} a renversé le verre ${k === 1 ? "1 fois" : `${k} fois`}`,
     noSpill: "Personne n'a rien renversé !",
     verreText: (n) => `${n} gagne au Verre Invisible ! Qui fait mieux ?`,
-    star: "La star de la soirée",
+    star: "Le moins de peines",
     penalties: (k) => `${k} peine${k > 1 ? "s" : ""}`,
-    roundText: (n) => `${n} est la star de notre Tournée. On remet ça ?`,
+    roundText: (n) => `${n} a fini notre Tournée avec le moins de peines. On remet ça ?`,
     chutText: (n) => `${n} a gardé son sérieux à Chut ! Tu tiendrais ?`,
     winner: "Grand gagnant",
     rankingText: (g, n) => `${n} gagne à ${g} ! Revanche ?`,
@@ -65,9 +65,9 @@ const T: I18n<{
     spilled: (n, k) => `${n} spilled the glass ${k === 1 ? "once" : `${k} times`}`,
     noSpill: "Nobody spilled a drop!",
     verreText: (n) => `${n} wins The Invisible Glass! Can you do better?`,
-    star: "Star of the night",
+    star: "Fewest penalties",
     penalties: (k) => `${k} ${k === 1 ? "penalty" : "penalties"}`,
-    roundText: (n) => `${n} is the star of our Round. Same again?`,
+    roundText: (n) => `${n} finished our Round with the fewest penalties. Same again?`,
     chutText: (n) => `${n} kept a straight face in Shh! Could you?`,
     winner: "The winner",
     rankingText: (g, n) => `${n} wins ${g}! Rematch?`,
@@ -86,9 +86,9 @@ const T: I18n<{
     spilled: (n, k) => `${n} derramó el vaso ${k === 1 ? "1 vez" : `${k} veces`}`,
     noSpill: "¡Nadie derramó ni una gota!",
     verreText: (n) => `¡${n} gana en El Vaso Invisible! ¿Lo superas?`,
-    star: "La estrella de la noche",
+    star: "Menos castigos",
     penalties: (k) => `${k} ${k === 1 ? "castigo" : "castigos"}`,
-    roundText: (n) => `${n} es la estrella de nuestra Ronda. ¿Otra?`,
+    roundText: (n) => `${n} terminó nuestra Ronda con menos castigos. ¿Otra?`,
     chutText: (n) => `¡${n} aguantó sin reírse en ¡Chis! ¿Aguantarías tú?`,
     winner: "El ganador",
     rankingText: (g, n) => `¡${n} gana en ${g}! ¿Revancha?`,
@@ -177,7 +177,8 @@ export function verreCard(ranking: { name: string; score: number; spills: number
 }
 
 /* ───────── La Tournée ───────── */
-export function tourneeCard(ranking: { name: string; losses: number; colorIndex: number }[]): ShareCard {
+/** ranking : du moins de peines au plus ; crowned : le 1er est bien gagnant (pas d'égalité de toute la table) */
+export function tourneeCard(ranking: { name: string; losses: number; colorIndex: number }[], crowned = true): ShareCard {
   const t = pick(T);
   const r = ranks(ranking, (x) => x.losses);
   const top = ranking[0];
@@ -186,7 +187,7 @@ export function tourneeCard(ranking: { name: string; losses: number; colorIndex:
     color: colorOf(top?.colorIndex ?? 0),
     name: top?.name,
     mood: "rofl",
-    crown: true,
+    crown: crowned,
     hero: { kicker: t.star, title: top?.name, sub: top ? t.penalties(top.losses) : undefined },
     rows: ranking.slice(1).map((x, i) => ({ name: x.name, value: t.penalties(x.losses), colorIndex: x.colorIndex, rank: r[i + 1] })),
     text: t.roundText(top?.name ?? ""),

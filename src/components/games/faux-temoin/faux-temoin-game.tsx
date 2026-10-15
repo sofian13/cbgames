@@ -28,7 +28,8 @@ import {
 import { FT_STR, answerLabel, type FTStrings } from "./i18n";
 import { BlobFigure, SceneView } from "./scene-view";
 import { COLOR_HEX, DECOR_IDS, makeScene, planRound, shuffle, type Answer, type DecorId, type Question, type Scene } from "./scene";
-import { useGameFinished } from "@/lib/game-finished";
+import { decideWinners, rankingOf, useGameFinished } from "@/lib/game-finished";
+import { WIN_STR } from "@/lib/winners-text";
 import { GameTuto, TutoAgainButton, useFirstTimeTuto } from "@/components/games/game-tuto";
 import { useFTExtra, useFTTuto } from "@/components/games/faux-temoin/tuto";
 import { ShareResultButton } from "@/components/games/share-result-button";
@@ -75,6 +76,7 @@ function makeOrder(ids: number[], prev?: [number, number][]): [number, number][]
 
 export default function FauxTemoinGame({ onReturnToLobby }: GameProps) {
   const t = useT(FT_STR);
+  const wt = useT(WIN_STR);
   const [phase, setPhase] = useState<Phase>("setup");
   const [players, setPlayers] = useState<string[]>([]);
   const [scores, setScores] = useState<number[]>([]);
@@ -108,6 +110,8 @@ export default function FauxTemoinGame({ onReturnToLobby }: GameProps) {
   // ou témoins) si on n'a joué qu'une manche ; au-delà, le podium des points fait foi.
   const campWinners = winner ? players.filter((_, i) => (winner === "fakes") === fakes.includes(i)) : [];
   useGameFinished(phase === "end", { scores: { names: players, values: scores }, winners: round === 1 ? campWinners : null });
+  // Couronnés à l'écran de fin = exactement les gagnants de la Soirée (règle unique)
+  const endWinners = decideWinners({ winners: round === 1 ? campWinners : null, ranking: rankingOf({ names: players, values: scores }) });
 
   useScrollTopOn(`${phase}-${viewer}-${orderRound}-${tieMode}-${pool?.length ?? 0}`);
   // Tuto en slides : 1re fois, dès l'ouverture du jeu (avant la saisie des prénoms)
@@ -608,16 +612,16 @@ export default function FauxTemoinGame({ onReturnToLobby }: GameProps) {
   } else if (phase === "scores" || phase === "end") {
     const ranking = players.map((name, i) => ({ name, score: scores[i], colorIndex: i })).sort((a, b) => b.score - a.score);
     const end = phase === "end";
-    const tie = ranking.length > 1 && ranking[0].score === ranking[1].score;
+    const solo = endWinners.length === 1 ? ranking.find((r) => r.name.trim() === endWinners[0]) : undefined;
     body = (
       <>
         {end && (
-          <div className="mb-2 flex justify-center"><PlayerBlob name={ranking[0].name} colorIndex={ranking[0].colorIndex} size={110} mood="laughing" crown={!tie} arms cheering />
+          <div className="mb-2 flex justify-center"><PlayerBlob name={(solo ?? ranking[0]).name} colorIndex={(solo ?? ranking[0]).colorIndex} size={110} mood="laughing" crown={!!solo} arms cheering />
 </div>
         )}
         <ZTitle size="clamp(34px, 10vw, 46px)" className={end ? "text-center" : ""}>{end ? t.endTitle : t.scoresTitle}</ZTitle>
-        {end && <p className="mt-2 text-center text-[20px] font-bold" style={{ color: ZZ.yellow }}>{round === 1 && winner ? (winner === "fakes" ? t.fakesWinTitle(fakes.length) : t.witnessesWinTitle) : tie ? t.tie : t.winner(ranking[0].name)}</p>}
-        <div className="mt-5"><ZRanking rows={ranking} unit={t.pts} /></div>
+        {end && <p className="mt-2 text-center text-[20px] font-bold" style={{ color: ZZ.yellow }}>{round === 1 && winner ? (winner === "fakes" ? t.fakesWinTitle(fakes.length) : t.witnessesWinTitle) : endWinners.length === 0 ? wt.allTiedSub : solo ? t.winner(solo.name) : wt.win(endWinners)}</p>}
+        <div className="mt-5"><ZRanking rows={ranking} unit={t.pts} winners={end ? endWinners : undefined} /></div>
         <div className="min-h-6 flex-1" />
         {end ? (
           <>

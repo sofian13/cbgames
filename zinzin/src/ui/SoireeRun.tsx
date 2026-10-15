@@ -12,7 +12,7 @@ import { shareApp } from "../settings";
 import { shareResultCard, shareTrophyCard } from "@/lib/share-card";
 import { soberKind } from "../no-alcohol";
 import {
-  captureFinished, endSoiree, ranking, recordWinners, setPhase, skipGame, useSoiree, type SoireeState,
+  announced, captureFinished, endSoiree, kingsOf, ranking, recapTitles, recordWinners, setPhase, skipGame, useSoiree, type SoireeState,
 } from "../soiree";
 import { allTrophies, Ceremony, TROPHY_STR, TrophyList, trophyText } from "./SoireeTrophies";
 import { SOIREE } from "../strings";
@@ -80,6 +80,7 @@ function Intro({ s, onPause }: { s: SoireeState; onPause: () => void }) {
   const c = ZPALETTE[g.color] ?? ZPALETTE.pink;
   const n = s.playlist.length;
   const top = ranking(s).filter((r) => r.points > 0).slice(0, 3);
+  const kings = kingsOf(s);
   const longest = Math.max(...info.name.split(" ").map((w) => w.length));
   // Petit écran (iPhone SE) : blob plus petit pour garder la règle visible
   const small = typeof window !== "undefined" && window.innerHeight < 700;
@@ -144,9 +145,9 @@ function Intro({ s, onPause }: { s: SoireeState; onPause: () => void }) {
 
         {top.length > 0 && (
           <div className="mt-4 flex flex-wrap items-center gap-1.5">
-            {top.map((r, i) => (
+            {top.map((r) => (
               <span key={r.name} className="inline-flex min-h-8 items-center gap-1 rounded-full px-2.5 text-[14px] font-extrabold" style={{ background: ZPALETTE[colorOf(s, r.name)].body, color: ZPALETTE[colorOf(s, r.name)].ink, border: "2.5px solid var(--zz-ink)" }}>
-                {i === 0 && <Crown size={14} strokeWidth={3} aria-hidden />}{r.name} · {t.pts(r.points)}
+                {kings.includes(r.name) && <Crown size={14} strokeWidth={3} aria-hidden />}{r.name} · {t.pts(r.points)}
               </span>
             ))}
           </div>
@@ -176,14 +177,13 @@ const NO_END: string[] = ["tu-prefere"];
 
 /* ───────── Gagnant du jeu : automatique si le jeu le sait, sinon « Qui a gagné ? » ───────── */
 function Winner({ s, onPause }: { s: SoireeState; onPause: () => void }) {
-  // Le jeu a désigné le(s) gagnant(s) via son signal de fin : on l'annonce sans rien demander
-  const named = (s.pending?.winners ?? []).filter((w) => s.band.includes(w));
-  // Pas de gagnant explicite mais un classement : le(s) 1er(s) gagnent
-  const fromRank = (s.pending?.ranking ?? []).filter((r) => r.rank === 1 && s.band.includes(r.name)).map((r) => r.name);
-  const suggested = named.length ? named : fromRank;
+  // On annonce EXACTEMENT ce que le jeu a désigné (règle unique, src/lib/game-finished.ts) :
+  // jamais de gagnant déduit ici d'un classement (le jeu a pu dire « pas de gagnant »)
+  // Prénoms du jeu absents de la bande : affichés quand même, avec « Corriger »
+  const { winners: suggested, unknown } = announced(s);
   const [fixing, setFixing] = useState(false);
   if (fixing) return <PickWinner s={s} suggested={suggested} onPause={onPause} />;
-  if (suggested.length) return <AutoWinner s={s} winners={suggested} onFix={() => setFixing(true)} />;
+  if (suggested.length || unknown.length) return <AutoWinner s={s} winners={suggested} unknown={unknown} onFix={() => setFixing(true)} />;
   // Le jeu ne désigne personne (jeu sans gagnant) : on ne pose pas de question, on enchaîne
   return <NoWinner onFix={() => setFixing(true)} />;
 }
@@ -226,10 +226,32 @@ function NoWinner({ onFix }: { onFix: () => void }) {
   );
 }
 
-/* Annonce automatique « Malik gagne La Patate ! » (1,8 s ou tap), lien discret « Corriger » */
-function AutoWinner({ s, winners, onFix }: { s: SoireeState; winners: string[]; onFix: () => void }) {
+const UNKNOWN_STR: I18n<{ notInBand: (names: string[]) => string; fixNow: string; goOn: (n: number) => string }> = {
+  fr: {
+    notInBand: (n) => `${n.map((x) => `« ${x} »`).join(", ")} ${n.length > 1 ? "ne sont" : "n'est"} pas dans la bande : qui c'était ?`,
+    fixNow: "Corriger",
+    goOn: (n) => (n ? "Continuer sans corriger" : "Continuer sans point"),
+  },
+  en: {
+    notInBand: (n) => `${n.map((x) => `“${x}”`).join(", ")} ${n.length > 1 ? "aren't" : "isn't"} in the crew: who was it?`,
+    fixNow: "Fix it",
+    goOn: (n) => (n ? "Continue without fixing" : "Continue with no point"),
+  },
+  es: {
+    notInBand: (n) => `${n.map((x) => `«${x}»`).join(", ")} no ${n.length > 1 ? "están" : "está"} en el grupo: ¿quién era?`,
+    fixNow: "Corregir",
+    goOn: (n) => (n ? "Seguir sin corregir" : "Seguir sin punto"),
+  },
+};
+
+/* Annonce automatique « Malik gagne La Patate ! » (1,8 s ou tap), lien discret « Corriger ».
+ * Un gagnant du jeu introuvable dans la bande : affiché quand même, pas de suite automatique, « Corriger » mis en avant. */
+function AutoWinner({ s, winners, unknown = [], onFix }: { s: SoireeState; winners: string[]; unknown?: string[]; onFix: () => void }) {
   const lang = useLang();
   const t = pick(SOIREE, lang);
+  const u = pick(UNKNOWN_STR, lang);
+  const shown = [...winners, ...unknown];
+  const doubt = unknown.length > 0;
   const g = getZGame(s.playlist[s.index])!;
   const info = gameInfo(g, lang);
   const done = useRef(false);
@@ -246,44 +268,56 @@ function AutoWinner({ s, winners, onFix }: { s: SoireeState; winners: string[]; 
   useEffect(() => {
     playSfx("tada", { volume: 0.7 });
     haptic("success");
-    timer.current = window.setTimeout(go, 1900);
+    if (!doubt) timer.current = window.setTimeout(go, 1900);
     return () => window.clearTimeout(timer.current);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  const many = winners.length > 1;
-  const size = winners.length === 1 ? 150 : winners.length <= 3 ? 96 : 70;
-  const title = t.autoWin(winners, info.name);
+  const many = shown.length > 1;
+  const size = shown.length === 1 ? 150 : shown.length <= 3 ? 96 : 70;
+  const title = t.autoWin(shown, info.name);
   return (
     <div
       className="zz-screen-in fixed inset-0 flex flex-col items-center justify-center px-6 text-center"
       style={{ zIndex: 30, background: "radial-gradient(rgba(255,255,255,0.07) 1.4px, transparent 1.6px) 0 0 / 22px 22px, #211052", paddingTop: "var(--sat)", paddingBottom: "var(--sab)" }}
-      onClick={() => { if (ready()) go(); }}
-      role="button"
-      aria-label={t.tapNext}
+      onClick={() => { if (!doubt && ready()) go(); }}
+      role={doubt ? undefined : "button"}
+      aria-label={doubt ? undefined : t.tapNext}
     >
       <SoireeStyles />
       <div className="pointer-events-none fixed inset-0" style={{ zIndex: 0 }}><ConfettiBurst count={40} /></div>
       <div className="relative flex flex-col items-center" style={{ zIndex: 1 }}>
         <Tag bg={ZPALETTE[g.color].body} color={ZPALETTE[g.color].ink} tilt={-3}>{info.name}</Tag>
         <div className={`flex flex-wrap items-end justify-center ${many ? "gap-2" : ""}`} style={{ marginTop: Math.round(size * 0.36) }}>{/* place pour la couronne */}
-          {winners.map((w, i) => (
+          {shown.map((w, i) => (
             <div key={w} className={i === 0 ? "zzs-dance" : undefined}>
-              <BandBlob name={w} size={size} color={colorOf(s, w)} mood="laughing" seed={i + 2} crown outline shadow={false} talk={i === 0} autoTalk={i === 0} />
+              <BandBlob name={w} size={size} color={unknown.includes(w) ? "lavender" : colorOf(s, w)} mood="laughing" seed={i + 2} crown outline shadow={false} talk={i === 0} autoTalk={i === 0} />
             </div>
           ))}
         </div>
         <h1 className="zz-title mt-4 text-white" style={{ fontSize: title.length > 34 ? 30 : title.length > 22 ? 36 : 44, lineHeight: 1, overflowWrap: "anywhere" }}>{title}</h1>
-        <p className="mt-3 text-[18px] font-extrabold" style={{ color: "#FFD23F" }}>{t.autoPts(winners.length)}</p>
-        <p className="mt-6 text-[14px] font-semibold" style={{ color: "var(--zz-dim)" }}>{t.tapNext}</p>
+        {winners.length > 0 && <p className="mt-3 text-[18px] font-extrabold" style={{ color: "#FFD23F" }}>{t.autoPts(winners.length)}</p>}
+        {doubt ? (
+          <>
+            <p className="mt-4 max-w-[330px] text-[16px] font-bold leading-snug text-white">{u.notInBand(unknown)}</p>
+            <div className="mt-5 w-full max-w-[330px]">
+              <BigBtn onClick={() => { if (!ready() || done.current) return; haptic(); playSfx("pop2", { volume: 0.5 }); onFix(); }} bg="#FFD23F">{u.fixNow}</BigBtn>
+            </div>
+            <button type="button" onClick={() => { if (ready()) go(); }} className="zz-tap mt-1 min-h-11 px-4 text-[15px] font-bold text-white underline decoration-2 underline-offset-4" style={{ opacity: 0.8 }}>
+              {u.goOn(winners.length)}
+            </button>
+          </>
+        ) : (
+          <p className="mt-6 text-[14px] font-semibold" style={{ color: "var(--zz-dim)" }}>{t.tapNext}</p>
+        )}
       </div>
-      <button
+      {!doubt && <button
         type="button"
         onClick={(e) => { e.stopPropagation(); if (done.current) return; window.clearTimeout(timer.current); haptic(); playSfx("pop2", { volume: 0.5 }); onFix(); }}
         className="zz-tap fixed left-1/2 min-h-11 -translate-x-1/2 px-4 text-[14px] font-bold text-white underline decoration-2 underline-offset-4"
         style={{ zIndex: 2, bottom: "calc(var(--sab) + 12px)", opacity: 0.7 }}
       >
         {t.fix}
-      </button>
+      </button>}
     </div>
   );
 }
@@ -296,6 +330,15 @@ function PickWinner({ s, suggested, onPause }: { s: SoireeState; suggested: stri
   const info = gameInfo(g, lang);
   const [picked, setPicked] = useState<string[]>(suggested);
   const ready = useTapReady();
+  // Un seul enregistrement (double tap sur « Valider » / « Personne »)
+  const done = useRef(false);
+  const submit = (names: string[]) => {
+    if (!ready() || done.current) return;
+    done.current = true;
+    haptic(names.length ? "success" : undefined);
+    playSfx(names.length ? "coins" : "pop2", { volume: names.length ? 0.7 : 0.5 });
+    recordWinners(names);
+  };
   const toggle = (name: string) => {
     if (!ready()) return;
     haptic();
@@ -346,7 +389,7 @@ function PickWinner({ s, suggested, onPause }: { s: SoireeState; suggested: stri
         <div className="min-h-6 flex-1" />
         <div className="sticky bottom-0 z-[2] -mx-5 px-5 pt-5" style={{ paddingBottom: "calc(var(--sab) + 4px)", marginBottom: "calc(-1 * (var(--sab) + 16px))", background: "linear-gradient(180deg, rgba(33,16,82,0) 0px, #211052 20px)" }}>
         <BigBtn
-          onClick={() => { if (!ready()) return; haptic("success"); playSfx("coins", { volume: 0.7 }); recordWinners(picked); }}
+          onClick={() => submit(picked)}
           bg="#FFD23F"
           disabled={!picked.length}
         >
@@ -354,7 +397,7 @@ function PickWinner({ s, suggested, onPause }: { s: SoireeState; suggested: stri
         </BigBtn>
         <button
           type="button"
-          onClick={() => { if (!ready()) return; haptic(); playSfx("pop2", { volume: 0.5 }); recordWinners([]); }}
+          onClick={() => submit([])}
           className="zz-tap mt-1 min-h-12 w-full text-[16px] font-bold text-white underline decoration-2 underline-offset-4"
         >
           {t.nobody}
@@ -370,7 +413,10 @@ function End({ s, onHome, onNew, toast }: { s: SoireeState; onHome: () => void; 
   const lang = useLang();
   const t = pick(SOIREE, lang);
   const rows = ranking(s);
-  const titleOf = (i: number) => (i >= 3 && i === rows.length - 1 ? t.lastTitle : t.titles[i % t.titles.length]);
+  // Titres selon le RANG : « Roi » = les rois (co-rois si ex æquo), jamais un ex æquo du 1er en « fair-play »
+  const kings = kingsOf(s);
+  const recap = recapTitles(s, t.titles, t.lastTitle);
+  const titleOf = (i: number) => recap[i] ?? "";
   // Trophées mesurés (+ prix du public) : remplacent le podium quand il y en a
   const trophies = allTrophies(s);
   const tt = pick(TROPHY_STR, lang);
@@ -390,7 +436,7 @@ function End({ s, onHome, onNew, toast }: { s: SoireeState; onHome: () => void; 
   const share = async () => {
     if (!ready()) return;
     haptic();
-    const lines = rows.map((r, i) => `${i === 0 ? "👑" : `${i + 1}.`} ${r.name} · ${t.pts(r.points)} · ${titleOf(i)}`);
+    const lines = rows.map((r, i) => `${kings.includes(r.name) ? "👑" : `${r.rank}.`} ${r.name} · ${t.pts(r.points)} · ${titleOf(i)}`);
     const games = s.playlist.slice(0, Math.max(1, s.index)).map((id) => gameInfo(getZGame(id)!, lang).name).join(", ");
     const text = `${t.shareHead} 🪩\n${lines.join("\n")}\n${t.shareGames}${lang === "fr" ? "\u00a0:" : ":"} ${games}\n`;
     // Image story des trophées (ou du podium) ; texte seul en secours
@@ -407,7 +453,7 @@ function End({ s, onHome, onNew, toast }: { s: SoireeState; onHome: () => void; 
       return;
     }
     const res = top ? await shareResultCard({
-      game: "soiree", chip: t.name, crown: true, mood: "laughing", color: colorOf(s, top.name),
+      game: "soiree", chip: t.name, crown: kings.includes(top.name), mood: "laughing", color: colorOf(s, top.name),
       hero: { kicker: titleOf(0), title: top.name, sub: `${t.shareGames}${lang === "fr" ? "\u00a0:" : ":"} ${games}` },
       rows: rows.map((r, i) => ({ name: r.name, value: t.pts(r.points), note: titleOf(i), colorIndex: Math.max(0, s.band.indexOf(r.name)), rank: r.rank })),
       text: text.trim(),
@@ -442,7 +488,7 @@ function End({ s, onHome, onNew, toast }: { s: SoireeState; onHome: () => void; 
             return (
               <div key={r.name} className="flex w-[31%] min-w-0 flex-col items-center">
                 <div className={k === 0 ? "zzs-dance" : undefined}>
-                  <BandBlob name={r.name} size={k === 0 ? 92 : 70} color={col} mood={k === 0 ? "laughing" : k === 1 ? "happy" : "wink"} seed={k + 3} crown={k === 0} outline shadow={false} wobble={k !== 0} talk autoTalk={k === 0} talkDelay={1600} />
+                  <BandBlob name={r.name} size={k === 0 ? 92 : 70} color={col} mood={k === 0 ? "laughing" : k === 1 ? "happy" : "wink"} seed={k + 3} crown={kings.includes(r.name)} outline shadow={false} wobble={k !== 0} talk autoTalk={k === 0} talkDelay={1600} />
                 </div>
                 <div className="zz-title mt-1 w-full truncate text-center text-white" style={{ fontSize: r.name.length > 9 ? 17 : 22 }}>{r.name}</div>
                 <div
@@ -462,10 +508,10 @@ function End({ s, onHome, onNew, toast }: { s: SoireeState; onHome: () => void; 
           {rows.map((r, i) => (
             <li key={r.name} className="flex items-center gap-3 px-3.5 py-2.5" style={{ borderTop: i ? "2px solid rgba(21,8,46,0.1)" : undefined }}>
               <span className="zz-title w-6 text-center text-[20px]">{r.rank}</span>
-              <BandBlob name={r.name} size={36} color={colorOf(s, r.name)} mood={i === 0 ? "cool" : "happy"} seed={i} outline shadow={false} wobble={false} hop={false} />
+              <BandBlob name={r.name} size={36} color={colorOf(s, r.name)} mood={kings.includes(r.name) ? "cool" : "happy"} seed={i} outline shadow={false} wobble={false} hop={false} />
               <span className="min-w-0 flex-1">
                 <span className="zz-title block truncate text-[19px]">{r.name}</span>
-                <span className="block text-[14px] font-bold" style={{ color: i === 0 ? "#C2187A" : "rgba(21,8,46,0.7)" }}>{titleOf(i)}</span>
+                <span className="block text-[14px] font-bold" style={{ color: kings.includes(r.name) ? "#C2187A" : "rgba(21,8,46,0.7)" }}>{titleOf(i)}</span>
               </span>
               <span className="shrink-0 text-[15px] font-extrabold">{t.pts(r.points)}</span>
             </li>

@@ -29,7 +29,7 @@ import {
   ArrowDown, ArrowLeft, ArrowUp, Check, CupSoda, Dices, Equal, Flame, Home, RotateCcw, Siren, TrainFront,
   Volume2, VolumeX, X, type LucideIcon,
 } from "lucide-react";
-import { uniqueMax, useGameFinished } from "@/lib/game-finished";
+import { uniqueMax, useGameFinished, winnersOf } from "@/lib/game-finished";
 import { SoireeNextButton } from "@/components/games/soiree-next";
 
 // ── DA sticker ────────────────────────────────────────────
@@ -452,7 +452,8 @@ export default function TgvGame({ onReturnToLobby }: GameProps) {
 
         <div className="min-h-6 flex-1" />
         <div className="sticky bottom-0 -mx-5 mt-4 px-5 pt-4" style={{ paddingBottom: BOTTOM, background: "linear-gradient(180deg, transparent, #1E1250 35%)" }}>
-          <Push big bg={ACCENT} onClick={() => { setCurrentIdx(0); setPhase("pass"); }} className="w-full">
+          {/* Nouvelle partie : peines remises à zéro (comme « Rejouer »), jamais cumulées avec la précédente */}
+          <Push big bg={ACCENT} onClick={() => { setLosses(players.map(() => 0)); setCurrentIdx(0); setPhase("pass"); }} className="w-full">
             {t.launch} <TrainFront size={22} strokeWidth={3} aria-hidden />
           </Push>
           <TextLink onClick={() => setPhase("setup")}><ArrowLeft size={17} strokeWidth={3} aria-hidden /> {t.editPlayers}</TextLink>
@@ -537,7 +538,7 @@ export default function TgvGame({ onReturnToLobby }: GameProps) {
             )}
           </div>
 
-          <TextLink onClick={endGame}>{t.endGame}</TextLink>
+          {/* Pas de « Terminer » en plein tour : on ne finit qu'à la fin d'un tour de table complet (écran d'arrivée du dernier) */}
         </div>
 
         {(spin || penalty) && <PenaltyOverlay name={currentName} colorIndex={currentIdx} spin={spin} penalty={penalty} onReroll={rerollGage} onDone={afterPenalty} />}
@@ -561,31 +562,44 @@ export default function TgvGame({ onReturnToLobby }: GameProps) {
         <Push big bg={ACCENT} onClick={nextPlayer} className="mt-8 w-full">
           {t.turnOf(players[(currentIdx + 1) % players.length] ?? "")}
         </Push>
-        <div className="mt-1"><TextLink onClick={endGame}>{t.endGame}</TextLink></div>
+        {/* Fin possible seulement quand chacun a conduit autant de fois (fin d'un tour de table) */}
+        {currentIdx === players.length - 1 && <div className="mt-1"><TextLink onClick={endGame}>{t.endGame}</TextLink></div>}
       </Page>
     );
   }
 
   // ── OVER : classement (le moins de peines en tête) ──
   const ranking = players.map((name, i) => ({ name, i, losses: losses[i] ?? 0 })).sort((a, b) => a.losses - b.losses);
-  const top = ranking[0];
+  // Couronnés = gagnants de la Soirée (règle unique : ex æquo en tête = tous, toute la table = personne)
+  const winners = winnersOf({ names: players, values: losses, lowerWins: true });
+  const tops = ranking.filter((p) => winners.includes(p.name));
+  const top = tops[0];
+  const rest = ranking.filter((p) => !winners.includes(p.name));
+  const rankOf = (l: number) => 1 + ranking.filter((p) => p.losses < l).length;
   return (
     <Page>
       {chrome}
       <h1 style={{ ...DISPLAY, fontSize: 48, lineHeight: 0.95 }}>{t.terminus}</h1>
       <p className="mt-2 text-[16px] font-semibold" style={{ color: "rgba(255,255,255,0.82)" }}>{t.summary}</p>
-      {top && (
+      {top ? (
         <div className="relative mt-16 rounded-[26px] px-5 pb-4 pt-[52px] text-center" style={{ ...stk("#3DDC97", 6), color: INK, transform: "rotate(-2deg)" }}>
-          <div className="absolute -top-[62px] left-1/2 -translate-x-1/2"><PlayerBlob name={top.name} colorIndex={top.i} size={76} mood="cool" crown arms /></div>
+          <div className="absolute -top-[62px] left-1/2 flex -translate-x-1/2 gap-1">
+            {tops.map((p) => <PlayerBlob key={p.i} name={p.name} colorIndex={p.i} size={tops.length > 1 ? 60 : 76} mood="cool" crown arms />)}
+          </div>
           <p className="text-[15px] font-bold">{t.bestDriver}</p>
-          <p style={{ ...DISPLAY, fontSize: nameSize(top.name, 40), lineHeight: 1, overflowWrap: "anywhere" }}>{top.name}</p>
+          <p style={{ ...DISPLAY, fontSize: nameSize(tops.map((p) => p.name).join(" & "), 40), lineHeight: 1, overflowWrap: "anywhere" }}>{tops.map((p) => p.name).join(" & ")}</p>
           <p className="mt-1 text-[15px] font-bold">{t.penalties(top.losses)}</p>
         </div>
+      ) : (
+        // Toute la table à égalité : pas de meilleur conducteur
+        <p className="mx-auto mt-6 inline-flex items-center gap-2 self-center rounded-full px-5 py-1.5" style={{ ...stk("#FFD23F", 4), color: INK, transform: "rotate(-2deg)", ...DISPLAY, fontSize: 28 }}>
+          <Equal size={26} strokeWidth={3.4} aria-hidden /> {t.tie}
+        </p>
       )}
       <div className="mt-5 space-y-2.5">
-        {ranking.slice(1).map((p, k) => (
+        {rest.map((p, k) => (
           <div key={p.i} className="flex items-center gap-3 rounded-[18px] px-3.5" style={{ ...stk("#fff", 3, 2.5), color: INK, minHeight: 54, transform: `rotate(${k % 2 ? 0.8 : -0.8}deg)` }}>
-            <span className="w-7 text-[18px]" style={DISPLAY}>{k + 2}</span>
+            <span className="w-7 text-[18px]" style={DISPLAY}>{rankOf(p.losses)}</span>
             <PlayerAvatar name={p.name} colorIndex={p.i} size={32} mood="happy" />
             <span className="min-w-0 flex-1 truncate text-[17px] font-bold">{p.name}</span>
             <span className="text-[15px] font-bold">{t.penalties(p.losses)}</span>
