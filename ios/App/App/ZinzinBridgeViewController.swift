@@ -8,6 +8,13 @@ class ZinzinBridgeViewController: CAPBridgeViewController {
         bridge?.registerPluginInstance(AppIconPlugin())
         // Pas de « Secouer pour annuler » (fenêtre système dans les champs) : la secousse est à l'accueil
         UIApplication.shared.applicationSupportsShakeToEdit = false
+        // Pas de rebond élastique de la webview elle-même : tous les écrans défilent dans leurs
+        // propres conteneurs (overflow-y: auto, inertie intacte) et l'accueil a son élastique en JS
+        // (PullBlob). Ce rebond tirait toute la page (grand vide violet) au lieu de l'élastique.
+        // Le défilement du document reste possible (scrollEnabled inchangé), seul le rebond saute.
+        webView?.scrollView.bounces = false
+        webView?.scrollView.alwaysBounceVertical = false
+        webView?.scrollView.alwaysBounceHorizontal = false
     }
 
     // MARK: - Secousse (easter egg de l'accueil)

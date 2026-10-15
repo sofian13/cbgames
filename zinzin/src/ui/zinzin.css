@@ -307,7 +307,9 @@
  * (blob, ombre, rotation, police un peu plus large) laissait glisser TOUTE la page.
  * `clip` sur html/body : coupe sans créer de conteneur de défilement (sans effet sur les jeux). */
 html, body { overflow-x: clip; overscroll-behavior-x: none; }
-.zz-home { overflow-x: hidden; overscroll-behavior-x: none; touch-action: pan-y; }
+/* Accueil : pas de rebond natif en haut / en bas, c'est l'élastique (PullBlob) qui le remplace.
+ * L'inertie du défilement reste native. */
+.zz-home { overflow-x: hidden; overscroll-behavior: none; touch-action: pan-y; }
 /* Carrousel / rails : défilent en largeur seulement. overflow-x: auto rend aussi overflow-y « auto » :
  * un blob qui dépasse en bas leur donnait quelques px de défilement vertical (la carte « bougeait »
  * et un swipe vertical posé dessus ne faisait plus défiler la page). Rendu identique (déjà coupé). */
