@@ -246,7 +246,7 @@ const BASE_CARDS: PicoletteCard[] = [
 // ═════════════════════════════════════════════════════════════
 const TC = "Chacun son tour, sans répéter. Le premier qui sèche (ou invente) perd.";
 const Q = "{p1} répond en 10 secondes. Faux ou rien = peine.";
-const J = "Ceux qui l'ont déjà fait lèvent la main et racontent en une phrase. Refuser de raconter = peine.";
+const J = "Ceux qui l'ont déjà fait lèvent la main et prennent la peine.";
 const M = "Sans un mot ni un bruit. Personne ne trouve en 30 secondes ? {p1} prend la peine.";
 const CH = "Tu bloques plus de 10 secondes ? Peine.";
 const AV = "Réponds franchement… ou prends la peine.";

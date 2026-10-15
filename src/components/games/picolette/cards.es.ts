@@ -9,7 +9,7 @@ const R = "El primero que falle se lleva el castigo.";
 const VAL = "Cada uno repite TODA la lista y añade una cosa. El primero que olvide algo o se equivoque pierde.";
 const TC = "Por turnos, sin repetir. El primero que se quede en blanco (o se lo invente) pierde.";
 const Q = "{p1} responde en 10 segundos. Mal o nada = castigo.";
-const J = "Quien lo haya hecho levanta la mano y lo cuenta en una frase. Negarse a contarlo = castigo.";
+const J = "Quien lo haya hecho levanta la mano y se lleva el castigo.";
 const M = "Sin palabras ni ruidos. ¿Nadie lo adivina en 30 segundos? {p1} se lleva el castigo.";
 const CH = "¿Te trabas más de 10 segundos? Castigo.";
 const AV = "Responde con sinceridad… o llévate el castigo.";

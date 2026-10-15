@@ -198,7 +198,7 @@ const BASE_CARDS_EN: PicoletteCard[] = [
 // ═════════════════════════════════════════════════════════════
 const TC = "Take turns, no repeats. First one to blank (or make stuff up) loses.";
 const Q = "{p1} answers in 10 seconds. Wrong or nothing = penalty.";
-const J = "Anyone who's done it raises a hand and tells the story in one sentence. Refuse to tell = penalty.";
+const J = "Anyone who's done it raises a hand and takes the penalty.";
 const M = "No words, no sounds. Nobody gets it in 30 seconds? {p1} takes the penalty.";
 const CH = "Stuck for more than 10 seconds? Penalty.";
 const AV = "Answer honestly… or take the penalty.";
