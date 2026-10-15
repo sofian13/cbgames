@@ -431,18 +431,6 @@ export default function PicoletteGame({ onReturnToLobby }: GameProps) {
     }
   };
 
-  // « Pas fou ? Une autre » : la carte sort du paquet (jamais revue dans la partie)
-  const rerollCard = () => {
-    setRevealed(false);
-    const rest = deck.filter((_, i) => i !== cardIdx);
-    if (cardIdx >= rest.length) {
-      setDeck(dealDeck(source(), players.length));
-      setCardIdx(0);
-    } else {
-      setDeck(rest);
-    }
-  };
-
   const activateRule = () => {
     if (!card || card.type !== "rule") return;
     const text = fill(card.text, card.who, players);
@@ -746,9 +734,6 @@ export default function PicoletteGame({ onReturnToLobby }: GameProps) {
                 {hint.lose && <LoseBox lose={hint.lose} who={card.who} players={players} penaltyMode={penaltyMode} />}
               </>
             )}
-          </div>
-          <div className="mt-4">
-            <RerollButton onClick={rerollCard} />
           </div>
         </div>
 
