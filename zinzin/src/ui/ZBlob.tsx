@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, type CSSProperties, type ReactNode } from "react";
 import type { MascotColor, MascotMood } from "@/components/Mascot";
 import { POTATO, costumeLayers, type ZCostume } from "./costumes";
+import { rainbowCrownLayer } from "@/components/avatar/AvatarBlob";
 
 /**
  * ZBlob — les « blobs zinzins » de l'app.
@@ -60,10 +61,16 @@ export interface ZBlobProps {
   outline?: boolean;
   /** Petite couronne (Premium) */
   crown?: boolean;
+  /** Couronne arc-en-ciel (secret du prénom « Zinzin ») : remplace la petite couronne */
+  rainbowCrown?: boolean;
   /** Déguisement du jeu (voir costumes.tsx) */
   costume?: ZCostume;
   /** Saute quand on le touche (défaut : oui) */
   hop?: boolean;
+  /** Couleurs sur mesure (blob doré…) : prioritaires sur `color` */
+  palette?: { body: string; deep: string; hi: string; ink: string };
+  /** Reflet qui balaie le corps (blob doré) */
+  gloss?: boolean;
   className?: string;
   style?: CSSProperties;
 }
@@ -151,12 +158,12 @@ export function pauseWhenOffscreen(el: Element | null): () => void {
 
 export function ZBlob({
   size = 96, color = "pink", mood = "happy", seed = 0, wobble = true, shadow = true,
-  speed = 2.6, delay = 0, outline = false, crown = false, costume, hop = true, className, style,
+  speed = 2.6, delay = 0, outline = false, crown = false, rainbowCrown = false, costume, hop = true, palette, gloss = false, className, style,
 }: ZBlobProps) {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => pauseWhenOffscreen(ref.current), []);
   const uid = useId().replace(/:/g, "");
-  const c = costume === "potato" ? POTATO : (ZPALETTE[color] ?? ZPALETTE.pink);
+  const c = palette ?? (costume === "potato" ? POTATO : (ZPALETTE[color] ?? ZPALETTE.pink));
   const s = Math.abs(Math.floor(seed));
   const shape = SHAPES[s % SHAPES.length];
   const look = LOOKS[(s + (mood === "sus" || mood === "shifty" ? 4 : 0)) % LOOKS.length];
@@ -334,6 +341,7 @@ export function ZBlob({
         <g clipPath={`url(#${clip})`}>
           <ellipse cx={37} cy={30} rx={14} ry={8.5} transform="rotate(-24 37 30)" fill="#fff" opacity={0.5} />
           <circle cx={55} cy={22} r={2.6} fill="#fff" opacity={0.6} />
+          {gloss && <rect className="zb-gloss" x={-30} y={-20} width={18} height={160} fill="#fff" opacity={0.55} />}
         </g>
 
         {/* Visage (léger décalage gélatineux) */}
@@ -363,7 +371,8 @@ export function ZBlob({
         {cos.top}
 
         {/* Accessoires d'humeur */}
-        {crown && (
+        {rainbowCrown && !cos.top && rainbowCrownLayer(clip, 2, wobble)}
+        {crown && !rainbowCrown && (
           <g transform="translate(60 14) rotate(-8)">
             <path d="M-20 4 L-24 -16 L-11 -6 L0 -22 L11 -6 L24 -16 L20 4Z" fill="#FFD23F" stroke={INK} strokeWidth={3.4} strokeLinejoin="round" />
             <circle cx={0} cy={-6} r={3.2} fill="#FF3EA5" stroke={INK} strokeWidth={1.6} />

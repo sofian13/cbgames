@@ -6,7 +6,8 @@ import { useUnlocked } from "@/lib/entitlements";
 import { AVATAR_PALETTE, freeLook, type AvatarLook } from "@/lib/avatar/look";
 import { getBand, getPlayerLook, subscribePlayers, type BandEntry } from "@/lib/saved-players";
 import { colorForIndexSafe } from "./colors";
-import { AvatarBlob, type AvatarCostumeLayers } from "./AvatarBlob";
+import { AvatarBlob, RainbowCrown, type AvatarCostumeLayers } from "./AvatarBlob";
+import { isZinzinName } from "@/lib/avatar/secrets";
 import { playPersoVoice, talkMood, usePersoVoice, useSpeaking, voiceKey } from "@/lib/avatar/voice";
 import { VoiceBadge, hopEl } from "./VoiceUI";
 
@@ -138,8 +139,13 @@ export function PlayerBlob({
   const { ref, mood: talkingMood, talking } = usePersoTalk(name, { auto: autoTalk });
   const m = talkingMood ?? mood;
   const tap = talk && voice && name ? { onClick: () => void playPersoVoice(name), role: "button" as const, tabIndex: 0, "aria-label": name } : {};
+  // Secret : un joueur nommé « Zinzin » porte la couronne arc-en-ciel (à la place de celle du gagnant)
+  const zinzin = isZinzinName(name);
   if (!look) {
-    const blob = <Mascot size={size} color={color ?? colorForIndexSafe(colorIndex)} mood={m} arms={arms} bob={bob} shadow={shadow} delay={delay} crown={crown} cheering={cheering} sweat={sweat} sparkle={sparkle} blink={blink} style={talk || autoTalk ? undefined : style} className={talk || autoTalk ? undefined : className} />;
+    const mascotProps = { size, color: color ?? colorForIndexSafe(colorIndex), mood: m, arms, shadow, delay, cheering, sweat, sparkle, blink };
+    const blob = zinzin
+      ? <ZinzinMascot {...mascotProps} bob={bob} crownSpace={crown} style={talk || autoTalk ? undefined : style} className={talk || autoTalk ? undefined : className} />
+      : <Mascot {...mascotProps} bob={bob} crown={crown} style={talk || autoTalk ? undefined : style} className={talk || autoTalk ? undefined : className} />;
     if (!talk && !autoTalk) return blob;
     return (
       <div ref={ref} className={className} style={{ position: "relative", display: "inline-block", flexShrink: 0, ...style }} {...tap}>
@@ -157,9 +163,34 @@ export function PlayerBlob({
     <div ref={ref} className={[cheer ? "pb-cheer" : "", className ?? ""].join(" ").trim() || undefined} style={{ position: "relative", width: size, height: k + crownH, flexShrink: 0, marginTop: headroom === "auto" ? overTop : headroom ? size * 0.2 : undefined, ...cheer, ...style }} {...tap}>
       {cheer && <style>{"@media (prefers-reduced-motion: reduce){.pb-cheer{animation:none!important}}"}</style>}
       <div ref={art} style={{ position: "absolute", left: (size - k) / 2, bottom: -k * 0.04 }}>
-        <AvatarBlob look={look} size={k} mood={m} animate={animate && bob !== false && !talking && !cheer} costume={crown ? (look.extra === "headphones" ? crownHighCostume : crownCostume) : undefined} />
+        <AvatarBlob look={look} size={k} mood={m} name={name} animate={animate && bob !== false && !talking && !cheer} costume={crown && !zinzin ? (look.extra === "headphones" ? crownHighCostume : crownCostume) : undefined} />
       </div>
       {talk && voice && <VoiceBadge size={Math.max(16, Math.round(size * 0.3))} />}
+    </div>
+  );
+}
+
+/**
+ * Blob par défaut (Mascot) d'un joueur « Zinzin » : couronne arc-en-ciel posée sur la tête.
+ * L'ensemble (blob + couronne) porte l'animation du Mascot pour bouger d'un bloc ;
+ * même encombrement que le Mascot (couronné ou non).
+ */
+function ZinzinMascot({ size, bob, crownSpace, delay = 0, cheering, mood, style, className, ...rest }: {
+  size: number; color: MascotColor; mood: MascotMood; arms?: boolean; bob?: boolean; shadow?: boolean; delay?: number;
+  cheering?: boolean; sweat?: boolean; sparkle?: boolean; blink?: boolean; crownSpace: boolean; style?: CSSProperties; className?: string;
+}) {
+  const crownH = crownSpace ? size * 0.3 : 0;
+  const anim = cheering
+    ? "mascot-cheer 0.9s ease-in-out infinite"
+    : mood === "rofl" ? "mascot-rofl 0.8s ease-in-out infinite"
+      : bob !== false ? `mascot-bob ${2.4 + delay * 0.2}s ease-in-out infinite` : "none";
+  return (
+    <div className={className} style={{ position: "relative", width: size, height: size * 1.15 + crownH, flexShrink: 0, animation: anim, animationDelay: `${delay}s`, transformOrigin: "50% 80%", ...style }}>
+      <Mascot {...rest} size={size} mood={mood} delay={delay} cheering={cheering} style={{ position: "absolute", left: 0, bottom: 0, animation: "none" }} />
+      {/* Base de la couronne sur le haut du corps (comme la couronne du Mascot) */}
+      <div style={{ position: "absolute", left: "50%", bottom: size * 0.84, width: size * 0.6, marginLeft: -size * 0.3, zIndex: 3 }}>
+        <RainbowCrown width={size * 0.6} />
+      </div>
     </div>
   );
 }

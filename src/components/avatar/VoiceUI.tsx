@@ -45,9 +45,11 @@ export function VoiceBadge({ size = 20, style }: { size?: number; style?: CSSPro
 
 /** Blob qui parle : bouche animée pendant la lecture, petit saut au départ, pastille son. */
 export function TalkingBlob({
-  look, size, speakKey, mood = "happy", animate = true, badge = false, onTap, label,
+  look, size, speakKey, mood = "happy", animate = true, badge = false, onTap, label, name,
 }: {
   look: AvatarLook;
+  /** Prénom (couronne secrète « Zinzin ») */
+  name?: string;
   size: number;
   speakKey: string;
   mood?: MascotMood;
@@ -62,7 +64,7 @@ export function TalkingBlob({
   useEffect(() => { if (talking) hopEl(ref.current); }, [talking]);
   const inner = (
     <span ref={ref} className="relative inline-block">
-      <AvatarBlob look={look} size={size} mood={talking ? talkMood(level) : mood} animate={animate && !talking} />
+      <AvatarBlob look={look} size={size} name={name} mood={talking ? talkMood(level) : mood} animate={animate && !talking} />
       {badge && <VoiceBadge size={Math.max(18, Math.round(size * 0.34))} />}
     </span>
   );

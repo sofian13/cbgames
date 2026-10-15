@@ -27,6 +27,8 @@ export interface AvatarItem {
   free: boolean;
   /** Équivalent gratuit le plus proche (affichage sans Zinzin+) */
   fallback?: string;
+  /** Secret (easter egg, voir secrets.ts) : caché dans l'éditeur tant qu'il n'est pas trouvé, jamais tiré au hasard */
+  secret?: boolean;
 }
 
 /* ───────── Couleurs du blob (toutes gratuites) ───────── */
@@ -67,6 +69,8 @@ export const HAIR_COLOR_IDS = Object.keys(HAIR_COLORS);
 
 /* ───────── Éléments ───────── */
 const item = (id: string, free: boolean, fallback?: string): AvatarItem => ({ id, free, fallback });
+/** Accessoire secret : gratuit une fois trouvé (récompense) */
+const secretItem = (id: string): AvatarItem => ({ id, free: true, secret: true });
 
 export const AVATAR_ITEMS: Record<AvatarSlot, AvatarItem[]> = {
   eyes: [
@@ -89,6 +93,8 @@ export const AVATAR_ITEMS: Record<AvatarSlot, AvatarItem[]> = {
     item("horns", false, "party"), item("bucket", true), item("ninja", false, "beanie"), item("cowboy", false, "bucket"),
     item("bow", true), item("halo", false, "party"), item("tophat", false, "cap"), item("party", true),
     item("bandana", false, "beanie"),
+    // Secret : trouvé en touchant le blob doré de l'accueil (ajout v3)
+    secretItem("goldhalo"),
   ],
   face: [
     item("none", true), item("shades", true), item("round", true), item("moustache", false, "none"), item("scar", false, "plaster"),
@@ -153,7 +159,7 @@ export function baseLook(color?: string): AvatarLook {
 /** Tirage au hasard : chaque élément est tiré séparément (pas de tenue toute faite). */
 export function randomLook(onlyFree = false, rnd: () => number = Math.random): AvatarLook {
   const pickOf = <T,>(a: T[]) => a[Math.floor(rnd() * a.length)];
-  const pool = (s: AvatarSlot) => AVATAR_ITEMS[s].filter((x) => !onlyFree || x.free).map((x) => x.id);
+  const pool = (s: AvatarSlot) => AVATAR_ITEMS[s].filter((x) => !x.secret && (!onlyFree || x.free)).map((x) => x.id);
   // Un peu de « rien » pour ne pas surcharger le perso
   const maybe = (s: AvatarSlot, p: number) => (rnd() < p ? pickOf(pool(s).filter((x) => x !== "none")) : "none");
   const hat = maybe("hat", 0.55);

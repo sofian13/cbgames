@@ -317,3 +317,46 @@ html, body { overflow-x: clip; overscroll-behavior-x: none; }
    horizontal parasite (un élément tourné ou une ombre qui dépasse rendait l'écran « déplaçable »). */
 .zz-scroll,
 .overflow-y-auto:not(.overflow-x-auto) { overflow-x: hidden; overscroll-behavior-x: none; }
+
+/* ── Secrets de l'accueil (GoldenBlob, CardBlob, PullBlob) ── */
+/* Blob doré : reflet qui balaie le corps, halo qui pulse, étincelles */
+.zb-gloss { animation: zb-gloss 1.7s ease-in-out infinite; transform: skewX(-18deg); }
+@keyframes zb-gloss {
+  0%   { transform: translateX(0) skewX(-18deg); }
+  60%, 100% { transform: translateX(170px) skewX(-18deg); }
+}
+.zz-gold-glow {
+  position: absolute; inset: -22%; border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 226, 110, 0.75), rgba(255, 200, 40, 0.25) 45%, rgba(255, 200, 40, 0) 68%);
+  animation: zz-gold-glow 1.1s ease-in-out infinite alternate;
+}
+@keyframes zz-gold-glow { from { opacity: 0.55; transform: scale(0.9); } to { opacity: 1; transform: scale(1.08); } }
+.zz-gold-spk { animation: zz-gold-spk 1.2s ease-in-out infinite; }
+@keyframes zz-gold-spk {
+  0%, 100% { opacity: 1; transform: scale(1) rotate(0deg); }
+  50%      { opacity: 0.2; transform: scale(0.4) rotate(60deg); }
+}
+.zz-gold-in { animation: zz-gold-in 620ms var(--zz-spring) both; }
+@keyframes zz-gold-in { from { opacity: 0; transform: translateY(-24px) scale(0.6); } to { opacity: 1; transform: none; } }
+.zz-gold-out { animation: zz-gold-out 240ms ease-in both; }
+@keyframes zz-gold-out { to { opacity: 0; transform: translateY(-16px) scale(0.9); } }
+
+/* Blob d'une carte : sa zone est sa propre cible ; la carte ne s'enfonce pas quand on le touche */
+.zz-cblob { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.zz-push:has(.zz-cblob:active):active { translate: none; box-shadow: 0 5px 0 var(--zz-ink); }
+.zz-sulk, .zz-sulk-off { transition: transform 420ms var(--zz-spring); transform-origin: 50% 90%; }
+/* Vexé : il se détourne (miroir) et pique du nez de l'autre côté */
+.zz-sulk { transform: scaleX(-1) rotate(-12deg) translateX(-6%); }
+.zz-hey { animation: zz-pop 420ms var(--zz-spring) both; rotate: -8deg; }
+
+/* Tirer l'accueil : élastique du blob suspendu */
+.zz-pull-rope {
+  width: 4px; height: 1px; margin-left: -2px; transform-origin: 50% 0%;
+  background: linear-gradient(90deg, #15082E, #FF7EC0 40%, #15082E);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .zb-gloss, .zz-gold-glow, .zz-gold-spk, .zz-hey { animation: none !important; }
+  .zz-gold-in, .zz-gold-out { animation-duration: 1ms !important; }
+  .zz-sulk, .zz-sulk-off { transition: none; }
+}

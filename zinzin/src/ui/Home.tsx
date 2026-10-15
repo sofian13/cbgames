@@ -9,6 +9,9 @@ import { UI } from "../strings";
 import { Backdrop } from "./Backdrop";
 import { BandSlide } from "./BandSlide";
 import { ShakeRain } from "./ShakeRain";
+import { GoldenBlob } from "./GoldenBlob";
+import { PullBlob } from "./PullBlob";
+import { CardBlob } from "./CardBlob";
 import { TapLogo } from "./Logo";
 import { drawGreeting, greetingText } from "../greeting";
 import { SoireeEntry } from "./SoireeKit";
@@ -35,6 +38,7 @@ export function Home({
 }) {
   const soiree = useSoiree();
   const scrollRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
   const lang = useLang();
   const t = pick(UI, lang);
   const noAlc = useNoAlcohol();
@@ -49,7 +53,10 @@ export function Home({
       <Backdrop scrollRef={scrollRef} />
       {/* Secret : secouer le tél → pluie de blobs (derrière le contenu, devant le fond) */}
       <ShakeRain homeRef={scrollRef} />
-      <div className="relative mx-auto max-w-lg" style={{ zIndex: 1, paddingTop: "calc(var(--sat) + 10px)", paddingBottom: "calc(var(--sab) + 32px)" }}>
+      {/* Secrets : blob doré (rare, derrière les cartes) ; blob suspendu quand on tire l'accueil vers le bas */}
+      <GoldenBlob homeRef={scrollRef} />
+      <PullBlob homeRef={scrollRef} contentRef={contentRef} />
+      <div ref={contentRef} className="relative mx-auto max-w-lg" style={{ zIndex: 1, paddingTop: "calc(var(--sat) + 10px)", paddingBottom: "calc(var(--sab) + 32px)" }}>
         {/* En-tête */}
         <header className="relative flex items-center justify-between px-5">
           <div className="flex items-center gap-2">
@@ -326,9 +333,9 @@ function GameCard({
       }}
       aria-label={`${info.name}${locked ? t.lockedSuffix : ""}`}
     >
-      {/* Blob qui dépasse du haut de la carte */}
-      <div className="absolute" style={{ right: big ? 6 : -10, top: -blob * 0.34 }}>
-        <ZBlob size={blob} color={game.color} mood={game.mood} seed={seed} speed={2.4} shadow={false} outline costume={game.costume} />
+      {/* Blob qui dépasse du haut de la carte (secret : il réagit quand on le touche, sans ouvrir la fiche) */}
+      <div className="absolute z-[3]" style={{ right: big ? 6 : -10, top: -blob * 0.34 }}>
+        <CardBlob size={blob} color={game.color} mood={game.mood} seed={seed} costume={game.costume} />
       </div>
 
       {/* Coin haut-gauche : sticker joueurs (+ cadenas), sur une ligne, à l'écart du blob */}

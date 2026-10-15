@@ -313,7 +313,7 @@ export function BandStatsScreen({ band, onClose, onToast }: { band: BandEntry[];
         {s.games === 0 ? (
           <div className="bst-in mt-6 flex flex-col items-center rounded-[28px] px-5 pb-6 pt-4 text-center" style={{ ...avSticker(LAVENDER, 5), color: AV_INK, ...enter(0, -1.5) }}>
             <div className="relative">
-              <AvatarBlob look={lookFor(meName ?? "?", band, unlocked)} size={130} mood="asleep" />
+              <AvatarBlob look={lookFor(meName ?? "?", band, unlocked)} name={meName} size={130} mood="asleep" />
               <span className="absolute -right-3 top-1" style={{ ...AV_DISPLAY, fontSize: 26, rotate: "12deg" }} aria-hidden>z<span style={{ fontSize: 18 }}>z</span></span>
             </div>
             <p className="mt-2" style={{ ...AV_DISPLAY, fontSize: 26, lineHeight: 1.05 }}>{t.emptyTitle}</p>
@@ -339,7 +339,7 @@ export function BandStatsScreen({ band, onClose, onToast }: { band: BandEntry[];
           <Section title={t.loserTitle} i={k++}>
             {podium.length === 0 ? (
               <div className="flex items-center gap-3 rounded-[22px] p-3" style={{ ...avSticker("#fff", 4), color: AV_INK, rotate: "1deg" }}>
-                <AvatarBlob look={lookFor(meName ?? "?", band, unlocked)} size={64} mood="sus" animate={false} />
+                <AvatarBlob look={lookFor(meName ?? "?", band, unlocked)} name={meName} size={64} mood="sus" animate={false} />
                 <p className="text-[15px] font-bold leading-snug">{t.loserNone}</p>
               </div>
             ) : (
@@ -403,7 +403,7 @@ export function BandStatsScreen({ band, onClose, onToast }: { band: BandEntry[];
                   return (
                     <li key={b.name} className="bst-in flex flex-col items-center rounded-[22px] px-2 pb-2.5 pt-2 text-center"
                       style={{ ...avSticker(CARD_COLORS[i % CARD_COLORS.length], 4), color: AV_INK, ...enter(k + i * 0.5, i % 2 ? 1.5 : -1.5) }}>
-                      <AvatarBlob look={lookFor(b.name, band, unlocked)} size={68} mood={mood} animate={false} />
+                      <AvatarBlob look={lookFor(b.name, band, unlocked)} name={b.name} size={68} mood={mood} animate={false} />
                       <span className="mt-0.5 block w-full truncate" style={{ ...AV_DISPLAY, fontSize: 18 }}>{b.name}</span>
                       <span className="mt-1 rounded-full px-2.5 py-0.5 text-[12px] font-extrabold" style={{ background: "#fff", border: `2px solid ${AV_INK}` }}>
                         {lost ? t.losses(lost) : `0 · ${t.untouchable}`}
@@ -461,7 +461,7 @@ function Podium({ people, band, unlocked, t }: { people: { name: string; n: numb
           <div key={sl.rank} className="flex min-w-0 flex-1 flex-col items-center" style={{ maxWidth: first ? 130 : 112 }}>
             <div className="relative" style={{ marginTop: first ? 52 : 0 }}>
               {first && <RainCloud />}
-              <AvatarBlob look={lookFor(p.name, band, unlocked)} size={sl.size} mood={first ? "sad" : "laughing"} />
+              <AvatarBlob look={lookFor(p.name, band, unlocked)} name={p.name} size={sl.size} mood={first ? "sad" : "laughing"} />
             </div>
             <span className="relative z-[1] -mt-1 mb-1 block max-w-full truncate rounded-full px-2.5 py-0.5"
               style={{ ...avSticker("#fff", 2), color: AV_INK, ...AV_DISPLAY, fontSize: first ? 17 : 15, rotate: `${sl.tilt}deg` }}>{p.name}</span>

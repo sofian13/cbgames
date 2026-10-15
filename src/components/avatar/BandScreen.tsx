@@ -168,7 +168,7 @@ export function BandScreen({ onClose }: { onClose: () => void }) {
                 const size = band.length <= 3 ? 104 : band.length <= 6 ? 84 : band.length <= 10 ? 68 : 58;
                 return (
                   <div key={b.name} className="flex flex-col items-center" style={{ width: size + 8, rotate: `${((i * 37) % 7) - 3}deg` }}>
-                    <TalkingBlob look={lookOf(b, i)} size={size} speakKey={voiceKey(b.name)} badge={audible(b)}
+                    <TalkingBlob look={lookOf(b, i)} name={b.name} size={size} speakKey={voiceKey(b.name)} badge={audible(b)}
                       onTap={() => void hear(b, i)} label={audible(b) ? tv.playAria(b.name) : tv.micAria(b.name)} />
                     <span className="mt-1 block max-w-full truncate text-center text-[13px] font-extrabold" style={{ color: b.me ? "#FFD23F" : "#fff" }}>{b.name}</span>
                   </div>
@@ -195,7 +195,7 @@ export function BandScreen({ onClose }: { onClose: () => void }) {
           {band.map((b, i) => (
             <li key={b.name} className="flex items-center gap-1.5 rounded-[22px] py-1.5 pl-2 pr-1" style={{ ...avSticker(b.me ? "#FFD23F" : "#fff", 3), color: AV_INK }}>
               <span className="grid h-[60px] w-[50px] shrink-0 place-items-end justify-center">
-                <TalkingBlob look={lookOf(b, i)} size={46} animate={false} speakKey={voiceKey(b.name)} badge={audible(b)}
+                <TalkingBlob look={lookOf(b, i)} name={b.name} size={46} animate={false} speakKey={voiceKey(b.name)} badge={audible(b)}
                   onTap={() => void hear(b, i)} label={audible(b) ? tv.playAria(b.name) : t.editAria(b.name)} />
               </span>
               <button type="button" onClick={() => { uiSfx.blob(); setEdit(i); }} aria-label={t.editAria(b.name)} className="flex min-h-[60px] min-w-0 flex-1 flex-col justify-center text-left">
@@ -365,7 +365,7 @@ function ImportPanel({ band, onClose, onDone }: { band: BandEntry[]; onClose: ()
             <div className="mt-2 flex flex-wrap justify-center gap-x-1 gap-y-2 rounded-[20px] p-2" style={{ background: "rgba(255,255,255,0.08)" }}>
               {parsed.map((m) => (
                 <div key={m.name} className="flex w-[74px] flex-col items-center">
-                  <div className="grid h-[62px] place-items-end"><AvatarBlob look={m.look} size={54} animate={false} /></div>
+                  <div className="grid h-[62px] place-items-end"><AvatarBlob look={m.look} name={m.name} size={54} animate={false} /></div>
                   <span className="mt-0.5 w-full truncate text-center text-[13px] font-bold">{m.name}</span>
                 </div>
               ))}

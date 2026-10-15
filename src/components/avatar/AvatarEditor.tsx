@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type CSSProperties, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { Check, Dices, Lock, RotateCcw, Star, X } from "lucide-react";
 import { useT } from "@/lib/i18n";
@@ -12,6 +12,7 @@ import {
   lookHasPremium, randomLook, type AvatarLook, type AvatarSlot, type AvatarTab,
 } from "@/lib/avatar/look";
 import { AVATAR_NAMES, AVATAR_STR } from "@/lib/avatar/i18n";
+import { getSecrets, getServerSecrets, isZinzinName, subscribeSecrets } from "@/lib/avatar/secrets";
 import { AvatarBlob } from "./AvatarBlob";
 import { VoiceRecorderPanel } from "./VoiceUI";
 import { talkMood, useSpeaking, voiceKey } from "@/lib/avatar/voice";
@@ -104,6 +105,10 @@ export function AvatarEditor({
 
   const locked = !unlocked && lookHasPremium(look);
   const cleanNm = cleanName(nm);
+  // Secrets : accessoires trouvés (affichés), prénom « Zinzin » (couronne arc-en-ciel)
+  const secrets = useSyncExternalStore(subscribeSecrets, getSecrets, getServerSecrets);
+  const shownName = editName ? cleanNm : name;
+  const zinzin = isZinzinName(shownName);
   // Bouche animée pendant la réécoute du son
   const talk = useSpeaking(voiceKey(cleanNm || name || "?"));
   const canSave = !busy && (!editName || cleanNm.length > 0);
@@ -143,13 +148,16 @@ export function AvatarEditor({
   };
 
   // Vignettes de l'onglet courant
-  const tiles: { key: string; label: string; free: boolean; on: boolean; apply: () => void; preview: AvatarLook; swatch?: string }[] =
+  const tiles: { key: string; label: string; free: boolean; secret?: boolean; on: boolean; apply: () => void; preview: AvatarLook; swatch?: string }[] =
     tab === "color"
       ? AVATAR_COLORS.map((col) => ({ key: col, label: names[`color.${col}`], free: true, on: look.color === col, apply: () => set({ color: col }), preview: { ...look, color: col }, swatch: AVATAR_PALETTE[col].body }))
-      : AVATAR_ITEMS[tab as AvatarSlot].map((it) => {
-        const slot = tab as AvatarSlot;
-        return { key: it.id, label: names[`${slot}.${it.id}`], free: it.free, on: look[slot] === it.id, apply: () => set({ [slot]: it.id } as Partial<AvatarLook>), preview: { ...look, [slot]: it.id } };
-      });
+      : AVATAR_ITEMS[tab as AvatarSlot]
+        // Accessoire secret : invisible tant qu'il n'est pas trouvé (sauf s'il est déjà porté, ex. code de bande)
+        .filter((it) => !it.secret || secrets.includes(it.id) || look[tab as AvatarSlot] === it.id)
+        .map((it) => {
+          const slot = tab as AvatarSlot;
+          return { key: it.id, label: names[`${slot}.${it.id}`], free: it.free, secret: it.secret, on: look[slot] === it.id, apply: () => set({ [slot]: it.id } as Partial<AvatarLook>), preview: { ...look, [slot]: it.id } };
+        });
 
   const title = editName ? (cleanNm ? t.editTitle(cleanNm) : t.addMember) : t.editTitle(name);
 
@@ -162,7 +170,14 @@ export function AvatarEditor({
       </div>
 
       {/* Aperçu */}
-      <div className="mx-auto flex w-full max-w-lg shrink-0 items-center justify-between px-4" style={{ height: "min(22dvh, 200px)", minHeight: 108 }}>
+      <div className="relative mx-auto flex w-full max-w-lg shrink-0 items-center justify-between px-4" style={{ height: "min(22dvh, 200px)", minHeight: 108 }}>
+        {/* Secret : clin d'œil aux « Zinzin » (couronne arc-en-ciel portée partout) */}
+        {zinzin && (
+          <span className="pointer-events-none absolute bottom-0 left-1/2 z-[1] -translate-x-1/2 whitespace-nowrap rounded-full px-2.5 py-0.5 text-[12px] font-bold"
+            style={{ ...avSticker("#fff", 2), color: AV_INK, rotate: "-2deg", borderWidth: 2 }}>
+            {t.zinzinCrown}
+          </span>
+        )}
         <div className="flex flex-col items-center gap-1.5">
           <RoundIconBtn onClick={() => { set(randomLook(false)); }} label={t.random} bg="#FFD23F"><Dices size={22} strokeWidth={2.6} /></RoundIconBtn>
           <span className="text-[12px] font-bold" style={{ color: "rgba(255,255,255,0.8)" }}>{t.random}</span>
@@ -170,7 +185,7 @@ export function AvatarEditor({
         <div className="relative grid h-full flex-1 place-items-center">
           <div className="absolute bottom-[4%] h-[12%] w-[46%] rounded-[50%]" style={{ background: "rgba(0,0,0,0.28)" }} />
           <div ref={preview} style={{ marginTop: "10%" }}>
-            <AvatarBlob look={look} size={pv} mood={talk !== null ? talkMood(talk) : "happy"} animate={talk === null} />
+            <AvatarBlob look={look} name={shownName} size={pv} mood={talk !== null ? talkMood(talk) : "happy"} animate={talk === null} />
           </div>
         </div>
         <div className="flex flex-col items-center gap-1.5">
@@ -264,6 +279,11 @@ export function AvatarEditor({
                 {lockedTile && (
                   <span className="absolute -right-1.5 -top-1.5 grid h-6 w-6 place-items-center rounded-full" style={{ background: "#FF3EA5", border: `2px solid ${AV_INK}`, color: "#fff" }}>
                     <Lock size={12} strokeWidth={3} />
+                  </span>
+                )}
+                {x.secret && !x.on && (
+                  <span className="absolute -right-1.5 -top-2 rounded-full px-1.5 text-[12px] font-extrabold leading-[18px]" style={{ background: "linear-gradient(135deg, #FFF0A8, #FFD23F 45%, #E09A00)", border: `2px solid ${AV_INK}`, color: AV_INK, rotate: "6deg" }}>
+                    {t.secret}
                   </span>
                 )}
                 {x.on && !lockedTile && (

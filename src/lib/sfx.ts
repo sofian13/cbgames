@@ -152,7 +152,8 @@ function play(name: SfxName, { volume = 1, rate = 1, delay = 0, duration, fromVo
   });
 }
 
-export function playSfx(name: SfxName, opts: SfxOptions = {}) {
+/** `duration` (s) : ne joue que le début du son, coupé en fondu court (ex. un petit rire). */
+export function playSfx(name: SfxName, opts: SfxOptions & { duration?: number } = {}) {
   play(name, opts);
 }
 

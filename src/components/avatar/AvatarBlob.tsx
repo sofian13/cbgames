@@ -3,6 +3,7 @@
 import { useId, useInsertionEffect, type CSSProperties, type ReactNode } from "react";
 import type { MascotMood } from "@/components/Mascot";
 import { AVATAR_PALETTE, HAIR_COLORS, type AvatarLook } from "@/lib/avatar/look";
+import { isZinzinName } from "@/lib/avatar/secrets";
 
 /**
  * AvatarBlob — le perso personnalisé d'un joueur (« Ma bande »).
@@ -67,7 +68,11 @@ const CSS = `
 .av-blink{transform-box:fill-box;transform-origin:center;animation:av-blink 4.8s infinite}
 @keyframes av-wob{0%,100%{transform:translateY(0) scale(1,1)}50%{transform:translateY(-2.5%) scale(0.985,1.02)}}
 @keyframes av-blink{0%,92%,100%{transform:scaleY(1)}95%{transform:scaleY(0.12)}}
-@media (prefers-reduced-motion: reduce){.av-wob,.av-blink{animation:none!important}}
+.av-twk{transform-box:fill-box;transform-origin:center;animation:av-twk 2.2s ease-in-out infinite}
+.av-crown{transform-box:fill-box;transform-origin:50% 100%;animation:av-crown 3.4s ease-in-out infinite}
+@keyframes av-twk{0%,100%{opacity:1;transform:scale(1) rotate(0deg)}50%{opacity:.35;transform:scale(.55) rotate(45deg)}}
+@keyframes av-crown{0%,100%{transform:rotate(0deg) translateY(0)}50%{transform:rotate(3deg) translateY(-1.5px)}}
+@media (prefers-reduced-motion: reduce){.av-wob,.av-blink,.av-twk,.av-crown{animation:none!important}}
 `;
 let styleDone = false;
 function useAvatarStyle() {
@@ -509,7 +514,7 @@ function hairLayers(id: string, hc: string, covered = false): { back?: ReactNode
  * chapeaux (couronne, auréole, cône, cornes) en dépendent ; les couvre-chefs
  * enveloppants restent sur le crâne et rangent les cheveux dessous (HAT_COVER).
  */
-function hatLayer(id: string, dy: number, bc: string): ReactNode {
+function hatLayer(id: string, dy: number, bc: string, animate = false): ReactNode {
   const S = { stroke: INK, strokeWidth: SW, strokeLinejoin: "round" as const };
   switch (id) {
     case "straw":
@@ -636,9 +641,94 @@ function hatLayer(id: string, dy: number, bc: string): ReactNode {
           <circle cx={14} cy={38} r={6} fill="#2A2342" {...S} />
         </g>
       );
+    case "goldhalo": {
+      // Secret (blob doré de l'accueil) : auréole d'or massif qui rayonne, reflets et étincelles
+      const g = `${bc}-gold`;
+      const tw = animate ? "av-twk" : undefined;
+      const rays = "M38 -6 L33 -13 M47 -9 L45 -18 M60 -10 L60 -21 M73 -9 L75 -18 M82 -6 L87 -13";
+      return (
+        <g transform={`translate(0 ${dy - 6})`}>
+          <defs>
+            <linearGradient id={g} x1="31" y1="0" x2="89" y2="0" gradientUnits="userSpaceOnUse">
+              <stop offset="0" stopColor="#B87A00" />
+              <stop offset="0.28" stopColor="#FFE680" />
+              <stop offset="0.5" stopColor="#FFC21A" />
+              <stop offset="0.72" stopColor="#FFF4B8" />
+              <stop offset="1" stopColor="#C98A00" />
+            </linearGradient>
+          </defs>
+          {/* Rayons de gloire */}
+          <path d={rays} stroke={INK} strokeWidth={6.4} strokeLinecap="round" />
+          <path d={rays} stroke="#FFD23F" strokeWidth={3} strokeLinecap="round" />
+          <ellipse cx={60} cy={2} rx={29} ry={8} fill="none" stroke={INK} strokeWidth={11} />
+          <ellipse cx={60} cy={2} rx={29} ry={8} fill="none" stroke={`url(#${g})`} strokeWidth={6.4} />
+          <path d="M39 -2 C45 -5 53 -6.2 60 -6.2" fill="none" stroke="#FFFBE0" strokeWidth={2.2} strokeLinecap="round" />
+          <path d="M70 9.4 C76 9 81 7.8 84 6.2" fill="none" stroke="#9C6400" strokeWidth={1.6} strokeLinecap="round" opacity={0.7} />
+          {/* Étincelles (scintillent quand le perso est animé) */}
+          <g fill="#FFF3A0" stroke={INK} strokeWidth={1.4} strokeLinejoin="round">
+            <path className={tw} d="M24 -14 l2.2 5.4 5.4 2.2 -5.4 2.2 -2.2 5.4 -2.2 -5.4 -5.4 -2.2 5.4 -2.2Z" />
+            <path className={tw} style={animate ? { animationDelay: "-0.8s" } : undefined} d="M97 -18 l1.8 4.4 4.4 1.8 -4.4 1.8 -1.8 4.4 -1.8 -4.4 -4.4 -1.8 4.4 -1.8Z" />
+            <path className={tw} style={animate ? { animationDelay: "-1.5s" } : undefined} d="M98 6 l1.2 3 3 1.2 -3 1.2 -1.2 3 -1.2 -3 -3 -1.2 3 -1.2Z" />
+          </g>
+        </g>
+      );
+    }
     default:
       return null;
   }
+}
+
+/**
+ * Couronne arc-en-ciel (secret du prénom « Zinzin ») dans le repère 120×120 : couleurs du logo
+ * qui défilent doucement, se balance un peu, joyaux. `uid` : identifiant unique du SVG hôte.
+ * `dy` : décalage du point d'appui (coupe de cheveux).
+ */
+export function rainbowCrownLayer(uid: string, dy = 0, animate = false): ReactNode {
+  const g = `${uid}-rb`;
+  const S = { stroke: INK, strokeWidth: SW, strokeLinejoin: "round" as const };
+  const body = "M-25 7 L-29 -15 L-16 -4 L-8 -21 L0 -5 L8 -21 L16 -4 L29 -15 L25 7Z";
+  return (
+    <g transform={`translate(60 ${11 + dy}) rotate(-6)`}>
+      <defs>
+        <linearGradient id={g} x1="-30" y1="0" x2="30" y2="0" gradientUnits="userSpaceOnUse" spreadMethod="repeat">
+          <stop offset="0" stopColor="#FFD23F" />
+          <stop offset="0.2" stopColor="#FF3EA5" />
+          <stop offset="0.4" stopColor="#A98BFF" />
+          <stop offset="0.6" stopColor="#4ECDC4" />
+          <stop offset="0.8" stopColor="#3DDC97" />
+          <stop offset="1" stopColor="#FFD23F" />
+          {animate && <animateTransform attributeName="gradientTransform" type="translate" from="0 0" to="60 0" dur="5s" repeatCount="indefinite" />}
+        </linearGradient>
+      </defs>
+      <g className={animate ? "av-crown" : undefined}>
+        <path d={body} fill={`url(#${g})`} {...S} />
+        {/* Bandeau, reflet, joyaux, pompons */}
+        <path d="M-25.6 0.5 H25.6" stroke={INK} strokeWidth={2.2} />
+        <path d="M-22 -9 L-24 -4 M-6 -15 L-7.6 -10" stroke="#fff" strokeWidth={2.2} strokeLinecap="round" opacity={0.75} />
+        <circle cx={-13} cy={3.8} r={2.2} fill="#fff" stroke={INK} strokeWidth={1.3} />
+        <circle cx={0} cy={3.8} r={2.6} fill="#FF3EA5" stroke={INK} strokeWidth={1.4} />
+        <circle cx={13} cy={3.8} r={2.2} fill="#fff" stroke={INK} strokeWidth={1.3} />
+        <circle cx={-29} cy={-15} r={3.2} fill="#FFD23F" stroke={INK} strokeWidth={1.8} />
+        <circle cx={-8} cy={-21} r={3.2} fill="#3DDC97" stroke={INK} strokeWidth={1.8} />
+        <circle cx={8} cy={-21} r={3.2} fill="#FF6B5B" stroke={INK} strokeWidth={1.8} />
+        <circle cx={29} cy={-15} r={3.2} fill="#4ECDC4" stroke={INK} strokeWidth={1.8} />
+      </g>
+    </g>
+  );
+}
+
+/**
+ * Couronne arc-en-ciel seule (pour poser sur un blob qui n'est pas un perso : Mascot, ZBlob).
+ * SVG 64×36 (unités du repère 120×120 des persos), à placer en absolu : la base est à ~8 % du bas.
+ */
+export function RainbowCrown({ width, animate = true, style }: { width: number; animate?: boolean; style?: CSSProperties }) {
+  useAvatarStyle();
+  const uid = useId().replace(/[^a-zA-Z0-9_-]/g, "");
+  return (
+    <svg viewBox="28 -15 64 36" width={width} height={(width * 36) / 64} style={{ overflow: "visible", display: "block", ...style }} aria-hidden>
+      {rainbowCrownLayer(`rc${uid}`, 0, animate)}
+    </svg>
+  );
 }
 
 /* ───────── Accessoires du visage ───────── */
@@ -972,31 +1062,35 @@ export interface AvatarBlobProps {
   shadow?: boolean;
   /** Costume de jeu : prioritaire sur le chapeau (top) et les accessoires du visage (face) */
   costume?: (ctx: AvatarCostumeCtx) => AvatarCostumeLayers;
+  /** Prénom du perso : « Zinzin » porte la couronne arc-en-ciel (secret) à la place de son chapeau */
+  name?: string | null;
   className?: string;
   style?: CSSProperties;
 }
 
-export function AvatarBlob({ look, size = 96, mood = "happy", animate = true, shadow = false, costume, className, style }: AvatarBlobProps) {
+export function AvatarBlob({ look, size = 96, mood = "happy", animate = true, shadow = false, costume, name, className, style }: AvatarBlobProps) {
   useAvatarStyle();
   const uid = useId().replace(/[^a-zA-Z0-9_-]/g, "");
   return (
     <div className={[animate ? "av-wob" : "", className ?? ""].join(" ")} style={{ width: size, height: size, flexShrink: 0, position: "relative", ...style }} aria-hidden>
-      <AvatarSvg look={look} size={size} mood={mood} animate={animate} shadow={shadow} costume={costume} uid={uid} />
+      <AvatarSvg look={look} size={size} mood={mood} animate={animate} shadow={shadow} costume={costume} uid={uid} zinzin={isZinzinName(name)} />
     </div>
   );
 }
 
 /** Le SVG seul (aussi utilisé pour les images de partage). */
-export function AvatarSvg({ look, size, mood = "happy", animate = false, shadow = false, costume, uid, viewBox = "0 0 120 120" }: {
+export function AvatarSvg({ look, size, mood = "happy", animate = false, shadow = false, costume, uid, viewBox = "0 0 120 120", zinzin = false }: {
   look: AvatarLook; size: number; mood?: MascotMood; animate?: boolean; shadow?: boolean;
   costume?: AvatarBlobProps["costume"]; uid: string; viewBox?: string;
+  /** Couronne arc-en-ciel (prénom « Zinzin ») : remplace le chapeau, pas le couvre-chef d'un costume de jeu */
+  zinzin?: boolean;
 }) {
   const c = AVATAR_PALETTE[look.color] ?? AVATAR_PALETTE.pink;
   const clip = `av-c-${uid}`, gBody = `av-b-${uid}`, gShade = `av-s-${uid}`, hatClip = `av-h-${uid}`;
   const hc = HAIR_COLORS[look.hairColor] || HAIR_DEFAULT[look.hair] || "#6B3E1F";
   const cos = costume?.({ c, L: L0, R: R0, clip }) ?? {};
   // Costume avec couvre-chef : il gagne ; la coupe se réduit à une tonsure de sa couleur (rien ne dépasse)
-  const hatId = cos.top ? "none" : look.hat;
+  const hatId = cos.top || zinzin ? "none" : look.hat;
   const cover = HAT_COVER[hatId];
   const hair = cos.top && look.hair !== "none" ? { skin: hairLayers("buzz", hc).skin } : hairLayers(look.hair, hc, cover !== undefined);
   // Point d'appui des petits chapeaux / du casque audio selon la coupe
@@ -1059,7 +1153,8 @@ export function AvatarSvg({ look, size, mood = "happy", animate = false, shadow 
       {underHat(hair.front)}
       {extra.front}
       {face.top}
-      {hatLayer(hatId, seat - 18, clip)}
+      {hatLayer(hatId, seat - 18, clip, animate)}
+      {zinzin && !cos.top && rainbowCrownLayer(clip, seat - 18, animate)}
       {cos.top}
       {extra.top}
     </svg>

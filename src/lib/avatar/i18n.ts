@@ -12,6 +12,10 @@ export const AVATAR_STR: I18n<{
   save: string;
   saveLocked: string;
   lockedHint: string;
+  /** Pastille d'un accessoire secret trouvé (easter egg) */
+  secret: string;
+  /** Clin d'œil sous l'aperçu quand le perso s'appelle « Zinzin » */
+  zinzinCrown: string;
   locked: string;
   selected: string;
   close: string;
@@ -74,6 +78,8 @@ export const AVATAR_STR: I18n<{
     save: "Enregistrer",
     saveLocked: "Enregistrer avec Zinzin+",
     lockedHint: "Cadenas = Zinzin+ : essaie tout librement.",
+    secret: "Secret",
+    zinzinCrown: "Couronne réservée aux vrais Zinzin",
     locked: "Zinzin+",
     selected: "choisi",
     close: "Fermer",
@@ -135,6 +141,8 @@ export const AVATAR_STR: I18n<{
     save: "Save",
     saveLocked: "Save with Zinzin+",
     lockedHint: "Padlock = Zinzin+: try anything on.",
+    secret: "Secret",
+    zinzinCrown: "Crown reserved for true Zinzins",
     locked: "Zinzin+",
     selected: "selected",
     close: "Close",
@@ -196,6 +204,8 @@ export const AVATAR_STR: I18n<{
     save: "Guardar",
     saveLocked: "Guardar con Zinzin+",
     lockedHint: "Candado = Zinzin+: pruébalo todo.",
+    secret: "Secreto",
+    zinzinCrown: "Corona reservada a los verdaderos Zinzin",
     locked: "Zinzin+",
     selected: "elegido",
     close: "Cerrar",
@@ -274,6 +284,7 @@ export const AVATAR_NAMES: I18n<Record<string, string>> = {
     "hat.none": "Aucun", "hat.straw": "Chapeau de paille", "hat.cap": "Casquette", "hat.beanie": "Bonnet", "hat.crown": "Couronne",
     "hat.horns": "Cornes", "hat.bucket": "Bob", "hat.ninja": "Bandeau ninja", "hat.cowboy": "Chapeau de cowboy", "hat.bow": "Nœud",
     "hat.halo": "Auréole", "hat.tophat": "Haut-de-forme", "hat.party": "Chapeau de fête", "hat.bandana": "Bandana noué",
+    "hat.goldhalo": "Auréole dorée",
     // visage
     "face.none": "Aucun", "face.shades": "Lunettes de soleil", "face.round": "Lunettes rondes", "face.moustache": "Moustache",
     "face.scar": "Cicatrice sous l'œil", "face.plaster": "Pansement", "face.mask": "Masque", "face.patch": "Bandeau sur l'œil",
@@ -303,6 +314,7 @@ export const AVATAR_NAMES: I18n<Record<string, string>> = {
     "hat.none": "None", "hat.straw": "Straw hat", "hat.cap": "Cap", "hat.beanie": "Beanie", "hat.crown": "Crown",
     "hat.horns": "Horns", "hat.bucket": "Bucket hat", "hat.ninja": "Ninja headband", "hat.cowboy": "Cowboy hat", "hat.bow": "Bow",
     "hat.halo": "Halo", "hat.tophat": "Top hat", "hat.party": "Party hat", "hat.bandana": "Tied bandana",
+    "hat.goldhalo": "Golden halo",
     "face.none": "None", "face.shades": "Sunglasses", "face.round": "Round glasses", "face.moustache": "Moustache",
     "face.scar": "Scar under the eye", "face.plaster": "Plaster", "face.mask": "Face mask", "face.patch": "Eye patch",
     "face.blush": "Rosy cheeks", "face.goggles": "Pilot goggles", "face.freckles": "Freckles", "face.beard": "Beard",
@@ -330,6 +342,7 @@ export const AVATAR_NAMES: I18n<Record<string, string>> = {
     "hat.none": "Ninguno", "hat.straw": "Sombrero de paja", "hat.cap": "Gorra", "hat.beanie": "Gorro", "hat.crown": "Corona",
     "hat.horns": "Cuernos", "hat.bucket": "Gorro de pescador", "hat.ninja": "Cinta ninja", "hat.cowboy": "Sombrero vaquero", "hat.bow": "Lazo",
     "hat.halo": "Aureola", "hat.tophat": "Sombrero de copa", "hat.party": "Gorro de fiesta", "hat.bandana": "Pañuelo anudado",
+    "hat.goldhalo": "Aureola dorada",
     "face.none": "Ninguno", "face.shades": "Gafas de sol", "face.round": "Gafas redondas", "face.moustache": "Bigote",
     "face.scar": "Cicatriz bajo el ojo", "face.plaster": "Tirita", "face.mask": "Mascarilla", "face.patch": "Parche en el ojo",
     "face.blush": "Mejillas rosas", "face.goggles": "Gafas de piloto", "face.freckles": "Pecas", "face.beard": "Barba",
