@@ -186,9 +186,9 @@ function Intro({ s, onPause }: { s: SoireeState; onPause: () => void }) {
 const TOTALS_LABEL: I18n<string> = { fr: "Classement de la soirée", en: "Party standings", es: "Clasificación de la noche" };
 
 /** Points de la soirée + ceux que le jeu en cours rapporte (pas encore enregistrés), en rangs « compétition ». */
-function soireeTotals(s: SoireeState): { name: string; pts: number; rank: number }[] {
+function soireeTotals(s: SoireeState): { name: string; pts: number; rank: number; ci: number }[] {
   const add = s.pending ? announcedGains(s) : {};
-  const rows = s.band.map((name) => ({ name, pts: (s.points[name] ?? 0) + (add[name] ?? 0) }));
+  const rows = s.band.map((name, ci) => ({ name, ci, pts: (s.points[name] ?? 0) + (add[name] ?? 0) }));
   return rows
     .map((r) => ({ ...r, rank: 1 + rows.filter((x) => x.pts > r.pts).length }))
     .sort((a, b) => a.rank - b.rank);

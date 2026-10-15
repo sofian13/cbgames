@@ -1,7 +1,8 @@
 "use client";
 
 import { createContext, useContext, useLayoutEffect, useRef, useState, useSyncExternalStore, type CSSProperties } from "react";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Crown } from "lucide-react";
+import { PlayerAvatar } from "@/components/avatar/PlayerBlob";
 import { ZButton } from "@/components/games/local-kit";
 import { useLang, pick, type I18n } from "@/lib/i18n";
 
@@ -19,7 +20,7 @@ export interface SoireeNext {
   /** Libellé de la ligne des points (« Soirée ») */
   gainsLabel?: string;
   /** Classement de la soirée APRÈS ce jeu (points de ce jeu compris), affiché au-dessus du bouton */
-  totals?: { name: string; pts: number; rank: number }[];
+  totals?: { name: string; pts: number; rank: number; ci: number }[];
   /** Libellé du classement (« Classement de la soirée ») */
   totalsLabel?: string;
 }
@@ -102,16 +103,24 @@ export function SoireeNextButton({ bg = "#FFD23F", className, style }: { bg?: st
   return (
     <>
       {totals.length > 0 && (
-        <div className="mb-3 rounded-2xl px-3 py-2 text-center" style={{ background: "rgba(10,4,32,0.35)", border: "2px solid rgba(255,255,255,0.12)" }}>
-          <p className="text-[12px] font-extrabold uppercase tracking-wide" style={{ color: "#FFD23F" }}>{next.totalsLabel}</p>
-          <p className="mt-0.5 text-[15px] font-bold leading-snug" style={{ color: "rgba(255,255,255,0.95)" }}>
-            {totals.map((r, i) => (
-              <span key={r.name} className="whitespace-nowrap">
-                {i ? <span style={{ opacity: 0.45 }}>{"  ·  "}</span> : null}
-                {r.rank === 1 ? "👑\u00A0" : `${r.rank}.\u00A0`}{r.name}{"\u00A0"}<span style={{ color: "#FFD23F" }}>{r.pts}</span>
-              </span>
-            ))}
-          </p>
+        <div className="mb-4">
+          <p className="mb-2 text-center text-[13px] font-extrabold uppercase tracking-wide" style={{ color: "rgba(255,255,255,0.75)" }}>{next.totalsLabel}</p>
+          <div className="flex flex-wrap justify-center gap-2">
+            {totals.map((r) => {
+              const lead = r.rank === 1 && r.pts > 0;
+              return (
+                <span key={r.name} className="inline-flex items-center gap-1.5 rounded-full py-1 pl-1 pr-3"
+                  style={{ background: lead ? "#FFD23F" : "#fff", color: "#15082E", border: "2.5px solid #15082E", boxShadow: "0 3px 0 #15082E" }}>
+                  <span className="relative inline-flex">
+                    <PlayerAvatar name={r.name} colorIndex={r.ci} size={26} border={false} />
+                    {lead && <Crown size={14} strokeWidth={3} aria-hidden className="absolute -top-2 left-1/2 -translate-x-1/2" style={{ color: "#15082E", fill: "#FFD23F" }} />}
+                  </span>
+                  <span className="max-w-[90px] truncate text-[15px] font-bold">{r.name}</span>
+                  <span className="text-[16px] font-extrabold tabular-nums">{r.pts}</span>
+                </span>
+              );
+            })}
+          </div>
         </div>
       )}
       {gains.length > 0 && (

@@ -432,7 +432,7 @@ export interface GameNext {
   /** Points de soirée rapportés par ce jeu (affichés au-dessus de « Jeu suivant ») */
   gains?: { name: string; pts: number }[];
   gainsLabel?: string;
-  totals?: { name: string; pts: number; rank: number }[];
+  totals?: { name: string; pts: number; rank: number; ci: number }[];
   totalsLabel?: string;
 }
 
