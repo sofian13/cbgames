@@ -563,3 +563,7 @@ html, body { overflow-x: clip; overscroll-behavior-x: none; }
   .zz-lang-pop, .zz-lang-bubble { animation: none !important; }
   .zz-lang-pop { bottom: calc(var(--sab) + 6px); }
 }
+
+/* Écran de jeu : la page du jeu (min-h 100svh) ne doit jamais rétrécir dans la colonne flex,
+ * sinon son fond s'arrête à la hauteur de l'écran et le fond sombre apparaît dessous en défilant */
+.zz-game-box > * { flex-shrink: 0; }
