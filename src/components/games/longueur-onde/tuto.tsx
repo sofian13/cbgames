@@ -172,8 +172,8 @@ function Slide3({ s }: { s: Txt }) {
       <g transform="translate(10 -26)">
         <Dial s={s} target needle="anim" />
       </g>
-      <Finger x={108} y={102} rot={-18} />
-      <Finger x={134} y={102} rot={18} style={{ animationDelay: "0.3s" }} />
+      <Finger x={106} y={102} rot={22} flip />
+      <Finger x={136} y={102} rot={-22} style={{ animationDelay: "0.3s" }} />
       <Blob x={24} y={130} s={38} color={CAST.lea} mood="happy" />
       <Badge x={24} y={78} r={13} fill="#FF3EA5" text="+4" className="gt-pulse" />
       <Blob x={198} y={130} s={36} color={CAST.malik} mood="happy" />

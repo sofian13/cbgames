@@ -312,13 +312,22 @@ export function Sun({ x, y, r = 13, className = "gt-pulse" }: { x: number; y: nu
   );
 }
 
-/** Doigt (index) qui tapote : avec rot=0, le bout est en (x, y) et pointe vers le HAUT (rot=180 : vers le bas). */
-export function Finger({ x, y, rot = 0, className = "gt-bob", style }: { x: number; y: number; rot?: number; className?: string; style?: CSSProperties }) {
+/** Main qui pointe (index tendu) et tapote : avec rot=0, le bout est en (x, y) et pointe vers le HAUT (rot=180 : vers le bas). */
+export function Finger({ x, y, rot = 0, flip = false, className = "gt-bob", style }: { x: number; y: number; rot?: number; /** Main gauche (poing à gauche) */ flip?: boolean; className?: string; style?: CSSProperties }) {
   return (
-    <g transform={`translate(${x} ${y}) rotate(${rot})`}>
+    <g transform={`translate(${x} ${y}) rotate(${rot})${flip ? " scale(-1 1)" : ""}`}>
       <g className={className} style={style}>
-        <path d="M-6 0 Q-6 -4 0 -4 Q6 -4 6 0 L6 26 L-6 26 Z" fill="#FFC9A8" stroke={INK} strokeWidth={2.5} strokeLinejoin="round" />
-        <path d="M-3 -1 Q0 -2.5 3 -1" fill="none" stroke={INK} strokeWidth={1.5} />
+        {/* Main qui pointe : manche, poing (doigts repliés + pouce), index avec ongle */}
+        <path d="M-9 37 L19 37 L20 47 L-10 47 Z" fill="#4AD6C8" stroke={INK} strokeWidth={2.4} strokeLinejoin="round" />
+        <path d="M-8.5 40.5 L19.3 40.5" stroke={INK} strokeWidth={1.4} opacity={0.35} />
+        <path d="M-6 16 L-6 30 Q-6 38.5 3 38.5 L11 38.5 Q18.5 38.5 18.5 31 L18.5 21 Q18.5 15.5 13 15.5 L5.5 15.5" fill="#FFC9A8" stroke={INK} strokeWidth={2.4} strokeLinejoin="round" />
+        <path d="M5.5 22 Q12 21 18.3 22.3" fill="none" stroke={INK} strokeWidth={1.6} strokeLinecap="round" />
+        <path d="M5.8 28.6 Q12 27.8 18.3 29" fill="none" stroke={INK} strokeWidth={1.6} strokeLinecap="round" />
+        <path d="M-6 21 L-6 3 Q-6 -3.5 0 -3.5 Q6 -3.5 6 3 L6 21" fill="#FFC9A8" stroke={INK} strokeWidth={2.4} strokeLinejoin="round" />
+        <path d="M-3.4 2.6 Q0 0 3.4 2.6 L3.4 6 Q0 7.3 -3.4 6 Z" fill="#FFE6D8" stroke={INK} strokeWidth={1.2} strokeLinejoin="round" />
+        <path d="M-3 13 Q0 14.2 3 13" fill="none" stroke={INK} strokeWidth={1.3} strokeLinecap="round" opacity={0.7} />
+        <path d="M-6 22.5 Q-12.5 23 -12 28.5 Q-11.5 33.5 -4 33 L9 31.5 Q12 31 11.5 28.5" fill="#FFC9A8" stroke={INK} strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M-3.8 9 L-3.8 18" stroke="#fff" strokeWidth={1.6} strokeLinecap="round" opacity={0.55} />
       </g>
     </g>
   );
