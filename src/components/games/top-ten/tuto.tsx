@@ -24,6 +24,29 @@ interface TtExtra {
   /** Révélation : barème en une ligne */
   scoreLine: string;
   rules: string[];
+  /** Classement commun (mode local) */
+  teamChip: string;
+  teamRankTitle: Record<"adult" | "culture", string>;
+  teamRankHelp: string;
+  submitTeam: string;
+  /** Révélation (mode local) */
+  revealHelp: string;
+  nailedIt: string;
+  placedAt: (given: string, real: string, gap: number) => string;
+  worstTitle: (n: number) => string;
+  worstGap: (gap: number) => string;
+  teamPerfect: string;
+  teamPairs: (c: number, t: number) => string;
+  nobodyNailed: string;
+  /** Fin de partie (mode local) */
+  gapNote: (n: number) => string;
+  bestUnderstood: (name: string) => string;
+  teamTitle: string;
+  teamGreat: string;
+  teamGood: string;
+  teamMeh: string;
+  perfectRounds: (n: number) => string;
+  worstOverall: (name: string) => string;
 }
 
 export const TT_EXTRA: I18n<TtExtra> = {
@@ -31,8 +54,8 @@ export const TT_EXTRA: I18n<TtExtra> = {
     slides: [
       { title: "Ton numéro secret", text: "Chacun regarde en secret son numéro, de 1 (le plus faible) à 10 (le plus fort). Ne le dis jamais !" },
       { title: "Réponds selon ton numéro", text: "Thème : « une excuse pour être en retard ». Léa (2) : « les bouchons ». Malik (9) : « enlevé par des extraterrestres » !" },
-      { title: "Chacun classe, en secret", text: "Ensuite, chacun son tour et en secret, range les prénoms du plus faible au plus fort. Toi compris !" },
-      { title: "Le meilleur flair gagne", text: "On révèle les vrais numéros. +2 par voisins bien rangés, +5 si tout est parfait. Le meilleur flair gagne !" },
+      { title: "Rangez-les tous ensemble", text: "Mettez-vous d'accord à voix haute sur l'ordre, du plus faible au plus fort. Une seule personne le rentre dans le tél." },
+      { title: "Qui a été bien compris ?", text: "On révèle les vrais numéros. Rangé pile à ta place : +2 pour toi. Le plus mal compris est démasqué, et l'équipe marque à chaque paire bien rangée." },
     ],
     art: { theme: "Une excuse pour être en retard", leaAnswer: "Les bouchons…", malikAnswer: "Des aliens !", mild: "1 · faible", strong: "10 · fort" },
     themeHelp: (r) => `Lisez le thème à voix haute. Les cartes 1 et ${r} ne sont que des repères.`,
@@ -41,22 +64,44 @@ export const TT_EXTRA: I18n<TtExtra> = {
     speakOrder: "Ordre de parole",
     themeReminder: "Le thème",
     inSpeakOrder: "Les prénoms sont dans l'ordre où vous avez parlé.",
-    scoreLine: "+2 pts par paire de voisins bien rangés · +5 si ton classement est parfait",
+    scoreLine: "+2 par paire de voisins bien rangés · +5 si l'ordre est parfait",
+    teamChip: "Toute la table",
+    teamRankTitle: { adult: "Rangez-les du plus soft au plus hard", culture: "Rangez-les du plus faible au plus fort" },
+    teamRankHelp: "Mettez-vous d'accord tous ensemble, puis une seule personne range les prénoms (glisser avec la poignée ou flèches).",
+    submitTeam: "Valider notre ordre",
+    revealHelp: "Dans l'ordre des vrais numéros, avec la place que vous aviez donnée à chacun.",
+    nailedIt: "Pile poil !",
+    placedAt: (g, r, gap) => `Placé ${g} → vraiment ${r} · écart ${gap}`,
+    worstTitle: (n) => (n > 1 ? "Les plus mal compris" : "Le plus mal compris"),
+    worstGap: (gap) => `${gap} place${gap > 1 ? "s" : ""} d'écart`,
+    teamPerfect: "Ordre parfait !",
+    teamPairs: (c, t) => `Équipe : ${c}/${t} paires`,
+    nobodyNailed: "Personne pile à sa place cette fois…",
+    gapNote: (n) => (n === 0 ? "Toujours pile à sa place" : `Écart total : ${n}`),
+    bestUnderstood: (n) => `${n} a été le mieux compris`,
+    teamTitle: "Score d'équipe",
+    teamGreat: "Vous êtes sur la même longueur d'onde !",
+    teamGood: "Bonne lecture de la table",
+    teamMeh: "Vous vous comprenez… à moitié",
+    perfectRounds: (n) => `${n} ordre${n > 1 ? "s" : ""} parfait${n > 1 ? "s" : ""}`,
+    worstOverall: (n) => `${n} a été le plus mal compris de la partie`,
     rules: [
       "Un thème tombe, avec deux repères : ce qui vaudrait 1 et ce qui vaudrait 10 (ou 25, 50). Ce ne sont que des exemples.",
       "Chacun reçoit en secret un numéro différent, tiré au hasard : ils ne se suivent pas forcément (ex. 2, 5, 7, 9).",
       "Ne dis jamais ton numéro ! Réponds au thème à voix haute, avec une réponse qui colle à l'intensité de ton numéro.",
-      "Quand tout le monde a parlé, chacun son tour et en secret, range toute la table (toi compris) du plus faible au plus fort.",
-      "Chacun marque seul : +2 points par paire de voisins bien rangés, +5 si tout son classement est parfait.",
-      "Après toutes les manches, le meilleur total a le meilleur flair.",
+      "Quand tout le monde a parlé, mettez-vous d'accord tous ensemble sur l'ordre, du plus faible au plus fort. Une seule personne le rentre dans le tél (glisser ou flèches).",
+      "On révèle les vrais numéros. Chacun est jugé sur SA réponse : rangé pile à sa place, +2 points ; à une place près, +1.",
+      "Celui dont la place est la plus éloignée de la vraie est « le plus mal compris » de la manche.",
+      "L'équipe marque aussi : +2 par paire de voisins bien rangés, +5 si l'ordre est parfait.",
+      "Après toutes les manches, le meilleur total individuel a été le mieux compris ; le plus mal placé au total perd.",
     ],
   },
   en: {
     slides: [
       { title: "Your secret number", text: "Everyone secretly checks their number, from 1 (the lowest) to 10 (the highest). Never say it out loud!" },
       { title: "Answer to match it", text: "Theme: \"an excuse for being late\". Léa (2): \"traffic\". Malik (9): \"abducted by aliens\"!" },
-      { title: "Everyone ranks, in secret", text: "Then, one by one and in secret, order the names from lowest to highest. Yourself included!" },
-      { title: "Best instinct wins", text: "The real numbers are revealed. +2 per pair of neighbours in the right order, +5 if it's perfect. Best instinct wins!" },
+      { title: "Rank them all together", text: "Agree out loud on the order, from lowest to highest. Just one person enters it on the phone." },
+      { title: "Who was understood?", text: "The real numbers are revealed. Placed exactly right: +2 for you. The most misunderstood gets exposed, and the team scores for every pair in the right order." },
     ],
     art: { theme: "An excuse for being late", leaAnswer: "Traffic…", malikAnswer: "Aliens!", mild: "1 · low", strong: "10 · high" },
     themeHelp: (r) => `Read the theme out loud. Cards 1 and ${r} are just guides.`,
@@ -65,22 +110,44 @@ export const TT_EXTRA: I18n<TtExtra> = {
     speakOrder: "Speaking order",
     themeReminder: "The theme",
     inSpeakOrder: "Names are in the order you spoke.",
-    scoreLine: "+2 pts per pair of neighbours in the right order · +5 if your ranking is perfect",
+    scoreLine: "+2 per pair of neighbours in the right order · +5 if the order is perfect",
+    teamChip: "The whole table",
+    teamRankTitle: { adult: "Rank them from mildest to wildest", culture: "Rank them from lowest to highest" },
+    teamRankHelp: "Agree all together, then just one person orders the names (drag the handle or use the arrows).",
+    submitTeam: "Lock in our order",
+    revealHelp: "In real-number order, with the spot you gave each person.",
+    nailedIt: "Spot on!",
+    placedAt: (g, r, gap) => `Placed ${g} → really ${r} · off by ${gap}`,
+    worstTitle: () => "Most misunderstood",
+    worstGap: (gap) => `${gap} spot${gap > 1 ? "s" : ""} off`,
+    teamPerfect: "Perfect order!",
+    teamPairs: (c, t) => `Team: ${c}/${t} pairs`,
+    nobodyNailed: "Nobody spot on this time…",
+    gapNote: (n) => (n === 0 ? "Always spot on" : `Total gap: ${n}`),
+    bestUnderstood: (n) => `${n} was the best understood`,
+    teamTitle: "Team score",
+    teamGreat: "You're on the same wavelength!",
+    teamGood: "Good read of the table",
+    teamMeh: "You half get each other…",
+    perfectRounds: (n) => `${n} perfect order${n > 1 ? "s" : ""}`,
+    worstOverall: (n) => `${n} was the most misunderstood of the game`,
     rules: [
       "A theme comes up with two guides: what would be a 1 and what would be a 10 (or 25, 50). They're only examples.",
       "Everyone secretly gets a different, random number: they don't have to follow each other (e.g. 2, 5, 7, 9).",
       "Never say your number! Answer the theme out loud with something that matches how high your number is.",
-      "Once everyone has spoken, one by one and in secret, order the whole table (yourself included) from lowest to highest.",
-      "Everyone scores on their own: +2 points per pair of neighbours in the right order, +5 if the whole ranking is perfect.",
-      "After all the rounds, the best total has the best instinct.",
+      "Once everyone has spoken, agree all together on the order, from lowest to highest. Just one person enters it on the phone (drag or arrows).",
+      "The real numbers are revealed. Everyone is judged on THEIR answer: placed exactly right, +2 points; one spot off, +1.",
+      "Whoever ends up furthest from their real spot is the round's \"most misunderstood\".",
+      "The team scores too: +2 per pair of neighbours in the right order, +5 if the order is perfect.",
+      "After all the rounds, the best individual total was the best understood; the most misplaced overall loses.",
     ],
   },
   es: {
     slides: [
       { title: "Tu número secreto", text: "Cada uno mira en secreto su número, del 1 (lo más bajo) al 10 (lo más alto). ¡No lo digas nunca!" },
       { title: "Responde según tu número", text: "Tema: «una excusa para llegar tarde». Léa (2): «había atasco». Malik (9): «¡me abdujeron los extraterrestres!»" },
-      { title: "Cada uno ordena, en secreto", text: "Luego, por turnos y en secreto, ordena los nombres de más bajo a más alto. ¡Tú también!" },
-      { title: "Gana el mejor olfato", text: "Se revelan los números reales. +2 por cada pareja de vecinos bien ordenada, +5 si es perfecto. ¡Gana el mejor olfato!" },
+      { title: "Ordenadlos todos juntos", text: "Poneos de acuerdo en voz alta sobre el orden, de más bajo a más alto. Una sola persona lo mete en el móvil." },
+      { title: "¿Quién se ha hecho entender?", text: "Se revelan los números reales. Colocado justo en tu sitio: +2 para ti. El peor entendido queda al descubierto, y el equipo puntúa por cada pareja bien ordenada." },
     ],
     art: { theme: "Una excusa para llegar tarde", leaAnswer: "Había atasco…", malikAnswer: "¡Aliens!", mild: "1 · bajo", strong: "10 · alto" },
     themeHelp: (r) => `Leed el tema en voz alta. Las cartas 1 y ${r} solo son referencias.`,
@@ -89,14 +156,36 @@ export const TT_EXTRA: I18n<TtExtra> = {
     speakOrder: "Orden para hablar",
     themeReminder: "El tema",
     inSpeakOrder: "Los nombres están en el orden en que hablasteis.",
-    scoreLine: "+2 pts por cada pareja de vecinos bien ordenada · +5 si tu orden es perfecto",
+    scoreLine: "+2 por cada pareja de vecinos bien ordenada · +5 si el orden es perfecto",
+    teamChip: "Toda la mesa",
+    teamRankTitle: { adult: "Ordenadlos del más suave al más fuerte", culture: "Ordenadlos del más bajo al más alto" },
+    teamRankHelp: "Poneos de acuerdo todos juntos y una sola persona ordena los nombres (arrastra el asa o usa las flechas).",
+    submitTeam: "Confirmar nuestro orden",
+    revealHelp: "En el orden de los números reales, con el puesto que disteis a cada uno.",
+    nailedIt: "¡Clavado!",
+    placedAt: (g, r, gap) => `Puesto ${g} → en realidad ${r} · ${gap} de diferencia`,
+    worstTitle: (n) => (n > 1 ? "Los peor entendidos" : "El peor entendido"),
+    worstGap: (gap) => `${gap} puesto${gap > 1 ? "s" : ""} de diferencia`,
+    teamPerfect: "¡Orden perfecto!",
+    teamPairs: (c, t) => `Equipo: ${c}/${t} parejas`,
+    nobodyNailed: "Esta vez nadie en su sitio exacto…",
+    gapNote: (n) => (n === 0 ? "Siempre en su sitio" : `Diferencia total: ${n}`),
+    bestUnderstood: (n) => `${n} fue el mejor entendido`,
+    teamTitle: "Puntos de equipo",
+    teamGreat: "¡Estáis en la misma onda!",
+    teamGood: "Buena lectura de la mesa",
+    teamMeh: "Os entendéis… a medias",
+    perfectRounds: (n) => `${n} orden${n > 1 ? "es" : ""} perfecto${n > 1 ? "s" : ""}`,
+    worstOverall: (n) => `${n} fue el peor entendido de la partida`,
     rules: [
       "Sale un tema con dos referencias: lo que valdría un 1 y lo que valdría un 10 (o 25, 50). Solo son ejemplos.",
       "Cada uno recibe en secreto un número distinto al azar: no tienen por qué ser seguidos (p. ej. 2, 5, 7, 9).",
       "¡No digas nunca tu número! Responde al tema en voz alta con algo que encaje con la intensidad de tu número.",
-      "Cuando todos han hablado, por turnos y en secreto, ordena a toda la mesa (tú también) de más bajo a más alto.",
-      "Cada uno puntúa por su cuenta: +2 puntos por cada pareja de vecinos bien ordenada, +5 si todo su orden es perfecto.",
-      "Tras todas las rondas, el mejor total tiene el mejor olfato.",
+      "Cuando todos han hablado, poneos de acuerdo todos juntos sobre el orden, de más bajo a más alto. Una sola persona lo mete en el móvil (arrastrando o con las flechas).",
+      "Se revelan los números reales. Cada uno se juzga por SU respuesta: colocado justo en su sitio, +2 puntos; a un puesto, +1.",
+      "Quien queda más lejos de su sitio real es «el peor entendido» de la ronda.",
+      "El equipo también puntúa: +2 por cada pareja de vecinos bien ordenada, +5 si el orden es perfecto.",
+      "Tras todas las rondas, el mejor total individual fue el mejor entendido; el peor colocado en total pierde.",
     ],
   },
 };
@@ -181,8 +270,8 @@ function ArtRank({ mild, strong }: { mild: string; strong: string }) {
   return (
     <TutoSvg>
       <Blob x={34} y={150} s={44} color={CAST.ines} mood="smirk" />
-      <Blob x={190} y={150} s={34} color={CAST.lea} mood="sleep" />
-      <Blob x={190} y={110} s={34} color={CAST.malik} mood="sleep" />
+      <Blob x={190} y={150} s={34} color={CAST.lea} mood="happy" />
+      <Blob x={190} y={110} s={34} color={CAST.malik} mood="happy" />
       <Phone x={62} y={8} w={100} h={156}>
         <Card x={8} y={6} w={76} h={16} fill="#3DDC97" text={mild} size={9} />
         {rows.map(([n, c], i) => (
@@ -212,7 +301,7 @@ function ArtReveal() {
         </g>
       ))}
       <Crown x={110} y={44} s={0.9} className="gt-bob" />
-      <Badge x={148} y={34} r={13} fill="#3DDC97" text="+9" size={11} className="gt-pulse" />
+      <Badge x={148} y={34} r={13} fill="#3DDC97" text="+2" size={11} className="gt-pulse" />
       <Check x={75} y={96} s={0.8} className="gt-pop" />
       <Check x={145} y={76} s={0.8} className="gt-pop" style={{ animationDelay: "0.4s" }} />
     </TutoSvg>

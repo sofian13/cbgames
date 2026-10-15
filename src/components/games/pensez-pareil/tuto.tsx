@@ -1,10 +1,10 @@
 "use client";
 
-/** Tuto en slides + règles en jeu de Pensez Pareil (mode local, à deux). */
+/** Tuto en slides + règles en jeu de Pensez Pareil (mode local, à deux, à voix haute). */
 
 import { type I18n, useT } from "@/lib/i18n";
 import type { TutoSlide } from "@/components/games/game-tuto";
-import { Arrow, Blob, CAST, Card, Heart, INK, Phone, Sparkle, SvgText, TutoSvg } from "@/components/games/game-tuto-art";
+import { Blob, CAST, Card, Heart, INK, Phone, Sparkle, SvgText, TutoSvg } from "@/components/games/game-tuto-art";
 
 /** Les textes SVG en police display collent les mots : on rétablit l'espace entre les mots. */
 const WS_CSS = ".gt-ws text{word-spacing:0.28em}";
@@ -18,46 +18,49 @@ type S = {
 const STR: I18n<S> = {
   fr: {
     slides: [
-      { title: "Un thème, en secret", text: "Thème : « un plat du dimanche soir ». Léa écrit sa réponse sans la montrer, puis passe le tél à Tom." },
-      { title: "Même mot = SYNC", text: "Tom écrit « pâtes » aussi : SYNC, vous marquez ensemble ! Il faut le même mot : « spaghetti » ne compte pas." },
+      { title: "Un mot dans la tête", text: "Thème : « un plat du dimanche soir ». Léa et Tom pensent chacun à un mot, sans rien dire. Le tél reste posé entre vous deux." },
+      { title: "3, 2, 1… dites-le !", text: "À « 1 », vous dites votre mot à voix haute en même temps. « Pâtes ! » « Pâtes ! » : touchez « Même mot ! », c'est SYNC. « Spaghetti » ne compte pas : c'est vous qui jugez." },
       { title: "Enchaînez les sync", text: "Plusieurs sync d'affilée, et le bonus grimpe. Après 8 manches, découvrez votre niveau de complicité." },
     ],
     theme: "Un plat du dimanche soir", answer: "PÂTES", other: "SPAGHETTI", sync: "SYNC !", rounds: "8 manches",
     rules: [
-      "Vous jouez à deux, sur un seul tél. Un thème s'affiche : chacun écrit sa réponse en secret, sans la montrer, puis passe le tél à l'autre.",
-      "Même réponse = SYNC : 100 points pour vous deux. Il faut le même mot : « pâtes » et « spaghetti » ne comptent pas. Les majuscules, accents et articles sont ignorés, et une petite faute de frappe passe sur les mots de 5 lettres ou plus.",
+      "Vous jouez à deux, le tél posé entre vous. Un thème s'affiche : chacun pense à un mot dans sa tête, sans rien dire.",
+      "Lancez « 3, 2, 1 » : à « 1 », vous dites votre mot à voix haute en même temps. Puis un seul tap : « Même mot ! » ou « Pas pareil ».",
+      "Même mot = SYNC : 100 points pour vous deux. Il faut exactement le même mot : « pâtes » et « spaghetti », c'est pas pareil. Les synonymes sont refusés, et c'est vous qui jugez, honnêtement !",
       "Sync d'affilée : chaque sync en série rapporte 25 points de bonus en plus.",
-      "Thème bof ? « Pas fou ? Un autre thème » le remplace avant que vous écriviez.",
+      "Thème bof ? « Pas fou ? Un autre thème » le remplace avant le décompte.",
       "La partie dure 8 manches. À la fin, vous gagnez de l'XP qui fait monter votre niveau de complicité, d'une partie à l'autre.",
     ],
   },
   en: {
     slides: [
-      { title: "One theme, in secret", text: "Theme: \"a Sunday-night dinner\". Léa types her answer without showing it, then passes the phone to Tom." },
-      { title: "Same word = SYNC", text: "Tom types \"pasta\" too: SYNC, you both score! It has to be the same word: \"spaghetti\" doesn't count." },
+      { title: "A word in your head", text: "Theme: \"a Sunday-night dinner\". Léa and Tom each think of a word, silently. The phone stays between you." },
+      { title: "3, 2, 1… say it!", text: "On \"1\", you both say your word out loud. \"Pasta!\" \"Pasta!\": tap \"Same word!\", it's a SYNC. \"Spaghetti\" doesn't count: you two are the judges." },
       { title: "Chain your syncs", text: "Several syncs in a row and the bonus climbs. After 8 rounds, see your connection level." },
     ],
     theme: "A Sunday-night dinner", answer: "PASTA", other: "SPAGHETTI", sync: "SYNC!", rounds: "8 rounds",
     rules: [
-      "You play as a pair, on one phone. A theme appears: each of you types an answer in secret, without showing it, then passes the phone.",
-      "Same answer = SYNC: 100 points for both of you. It has to be the same word: \"pasta\" and \"spaghetti\" don't count. Capitals, accents and articles are ignored, and a small typo is fine on words of 5 letters or more.",
+      "You play as a pair, the phone between you. A theme appears: each of you thinks of a word, silently.",
+      "Start \"3, 2, 1\": on \"1\", you both say your word out loud. Then a single tap: \"Same word!\" or \"Not the same\".",
+      "Same word = SYNC: 100 points for both of you. It has to be exactly the same word: \"pasta\" and \"spaghetti\" are not the same. No synonyms, and you two judge, honestly!",
       "Syncs in a row: each sync in a streak earns 25 bonus points on top.",
-      "Meh theme? \"Meh? Another one\" swaps it before you type.",
+      "Meh theme? \"Meh? Another theme\" swaps it before the countdown.",
       "A game lasts 8 rounds. At the end you earn XP that raises your connection level, game after game.",
     ],
   },
   es: {
     slides: [
-      { title: "Un tema, en secreto", text: "Tema: «una cena de domingo». Léa escribe su respuesta sin enseñarla y pasa el móvil a Tom." },
-      { title: "Misma palabra = SYNC", text: "Tom también escribe «pasta»: ¡SYNC, puntuáis juntos! Tiene que ser la misma palabra: «espaguetis» no cuenta." },
+      { title: "Una palabra en la cabeza", text: "Tema: «una cena de domingo». Léa y Tom piensan cada uno una palabra, en silencio. El móvil se queda entre los dos." },
+      { title: "3, 2, 1… ¡decidla!", text: "Al «1», decís vuestra palabra en voz alta a la vez. «¡Pasta!» «¡Pasta!»: tocad «¡Misma palabra!», es SYNC. «Espaguetis» no cuenta: juzgáis vosotros." },
       { title: "Encadenad syncs", text: "Varios syncs seguidos y el bonus sube. Tras 8 rondas, descubrid vuestro nivel de complicidad." },
     ],
     theme: "Una cena de domingo", answer: "PASTA", other: "ESPAGUETIS", sync: "¡SYNC!", rounds: "8 rondas",
     rules: [
-      "Jugáis los dos, con un solo móvil. Aparece un tema: cada uno escribe su respuesta en secreto, sin enseñarla, y pasa el móvil al otro.",
-      "Misma respuesta = SYNC: 100 puntos para los dos. Tiene que ser la misma palabra: «pasta» y «espaguetis» no cuentan. Se ignoran mayúsculas, tildes y artículos, y una pequeña errata vale en palabras de 5 letras o más.",
+      "Jugáis los dos, con el móvil entre vosotros. Aparece un tema: cada uno piensa una palabra, en silencio.",
+      "Lanzad «3, 2, 1»: al «1», decís vuestra palabra en voz alta a la vez. Luego un solo toque: «¡Misma palabra!» o «No es igual».",
+      "Misma palabra = SYNC: 100 puntos para los dos. Tiene que ser exactamente la misma: «pasta» y «espaguetis» no valen. Nada de sinónimos, y juzgáis vosotros, ¡con honestidad!",
       "Syncs seguidos: cada sync de la racha da 25 puntos extra.",
-      "¿Tema flojo? «¿No mola? Otro tema» lo cambia antes de escribir.",
+      "¿Tema flojo? «¿No mola? Otro tema» lo cambia antes de la cuenta atrás.",
       "La partida dura 8 rondas. Al final ganáis XP que sube vuestro nivel de complicidad, partida tras partida.",
     ],
   },
@@ -69,13 +72,14 @@ function ArtSecret({ s }: { s: S }) {
       <style>{WS_CSS}</style>
       <g className="gt-ws">
       <Card x={30} y={12} w={160} h={26} fill="#FFD23F" text={s.theme} size={11} />
-      <Blob x={46} y={148} s={50} color={CAST.lea} mood="smirk" />
-      <Phone x={70} y={56} w={44} h={70} rot={-8}>
-        <SvgText x={18} y={22} text="••••" size={14} />
-        <rect x={6} y={34} width={24} height={9} rx={4} fill="#FF3EA5" stroke={INK} strokeWidth={1.5} />
+      <Blob x={46} y={148} s={50} color={CAST.lea} mood="smirk" className="gt-bob" />
+      <Card x={30} y={64} w={30} h={30} fill="#fff" text="?" size={16} rot={-6} />
+      {/* le tél reste posé au milieu : décompte */}
+      <Phone x={88} y={70} w={44} h={70}>
+        <g className="gt-pulse"><SvgText x={22} y={34} text="3" size={30} fill="#FF3EA5" /></g>
       </Phone>
-      <Arrow d="M122 92 Q146 70 166 92" head={[166, 92, 40]} className="gt-blink" />
-      <Blob x={180} y={148} s={50} color={CAST.tom} mood="happy" className="gt-bob" />
+      <Blob x={174} y={148} s={50} color={CAST.tom} mood="smirk" className="gt-bob" style={{ animationDelay: ".3s" }} />
+      <Card x={160} y={64} w={30} h={30} fill="#fff" text="?" size={16} rot={6} />
       </g>
     </TutoSvg>
   );

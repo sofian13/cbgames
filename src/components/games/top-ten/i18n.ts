@@ -64,12 +64,14 @@ interface TTStrings {
   submitRanking: string;
   /** Version découverte : « 30 thèmes offerts » */
   freeThemes: (n: number) => string;
+  /** Place ordinale : « 1er », « 2e »… */
+  place: (n: number) => string;
 }
 
 export const TT_STR: I18n<TTStrings> = {
   fr: {
     gameName: "De 1 à 10",
-    tagline: "Un thème, un numéro secret (de 1 à 10, 25 ou 50). Chacun répond à voix haute selon son numéro… puis chacun classe toute la table, lui compris. Deux ambiances : Soirée 18+ ou Culture pop (classements animés, villes, foot…).",
+    tagline: "Un thème, un numéro secret (de 1 à 10, 25 ou 50). Chacun répond à voix haute selon son numéro… puis on range toute la table du plus faible au plus fort. Deux ambiances : Soirée 18+ ou Culture pop (classements animés, villes, foot…).",
     packLabel: { adult: "Thème 18+", culture: "Culture pop" },
     scale: {
       adult: {
@@ -88,7 +90,7 @@ export const TT_STR: I18n<TTStrings> = {
     passNumberHint: (lo, r, hi) => `Toi seul : tu vas voir ton numéro secret, de 1 (${lo}) à ${r} (${hi}).`,
     yourNumber: (n) => `${n}, ton numéro`,
     seenHide: "J'ai vu, je cache",
-    answerHelp: ["Chacun répond ", "à voix haute", ", selon l'intensité de son numéro. Écoutez bien : ensuite ", "chacun", " classera toute la table."],
+    answerHelp: ["Chacun répond ", "à voix haute", ", selon l'intensité de son numéro. Écoutez bien : ensuite, ", "tous ensemble", ", vous rangerez la table du plus faible au plus fort."],
     everyoneSpoke: "Tout le monde a parlé",
     itsMeRank: "C'est moi, je classe",
     trueRanking: "Le vrai classement",
@@ -111,7 +113,7 @@ export const TT_STR: I18n<TTStrings> = {
     },
     themesTitle: "Les thèmes",
     numbersUpTo: "Les numéros vont jusqu'à",
-    rangeHelp: "Chacun reçoit un numéro secret et répond à voix haute selon son intensité, puis chacun classe toute la table. Plus l'échelle est grande, plus il faut être précis.",
+    rangeHelp: "Chacun reçoit un numéro secret et répond à voix haute selon son intensité, puis on range toute la table. Plus l'échelle est grande, plus il faut être précis.",
     startGame: "Lancer la partie",
     sharedHint: "N'importe qui peut changer l'échelle ou lancer.",
     editPlayers: "Modifier les joueurs",
@@ -127,10 +129,11 @@ export const TT_STR: I18n<TTStrings> = {
     rankingSent: "Classement envoyé",
     submitRanking: "Valider mon classement",
     freeThemes: (n) => `${n} thèmes offerts`,
+    place: (n) => (n === 1 ? "1er" : `${n}e`),
   },
   en: {
     gameName: "From 1 to 10",
-    tagline: "A theme, a secret number (1 to 10, 25 or 50). Everyone answers out loud to match their number… then everyone ranks the whole table, themselves included. Two vibes: 18+ Party or Pop Culture (anime, cities, football rankings…).",
+    tagline: "A theme, a secret number (1 to 10, 25 or 50). Everyone answers out loud to match their number… then you rank the whole table from lowest to highest. Two vibes: 18+ Party or Pop Culture (anime, cities, football rankings…).",
     packLabel: { adult: "18+ theme", culture: "Pop culture" },
     scale: {
       adult: {
@@ -149,7 +152,7 @@ export const TT_STR: I18n<TTStrings> = {
     passNumberHint: (lo, r, hi) => `Just you: you'll see your secret number, from 1 (${lo}) to ${r} (${hi}).`,
     yourNumber: (n) => `${n}, your number`,
     seenHide: "Seen it, hide it",
-    answerHelp: ["Everyone answers ", "out loud", ", matching how high their number is. Listen up: next, ", "everyone", " ranks the whole table."],
+    answerHelp: ["Everyone answers ", "out loud", ", matching how high their number is. Listen up: next, ", "all together", ", you'll rank the table from lowest to highest."],
     everyoneSpoke: "Everyone has answered",
     itsMeRank: "It's me, let me rank",
     trueRanking: "The real ranking",
@@ -172,7 +175,7 @@ export const TT_STR: I18n<TTStrings> = {
     },
     themesTitle: "Themes",
     numbersUpTo: "Numbers go up to",
-    rangeHelp: "Everyone gets a secret number and answers out loud to match it, then everyone ranks the whole table. The bigger the scale, the sharper you need to be.",
+    rangeHelp: "Everyone gets a secret number and answers out loud to match it, then the whole table gets ranked. The bigger the scale, the sharper you need to be.",
     startGame: "Start the game",
     sharedHint: "Anyone can change the scale or start.",
     editPlayers: "Edit players",
@@ -188,10 +191,11 @@ export const TT_STR: I18n<TTStrings> = {
     rankingSent: "Ranking sent",
     submitRanking: "Lock in my ranking",
     freeThemes: (n) => `${n} free themes`,
+    place: (n) => `${n}${n % 100 >= 11 && n % 100 <= 13 ? "th" : ["th", "st", "nd", "rd"][n % 10] ?? "th"}`,
   },
   es: {
     gameName: "Del 1 al 10",
-    tagline: "Un tema, un número secreto (del 1 al 10, 25 o 50). Cada uno responde en voz alta según su número… y luego todos ordenan a la mesa entera, incluidos ellos mismos. Dos ambientes: Fiesta +18 o Cultura pop (anime, ciudades, fútbol…).",
+    tagline: "Un tema, un número secreto (del 1 al 10, 25 o 50). Cada uno responde en voz alta según su número… y luego se ordena a toda la mesa de más bajo a más alto. Dos ambientes: Fiesta +18 o Cultura pop (anime, ciudades, fútbol…).",
     packLabel: { adult: "Tema +18", culture: "Cultura pop" },
     scale: {
       adult: {
@@ -210,7 +214,7 @@ export const TT_STR: I18n<TTStrings> = {
     passNumberHint: (lo, r, hi) => `Solo tú: vas a ver tu número secreto, del 1 (${lo}) al ${r} (${hi}).`,
     yourNumber: (n) => `${n}, tu número`,
     seenHide: "Visto, lo escondo",
-    answerHelp: ["Cada uno responde ", "en voz alta", ", según la intensidad de su número. Atención: después ", "cada uno", " ordenará a toda la mesa."],
+    answerHelp: ["Cada uno responde ", "en voz alta", ", según la intensidad de su número. Atención: después, ", "todos juntos", ", ordenaréis a la mesa de más bajo a más alto."],
     everyoneSpoke: "Ya ha hablado todo el mundo",
     itsMeRank: "Soy yo, voy a ordenar",
     trueRanking: "El orden real",
@@ -233,7 +237,7 @@ export const TT_STR: I18n<TTStrings> = {
     },
     themesTitle: "Los temas",
     numbersUpTo: "Los números llegan hasta",
-    rangeHelp: "Cada uno recibe un número secreto y responde en voz alta según su intensidad; luego todos ordenan a la mesa entera. Cuanto más grande la escala, más precisión hace falta.",
+    rangeHelp: "Cada uno recibe un número secreto y responde en voz alta según su intensidad; luego se ordena a toda la mesa. Cuanto más grande la escala, más precisión hace falta.",
     startGame: "Empezar la partida",
     sharedHint: "Cualquiera puede cambiar la escala o empezar.",
     editPlayers: "Editar jugadores",
@@ -249,5 +253,6 @@ export const TT_STR: I18n<TTStrings> = {
     rankingSent: "Orden enviado",
     submitRanking: "Confirmar mi orden",
     freeThemes: (n) => `${n} temas gratis`,
+    place: (n) => `${n}.º`,
   },
 };

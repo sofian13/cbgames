@@ -11,7 +11,7 @@ import { PlayerBlob } from "@/components/avatar/PlayerBlob";
 import { isOfflineApp } from "@/lib/offline-app";
 import { ConfettiBurst, Sparkles } from "@/components/ConfettiBurst";
 import {
-  ModeSelect, PassScreen, type GameMode,
+  ModeSelect, type GameMode,
   DISPLAY, ZButton, ZCard, ZChip, ZChoice, ZLink, ZScreen, ZTitle, useScrollTopOn,
 } from "@/components/games/local-kit";
 import { GAME_INK } from "@/components/games/game-icon-button";
@@ -31,7 +31,6 @@ import { getLang, useT, type Lang } from "@/lib/i18n";
 import { STR, promptsFor } from "@/components/games/pensez-pareil/i18n";
 import {
   ANSWER_TIME,
-  isMatch,
   shuffle,
   type Prompt as PPPrompt,
   type Tier as PPTier,
@@ -95,28 +94,25 @@ export default function PensezPareilGame(props: GameProps) {
 // MODE LOCAL (pass-and-play à deux)
 // ══════════════════════════════════════════════════════════
 function PensezPareilLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) {
-  type Phase = "setup" | "passA" | "typeA" | "passB" | "typeB" | "reveal" | "over";
+  // Un seul tél posé entre vous deux : thème → « 3, 2, 1 » → chacun dit son mot à voix haute → un tap pour juger
+  type Phase = "setup" | "theme" | "countdown" | "reveal" | "over";
   const t = useT(STR);
   const [phase, setPhase] = useState<Phase>("setup");
   useGameFinished(phase === "over"); // fin de partie → demande de note éventuelle (app)
-  // Langue figée au début de la partie (thèmes + règles de comparaison des réponses)
+  // Langue figée au début de la partie (thèmes)
   const [lang, setLang] = useState<Lang>(getLang);
   const [names, setNames] = useState<[string, string]>(["", ""]);
   const [pack, setPack] = useState<Pack>(() => (adultDefault(false) ? "hot" : "mix")); // Soirée « Folle » : pack coquin
   const [deck, setDeck] = useState<Prompt[]>([]);
   const [round, setRound] = useState(0);
-  const [ansA, setAnsA] = useState("");
-  const [ansB, setAnsB] = useState("");
   const [syncs, setSyncs] = useState(0);
   const [streak, setStreak] = useState(0);
   const [bestStreak, setBestStreak] = useState(0);
   const [teamScore, setTeamScore] = useState(0);
-  // Résultat figé de la manche (évite de lire un ansB encore périmé au moment de scorer)
+  // Résultat figé de la manche
   const [lastResult, setLastResult] = useState<{ matched: boolean; points: number; streak: number; syncs: number }>({ matched: false, points: 0, streak: 0, syncs: 0 });
-  const [inputA, setInputA] = useKeyedState<string>(`${round}-A`, "");
-  const [inputB, setInputB] = useKeyedState<string>(`${round}-B`, "");
 
-  useEffect(() => { preloadSfx(["whoosh", "confirm", "success", "ding", "ding2", "wrong", "lose", "win", "powerup", "levelup", "card-flip", "gong", "tock"]); }, []);
+  useEffect(() => { preloadSfx(["whoosh", "confirm", "success", "ding", "ding2", "wrong", "lose", "win", "powerup", "levelup", "card-flip", "gong", "tick", "tock"]); }, []);
   useScrollTopOn(`${phase}-${round}`);
   // Tuto 1re fois (dès l'ouverture, avant les prénoms) + règles en jeu (bouton livre)
   const tuto = useFirstTimeTuto("pensez-pareil", { atMount: true });
@@ -140,7 +136,8 @@ function PensezPareilLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }
     setLang(l);
     setNames(n); setPack(p); setDeck(buildDeck(p, l));
     setRound(0); setSyncs(0); setStreak(0); setBestStreak(0); setTeamScore(0);
-    setPhase("passA");
+    playSfx("card-flip", { volume: 0.7 });
+    setPhase("theme");
   };
 
   // « Pas fou ? » : thème remplacé par un thème du même pack jamais tiré dans la partie
@@ -154,8 +151,8 @@ function PensezPareilLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }
     setDeck((d) => d.map((x, i) => (i === round ? pick : x)));
   };
 
-  const resolveReveal = (bAns: string) => {
-    const m = isMatch(ansA, bAns, lang);
+  // Le duo juge lui-même (synonymes refusés) : un seul tap
+  const judge = (m: boolean) => {
     const pts = m ? SYNC_BASE + streak * COMBO_STEP : 0;
     const nStreak = m ? streak + 1 : 0;
     const nSyncs = syncs + (m ? 1 : 0);
@@ -163,7 +160,7 @@ function PensezPareilLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }
       setStreak(nStreak);
       setBestStreak((b) => Math.max(b, nStreak));
       setSyncs(nSyncs);
-      setTeamScore((t) => t + pts);
+      setTeamScore((s) => s + pts);
     } else {
       setStreak(0);
     }
@@ -172,30 +169,19 @@ function PensezPareilLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }
     if (m) { playSfx("success", { volume: 0.9, delay: 1.05 }); playSfx("ding", { volume: 0.7, rate: 1 + Math.min(nStreak, 5) * 0.08, delay: 1.25 }); }
     else { playSfx("wrong", { volume: 0.8, delay: 1.05 }); playSfx("lose", { volume: 0.5, delay: 1.12 }); }
     setLastResult({ matched: m, points: pts, streak: nStreak, syncs: nSyncs });
+    setPhase("reveal");
   };
 
   if (phase === "setup") {
     return <><CoupleSetup pack={pack} onBack={onReturnToLobby} onStart={begin} tools={rulesTool} onTuto={tuto.show} />{layers}</>;
   }
-  if (phase === "passA") {
-    return <><PassScreen toName={nameA} colorIndex={0} accent={PP_COLOR}
-      hint={t.passA}
-      onReady={() => setPhase("typeA")} />{layers}</>;
+  if (phase === "theme") {
+    return <><ThemeScreen prompt={prompt} names={[nameA, nameB]} round={round + 1} streak={streak}
+      onReroll={rerollPrompt} tools={rulesTool}
+      onGo={() => setPhase("countdown")} />{layers}</>;
   }
-  if (phase === "typeA") {
-    return <><TypeScreen prompt={prompt} player={nameA} idx={0} round={round + 1}
-      value={inputA} onChange={setInputA} onReroll={rerollPrompt} tools={rulesTool}
-      onSubmit={() => { playSfx("confirm", { volume: 0.7 }); setAnsA(inputA.trim()); setPhase("passB"); }} />{layers}</>;
-  }
-  if (phase === "passB") {
-    return <PassScreen toName={nameB} colorIndex={1} accent={PP_COLOR}
-      hint={t.passB(nameA)}
-      onReady={() => setPhase("typeB")} />;
-  }
-  if (phase === "typeB") {
-    return <><TypeScreen prompt={prompt} player={nameB} idx={1} round={round + 1}
-      value={inputB} onChange={setInputB} tools={rulesTool}
-      onSubmit={() => { const b = inputB.trim(); setAnsB(b); resolveReveal(b); setPhase("reveal"); }} />{layers}</>;
+  if (phase === "countdown") {
+    return <><CountdownScreen key={round} prompt={prompt} names={[nameA, nameB]} round={round + 1} tools={rulesTool} onJudge={judge} />{layers}</>;
   }
   if (phase === "reveal") {
     return (
@@ -203,7 +189,7 @@ function PensezPareilLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }
       <RevealScreen
         tools={rulesTool}
         prompt={prompt} matched={lastResult.matched} points={lastResult.points} streak={lastResult.streak}
-        names={[nameA, nameB]} answers={[ansA, ansB]}
+        names={[nameA, nameB]}
         round={round + 1} total={TOTAL_ROUNDS} syncs={lastResult.syncs}
         onNext={() => {
           if (round + 1 >= TOTAL_ROUNDS) {
@@ -214,7 +200,7 @@ function PensezPareilLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }
             else playSfx("lose", { volume: 0.6 });
             setPhase("over");
           }
-          else { setRound((r) => r + 1); setPhase("passA"); }
+          else { playSfx("card-flip", { volume: 0.7 }); setRound((r) => r + 1); setPhase("theme"); }
         }}
       />
       {layers}
@@ -227,6 +213,85 @@ function PensezPareilLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }
       teamScore={teamScore} syncs={syncs} total={TOTAL_ROUNDS} bestStreak={bestStreak}
       onReplay={() => setPhase("setup")} onReturnToLobby={onReturnToLobby}
     />
+  );
+}
+
+// ── Thème de la manche (local) : on réfléchit chacun dans sa tête ──
+function ThemeScreen({ prompt, names, round, streak, onReroll, onGo, tools }: {
+  tools?: ReactNode;
+  prompt: Prompt | null; names: [string, string]; round: number; streak: number;
+  onReroll: () => void; onGo: () => void;
+}) {
+  const t = useT(STR);
+  return (
+    <ZScreen tools={tools}>
+      <RoundBar round={round} total={TOTAL_ROUNDS} streak={streak} />
+      <PromptCard prompt={prompt} timed={false} />
+      <div className="mt-5 flex justify-center"><RerollButton label={t.reroll} onClick={onReroll} /></div>
+      <ZCard bg="#FFF6E5" tilt={1} shadow={4} radius={20} className="mt-6 flex items-center gap-3 px-3 py-3">
+        <div className="flex shrink-0 -space-x-3">
+          <PlayerBlob name={names[0]} colorIndex={0} size={40} mood="thinking" bob={false} />
+          <PlayerBlob name={names[1]} colorIndex={1} size={40} mood="thinking" bob={false} />
+        </div>
+        <p className="text-[16px] font-semibold leading-snug">{t.thinkHint}</p>
+      </ZCard>
+      <div className="min-h-6 flex-1" />
+      <ZButton bg="#FFD23F" onClick={onGo}>{t.countdownGo}</ZButton>
+    </ZScreen>
+  );
+}
+
+// ── « 3, 2, 1… » puis « Dites-le ! » et un seul tap : même mot ou pas ──
+function CountdownScreen({ prompt, names, round, onJudge, tools }: {
+  tools?: ReactNode;
+  prompt: Prompt | null; names: [string, string]; round: number;
+  onJudge: (matched: boolean) => void;
+}) {
+  const t = useT(STR);
+  // 3 → 2 → 1 → 0 (« Dites-le ! ») → -1 (on juge)
+  const [n, setN] = useState(3);
+  const [done, setDone] = useState(false);
+  useEffect(() => {
+    if (n > 0) playSfx("tick", { volume: 0.9 });
+    else if (n === 0) playSfx("gong", { volume: 0.7 });
+    if (n < 0) return;
+    const id = setTimeout(() => setN((v) => v - 1), n === 0 ? 1100 : 850);
+    return () => clearTimeout(id);
+  }, [n]);
+  const judging = n < 0;
+  const pick = (m: boolean) => { if (done) return; setDone(true); onJudge(m); };
+  return (
+    <ZScreen bg={PP_COLOR} tools={tools}>
+      <div className="flex flex-wrap items-center gap-2">
+        <ZChip bg="#fff" tilt={-2}>{t.round(round, TOTAL_ROUNDS)}</ZChip>
+      </div>
+      {prompt && <p className="mt-4 text-center text-[18px] font-bold leading-snug" style={{ textWrap: "balance" }}>{prompt.text}</p>}
+      <div className="flex min-h-[220px] flex-1 flex-col items-center justify-center">
+        {!judging ? (
+          <p key={n} className="text-center"
+            style={{ ...DISPLAY, fontSize: n > 0 ? 150 : 64, lineHeight: 1, color: "#fff", WebkitTextStroke: `6px ${GAME_INK}`, paintOrder: "stroke fill", textShadow: `0 6px 0 ${GAME_INK}`, animation: "reaction-pop .45s ease-out both" }}>
+            {n > 0 ? n : t.sayIt}
+          </p>
+        ) : (
+          <>
+            <div className="flex items-end gap-4">
+              <PlayerBlob name={names[0]} colorIndex={0} size={64} mood="happy" bob={false} />
+              <PlayerBlob name={names[1]} colorIndex={1} size={64} mood="happy" bob={false} />
+            </div>
+            <ZTitle size={40} className="mt-4 text-center">{t.judgeTitle}</ZTitle>
+            <p className="mt-2 text-center text-[15px] font-semibold leading-snug" style={{ textWrap: "balance" }}>{t.judgeHint}</p>
+          </>
+        )}
+      </div>
+      {judging ? (
+        <div className="flex flex-col gap-3">
+          <ZButton bg="#3DDC97" onClick={() => pick(true)}>{t.sameWord}</ZButton>
+          <ZButton bg="#fff" onClick={() => pick(false)}>{t.notSame}</ZButton>
+        </div>
+      ) : (
+        <p className="pb-2 text-center text-[16px] font-bold">{t.countdownHint}</p>
+      )}
+    </ZScreen>
   );
 }
 
@@ -529,7 +594,9 @@ function RevealScreen({
 }: {
   tools?: ReactNode;
   prompt: Prompt | null; matched: boolean; points: number; streak: number;
-  names: [string, string]; answers: [string, string];
+  names: [string, string];
+  /** Mots écrits (en ligne) ; absents en local, où chacun dit son mot à voix haute */
+  answers?: [string, string];
   round: number; total: number; syncs: number;
   onNext?: () => void; auto?: boolean;
 }) {
@@ -553,9 +620,15 @@ function RevealScreen({
             style={{ background: i ? "#FFF6E5" : "#fff", color: GAME_INK, border: `3px solid ${GAME_INK}`, boxShadow: `0 5px 0 ${GAME_INK}`, rotate: `${i ? 2 : -2}deg` }}>
             <div className="flex justify-center"><PlayerBlob name={names[i]} colorIndex={i} size={44} mood={matched ? "love" : "shocked"} bob={false} />
 </div>
-            <p className="mt-1 truncate text-[14px] font-bold">{names[i]}</p>
-            {/* Réponse longue (40 car. max) : plus petite, sans césure au milieu des mots */}
-            <p className="mt-1 leading-tight" style={{ ...DISPLAY, fontSize: (answers[i] ?? "").length > 18 ? 18 : (answers[i] ?? "").length > 10 ? 21 : 24, overflowWrap: "anywhere" }}>{answers[i] || "—"}</p>
+            {answers ? (
+              <>
+                <p className="mt-1 truncate text-[14px] font-bold">{names[i]}</p>
+                {/* Réponse longue (40 car. max) : plus petite, sans césure au milieu des mots */}
+                <p className="mt-1 leading-tight" style={{ ...DISPLAY, fontSize: (answers[i] ?? "").length > 18 ? 18 : (answers[i] ?? "").length > 10 ? 21 : 24, overflowWrap: "anywhere" }}>{answers[i] || "—"}</p>
+              </>
+            ) : (
+              <p className="mt-1 truncate text-[20px]" style={DISPLAY}>{names[i]}</p>
+            )}
           </div>
         ))}
       </div>
@@ -649,28 +722,6 @@ function Stat({ label, value }: { label: string; value: string | number }) {
       <p className="text-[24px] leading-none" style={DISPLAY}>{value}</p>
       <p className="mt-1 text-[13px] font-bold">{label}</p>
     </div>
-  );
-}
-
-// ── Saisie (local) ────────────────────────────────────────
-function TypeScreen({ prompt, player, idx, round, value, onChange, onSubmit, onReroll, tools }: {
-  tools?: ReactNode;
-  prompt: Prompt | null; player: string; idx: number; round: number;
-  value: string; onChange: (v: string) => void; onSubmit: () => void; onReroll?: () => void;
-}) {
-  const t = useT(STR);
-  return (
-    <ZScreen tools={tools}>
-      <div className="flex flex-wrap items-center gap-2">
-        <ZChip bg="#fff" tilt={-2}>{t.round(round, TOTAL_ROUNDS)}</ZChip>
-        <ZChip bg={idx ? "#FF3EA5" : "#7A4EE8"} tilt={2}>{t.answers(player)}</ZChip>
-      </div>
-      <PromptCard prompt={prompt} timed={false} />
-      {onReroll && !value.trim() && (
-        <div className="mt-5 flex justify-center"><RerollButton label={t.reroll} onClick={onReroll} /></div>
-      )}
-      <AnswerInput value={value} onChange={onChange} onSubmit={() => value.trim() && onSubmit()} />
-    </ZScreen>
   );
 }
 

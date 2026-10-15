@@ -23,7 +23,7 @@ import { THEMES, type ThemeState } from "@/components/games/top-ten/themes";
 import { TT_STR } from "@/components/games/top-ten/i18n";
 import { GameRulesSheet, GameTuto, RulesIconButton, TutoAgainButton, useFirstTimeTuto } from "@/components/games/game-tuto";
 import { TT_EXTRA, useTtTutoSlides } from "@/components/games/top-ten/tuto";
-import { uniqueMin, useGameFinished } from "@/lib/game-finished";
+import { uniqueMax, useGameFinished } from "@/lib/game-finished";
 import { ShareResultButton } from "@/components/games/share-result-button";
 import { rankingCard } from "@/lib/share-cards";
 
@@ -115,7 +115,7 @@ export default function TopTenGame(props: GameProps) {
 }
 
 // ══════════════════════════════════════════════════════════
-// MODE LOCAL (pass-and-play — chacun voit son numéro, puis chacun classe)
+// MODE LOCAL (on passe le tél pour les numéros, puis la table range ensemble sur un seul écran)
 // ══════════════════════════════════════════════════════════
 const TT_SFX: SfxName[] = ["card-flip", "card-shuffle", "gong", "whoosh", "tock", "ding", "win", "powerup", "coins", "confirm", "select", "tap"];
 
@@ -138,12 +138,19 @@ function TopTenLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) {
 function TopTenLocalGame({ onReturnToLobby, tools, onTuto }: { onReturnToLobby?: () => void; tools: React.ReactNode; onTuto: () => void }) {
   const x = useT(TT_EXTRA);
   const t = useT(TT_STR);
-  type Phase = "setup" | "target" | "theme" | "pass-number" | "show-number" | "answer" | "pass-rank" | "rank" | "reveal" | "over";
+  // Numéros distribués en passant le tél (seul moment où il circule), puis UN classement commun
+  type Phase = "setup" | "target" | "theme" | "pass-number" | "show-number" | "answer" | "rank" | "reveal" | "over";
   const [phase, setPhase] = useState<Phase>("setup");
   const [players, setPlayers] = useState<string[]>([]);
+  // Points individuels (justesse de SA réponse) + écart cumulé (place donnée vs vraie place)
   const [scores, setScores] = useState<number[]>([]);
-  // fin de partie → demande de note éventuelle + stats de la bande (app)
-  useGameFinished(phase === "over", { loser: uniqueMin(players, scores), scores: { names: players, values: scores } });
+  const [gapTotals, setGapTotals] = useState<number[]>([]);
+  // Score d'équipe (paires bien rangées + bonus ordre parfait), cumulé sur la partie
+  const [teamScore, setTeamScore] = useState(0);
+  const [teamMax, setTeamMax] = useState(0);
+  const [perfectRounds, setPerfectRounds] = useState(0);
+  // fin de partie → gagnant(s) = meilleur total individuel, perdant = le plus mal placé au total
+  useGameFinished(phase === "over", { loser: uniqueMax(players, gapTotals), scores: { names: players, values: scores } });
   const [round, setRound] = useState(0);
   const [numberRange, setNumberRange] = useState<10 | 25 | 50>(10);
   // 18+ jamais présélectionné, sauf en Soirée « Folle »
@@ -156,9 +163,8 @@ function TopTenLocalGame({ onReturnToLobby, tools, onTuto }: { onReturnToLobby?:
   const [themeCursor, setThemeCursor] = useState(0); // avance à chaque manche / changement
   const [numbers, setNumbers] = useState<Record<number, number>>({}); // playerIdx -> numéro
   const [passOrder, setPassOrder] = useState<number[]>([]); // ordre de passage (mélangé)
-  const [stepIdx, setStepIdx] = useState(0); // index dans passOrder (voir numéro / classer)
-  const [guesses, setGuesses] = useState<Record<number, number[]>>({}); // playerIdx -> classement (player indices)
-  const [results, setResults] = useState<Record<number, RoundResult>>({});
+  const [stepIdx, setStepIdx] = useState(0); // index dans passOrder (voir son numéro)
+  const [result, setResult] = useState<LocalRound | null>(null);
 
   useEffect(() => { preloadSfx(TT_SFX); }, []);
   useScrollTopOn(`${phase}-${stepIdx}`);
@@ -178,42 +184,40 @@ function TopTenLocalGame({ onReturnToLobby, tools, onTuto }: { onReturnToLobby?:
     setNumbers(nums);
     setPassOrder(shuffle(all));
     setStepIdx(0);
-    setGuesses({});
-    setResults({});
+    setResult(null);
     setRound(r);
     playSfx("card-flip", { volume: 0.7 });
     setPhase("theme");
   };
 
   const begin = (names: string[]) => {
-    setPlayers(names); setScores(names.map(() => 0));
+    setPlayers(names);
+    setScores(names.map(() => 0)); setGapTotals(names.map(() => 0));
+    setTeamScore(0); setTeamMax(0); setPerfectRounds(0);
     setThemeCursor(0);
     setPhase("target"); // on choisit l'échelle avant la 1re manche
   };
   const launch = () => {
     playSfx("card-shuffle", { volume: 0.8 });
+    setScores(players.map(() => 0)); setGapTotals(players.map(() => 0));
+    setTeamScore(0); setTeamMax(0); setPerfectRounds(0);
     setThemes(shuffle(themesForPack(pack)));
     setThemeCursor(0);
     startRound(1, players);
   };
 
-  // Quand tout le monde a classé → score + reveal
-  const finishRanking = (allGuesses: Record<number, number[]>) => {
-    const res: Record<number, RoundResult> = {};
-    const gained: number[] = players.map(() => 0);
-    players.forEach((_, idx) => {
-      const guess = allGuesses[idx] ?? passOrder;
-      const nums = guess.map((pIdx) => numbers[pIdx]);
-      const r = scorePairs(nums);
-      res[idx] = r;
-      gained[idx] = r.points;
-    });
-    setResults(res);
-    setScores((s) => s.map((v, i) => v + gained[i]));
+  // La table a validé SON ordre → score d'équipe + justesse de chacun, puis révélation
+  const finishRanking = (order: number[]) => {
+    const res = scoreLocalRound(order, numbers);
+    setResult(res);
+    setScores((s) => s.map((v, i) => v + (res.pts[i] ?? 0)));
+    setGapTotals((g) => g.map((v, i) => v + (res.gaps[i] ?? 0)));
+    setTeamScore((v) => v + res.team.points);
+    setTeamMax((v) => v + res.team.total * 2 + 5);
+    if (res.team.perfect) setPerfectRounds((v) => v + 1);
     // Roulement de tambour… puis le verdict
     playCombo("drumroll");
-    const perfect = Object.values(res).some((r) => r.perfect);
-    if (perfect) { playSfx("win", { volume: 0.9, delay: 1.05 }); playSfx("coins", { volume: 0.7, delay: 1.25 }); }
+    if (res.team.perfect) { playSfx("win", { volume: 0.9, delay: 1.05 }); playSfx("coins", { volume: 0.7, delay: 1.25 }); }
     else playSfx("ding", { volume: 0.8, delay: 1.05 });
     setPhase("reveal");
   };
@@ -292,77 +296,80 @@ function TopTenLocalGame({ onReturnToLobby, tools, onTuto }: { onReturnToLobby?:
           ))}
         </div>
         <div className="min-h-6 flex-1" />
-        <ZButton bg="#FFD23F" onClick={() => { setStepIdx(0); setPhase("pass-rank"); }}>{t.everyoneSpoke}</ZButton>
+        <ZButton bg="#FFD23F" onClick={() => { playSfx("whoosh", { volume: 0.6 }); setPhase("rank"); }}>{t.everyoneSpoke}</ZButton>
       </ZScreen>
     );
   }
-  if (phase === "pass-rank") {
-    const idx = passOrder[stepIdx];
-    return <><PassScreen toName={players[idx]} colorIndex={idx} accent={TT_COLOR}
-      buttonLabel={t.itsMeRank} hint={t.scale[pack].passRankHint} onReady={() => setPhase("rank")} /><GameTopRight><SoundButton /></GameTopRight></>;
-  }
   if (phase === "rank") {
-    const ranker = passOrder[stepIdx];
     return (
       <OrderingBoard
-        key={`${round}-${stepIdx}`}
+        key={`${round}-team`}
         ids={passOrder.map(String)}
         nameOf={(id) => players[+id]}
         colorOf={(id) => +id}
-        rankerName={players[ranker]}
+        team
         round={round} total={totalRounds} range={numberRange} pack={pack}
         theme={theme} tools={tools}
-        onSubmit={(o) => {
-          playSfx("confirm", { volume: 0.7 });
-          const g = o.map(Number);
-          const next = { ...guesses, [ranker]: g };
-          setGuesses(next);
-          if (stepIdx < passOrder.length - 1) { setStepIdx(stepIdx + 1); setPhase("pass-rank"); }
-          else finishRanking(next);
-        }} />
+        onSubmit={(o) => { playSfx("confirm", { volume: 0.7 }); finishRanking(o.map(Number)); }} />
     );
   }
-  if (phase === "reveal") {
-    // Vrai classement (soft → hard)
+  if (phase === "reveal" && result) {
+    // Vrai classement (soft → hard), avec la place que la table avait donnée à chacun
     const trueOrder = [...passOrder].sort((a, b) => numbers[a] - numbers[b]);
-    const perRound = players
-      .map((name, i) => ({ name, i, ...results[i] }))
-      .sort((a, b) => (b.points ?? 0) - (a.points ?? 0));
-    const anyPerfect = perRound.some((p) => p.perfect);
+    const nailed = trueOrder.filter((i) => result.gaps[i] === 0);
     return (
       <ZScreen tools={tools}>
-        {anyPerfect && <ConfettiBurst count={40} />}
+        {result.team.perfect && <ConfettiBurst count={40} />}
         <RoundChips round={round} total={totalRounds} range={numberRange} />
         <ZTitle size={38} className="mt-4">{t.trueRanking}</ZTitle>
+        <p className="mt-1 text-[14px] font-semibold leading-snug" style={{ color: "rgba(255,255,255,0.85)" }}>{x.revealHelp}</p>
         <div className="mt-4 flex flex-col gap-2.5">
           {trueOrder.map((idx, i) => {
             const num = numbers[idx];
             const hot = num / Math.max(numberRange, total);
+            const gap = result.gaps[idx] ?? 0;
+            const worst = result.worst.includes(idx);
             return (
-              <div key={idx} className="flex items-center gap-3 rounded-[18px] py-2 pl-2 pr-4"
-                style={{ background: "#fff", color: GAME_INK, border: `3px solid ${GAME_INK}`, boxShadow: `0 4px 0 ${GAME_INK}`, rotate: `${i % 2 ? 0.8 : -0.8}deg` }}>
+              <div key={idx} className="flex items-center gap-2.5 rounded-[18px] py-2 pl-2 pr-3"
+                style={{ background: gap === 0 ? "#3DDC97" : worst ? "#FFD0E6" : "#fff", color: GAME_INK, border: `3px solid ${GAME_INK}`, boxShadow: `0 4px 0 ${GAME_INK}`, rotate: `${i % 2 ? 0.8 : -0.8}deg` }}>
                 <span className="grid h-11 min-w-11 shrink-0 place-items-center rounded-[14px] px-1 text-[22px]"
                   style={{ ...DISPLAY, background: hot > 0.66 ? "#FF3EA5" : hot > 0.33 ? "#FFD23F" : "#3DDC97", color: GAME_INK, border: `2.5px solid ${GAME_INK}` }}>{num}</span>
-                <PlayerBlob name={players[idx]} colorIndex={idx} size={34} mood="happy" bob={false} />
-                <span className="min-w-0 flex-1 truncate text-[19px]" style={DISPLAY}>{players[idx]}</span>
+                <PlayerBlob name={players[idx]} colorIndex={idx} size={34} mood={gap === 0 ? "laughing" : worst ? "shocked" : "happy"} bob={false} />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[18px] leading-tight" style={DISPLAY}>{players[idx]}</p>
+                  <p className="text-[13px] font-bold leading-tight">
+                    {gap === 0 ? x.nailedIt : x.placedAt(t.place(result.given[idx] + 1), t.place(i + 1), gap)}
+                  </p>
+                </div>
+                {(result.pts[idx] ?? 0) > 0 && <span className="shrink-0 text-[20px]" style={DISPLAY}>+{result.pts[idx]}</span>}
               </div>
             );
           })}
         </div>
 
-        <ZTitle size={28} className="mt-8">{t.whoNailedIt}</ZTitle>
-        <p className="mt-1 text-[14px] font-semibold leading-snug" style={{ color: "rgba(255,255,255,0.85)" }}>{x.scoreLine}</p>
-        <div className="mt-3 flex flex-col gap-2.5">
-          {perRound.map((p) => (
-            <div key={p.i} className="flex items-center gap-3 rounded-[18px] px-3 py-2.5"
-              style={{ background: p.perfect ? "#3DDC97" : "#FFF6E5", color: GAME_INK, border: `3px solid ${GAME_INK}`, boxShadow: `0 4px 0 ${GAME_INK}` }}>
-              <PlayerBlob name={p.name} colorIndex={p.i} size={34} mood={p.perfect ? "laughing" : "happy"} bob={false} />
-              <span className="min-w-0 flex-1 truncate text-[18px]" style={DISPLAY}>{p.name}</span>
-              <span className="text-[14px] font-bold">{p.perfect ? t.perfect : t.pairs(p.correct, p.total)}</span>
-              <span className="text-[22px]" style={DISPLAY}>+{p.points}</span>
+        {/* Le plus mal compris de la manche (égalité = plusieurs, ordre parfait = personne) */}
+        {result.worst.length > 0 && (
+          <ZCard bg="#FFD23F" tilt={-1.5} shadow={4} radius={20} className="mt-6 flex items-center gap-3 px-3 py-3">
+            <div className="flex shrink-0 -space-x-3">
+              {result.worst.slice(0, 3).map((i) => <PlayerBlob key={i} name={players[i]} colorIndex={i} size={40} mood="shocked" bob={false} />)}
             </div>
-          ))}
-        </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-[13px] font-bold uppercase tracking-wide">{x.worstTitle(result.worst.length)}</p>
+              <p className="text-[19px] leading-tight" style={DISPLAY}>{result.worst.map((i) => players[i]).join(", ")}</p>
+              <p className="text-[13px] font-semibold leading-tight">{x.worstGap(result.gaps[result.worst[0]] ?? 0)}</p>
+            </div>
+          </ZCard>
+        )}
+
+        {/* Score d'équipe de la manche */}
+        <ZCard bg={result.team.perfect ? "#3DDC97" : "#FFF6E5"} tilt={1} shadow={4} radius={20} className="mt-4 px-4 py-3">
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-[18px] leading-tight" style={DISPLAY}>{result.team.perfect ? x.teamPerfect : x.teamPairs(result.team.correct, result.team.total)}</p>
+            <p className="shrink-0 text-[24px]" style={DISPLAY}>+{result.team.points}</p>
+          </div>
+          <p className="mt-1 text-[13px] font-semibold leading-snug">{x.scoreLine}</p>
+          {nailed.length === 0 && <p className="mt-1 text-[13px] font-semibold leading-snug">{x.nobodyNailed}</p>}
+        </ZCard>
 
         <ZButton bg="#FFD23F" className="mt-8" onClick={() => {
           if (round >= totalRounds) { playCombo("fanfare"); setPhase("over"); }
@@ -372,15 +379,37 @@ function TopTenLocalGame({ onReturnToLobby, tools, onTuto }: { onReturnToLobby?:
     );
   }
   // over
-  const ranking = players.map((name, i) => ({ name, score: scores[i], colorIndex: i })).sort((a, b) => b.score - a.score);
+  const ranking = players
+    .map((name, i) => ({ name, score: scores[i] ?? 0, colorIndex: i, note: x.gapNote(gapTotals[i] ?? 0) }))
+    .sort((a, b) => b.score - a.score);
+  const worstAll = uniqueMax(players, gapTotals);
+  const tieTop = ranking.length > 1 && ranking[1].score === ranking[0]?.score;
+  const teamPct = teamMax > 0 ? teamScore / teamMax : 0;
   return (
     <ZScreen bg={TT_COLOR} tools={tools}>
       <ConfettiBurst count={50} />
-      {/* Ex æquo en tête : pas de « X a le meilleur flair » arbitraire */}
+      {/* Ex æquo en tête : pas de « X a été le mieux compris » arbitraire */}
       <ZTitle size={(ranking[0]?.name.length ?? 0) > 10 ? 32 : 40} className="text-center">
-        {ranking.length > 1 && ranking[1].score === ranking[0]?.score ? t.tieTop : t.bestInstinct(ranking[0]?.name ?? "")}
+        {tieTop ? t.tieTop : x.bestUnderstood(ranking[0]?.name ?? "")}
       </ZTitle>
-      <div className="mt-6"><ZRanking rows={ranking} /></div>
+      {/* Score d'équipe de la partie */}
+      <ZCard bg="#fff" tilt={-1.5} shadow={5} radius={22} className="mt-5 px-4 py-3">
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-[13px] font-bold uppercase tracking-wide" style={{ color: "#6B5A8E" }}>{x.teamTitle}</p>
+            <p className="text-[18px] leading-tight" style={DISPLAY}>{teamPct >= 0.85 ? x.teamGreat : teamPct >= 0.6 ? x.teamGood : x.teamMeh}</p>
+            {perfectRounds > 0 && <p className="mt-0.5 text-[13px] font-semibold">{x.perfectRounds(perfectRounds)}</p>}
+          </div>
+          <p className="shrink-0 text-[28px] leading-none" style={DISPLAY}>{teamScore}<span className="text-[15px]">/{teamMax}</span></p>
+        </div>
+      </ZCard>
+      <div className="mt-5"><ZRanking rows={ranking} /></div>
+      {worstAll && (
+        <ZCard bg="#FFD23F" tilt={1} shadow={4} radius={20} className="mt-4 flex items-center gap-3 px-3 py-2.5">
+          <PlayerBlob name={worstAll} colorIndex={players.indexOf(worstAll)} size={38} mood="shocked" bob={false} />
+          <p className="min-w-0 flex-1 text-[15px] font-bold leading-snug">{x.worstOverall(worstAll)}</p>
+        </ZCard>
+      )}
       <div className="min-h-8 flex-1" />
       {/* Version découverte : un petit mot sur Zinzin+, une seule fois, en fin de partie */}
       <PremiumNudge text={nudge.topTen(fmtCount(themesForPack("adult").length))} style={{ marginBottom: 16 }} />
@@ -393,6 +422,43 @@ function TopTenLocalGame({ onReturnToLobby, tools, onTuto }: { onReturnToLobby?:
       {onReturnToLobby && <ZLink onClick={onReturnToLobby} color={GAME_INK} className="mt-2">{t.backHome}</ZLink>}
     </ZScreen>
   );
+}
+
+/** Résultat d'une manche locale (classement commun). Index = index du joueur. */
+interface LocalRound {
+  /** Score d'équipe : paires de voisins bien rangées + bonus ordre parfait */
+  team: RoundResult;
+  /** Place donnée par la table (0 = la plus faible) */
+  given: Record<number, number>;
+  /** Écart entre la place donnée et la vraie place */
+  gaps: Record<number, number>;
+  /** Points individuels de la manche */
+  pts: Record<number, number>;
+  /** Le(s) plus mal compris (écart max > 0) */
+  worst: number[];
+}
+
+/** Barème individuel : pile à sa place +2, à une place près +1. */
+const PTS_NAILED = 2;
+const PTS_CLOSE = 1;
+
+function scoreLocalRound(order: number[], numbers: Record<number, number>): LocalRound {
+  const team = scorePairs(order.map((i) => numbers[i]));
+  const truth = [...order].sort((a, b) => numbers[a] - numbers[b]);
+  const given: Record<number, number> = {};
+  const gaps: Record<number, number> = {};
+  const pts: Record<number, number> = {};
+  order.forEach((idx, pos) => {
+    given[idx] = pos;
+    const gap = Math.abs(pos - truth.indexOf(idx));
+    gaps[idx] = gap;
+    pts[idx] = gap === 0 ? PTS_NAILED : gap === 1 ? PTS_CLOSE : 0;
+  });
+  const maxGap = Math.max(0, ...Object.values(gaps));
+  const tied = maxGap > 0 ? order.filter((i) => gaps[i] === maxGap) : [];
+  // Égalité : plusieurs « plus mal compris »… sauf si c'est la moitié de la table ou plus (personne alors)
+  const worst = tied.length <= Math.max(1, Math.floor(order.length / 2)) ? tied : [];
+  return { team, given, gaps, pts, worst };
 }
 
 /** Pastilles « Manche 2/4 » + « De 1 à 10 ». */
@@ -906,6 +972,7 @@ function OrderingBoard({
   colorOf,
   theme,
   tools,
+  team,
 }: {
   ids: string[];
   nameOf: (id: string) => string;
@@ -924,6 +991,8 @@ function OrderingBoard({
   /** Mode local : rappel du thème et des repères (on ne classe pas de mémoire) */
   theme?: ThemeState | null;
   tools?: React.ReactNode;
+  /** Mode local : UN classement commun, décidé ensemble par toute la table */
+  team?: boolean;
 }) {
   const t = useT(TT_STR);
   const x = useT(TT_EXTRA);
@@ -991,6 +1060,7 @@ function OrderingBoard({
       <div className="flex flex-wrap items-center gap-2">
         <ZChip bg="#fff" tilt={-2}>{t.roundOf(round, total)}</ZChip>
         {rankerName && <ZChip bg={TT_COLOR} tilt={2}>{t.ranks(rankerName)}</ZChip>}
+        {team && <ZChip bg={TT_COLOR} tilt={2}>{x.teamChip}</ZChip>}
       </div>
       {theme && (
         <ZCard bg="#fff" tilt={-1} shadow={4} radius={20} className="mt-4 px-4 pb-3 pt-2.5">
@@ -999,9 +1069,9 @@ function OrderingBoard({
           <p className="mt-1.5 text-[13px] font-semibold leading-snug"><b>1</b> = {nbNum(theme.low)} · <b>{range}</b> = {nbNum(theme.high)}</p>
         </ZCard>
       )}
-      <ZTitle size={30} className="mt-4">{t.scale[pack].rankTitle}</ZTitle>
+      <ZTitle size={30} className="mt-4">{team ? x.teamRankTitle[pack] : t.scale[pack].rankTitle}</ZTitle>
       <p className="mt-2 text-[15px] font-semibold" style={{ color: "rgba(255,255,255,0.85)" }}>
-        {t.rankHelp}{theme ? ` ${x.inSpeakOrder}` : ""}
+        {team ? x.teamRankHelp : t.rankHelp}{theme ? ` ${x.inSpeakOrder}` : ""}
       </p>
       {remainingMs != null && <OrderCountdown key={round} remainingMs={remainingMs} />}
 
@@ -1055,7 +1125,7 @@ function OrderingBoard({
           ? submittedCount != null
             ? t.sent(submittedCount, playerCount ?? 0)
             : t.rankingSent
-          : t.submitRanking}
+          : team ? x.submitTeam : t.submitRanking}
       </ZButton>
     </ZScreen>
     </div>
