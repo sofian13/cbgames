@@ -5,7 +5,7 @@ import { colorForIndex } from "@/components/games/local-kit";
 import { armPartyBand, disarmPartyBand } from "@/lib/saved-players";
 import { setPartyMood } from "@/lib/party-mood";
 import { emitGameFinished, GAME_FINISHED_EVENT, type GameFinishedDetail } from "@/lib/game-finished";
-import { getLang, pick, useLang } from "@/lib/i18n";
+import { getLang, pick, useLang, useT, type I18n } from "@/lib/i18n";
 import { playCombo, playSfx, preloadSfx } from "@/lib/sfx";
 import { GAME_KIND, getZGame } from "../catalog";
 import { shareApp } from "../settings";
@@ -178,10 +178,53 @@ const NO_END: string[] = ["tu-prefere"];
 /* ───────── Gagnant du jeu : automatique si le jeu le sait, sinon « Qui a gagné ? » ───────── */
 function Winner({ s, onPause }: { s: SoireeState; onPause: () => void }) {
   // Le jeu a désigné le(s) gagnant(s) via son signal de fin : on l'annonce sans rien demander
-  const suggested = (s.pending?.winners ?? []).filter((w) => s.band.includes(w));
+  const named = (s.pending?.winners ?? []).filter((w) => s.band.includes(w));
+  // Pas de gagnant explicite mais un classement : le(s) 1er(s) gagnent
+  const fromRank = (s.pending?.ranking ?? []).filter((r) => r.rank === 1 && s.band.includes(r.name)).map((r) => r.name);
+  const suggested = named.length ? named : fromRank;
   const [fixing, setFixing] = useState(false);
-  if (suggested.length && !fixing) return <AutoWinner s={s} winners={suggested} onFix={() => setFixing(true)} />;
-  return <PickWinner s={s} suggested={suggested} onPause={onPause} />;
+  if (fixing) return <PickWinner s={s} suggested={suggested} onPause={onPause} />;
+  if (suggested.length) return <AutoWinner s={s} winners={suggested} onFix={() => setFixing(true)} />;
+  // Le jeu ne désigne personne (jeu sans gagnant) : on ne pose pas de question, on enchaîne
+  return <NoWinner onFix={() => setFixing(true)} />;
+}
+
+const NO_WINNER: I18n<{ title: string; sub: string; pick: string }> = {
+  fr: { title: "Pas de gagnant sur ce jeu", sub: "On enchaîne !", pick: "Désigner un gagnant" },
+  en: { title: "No winner this time", sub: "On to the next one!", pick: "Pick a winner" },
+  es: { title: "Sin ganador en este juego", sub: "¡Seguimos!", pick: "Elegir un ganador" },
+};
+
+/* Jeu sans gagnant : court écran puis suite automatique (lien discret pour en désigner un quand même) */
+function NoWinner({ onFix }: { onFix: () => void }) {
+  const t = useT(NO_WINNER);
+  const done = useRef(false);
+  const timer = useRef<number | undefined>(undefined);
+  const go = () => {
+    if (done.current) return;
+    done.current = true;
+    window.clearTimeout(timer.current);
+    recordWinners([]);
+  };
+  useEffect(() => {
+    timer.current = window.setTimeout(go, 1500);
+    return () => window.clearTimeout(timer.current);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  return (
+    <div className="zz-screen-in fixed inset-0 flex flex-col items-center justify-center px-6 text-center"
+      style={{ zIndex: 30, background: "#211052", paddingTop: "var(--sat)", paddingBottom: "var(--sab)" }}
+      onClick={go} role="button">
+      <h1 className="zz-title text-white" style={{ fontSize: 34, lineHeight: 1.05 }}>{t.title}</h1>
+      <p className="mt-3 text-[18px] font-extrabold" style={{ color: "#FFD23F" }}>{t.sub}</p>
+      <button type="button"
+        onClick={(e) => { e.stopPropagation(); if (done.current) return; window.clearTimeout(timer.current); onFix(); }}
+        className="fixed left-1/2 min-h-11 -translate-x-1/2 px-4 text-[14px] font-bold text-white underline decoration-2 underline-offset-4"
+        style={{ bottom: "calc(var(--sab) + 18px)", opacity: 0.75 }}>
+        {t.pick}
+      </button>
+    </div>
+  );
 }
 
 /* Annonce automatique « Malik gagne La Patate ! » (1,8 s ou tap), lien discret « Corriger » */
