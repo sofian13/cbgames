@@ -1,6 +1,6 @@
 /**
  * Yeux en spirale (secrets : « accros » au Rejouer, accueil secoué en tous sens = « tournis »).
- * Posés hors React, pour quelques secondes, sur les blobs VISIBLES d'un conteneur (12 au plus) :
+ * Posés hors React, pour quelques secondes, sur les blobs VISIBLES (et proches) d'un conteneur (16 au plus) :
  * - blobs SVG repérés (ZBlob, persos « Ma bande ») : le groupe des yeux d'origine ([data-eyes]) est masqué
  *   et de gros yeux en spirale sont posés au-dessus du visage ([data-eyes-top], sous les cheveux / chapeaux),
  *   quel que soit le style d'yeux (ronds, points, arcs rieurs, étoiles…). Yeux cachés par des lunettes
@@ -14,7 +14,7 @@
 
 const NS = "http://www.w3.org/2000/svg";
 const INK = "#1A0B33";
-const MAX_BLOBS = 12;
+const MAX_BLOBS = 16;
 /** Étoiles seulement au-dessus des blobs assez grands (sinon c'est du bruit) */
 const STARS_MIN_PX = 44;
 
@@ -64,9 +64,9 @@ function el<K extends keyof SVGElementTagNameMap>(tag: K, attrs: Record<string, 
   return n;
 }
 
-const onScreen = (e: Element) => {
+const onScreen = (e: Element, margin = 0) => {
   const r = e.getBoundingClientRect();
-  return r.width > 0 && r.bottom > 0 && r.top < innerHeight && r.right > 0 && r.left < innerWidth;
+  return r.width > 0 && r.bottom > -margin && r.top < innerHeight + margin && r.right > 0 && r.left < innerWidth;
 };
 
 /** Boîte d'un élément dans le repère de son parent (seul l'attribut transform compte, pas le CSS animé). */
@@ -258,11 +258,12 @@ export function spiralEyes(root: Element, ms = 3000, opts: SpiralOpts = {}): () 
   const still = reduced();
   root.classList.add("zz-spiral");
 
-  // Blobs visibles, les plus grands d'abord (12 au plus)
+  // Blobs visibles ET ceux juste au-dessus/en dessous (on défile souvent encore un peu après le
+  // déclenchement : tout le monde doit être étourdi), les visibles d'abord puis les plus grands
   const svgs = Array.from(root.querySelectorAll<SVGSVGElement>("svg"))
-    .filter((s) => /120 120$/.test((s.getAttribute("viewBox") ?? "").trim()) && onScreen(s))
-    .map((s) => ({ s, px: s.getBoundingClientRect().width }))
-    .sort((a, b) => b.px - a.px)
+    .filter((s) => /120 120$/.test((s.getAttribute("viewBox") ?? "").trim()) && onScreen(s, innerHeight * 0.75))
+    .map((s) => ({ s, px: s.getBoundingClientRect().width, vis: onScreen(s) ? 1 : 0 }))
+    .sort((a, b) => b.vis - a.vis || b.px - a.px)
     .slice(0, MAX_BLOBS);
 
   svgs.forEach(({ s: svg, px }, i) => {
