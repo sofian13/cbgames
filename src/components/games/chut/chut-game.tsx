@@ -35,6 +35,7 @@ import { chutCard } from "@/lib/share-cards";
 import { GameTuto, TutoAgainButton, useFirstTimeTuto } from "@/components/games/game-tuto";
 import { useChutTuto } from "./tuto";
 import { SoireeNextButton } from "@/components/games/soiree-next";
+import { EndHomeLink, EndPills, EndReplay } from "@/components/games/end-actions";
 
 // ── Chut ! ────────────────────────────────────────────────
 // Jeux au micro, au choix : « Le bon volume » (mode phare), « Chuchote-le ! »,
@@ -1661,20 +1662,23 @@ function EndScreen({ players, mode, results, ko, tableCracks, tools, overlays, o
         <ZRanking rows={rows} unit={unit} winners={winners} />
       </div>
       {incomplete && <p className="mt-4 text-center text-[15px] font-bold" style={{ color: "rgba(255,255,255,0.9)" }}>{wt.incomplete}</p>}
-      <div className="mt-auto flex flex-col items-center gap-1 pt-7">
-        <SoireeNextButton className="mb-2" />
-        <ZButton bg={ACCENT} onClick={onReplay}>{t.replay}</ZButton>
-        {onQuit && <ZLink onClick={onQuit}>{t.quit}</ZLink>}
-        <div className="mt-2 flex flex-wrap justify-center gap-3">
-          <ShareResultButton bg={ZZ.yellow} card={() => chutCard(
+      {/* Une seule action principale (Jeu suivant en Soirée, sinon Rejouer), le reste en pastilles */}
+      <div className="mt-auto flex flex-col items-center gap-3 pt-7">
+        <SoireeNextButton bg={ACCENT} />
+        <EndReplay onClick={onReplay} label={t.replay}>
+          <ZButton bg={ACCENT} onClick={onReplay}>{t.replay}</ZButton>
+        </EndReplay>
+        <EndPills className="mt-1">
+          <ShareResultButton short bg={ZZ.yellow} card={() => chutCard(
             awards.map((a) => ({ title: a.title, sub: a.sub, name: players[a.p], colorIndex: a.p, bg: a.bg })),
             rows.map((r) => ({
               name: r.name, value: unit ? `${r.score} ${unit}` : String(r.score), note: typeof r.note === "string" ? r.note : undefined,
               colorIndex: r.colorIndex, rank: 1 + rows.findIndex((x) => x.score === r.score),
             })),
           )} />
-          <IdeaButton game={t.name} kind="carte" bg={ZZ.cream} />
-        </div>
+          <IdeaButton short game={t.name} kind="carte" bg={ZZ.cream} />
+        </EndPills>
+        <EndHomeLink onClick={onQuit}>{t.quit}</EndHomeLink>
       </div>
     </ZScreen>
   );

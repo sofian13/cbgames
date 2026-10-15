@@ -31,6 +31,7 @@ import {
 } from "lucide-react";
 import { uniqueMax, useGameFinished, winnersOf } from "@/lib/game-finished";
 import { SoireeNextButton } from "@/components/games/soiree-next";
+import { EndHomeLink, EndPill, EndPills, EndReplay } from "@/components/games/end-actions";
 
 // ── DA sticker ────────────────────────────────────────────
 const INK = "#15082E";
@@ -451,7 +452,7 @@ export default function TgvGame({ onReturnToLobby }: GameProps) {
         <div className="mt-5 flex justify-center"><IdeaButton game="Le Train Fou" kind="gage" /></div>
 
         <div className="min-h-6 flex-1" />
-        <div className="sticky bottom-0 -mx-5 mt-4 px-5 pt-4" style={{ paddingBottom: BOTTOM, background: "linear-gradient(180deg, transparent, #1E1250 35%)" }}>
+        <div className="mt-4 pt-4">
           {/* Nouvelle partie : peines remises à zéro (comme « Rejouer »), jamais cumulées avec la précédente */}
           <Push big bg={ACCENT} onClick={() => { setLosses(players.map(() => 0)); setCurrentIdx(0); setPhase("pass"); }} className="w-full">
             {t.launch} <TrainFront size={22} strokeWidth={3} aria-hidden />
@@ -576,6 +577,13 @@ export default function TgvGame({ onReturnToLobby }: GameProps) {
   const top = tops[0];
   const rest = ranking.filter((p) => !winners.includes(p.name));
   const rankOf = (l: number) => 1 + ranking.filter((p) => p.losses < l).length;
+  const replay = () => {
+    setLosses(players.map(() => 0));
+    setCurrentIdx(0);
+    deckRef.current = newDeck();
+    playSfx("card-shuffle", { volume: 0.7 });
+    setPhase("pass");
+  };
   return (
     <Page>
       {chrome}
@@ -606,29 +614,20 @@ export default function TgvGame({ onReturnToLobby }: GameProps) {
           </div>
         ))}
       </div>
-      <div className="mt-5 flex justify-center"><IdeaButton game="Le Train Fou" kind="gage" /></div>
       <div className="min-h-6 flex-1" />
-      {/* Boutons collés en bas (le classement défile dessous avec beaucoup de joueurs) */}
-      <div className="sticky bottom-0 -mx-5 mt-4 space-y-3 px-5 pt-4" style={{ paddingBottom: BOTTOM, marginBottom: `calc(-1 * ${BOTTOM})`, background: "linear-gradient(180deg, transparent, #1E1250 30%)" }}>
-        <SoireeNextButton />
-        <Push
-          big
-          bg={ACCENT}
-          onClick={() => {
-            setLosses(players.map(() => 0));
-            setCurrentIdx(0);
-            deckRef.current = newDeck();
-            playSfx("card-shuffle", { volume: 0.7 });
-            setPhase("pass");
-          }}
-          className="w-full"
-        >
-          <RotateCcw size={22} strokeWidth={3} aria-hidden /> {t.replay}
-        </Push>
-        <div className="grid grid-cols-2 gap-3">
-          <Push bg="#fff" onClick={() => setPhase("config")}>{t.settings}</Push>
-          {onReturnToLobby && <Push bg="#fff" onClick={onReturnToLobby}><Home size={18} strokeWidth={3} aria-hidden /> {t.home}</Push>}
-        </div>
+      {/* Une seule action principale (Jeu suivant en Soirée, sinon Rejouer), le reste en pastilles ; tout défile normalement */}
+      <div className="mt-6 flex flex-col gap-3">
+        <SoireeNextButton bg={ACCENT} />
+        <EndReplay onClick={replay} label={t.replay}>
+          <Push big bg={ACCENT} onClick={replay} className="w-full">
+            <RotateCcw size={22} strokeWidth={3} aria-hidden /> {t.replay}
+          </Push>
+        </EndReplay>
+        <EndPills className="mt-1">
+          <EndPill onClick={() => setPhase("config")}>{t.settings}</EndPill>
+          <IdeaButton short game="Le Train Fou" kind="gage" bg="#fff" />
+        </EndPills>
+        <EndHomeLink onClick={onReturnToLobby}><Home size={17} strokeWidth={3} aria-hidden /> {t.home}</EndHomeLink>
       </div>
     </Page>
   );

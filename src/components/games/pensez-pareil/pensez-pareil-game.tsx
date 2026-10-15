@@ -40,6 +40,7 @@ import { GameRulesSheet, GameTuto, RulesIconButton, TutoAgainButton, useFirstTim
 import { usePPRules, usePPTuto } from "@/components/games/pensez-pareil/tuto";
 import type { ReactNode } from "react";
 import { SoireeNextButton } from "@/components/games/soiree-next";
+import { EndHomeLink, EndPills, EndReplay } from "@/components/games/end-actions";
 
 const SYNC_BASE = 100;
 const COMBO_STEP = 25;
@@ -710,10 +711,17 @@ function GameOverScreen({
       </ZCard>
 
       <div className="min-h-8 flex-1" />
-      <SoireeNextButton bg="#fff" className="mb-3" />
-      {onReplay && <ZButton bg="#FFD23F" onClick={onReplay}>{t.playAgain}</ZButton>}
-      <div className="mt-4 flex justify-center"><IdeaButton game="Pensez Pareil" kind="thème" bg="#fff" /></div>
-      {onReturnToLobby && <ZLink onClick={onReturnToLobby} color={GAME_INK} className="mt-2">{t.backHome}</ZLink>}
+      {/* Une seule action principale (Jeu suivant en Soirée, sinon Rejouer), le reste en pastilles */}
+      <div className="flex flex-col gap-3">
+        <SoireeNextButton bg="#FFD23F" />
+        {onReplay && (
+          <EndReplay onClick={onReplay} label={t.playAgain}>
+            <ZButton bg="#FFD23F" onClick={onReplay}>{t.playAgain}</ZButton>
+          </EndReplay>
+        )}
+        <EndPills className="mt-1"><IdeaButton short game="Pensez Pareil" kind="thème" bg="#fff" /></EndPills>
+        <EndHomeLink onClick={onReturnToLobby} color={GAME_INK}>{t.backHome}</EndHomeLink>
+      </div>
     </ZScreen>
   );
 }

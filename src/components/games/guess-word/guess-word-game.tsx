@@ -25,6 +25,7 @@ import { landscapeWhile } from "@/lib/orientation";
 import { requestMotionPermission } from "@/components/games/verre/sensors";
 import { useTiltGestures } from "./tilt";
 import { SoireeNextButton } from "@/components/games/soiree-next";
+import { EndHomeLink, EndPill, EndPills, EndReplay } from "@/components/games/end-actions";
 
 // ── Deviner le Mot ─────────────────────────────────────────
 // Un joueur met le tél sur son front (écran vers les autres), les autres le
@@ -553,16 +554,17 @@ export default function GuessWordGame({ onReturnToLobby }: GameProps) {
             : top?.name}
       </h2>
       <Standings players={players} scores={scores} big winners={winners} />
-      <div className="mt-auto flex w-full flex-col items-center pt-7">
-        <SoireeNextButton className="mb-3" />
-        <StickerBtn big bg={ACCENT} onClick={replay}>{t.playAgain}</StickerBtn>
-        <div className="mt-3 grid w-full grid-cols-2 gap-3">
-          <StickerBtn bg={C.cream} onClick={() => setPhase("config")}>{t.themesBtn}</StickerBtn>
-          {onReturnToLobby ? <StickerBtn bg={INK} color="#fff" onClick={onReturnToLobby}>{t.quit}</StickerBtn> : <span />}
-        </div>
-        <div className="mt-4">
-          <IdeaButton game="Deviner le Mot" kind="mot" bg={C.cream} />
-        </div>
+      {/* Une seule action principale (Jeu suivant en Soirée, sinon Rejouer), le reste en pastilles */}
+      <div className="mt-auto flex w-full flex-col items-center gap-3 pt-7">
+        <SoireeNextButton bg={ACCENT} />
+        <EndReplay onClick={replay} label={t.playAgain}>
+          <StickerBtn big bg={ACCENT} onClick={replay}>{t.playAgain}</StickerBtn>
+        </EndReplay>
+        <EndPills className="mt-1">
+          <EndPill bg={C.cream} onClick={() => setPhase("config")}>{t.themesBtn}</EndPill>
+          <IdeaButton short game="Deviner le Mot" kind="mot" bg={C.cream} />
+        </EndPills>
+        <EndHomeLink onClick={onReturnToLobby}>{t.quit}</EndHomeLink>
       </div>
     </StickerScreen>
   );

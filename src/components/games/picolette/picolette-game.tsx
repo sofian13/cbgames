@@ -41,6 +41,7 @@ import { tourneeCard } from "@/lib/share-cards";
 import { GameTuto, RulesIconButton, useFirstTimeTuto } from "@/components/games/game-tuto";
 import { TourneeRules, useTourneeSlides } from "./tuto";
 import { SoireeNextButton } from "@/components/games/soiree-next";
+import { EndHomeLink, EndPills, EndReplay } from "@/components/games/end-actions";
 
 // ── DA sticker ────────────────────────────────────────────
 const INK = "#15082E";
@@ -893,22 +894,22 @@ export default function PicoletteGame({ onReturnToLobby }: GameProps) {
         <p className="mt-5 text-center text-[15px] font-semibold" style={{ color: "rgba(255,255,255,0.82)" }}>{tr.overWater}</p>
         {/* Version découverte : une seule petite bannière, en fin de partie */}
         {!unlocked && <PremiumNudge style={{ marginTop: 16 }} text={nudge.picolette(fmtCount(cardsFor(lang).length - freeDeck(lang).length, lang))} />}
-        <div className="mt-4 flex flex-wrap justify-center gap-3">
-          <ShareResultButton card={() => tourneeCard(ranking.map((p) => ({ name: p.name, losses: p.losses, colorIndex: p.i })), tops.length > 0)} />
-          <IdeaButton game={tr.gameName} kind={tr.ideaKind} />
-        </div>
-
         <div className="min-h-6 flex-1" />
-        <div className="space-y-3">
-          <SoireeNextButton bg="#fff" />
-          <Push big bg={ACCENT} onClick={() => { playSfx("whoosh", { volume: 0.6 }); setPhase("setup"); }} className="w-full">
-            <RotateCcw size={22} strokeWidth={3} aria-hidden /> {tr.playAgain}
-          </Push>
-          {onReturnToLobby && (
-            <Push bg="#fff" onClick={onReturnToLobby} className="w-full">
-              <Home size={19} strokeWidth={3} aria-hidden /> {tr.backHome}
+        {/* Une seule action principale (Jeu suivant en Soirée, sinon Rejouer), le reste en pastilles */}
+        <div className="mt-5 flex flex-col gap-3">
+          <SoireeNextButton bg={ACCENT} />
+          <EndReplay onClick={() => { playSfx("whoosh", { volume: 0.6 }); setPhase("setup"); }} label={tr.playAgain}>
+            <Push big bg={ACCENT} onClick={() => { playSfx("whoosh", { volume: 0.6 }); setPhase("setup"); }} className="w-full">
+              <RotateCcw size={22} strokeWidth={3} aria-hidden /> {tr.playAgain}
             </Push>
-          )}
+          </EndReplay>
+          <EndPills className="mt-1">
+            <ShareResultButton short card={() => tourneeCard(ranking.map((p) => ({ name: p.name, losses: p.losses, colorIndex: p.i })), tops.length > 0)} />
+            <IdeaButton short game={tr.gameName} kind={tr.ideaKind} />
+          </EndPills>
+          <EndHomeLink onClick={onReturnToLobby}>
+            <Home size={17} strokeWidth={3} aria-hidden /> {tr.backHome}
+          </EndHomeLink>
         </div>
       </div>
     </div>
@@ -1082,7 +1083,7 @@ function PacksScreen({
         <div className="mt-6 flex justify-center"><IdeaButton game={t.gameName} kind={t.ideaKind} /></div>
 
         <div className="min-h-6 flex-1" />
-        <div className="sticky bottom-0 -mx-5 mt-4 px-5 pt-4" style={{ paddingBottom: BOTTOM, background: "linear-gradient(180deg, transparent, #1E1250 35%)" }}>
+        <div className="mt-4 pt-4" style={{ paddingBottom: BOTTOM }}>
           <Push big bg={ACCENT} onClick={() => { playSfx("whoosh", { volume: 0.6 }); onLaunch(); }} disabled={total === 0} className="w-full">
             {t.launch(total)}
           </Push>

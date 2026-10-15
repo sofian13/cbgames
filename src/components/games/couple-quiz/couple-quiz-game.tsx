@@ -28,6 +28,7 @@ import { STR, packsFor } from "./i18n";
 import { getSavedDuo, saveDuo } from "@/lib/saved-players";
 import { useGameFinished, winnersOf } from "@/lib/game-finished";
 import { SoireeNextButton } from "@/components/games/soiree-next";
+import { EndHomeLink, EndPill, EndPills, EndReplay } from "@/components/games/end-actions";
 
 const ACCENT = "#FF6BAE";
 
@@ -94,7 +95,7 @@ function useSfxMuted() {
 }
 
 // Conteneur plein écran : rien sous la barre d'état ni sous la croix « quitter » de l'app
-function Screen({ children, center, footer }: { children: ReactNode; center?: boolean; footer?: ReactNode }) {
+function Screen({ children, center, footer, flowFooter }: { children: ReactNode; center?: boolean; footer?: ReactNode; flowFooter?: boolean }) {
   const muted = useSfxMuted();
   const t = useT(STR);
   const r = useT(CQ_RULES);
@@ -110,7 +111,9 @@ function Screen({ children, center, footer }: { children: ReactNode; center?: bo
       </GameTopRight>
       {rulesOpen && <GameRulesSheet name={t.name} rules={r.rules} onClose={() => setRulesOpen(false)} />}
       <div className={`mx-auto flex w-full max-w-md flex-col ${center ? "my-auto items-center" : ""}`}>{children}</div>
-      {footer && (
+      {/* Écran de fin : boutons dans le flux, sans barre collée ni fond */}
+      {footer && flowFooter && <div className="mx-auto mt-auto w-full max-w-md pt-7">{footer}</div>}
+      {footer && !flowFooter && (
         <div
           className="sticky bottom-0 z-[2] -mx-5 mt-auto px-5 pt-5"
           style={{ paddingBottom: BOTTOM_SAFE, marginBottom: `calc(-1 * ${BOTTOM_SAFE})`, background: `linear-gradient(180deg, transparent, ${NIGHT} 38%)` }}
@@ -474,15 +477,20 @@ function CoupleQuizLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) 
     const duoWinners = winnersOf({ names: [...names], values: [...scores] });
     return (
       <Screen
+        flowFooter
         footer={
-          <>
-            <SoireeNextButton className="mb-3" />
-            <BigBtn bg={PINK} onClick={begin}><RotateCcw size={22} strokeWidth={3} aria-hidden /> {t.playAgain}</BigBtn>
-            <div className="mt-1 flex justify-center gap-2">
-              <SubBtn onClick={() => setPhase("config")}>{t.changeThemes}</SubBtn>
-              {onReturnToLobby && <SubBtn onClick={onReturnToLobby}>{t.quit}</SubBtn>}
-            </div>
-          </>
+          // Une seule action principale (Jeu suivant en Soirée, sinon Rejouer), le reste en pastilles
+          <div className="flex flex-col gap-3">
+            <SoireeNextButton bg={PINK} />
+            <EndReplay onClick={begin} label={t.playAgain}>
+              <BigBtn bg={PINK} onClick={begin}><RotateCcw size={22} strokeWidth={3} aria-hidden /> {t.playAgain}</BigBtn>
+            </EndReplay>
+            <EndPills className="mt-1">
+              <EndPill onClick={() => setPhase("config")}>{t.changeThemes}</EndPill>
+              <IdeaButton short game="Tu me connais ?" kind="idée de question" bg="#fff" />
+            </EndPills>
+            <EndHomeLink onClick={onReturnToLobby}>{t.quit}</EndHomeLink>
+          </div>
         }
       >
         {pct >= 65 && <ConfettiBurst count={60} />}
@@ -506,9 +514,6 @@ function CoupleQuizLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) 
             {/* Couronne = meilleur devineur (règle unique, la même que la Soirée ; égalité = personne) */}
             <DuoScore name={names[0]} score={scores[0]} idx={0} big crown={duoWinners.includes(names[0].trim())} />
             <DuoScore name={names[1]} score={scores[1]} idx={1} big crown={duoWinners.includes(names[1].trim())} />
-          </div>
-          <div className="mt-7">
-            <IdeaButton game="Tu me connais ?" kind="idée de question" bg="#fff" />
           </div>
         </div>
       </Screen>

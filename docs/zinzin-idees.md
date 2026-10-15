@@ -26,3 +26,6 @@ Qui a le tél ? (roulette des doigts), Le Procès, Qui a dit ça ?, Ça ou Rien,
 - **Événements saisonniers** : du 25 au 31 octobre, blobs de l'accueil déguisés (citrouille, fantôme, chapeau de sorcière) + slide « Spécial Halloween » ; même principe pour Noël (bonnets) et le Nouvel An. Idéal pour TikTok (« l'app se déguise »). À faire selon la date de sortie.
 - **Blobs de l'accueil vivants** (clignent des yeux, bâillent/s'endorment si l'app reste ouverte sans rien faire) : à garder en réserve, emplacement à trouver sans surcharger.
 - **Badges cachés** (« A perdu 5 fois d'affilée », « Premier à 3 h du mat' ») : écarté pour l'instant (risque de surcharge).
+
+## Classement long (8 à 16 joueurs), en attente
+- Au-delà de 6 joueurs : les 3 premiers en grand, les autres en lignes compactes ou sur 2 colonnes, pour que tout tienne presque sur un écran. Alternative évoquée : classement en slide (déconseillé : on ne voit pas tout le monde d'un coup). Décision reportée, à revoir après un test avec une grosse tablée.

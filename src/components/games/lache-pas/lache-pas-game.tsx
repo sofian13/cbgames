@@ -23,6 +23,7 @@ import { getSavedPlayers } from "@/lib/saved-players";
 import { LP_EXTRA, useLpTutoSlides } from "./tuto";
 import { rankingOf, uniqueMax, useGameFinished, winnersOf, type GameScores } from "@/lib/game-finished";
 import { SoireeNextButton } from "@/components/games/soiree-next";
+import { endHome, EndPills, EndReplay } from "@/components/games/end-actions";
 
 // ── Lâche pas ! ────────────────────────────────────────────
 // Tout le monde pose un doigt sur l'écran : une bombe à retardement (cachée,
@@ -386,6 +387,14 @@ export default function LachePasGame({ onReturnToLobby }: GameProps) {
 
   // ══ Fin ══
   if (phase === "end") {
+    const replayGame = () => {
+      // Nouvelle partie : bilan remis à zéro (jamais cumulé avec la précédente)
+      setStats({ rounds: 0, boomed: 0, cowards: 0 });
+      setCrowns(Array(MAX_FINGERS).fill(0));
+      setBurns(Array(MAX_FINGERS).fill(0));
+      setInGame(Array(MAX_FINGERS).fill(false));
+      newRound();
+    };
     return (
       <StickerScreen bg={C.night}>
         <ConfettiBurst count={40} />
@@ -431,27 +440,18 @@ export default function LachePasGame({ onReturnToLobby }: GameProps) {
             </div>
           </div>
         )}
-        <div className="mt-auto flex w-full flex-col items-center gap-1 pt-7">
-          <SoireeNextButton className="mb-2" />
-          <StickerBtn
-            big
-            bg={ACCENT}
-            color="#fff"
-            onClick={() => {
-              // Nouvelle partie : bilan remis à zéro (jamais cumulé avec la précédente)
-              setStats({ rounds: 0, boomed: 0, cowards: 0 });
-              setCrowns(Array(MAX_FINGERS).fill(0));
-              setBurns(Array(MAX_FINGERS).fill(0));
-              setInGame(Array(MAX_FINGERS).fill(false));
-              newRound();
-            }}
-          >
-            {t.replay}
-          </StickerBtn>
-          {onReturnToLobby && <SoftLink onClick={onReturnToLobby}>{t.quit}</SoftLink>}
-          <div className="mt-2">
-            <IdeaButton game="Lâche pas !" kind="gage" bg={C.cream} />
-          </div>
+        {/* Une seule action principale (Jeu suivant en Soirée, sinon Rejouer), le reste en pastilles */}
+        <div className="mt-auto flex w-full flex-col items-center gap-3 pt-7">
+          <SoireeNextButton bg={ACCENT} />
+          <EndReplay onClick={replayGame} label={t.replay}>
+            <StickerBtn big bg={ACCENT} color="#fff" onClick={replayGame}>
+              {t.replay}
+            </StickerBtn>
+          </EndReplay>
+          <EndPills className="mt-1">
+            <IdeaButton short game="Lâche pas !" kind="gage" bg={C.cream} />
+          </EndPills>
+          {endHome(onReturnToLobby) && <SoftLink onClick={onReturnToLobby!}>{t.quit}</SoftLink>}
         </div>
       </StickerScreen>
     );

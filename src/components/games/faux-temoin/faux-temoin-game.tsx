@@ -35,6 +35,7 @@ import { useFTExtra, useFTTuto } from "@/components/games/faux-temoin/tuto";
 import { ShareResultButton } from "@/components/games/share-result-button";
 import { rankingCard } from "@/lib/share-cards";
 import { SoireeNextButton } from "@/components/games/soiree-next";
+import { EndHomeLink, EndPills, EndReplay } from "@/components/games/end-actions";
 
 const ACCENT = "#4ECDC4";
 const VIEW_SEC = 5;
@@ -625,13 +626,18 @@ export default function FauxTemoinGame({ onReturnToLobby }: GameProps) {
         <div className="min-h-6 flex-1" />
         {end ? (
           <>
-            <div className="mt-6 flex flex-wrap justify-center gap-3">
-              <ShareResultButton bg={ZZ.yellow} card={() => rankingCard("faux-temoin", ranking, t.pts)} />
-              <IdeaButton game={t.name} kind={t.ideaKind} bg="#fff" />
+            {/* Une seule action principale (Jeu suivant en Soirée, sinon Rejouer), le reste en pastilles */}
+            <div className="mt-6 flex flex-col gap-3">
+              <SoireeNextButton bg={ACCENT} />
+              <EndReplay onClick={replay} label={t.replay}>
+                <ZButton bg={ACCENT} onClick={replay}>{t.replay}</ZButton>
+              </EndReplay>
+              <EndPills className="mt-1">
+                <ShareResultButton short bg={ZZ.yellow} card={() => rankingCard("faux-temoin", ranking, t.pts)} />
+                <IdeaButton short game={t.name} kind={t.ideaKind} bg="#fff" />
+              </EndPills>
+              <EndHomeLink onClick={onReturnToLobby}>{t.quit}</EndHomeLink>
             </div>
-            <SoireeNextButton className="mt-5 -mb-2" />
-            <ZButton className="mt-5" bg={ACCENT} onClick={replay}>{t.replay}</ZButton>
-            {onReturnToLobby && <ZButton className="mt-3" bg="#fff" size="md" onClick={onReturnToLobby}>{t.quit}</ZButton>}
           </>
         ) : (
           <>

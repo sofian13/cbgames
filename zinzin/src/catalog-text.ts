@@ -214,6 +214,7 @@ export const GAME_TEXT = {
         "Lisez le dilemme à voix haute, votez tous « à 3 » avec la main.",
         "Touchez la carte A ou B une fois par main levée, puis révélez le résultat.",
         "Le camp minoritaire prend la peine : un gage, ou 1 à 2 gorgées de zinzin (eau OK). Égalité ou unanimité : tout le monde prend la peine !",
+        "Une partie = 15 dilemmes (10 en Soirée Zinzin), puis le bilan : les votes unanimes et le dilemme le plus serré.",
       ],
       steps: [
         "Lisez le dilemme à voix haute",
@@ -239,6 +240,7 @@ export const GAME_TEXT = {
         "Read the dilemma out loud, everyone votes with their hand \"on 3\".",
         "Tap card A or B once per raised hand, then reveal the result.",
         "The minority side takes the penalty: a dare, or 1 to 2 zinzin sips (water is fine). Tie or unanimous: everyone takes the penalty!",
+        "A game = 15 dilemmas (10 in a Zinzin Night), then the recap: unanimous votes and the closest call.",
       ],
       steps: [
         "Read the dilemma out loud",
@@ -264,6 +266,7 @@ export const GAME_TEXT = {
         "Lee el dilema en voz alta y todos votan con la mano «a la de 3».",
         "Toca la carta A o B una vez por mano levantada y revela el resultado.",
         "El bando minoritario paga: un reto, o 1 a 2 tragos de zinzin (vale agua). Empate o unanimidad: ¡paga todo el mundo!",
+        "Una partida = 15 dilemas (10 en una Noche Zinzin), y luego el resumen: los votos unánimes y el dilema más reñido.",
       ],
       steps: [
         "Lee el dilema en voz alta",

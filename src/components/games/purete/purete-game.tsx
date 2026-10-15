@@ -32,6 +32,7 @@ import { uniqueMin, useGameFinished, winnersOf } from "@/lib/game-finished";
 import { ShareResultButton } from "@/components/games/share-result-button";
 import { pureteGroupCard, pureteSoloCard, pureteTableCard } from "@/lib/share-cards";
 import { SoireeNextButton } from "@/components/games/soiree-next";
+import { EndHomeLink, EndPill, EndPills, EndReplay } from "@/components/games/end-actions";
 
 // ── Constantes visuelles ─────────────────────────────────
 const INK = "#15082E";
@@ -922,20 +923,21 @@ function PureteBody({ onReturnToLobby }: GameProps) {
       {/* Version découverte : une petite bannière, en fin de partie seulement */}
       {!unlocked && <div className="mt-7 w-full max-w-md"><PremiumNudge text={nudge.purete} /></div>}
 
+      {/* Une seule action principale (Jeu suivant en Soirée, sinon Rejouer), le reste en pastilles */}
       <div className="mt-8 grid w-full max-w-md gap-3">
-        <SoireeNextButton bg="#fff" />
-        <Btn onClick={replay} bg={YELLOW} className="text-[22px]" style={{ minHeight: 60 }}><GameInlineIcon icon={RotateCcw} /> {t.replay}</Btn>
-        <div className="grid grid-cols-2 gap-3">
-          <Btn onClick={mode === "solo" ? () => setPhase({ k: "setup" }) : changePlayers} bg={CREAM} className="text-[16px] leading-tight">{mode === "solo" ? t.playMulti : t.changePlayers}</Btn>
-          <Btn onClick={() => (onReturnToLobby ? onReturnToLobby() : setPhase({ k: "setup" }))} bg={INK} color="#fff" className="text-[16px] leading-tight">{t.quit}</Btn>
-        </div>
-        <div className="flex flex-wrap justify-center gap-3 pt-1">
-          <ShareResultButton bg={YELLOW} card={() =>
+        <SoireeNextButton bg={YELLOW} />
+        <EndReplay onClick={replay} label={t.replay}>
+          <Btn onClick={replay} bg={YELLOW} className="text-[22px]" style={{ minHeight: 60 }}><GameInlineIcon icon={RotateCcw} /> {t.replay}</Btn>
+        </EndReplay>
+        <EndPills className="mt-1">
+          <ShareResultButton short bg={YELLOW} card={() =>
             mode === "solo" ? pureteSoloCard(purities[0] ?? 100, titleFor(purities[0] ?? 100).title)
               : anonymousMode ? pureteTableCard(tablePurity, tt.title)
                 : pureteGroupCard(order.map((pi) => ({ name: players[pi], purity: purities[pi], verdict: titleFor(purities[pi]).title, colorIndex: pi })))} />
-          <IdeaButton game="Test de pureté" kind="question" bg={CREAM} />
-        </div>
+          <IdeaButton short game="Test de pureté" kind="question" bg={CREAM} />
+          <EndPill bg={CREAM} onClick={mode === "solo" ? () => setPhase({ k: "setup" }) : changePlayers}>{mode === "solo" ? t.playMulti : t.changePlayers}</EndPill>
+        </EndPills>
+        <EndHomeLink onClick={() => (onReturnToLobby ? onReturnToLobby() : setPhase({ k: "setup" }))}>{t.quit}</EndHomeLink>
       </div>
     </Screen>
   );

@@ -26,6 +26,7 @@ import { CN_WORDS } from "./cn-local-words";
 import { STR } from "./i18n";
 import { ArtClue, ArtKey, ArtTap, ArtTeams } from "./tuto-art";
 import { SoireeNextButton } from "@/components/games/soiree-next";
+import { endHome, EndReplay } from "@/components/games/end-actions";
 
 // ── Types ─────────────────────────────────────────────────
 type Team = "red" | "blue";
@@ -715,12 +716,18 @@ export default function MotsEspionsLocal({ onReturnToLobby }: GameProps) {
           {ended ? (
             <>
               <IdeaButton game="Mots Espions" kind="mot" compact bg="#fff" />
-              <Btn bg="#fff" onClick={() => onReturnToLobby?.()} className="flex-[0.8]">
-                {t.quit}
-              </Btn>
-              <Btn bg={YELLOW} onClick={replay} className="flex-[2] whitespace-nowrap" big style={{ fontSize: 17 }}>
-                <RotateCcw size={20} strokeWidth={3} aria-hidden /> {t.replay}
-              </Btn>
+              {/* App : pas de « Quitter » (la croix en haut à gauche le fait déjà) */}
+              {endHome(onReturnToLobby) && (
+                <Btn bg="#fff" onClick={() => onReturnToLobby?.()} className="flex-[0.8]">
+                  {t.quit}
+                </Btn>
+              )}
+              {/* Soirée : « Jeu suivant » au-dessus est le principal, Rejouer passe en secondaire */}
+              <EndReplay onClick={replay} label={t.replay} className="flex-[2] whitespace-nowrap">
+                <Btn bg={YELLOW} onClick={replay} className="flex-[2] whitespace-nowrap" big style={{ fontSize: 17 }}>
+                  <RotateCcw size={20} strokeWidth={3} aria-hidden /> {t.replay}
+                </Btn>
+              </EndReplay>
             </>
           ) : selected !== null ? (
             <>

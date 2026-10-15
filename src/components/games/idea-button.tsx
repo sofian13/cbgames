@@ -62,6 +62,7 @@ function suggestLabel(kind: string, lang: Lang): string {
 
 const STR: I18n<{
   reroll: string;
+  short: string;
   close: string;
   sheetAria: string;
   thanks: string;
@@ -79,6 +80,7 @@ const STR: I18n<{
 }> = {
   fr: {
     reroll: "Pas fou ? Une autre",
+    short: "Une idée ?",
     close: "Fermer",
     sheetAria: "Propose ton idée",
     thanks: "Merci !",
@@ -100,6 +102,7 @@ Envoyé depuis l'app Zinzin`,
   },
   en: {
     reroll: "Meh? Another one",
+    short: "An idea?",
     close: "Close",
     sheetAria: "Suggest an idea",
     thanks: "Thanks!",
@@ -121,6 +124,7 @@ Sent from the Zinzin app`,
   },
   es: {
     reroll: "¿No mola? Otra",
+    short: "¿Una idea?",
     close: "Cerrar",
     sheetAria: "Propón una idea",
     thanks: "¡Gracias!",
@@ -166,7 +170,7 @@ export function RerollButton({ onClick, label, bg = "#fff", className = "" }: {
   );
 }
 
-export function IdeaButton({ game, kind = "idée", bg = "#FFD23F", className = "", compact = false }: {
+export function IdeaButton({ game, kind = "idée", bg = "#FFD23F", className = "", compact = false, short = false }: {
   /** Nom du jeu (sujet du mail) */
   game: string;
   /** ce qu'on propose : « question », « catégorie », « gage », « mot »… */
@@ -175,9 +179,12 @@ export function IdeaButton({ game, kind = "idée", bg = "#FFD23F", className = "
   className?: string;
   /** rond icône seule (pour les barres d'outils) */
   compact?: boolean;
+  /** petite pastille « Une idée ? » (écrans de fin, à côté de « Partager ») */
+  short?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const lang = useLang();
+  const t = useT(STR);
   const title = suggestLabel(kind, lang);
   return (
     <>
@@ -185,11 +192,11 @@ export function IdeaButton({ game, kind = "idée", bg = "#FFD23F", className = "
         type="button"
         onClick={() => { playSfx("open", { volume: 0.6 }); setOpen(true); }}
         aria-label={title}
-        className={`inline-flex min-h-11 items-center justify-center gap-2 text-[15px] font-extrabold transition-transform active:translate-y-[3px] ${compact ? "w-11 px-0" : "px-4"} ${className}`}
-        style={sticker(bg)}
+        className={`inline-flex min-h-11 items-center justify-center font-extrabold transition-transform ${short ? "gap-1.5 whitespace-nowrap px-3.5 text-[14px] active:translate-y-[2px]" : "gap-2 text-[15px] active:translate-y-[3px]"} ${compact ? "w-11 px-0" : short ? "" : "px-4"} ${className}`}
+        style={short ? { ...sticker(bg), boxShadow: `0 3px 0 ${INK}` } : sticker(bg)}
       >
-        <Lightbulb size={18} strokeWidth={3} aria-hidden />
-        {!compact && title}
+        <Lightbulb size={short ? 16 : 18} strokeWidth={3} aria-hidden />
+        {!compact && (short ? t.short : title)}
       </button>
       {/* Portal sur <body> : la feuille passe au-dessus de tout (boutons collants, parents transformés…) */}
       {open && typeof document !== "undefined" && createPortal(<IdeaSheet game={game} kind={kind} onClose={() => setOpen(false)} />, document.body)}

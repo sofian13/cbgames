@@ -446,7 +446,8 @@ export function GameScreen({ id, onExit, next }: { id: string; onExit: () => voi
   const soireeNext = next ? { label: next.label, onNext: () => { haptic("medium"); uiSfx.primary(); next.onNext(); } } : null;
 
   return (
-    <div ref={boxRef} className="zz-screen-in fixed inset-0 flex flex-col overflow-y-auto" style={{ background: "#0A0420", zIndex: 30 }}>
+    // Pas de rebond élastique : il découvrait ce fond sombre sous l'écran du jeu (bande noire en bas en défilant)
+    <div ref={boxRef} className="zz-screen-in fixed inset-0 flex flex-col overflow-y-auto" style={{ background: "#0A0420", zIndex: 30, overscrollBehaviorY: "none" }}>
       <ErrorBoundary onBack={onExit} backLabel={t.backHome}>
         <SoireeNextContext.Provider value={soireeNext}>
           <Suspense fallback={<Loading />}>

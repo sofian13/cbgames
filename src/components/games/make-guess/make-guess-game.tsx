@@ -25,6 +25,7 @@ import { PremiumNudge, fmtCount, useNudgeText } from "../premium-nudge";
 import { useGameFinished, winnersOf } from "@/lib/game-finished";
 import { WIN_STR } from "@/lib/winners-text";
 import { SoireeNextButton } from "@/components/games/soiree-next";
+import { EndHomeLink, EndPill, EndPills, EndReplay } from "@/components/games/end-actions";
 
 const ACCENT = "#FFD23F";
 
@@ -783,17 +784,18 @@ export default function MakeGuessGame({
         />
       )}
 
+      {/* Une seule action principale (Jeu suivant en Soirée, sinon Revanche), le reste en pastilles */}
       <div className="mt-auto flex w-full flex-col items-center pt-8">
-        <SoireeNextButton bg="#fff" className="mb-3" />
-        <StickerBtn big bg={ACCENT} onClick={replay}>{t.rematch}</StickerBtn>
-        <p className="mt-2 text-center text-[14px] font-semibold text-white/75">{t.rematchHint}</p>
-        <div className="mt-3 grid w-full grid-cols-2 gap-3">
-          <StickerBtn bg={C.cream} onClick={resetGame}>{t.settings}</StickerBtn>
-          {onReturnToLobby ? <StickerBtn bg="#fff" onClick={onReturnToLobby}>{t.quit}</StickerBtn> : <span />}
-        </div>
-        <div className="mt-4">
-          <IdeaButton game="Fais Deviner" kind="mot" bg={C.cream} />
-        </div>
+        <SoireeNextButton bg={ACCENT} className="mb-3" />
+        <EndReplay onClick={replay} label={t.rematch}>
+          <StickerBtn big bg={ACCENT} onClick={replay}>{t.rematch}</StickerBtn>
+          <p className="mt-2 text-center text-[14px] font-semibold text-white/75">{t.rematchHint}</p>
+        </EndReplay>
+        <EndPills className="mt-4">
+          <EndPill bg={C.cream} onClick={resetGame}>{t.settings}</EndPill>
+          <IdeaButton short game="Fais Deviner" kind="mot" bg={C.cream} />
+        </EndPills>
+        <EndHomeLink onClick={onReturnToLobby} className="mt-2">{t.quit}</EndHomeLink>
       </div>
     </StickerScreen>
   );

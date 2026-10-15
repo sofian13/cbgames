@@ -24,6 +24,7 @@ import { WIN_STR } from "@/lib/winners-text";
 import { ShareResultButton } from "../share-result-button";
 import { verreCard } from "@/lib/share-cards";
 import { SoireeNextButton } from "@/components/games/soiree-next";
+import { EndHomeLink, EndPill, EndPills, EndReplay } from "@/components/games/end-actions";
 
 // ── Le Verre Invisible ──────────────────────────────────────
 // « Jenga liquide » sur un seul tél : le tél tenu à plat est un plateau avec un verre.
@@ -443,17 +444,18 @@ export default function VerreGame({ onReturnToLobby }: GameProps) {
       <ZCard bg={ZZ.coral} tilt={1.5} shadow={4} radius={20} className="mt-5 px-4 py-3 text-center">
         <p className="text-[18px] leading-tight" style={DISPLAY}>{king && king.sp > 0 ? t.spillKing(king.name, king.sp) : t.noSpill}</p>
       </ZCard>
+      {/* Une seule action principale (Jeu suivant en Soirée, sinon Rejouer), le reste en pastilles */}
       <div className="mt-auto flex flex-col gap-3 pt-7">
-        <SoireeNextButton />
-        <ZButton bg={ACCENT} onClick={replay}>{t.replay}</ZButton>
-        <div className="grid grid-cols-2 gap-3">
-          <ZButton size="md" bg={ZZ.cream} onClick={() => setPhase("setup")}>{t.players}</ZButton>
-          {onReturnToLobby ? <ZButton size="md" bg={INK} color="#fff" onClick={onReturnToLobby}>{t.quit}</ZButton> : <span />}
-        </div>
-        <div className="mt-1 flex flex-wrap justify-center gap-3">
-          <ShareResultButton bg={ZZ.yellow} card={() => verreCard(ranking.map((r) => ({ name: r.name, score: r.s, spills: r.sp, colorIndex: r.i, note: t.spills(r.sp) })))} />
-          <IdeaButton game={GAME_FR} kind="idée" bg={ZZ.cream} />
-        </div>
+        <SoireeNextButton bg={ACCENT} />
+        <EndReplay onClick={replay} label={t.replay}>
+          <ZButton bg={ACCENT} onClick={replay}>{t.replay}</ZButton>
+        </EndReplay>
+        <EndPills className="mt-1">
+          <ShareResultButton short bg={ZZ.yellow} card={() => verreCard(ranking.map((r) => ({ name: r.name, score: r.s, spills: r.sp, colorIndex: r.i, note: t.spills(r.sp) })))} />
+          <IdeaButton short game={GAME_FR} kind="idée" bg={ZZ.cream} />
+          <EndPill bg={ZZ.cream} onClick={() => setPhase("setup")}>{t.players}</EndPill>
+        </EndPills>
+        <EndHomeLink onClick={onReturnToLobby}>{t.quit}</EndHomeLink>
       </div>
     </Screen>
   );

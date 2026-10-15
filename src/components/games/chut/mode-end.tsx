@@ -5,11 +5,12 @@ import { useT } from "@/lib/i18n";
 import { ConfettiBurst } from "@/components/ConfettiBurst";
 import { IdeaButton } from "@/components/games/idea-button";
 import { ShareResultButton } from "@/components/games/share-result-button";
-import { ZButton, ZLink, ZRanking, ZScreen, ZTitle, ZZ } from "@/components/games/local-kit";
+import { ZButton, ZRanking, ZScreen, ZTitle, ZZ } from "@/components/games/local-kit";
 import { rankingCard } from "@/lib/share-cards";
 import { decideWinners, rankingOf, useGameFinished, type GameScores } from "@/lib/game-finished";
 import { WIN_STR } from "@/lib/winners-text";
 import { SoireeNextButton } from "@/components/games/soiree-next";
+import { EndHomeLink, EndPills, EndReplay } from "@/components/games/end-actions";
 import { CHUT_STR } from "./i18n";
 import { MODES_STR } from "./modes-i18n";
 import { ChutStyles, SentenceCard, useReducedMotion, type Sentence } from "./shared";
@@ -57,14 +58,17 @@ export function ModeEnd({ title, top, rows, unit, loser, tieNote, result, comple
       {!complete && <p className="mt-4 text-center text-[15px] font-bold" style={{ color: "rgba(255,255,255,0.9)" }}>{w.incomplete}</p>}
       {loser && <SentenceCard name={loser.name} colorIndex={loser.colorIndex} sentence={loser.sentence} onReroll={loser.onReroll} title={loser.title} />}
       {!loser && tieNote && <p className="mt-5 text-center text-[16px] font-bold" style={{ color: "rgba(255,255,255,0.9)" }}>{tieNote}</p>}
-      <div className="mt-auto flex flex-col items-center gap-1 pt-7">
-        <SoireeNextButton className="mb-2" />
-        <ZButton bg={ZZ.pink} onClick={onReplay}>{t.replay}</ZButton>
-        {onQuit && <ZLink onClick={onQuit}>{t.quit}</ZLink>}
-        <div className="mt-2 flex flex-wrap justify-center gap-3">
-          <ShareResultButton bg={ZZ.yellow} card={() => rankingCard("chut", rows, unit)} />
-          <IdeaButton game={t.name} kind="carte" bg={ZZ.cream} />
-        </div>
+      {/* Une seule action principale (Jeu suivant en Soirée, sinon Rejouer), le reste en pastilles */}
+      <div className="mt-auto flex flex-col items-center gap-3 pt-7">
+        <SoireeNextButton bg={ZZ.pink} />
+        <EndReplay onClick={onReplay} label={t.replay}>
+          <ZButton bg={ZZ.pink} onClick={onReplay}>{t.replay}</ZButton>
+        </EndReplay>
+        <EndPills className="mt-1">
+          <ShareResultButton short bg={ZZ.yellow} card={() => rankingCard("chut", rows, unit)} />
+          <IdeaButton short game={t.name} kind="carte" bg={ZZ.cream} />
+        </EndPills>
+        <EndHomeLink onClick={onQuit}>{t.quit}</EndHomeLink>
       </div>
     </ZScreen>
   );

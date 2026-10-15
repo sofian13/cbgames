@@ -21,6 +21,7 @@ import { GameInlineIcon } from "../game-icon-button";
 import { MASCOT_PALETTE } from "@/components/Mascot";
 import { uniqueMax, useGameFinished } from "@/lib/game-finished";
 import { SoireeNextButton } from "@/components/games/soiree-next";
+import { EndHomeLink, EndPill, EndPills, EndReplay } from "@/components/games/end-actions";
 
 // ── La Patate ──────────────────────────────────────────────
 // Le téléphone EST la patate chaude. Une catégorie, chacun dit une réponse
@@ -662,18 +663,17 @@ export default function PatateGame({ onReturnToLobby }: GameProps) {
           text={nudge.patate(fmtCount(content.classic.length - freeCategories(content).length + content.spicy.length, lang))}
         />
       )}
-      <div className="mt-auto flex w-full flex-col items-center gap-1 pt-7">
-        <SoireeNextButton className="mb-2" />
-        <StickerBtn big bg={ACCENT} onClick={replay}>{t.replay}</StickerBtn>
-        <div className="mt-2 grid w-full grid-cols-2 gap-3">
-          <StickerBtn bg={C.cream} onClick={() => setPhase("setup")}>{t.players}</StickerBtn>
-          {onReturnToLobby ? (
-            <StickerBtn bg={INK} color="#fff" onClick={onReturnToLobby}>{t.quit}</StickerBtn>
-          ) : <span />}
-        </div>
-        <div className="mt-4">
-          <IdeaButton game="La Patate" kind="catégorie" bg={C.cream} />
-        </div>
+      {/* Une seule action principale (Jeu suivant en Soirée, sinon Rejouer), le reste en pastilles */}
+      <div className="mt-auto flex w-full flex-col items-center gap-3 pt-7">
+        <SoireeNextButton bg={ACCENT} />
+        <EndReplay onClick={replay} label={t.replay}>
+          <StickerBtn big bg={ACCENT} onClick={replay}>{t.replay}</StickerBtn>
+        </EndReplay>
+        <EndPills className="mt-1">
+          <EndPill bg={C.cream} onClick={() => setPhase("setup")}>{t.players}</EndPill>
+          <IdeaButton short game="La Patate" kind="catégorie" bg={C.cream} />
+        </EndPills>
+        <EndHomeLink onClick={onReturnToLobby}>{t.quit}</EndHomeLink>
       </div>
     </StickerScreen>
   );

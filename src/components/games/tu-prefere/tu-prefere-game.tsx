@@ -7,6 +7,8 @@
  * révèle le résultat du groupe + une petite punchline. Le camp minoritaire
  * prend la peine (gage, ou 1 à 2 gorgées de zinzin selon le réglage) ; en cas
  * d'égalité ou d'unanimité, TOUT LE MONDE prend. 100% local.
+ * Une partie = 15 dilemmes (10 dans une Soirée Zinzin), jamais deux fois le même,
+ * puis un bilan (unanimes, le plus serré).
  */
 
 import { useEffect, useRef, useState } from "react";
@@ -28,6 +30,9 @@ import { adultDefault, isNoAlcohol, sipsAllowed } from "@/lib/party-mood";
 import { useUnlocked } from "@/lib/entitlements";
 import { LockedPack, PremiumNudge, fmtCount, useNudgeText } from "@/components/games/premium-nudge";
 import { GameRulesSheet, RulesIconButton } from "@/components/games/game-tuto";
+import { SoireeNextButton, useSoireeNext } from "@/components/games/soiree-next";
+import { EndHomeLink, EndPill, EndPills, EndReplay } from "@/components/games/end-actions";
+import { useGameFinished } from "@/lib/game-finished";
 
 type Cat = "classique" | "hot" | "absurde" | "couple";
 type Penalty = "dares" | "sips";
@@ -50,6 +55,24 @@ const deckFor = (c: Cat, lang: Lang, unlocked: boolean): Dilemma[] =>
 const totalAll = (lang: Lang) => (["classique", "hot", "absurde", "couple"] as Cat[]).reduce((n, c) => n + listFor(c, lang).length, 0);
 // Bannière Zinzin+ (version découverte) : une seule fois, au résultat de ce dilemme
 const NUDGE_AT = 12;
+// Longueur d'une partie (dans une Soirée Zinzin : plus courte, on enchaîne)
+const GAME_LEN = 15;
+const SOIREE_LEN = 10;
+/** Résultat d'un dilemme joué (pour le bilan) */
+interface Played { a: string; b: string; va: number; vb: number }
+const isUnanimous = (r: Played) => r.va + r.vb >= 2 && Math.min(r.va, r.vb) === 0;
+/** Le dilemme le plus serré : plus petit écart relatif (au moins 2 mains), puis le plus de mains */
+function closestOf(results: Played[]): Played | null {
+  let best: Played | null = null;
+  let bestGap = Infinity;
+  for (const r of results) {
+    const tot = r.va + r.vb;
+    if (tot < 2) continue;
+    const gap = Math.abs(r.va - r.vb) / tot;
+    if (gap < bestGap || (gap === bestGap && best && tot > best.va + best.vb)) { best = r; bestGap = gap; }
+  }
+  return best;
+}
 const PACKS: Record<Cat, { icon: LucideIcon; color: string }> = {
   classique: { icon: Dices, color: "#4ECDC4" },
   hot: { icon: Flame, color: "#FF3EA5" },
@@ -129,6 +152,14 @@ export default function TuPrefereGame({ onReturnToLobby }: GameProps) {
   // Soirée « Folle » : on démarre directement sur l'ambiance Chaud (le chip permet d'en changer).
   const [cat, setCat] = useState<Cat | null>(() => (adultDefault(false) && unlocked ? "hot" : null));
   const [deck, setDeck] = useState<Dilemma[]>(() => (adultDefault(false) && unlocked ? shuffle(listFor("hot", lang)) : []));
+  // Dans une Soirée Zinzin (contexte « Jeu suivant » présent) : partie plus courte
+  const inSoiree = useSoireeNext() !== null;
+  const [gameLen] = useState(() => (inSoiree ? SOIREE_LEN : GAME_LEN));
+  // Nombre de dilemmes de la partie en cours (plafonné à la taille du paquet)
+  const [target, setTarget] = useState(() => Math.min(gameLen, deck.length));
+  // Dilemmes joués dans la partie en cours (bilan) et écran de fin
+  const [results, setResults] = useState<Played[]>([]);
+  const [phase, setPhase] = useState<"play" | "end">("play");
   // Nombre de dilemmes révélés (bannière Zinzin+ une seule fois)
   const [played, setPlayed] = useState(0);
   const [idx, setIdx] = useState(0);
@@ -140,12 +171,14 @@ export default function TuPrefereGame({ onReturnToLobby }: GameProps) {
   // Feuille de règles (bouton livre en haut à droite, sur tous les écrans du jeu)
   const [rulesOpen, setRulesOpen] = useState(false);
   const rulesBtn = <RulesIconButton onClick={() => setRulesOpen(true)} />;
-  const rulesSheet = rulesOpen && <GameRulesSheet name={t.title} rules={t.rules(sipsOk && penalty === "sips")} onClose={() => setRulesOpen(false)} />;
+  const rulesSheet = rulesOpen && <GameRulesSheet name={t.title} rules={t.rules(sipsOk && penalty === "sips", gameLen)} onClose={() => setRulesOpen(false)} />;
   const [dare, setDare] = useState("");
   const penaltyRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => { preloadSfx(["pop", "pop2", "whoosh", "gong", "card-slide", "card-flip", "select", "ding", "win"]); }, []);
-  useScrollTopOn(`${cat}-${idx}`);
+  useScrollTopOn(`${cat}-${idx}-${phase}`);
+  // Écran de fin : jeu sans gagnant (la Soirée enchaîne, note / stats de la bande)
+  useGameFinished(phase === "end", { noWinner: true });
   // À la révélation, on fait défiler jusqu'à la peine pour que tout le monde la voie
   useEffect(() => {
     if (!revealed) return;
@@ -153,18 +186,34 @@ export default function TuPrefereGame({ onReturnToLobby }: GameProps) {
     return () => window.clearTimeout(id);
   }, [revealed]);
 
+  // Nouvelle partie sur un paquet déjà mélangé (jamais deux fois le même dilemme dans la partie)
+  const startGame = (d: Dilemma[]) => {
+    setDeck(d); setIdx(0); setTarget(Math.min(gameLen, d.length));
+    setResults([]); setPhase("play"); setVotes({ a: 0, b: 0 }); setRevealed(false);
+  };
   const startPack = (c: Cat) => {
     playSfx("card-flip", { volume: 0.7 });
-    setCat(c); setDeck(shuffle(deckFor(c, lang, unlocked))); setIdx(0); setVotes({ a: 0, b: 0 }); setRevealed(false);
+    setCat(c); startGame(shuffle(deckFor(c, lang, unlocked)));
+  };
+  // « Encore 15 » : les dilemmes pas encore vus du paquet (on remélange tout s'il n'en reste plus)
+  const rest = deck.slice(idx + 1);
+  const again = () => {
+    playSfx("card-flip", { volume: 0.7 });
+    startGame(rest.length ? rest : shuffle(deckFor(cat!, lang, unlocked)));
   };
   const current = deck[idx];
   const color = cat ? PACKS[cat].color : "#4ECDC4";
   const total = votes.a + votes.b;
 
+  // Dilemme en cours = n° (joués + 1) ; dernier révélé → « Voir le bilan »
+  const isLast = revealed && results.length >= target;
+  // « Un autre » (sans compter) seulement s'il reste assez de dilemmes pour finir la partie
+  const canReroll = deck.length - idx - 1 > target - results.length - 1;
   const next = () => {
+    if (isLast) { playCombo("reveal"); setPhase("end"); return; }
+    if (idx + 1 >= deck.length) return;
     playSfx("card-slide", { volume: 0.7 });
-    if (idx + 1 >= deck.length) { setDeck(shuffle(deckFor(cat!, lang, unlocked))); setIdx(0); }
-    else setIdx(idx + 1);
+    setIdx(idx + 1);
     setVotes({ a: 0, b: 0 });
     setRevealed(false);
   };
@@ -183,6 +232,7 @@ export default function TuPrefereGame({ onReturnToLobby }: GameProps) {
     const pool = all ? t.groupDares : t.dares;
     setDare(pool[Math.floor(Math.random() * pool.length)]);
     setPlayed((n) => n + 1);
+    if (current) setResults((r) => [...r, { a: current.a, b: current.b, va: votes.a, vb: votes.b }]);
     setRevealed(true);
   };
 
@@ -262,6 +312,61 @@ export default function TuPrefereGame({ onReturnToLobby }: GameProps) {
     );
   }
 
+  // ── Bilan ──
+  if (phase === "end") {
+    const unanimous = results.filter(isUnanimous).length;
+    const close = closestOf(results);
+    const nextLen = Math.min(gameLen, rest.length || deckFor(cat, lang, unlocked).length);
+    const closeTot = close ? close.va + close.vb : 0;
+    return (
+      <ZScreen tools={rulesBtn}>
+        {rulesSheet}
+        <ConfettiBurst count={40} />
+        <div className="flex justify-center"><Mascot size={104} color="sky" mood="laughing" arms shadow={false} /></div>
+        <ZTitle as="h1" size={44} className="mt-3 text-center" style={{ lineHeight: 0.95 }}>{t.endTitle(unanimous, results.length)}</ZTitle>
+        <p className="mt-2 text-center text-[17px] font-semibold" style={{ color: "rgba(255,255,255,0.88)" }}>{t.endSub(results.length)}</p>
+        <div className="mt-5 grid grid-cols-2 gap-3">
+          <ZCard bg="#fff" tilt={-1.5} shadow={4} radius={20} className="px-3 py-3 text-center">
+            <p style={{ ...DISPLAY, fontSize: 40, lineHeight: 1 }}>{results.length}</p>
+            <p className="mt-1 text-[14px] font-bold leading-tight">{t.statPlayed}</p>
+          </ZCard>
+          <ZCard bg={color} tilt={1.5} shadow={4} radius={20} className="px-3 py-3 text-center">
+            <p style={{ ...DISPLAY, fontSize: 40, lineHeight: 1 }}>{unanimous}</p>
+            <p className="mt-1 text-[14px] font-bold leading-tight">{t.statUnanimous}</p>
+          </ZCard>
+        </div>
+        <ZCard bg="#FFD23F" tilt={-1} shadow={4} radius={20} className="mt-4 px-4 py-3">
+          <p className="text-[19px] leading-tight" style={DISPLAY}>{t.closestTitle}</p>
+          {close ? (
+            <>
+              <p className="mt-1.5 text-[16px] font-bold leading-snug">
+                <span style={DISPLAY}>A</span> {close.a} <span className="opacity-70">{t.pct(Math.round((close.va / closeTot) * 100))}</span>
+              </p>
+              <p className="mt-0.5 text-[16px] font-bold leading-snug">
+                <span style={DISPLAY}>B</span> {close.b} <span className="opacity-70">{t.pct(Math.round((close.vb / closeTot) * 100))}</span>
+              </p>
+              <p className="mt-1 text-[14px] font-semibold opacity-80">{t.closestSplit(Math.max(close.va, close.vb), Math.min(close.va, close.vb))}</p>
+            </>
+          ) : (
+            <p className="mt-1 text-[15px] font-semibold leading-snug">{t.noClosest}</p>
+          )}
+        </ZCard>
+        {/* Une seule action principale (Jeu suivant en Soirée, sinon Encore 15), le reste en pastilles */}
+        <div className="mt-auto flex flex-col gap-3 pt-7">
+          <SoireeNextButton />
+          <EndReplay onClick={again} label={t.again(nextLen)}>
+            <ZButton bg={color} onClick={again}>{t.again(nextLen)}</ZButton>
+          </EndReplay>
+          <EndPills className="mt-1">
+            <EndPill onClick={() => { playSfx("select", { volume: 0.5 }); setPhase("play"); setCat(null); }}>{t.changeVibe}</EndPill>
+            <IdeaButton short game={t.gameName} kind="dilemme" bg="#fff" />
+          </EndPills>
+          <EndHomeLink onClick={onReturnToLobby}><GameInlineIcon icon={ArrowLeft} /> {t.backHome}</EndHomeLink>
+        </div>
+      </ZScreen>
+    );
+  }
+
   const winner: "a" | "b" | "tie" | null = !revealed || total === 0 ? null : votes.a === votes.b ? "tie" : votes.a > votes.b ? "a" : "b";
   // Camp minoritaire = l'autre camp, s'il a au moins une main.
   // Égalité ou unanimité (pas de minorité) : TOUT LE MONDE prend la peine.
@@ -281,7 +386,7 @@ export default function TuPrefereGame({ onReturnToLobby }: GameProps) {
         <button type="button" onClick={() => setCat(null)} className="min-h-11" aria-label={t.changeVibe}>
           <ZChip bg={color} tilt={-2}><GameInlineIcon icon={PACKS[cat].icon} /> {t.packs[cat].label}</ZChip>
         </button>
-        <ZChip bg="#fff" tilt={2}>{idx + 1}/{deck.length}</ZChip>
+        <ZChip bg="#fff" tilt={2}>{Math.min(target, results.length + (revealed ? 0 : 1))}/{target}</ZChip>
       </div>
       <ZTitle size={38} className="mt-3">{t.prompt}</ZTitle>
 
@@ -333,7 +438,7 @@ export default function TuPrefereGame({ onReturnToLobby }: GameProps) {
             </ZCard>
             </div>
             {showNudge && <PremiumNudge text={nudge.tuPrefere(fmtCount(totalAll(lang) - FREE_COUNT, lang))} style={{ marginTop: 16 }} />}
-            <ZButton bg={color} className="mt-5" onClick={next}>{t.nextDilemma}</ZButton>
+            <ZButton bg={isLast ? "#FFD23F" : color} className="mt-5" onClick={next}>{isLast ? t.seeRecap : t.nextDilemma}</ZButton>
           </>
         ) : (
           <>
@@ -342,7 +447,7 @@ export default function TuPrefereGame({ onReturnToLobby }: GameProps) {
                 <p className="text-center text-[15px] font-semibold" style={{ color: "rgba(255,255,255,0.88)" }}>
                   {t.raiseHands}
                 </p>
-                <RerollButton label={t.reroll} onClick={next} />
+                {canReroll && <RerollButton label={t.reroll} onClick={next} />}
               </div>
             ) : (
               <ZButton bg="#FFD23F" onClick={reveal}>{t.seeResult(total)}</ZButton>

@@ -35,6 +35,7 @@ import { useGameFinished } from "@/lib/game-finished";
 import { GameTuto, useFirstTimeTuto } from "@/components/games/game-tuto";
 import { useLgTutoSlides } from "./tuto";
 import { SoireeNextButton } from "@/components/games/soiree-next";
+import { EndHomeLink, EndPill, EndPills, EndReplay } from "@/components/games/end-actions";
 
 // ── Réglages persistants ──────────────────────────────────
 interface Settings {
@@ -1041,13 +1042,16 @@ function EndScreen({
         <GameInlineIcon icon={ScrollText} /> {t.seeHistory}
       </button>
       <div className="mt-8 grid gap-3">
+        {/* Une seule action principale (Jeu suivant en Soirée, sinon Rejouer), le reste en pastilles */}
         <SoireeNextButton />
-        <BigButton onClick={onReplay}><GameInlineIcon icon={RotateCcw} /> {t.replaySame}</BigButton>
-        <BigButton variant="ghost" onClick={onNewPlayers}>{t.changePlayers}</BigButton>
-        <div className="flex justify-center pt-1">
-          <IdeaButton game="Loup-Garou" kind="idée de rôle" bg={YELLOW} />
-        </div>
-        <button type="button" onClick={onQuit} className="text-[16px] font-bold underline decoration-2 underline-offset-4" style={{ minHeight: 48 }}>{t.quit}</button>
+        <EndReplay onClick={onReplay} label={t.replaySame}>
+          <BigButton onClick={onReplay}><GameInlineIcon icon={RotateCcw} /> {t.replaySame}</BigButton>
+        </EndReplay>
+        <EndPills className="mt-1">
+          <EndPill onClick={onNewPlayers}>{t.changePlayers}</EndPill>
+          <IdeaButton short game="Loup-Garou" kind="idée de rôle" bg={YELLOW} />
+        </EndPills>
+        <EndHomeLink onClick={onQuit} color="inherit">{t.quit}</EndHomeLink>
       </div>
     </Screen>
   );

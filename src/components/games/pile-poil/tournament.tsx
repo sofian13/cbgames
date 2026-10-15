@@ -17,6 +17,7 @@ import { fxBad, fxDrum, fxGood, fxNeutral, fxOver, fxPerfect, fxPreload, fxRevea
 import { rankingOf, useGameFinished, winnersOf, type GameScores } from "@/lib/game-finished";
 import { WIN_STR } from "@/lib/winners-text";
 import { SoireeNextButton } from "@/components/games/soiree-next";
+import { EndHomeLink, EndPill, EndPills, EndReplay } from "@/components/games/end-actions";
 
 // ── Pile Poil · mode Tournoi (tout sur un seul téléphone) ─────────────────
 // Chacun à son tour : GO, on compte dans sa tête, STOP. Le temps est mesuré
@@ -1075,16 +1076,17 @@ function FinalScreen({
         </div>
       )}
 
-      <div className="mt-auto flex w-full flex-col items-center pt-7">
-        <SoireeNextButton className="mb-3" />
-        <StickerBtn big bg={ACCENT} onClick={onReplay}>{t.replay}</StickerBtn>
-        <div className="mt-3 grid w-full grid-cols-2 gap-3">
-          <StickerBtn bg={C.cream} onClick={onNewPlayers}>{t.players}</StickerBtn>
-          {onExit ? <StickerBtn bg={INK} color="#fff" onClick={onExit}>{t.quit}</StickerBtn> : <span />}
-        </div>
-        <div className="mt-4">
-          <IdeaButton game="Pile Poil" kind="défi" bg={C.cream} />
-        </div>
+      {/* Une seule action principale (Jeu suivant en Soirée, sinon Rejouer), le reste en pastilles */}
+      <div className="mt-auto flex w-full flex-col items-center gap-3 pt-7">
+        <SoireeNextButton bg={ACCENT} />
+        <EndReplay onClick={onReplay} label={t.replay}>
+          <StickerBtn big bg={ACCENT} onClick={onReplay}>{t.replay}</StickerBtn>
+        </EndReplay>
+        <EndPills className="mt-1">
+          <EndPill bg={C.cream} onClick={onNewPlayers}>{t.players}</EndPill>
+          <IdeaButton short game="Pile Poil" kind="défi" bg={C.cream} />
+        </EndPills>
+        <EndHomeLink onClick={onExit}>{t.quit}</EndHomeLink>
       </div>
     </StickerScreen>
   );

@@ -176,8 +176,8 @@ function Intro({ s, onPause }: { s: SoireeState; onPause: () => void }) {
   );
 }
 
-/** Jeux sans écran de fin (on enchaîne quand on veut) */
-const NO_END: string[] = ["tu-prefere"];
+/** Jeux sans écran de fin (on enchaîne quand on veut) : aucun pour l'instant (Tu préfères a son bilan) */
+const NO_END: string[] = [];
 
 /* ───────── Gagnant du jeu : automatique si le jeu le sait, sinon « Qui a gagné ? » ───────── */
 function Winner({ s, onPause }: { s: SoireeState; onPause: () => void }) {

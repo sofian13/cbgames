@@ -18,6 +18,7 @@ import { useGameFinished } from "@/lib/game-finished";
 import { GameRulesSheet, GameTuto, RulesIconButton, TutoAgainButton, useFirstTimeTuto } from "@/components/games/game-tuto";
 import { useChronoTuto } from "./tuto";
 import { SoireeNextButton } from "@/components/games/soiree-next";
+import { EndHomeLink, EndPill, EndPills, EndReplay } from "@/components/games/end-actions";
 
 // ── Catégorie Chrono ───────────────────────────────────────
 // Une catégorie s'affiche ; chacun son tour doit donner un mot de la catégorie
@@ -541,25 +542,22 @@ export default function CategoryChronoGame({ onReturnToLobby }: GameProps) {
           ))}
         </div>
 
-        <div className="mt-6">
-          <IdeaButton game="Catégorie Chrono" kind="idée de catégorie" bg="#fff" />
-        </div>
       </div>
 
-      <BottomBar>
-        <SoireeNextButton className="mb-3" />
-        <BigBtn bg={ACCENT} onClick={() => startGame(names)}>
-          <RotateCcw size={22} strokeWidth={3} aria-hidden /> {t.playAgain}
-        </BigBtn>
-        <div className="mt-1 flex justify-center gap-2">
-          <button type="button" onClick={() => setPhase("config")} className="min-h-11 px-3 text-[15px] font-semibold text-white/85">
-            {t.changeSettings}
-          </button>
-          {onReturnToLobby && (
-            <button type="button" onClick={onReturnToLobby} className="min-h-11 px-3 text-[15px] font-semibold text-white/85">
-              {t.quit}
-            </button>
-          )}
+      {/* Fin de partie : boutons dans le flux (pas de barre collée), une seule action principale */}
+      <BottomBar flow>
+        <div className="flex flex-col gap-3">
+          <SoireeNextButton bg={ACCENT} />
+          <EndReplay onClick={() => startGame(names)} label={t.playAgain}>
+            <BigBtn bg={ACCENT} onClick={() => startGame(names)}>
+              <RotateCcw size={22} strokeWidth={3} aria-hidden /> {t.playAgain}
+            </BigBtn>
+          </EndReplay>
+          <EndPills className="mt-1">
+            <EndPill onClick={() => setPhase("config")}>{t.changeSettings}</EndPill>
+            <IdeaButton short game="Catégorie Chrono" kind="idée de catégorie" bg="#fff" />
+          </EndPills>
+          <EndHomeLink onClick={onReturnToLobby}>{t.quit}</EndHomeLink>
         </div>
       </BottomBar>
     </Page>
@@ -598,8 +596,9 @@ function Page({ children, center }: { children: ReactNode; center?: boolean }) {
   );
 }
 
-/** Bas d'écran collant : bouton principal pleine largeur. */
-function BottomBar({ children }: { children: ReactNode }) {
+/** Bas d'écran collant : bouton principal pleine largeur. `flow` (écran de fin) : simple bloc en bas du contenu, sans fond. */
+function BottomBar({ children, flow }: { children: ReactNode; flow?: boolean }) {
+  if (flow) return <div className="mt-auto w-full pt-7"><div className="mx-auto w-full max-w-md">{children}</div></div>;
   return (
     <div
       className="sticky bottom-0 z-[2] -mx-5 mt-auto w-[calc(100%+40px)] px-5 pt-5"

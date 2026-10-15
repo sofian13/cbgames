@@ -28,6 +28,7 @@ import { rankingCard } from "@/lib/share-cards";
 import { GameRulesSheet, GameTuto, RulesIconButton, useFirstTimeTuto } from "@/components/games/game-tuto";
 import { useCurseurTuto } from "@/components/games/longueur-onde/tuto";
 import { SoireeNextButton } from "@/components/games/soiree-next";
+import { EndHomeLink, EndPill, EndPills, EndReplay } from "@/components/games/end-actions";
 
 // Un indice sans aucune lettre (ex. « 73 ») donnerait directement la cible
 function clueProblem(clue: string): string | null {
@@ -344,14 +345,19 @@ function LocalGame({ onReturnToLobby, onTuto, rulesBtn }: { onReturnToLobby?: ()
       <p className="mt-2 text-center text-[15px] font-bold" style={{ textWrap: "balance" }}>{t.scoreNote}</p>
       <div className="mt-6"><ZRanking rows={ranking} winners={winners} /></div>
       <div className="min-h-8 flex-1" />
-      <SoireeNextButton className="mt-6 -mb-3" />
-      <ZButton bg={GAME_INK} className="mt-6" onClick={() => begin(players)}>{t.playAgain}</ZButton>
-      <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
-        <ZButton size="sm" bg="#fff" style={{ width: "auto" }} onClick={() => setPhase("setup")}>{t.changePlayers}</ZButton>
-        <IdeaButton game="Le Curseur" kind="paire" bg="#fff" />
-        <ShareResultButton card={() => rankingCard("longueur-onde", ranking)} />
+      {/* Une seule action principale (Jeu suivant en Soirée, sinon Rejouer), le reste en pastilles */}
+      <div className="mt-6 flex flex-col gap-3">
+        <SoireeNextButton />
+        <EndReplay onClick={() => begin(players)} label={t.playAgain}>
+          <ZButton bg={GAME_INK} onClick={() => begin(players)}>{t.playAgain}</ZButton>
+        </EndReplay>
+        <EndPills className="mt-1">
+          <ShareResultButton short card={() => rankingCard("longueur-onde", ranking)} />
+          <IdeaButton short game="Le Curseur" kind="paire" bg="#fff" />
+          <EndPill onClick={() => setPhase("setup")}>{t.changePlayers}</EndPill>
+        </EndPills>
+        <EndHomeLink onClick={onReturnToLobby} color={GAME_INK}>{t.backHome}</EndHomeLink>
       </div>
-      {onReturnToLobby && <ZLink onClick={onReturnToLobby} color={GAME_INK} className="mt-2">{t.backHome}</ZLink>}
     </ZScreen>
   );
 }

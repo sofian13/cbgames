@@ -20,6 +20,7 @@ import { useGameFinished } from "@/lib/game-finished";
 import { GameTuto, TutoAgainButton, useFirstTimeTuto } from "@/components/games/game-tuto";
 import { useUndercoverTuto } from "@/components/games/undercover/tuto";
 import { SoireeNextButton } from "@/components/games/soiree-next";
+import { EndHomeLink, EndPills, EndReplay } from "@/components/games/end-actions";
 
 /* ─────────────────────────────────────────────────────────────
    L'INTRUS LOCAL — Pass-and-play (un seul téléphone)
@@ -1182,10 +1183,13 @@ function GameOverScreen({
       <PremiumNudge text={nudge.undercover(fmtCount(allWordPairs(getLang()).length - freePairs(getLang()).length))} style={{ marginBottom: 18 }} />
 
       <div style={{ marginTop: "auto" }}>
-        <SoireeNextButton bg="#fff" className="mb-3" />
-        <Btn tone="gold" onClick={onReplay} icon={<RotateCcw size={20} strokeWidth={2.8} aria-hidden />} sub={t.rematchSub}>{t.rematch}</Btn>
-        <div style={{ display: "flex", justifyContent: "center", marginTop: 16 }}><IdeaButton game={t.gameName} kind="mot" bg="#fff" /></div>
-        {onLobby && <button type="button" onClick={onLobby} className="mx-auto mt-2 flex min-h-11 items-center px-4 text-[15px] font-bold underline decoration-2 underline-offset-4" style={{ color: "rgba(255,255,255,0.9)" }}>{t.backHome}</button>}
+        {/* Une seule action principale (Jeu suivant en Soirée, sinon Revanche), le reste en pastilles */}
+        <SoireeNextButton className="mb-3" />
+        <EndReplay onClick={onReplay} label={t.rematch}>
+          <Btn tone="gold" onClick={onReplay} icon={<RotateCcw size={20} strokeWidth={2.8} aria-hidden />} sub={t.rematchSub}>{t.rematch}</Btn>
+        </EndReplay>
+        <EndPills className="mt-4"><IdeaButton short game={t.gameName} kind="mot" bg="#fff" /></EndPills>
+        <EndHomeLink onClick={onLobby} color="rgba(255,255,255,0.9)" className="mt-2">{t.backHome}</EndHomeLink>
       </div>
     </LocalShell>
   );

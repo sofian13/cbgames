@@ -28,6 +28,7 @@ import { rankingCard } from "@/lib/share-cards";
 import { GameTuto, RulesIconButton, useFirstTimeTuto } from "@/components/games/game-tuto";
 import { BluffRules, useBluffSlides } from "@/components/games/le-bluffeur/tuto";
 import { SoireeNextButton } from "@/components/games/soiree-next";
+import { EndHomeLink, EndPill, EndPills, EndReplay } from "@/components/games/end-actions";
 
 interface BluffPlayerState {
   id: string;
@@ -335,14 +336,19 @@ function LeBluffeurLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) 
       <ZTitle size={wt.names(winners).length > 9 ? 30 : 40} className="text-center">{winners.length ? <><span className="whitespace-nowrap">{wt.names(winners)},</span>{t.bluffAce}</> : wt.allTied}</ZTitle>
       <div className="mt-6"><ZRanking rows={ranking} winners={winners} /></div>
       <div className="min-h-8 flex-1" />
-      <SoireeNextButton className="mb-3" />
-      <ZButton bg={GAME_INK} onClick={() => begin(players)}>{t.playAgain}</ZButton>
-      <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
-        <ZButton size="sm" bg="#fff" style={{ width: "auto" }} onClick={() => setPhase("setup")}>{t.changePlayers}</ZButton>
-        <IdeaButton game="Le Bluffeur" kind="question" bg="#fff" />
-        <ShareResultButton card={() => rankingCard("le-bluffeur", ranking)} />
+      {/* Une seule action principale (Jeu suivant en Soirée, sinon Rejouer), le reste en pastilles */}
+      <div className="flex flex-col gap-3">
+        <SoireeNextButton />
+        <EndReplay onClick={() => begin(players)} label={t.playAgain}>
+          <ZButton bg={GAME_INK} onClick={() => begin(players)}>{t.playAgain}</ZButton>
+        </EndReplay>
+        <EndPills className="mt-1">
+          <ShareResultButton short card={() => rankingCard("le-bluffeur", ranking)} />
+          <IdeaButton short game="Le Bluffeur" kind="question" bg="#fff" />
+          <EndPill onClick={() => setPhase("setup")}>{t.changePlayers}</EndPill>
+        </EndPills>
+        <EndHomeLink onClick={onReturnToLobby} color={GAME_INK}>{t.backHome}</EndHomeLink>
       </div>
-      {onReturnToLobby && <ZLink onClick={onReturnToLobby} color={GAME_INK} className="mt-2">{t.backHome}</ZLink>}
     </ZScreen>
   );
 }

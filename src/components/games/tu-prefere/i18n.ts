@@ -9,7 +9,7 @@ interface TPStrings {
   title: string;
   intro: string;
   /** Feuille de règles (bouton livre) ; la ligne de peine dépend du réglage */
-  rules: (sips: boolean) => string[];
+  rules: (sips: boolean, n: number) => string[];
   vibe: string;
   packs: Record<Cat, { label: string; tag: string }>;
   backHome: string;
@@ -53,6 +53,18 @@ interface TPStrings {
   dares: string[];
   /** Gages pour toute la table (égalité / unanimité) */
   groupDares: string[];
+  /** Dernier dilemme de la partie : bouton vers l'écran de fin */
+  seeRecap: string;
+  /** Écran de fin (bilan) */
+  endTitle: (unanimous: number, played: number) => string;
+  endSub: (n: number) => string;
+  statPlayed: string;
+  statUnanimous: string;
+  closestTitle: string;
+  /** Répartition des mains du dilemme le plus serré */
+  closestSplit: (a: number, b: number) => string;
+  noClosest: string;
+  again: (n: number) => string;
   /** Version découverte (app sans Zinzin+) */
   freeDilemmas: (n: number) => string;
   restOfClassic: (n: number) => string;
@@ -63,14 +75,14 @@ export const TP_STR: I18n<TPStrings> = {
     gameName: "Tu préfères",
     title: "Tu préfères ?",
     intro: "Lisez le dilemme à voix haute. À 3, chacun lève la main pour A ou B, on compte les mains sur l'écran… et le camp minoritaire prend la peine. Égalité ou unanimité ? Tout le monde prend !",
-    rules: (sips) => [
+    rules: (sips, n) => [
       "Lisez le dilemme à voix haute : « Tu préfères A… ou B ? »",
       "À 3, chacun lève la main pour A ou B. Une personne compte : un tap sur la carte A ou B par main levée. Le bouton − corrige une erreur.",
       "Touchez « Voir le résultat » : le pourcentage de la table s'affiche.",
       sips
         ? "Le camp minoritaire prend la peine : 1 à 2 gorgées de zinzin chacun (eau acceptée) ou un gage. Égalité ou unanimité : tout le monde prend !"
         : "Le camp minoritaire fait un gage. Égalité ou unanimité : tout le monde fait le gage !",
-      "« Dilemme suivant » pour continuer. Touche l'étiquette d'ambiance en haut pour en changer.",
+      `« Dilemme suivant » pour continuer. Une partie = ${n} dilemmes, puis le bilan. Touche l'étiquette d'ambiance en haut pour en changer.`,
     ],
     vibe: "L'ambiance",
     packs: {
@@ -136,6 +148,15 @@ export const TP_STR: I18n<TPStrings> = {
       "Tout le monde chante le même refrain, choisi par le plus âgé",
       "Tout le monde fait 5 squats en même temps en comptant à voix haute",
     ],
+    seeRecap: "Voir le bilan",
+    endTitle: (u, p) => (u * 2 >= p ? "Une bande de clones !" : u === 0 ? "Zéro consensus !" : "Débat clos !"),
+    endSub: (n) => `${n} dilemmes tranchés, zéro regret.`,
+    statPlayed: "Dilemmes joués",
+    statUnanimous: "Unanimes",
+    closestTitle: "Le plus serré",
+    closestSplit: (a, b) => `${a} main${a > 1 ? "s" : ""} contre ${b}`,
+    noClosest: "Pas assez de mains pour trouver un dilemme serré. La prochaine fois, tout le monde vote !",
+    again: (n) => `Encore ${n}`,
     freeDilemmas: (n) => `${n} dilemmes offerts`,
     restOfClassic: (n) => `Tout le Classique · ${n} dilemmes de plus`,
   },
@@ -143,14 +164,14 @@ export const TP_STR: I18n<TPStrings> = {
     gameName: "Would You Rather",
     title: "Would You Rather?",
     intro: "Read the dilemma out loud. On 3, everyone raises a hand for A or B, you count the hands on screen… and the minority side takes the penalty. A tie or everyone agrees? Everyone takes it!",
-    rules: (sips) => [
+    rules: (sips, n) => [
       "Read the dilemma out loud: \"Would you rather A… or B?\"",
       "On 3, everyone raises a hand for A or B. One person counts: one tap on card A or B per raised hand. The − button fixes a mistake.",
       "Tap \"See the result\": the table's percentage shows up.",
       sips
         ? "The minority side takes the penalty: 1 to 2 zinzin sips each (water's fine) or a dare. A tie or everyone agrees? Everyone takes it!"
         : "The minority side does a dare. A tie or everyone agrees? Everyone does the dare!",
-      "\"Next dilemma\" to keep going. Tap the vibe tag at the top to change it.",
+      `"Next dilemma" to keep going. A game = ${n} dilemmas, then the recap. Tap the vibe tag at the top to change it.`,
     ],
     vibe: "Pick a vibe",
     packs: {
@@ -216,6 +237,15 @@ export const TP_STR: I18n<TPStrings> = {
       "Everyone sings the same chorus, picked by the oldest player",
       "Everyone does 5 squats together, counting out loud",
     ],
+    seeRecap: "See the recap",
+    endTitle: (u, p) => (u * 2 >= p ? "A bunch of clones!" : u === 0 ? "Zero agreement!" : "Debate closed!"),
+    endSub: (n) => `${n} dilemmas settled, zero regrets.`,
+    statPlayed: "Dilemmas played",
+    statUnanimous: "Unanimous",
+    closestTitle: "Closest call",
+    closestSplit: (a, b) => `${a} hand${a === 1 ? "" : "s"} vs ${b}`,
+    noClosest: "Not enough hands for a close call. Next time, everyone votes!",
+    again: (n) => `${n} more`,
     freeDilemmas: (n) => `${n} free dilemmas`,
     restOfClassic: (n) => `All of Classic · ${n} more dilemmas`,
   },
@@ -223,14 +253,14 @@ export const TP_STR: I18n<TPStrings> = {
     gameName: "¿Qué prefieres?",
     title: "¿Qué prefieres?",
     intro: "Lee el dilema en voz alta. A la de 3, cada uno levanta la mano por la A o la B, se cuentan las manos en la pantalla… y el bando minoritario paga. ¿Empate o unanimidad? ¡Paga todo el mundo!",
-    rules: (sips) => [
+    rules: (sips, n) => [
       "Leed el dilema en voz alta: «¿Qué prefieres, A… o B?»",
       "A la de 3, cada uno levanta la mano por la A o la B. Una persona cuenta: un toque en la carta A o B por cada mano. El botón − corrige un error.",
       "Tocad «Ver el resultado»: aparece el porcentaje de la mesa.",
       sips
         ? "El bando minoritario paga: 1 o 2 tragos de zinzin cada uno (vale agua) o un reto. ¿Empate o unanimidad? ¡Paga todo el mundo!"
         : "El bando minoritario hace un reto. ¿Empate o unanimidad? ¡Todo el mundo hace el reto!",
-      "«Siguiente dilema» para seguir. Toca la etiqueta de ambiente de arriba para cambiarlo.",
+      `«Siguiente dilema» para seguir. Una partida = ${n} dilemas, y luego el resumen. Toca la etiqueta de ambiente de arriba para cambiarlo.`,
     ],
     vibe: "El ambiente",
     packs: {
@@ -296,6 +326,15 @@ export const TP_STR: I18n<TPStrings> = {
       "Todo el mundo canta el mismo estribillo, elegido por el mayor",
       "Todo el mundo hace 5 sentadillas a la vez, contando en voz alta",
     ],
+    seeRecap: "Ver el resumen",
+    endTitle: (u, p) => (u * 2 >= p ? "¡Sois todos clones!" : u === 0 ? "¡Cero consenso!" : "¡Debate cerrado!"),
+    endSub: (n) => `${n} dilemas resueltos, cero arrepentimientos.`,
+    statPlayed: "Dilemas jugados",
+    statUnanimous: "Unánimes",
+    closestTitle: "El más reñido",
+    closestSplit: (a, b) => `${a} mano${a === 1 ? "" : "s"} contra ${b}`,
+    noClosest: "No hay manos suficientes para un dilema reñido. ¡La próxima, votad todos!",
+    again: (n) => `Otros ${n}`,
     freeDilemmas: (n) => `${n} dilemas gratis`,
     restOfClassic: (n) => `Todo el Clásico · ${n} dilemas más`,
   },

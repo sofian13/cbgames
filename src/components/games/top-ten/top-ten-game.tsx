@@ -28,6 +28,7 @@ import { WIN_STR } from "@/lib/winners-text";
 import { ShareResultButton } from "@/components/games/share-result-button";
 import { rankingCard } from "@/lib/share-cards";
 import { SoireeNextButton } from "@/components/games/soiree-next";
+import { EndHomeLink, EndPill, EndPills, EndReplay } from "@/components/games/end-actions";
 
 // ── Types ─────────────────────────────────────────────────
 interface TopTenPlayerState {
@@ -417,14 +418,19 @@ function TopTenLocalGame({ onReturnToLobby, tools, onTuto }: { onReturnToLobby?:
       <div className="min-h-8 flex-1" />
       {/* Version découverte : un petit mot sur Zinzin+, une seule fois, en fin de partie */}
       <PremiumNudge text={nudge.topTen(fmtCount(themesForPack("adult").length))} style={{ marginBottom: 16 }} />
-      <SoireeNextButton bg="#fff" className="mb-3" />
-      <ZButton bg="#FFD23F" onClick={() => { setPhase("target"); }}>{t.playAgain}</ZButton>
-      <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
-        <ZButton size="sm" bg="#fff" style={{ width: "auto" }} onClick={() => setPhase("setup")}>{t.changePlayers}</ZButton>
-        <IdeaButton game={t.gameName} kind="thème" bg="#fff" />
-        <ShareResultButton card={() => rankingCard("top-ten", ranking)} />
+      {/* Une seule action principale (Jeu suivant en Soirée, sinon Rejouer), le reste en pastilles */}
+      <div className="flex flex-col gap-3">
+        <SoireeNextButton bg="#FFD23F" />
+        <EndReplay onClick={() => { setPhase("target"); }} label={t.playAgain}>
+          <ZButton bg="#FFD23F" onClick={() => { setPhase("target"); }}>{t.playAgain}</ZButton>
+        </EndReplay>
+        <EndPills className="mt-1">
+          <ShareResultButton short card={() => rankingCard("top-ten", ranking)} />
+          <IdeaButton short game={t.gameName} kind="thème" bg="#fff" />
+          <EndPill onClick={() => setPhase("setup")}>{t.changePlayers}</EndPill>
+        </EndPills>
+        <EndHomeLink onClick={onReturnToLobby} color={GAME_INK}>{t.backHome}</EndHomeLink>
       </div>
-      {onReturnToLobby && <ZLink onClick={onReturnToLobby} color={GAME_INK} className="mt-2">{t.backHome}</ZLink>}
     </ZScreen>
   );
 }
