@@ -7,7 +7,7 @@ import { IdeaButton } from "@/components/games/idea-button";
 import { ShareResultButton } from "@/components/games/share-result-button";
 import { ZButton, ZLink, ZRanking, ZScreen, ZTitle, ZZ } from "@/components/games/local-kit";
 import { rankingCard } from "@/lib/share-cards";
-import { useGameFinished } from "@/lib/game-finished";
+import { useGameFinished, type GameScores } from "@/lib/game-finished";
 import { CHUT_STR } from "./i18n";
 import { MODES_STR } from "./modes-i18n";
 import { ChutStyles, SentenceCard, useReducedMotion, type Sentence } from "./shared";
@@ -18,13 +18,15 @@ export interface EndRow { name: string; score: number | string; colorIndex: numb
  * Écran de fin commun aux modes micro : classement, peine du dernier (ou égalité),
  * Rejouer / Quitter / Partager. Émet le signal de fin de partie.
  */
-export function ModeEnd({ title, top, rows, unit, loser, tieNote, tools, overlays, onReplay, onQuit }: {
+export function ModeEnd({ title, top, rows, unit, loser, tieNote, result, tools, overlays, onReplay, onQuit }: {
   title?: string;
   top?: ReactNode;
   rows: EndRow[];
   unit: string;
   loser: { name: string; colorIndex: number; sentence: Sentence; onReroll: () => void; title?: string } | null;
   tieNote?: string | null;
+  /** Ce que le jeu sait du résultat (gagnants explicites ou scores) → signal de fin de partie */
+  result?: { winners?: string[]; scores?: GameScores };
   tools: ReactNode;
   overlays: ReactNode;
   onReplay: () => void;
@@ -33,7 +35,7 @@ export function ModeEnd({ title, top, rows, unit, loser, tieNote, tools, overlay
   const t = useT(CHUT_STR);
   const m = useT(MODES_STR);
   const reduced = useReducedMotion();
-  useGameFinished(true);
+  useGameFinished(true, { loser: loser?.name ?? null, ...result });
   return (
     <ZScreen tools={tools}>
       {overlays}

@@ -11,7 +11,7 @@ import { isSfxMuted, playCombo, playSfx, preloadSfx, setSfxMuted, subscribeSfxMu
 import { PACKS_BY_LANG, type Category } from "./categories";
 import { useLang, useT } from "@/lib/i18n";
 import { STR } from "./i18n";
-import { ArrowLeft, BookOpen, Check, Clapperboard, Flame, Heart, PartyPopper, RotateCcw, Skull, Volume2, VolumeX, X, type LucideIcon } from "lucide-react";
+import { ArrowLeft, BookOpen, Check, Clapperboard, Flame, Heart, PartyPopper, Pause, Play, RotateCcw, Skull, Volume2, VolumeX, X, type LucideIcon } from "lucide-react";
 import { GameIconButton, GameInlineIcon, GameTopRight } from "@/components/games/game-icon-button";
 import { IdeaButton, RerollButton } from "@/components/games/idea-button";
 import { useGameFinished } from "@/lib/game-finished";
@@ -19,8 +19,9 @@ import { GameRulesSheet, GameTuto, RulesIconButton, TutoAgainButton, useFirstTim
 import { useChronoTuto } from "./tuto";
 
 // ── Catégorie Chrono ───────────────────────────────────────
-// Une catégorie s'affiche, le tél tourne : chacun doit donner un mot de la
-// catégorie avant la fin du chrono (qui raccourcit à chaque bonne réponse).
+// Une catégorie s'affiche ; chacun son tour doit donner un mot de la catégorie
+// avant la fin de son chrono (qui raccourcit à chaque bonne réponse). Une seule
+// personne tient le tél et appuie « Validé » / « Raté » : on enchaîne sans le passer.
 // Pas de mot, mot déjà dit ou hors sujet = une vie en moins. Dernier en vie gagne.
 
 const ACCENT = "#FF6B5B"; // corail du jeu
@@ -40,7 +41,7 @@ interface P {
   lives: number;
 }
 
-type Phase = "setup" | "config" | "reveal" | "playing" | "pass" | "lost" | "over";
+type Phase = "setup" | "config" | "reveal" | "playing" | "lost" | "over";
 
 function shuffle<T>(arr: T[]): T[] {
   const a = [...arr];
@@ -78,7 +79,6 @@ export default function CategoryChronoGame({ onReturnToLobby }: GameProps) {
   const PACKS = PACKS_BY_LANG[lang];
 
   const [phase, setPhase] = useState<Phase>("setup");
-  useGameFinished(phase === "over"); // fin de partie → demande de note éventuelle (app)
   // Chaque écran repart du haut (sinon la catégorie s'ouvre défilée si on a scrollé les réglages)
   useScrollTopOn(phase);
   const [names, setNames] = useState<string[]>([]);
@@ -87,6 +87,8 @@ export default function CategoryChronoGame({ onReturnToLobby }: GameProps) {
   const [startLives, setStartLives] = useState(3);
 
   const [players, setPlayers] = useState<P[]>([]);
+  // Fin de partie → note éventuelle + Soirée (app) : le dernier en vie gagne
+  useGameFinished(phase === "over", { winners: players.filter((p) => p.lives > 0).map((p) => p.name), scores: { names: players.map((p) => p.name), values: players.map((p) => p.lives) } });
   const [cur, setCur] = useState(0);
   const [queue, setQueue] = useState<Category[]>([]);
   const [catIdx, setCatIdx] = useState(0);
@@ -94,6 +96,8 @@ export default function CategoryChronoGame({ onReturnToLobby }: GameProps) {
   const [timeLeft, setTimeLeft] = useState(0);
   const [lostIdx, setLostIdx] = useState(0);
   const endAt = useRef(0);
+  // Pause discrète : temps restant gelé (null = chrono qui tourne)
+  const [pausedLeft, setPausedLeft] = useState<number | null>(null);
   // Tuto 1re fois (dès l'ouverture, avant les joueurs) + feuille de règles en jeu
   const tuto = useFirstTimeTuto("category-chrono", { atMount: true });
   const tutoContent = useChronoTuto();
@@ -117,7 +121,7 @@ export default function CategoryChronoGame({ onReturnToLobby }: GameProps) {
 
   // Chrono (échéance absolue → pas de dérive ; nettoyé à chaque changement)
   useEffect(() => {
-    if (phase !== "playing") return;
+    if (phase !== "playing" || pausedLeft !== null) return;
     let lastTick = -1;
     const id = setInterval(() => {
       const left = Math.max(0, (endAt.current - Date.now()) / 1000);
@@ -135,7 +139,7 @@ export default function CategoryChronoGame({ onReturnToLobby }: GameProps) {
     }, 100);
     return () => clearInterval(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase, cur, streak]);
+  }, [phase, cur, streak, pausedLeft]);
 
   const startGame = (list: string[]) => {
     setPlayers(list.map((name) => ({ name, lives: startLives })));
@@ -164,28 +168,36 @@ export default function CategoryChronoGame({ onReturnToLobby }: GameProps) {
     }
   };
 
-  // Validé par les autres : le chrono s'arrête pendant le passage du tél (repart sur « Prêt »)
+  // Validé : le joueur suivant enchaîne tout de suite, son chrono (un peu plus court) part direct
   const valid = () => {
-    if (phase !== "playing") return;
+    if (phase !== "playing" || pausedLeft !== null) return;
     const n = streak + 1;
+    const tt = turnTime(n);
+    endAt.current = Date.now() + tt * 1000;
+    setTimeLeft(tt);
     setStreak(n);
     setCur(nextAlive(cur, players));
-    setPhase("pass");
     playSfx("ding", { volume: 0.7, rate: 1 + Math.min(n, 12) * 0.04 });
     playSfx("whoosh", { volume: 0.35, rate: 1.2, delay: 0.05 });
     vib(25);
   };
 
-  const ready = () => {
-    const tt = turnTime(streak);
-    endAt.current = Date.now() + tt * 1000;
-    setTimeLeft(tt);
-    setPhase("playing");
+  const pause = () => {
+    if (phase !== "playing" || pausedLeft !== null) return;
+    setPausedLeft(Math.max(0, (endAt.current - Date.now()) / 1000));
+    playSfx("select", { volume: 0.5 });
+  };
+
+  const resume = () => {
+    if (pausedLeft === null) return;
+    endAt.current = Date.now() + pausedLeft * 1000;
+    setTimeLeft(pausedLeft);
+    setPausedLeft(null);
     playSfx("confirm", { volume: 0.6 });
   };
 
   function lose() {
-    if (phase !== "playing") return;
+    if (phase !== "playing" || pausedLeft !== null) return;
     const updated = players.map((p, i) => (i === cur ? { ...p, lives: p.lives - 1 } : p));
     setPlayers(updated);
     setLostIdx(cur);
@@ -207,10 +219,19 @@ export default function CategoryChronoGame({ onReturnToLobby }: GameProps) {
     playSfx("card-flip", { volume: 0.8 });
   };
 
+  // Vie perdue : on montre le coup ~2 s puis on enchaîne tout seul (tap pour aller plus vite)
+  useEffect(() => {
+    if (phase !== "lost" || rulesOpen) return;
+    const id = window.setTimeout(continueGame, 2200);
+    return () => window.clearTimeout(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, rulesOpen]);
+
   const soundBtn = (
     <>
     <GameTopRight>
-      <RulesIconButton onClick={() => setRulesOpen(true)} />
+      {phase === "playing" && <GameIconButton icon={Pause} label={t.pause} onClick={pause} />}
+      <RulesIconButton onClick={() => { pause(); setRulesOpen(true); }} />
       <GameIconButton
         icon={muted ? VolumeX : Volume2}
         label={muted ? t.soundOn : t.soundOff}
@@ -415,7 +436,7 @@ export default function CategoryChronoGame({ onReturnToLobby }: GameProps) {
             </div>
             <h2
               className="max-w-full rounded-[22px] px-6 pb-2 pt-6"
-              style={{ ...DISPLAY, ...sticker(MASCOT_PALETTE[col].body, 5), color: inkOn(MASCOT_PALETTE[col].body), fontSize: nameSize(players[cur]?.name ?? "", 54), lineHeight: 1, transform: "rotate(2deg)", overflowWrap: "anywhere" }}
+              style={{ ...DISPLAY, ...sticker(MASCOT_PALETTE[col].body, 5), color: inkOn(MASCOT_PALETTE[col].body), fontSize: nameSize(players[cur]?.name ?? "", 64, 16), lineHeight: 1, transform: "rotate(2deg)", overflowWrap: "anywhere" }}
             >
               {players[cur]?.name}
             </h2>
@@ -433,41 +454,22 @@ export default function CategoryChronoGame({ onReturnToLobby }: GameProps) {
           <PlayBtn bg="#3DDC97" onClick={valid} icon={<Check size={30} strokeWidth={3.5} />} label={t.valid} />
           <PlayBtn bg="#FF6B5B" onClick={lose} icon={<X size={30} strokeWidth={3.5} />} label={t.failed} />
         </div>
-      </div>
-    );
-  }
 
-  // Passage du tél : chrono en pause jusqu'à « Prêt »
-  if (phase === "pass" && category) {
-    const col = colorForIndex(cur);
-    return (
-      <Page center>
-        <style>{KEYFRAMES}</style>
-        {soundBtn}
-        <Lives players={players} cur={cur} />
-        <div className="flex flex-1 flex-col items-center justify-center py-4 text-center">
-          <p className="rounded-full px-3 py-1 text-[15px] font-bold" style={{ ...sticker("#FFF6E5", 3), color: INK, overflowWrap: "anywhere" }}>{category.name}</p>
-          <p className="mt-5 text-[18px] font-semibold text-white/85">{t.passTo}</p>
-          <div key={cur} style={{ animation: "cc-pop .25s ease-out" }} className="flex flex-col items-center">
-            <div className="relative z-[1] -mb-5">
-              <PlayerBlob name={players[cur]?.name} color={col} size={96} mood="happy" arms headroom />
+        {/* Pause : chrono gelé jusqu'à « Reprendre » (règles ouvertes = pause aussi) */}
+        {pausedLeft !== null && !rulesOpen && !tuto.open && (
+          <div className="fixed inset-0 z-[5] flex flex-col items-center justify-center px-6" style={{ background: "rgba(14,8,40,0.88)" }}>
+            <div className="w-full max-w-sm rounded-[26px] px-6 pb-6 pt-5 text-center" style={{ ...sticker("#FFF6E5", 6), color: INK, transform: "rotate(-1.5deg)" }}>
+              <h2 style={{ ...DISPLAY, fontSize: 44, lineHeight: 1 }}>{t.paused}</h2>
+              <p className="mt-2 text-[16px] font-semibold leading-snug" style={{ color: "#4A3A66" }}>{t.pausedSub}</p>
+              <div className="mt-5">
+                <BigBtn bg="#3DDC97" onClick={resume}>
+                  <Play size={22} strokeWidth={3} fill={INK} aria-hidden /> {t.resume}
+                </BigBtn>
+              </div>
             </div>
-            <h2
-              className="max-w-full rounded-[22px] px-6 pb-2 pt-6"
-              style={{ ...DISPLAY, ...sticker(MASCOT_PALETTE[col].body, 5), color: inkOn(MASCOT_PALETTE[col].body), fontSize: nameSize(players[cur]?.name ?? "", 50), lineHeight: 1, transform: "rotate(2deg)", overflowWrap: "anywhere" }}
-            >
-              {players[cur]?.name}
-            </h2>
           </div>
-          <p className="mt-5 max-w-sm text-[16px] font-semibold leading-snug text-white/85">{t.passSub}</p>
-          <span className="mt-3 rounded-full px-3 py-1 text-[15px] font-bold" style={{ ...sticker("#FFD23F", 3), color: INK, transform: "rotate(-2deg)" }}>
-            {t.wordsSaid(streak)}
-          </span>
-        </div>
-        <BottomBar>
-          <BigBtn bg="#3DDC97" onClick={ready}>{t.ready}</BigBtn>
-        </BottomBar>
-      </Page>
+        )}
+      </div>
     );
   }
 
@@ -564,8 +566,8 @@ export default function CategoryChronoGame({ onReturnToLobby }: GameProps) {
 
 // ── Briques « sticker » ────────────────────────────────────
 /** Taille d'un prénom en gros : baisse avec la longueur pour tenir sur une ligne (16 car. max). */
-function nameSize(name: string, max: number): string {
-  return `min(${max}px, 11vw, ${(118 / Math.max(1, name.length)).toFixed(1)}vw)`;
+function nameSize(name: string, max: number, vw = 11): string {
+  return `min(${max}px, ${vw}vw, ${(118 / Math.max(1, name.length)).toFixed(1)}vw)`;
 }
 
 /** Texte lisible sur une couleur pleine : encre foncée ou blanc. */

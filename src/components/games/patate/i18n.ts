@@ -56,7 +56,10 @@ interface PatateStr {
   finish: string;
   roundsPlayed: (n: number) => string;
   nobody: string;
-  goldWin: (n: number) => string;
+  winsWith: (n: number) => string;
+  tieTop: string;
+  tieNames: (names: string) => string;
+  goldTitle: string;
   nobodyBlew: string;
   booms: (n: number) => string;
   replay: string;
@@ -116,7 +119,10 @@ export const PATATE_STR: I18n<PatateStr> = {
     finish: "Fin de la partie",
     roundsPlayed: (n) => `${n} manche${n > 1 ? "s" : ""} jouée${n > 1 ? "s" : ""}`,
     nobody: "Personne",
-    goldWin: (n) => `remporte la Patate d'or avec ${n} explosion${n > 1 ? "s" : ""}`,
+    winsWith: (n) => (n ? `gagne avec seulement ${n} explosion${n > 1 ? "s" : ""} !` : "gagne sans jamais exploser !"),
+    tieTop: "Égalité en tête !",
+    tieNames: (names) => `${names} : le moins d'explosions`,
+    goldTitle: "Patate d'or",
     nobodyBlew: "n'a explosé. Bizarre.",
     booms: (n) => `${n} boum${n > 1 ? "s" : ""}`,
     replay: "Rejouer",
@@ -174,7 +180,10 @@ export const PATATE_STR: I18n<PatateStr> = {
     finish: "End of the game",
     roundsPlayed: (n) => `${n} round${n !== 1 ? "s" : ""} played`,
     nobody: "Nobody",
-    goldWin: (n) => `wins the Golden Potato with ${n} explosion${n !== 1 ? "s" : ""}`,
+    winsWith: (n) => (n ? `wins with only ${n} explosion${n !== 1 ? "s" : ""}!` : "wins without ever blowing up!"),
+    tieTop: "Tied for first!",
+    tieNames: (names) => `${names}: fewest explosions`,
+    goldTitle: "Golden Potato",
     nobodyBlew: "blew up. Weird.",
     booms: (n) => `${n} boom${n !== 1 ? "s" : ""}`,
     replay: "Play again",
@@ -232,7 +241,10 @@ export const PATATE_STR: I18n<PatateStr> = {
     finish: "Fin de la partida",
     roundsPlayed: (n) => `${n} ronda${n !== 1 ? "s" : ""} jugada${n !== 1 ? "s" : ""}`,
     nobody: "Nadie",
-    goldWin: (n) => `gana la Patata de Oro con ${n} explosi${n !== 1 ? "ones" : "ón"}`,
+    winsWith: (n) => (n ? `¡gana con solo ${n} explosi${n !== 1 ? "ones" : "ón"}!` : "¡gana sin explotar ni una vez!"),
+    tieTop: "¡Empate en cabeza!",
+    tieNames: (names) => `${names}: las menos explosiones`,
+    goldTitle: "Patata de Oro",
     nobodyBlew: "ha explotado. Qué raro.",
     booms: (n) => `${n} bum${n !== 1 ? "s" : ""}`,
     replay: "Volver a jugar",

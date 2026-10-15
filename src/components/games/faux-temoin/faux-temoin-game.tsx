@@ -6,12 +6,14 @@
  * sauf le ou les Faux Témoins qui ne voient rien (ils ne savent pas qui sont les autres).
  * Ensuite l'app affiche juste l'ORDRE des questions (« Léa → Malik… ») : tout se passe
  * à l'oral, on ne touche plus le tél (bouton discret « Une idée de question ? » en option).
- * Vote à trois, comme L'Intrus. Chaque démasqué a une dernière chance (QCM).
- * À la fin : la scène + les réponses des idées tirées.
+ * Vote à trois, comme L'Intrus : la personne désignée est éliminée. Innocente → les Faux
+ * Témoins encore en jeu marquent et on repart pour un tour de questions ; Faux Témoin →
+ * démasqué. Les Faux Témoins gagnent dès qu'ils sont aussi nombreux que les témoins restants.
+ * À la fin : la scène + les réponses des idées tirées + le détail des points.
  */
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { ArrowRight, BookOpen, Check, Eye, Lightbulb, Volume2, VolumeX, X } from "lucide-react";
+import { ArrowRight, BookOpen, Dices, Lightbulb, Volume2, VolumeX, X, Eye } from "lucide-react";
 import type { GameProps } from "@/lib/games/types";
 import { useT } from "@/lib/i18n";
 import { playCombo, playSfx, preloadSfx } from "@/lib/sfx";
@@ -25,7 +27,7 @@ import {
 } from "@/components/games/local-kit";
 import { FT_STR, answerLabel, type FTStrings } from "./i18n";
 import { BlobFigure, SceneView } from "./scene-view";
-import { COLOR_HEX, DECOR_IDS, makeScene, planRound, sameAnswer, shuffle, type Answer, type DecorId, type Question, type Scene } from "./scene";
+import { COLOR_HEX, DECOR_IDS, makeScene, planRound, shuffle, type Answer, type DecorId, type Question, type Scene } from "./scene";
 import { useGameFinished } from "@/lib/game-finished";
 import { GameTuto, TutoAgainButton, useFirstTimeTuto } from "@/components/games/game-tuto";
 import { useFTExtra, useFTTuto } from "@/components/games/faux-temoin/tuto";
@@ -34,29 +36,38 @@ import { rankingCard } from "@/lib/share-cards";
 
 const ACCENT = "#4ECDC4";
 const VIEW_SEC = 5;
-/** Points : Faux Témoin pas démasqué / démasqué mais a trouvé / chaque témoin, par démasqué qui rate */
-const PTS_ESCAPE = 3;
-const PTS_STEAL = 2;
-const PTS_WITNESS = 1;
+/** Points : chaque Faux Témoin encore en jeu, par innocent éliminé (gardés même s'il est démasqué ensuite) */
+const PTS_FOOL = 2;
+/** Points : bonus de chaque Faux Témoin quand leur camp gagne */
+const PTS_WIN = 3;
+/** Points : chaque témoin encore en jeu, par Faux Témoin démasqué */
+const PTS_CATCH = 3;
 /** Nombre max de Faux Témoins : environ 1/3 des joueurs (1 jusqu'à 5, 2 dès 6, 3 dès 9) */
 const maxFakes = (n: number) => Math.max(1, Math.floor(n / 3));
 
 type Phase =
   | "setup" | "teaser" | "pass" | "view" | "order"
-  | "vote" | "suspense" | "verdict" | "last" | "reveal" | "scores" | "end";
+  | "vote" | "suspense" | "out" | "reveal" | "scores" | "end";
 
-interface RoundPlan { ideas: Question[]; lasts: Question[] }
+type Camp = "fakes" | "witnesses";
+
+/** Ce qui s'est passé dans la manche (pour le récap des points) */
+type Ev =
+  | { k: "innocent"; who: number; fakes: number[] }
+  | { k: "caught"; who: number; witnesses: number[] }
+  | { k: "fakesWin"; fakes: number[] }
+  | { k: "witnessesWin" };
 
 const INK = GAME_INK;
 
-/** Ordre des questions : un cycle au hasard (chacun pose une question et en reçoit une). */
-function makeOrder(n: number, prev?: [number, number][]): [number, number][] {
+/** Ordre des questions entre les joueurs encore en jeu : un cycle au hasard (chacun pose une question et en reçoit une). */
+function makeOrder(ids: number[], prev?: [number, number][]): [number, number][] {
   let best: [number, number][] = [];
   for (let tries = 0; tries < 6; tries++) {
-    const o = shuffle(Array.from({ length: n }, (_, i) => i));
-    best = o.map((a, i) => [a, o[(i + 1) % n]] as [number, number]);
+    const o = shuffle(ids);
+    best = o.map((a, i) => [a, o[(i + 1) % o.length]] as [number, number]);
     // Évite de retomber sur exactement les mêmes duos que le tour précédent
-    if (!prev || n < 4 || best.some(([a, b]) => !prev.some(([x, y]) => x === a && y === b))) break;
+    if (!prev || ids.length < 4 || best.some(([a, b]) => !prev.some(([x, y]) => x === a && y === b))) break;
   }
   return best;
 }
@@ -64,14 +75,13 @@ function makeOrder(n: number, prev?: [number, number][]): [number, number][] {
 export default function FauxTemoinGame({ onReturnToLobby }: GameProps) {
   const t = useT(FT_STR);
   const [phase, setPhase] = useState<Phase>("setup");
-  useGameFinished(phase === "end"); // fin de partie → demande de note éventuelle (app)
   const [players, setPlayers] = useState<string[]>([]);
   const [scores, setScores] = useState<number[]>([]);
   const [fakeCount, setFakeCount] = useState<number[]>([]);
   const [nFakes, setNFakes] = useState(1);
   const [round, setRound] = useState(1);
   const [scene, setScene] = useState<Scene | null>(null);
-  const [plan, setPlan] = useState<RoundPlan | null>(null);
+  const [ideasAll, setIdeasAll] = useState<Question[]>([]);
   const [usedDecors, setUsedDecors] = useState<DecorId[]>([]);
   const [fakes, setFakes] = useState<number[]>([]);
   const [viewer, setViewer] = useState(0);
@@ -81,13 +91,24 @@ export default function FauxTemoinGame({ onReturnToLobby }: GameProps) {
   const [ideaQueue, setIdeaQueue] = useState<Question[]>([]);
   const [drawn, setDrawn] = useState<Question[]>([]);
   const [showAll, setShowAll] = useState(false);
-  const [accused, setAccused] = useState<number[]>([]);
-  /** Dernière chance : index du démasqué en cours + choix de chacun */
-  const [lastI, setLastI] = useState(0);
-  const [lastPicks, setLastPicks] = useState<(number | null)[]>([]);
+  /** Éliminés de la manche, dans l'ordre */
+  const [out, setOut] = useState<number[]>([]);
+  const [events, setEvents] = useState<Ev[]>([]);
+  const [roundPts, setRoundPts] = useState<number[]>([]);
+  const [winner, setWinner] = useState<Camp | null>(null);
+  /** Vote : prénom désigné, mode « égalité » (choix des ex æquo), revote restreint aux ex æquo */
+  const [picked, setPicked] = useState<number | null>(null);
+  const [tieMode, setTieMode] = useState(false);
+  const [tieSel, setTieSel] = useState<number[]>([]);
+  const [pool, setPool] = useState<number[] | null>(null);
   const [showRules, setShowRules] = useState(false);
 
-  useScrollTopOn(`${phase}-${viewer}-${lastI}-${orderRound}`);
+  // Fin de partie → note éventuelle + Soirée (app). Gagnants : le camp vainqueur (Faux Témoins
+  // ou témoins) si on n'a joué qu'une manche ; au-delà, le podium des points fait foi.
+  const campWinners = winner ? players.filter((_, i) => (winner === "fakes") === fakes.includes(i)) : [];
+  useGameFinished(phase === "end", { scores: { names: players, values: scores }, winners: round === 1 ? campWinners : null });
+
+  useScrollTopOn(`${phase}-${viewer}-${orderRound}-${tieMode}-${pool?.length ?? 0}`);
   // Tuto en slides : 1re fois, dès l'ouverture du jeu (avant la saisie des prénoms)
   const tuto = useFirstTimeTuto("faux-temoin");
   const tutoSlides = useFTTuto();
@@ -101,6 +122,11 @@ export default function FauxTemoinGame({ onReturnToLobby }: GameProps) {
 
   const k = Math.min(nFakes, maxFakes(players.length));
   const joinNames = (names: string[]) => names.length > 1 ? `${names.slice(0, -1).join(", ")} ${t.and} ${names[names.length - 1]}` : names[0] ?? "";
+  const namesOf = (ids: number[]) => joinNames(ids.map((i) => players[i]));
+
+  const alive = players.map((_, i) => i).filter((i) => !out.includes(i));
+  const fakesAlive = fakes.filter((f) => !out.includes(f));
+  const witnessesAlive = alive.filter((i) => !fakes.includes(i));
 
   // ── Manches ───────────────────────────────────────────
   const drawScene = (avoid: DecorId[]) => setScene(makeScene(avoid));
@@ -128,23 +154,24 @@ export default function FauxTemoinGame({ onReturnToLobby }: GameProps) {
   const deal = () => {
     if (!scene) return;
     // Faux Témoins au hasard parmi ceux qui l'ont été le moins souvent (rôle tournant, mais secret)
-    const pool = shuffle(players.map((_, i) => i)).sort((a, b) => fakeCount[a] - fakeCount[b]);
-    const f = pool.slice(0, k);
-    const p = planRound(scene, k);
-    setPlan(p);
-    setIdeaQueue(p.ideas);
+    const pool0 = shuffle(players.map((_, i) => i)).sort((a, b) => fakeCount[a] - fakeCount[b]);
+    const f = pool0.slice(0, k);
+    const ideas = planRound(scene, 0).ideas;
+    setIdeasAll(ideas);
+    setIdeaQueue(ideas);
     setFakes(f);
     setFakeCount((c) => c.map((x, i) => (f.includes(i) ? x + 1 : x)));
     setUsedDecors((u) => (u.includes(scene.decor) ? u : [...u, scene.decor]));
     setViewer(0);
-    setOrder(makeOrder(players.length));
+    setOrder(makeOrder(players.map((_, i) => i)));
     setOrderRound(1);
     setIdea(null);
     setDrawn([]);
     setShowAll(false);
-    setAccused([]);
-    setLastI(0);
-    setLastPicks([]);
+    setOut([]);
+    setEvents([]);
+    setRoundPts(players.map(() => 0));
+    setWinner(null);
     setPhase("pass");
   };
 
@@ -169,58 +196,77 @@ export default function FauxTemoinGame({ onReturnToLobby }: GameProps) {
     setDrawn((d) => (d.some((x) => x.id === q.id) ? d : [...d, q]));
   };
 
-  const moreTurn = () => {
+  /** Nouveau tour de questions (sur demande, ou après une élimination) entre les joueurs encore en jeu */
+  const newTurn = () => {
     playSfx("whoosh", { volume: 0.5 });
-    setOrder((o) => makeOrder(players.length, o));
+    setOrder((o) => makeOrder(alive, o));
     setOrderRound((r) => r + 1);
     setIdea(null);
+    setPhase("order");
   };
 
-  const toggleAccused = (i: number) => {
+  const goVote = () => {
+    playSfx("whoosh", { volume: 0.5 });
+    setPicked(null);
+    setTieMode(false);
+    setTieSel([]);
+    setPool(null);
+    setPhase("vote");
+  };
+
+  const toggleTie = (i: number) => {
     playSfx("select", { volume: 0.4 });
-    setAccused((a) => {
-      if (a.includes(i)) return a.filter((x) => x !== i);
-      const next = [...a, i];
-      return next.length > k ? next.slice(next.length - k) : next;
-    });
+    setTieSel((s) => (s.includes(i) ? s.filter((x) => x !== i) : [...s, i]));
   };
 
-  const caught = fakes.filter((f) => accused.includes(f));
-  const escaped = fakes.filter((f) => !accused.includes(f));
-
-  const accuse = () => {
-    if (accused.length !== k) return;
+  /** Élimine la personne désignée : points, fin de manche éventuelle, puis suspense. */
+  const eliminate = () => {
+    if (picked == null) return;
+    const i = picked;
+    const nextOut = [...out, i];
+    const fA = fakes.filter((f) => !nextOut.includes(f));
+    const wA = players.map((_, j) => j).filter((j) => !nextOut.includes(j) && !fakes.includes(j));
+    const add = players.map(() => 0);
+    const evs: Ev[] = [];
+    if (fakes.includes(i)) {
+      wA.forEach((w) => { add[w] += PTS_CATCH; });
+      evs.push({ k: "caught", who: i, witnesses: wA });
+    } else {
+      fA.forEach((f) => { add[f] += PTS_FOOL; });
+      evs.push({ k: "innocent", who: i, fakes: fA });
+    }
+    let w: Camp | null = null;
+    if (!fA.length) {
+      w = "witnesses";
+      evs.push({ k: "witnessesWin" });
+    } else if (fA.length >= wA.length) {
+      w = "fakes";
+      fakes.forEach((f) => { add[f] += PTS_WIN; });
+      evs.push({ k: "fakesWin", fakes });
+    }
+    setOut(nextOut);
+    setEvents((e) => [...e, ...evs]);
+    setRoundPts((p) => p.map((x, j) => x + add[j]));
+    setScores((p) => p.map((x, j) => x + add[j]));
+    setWinner(w);
     playCombo("drumroll", { duration: 1.8 });
     setPhase("suspense");
   };
 
-  // Suspense → verdict (+ points des Faux Témoins qui s'en sortent)
+  const lastOut = out[out.length - 1];
+
+  // Suspense → résultat de l'élimination
   useEffect(() => {
     if (phase !== "suspense") return;
     const id = window.setTimeout(() => {
-      if (caught.length) playCombo("reveal");
+      if (winner === "witnesses") playCombo("fanfare");
+      else if (fakes.includes(lastOut)) playCombo("reveal");
       else playCombo("fail");
-      if (escaped.length) setScores((p) => p.map((s, i) => (escaped.includes(i) ? s + PTS_ESCAPE : s)));
-      setPhase("verdict");
+      setPhase("out");
     }, 1900);
     return () => window.clearTimeout(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase]);
-
-  const answerLast = (pick: number) => {
-    if (!plan || lastPicks[lastI] != null) return;
-    const q = plan.lasts[lastI] ?? plan.lasts[0];
-    const who = caught[lastI];
-    setLastPicks((p) => { const n = [...p]; n[lastI] = pick; return n; });
-    if (sameAnswer(q.options[pick], q.answer)) {
-      playCombo("fanfare");
-      setScores((p) => p.map((s, i) => (i === who ? s + PTS_STEAL : s)));
-    } else {
-      playCombo("fail");
-      // Les témoins (pas les Faux Témoins) marquent
-      setScores((p) => p.map((s, i) => (fakes.includes(i) ? s : s + PTS_WITNESS)));
-    }
-  };
 
   const nextRound = () => {
     setRound((r) => r + 1);
@@ -261,7 +307,7 @@ export default function FauxTemoinGame({ onReturnToLobby }: GameProps) {
   }
 
   if (!scene) return null;
-  const fakeNames = joinNames(fakes.map((f) => players[f]));
+  const fakeNames = namesOf(fakes);
 
   if (phase === "pass") {
     return (
@@ -328,7 +374,10 @@ export default function FauxTemoinGame({ onReturnToLobby }: GameProps) {
         <ZChip bg={ZZ.yellow}>{t.orderChip(orderRound)}</ZChip>
         <ZTitle size="clamp(32px, 9.5vw, 44px)" className="mt-3">{t.orderTitle}</ZTitle>
         <p className="mt-2 text-[15px] font-semibold leading-snug" style={{ color: "rgba(255,255,255,0.88)" }}>{t.orderText}</p>
-        {fakes.length > 1 && <p className="mt-1.5 text-[15px] font-bold leading-snug" style={{ color: ZZ.yellow }}>{t.orderFakes(fakes.length)}</p>}
+        {fakesAlive.length > 1 && <p className="mt-1.5 text-[15px] font-bold leading-snug" style={{ color: ZZ.yellow }}>{t.orderFakes(fakesAlive.length)}</p>}
+        {out.length > 0 && (
+          <ZChip bg="#fff" tilt={1} className="mt-3" style={{ whiteSpace: "normal", lineHeight: 1.2, padding: "6px 12px" }}>{t.outLabel(namesOf(out))}</ZChip>
+        )}
         {/* L'ordre des questions : qui interroge qui (tout se dit à voix haute) */}
         <ol className="mt-4 flex flex-col gap-2" aria-label={t.orderLabel}>
           {order.map(([a, b], i) => (
@@ -365,22 +414,23 @@ export default function FauxTemoinGame({ onReturnToLobby }: GameProps) {
           <ZLink className="mt-3" onClick={drawIdea}><Lightbulb size={18} strokeWidth={2.8} aria-hidden /> {t.ideaBtn}</ZLink>
         )}
         <div className="min-h-4 flex-1" />
-        <ZButton className="mt-5" bg={ZZ.pink} onClick={() => { playSfx("whoosh", { volume: 0.5 }); setPhase("vote"); }}>{t.toVote}</ZButton>
-        <ZLink className="mt-1" onClick={moreTurn}>{t.moreTurn}</ZLink>
+        <ZButton className="mt-5" bg={ZZ.pink} onClick={goVote}>{t.toVote}</ZButton>
+        <ZLink className="mt-1" onClick={newTurn}>{t.moreTurn}</ZLink>
       </>
     );
-  } else if (phase === "vote") {
-    const left = k - accused.length;
+  } else if (phase === "vote" && tieMode) {
+    // Égalité : on désigne les ex æquo, puis revote entre eux seulement
+    const cands = pool ?? alive;
     body = (
       <>
-        <ZTitle size="clamp(32px, 9.5vw, 44px)">{t.voteTitle(k)}</ZTitle>
-        <p className="mt-3 text-[16px] font-semibold leading-snug" style={{ color: "rgba(255,255,255,0.88)" }}>{t.voteText(k)}</p>
-        <p className="mt-1.5 text-[15px] font-bold leading-snug" style={{ color: ZZ.yellow }}>{extra.voteTie}</p>
+        <ZTitle size="clamp(32px, 9.5vw, 44px)">{t.tieTitle}</ZTitle>
+        <p className="mt-3 text-[16px] font-semibold leading-snug" style={{ color: "rgba(255,255,255,0.88)" }}>{t.tieText}</p>
         <div className="mt-5 grid grid-cols-2 gap-3">
-          {players.map((p, i) => {
-            const on = accused.includes(i);
+          {cands.map((i, n) => {
+            const on = tieSel.includes(i);
+            const p = players[i];
             return (
-              <ZChoice key={i} active={on} onClick={() => toggleAccused(i)} color={ZZ.pink} tilt={i % 2 ? 1.2 : -1.2} className="flex min-h-[64px] items-center gap-2.5">
+              <ZChoice key={i} active={on} onClick={() => toggleTie(i)} color={ZZ.yellow} tilt={n % 2 ? 1.2 : -1.2} className="flex min-h-[64px] items-center gap-2.5">
                 <PlayerBlob name={p} colorIndex={i} size={38} mood={on ? "shocked" : "sus"} bob={false} />
                 <span className="min-w-0 flex-1 leading-tight" style={{ ...DISPLAY, fontSize: p.length > 10 ? 16 : 19, overflowWrap: "anywhere" }}>{p}</span>
               </ZChoice>
@@ -388,135 +438,122 @@ export default function FauxTemoinGame({ onReturnToLobby }: GameProps) {
           })}
         </div>
         <div className="min-h-6 flex-1" />
-        <ZButton className="mt-6" bg={ZZ.pink} disabled={left > 0} onClick={accuse}>
-          {left > 0 ? t.votePick(left) : t.voteBtn(k)}
+        <ZButton className="mt-6" bg={ZZ.yellow} disabled={tieSel.length < 2}
+          onClick={() => { playSfx("whoosh", { volume: 0.5 }); setPool(cands.filter((i) => tieSel.includes(i))); setTieSel([]); setPicked(null); setTieMode(false); }}>
+          {tieSel.length < 2 ? t.tiePick : t.tieBtn}
         </ZButton>
+        <ZLink className="mt-1" onClick={() => { setTieMode(false); setTieSel([]); }}>{t.tieCancel}</ZLink>
+      </>
+    );
+  } else if (phase === "vote") {
+    const cands = pool ?? alive;
+    body = (
+      <>
+        {pool && <ZChip bg={ZZ.yellow} className="mb-3">{t.revoteChip}</ZChip>}
+        <ZTitle size="clamp(32px, 9.5vw, 44px)">{t.voteTitle(fakesAlive.length)}</ZTitle>
+        <p className="mt-3 text-[16px] font-semibold leading-snug" style={{ color: "rgba(255,255,255,0.88)" }}>{pool ? t.revoteText : t.voteText}</p>
+        <div className="mt-5 grid grid-cols-2 gap-3">
+          {cands.map((i, n) => {
+            const on = picked === i;
+            const p = players[i];
+            return (
+              <ZChoice key={i} active={on} onClick={() => { playSfx("select", { volume: 0.4 }); setPicked(on ? null : i); }} color={ZZ.pink} tilt={n % 2 ? 1.2 : -1.2} className="flex min-h-[64px] items-center gap-2.5">
+                <PlayerBlob name={p} colorIndex={i} size={38} mood={on ? "shocked" : "sus"} bob={false} />
+                <span className="min-w-0 flex-1 leading-tight" style={{ ...DISPLAY, fontSize: p.length > 10 ? 16 : 19, overflowWrap: "anywhere" }}>{p}</span>
+              </ZChoice>
+            );
+          })}
+        </div>
+        <div className="min-h-6 flex-1" />
+        <ZButton className="mt-6" bg={ZZ.pink} disabled={picked == null} onClick={eliminate}>
+          {picked == null ? t.votePick : t.voteBtn(players[picked])}
+        </ZButton>
+        {pool ? (
+          <ZLink className="mt-1" onClick={() => { playSfx("card-flip", { volume: 0.5 }); setPicked(pool[Math.floor(Math.random() * pool.length)]); }}>
+            <Dices size={18} strokeWidth={2.6} aria-hidden /> {t.tieRandom}
+          </ZLink>
+        ) : (
+          <ZLink className="mt-1" onClick={() => { playSfx("pop", { volume: 0.4 }); setPicked(null); setTieMode(true); }}>{t.tieLink}</ZLink>
+        )}
       </>
     );
   } else if (phase === "suspense") {
     body = (
       <div className="flex flex-1 flex-col items-center justify-center text-center">
-        <Mascot size={130} color="purple" mood="shifty" arms shadow={false} />
-        <ZTitle size="clamp(32px, 9vw, 44px)" className="mt-6">{t.suspense(fakes.length)}</ZTitle>
+        <PlayerBlob name={players[lastOut]} colorIndex={lastOut} size={130} mood="sus" arms />
+        <ZTitle size="clamp(32px, 9vw, 44px)" className="mt-6" style={{ overflowWrap: "anywhere" }}>{t.suspense(players[lastOut])}</ZTitle>
       </div>
     );
-  } else if (phase === "verdict") {
-    const multi = fakes.length > 1;
-    const all = caught.length === fakes.length;
-    const none = caught.length === 0;
-    bg = all ? ZZ.mint : none ? ZZ.coral : ZZ.yellow;
-    const wrongAccused = accused.filter((a) => !fakes.includes(a));
+  } else if (phase === "out") {
+    const name = players[lastOut];
+    const caught = fakes.includes(lastOut);
+    bg = winner === "fakes" ? ZZ.coral : caught ? ZZ.mint : ZZ.coral;
+    const k0 = fakes.length;
     body = (
       <div className="flex flex-1 flex-col items-center text-center">
-        {multi ? (
-          <div className="mt-2 flex flex-wrap justify-center gap-4">
-            {fakes.map((f) => {
-              const got = accused.includes(f);
-              return (
+        <div className="mt-1"><PlayerBlob name={name} colorIndex={lastOut} size={winner ? 84 : 110} mood="shocked" arms /></div>
+        <ZTitle size={winner ? "clamp(34px, 10vw, 46px)" : "clamp(40px, 12vw, 56px)"} className="mt-3" style={{ color: INK }}>{caught ? t.caughtTitle : t.innocentTitle}</ZTitle>
+        <p className="mt-2 max-w-sm text-[18px] font-bold leading-snug" style={{ color: INK }}>{caught ? t.caughtText(name, k0) : t.innocentText(name)}</p>
+        {/* Points de l'élimination (ceux des Faux Témoins restent secrets jusqu'à la fin) */}
+        {caught ? (
+          witnessesAlive.length > 0 && <ZChip bg="#fff" className="mt-4 self-center" style={{ whiteSpace: "normal", lineHeight: 1.2, padding: "8px 14px" }}>{t.witnessPts(PTS_CATCH)}</ZChip>
+        ) : !winner && (
+          <>
+            <p className="mt-4" style={{ ...DISPLAY, fontSize: 24, color: INK, lineHeight: 1.1 }}>{t.stillFree(fakesAlive.length)}</p>
+            <ZChip bg="#fff" className="mt-3 self-center" style={{ whiteSpace: "normal", lineHeight: 1.2, padding: "8px 14px" }}>{t.secretPts(PTS_FOOL, fakesAlive.length)}</ZChip>
+          </>
+        )}
+        {winner === "fakes" && (
+          <ZCard bg="#fff" tilt={-1.5} className="mt-5 w-full px-4 py-4">
+            <div className="flex flex-wrap justify-center gap-3">
+              {fakes.map((f) => (
                 <div key={f} className="flex flex-col items-center">
-                  <PlayerBlob name={players[f]} colorIndex={f} size={84} mood={got ? "shocked" : "cool"} arms />
-                  <span className="mt-1 max-w-[120px] truncate" style={{ ...DISPLAY, fontSize: 20, color: INK }}>{players[f]}</span>
-                  <ZChip bg={got ? "#fff" : ZZ.violet} tilt={got ? -2 : 2} className="mt-1 self-center">{got ? t.tagCaught : t.tagFree}</ZChip>
+                  <PlayerBlob name={players[f]} colorIndex={f} size={64} mood="cool" arms bob={false} />
+                  <span className="mt-1 max-w-[120px] truncate" style={{ ...DISPLAY, fontSize: 17 }}>{players[f]}</span>
                 </div>
-              );
-            })}
-          </div>
-        ) : (
-          <div className="mt-2"><PlayerBlob name={players[fakes[0]]} colorIndex={fakes[0]} size={120} mood={all ? "shocked" : "cool"} arms /></div>
+              ))}
+            </div>
+            <ZTitle size={30} className="mt-2">{t.fakesWinTitle(k0)}</ZTitle>
+            <p className="mt-1 text-[16px] font-bold leading-snug">{t.fakesWinText(fakeNames, k0)}</p>
+            <p className="mt-1 text-[15px] font-semibold leading-snug">{t.fakesWinPts(PTS_WIN, k0)}</p>
+          </ZCard>
         )}
-        <ZTitle size={multi ? "clamp(36px, 11vw, 50px)" : "clamp(42px, 13vw, 60px)"} className="mt-4" style={{ color: INK }}>
-          {multi ? (none ? t.missedTitle : t.partialTitle(caught.length, fakes.length)) : all ? t.caughtTitle : t.missedTitle}
-        </ZTitle>
-        <p className="mt-3 max-w-sm text-[18px] font-bold leading-snug" style={{ color: INK }}>
-          {multi ? t.fakesWere(fakeNames) : all ? t.caughtText(fakeNames) : t.missedText(players[wrongAccused[0] ?? 0], fakeNames)}
-        </p>
-        {escaped.length > 0 && (
-          <div className="mt-5 flex flex-col items-center gap-2">
-            {escaped.map((f) => (
-              <ZChip key={f} bg="#fff" className="self-center" style={{ whiteSpace: "normal", lineHeight: 1.2, padding: "8px 14px" }}>
-                {multi ? t.ptsOne(players[f], PTS_ESCAPE) : t.ptsFake(players[f], PTS_ESCAPE)}
-              </ZChip>
-            ))}
-          </div>
+        {winner === "witnesses" && (
+          <ZCard bg={ZZ.yellow} tilt={-1.5} className="mt-5 w-full px-4 py-4">
+            <ZTitle size={30}>{t.witnessesWinTitle}</ZTitle>
+            <p className="mt-1 text-[16px] font-bold leading-snug">{t.witnessesWinText(k0)}</p>
+          </ZCard>
         )}
-        {caught.length > 0 && (
-          <ZCard bg={all ? ZZ.yellow : "#fff"} tilt={-1.5} className="mt-5 px-4 py-3.5">
-            <p className="text-[16px] font-bold leading-snug">{multi ? t.caughtHintMulti(caught.length) : t.caughtHint}</p>
+        {!winner && (
+          <ZCard bg="#fff" tilt={1.5} className="mt-5 w-full px-4 py-3.5">
+            {caught && <p className="text-[16px] font-bold leading-snug">{t.leftFakes(fakesAlive.length)}</p>}
+            <p className={`${caught ? "mt-1 " : ""}text-[15px] font-semibold leading-snug`} style={{ color: "#4A3A66" }}>{t.remaining(alive.length, fakesAlive.length)}</p>
+            {fakesAlive.length >= witnessesAlive.length - 1 && (
+              <p className="mt-1 text-[16px] font-extrabold leading-snug" style={{ color: "#C2185B" }}>{t.danger(fakesAlive.length)}</p>
+            )}
           </ZCard>
         )}
         <div className="min-h-6 flex-1" />
-        <ZButton className="mt-6" bg={caught.length ? (all ? ZZ.yellow : ZZ.pink) : "#fff"} onClick={() => { playSfx("whoosh", { volume: 0.5 }); setPhase(caught.length ? "last" : "reveal"); }}>
-          {caught.length ? t.caughtBtn : t.seeScene}
-        </ZButton>
+        {winner ? (
+          <ZButton className="mt-6" bg={winner === "witnesses" ? ACCENT : ZZ.yellow} onClick={() => { playSfx("whoosh", { volume: 0.5 }); setPhase("reveal"); }}>{t.seeScene}</ZButton>
+        ) : (
+          <ZButton className="mt-6" bg={ZZ.yellow} onClick={newTurn}>{t.nextQuestions}</ZButton>
+        )}
       </div>
     );
-  } else if (phase === "last" && plan) {
-    const q = plan.lasts[lastI] ?? plan.lasts[0];
-    const who = caught[lastI];
-    const name = players[who];
-    const pick = lastPicks[lastI] ?? null;
-    const done = pick !== null;
-    const ok = done && sameAnswer(q.options[pick], q.answer);
-    const nextWho = caught[lastI + 1];
-    body = (
-      <>
-        <div className="flex items-center gap-3">
-          <PlayerBlob name={name} colorIndex={who} size={52} mood={done ? (ok ? "laughing" : "shocked") : "sus"} bob={false} />
-          <ZTitle size="clamp(28px, 8.5vw, 38px)" style={{ lineHeight: 1.02, overflowWrap: "anywhere" }}>{t.lastTitle(name)}</ZTitle>
-        </div>
-        <p className="mt-2 text-[15px] font-semibold" style={{ color: "rgba(255,255,255,0.85)" }}>{t.lastSub}</p>
-        <ZCard bg={ZZ.cream} tilt={-1} className="mt-5 px-5 py-5">
-          <ZTitle size={26} style={{ lineHeight: 1.08, textWrap: "balance" }}>{t.question(q.q)}</ZTitle>
-        </ZCard>
-        <div className="mt-5 grid grid-cols-2 gap-3">
-          {q.options.map((o, j) => {
-            const right = sameAnswer(o, q.answer);
-            const picked = pick === j;
-            const fill = !done ? "#fff" : right ? ZZ.mint : picked ? ZZ.coral : "#fff";
-            return (
-              <button
-                key={j}
-                type="button"
-                disabled={done}
-                onClick={() => answerLast(j)}
-                className="relative min-h-[64px] rounded-[20px] px-3 text-[18px] font-extrabold leading-tight transition-[translate,box-shadow] active:translate-y-[3px]"
-                style={{ background: fill, color: INK, border: `3px solid ${INK}`, boxShadow: `0 4px 0 ${INK}`, opacity: done && !right && !picked ? 0.55 : 1, rotate: j % 2 ? "1deg" : "-1deg" }}
-              >
-                {o.k === "color" && <span aria-hidden className="mr-1.5 inline-block h-4 w-4 rounded-full align-[-2px]" style={{ background: COLOR_HEX[o.v], border: `2px solid ${INK}` }} />}
-                {answerLabel(t, o)}
-                {done && right && <span aria-hidden className="absolute -right-2 -top-2 grid h-7 w-7 place-items-center rounded-full" style={{ background: "#fff", border: `2.5px solid ${INK}` }}><Check size={15} strokeWidth={3.4} /></span>}
-              </button>
-            );
-          })}
-        </div>
-        {done && (
-          <ZCard bg={ok ? ZZ.yellow : "#fff"} tilt={1.5} className="mt-6 px-4 py-3.5 text-center">
-            <ZTitle size={30}>{ok ? t.lastWinTitle : t.lastLoseTitle}</ZTitle>
-            <p className="mt-1 text-[16px] font-bold">{ok ? (fakes.length > 1 ? t.ptsOne(name, PTS_STEAL) : t.lastWinText(name)) : (fakes.length > 1 ? t.lastLoseOne : t.lastLoseText)}</p>
-          </ZCard>
-        )}
-        <div className="min-h-6 flex-1" />
-        {done && (nextWho !== undefined ? (
-          <ZButton className="mt-6" bg={ZZ.yellow} onClick={() => { playSfx("whoosh", { volume: 0.5 }); setLastI(lastI + 1); }}>{t.lastNext(players[nextWho])}</ZButton>
-        ) : (
-          <ZButton className="mt-6" bg={ACCENT} onClick={() => { playSfx("whoosh", { volume: 0.5 }); setPhase("reveal"); }}>{t.seeScene}</ZButton>
-        ))}
-      </>
-    );
-  } else if (phase === "reveal" && plan) {
-    const multi = fakes.length > 1;
+  } else if (phase === "reveal") {
     const usedIds = new Set(drawn.map((q) => q.id));
-    const others = plan.ideas.filter((q) => !usedIds.has(q.id));
-    // Bilan de la manche
-    const lines: string[] = escaped.map((f) => (multi ? t.ptsOne(players[f], PTS_ESCAPE) : t.ptsFake(players[f], PTS_ESCAPE)));
-    let fails = 0;
-    caught.forEach((f, i) => {
-      const q = plan.lasts[i] ?? plan.lasts[0];
-      const pk = lastPicks[i];
-      if (pk != null && sameAnswer(q.options[pk], q.answer)) lines.push(multi ? t.ptsOne(players[f], PTS_STEAL) : t.ptsFake(players[f], PTS_STEAL));
-      else fails++;
+    const others = ideasAll.filter((q) => !usedIds.has(q.id));
+    // Récap : qui a gagné quoi, et pourquoi
+    const lines = events.map((e) => {
+      switch (e.k) {
+        case "innocent": return t.evInnocent(players[e.who], namesOf(e.fakes), PTS_FOOL);
+        case "caught": return t.evCaught(players[e.who], namesOf(e.witnesses), PTS_CATCH);
+        case "fakesWin": return t.evFakesWin(namesOf(e.fakes), PTS_WIN, e.fakes.length);
+        case "witnessesWin": return t.evWitnessesWin;
+      }
     });
-    if (fails) lines.push(t.ptsWitnesses(fails * PTS_WITNESS));
+    const totals = players.map((name, i) => ({ name, i, pts: roundPts[i] ?? 0 })).filter((r) => r.pts > 0).sort((a, b) => b.pts - a.pts);
     body = (
       <>
         <div className="flex items-center justify-between gap-2">
@@ -527,12 +564,11 @@ export default function FauxTemoinGame({ onReturnToLobby }: GameProps) {
           <SceneView scene={scene} label={t.sceneLabel} />
         </ZCard>
         <ZChip bg={ZZ.pink} tilt={2} className="mt-4" style={{ whiteSpace: "normal", lineHeight: 1.2, padding: "8px 14px" }}>{t.revealWho(fakeNames, fakes.length)}</ZChip>
-        {(drawn.length > 0 || caught.length > 0) && (
+        {drawn.length > 0 && (
           <>
-            {drawn.length > 0 && <p className="mt-6" style={{ ...DISPLAY, fontSize: 24 }}>{t.ideasTitle}</p>}
+            <p className="mt-6" style={{ ...DISPLAY, fontSize: 24 }}>{t.ideasTitle}</p>
             <div className="mt-3 flex flex-col gap-2.5">
               {drawn.map((q) => <AnswerRow key={q.id} t={t} q={q} />)}
-              {caught.map((f, i) => <AnswerRow key={`last-${f}`} t={t} q={plan.lasts[i] ?? plan.lasts[0]} who={t.lastTag(players[f])} bg={ZZ.yellow} />)}
             </div>
           </>
         )}
@@ -546,8 +582,24 @@ export default function FauxTemoinGame({ onReturnToLobby }: GameProps) {
         ) : (
           <ZLink className="mt-3" onClick={() => { playSfx("pop", { volume: 0.4 }); setShowAll(true); }}>{t.moreDetails}</ZLink>
         ))}
-        <ZCard bg={ZZ.mint} tilt={-1} className="mt-5 px-4 py-3 text-center">
-          {lines.map((l, i) => <p key={i} className="text-[16px] font-bold leading-snug">{l}</p>)}
+        <ZCard bg={winner === "fakes" ? ZZ.coral : ZZ.mint} tilt={-1} className="mt-5 px-4 py-3.5">
+          <p style={{ ...DISPLAY, fontSize: 22, lineHeight: 1.1 }}>{t.recapTitle}</p>
+          <ul className="mt-2 flex flex-col gap-1.5">
+            {lines.map((l, i) => <li key={i} className="text-[15px] font-bold leading-snug">{l}</li>)}
+          </ul>
+          {totals.length > 0 && (
+            <>
+              <p className="mt-3 text-[13px] font-extrabold uppercase tracking-wide">{t.recapTotal}</p>
+              <div className="mt-1.5 flex flex-wrap gap-2">
+                {totals.map((r) => (
+                  <span key={r.i} className="inline-flex min-h-8 items-center gap-1.5 rounded-full px-2.5 text-[15px] font-extrabold" style={{ background: "#fff", color: INK, border: `2.5px solid ${INK}` }}>
+                    <PlayerBlob name={r.name} colorIndex={r.i} size={20} bob={false} />
+                    {r.name} +{r.pts}
+                  </span>
+                ))}
+              </div>
+            </>
+          )}
         </ZCard>
         <ZButton className="mt-6" bg={ZZ.yellow} onClick={() => { playSfx("coins", { volume: 0.5 }); setPhase("scores"); }}>{t.scoresBtn}</ZButton>
       </>
@@ -563,7 +615,7 @@ export default function FauxTemoinGame({ onReturnToLobby }: GameProps) {
 </div>
         )}
         <ZTitle size="clamp(34px, 10vw, 46px)" className={end ? "text-center" : ""}>{end ? t.endTitle : t.scoresTitle}</ZTitle>
-        {end && <p className="mt-2 text-center text-[20px] font-bold" style={{ color: ZZ.yellow }}>{tie ? t.tie : t.winner(ranking[0].name)}</p>}
+        {end && <p className="mt-2 text-center text-[20px] font-bold" style={{ color: ZZ.yellow }}>{round === 1 && winner ? (winner === "fakes" ? t.fakesWinTitle(fakes.length) : t.witnessesWinTitle) : tie ? t.tie : t.winner(ranking[0].name)}</p>}
         <div className="mt-5"><ZRanking rows={ranking} unit={t.pts} /></div>
         <div className="min-h-6 flex-1" />
         {end ? (

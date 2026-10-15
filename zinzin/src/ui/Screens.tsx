@@ -1,6 +1,6 @@
 import { Suspense, lazy, useEffect, useRef, useState, type ComponentType, type LazyExoticComponent, type ReactNode } from "react";
 import type { GameProps } from "@/lib/games/types";
-import { Bell, ChevronLeft, CreditCard, GlassWater, Mail, RotateCcw, Share2, Sparkles, Star, Volume2, X } from "lucide-react";
+import { ArrowRight, Bell, ChevronLeft, CreditCard, GlassWater, Mail, RotateCcw, Share2, Sparkles, Star, Volume2, X } from "lucide-react";
 import { LANGS, notificationsOn, rateApp, setLang, setNotifications, shareApp, useLang } from "../settings";
 import { getZGame } from "../catalog";
 import { isTestMode, resetPremiumForTests, restore } from "../premium";
@@ -15,7 +15,7 @@ import { APP_VERSION, haptic, setAgeOk } from "./util";
 import { setNoAlcohol, useNoAlcohol } from "@/lib/party-mood";
 import { NOALC_UI } from "../no-alcohol";
 import { markRatedManually } from "../rating";
-import { setCurrentGame } from "@/lib/game-finished";
+import { GAME_FINISHED_EVENT, GAME_UNFINISHED_EVENT, setCurrentGame } from "@/lib/game-finished";
 import { AppIconRow } from "./AppIconRow";
 import { BandScreen } from "@/components/avatar/BandScreen";
 import { AvatarBlob } from "@/components/avatar/AvatarBlob";
@@ -421,7 +421,17 @@ function lazyGame(id: string) {
   return c;
 }
 
-export function GameScreen({ id, onExit }: { id: string; onExit: () => void }) {
+/** Bouton « Jeu suivant » d'une Soirée : posé par-dessus l'écran de fin du jeu */
+export interface GameNext {
+  label: string;
+  /** Petit lien qui retire le bouton pour revenir aux boutons du jeu (Rejouer…) */
+  stayLabel: string;
+  onNext: () => void;
+  /** Jeu sans fin de partie (Tu préfères) : petit bouton toujours visible */
+  always?: boolean;
+}
+
+export function GameScreen({ id, onExit, next }: { id: string; onExit: () => void; next?: GameNext }) {
   const game = getZGame(id)!;
   const [Comp] = useState(() => lazyGame(id));
   const [confirm, setConfirm] = useState(false);
@@ -430,6 +440,18 @@ export function GameScreen({ id, onExit }: { id: string; onExit: () => void }) {
   const t = useT(UI);
   // Jeu en cours : la fin de partie le signale avec son id (stats de la bande)
   useEffect(() => { setCurrentGame(id); return () => setCurrentGame(null); }, [id]);
+  // Soirée : l'écran de fin du jeu a été atteint → gros bouton « Jeu suivant » (retiré si on rejoue)
+  const [ended, setEnded] = useState(false);
+  const [stay, setStay] = useState(false);
+  useEffect(() => {
+    if (!next) return;
+    const on = (e: Event) => { if (!(e as CustomEvent<{ soiree?: boolean }>).detail?.soiree) { setEnded(true); setStay(false); } };
+    const off = () => setEnded(false);
+    window.addEventListener(GAME_FINISHED_EVENT, on);
+    window.addEventListener(GAME_UNFINISHED_EVENT, off);
+    return () => { window.removeEventListener(GAME_FINISHED_EVENT, on); window.removeEventListener(GAME_UNFINISHED_EVENT, off); };
+  }, [next]);
+  const showNext = !!next && ended && !stay;
 
   return (
     <div className="zz-screen-in fixed inset-0 flex flex-col overflow-y-auto" style={{ background: "#0A0420", zIndex: 30 }}>
@@ -438,6 +460,35 @@ export function GameScreen({ id, onExit }: { id: string; onExit: () => void }) {
           <Comp roomCode="LOCAL" playerId="local" playerName={t.player} onReturnToLobby={onExit} />
         </Suspense>
       </ErrorBoundary>
+
+      {/* Soirée : la place du bouton fixe en bas, pour que la fin de l'écran du jeu reste lisible */}
+      {showNext && <div aria-hidden className="shrink-0" style={{ height: "calc(var(--sab) + 136px)" }} />}
+      {showNext && next && (
+        <div
+          className="zz-screen-in fixed inset-x-0 bottom-0 px-5 pt-4"
+          style={{ zIndex: 55, paddingBottom: "calc(var(--sab) + 6px)", background: "var(--zz-ink)", borderTop: "3px solid rgba(255,255,255,0.85)", borderRadius: "26px 26px 0 0" }}
+        >
+          <div className="mx-auto max-w-lg">
+            <BigBtn onClick={() => { haptic("medium"); uiSfx.primary(); next.onNext(); }} bg="#FFD23F">
+              {next.label} <ArrowRight size={22} strokeWidth={3} aria-hidden className="ml-1 inline align-[-3px]" />
+            </BigBtn>
+            <button type="button" onClick={() => { haptic(); setStay(true); }} className="zz-tap min-h-11 w-full text-[15px] font-bold text-white underline decoration-2 underline-offset-4" style={{ opacity: 0.85 }}>
+              {next.stayLabel}
+            </button>
+          </div>
+        </div>
+      )}
+      {/* Jeu sans fin de partie : petit « Jeu suivant » en haut, à côté de la croix */}
+      {next?.always && (
+        <button
+          type="button"
+          onClick={() => { haptic("medium"); next.onNext(); }}
+          className="zz-press fixed left-16 flex h-11 items-center gap-1 rounded-full px-3.5 text-[15px] font-extrabold"
+          style={{ top: "calc(var(--sat) + 10px)", zIndex: 60, background: "#FFD23F", color: "var(--zz-ink)", border: "2.5px solid var(--zz-ink)" }}
+        >
+          {next.label} <ArrowRight size={17} strokeWidth={3} aria-hidden />
+        </button>
+      )}
 
       {/* Quitter : discret, en haut à gauche (le coin droit reste aux jeux) */}
       <button

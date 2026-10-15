@@ -28,7 +28,7 @@ import { ArrowLeft, Award, EyeOff, Flame, Hand, Heart, Lock, PartyPopper, Rotate
 import { isUnlockedNow, requestPaywall, useUnlocked } from "@/lib/entitlements";
 import { PLUS_STR, PremiumNudge, useNudgeText } from "@/components/games/premium-nudge";
 import { GameIconBadge, GameInlineIcon, GameTopRight } from "@/components/games/game-icon-button";
-import { useGameFinished } from "@/lib/game-finished";
+import { uniqueMin, useGameFinished } from "@/lib/game-finished";
 import { ShareResultButton } from "@/components/games/share-result-button";
 import { pureteGroupCard, pureteSoloCard, pureteTableCard } from "@/lib/share-cards";
 
@@ -372,7 +372,6 @@ function PureteBody({ onReturnToLobby }: GameProps) {
 
   // Partie
   const [phase, setPhase] = useState<Phase>({ k: "setup" });
-  useGameFinished(phase.k === "results"); // fin de partie → demande de note éventuelle (app)
   const [players, setPlayers] = useState<string[]>([]);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [answers, setAnswers] = useState<boolean[][]>([]); // [joueur][question]
@@ -455,6 +454,10 @@ function PureteBody({ onReturnToLobby }: GameProps) {
     const yes = yesCounts.reduce((a, b) => a + b, 0);
     return Math.round(100 * (1 - yes / (questions.length * nbPlayers)));
   }, [yesCounts, questions, nbPlayers]);
+  // Fin de partie → note éventuelle + Soirée (app). Comme l'écran de fin : le plus pur en tête,
+  // le moins pur (le démon, qui prend la peine) perd. Rien en solo ni quand les résultats sont anonymes.
+  const namedResults = mode !== "solo" && !anonymousMode && !(mode === "secret" && anonymous) && players.length >= 2;
+  useGameFinished(phase.k === "results", namedResults ? { loser: uniqueMin(players, purities), scores: { names: players, values: purities } } : undefined);
   // Ordre de révélation : du plus pur au moins pur (le démon en dernier)
   const order = useMemo(() => players.map((_, i) => i).sort((a, b) => purities[b] - purities[a]), [players, purities]);
 

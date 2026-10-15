@@ -10,7 +10,7 @@ import { computeTrophies, finishCeremony, type SoireeState, type Trophy, type Tr
 import { ZBlob, ZPALETTE } from "./ZBlob";
 import { BandBlob } from "./BandBlob";
 import { BigBtn, Tag, useTapReady } from "./common";
-import { CornerBtn, DiscoBall, SoireeStyles } from "./SoireeKit";
+import { DiscoBall, SoireeStyles } from "./SoireeKit";
 import { gameInfo, haptic, reducedMotion } from "./util";
 
 /**
@@ -28,6 +28,8 @@ type TStr = {
   ceremonySub: (n: number) => string;
   start: string;
   skip: string;
+  /** Bouton « Passer » visible pendant les prix → récap direct */
+  skipShort: string;
   of: (i: number, n: number) => string;
   andTheWinner: string;
   tapNext: string;
@@ -58,6 +60,7 @@ export const TROPHY_STR: I18n<TStr> = {
     ceremonySub: (n) => `${plFr(n, "prix", "prix")} à remettre, un par perso. Calculés sur ce qui s'est vraiment passé ce soir.`,
     start: "Ouvrir les enveloppes",
     skip: "Passer la cérémonie",
+    skipShort: "Passer",
     of: (i, n) => `Prix ${i}/${n}`,
     andTheWinner: "Et le prix revient à…",
     tapNext: "Touche pour la suite",
@@ -135,6 +138,7 @@ export const TROPHY_STR: I18n<TStr> = {
     ceremonySub: (n) => `${n} awards to hand out, one each. Based on what really happened tonight.`,
     start: "Open the envelopes",
     skip: "Skip the ceremony",
+    skipShort: "Skip",
     of: (i, n) => `Award ${i}/${n}`,
     andTheWinner: "And the award goes to…",
     tapNext: "Tap to continue",
@@ -212,6 +216,7 @@ export const TROPHY_STR: I18n<TStr> = {
     ceremonySub: (n) => `${n} premio${n > 1 ? "s" : ""} por entregar, uno para cada uno. Según lo que de verdad pasó esta noche.`,
     start: "Abrir los sobres",
     skip: "Saltar la ceremonia",
+    skipShort: "Saltar",
     of: (i, n) => `Premio ${i}/${n}`,
     andTheWinner: "Y el premio es para…",
     tapNext: "Toca para seguir",
@@ -428,7 +433,16 @@ export function Ceremony({ s }: { s: SoireeState }) {
       <SoireeStyles />
       <CeremonyStyles />
       {step >= 0 && (
-        <CornerBtn onClick={finish} label={t.skip}><FastForward size={20} strokeWidth={3} fill="currentColor" /></CornerBtn>
+        // « Passer » bien lisible (texte + icône) : file directement au récap ; taper ailleurs = prix suivant
+        <button
+          type="button"
+          onClick={() => { haptic(); finish(); }}
+          aria-label={t.skip}
+          className="zz-press fixed left-3 flex h-11 items-center gap-1.5 rounded-full px-4 text-[15px] font-extrabold"
+          style={{ top: "calc(var(--sat) + 10px)", zIndex: 60, background: "#fff", color: "var(--zz-ink)", border: "2.5px solid var(--zz-ink)", boxShadow: "0 3px 0 var(--zz-ink)" }}
+        >
+          {t.skipShort} <FastForward size={16} strokeWidth={3} fill="currentColor" aria-hidden />
+        </button>
       )}
       {step < 0 ? (
         <div className="zz-scroll absolute inset-0">

@@ -326,7 +326,11 @@ export default function PatateGame({ onReturnToLobby }: GameProps) {
       <ScrollReset dep={phase} />
     </>
   );
-  const ranking = players.map((name, i) => ({ name, i, l: losses[i] ?? 0 })).sort((a, b) => b.l - a.l);
+  // Classement : le MOINS d'explosions en tête (ex æquo = même rang) ; le plus explosé = Patate d'or (perdant)
+  const ranking = players
+    .map((name, i) => ({ name, i, l: losses[i] ?? 0 }))
+    .sort((a, b) => a.l - b.l)
+    .map((r, _k, all) => ({ ...r, rank: 1 + all.filter((x) => x.l < r.l).length }));
 
   // ══ Écrans ══
   if (phase === "setup") {
@@ -596,8 +600,12 @@ export default function PatateGame({ onReturnToLobby }: GameProps) {
   }
 
   // ── Fin ──
-  const worst = ranking[0];
-  const hasLoser = !!worst && worst.l > 0;
+  const anyBoom = ranking.some((r) => r.l > 0);
+  const leaders = ranking.filter((r) => r.rank === 1);
+  const best = leaders.length === 1 ? leaders[0] : null;
+  const worstName = uniqueMax(players, losses);
+  const worst = worstName != null ? ranking.find((r) => r.name === worstName) ?? null : null;
+  const hero = best ?? leaders[0];
   return (
     <StickerScreen bg={C.night}>
       <ConfettiBurst count={50} />
@@ -606,20 +614,38 @@ export default function PatateGame({ onReturnToLobby }: GameProps) {
         {t.roundsPlayed(round)}
       </span>
       <div className="mt-4 flex items-end">
-        <PlayerBlob name={worst?.name} colorIndex={worst?.i ?? 0} size={110} mood={hasLoser ? "rofl" : "cool"} crown shadow />
+        <PlayerBlob name={anyBoom ? hero?.name : undefined} colorIndex={anyBoom ? hero?.i ?? 0 : 0} size={110} mood="cool" crown={anyBoom} shadow />
         <PotatoBlob size={70} face="smug" style={{ marginLeft: -18 }} />
       </div>
-      <h1 className="mt-2 max-w-full text-center leading-[0.95]" style={{ ...DISPLAY, fontSize: fitName(hasLoser ? worst.name : t.nobody, "clamp(40px,12vw,56px)", 88), textShadow: `4px 4px 0 ${INK}`, overflowWrap: "anywhere" }}>
-        {hasLoser ? worst.name : t.nobody}
-      </h1>
-      <p className="mt-2 text-center text-[19px] leading-tight" style={{ ...DISPLAY, color: C.yellow }}>
-        {hasLoser ? t.goldWin(worst.l) : t.nobodyBlew}
-      </p>
+      {(() => {
+        // Héros = le joueur qui a le MOINS explosé (égalité en tête = titre d'égalité)
+        const title = !anyBoom ? t.nobody : best ? best.name : t.tieTop;
+        const sub = !anyBoom ? t.nobodyBlew : best ? t.winsWith(best.l) : t.tieNames(leaders.map((r) => r.name).join(", "));
+        return (
+          <>
+            <h1 className="mt-2 max-w-full text-center leading-[0.95]" style={{ ...DISPLAY, fontSize: fitName(title, "clamp(40px,12vw,56px)", 88), textShadow: `4px 4px 0 ${INK}`, overflowWrap: "anywhere" }}>
+              {title}
+            </h1>
+            <p className="mt-2 text-center text-[19px] leading-tight" style={{ ...DISPLAY, color: C.yellow }}>{sub}</p>
+          </>
+        );
+      })()}
+      {/* Patate d'or : celui qui a le plus explosé (seul en tête des explosions) */}
+      {worst && (
+        <div className="mt-4 flex w-full items-center gap-3 px-3 py-2.5" style={{ ...sticker(C.yellow, { radius: 18, shadow: 3 }), transform: "rotate(-1deg)" }}>
+          <PlayerAvatar name={worst.name} colorIndex={worst.i} size={40} mood="rofl" border={false} />
+          <span className="min-w-0 flex-1 leading-tight">
+            <span className="block text-[14px] font-bold">{t.goldTitle}</span>
+            <span className="block text-[20px]" style={{ ...DISPLAY, overflowWrap: "anywhere" }}>{worst.name}</span>
+          </span>
+          <span className="shrink-0 whitespace-nowrap text-[18px]" style={DISPLAY}>{t.booms(worst.l)}</span>
+        </div>
+      )}
       <div className="mt-5 w-full space-y-2">
         {ranking.map((r, k) => (
-          <div key={r.i} className="zk-rise flex items-center gap-3 px-3 py-2" style={{ ...sticker(k === 0 && hasLoser ? C.yellow : C.cream, { radius: 18, shadow: 3 }), animationDelay: `${k * 0.06}s` }}>
-            <span className="w-6 text-center text-[20px]" style={DISPLAY}>{k + 1}</span>
-            <PlayerAvatar name={r.name} colorIndex={r.i} size={34} mood={r.l > 0 ? "dead" : "happy"} border={false} />
+          <div key={r.i} className="zk-rise flex items-center gap-3 px-3 py-2" style={{ ...sticker(r.rank === 1 && anyBoom ? C.mint : C.cream, { radius: 18, shadow: 3 }), animationDelay: `${k * 0.06}s` }}>
+            <span className="w-6 text-center text-[20px]" style={DISPLAY}>{r.rank}</span>
+            <PlayerAvatar name={r.name} colorIndex={r.i} size={34} mood={r.rank === 1 ? "cool" : r.name === worst?.name ? "dead" : "happy"} border={false} />
             {/* Prénom long : passe à la ligne (au tiret) plutôt que d'être tronqué */}
             <span className="min-w-0 flex-1 text-[18px] leading-tight" style={{ ...DISPLAY, overflowWrap: "anywhere" }}>{r.name}</span>
             <span className="shrink-0 whitespace-nowrap text-[18px]" style={DISPLAY}>{t.booms(r.l)}</span>

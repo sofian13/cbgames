@@ -48,42 +48,51 @@ export interface FTStrings {
   ideaTag: string;
   moreTurn: string;
   toVote: string;
-  // Vote
+  // Vote : on élimine une personne
   voteTitle: (k: number) => string;
-  voteText: (k: number) => string;
-  voteBtn: (k: number) => string;
-  votePick: (left: number) => string;
-  suspense: (k: number) => string;
-  // Verdict
+  voteText: string;
+  votePick: string;
+  voteBtn: (name: string) => string;
+  tieLink: string;
+  tieTitle: string;
+  tieText: string;
+  tiePick: string;
+  tieBtn: string;
+  tieCancel: string;
+  revoteChip: string;
+  revoteText: string;
+  tieRandom: string;
+  outLabel: (names: string) => string;
+  suspense: (name: string) => string;
+  // Résultat d'une élimination
   caughtTitle: string;
-  caughtText: (name: string) => string;
-  caughtHint: string;
-  caughtHintMulti: (k: number) => string;
-  caughtBtn: string;
-  missedTitle: string;
-  missedText: (accused: string, fake: string) => string;
-  partialTitle: (caught: number, k: number) => string;
-  fakesWere: (names: string) => string;
-  tagCaught: string;
-  tagFree: string;
+  caughtText: (name: string, k: number) => string;
+  innocentTitle: string;
+  innocentText: (name: string) => string;
+  stillFree: (k: number) => string;
+  secretPts: (pts: number, k: number) => string;
+  witnessPts: (pts: number) => string;
+  leftFakes: (k: number) => string;
+  remaining: (n: number, k: number) => string;
+  danger: (k: number) => string;
+  nextQuestions: string;
+  fakesWinTitle: (k: number) => string;
+  fakesWinText: (names: string, k: number) => string;
+  fakesWinPts: (pts: number, k: number) => string;
+  witnessesWinTitle: string;
+  witnessesWinText: (k: number) => string;
   seeScene: string;
-  lastTitle: (name: string) => string;
-  lastSub: string;
-  lastWinTitle: string;
-  lastWinText: (name: string) => string;
-  lastLoseTitle: string;
-  lastLoseText: string;
-  lastLoseOne: string;
-  lastNext: (name: string) => string;
   // Révélation / scores
   revealTitle: string;
   revealWho: (names: string, k: number) => string;
   ideasTitle: string;
   moreDetails: string;
-  lastTag: (name: string) => string;
-  ptsFake: (name: string, pts: number) => string;
-  ptsOne: (name: string, pts: number) => string;
-  ptsWitnesses: (n: number) => string;
+  recapTitle: string;
+  evInnocent: (name: string, fakes: string, pts: number) => string;
+  evCaught: (name: string, witnesses: string, pts: number) => string;
+  evFakesWin: (names: string, pts: number, k: number) => string;
+  evWitnessesWin: string;
+  recapTotal: string;
   /** « et » pour joindre des prénoms */
   and: string;
   scoresBtn: string;
@@ -264,7 +273,7 @@ export const FT_STR: I18n<FTStrings> = {
     howto: [
       { title: "Regarde la scène", text: "Chacun son tour, 5 secondes pour mémoriser une scène. Sauf le Faux Témoin, qui ne voit rien." },
       { title: "Interrogez-vous", text: "L'app tire l'ordre : chacun pose une question sur la scène à voix haute. Le tél, on n'y touche plus." },
-      { title: "Démasquez-le", text: "Le Faux Témoin pose et répond aussi… au bluff. Votez à trois ! Démasqué, il a une dernière chance." },
+      { title: "Éliminez un suspect", text: "À trois, pointez un suspect : il est éliminé. Innocent ? Le Faux Témoin marque et on repart pour un tour. Démasquez-le avant qu'il ne reste qu'un témoin face à lui !" },
     ],
     howtoGo: "C'est parti !",
     round: (n) => `Manche ${n}`,
@@ -295,41 +304,50 @@ export const FT_STR: I18n<FTStrings> = {
     ideaTag: "Idée",
     moreTurn: "Encore un tour de questions",
     toVote: "On passe au vote",
-    voteTitle: (k) => (k > 1 ? `Qui sont les ${k} Faux Témoins ?` : "Qui est le Faux Témoin ?"),
-    voteText: (k) => (k > 1
-      ? `À trois, chacun pointe quelqu'un du doigt. Touchez les ${k} prénoms qui ont le plus de voix.`
-      : "À trois, tout le monde pointe quelqu'un du doigt. Touchez le prénom qui a le plus de voix."),
-    voteBtn: (k) => (k > 1 ? "On les accuse !" : "On l'accuse !"),
-    votePick: (left) => (left > 1 ? `Touchez encore ${left} prénoms` : "Touchez un prénom"),
-    suspense: (k) => (k > 1 ? "Les Faux Témoins étaient…" : "Le Faux Témoin était…"),
+    voteTitle: (k) => (k > 1 ? "Qui est un Faux Témoin ?" : "Qui est le Faux Témoin ?"),
+    voteText: "À trois, tout le monde pointe un suspect du doigt. Touchez le prénom qui a le plus de voix : il est éliminé.",
+    votePick: "Touchez un prénom",
+    voteBtn: (name) => `Éliminer ${name}`,
+    tieLink: "Égalité ?",
+    tieTitle: "Égalité !",
+    tieText: "Touchez les prénoms à égalité : vous revoterez seulement entre eux.",
+    tiePick: "Touchez au moins 2 prénoms",
+    tieBtn: "Revoter entre eux",
+    tieCancel: "Annuler",
+    revoteChip: "Revote",
+    revoteText: "À trois, revotez seulement entre eux. Touchez le prénom qui a le plus de voix.",
+    tieRandom: "Encore égalité ? Le hasard tranche",
+    outLabel: (names) => `Hors jeu : ${names}`,
+    suspense: (name) => `${name} était…`,
     caughtTitle: "Démasqué !",
-    caughtText: (name) => `${name} était bien le Faux Témoin.`,
-    caughtHint: "Dernière chance : une bonne réponse et la victoire lui revient quand même !",
-    caughtHintMulti: (k) => (k > 1 ? "Dernière chance : chaque démasqué répond à sa question. Bonne réponse = +2 !" : "Dernière chance : une bonne réponse = +2 quand même !"),
-    caughtBtn: "Dernière chance",
-    missedTitle: "Raté !",
-    missedText: (accused, fake) => `${accused} avait tout vu. Le Faux Témoin, c'était ${fake} !`,
-    partialTitle: (c, k) => (c === k ? "Tous démasqués !" : `${c} sur ${k} !`),
-    fakesWere: (names) => `Les Faux Témoins : ${names}.`,
-    tagCaught: "Démasqué",
-    tagFree: "Pas vu",
+    caughtText: (name, k) => (k > 1 ? `${name} était bien un Faux Témoin !` : `${name} était bien le Faux Témoin !`),
+    innocentTitle: "Erreur judiciaire !",
+    innocentText: (name) => `${name} avait vraiment vu la scène.`,
+    stillFree: (k) => (k > 1 ? "Les Faux Témoins courent toujours…" : "Le Faux Témoin court toujours…"),
+    secretPts: (pts, k) => (k > 1 ? `Chaque Faux Témoin encore en jeu marque +${pts}, en secret.` : `Il marque +${pts}, en secret.`),
+    witnessPts: (pts) => `Les témoins encore en jeu marquent +${pts} chacun.`,
+    remaining: (n, k) => `Encore en jeu : ${n} joueurs, dont ${k > 1 ? `${k} Faux Témoins` : "1 Faux Témoin"}.`,
+    leftFakes: (k) => (k > 1 ? `Il reste ${k} Faux Témoins à démasquer.` : "Il reste 1 Faux Témoin à démasquer."),
+    danger: (k) => (k > 1 ? "Attention : encore une erreur et les Faux Témoins gagnent !" : "Attention : encore une erreur et le Faux Témoin gagne !"),
+    nextQuestions: "Nouveau tour de questions",
+    fakesWinTitle: (k) => (k > 1 ? "Les Faux Témoins gagnent !" : "Le Faux Témoin gagne !"),
+    fakesWinText: (names, k) => (k > 1
+      ? `Plus assez de témoins pour les arrêter : ${names} ont bluffé jusqu'au bout.`
+      : `Plus assez de témoins pour l'arrêter : ${names} a bluffé jusqu'au bout.`),
+    fakesWinPts: (pts, k) => (k > 1 ? `Bonus victoire : +${pts} pour chaque Faux Témoin.` : `Bonus victoire : +${pts}.`),
+    witnessesWinTitle: "Les témoins gagnent !",
+    witnessesWinText: (k) => (k > 1 ? "Tous les Faux Témoins sont démasqués." : "Le Faux Témoin est démasqué."),
     seeScene: "Voir la scène",
-    lastTitle: (name) => `${name}, dernière chance !`,
-    lastSub: "Une seule réponse. Les autres, motus !",
-    lastWinTitle: "Bien deviné !",
-    lastWinText: (name) => `${name} vole la victoire.`,
-    lastLoseTitle: "Raté !",
-    lastLoseText: "Les témoins gagnent la manche.",
-    lastLoseOne: "Les témoins marquent 1 point.",
-    lastNext: (name) => `Au tour de ${name}`,
     revealTitle: "La scène",
     revealWho: (names, k) => (k > 1 ? `Les Faux Témoins : ${names}` : `Le Faux Témoin : ${names}`),
     ideasTitle: "Les idées tirées",
     moreDetails: "Tous les détails de la scène",
-    lastTag: (name) => `Dernière chance · ${name}`,
-    ptsFake: (name, pts) => `${name} remporte la manche : +${pts} points`,
-    ptsOne: (name, pts) => `${name} : +${pts} points`,
-    ptsWitnesses: (n) => (n > 1 ? `Les témoins marquent ${n} points chacun` : "Les témoins marquent 1 point chacun"),
+    recapTitle: "Les points de la manche",
+    evInnocent: (name, fakes, pts) => `Erreur sur ${name} : +${pts} pour ${fakes}`,
+    evCaught: (name, witnesses, pts) => `${name} démasqué : +${pts} chacun pour ${witnesses}`,
+    evFakesWin: (names, pts, k) => (k > 1 ? `Victoire des Faux Témoins : +${pts} pour ${names}` : `Victoire du Faux Témoin : +${pts} pour ${names}`),
+    evWitnessesWin: "Victoire des témoins !",
+    recapTotal: "Total de la manche",
     and: "et",
     scoresBtn: "Les scores",
     scoresTitle: "Les scores",
@@ -394,7 +412,7 @@ export const FT_STR: I18n<FTStrings> = {
     howto: [
       { title: "Look at the scene", text: "One by one, 5 seconds to memorize a scene. Except the Fake Witness, who sees nothing." },
       { title: "Grill each other", text: "The app picks the order: everyone asks a question about the scene out loud. No more tapping the phone." },
-      { title: "Unmask them", text: "The Fake Witness asks and answers too… by bluffing. Vote on three! If caught, they get one last chance." },
+      { title: "Kick out a suspect", text: "On three, point at a suspect: they're out. Innocent? The Fake Witness scores and you go again. Catch them before only one witness is left facing them!" },
     ],
     howtoGo: "Let's go!",
     round: (n) => `Round ${n}`,
@@ -425,41 +443,50 @@ export const FT_STR: I18n<FTStrings> = {
     ideaTag: "Idea",
     moreTurn: "One more round of questions",
     toVote: "Time to vote",
-    voteTitle: (k) => (k > 1 ? `Who are the ${k} Fake Witnesses?` : "Who's the Fake Witness?"),
-    voteText: (k) => (k > 1
-      ? `On three, everyone points at someone. Tap the ${k} names with the most fingers pointed at them.`
-      : "On three, everyone points at someone. Tap the name with the most fingers pointed at it."),
-    voteBtn: (k) => (k > 1 ? "Accuse them!" : "Accuse!"),
-    votePick: (left) => (left > 1 ? `Tap ${left} more names` : "Tap a name"),
-    suspense: (k) => (k > 1 ? "The Fake Witnesses were…" : "The Fake Witness was…"),
+    voteTitle: (k) => (k > 1 ? "Who's a Fake Witness?" : "Who's the Fake Witness?"),
+    voteText: "On three, everyone points at a suspect. Tap the name with the most fingers pointed at it: they're out.",
+    votePick: "Tap a name",
+    voteBtn: (name) => `Kick out ${name}`,
+    tieLink: "A tie?",
+    tieTitle: "It's a tie!",
+    tieText: "Tap the tied names: you'll vote again between them only.",
+    tiePick: "Tap at least 2 names",
+    tieBtn: "Vote again between them",
+    tieCancel: "Cancel",
+    revoteChip: "Revote",
+    revoteText: "On three, vote again between them only. Tap the name with the most votes.",
+    tieRandom: "Still a tie? Let chance decide",
+    outLabel: (names) => `Out: ${names}`,
+    suspense: (name) => `${name} was…`,
     caughtTitle: "Busted!",
-    caughtText: (name) => `${name} really was the Fake Witness.`,
-    caughtHint: "Last chance: one right answer and they still win!",
-    caughtHintMulti: (k) => (k > 1 ? "Last chance: each busted witness answers their own question. Right answer = +2!" : "Last chance: a right answer still scores +2!"),
-    caughtBtn: "Last chance",
-    missedTitle: "Wrong!",
-    missedText: (accused, fake) => `${accused} saw everything. The Fake Witness was ${fake}!`,
-    partialTitle: (c, k) => (c === k ? "All busted!" : `${c} out of ${k}!`),
-    fakesWere: (names) => `The Fake Witnesses: ${names}.`,
-    tagCaught: "Busted",
-    tagFree: "Got away",
+    caughtText: (name, k) => (k > 1 ? `${name} really was a Fake Witness!` : `${name} really was the Fake Witness!`),
+    innocentTitle: "Wrong person!",
+    innocentText: (name) => `${name} really did see the scene.`,
+    stillFree: (k) => (k > 1 ? "The Fake Witnesses are still on the loose…" : "The Fake Witness is still on the loose…"),
+    secretPts: (pts, k) => (k > 1 ? `Every Fake Witness still in the game secretly scores +${pts}.` : `They secretly score +${pts}.`),
+    witnessPts: (pts) => `Every witness still in the game scores +${pts}.`,
+    remaining: (n, k) => `Still in the game: ${n} players, including ${k > 1 ? `${k} Fake Witnesses` : "1 Fake Witness"}.`,
+    leftFakes: (k) => (k > 1 ? `${k} Fake Witnesses left to catch.` : "1 Fake Witness left to catch."),
+    danger: (k) => (k > 1 ? "Careful: one more mistake and the Fake Witnesses win!" : "Careful: one more mistake and the Fake Witness wins!"),
+    nextQuestions: "New round of questions",
+    fakesWinTitle: (k) => (k > 1 ? "The Fake Witnesses win!" : "The Fake Witness wins!"),
+    fakesWinText: (names, k) => (k > 1
+      ? `Not enough witnesses left to stop them: ${names} bluffed all the way.`
+      : `Not enough witnesses left to stop them: ${names} bluffed all the way.`),
+    fakesWinPts: (pts, k) => (k > 1 ? `Win bonus: +${pts} for each Fake Witness.` : `Win bonus: +${pts}.`),
+    witnessesWinTitle: "The witnesses win!",
+    witnessesWinText: (k) => (k > 1 ? "Every Fake Witness has been caught." : "The Fake Witness has been caught."),
     seeScene: "See the scene",
-    lastTitle: (name) => `${name}, last chance!`,
-    lastSub: "One answer only. Everyone else, zip it!",
-    lastWinTitle: "Nice guess!",
-    lastWinText: (name) => `${name} steals the win.`,
-    lastLoseTitle: "Missed!",
-    lastLoseText: "The witnesses win the round.",
-    lastLoseOne: "The witnesses score 1 point.",
-    lastNext: (name) => `${name}'s turn`,
     revealTitle: "The scene",
     revealWho: (names, k) => (k > 1 ? `Fake Witnesses: ${names}` : `Fake Witness: ${names}`),
     ideasTitle: "Ideas drawn",
     moreDetails: "Every detail of the scene",
-    lastTag: (name) => `Last chance · ${name}`,
-    ptsFake: (name, pts) => `${name} wins the round: +${pts} points`,
-    ptsOne: (name, pts) => `${name}: +${pts} points`,
-    ptsWitnesses: (n) => (n > 1 ? `Each witness scores ${n} points` : "Each witness scores 1 point"),
+    recapTitle: "Points this round",
+    evInnocent: (name, fakes, pts) => `Wrong call on ${name}: +${pts} for ${fakes}`,
+    evCaught: (name, witnesses, pts) => `${name} busted: +${pts} each for ${witnesses}`,
+    evFakesWin: (names, pts, k) => (k > 1 ? `The Fake Witnesses win: +${pts} for ${names}` : `The Fake Witness wins: +${pts} for ${names}`),
+    evWitnessesWin: "The witnesses win!",
+    recapTotal: "Round total",
     and: "and",
     scoresBtn: "Scores",
     scoresTitle: "Scores",
@@ -524,7 +551,7 @@ export const FT_STR: I18n<FTStrings> = {
     howto: [
       { title: "Mira la escena", text: "Por turnos, 5 segundos para memorizar una escena. Menos el Falso Testigo, que no ve nada." },
       { title: "Interrogaos", text: "La app sortea el orden: cada uno hace una pregunta sobre la escena en voz alta. El móvil ya no se toca." },
-      { title: "Desenmascáralo", text: "El Falso Testigo también pregunta y responde… de farol. ¡Votad a la de tres! Si lo pilláis, tiene una última oportunidad." },
+      { title: "Eliminad a un sospechoso", text: "A la de tres, señalad a un sospechoso: queda eliminado. ¿Inocente? El Falso Testigo puntúa y otra ronda. ¡Pilladlo antes de que solo quede un testigo frente a él!" },
     ],
     howtoGo: "¡Vamos!",
     round: (n) => `Ronda ${n}`,
@@ -555,41 +582,50 @@ export const FT_STR: I18n<FTStrings> = {
     ideaTag: "Idea",
     moreTurn: "Otra ronda de preguntas",
     toVote: "¡A votar!",
-    voteTitle: (k) => (k > 1 ? `¿Quiénes son los ${k} Falsos Testigos?` : "¿Quién es el Falso Testigo?"),
-    voteText: (k) => (k > 1
-      ? `A la de tres, todos señaláis a alguien. Tocad los ${k} nombres con más votos.`
-      : "A la de tres, todos señaláis a alguien. Tocad el nombre con más votos."),
-    voteBtn: (k) => (k > 1 ? "¡Los acusamos!" : "¡Lo acusamos!"),
-    votePick: (left) => (left > 1 ? `Tocad ${left} nombres más` : "Toca un nombre"),
-    suspense: (k) => (k > 1 ? "Los Falsos Testigos eran…" : "El Falso Testigo era…"),
+    voteTitle: (k) => (k > 1 ? "¿Quién es un Falso Testigo?" : "¿Quién es el Falso Testigo?"),
+    voteText: "A la de tres, todos señaláis a un sospechoso. Tocad el nombre con más votos: queda eliminado.",
+    votePick: "Toca un nombre",
+    voteBtn: (name) => `Eliminar a ${name}`,
+    tieLink: "¿Empate?",
+    tieTitle: "¡Empate!",
+    tieText: "Tocad los nombres empatados: volveréis a votar solo entre ellos.",
+    tiePick: "Tocad al menos 2 nombres",
+    tieBtn: "Votar otra vez entre ellos",
+    tieCancel: "Cancelar",
+    revoteChip: "Desempate",
+    revoteText: "A la de tres, votad otra vez solo entre ellos. Tocad el nombre con más votos.",
+    tieRandom: "¿Otra vez empate? Que decida el azar",
+    outLabel: (names) => `Eliminados: ${names}`,
+    suspense: (name) => `${name} era…`,
     caughtTitle: "¡Pillado!",
-    caughtText: (name) => `${name} era el Falso Testigo.`,
-    caughtHint: "Última oportunidad: si acierta una respuesta, ¡gana igualmente!",
-    caughtHintMulti: (k) => (k > 1 ? "Última oportunidad: cada pillado responde a su pregunta. ¡Acierto = +2!" : "Última oportunidad: ¡si acierta, +2 igualmente!"),
-    caughtBtn: "Última oportunidad",
-    missedTitle: "¡Fallasteis!",
-    missedText: (accused, fake) => `${accused} lo había visto todo. ¡El Falso Testigo era ${fake}!`,
-    partialTitle: (c, k) => (c === k ? "¡Todos pillados!" : `¡${c} de ${k}!`),
-    fakesWere: (names) => `Los Falsos Testigos: ${names}.`,
-    tagCaught: "Pillado",
-    tagFree: "Se libró",
+    caughtText: (name, k) => (k > 1 ? `¡${name} era un Falso Testigo!` : `¡${name} era el Falso Testigo!`),
+    innocentTitle: "¡Error judicial!",
+    innocentText: (name) => `${name} sí había visto la escena.`,
+    stillFree: (k) => (k > 1 ? "Los Falsos Testigos siguen sueltos…" : "El Falso Testigo sigue suelto…"),
+    secretPts: (pts, k) => (k > 1 ? `Cada Falso Testigo que sigue en juego gana +${pts}, en secreto.` : `Gana +${pts}, en secreto.`),
+    witnessPts: (pts) => `Cada testigo que sigue en juego gana +${pts}.`,
+    remaining: (n, k) => `Siguen en juego: ${n} jugadores, ${k > 1 ? `${k} de ellos Falsos Testigos` : "uno de ellos Falso Testigo"}.`,
+    leftFakes: (k) => (k > 1 ? `Quedan ${k} Falsos Testigos por desenmascarar.` : "Queda 1 Falso Testigo por desenmascarar."),
+    danger: (k) => (k > 1 ? "Ojo: un error más y ganan los Falsos Testigos." : "Ojo: un error más y gana el Falso Testigo."),
+    nextQuestions: "Nueva ronda de preguntas",
+    fakesWinTitle: (k) => (k > 1 ? "¡Ganan los Falsos Testigos!" : "¡Gana el Falso Testigo!"),
+    fakesWinText: (names, k) => (k > 1
+      ? `Ya no quedan testigos suficientes para pararlos: ${names} se marcaron un farol hasta el final.`
+      : `Ya no quedan testigos suficientes para pararlo: ${names} se marcó un farol hasta el final.`),
+    fakesWinPts: (pts, k) => (k > 1 ? `Bonus de victoria: +${pts} para cada Falso Testigo.` : `Bonus de victoria: +${pts}.`),
+    witnessesWinTitle: "¡Ganan los testigos!",
+    witnessesWinText: (k) => (k > 1 ? "Todos los Falsos Testigos han sido desenmascarados." : "El Falso Testigo ha sido desenmascarado."),
     seeScene: "Ver la escena",
-    lastTitle: (name) => `${name}, ¡última oportunidad!`,
-    lastSub: "Una sola respuesta. Los demás, ¡ni pío!",
-    lastWinTitle: "¡Bien adivinado!",
-    lastWinText: (name) => `${name} se lleva la victoria.`,
-    lastLoseTitle: "¡Fallo!",
-    lastLoseText: "Los testigos ganan la ronda.",
-    lastLoseOne: "Los testigos ganan 1 punto.",
-    lastNext: (name) => `Le toca a ${name}`,
     revealTitle: "La escena",
     revealWho: (names, k) => (k > 1 ? `Los Falsos Testigos: ${names}` : `El Falso Testigo: ${names}`),
     ideasTitle: "Las ideas sacadas",
     moreDetails: "Todos los detalles de la escena",
-    lastTag: (name) => `Última oportunidad · ${name}`,
-    ptsFake: (name, pts) => `${name} gana la ronda: +${pts} puntos`,
-    ptsOne: (name, pts) => `${name}: +${pts} puntos`,
-    ptsWitnesses: (n) => (n > 1 ? `Cada testigo gana ${n} puntos` : "Cada testigo gana 1 punto"),
+    recapTitle: "Los puntos de la ronda",
+    evInnocent: (name, fakes, pts) => `Error con ${name}: +${pts} para ${fakes}`,
+    evCaught: (name, witnesses, pts) => `${name}, pillado: +${pts} para cada uno de ${witnesses}`,
+    evFakesWin: (names, pts, k) => (k > 1 ? `Ganan los Falsos Testigos: +${pts} para ${names}` : `Gana el Falso Testigo: +${pts} para ${names}`),
+    evWitnessesWin: "¡Ganan los testigos!",
+    recapTotal: "Total de la ronda",
     and: "y",
     scoresBtn: "Puntuaciones",
     scoresTitle: "Puntuaciones",

@@ -2,7 +2,7 @@
 
 /**
  * Tuto en slides du Faux Témoin (remplace l'ancien écran « Comment on joue ? » de début de partie)
- * + petites consignes partagées (points, égalité au vote).
+ * + consigne partagée (élimination, victoire, points).
  */
 
 import { type I18n, useT } from "@/lib/i18n";
@@ -16,7 +16,6 @@ type S = {
   slides: { title: string; text: string }[];
   sawNothing: string; question: string; answer: string; caught: string;
   pointsLine: string;
-  voteTie: string;
   names: [string, string, string];
 };
 
@@ -25,33 +24,30 @@ const STR: I18n<S> = {
     slides: [
       { title: "Regarde la scène", text: "Chacun son tour, 5 secondes pour mémoriser une image. Sauf le Faux Témoin : lui ne voit rien ! (Dès 6 joueurs, ils peuvent être plusieurs.)" },
       { title: "Tout à l'oral", text: "L'app tire l'ordre : Léa → Tom, Tom → Inès… Léa demande « Combien de mouettes ? », Tom répond. Plus besoin de toucher le tél." },
-      { title: "Démasquez-le", text: "À trois, pointez le suspect. Démasqué ? Une dernière bonne réponse et il marque quand même. Sinon, les témoins gagnent." },
+      { title: "Éliminez un suspect", text: "À trois, pointez un suspect : il est éliminé. Innocent ? Le Faux Témoin marque et on repart pour un tour. Démasquez-le avant qu'il ne reste qu'un témoin face à lui !" },
     ],
     sawNothing: "Rien vu…", question: "Combien de mouettes ?", answer: "Euh… 5 ?", caught: "DÉMASQUÉ",
-    pointsLine: "Points : Faux Témoin pas démasqué +3, démasqué mais bonne réponse +2, sinon +1 pour chaque témoin. Dès 6 joueurs, choisissez 2 Faux Témoins (3 dès 9) : on vote alors pour autant de suspects.",
-    voteTie: "Égalité ? Revotez seulement entre les ex æquo.",
+    pointsLine: "Le vote élimine une personne (égalité : on revote entre les ex æquo). Les Faux Témoins gagnent dès qu'ils sont aussi nombreux que les témoins restants ; les témoins gagnent s'ils les démasquent tous. Points : à chaque innocent éliminé, chaque Faux Témoin encore en jeu marque +2 (il les garde même s'il est démasqué ensuite), +3 de bonus s'ils gagnent. Chaque Faux Témoin démasqué rapporte +3 à chaque témoin encore en jeu. Dès 6 joueurs, 2 Faux Témoins possibles (3 dès 9).",
     names: ["Léa", "Tom", "Inès"],
   },
   en: {
     slides: [
       { title: "Look at the scene", text: "One by one, you get 5 seconds to memorise a picture. Except the Fake Witness: they see nothing! (From 6 players, there can be more than one.)" },
       { title: "All out loud", text: "The app picks the order: Léa → Tom, Tom → Inès… Léa asks \"How many seagulls?\", Tom answers. No need to touch the phone." },
-      { title: "Unmask them", text: "On three, point at the suspect. Caught? One last right answer and they still score. Otherwise, the witnesses win." },
+      { title: "Kick out a suspect", text: "On three, point at a suspect: they're out. Innocent? The Fake Witness scores and you go again. Catch them before only one witness is left facing them!" },
     ],
     sawNothing: "Saw nothing…", question: "How many seagulls?", answer: "Erm… 5?", caught: "BUSTED",
-    pointsLine: "Points: Fake Witness not caught +3, caught but right answer +2, otherwise +1 for each witness. From 6 players, pick 2 Fake Witnesses (3 from 9): you then vote for that many suspects.",
-    voteTie: "A tie? Vote again between the tied players only.",
+    pointsLine: "The vote kicks one person out (a tie: vote again between the tied players). The Fake Witnesses win as soon as there are as many of them as witnesses left; the witnesses win by catching them all. Points: for each innocent kicked out, every Fake Witness still in the game scores +2 (kept even if caught later), +3 bonus if they win. Each Fake Witness caught gives +3 to every witness still in the game. From 6 players, up to 2 Fake Witnesses (3 from 9).",
     names: ["Léa", "Tom", "Inès"],
   },
   es: {
     slides: [
       { title: "Mira la escena", text: "Por turnos, 5 segundos para memorizar una imagen. ¡Menos el Falso Testigo: él no ve nada! (Desde 6 jugadores, pueden ser varios.)" },
       { title: "Todo en voz alta", text: "La app sortea el orden: Léa → Tom, Tom → Inès… Léa pregunta «¿Cuántas gaviotas?» y Tom responde. No hace falta tocar el móvil." },
-      { title: "Desenmascáralo", text: "A la de tres, señalad al sospechoso. ¿Pillado? Una última respuesta correcta y puntúa igual. Si no, ganan los testigos." },
+      { title: "Eliminad a un sospechoso", text: "A la de tres, señalad a un sospechoso: queda eliminado. ¿Inocente? El Falso Testigo puntúa y otra ronda. ¡Pilladlo antes de que solo quede un testigo frente a él!" },
     ],
     sawNothing: "No vi nada…", question: "¿Cuántas gaviotas?", answer: "Eh… ¿5?", caught: "PILLADO",
-    pointsLine: "Puntos: Falso Testigo no pillado +3, pillado pero acierta +2; si no, +1 para cada testigo. Desde 6 jugadores, elegid 2 Falsos Testigos (3 desde 9): se vota a tantos sospechosos.",
-    voteTie: "¿Empate? Volved a votar solo entre los empatados.",
+    pointsLine: "La votación elimina a una persona (empate: se vuelve a votar entre los empatados). Los Falsos Testigos ganan en cuanto son tantos como los testigos que quedan; los testigos ganan si los pillan a todos. Puntos: por cada inocente eliminado, cada Falso Testigo en juego gana +2 (se los queda aunque lo pillen después), +3 de bonus si ganan. Cada Falso Testigo pillado da +3 a cada testigo en juego. Desde 6 jugadores, hasta 2 Falsos Testigos (3 desde 9).",
     names: ["Léa", "Tom", "Inès"],
   },
 };
@@ -124,9 +120,9 @@ function ArtUnmask({ s }: { s: S }) {
       <Blob x={100} y={150} s={36} color={CAST.malik} mood="happy" />
       <Arrow d="M40 110 Q110 76 150 110" head={[150, 110, 40]} color="#FF6B5B" width={3.5} className="gt-blink" />
       <Blob x={176} y={150} s={46} color={CAST.tom} mood="panic" />
-      {/* QCM de la dernière chance */}
+      {/* Éliminé : démasqué, les témoins marquent */}
       <g className="gt-pop">
-        {["3", "5", "7"].map((v, i) => <Card key={v} x={140 + i * 24} y={44} w={20} h={24} fill={i === 0 ? "#3DDC97" : "#fff"} text={v} size={12} />)}
+        <Card x={150} y={44} w={52} h={24} fill="#3DDC97" text="+3" size={13} />
       </g>
       <g transform="translate(64 30) rotate(-8)">
         <g className="gt-pop" style={{ animationDelay: ".3s" }}>
@@ -134,7 +130,6 @@ function ArtUnmask({ s }: { s: S }) {
           <SvgText x={0} y={1} text={s.caught} size={13} fill="#FF3EA5" />
         </g>
       </g>
-      <SvgText x={110} y={88} text="+3 · +2 · +1" size={11} fill="#FFD23F" outline />
       </g>
     </TutoSvg>
   );
@@ -146,8 +141,8 @@ export function useFTTuto(): TutoSlide[] {
   return s.slides.map((sl, i) => ({ ...sl, art: arts[i] }));
 }
 
-/** Consignes courtes (points, égalité au vote). */
+/** Consigne courte (élimination, victoire, points) pour la feuille de règles. */
 export function useFTExtra() {
   const s = useT(STR);
-  return { pointsLine: s.pointsLine, voteTie: s.voteTie };
+  return { pointsLine: s.pointsLine };
 }

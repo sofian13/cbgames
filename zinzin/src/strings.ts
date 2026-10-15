@@ -414,6 +414,13 @@ export const SOIREE: I18n<{
   winnerSub: string;
   nobody: string;
   validate: (n: number) => string;
+  nextGame: string;
+  toResults: string;
+  stayHere: string;
+  autoWin: (names: string[], game: string) => string;
+  autoPts: (n: number) => string;
+  tapNext: string;
+  fix: string;
   standings: string;
   pts: (n: number) => string;
   endTitle: string;
@@ -470,6 +477,13 @@ export const SOIREE: I18n<{
     winnerSub: "Touchez un ou plusieurs prénoms.",
     nobody: "Personne / égalité",
     validate: (n) => (n > 1 ? `Valider (${n} gagnants)` : "Valider"),
+    nextGame: "Jeu suivant",
+    toResults: "Voir les résultats",
+    stayHere: "Rester sur ce jeu (rejouer…)",
+    autoWin: (n, g) => `${n.length > 1 ? `${n.slice(0, -1).join(", ")} et ${n[n.length - 1]}` : n[0]} gagne${n.length > 1 ? "nt" : ""} ${g} !`,
+    autoPts: (n) => (n > 1 ? "+1 point chacun" : "+1 point"),
+    tapNext: "Touchez pour continuer",
+    fix: "Corriger",
     standings: "Le classement de la soirée",
     pts: (n) => `${n} pt${n > 1 ? "s" : ""}`,
     endTitle: "Fin de la Soirée Zinzin",
@@ -526,6 +540,13 @@ export const SOIREE: I18n<{
     winnerSub: "Tap one or more names.",
     nobody: "Nobody / tie",
     validate: (n) => (n > 1 ? `Confirm (${n} winners)` : "Confirm"),
+    nextGame: "Next game",
+    toResults: "See the results",
+    stayHere: "Stay on this game (play again…)",
+    autoWin: (n, g) => `${n.length > 1 ? `${n.slice(0, -1).join(", ")} and ${n[n.length - 1]}` : n[0]} win${n.length > 1 ? "" : "s"} ${g}!`,
+    autoPts: (n) => (n > 1 ? "+1 point each" : "+1 point"),
+    tapNext: "Tap to continue",
+    fix: "Change",
     standings: "Tonight's leaderboard",
     pts: (n) => `${n} pt${n === 1 ? "" : "s"}`,
     endTitle: "That's a wrap on Zinzin Night",
@@ -582,6 +603,13 @@ export const SOIREE: I18n<{
     winnerSub: "Toca uno o varios nombres.",
     nobody: "Nadie / empate",
     validate: (n) => (n > 1 ? `Confirmar (${n} ganadores)` : "Confirmar"),
+    nextGame: "Siguiente juego",
+    toResults: "Ver los resultados",
+    stayHere: "Quedarse en este juego (volver a jugar…)",
+    autoWin: (n, g) => `¡${n.length > 1 ? `${n.slice(0, -1).join(", ")} y ${n[n.length - 1]}` : n[0]} gana${n.length > 1 ? "n" : ""} ${g}!`,
+    autoPts: (n) => (n > 1 ? "+1 punto cada uno" : "+1 punto"),
+    tapNext: "Toca para continuar",
+    fix: "Corregir",
     standings: "La clasificación de la noche",
     pts: (n) => `${n} pt${n === 1 ? "" : "s"}`,
     endTitle: "Fin de la Noche Zinzin",

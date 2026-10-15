@@ -165,7 +165,6 @@ function CoupleQuizLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) 
   const [lang] = useState<Lang>(getLang);
   const QPACKS = packsFor(lang);
   const [phase, setPhase] = useState<Phase>("names");
-  useGameFinished(phase === "over"); // fin de partie → demande de note éventuelle (app)
   const [names, setNames] = useState<[string, string]>(() => getSavedDuo());
   const [packs, setPacks] = useState<string[]>(() => QPACKS.filter((p) => (p.adult ? adultDefault(!!p.defaultOn) : p.defaultOn)).map((p) => p.id)); // pack 18+ selon l'ambiance de soirée
   const [rounds, setRounds] = useState(10);
@@ -175,6 +174,7 @@ function CoupleQuizLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) 
   const [truth, setTruth] = useState<"a" | "b" | null>(null);
   const [guess, setGuess] = useState<"a" | "b" | null>(null);
   const [scores, setScores] = useState<[number, number]>([0, 0]);
+  useGameFinished(phase === "over", { scores: { names: [...names], values: [...scores] } }); // fin de partie → note éventuelle + Soirée (app) : meilleur score s'il n'y a pas égalité
   const [seen, setSeen] = useState<string[]>([]); // questions déjà sorties dans la partie
 
   useEffect(() => {

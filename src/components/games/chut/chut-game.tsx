@@ -150,7 +150,6 @@ export default function ChutGame({ onReturnToLobby }: GameProps) {
   const [sipsOk] = useState(() => sipsAllowed(true)); // mode sans alcool / Soirée « Chill » : gages seulement
   const [players, setPlayers] = useState<string[]>([]);
   const [screen, setScreen] = useState<Screen>("players");
-  useGameFinished(screen === "end"); // fin de partie → demande de note éventuelle (app)
   const [settings, setSettings] = useState<Settings>(() => ({
     mode: "volume", format: "rotation", tours: 1, sens: "living",
     penalty: sipsOk ? "sips" : "dares", adult: adultDefault(false), human: false,
@@ -1623,6 +1622,8 @@ function EndScreen({ players, mode, results, ko, tableCracks, tools, overlays, o
     weak != null && { icon: Drama, title: t.weakest, sub: t.weakestSub, p: weak, bg: ZZ.coral, mood: "rofl" as const },
     gold != null && { icon: Sparkles, title: t.goldClown, sub: t.goldClownSub, p: gold, bg: ZZ.pink, mood: "laughing" as const },
   ].filter(Boolean) as { icon: typeof Crown; title: string; sub: string; p: number; bg: string; mood: "cool" | "rofl" | "laughing" }[];
+  // Fin de partie → note éventuelle + Soirée (app) : le couronné en tête gagne, « le plus faible » perd
+  useGameFinished(true, { winners: tomb != null ? [players[tomb]] : [], loser: weak != null ? players[weak] : null });
 
   return (
     <ZScreen tools={tools}>

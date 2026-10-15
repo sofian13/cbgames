@@ -17,7 +17,6 @@ type Txt = {
   apple: string;
   valid: string;
   failed: string;
-  ready: string;
   um: string;
   dec: string;
 };
@@ -25,14 +24,14 @@ type Txt = {
 export const TUTO_STR: I18n<Txt> = {
   fr: {
     slides: [
-      { title: "Une catégorie tombe", text: "Catégorie : « un fruit ». Celui qui tient le tél dit un fruit avant la fin du chrono." },
-      { title: "Les autres valident", text: "Bon mot ? Les AUTRES touchent « Validé ». Malik prend le tél et touche « Prêt » : son chrono repart, un peu plus court." },
-      { title: "Bloqué ? Un cœur en moins", text: "Malik bloque, répète ou dit n'importe quoi ? Les autres touchent « Raté » : il perd un cœur. Le dernier en vie gagne." },
+      { title: "Une catégorie tombe", text: "Catégorie : « un fruit ». Une seule personne tient le tél. Léa dit un fruit avant la fin de son chrono." },
+      { title: "Validé : au suivant !", text: "Bon mot ? Celui qui tient le tél touche « Validé ». Le prénom de Malik s'affiche en gros et son chrono part direct, un peu plus court." },
+      { title: "Bloqué ? Un cœur en moins", text: "Malik bloque, répète ou dit n'importe quoi ? Celui qui tient le tél touche « Raté » : il perd un cœur. Le dernier en vie gagne." },
     ],
     rules: [
-      "Une catégorie tombe (ex. « un fruit »). Celui qui tient le tél dit un mot de la catégorie avant la fin du chrono.",
-      "Ce sont les AUTRES qui jugent : « Validé » si le mot est bon, « Raté » s'il bloque, répète un mot déjà dit ou sort du sujet.",
-      "Validé : passe le tél au suivant. Il touche « Prêt » pour lancer son chrono, un peu plus court à chaque mot (−0,5 s, minimum 3 s).",
+      "Une catégorie tombe (ex. « un fruit »). Chacun son tour, dis un mot de la catégorie avant la fin de ton chrono.",
+      "Une seule personne tient le téléphone (elle peut jouer aussi) et appuie pour chacun : « Validé » si le mot est bon, « Raté » s'il bloque, répète un mot déjà dit ou sort du sujet.",
+      "Validé : le prénom du joueur suivant s'affiche aussitôt et son chrono part, un peu plus court à chaque mot (−0,5 s, minimum 3 s). Pas besoin de se passer le tél.",
       "Chrono à zéro ou « Raté » : une vie en moins, et on change de catégorie.",
       "Le dernier joueur encore en vie gagne.",
     ],
@@ -40,20 +39,19 @@ export const TUTO_STR: I18n<Txt> = {
     apple: "Pomme !",
     valid: "Validé",
     failed: "Raté",
-    ready: "Prêt",
     um: "Euh…",
     dec: "10 s → 9,5 s",
   },
   en: {
     slides: [
-      { title: "A category drops", text: "Category: \"a fruit\". Whoever holds the phone says a fruit before the timer runs out." },
-      { title: "The others judge", text: "Good word? The OTHERS tap \"Good\". Malik takes the phone and taps \"Ready\": his timer restarts, a bit shorter." },
-      { title: "Stuck? Lose a heart", text: "Malik freezes, repeats or says nonsense? The others tap \"Fail\": he loses a heart. Last one standing wins." },
+      { title: "A category drops", text: "Category: \"a fruit\". One person holds the phone. Léa says a fruit before her timer runs out." },
+      { title: "Good: next!", text: "Good word? Whoever holds the phone taps \"Good\". Malik's name pops up and his timer starts right away, a bit shorter." },
+      { title: "Stuck? Lose a heart", text: "Malik freezes, repeats or says nonsense? Whoever holds the phone taps \"Fail\": he loses a heart. Last one standing wins." },
     ],
     rules: [
-      "A category comes up (e.g. \"a fruit\"). Whoever holds the phone says a word from it before the timer runs out.",
-      "The OTHER players judge: \"Good\" if the word works, \"Fail\" if they freeze, repeat a word already said or go off-topic.",
-      "Good: pass the phone on. The next player taps \"Ready\" to start their timer, a bit shorter with every word (−0.5 s, 3 s minimum).",
+      "A category comes up (e.g. \"a fruit\"). Take turns saying a word from it before your timer runs out.",
+      "One person holds the phone (they can play too) and taps for everyone: \"Good\" if the word works, \"Fail\" if they freeze, repeat a word already said or go off-topic.",
+      "Good: the next player's name pops up right away and their timer starts, a bit shorter with every word (−0.5 s, 3 s minimum). No need to pass the phone.",
       "Timer hits zero or \"Fail\": you lose a life, and a new category comes up.",
       "The last player with lives left wins.",
     ],
@@ -61,20 +59,19 @@ export const TUTO_STR: I18n<Txt> = {
     apple: "Apple!",
     valid: "Good",
     failed: "Fail",
-    ready: "Ready",
     um: "Umm…",
     dec: "10 s → 9.5 s",
   },
   es: {
     slides: [
-      { title: "Sale una categoría", text: "Categoría: «una fruta». Quien tiene el móvil dice una fruta antes de que acabe el tiempo." },
-      { title: "Los demás juzgan", text: "¿Palabra buena? Los DEMÁS tocan «Vale». Malik coge el móvil y toca «Listo»: su tiempo vuelve a correr, un poco más corto." },
-      { title: "¿Bloqueado? Pierdes un corazón", text: "¿Malik se bloquea, repite o dice cualquier cosa? Los demás tocan «Fallo»: pierde un corazón. Gana el último en pie." },
+      { title: "Sale una categoría", text: "Categoría: «una fruta». Una sola persona sostiene el móvil. Léa dice una fruta antes de que acabe su tiempo." },
+      { title: "Vale: ¡al siguiente!", text: "¿Palabra buena? Quien sostiene el móvil toca «Vale». El nombre de Malik aparece en grande y su tiempo arranca al instante, un poco más corto." },
+      { title: "¿Bloqueado? Pierdes un corazón", text: "¿Malik se bloquea, repite o dice cualquier cosa? Quien sostiene el móvil toca «Fallo»: pierde un corazón. Gana el último en pie." },
     ],
     rules: [
-      "Sale una categoría (p. ej., «una fruta»). Quien tiene el móvil dice una palabra de esa categoría antes de que acabe el tiempo.",
-      "Juzgan los DEMÁS: «Vale» si la palabra es buena, «Fallo» si se bloquea, repite una palabra ya dicha o se sale del tema.",
-      "Vale: pasa el móvil al siguiente. Toca «Listo» para lanzar su tiempo, un poco más corto con cada palabra (−0,5 s, mínimo 3 s).",
+      "Sale una categoría (p. ej., «una fruta»). Por turnos, di una palabra de esa categoría antes de que acabe tu tiempo.",
+      "Una sola persona sostiene el móvil (también puede jugar) y toca por cada uno: «Vale» si la palabra es buena, «Fallo» si se bloquea, repite una palabra ya dicha o se sale del tema.",
+      "Vale: el nombre del siguiente aparece al instante y arranca su tiempo, un poco más corto con cada palabra (−0,5 s, mínimo 3 s). No hace falta pasarse el móvil.",
       "Tiempo a cero o «Fallo»: pierdes una vida y sale otra categoría.",
       "Gana el último jugador que conserve vidas.",
     ],
@@ -82,7 +79,6 @@ export const TUTO_STR: I18n<Txt> = {
     apple: "¡Manzana!",
     valid: "Vale",
     failed: "Fallo",
-    ready: "Listo",
     um: "Eh…",
     dec: "10 s → 9,5 s",
   },
@@ -101,7 +97,7 @@ function Clock({ x, y, r = 13 }: { x: number; y: number; r?: number }) {
   );
 }
 
-/** Gros bouton de jeu (Validé / Raté / Prêt). */
+/** Gros bouton de jeu (Validé / Raté). */
 function GameBtn({ x, y, w, label, fill, className }: { x: number; y: number; w: number; label: string; fill: string; className?: string }) {
   return (
     <g transform={`translate(${x} ${y})`}>
@@ -130,15 +126,15 @@ function Slide1({ s }: { s: Txt }) {
 function Slide2({ s }: { s: Txt }) {
   return (
     <TutoSvg floor>
-      {/* Tom (un AUTRE joueur) touche « Validé » */}
+      {/* Tom (qui tient le tél) touche « Validé » */}
       <GameBtn x={8} y={50} w={66} label={s.valid} fill="#3DDC97" className="gt-pulse" />
       <Finger x={44} y={76} rot={-8} />
       <Blob x={40} y={140} s={44} color={CAST.tom} mood="happy" />
-      {/* puis Léa passe le tél à Malik, qui touche « Prêt » */}
+      {/* … et c'est direct au tour de Malik : son chrono part */}
       <Blob x={112} y={140} s={42} color={CAST.lea} mood="happy" />
       <Blob x={182} y={140} s={46} color={CAST.malik} mood="happy" />
       <Arrow d="M116 86 Q148 68 176 86" head={[176, 86, 30]} dashed />
-      <GameBtn x={156} y={36} w={54} label={s.ready} fill="#FFD23F" className="gt-pulse" />
+      <Clock x={182} y={52} r={15} />
       <SvgText x={210} y={20} text={s.dec} size={11} fill="#fff" anchor="end" />
     </TutoSvg>
   );

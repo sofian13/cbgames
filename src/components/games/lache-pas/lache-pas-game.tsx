@@ -58,7 +58,6 @@ interface Outcome {
 
 export default function LachePasGame({ onReturnToLobby }: GameProps) {
   const [phase, setPhase] = useState<Phase>("intro");
-  useGameFinished(phase === "end"); // fin de partie → demande de note éventuelle (app)
   const [sipsOk] = useState(() => sipsAllowed(true)); // mode sans alcool / Soirée « Chill » : gages seulement
   const [penalty, setPenalty] = useState<Penalty>(() => (sipsOk ? "sips" : "dares"));
   const [fingers, setFingers] = useState<Finger[]>([]);
@@ -76,6 +75,11 @@ export default function LachePasGame({ onReturnToLobby }: GameProps) {
     return Array.from({ length: MAX_FINGERS }, (_, i) => saved[i] ?? "");
   });
   const nameOf = (slot: number) => names[slot]?.trim() || "";
+  // Fin de manche → note éventuelle + Soirée (app) : le doigt couronné gagne, le seul doigt pris perd
+  useGameFinished(phase === "end", {
+    winners: outcome?.winner != null && nameOf(outcome.winner) ? [nameOf(outcome.winner)] : [],
+    loser: outcome && outcome.losers.length === 1 ? nameOf(outcome.losers[0]) || null : null,
+  });
   const colorName = (slot: number) => t.colors[colorForIndex(slot)] ?? colorForIndex(slot);
   const labelOf = (slot: number) => nameOf(slot) || colorName(slot);
   const [rulesOpen, setRulesOpen] = useState(false);

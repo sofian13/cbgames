@@ -158,6 +158,7 @@ export function CrescendoMode({ plan, ...c }: ModeCommon & { plan: CrescendoPlan
   return (
     <ModeEnd
       rows={rows}
+      result={{ scores: { names: st.map((x) => c.players[x.p]), values: st.map((x) => x.f), lowerWins: true } }}
       unit=""
       loser={null}
       tools={c.tools}

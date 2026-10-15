@@ -103,7 +103,13 @@ export default function LoupGarouLocal({ onReturnToLobby }: GameProps) {
   const [settings, setSettings] = useState<Settings>(() => (typeof window === "undefined" ? DEFAULT_SETTINGS : loadSettings()));
   const [game, setGame] = useState<GameState | null>(null);
   const [phase, setPhase] = useState<Phase>({ k: "players" });
-  useGameFinished(phase.k === "end"); // fin de partie → demande de note éventuelle (app)
+  // Fin de partie → note éventuelle + Soirée (app) : les joueurs du camp gagnant (même bande que WinnersParade)
+  const lgWinner = phase.k === "end" ? phase.winner : null;
+  useGameFinished(phase.k === "end", {
+    winners: !game || !lgWinner || lgWinner === "personne" ? [] : game.players
+      .filter((p) => (lgWinner === "loups" ? p.role === "loup" : lgWinner === "village" ? p.role !== "loup" : game.lovers?.includes(p.id)))
+      .map((p) => p.name),
+  });
   const [modal, setModal] = useState<null | "rules" | "history" | "sound">(null);
   // Tuto en slides : 1re partie, dès l'ouverture (avant la saisie des joueurs)
   const tuto = useFirstTimeTuto("loup-garou", { atMount: true });

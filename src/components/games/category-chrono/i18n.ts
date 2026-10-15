@@ -26,9 +26,10 @@ export interface CategoryChronoStrings {
   itsTurn: string;
   sayWord: string;
   judgeHint: string;
-  passTo: string;
-  passSub: string;
-  ready: string;
+  pause: string;
+  paused: string;
+  pausedSub: string;
+  resume: string;
   wordsSaid: (n: number) => string;
   valid: string;
   failed: string;
@@ -56,7 +57,7 @@ export const STR: I18n<CategoryChronoStrings> = {
     soundOn: "Activer le son",
     soundOff: "Couper le son",
     rule1: ["Une ", "catégorie", " tombe (ex. « Fruits »)."],
-    rule2: ["Chacun son tour, dis ", "un mot", " de la catégorie avant la fin du chrono. Les autres jugent (« Validé » / « Raté »), puis passe le tél."],
+    rule2: ["Chacun son tour, dis ", "un mot", " de la catégorie avant la fin du chrono. Une seule personne tient le tél et appuie sur « Validé » / « Raté » pour chacun."],
     rule3: ["Le chrono ", "raccourcit", " à chaque mot. Pas de mot, répétition ou hors sujet : ", "une vie en moins", "."],
     themes: "Les thèmes",
     poolCount: (n) => `${n} catégorie${n > 1 ? "s" : ""} dans la pioche`,
@@ -71,10 +72,11 @@ export const STR: I18n<CategoryChronoStrings> = {
     go: "Go !",
     itsTurn: "C'est à",
     sayWord: "Dis un mot de la catégorie !",
-    judgeHint: "Les autres : touchez « Validé » si le mot est bon, « Raté » sinon.",
-    passTo: "Passe le tél à",
-    passSub: "Le chrono est en pause. Touche « Prêt » quand tu as le tél en main : ton chrono part.",
-    ready: "Prêt !",
+    judgeHint: "« Validé » si le mot est bon, « Raté » sinon : le suivant enchaîne direct.",
+    pause: "Mettre en pause",
+    paused: "Pause",
+    pausedSub: "Le chrono est arrêté. On reprend quand vous voulez.",
+    resume: "Reprendre",
     wordsSaid: (n) => `${n} mot${n > 1 ? "s" : ""} déjà dit${n > 1 ? "s" : ""}`,
     valid: "Validé",
     failed: "Raté",
@@ -100,7 +102,7 @@ export const STR: I18n<CategoryChronoStrings> = {
     soundOn: "Turn sound on",
     soundOff: "Mute",
     rule1: ["A ", "category", " comes up (e.g. “Fruit”)."],
-    rule2: ["Take turns saying ", "one word", " from the category before the timer runs out. The others judge (“Good” / “Fail”), then pass the phone."],
+    rule2: ["Take turns saying ", "one word", " from the category before the timer runs out. One person holds the phone and taps “Good” / “Fail” for everyone."],
     rule3: ["The timer gets ", "shorter", " with every word. No word, a repeat or off-topic: ", "you lose a life", "."],
     themes: "Themes",
     poolCount: (n) => `${n} categor${n === 1 ? "y" : "ies"} in the deck`,
@@ -115,10 +117,11 @@ export const STR: I18n<CategoryChronoStrings> = {
     go: "Go!",
     itsTurn: "Over to",
     sayWord: "Say a word from the category!",
-    judgeHint: "Everyone else: tap “Good” if the word works, “Fail” if not.",
-    passTo: "Pass the phone to",
-    passSub: "The timer is paused. Tap “Ready” once you're holding the phone: your timer starts.",
-    ready: "Ready!",
+    judgeHint: "“Good” if the word works, “Fail” if not: the next player goes straight away.",
+    pause: "Pause",
+    paused: "Paused",
+    pausedSub: "The timer is stopped. Resume whenever you're ready.",
+    resume: "Resume",
     wordsSaid: (n) => `${n} word${n === 1 ? "" : "s"} said`,
     valid: "Good",
     failed: "Fail",
@@ -144,7 +147,7 @@ export const STR: I18n<CategoryChronoStrings> = {
     soundOn: "Activar el sonido",
     soundOff: "Silenciar",
     rule1: ["Sale una ", "categoría", " (p. ej., «Frutas»)."],
-    rule2: ["Por turnos, di ", "una palabra", " de la categoría antes de que acabe el tiempo. Los demás juzgan («Vale» / «Fallo») y pasa el móvil."],
+    rule2: ["Por turnos, di ", "una palabra", " de la categoría antes de que acabe el tiempo. Una sola persona sostiene el móvil y toca «Vale» / «Fallo» para todos."],
     rule3: ["El tiempo se ", "acorta", " con cada palabra. Sin palabra, repetida o fuera de tema: ", "pierdes una vida", "."],
     themes: "Los temas",
     poolCount: (n) => `${n} categoría${n === 1 ? "" : "s"} en el mazo`,
@@ -159,10 +162,11 @@ export const STR: I18n<CategoryChronoStrings> = {
     go: "¡Ya!",
     itsTurn: "Le toca a",
     sayWord: "¡Di una palabra de la categoría!",
-    judgeHint: "Los demás: tocad «Vale» si la palabra es buena, «Fallo» si no.",
-    passTo: "Pásale el móvil a",
-    passSub: "El tiempo está en pausa. Toca «Listo» cuando tengas el móvil: empieza tu tiempo.",
-    ready: "¡Listo!",
+    judgeHint: "«Vale» si la palabra es buena, «Fallo» si no: el siguiente sigue al instante.",
+    pause: "Pausar",
+    paused: "Pausa",
+    pausedSub: "El tiempo está parado. Seguid cuando queráis.",
+    resume: "Seguir",
     wordsSaid: (n) => `${n} palabra${n === 1 ? "" : "s"} dicha${n === 1 ? "" : "s"}`,
     valid: "Vale",
     failed: "Fallo",

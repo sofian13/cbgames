@@ -85,10 +85,11 @@ const colorByIdx = (idx: number): MascotColor => MASCOT_COLORS[idx % MASCOT_COLO
 export default function UndercoverLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) {
   // ── State global ────────────────────────────────────────
   const [phase, setPhase]           = useState<LocalPhase>("setup-players");
-  useGameFinished(phase === "over"); // fin de partie → demande de note éventuelle (app)
   const [players, setPlayers]       = useState<LocalPlayer[]>([]);
   const [round, setRound]           = useState(1);
   const [endReason, setEndReason]   = useState<EndReason | null>(null);
+  // Fin de partie → note éventuelle + Soirée (app) : les joueurs du camp gagnant
+  useGameFinished(phase === "over", { winners: endReason ? players.filter((p) => (endReason === "civils-win" ? p.role === "civil" : endReason === "undercover-wins" ? p.role === "undercover" || p.role === "mrwhite" : endReason === "jester-wins" ? p.role === "jester" : p.role === "mrwhite")).map((p) => p.name) : [] });
   // Catégories de mots sélectionnées (toutes par défaut, sauf le +18).
   // Langue figée pour la partie (on ne change pas de banque de mots en cours de jeu).
   const [lang] = useState<Lang>(() => getLang());

@@ -1,11 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Check, Crown, Home as HomeIcon, Pause, Share2, Sparkles } from "lucide-react";
 import { ConfettiBurst } from "@/components/ConfettiBurst";
 import { colorForIndex } from "@/components/games/local-kit";
 import { armPartyBand, disarmPartyBand } from "@/lib/saved-players";
 import { setPartyMood } from "@/lib/party-mood";
 import { emitGameFinished, GAME_FINISHED_EVENT, type GameFinishedDetail } from "@/lib/game-finished";
-import { pick, useLang } from "@/lib/i18n";
+import { getLang, pick, useLang } from "@/lib/i18n";
 import { playCombo, playSfx, preloadSfx } from "@/lib/sfx";
 import { GAME_KIND, getZGame } from "../catalog";
 import { shareApp } from "../settings";
@@ -46,11 +46,20 @@ export function SoireeRun({ onHome, onNew, toast }: { onHome: () => void; onNew:
   const pause = () => { disarmPartyBand(); setPartyMood(null); onHome(); };
 
   if (s.phase === "playing") {
+    const t = pick(SOIREE, getLang());
+    const toWinner = () => { disarmPartyBand(); setPartyMood(null); playSfx("whoosh", { volume: 0.6 }); setPhase("winner"); };
     return (
       <GameScreen
         key={`${s.index}-${s.playlist[s.index]}`}
         id={s.playlist[s.index]}
-        onExit={() => { disarmPartyBand(); setPartyMood(null); playSfx("whoosh", { volume: 0.6 }); setPhase("winner"); }}
+        onExit={toWinner}
+        // Écran de fin du jeu : gros « Jeu suivant » qui enchaîne la soirée (plus besoin de la croix)
+        next={{
+          label: s.index < s.playlist.length - 1 ? t.nextGame : t.toResults,
+          stayLabel: t.stayHere,
+          onNext: toWinner,
+          always: NO_END.includes(s.playlist[s.index]),
+        }}
       />
     );
   }
@@ -163,14 +172,86 @@ function Intro({ s, onPause }: { s: SoireeState; onPause: () => void }) {
   );
 }
 
-/* ───────── « Qui a gagné ce jeu ? » ───────── */
+/** Jeux sans écran de fin (on enchaîne quand on veut) */
+const NO_END: string[] = ["tu-prefere"];
+
+/* ───────── Gagnant du jeu : automatique si le jeu le sait, sinon « Qui a gagné ? » ───────── */
 function Winner({ s, onPause }: { s: SoireeState; onPause: () => void }) {
+  // Le jeu a désigné le(s) gagnant(s) via son signal de fin : on l'annonce sans rien demander
+  const suggested = (s.pending?.winners ?? []).filter((w) => s.band.includes(w));
+  const [fixing, setFixing] = useState(false);
+  if (suggested.length && !fixing) return <AutoWinner s={s} winners={suggested} onFix={() => setFixing(true)} />;
+  return <PickWinner s={s} suggested={suggested} onPause={onPause} />;
+}
+
+/* Annonce automatique « Malik gagne La Patate ! » (1,8 s ou tap), lien discret « Corriger » */
+function AutoWinner({ s, winners, onFix }: { s: SoireeState; winners: string[]; onFix: () => void }) {
   const lang = useLang();
   const t = pick(SOIREE, lang);
   const g = getZGame(s.playlist[s.index])!;
   const info = gameInfo(g, lang);
-  // Le jeu a peut-être déjà désigné le(s) gagnant(s) : pré-sélectionnés, la table valide
-  const suggested = (s.pending?.winners ?? []).filter((w) => s.band.includes(w));
+  const done = useRef(false);
+  const timer = useRef<number | undefined>(undefined);
+  const ready = useTapReady();
+  const go = () => {
+    if (done.current) return;
+    done.current = true;
+    window.clearTimeout(timer.current);
+    haptic("success");
+    playSfx("coins", { volume: 0.6 });
+    recordWinners(winners);
+  };
+  useEffect(() => {
+    playSfx("tada", { volume: 0.7 });
+    haptic("success");
+    timer.current = window.setTimeout(go, 1900);
+    return () => window.clearTimeout(timer.current);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const many = winners.length > 1;
+  const size = winners.length === 1 ? 150 : winners.length <= 3 ? 96 : 70;
+  const title = t.autoWin(winners, info.name);
+  return (
+    <div
+      className="zz-screen-in fixed inset-0 flex flex-col items-center justify-center px-6 text-center"
+      style={{ zIndex: 30, background: "radial-gradient(rgba(255,255,255,0.07) 1.4px, transparent 1.6px) 0 0 / 22px 22px, #211052", paddingTop: "var(--sat)", paddingBottom: "var(--sab)" }}
+      onClick={() => { if (ready()) go(); }}
+      role="button"
+      aria-label={t.tapNext}
+    >
+      <SoireeStyles />
+      <div className="pointer-events-none fixed inset-0" style={{ zIndex: 0 }}><ConfettiBurst count={40} /></div>
+      <div className="relative flex flex-col items-center" style={{ zIndex: 1 }}>
+        <Tag bg={ZPALETTE[g.color].body} color={ZPALETTE[g.color].ink} tilt={-3}>{info.name}</Tag>
+        <div className={`flex flex-wrap items-end justify-center ${many ? "gap-2" : ""}`} style={{ marginTop: Math.round(size * 0.36) }}>{/* place pour la couronne */}
+          {winners.map((w, i) => (
+            <div key={w} className={i === 0 ? "zzs-dance" : undefined}>
+              <BandBlob name={w} size={size} color={colorOf(s, w)} mood="laughing" seed={i + 2} crown outline shadow={false} talk={i === 0} autoTalk={i === 0} />
+            </div>
+          ))}
+        </div>
+        <h1 className="zz-title mt-4 text-white" style={{ fontSize: title.length > 34 ? 30 : title.length > 22 ? 36 : 44, lineHeight: 1, overflowWrap: "anywhere" }}>{title}</h1>
+        <p className="mt-3 text-[18px] font-extrabold" style={{ color: "#FFD23F" }}>{t.autoPts(winners.length)}</p>
+        <p className="mt-6 text-[14px] font-semibold" style={{ color: "var(--zz-dim)" }}>{t.tapNext}</p>
+      </div>
+      <button
+        type="button"
+        onClick={(e) => { e.stopPropagation(); if (done.current) return; window.clearTimeout(timer.current); haptic(); playSfx("pop2", { volume: 0.5 }); onFix(); }}
+        className="zz-tap fixed left-1/2 min-h-11 -translate-x-1/2 px-4 text-[14px] font-bold text-white underline decoration-2 underline-offset-4"
+        style={{ zIndex: 2, bottom: "calc(var(--sab) + 12px)", opacity: 0.7 }}
+      >
+        {t.fix}
+      </button>
+    </div>
+  );
+}
+
+/* « Qui a gagné ce jeu ? » : le jeu ne le sait pas (ou on corrige) */
+function PickWinner({ s, suggested, onPause }: { s: SoireeState; suggested: string[]; onPause: () => void }) {
+  const lang = useLang();
+  const t = pick(SOIREE, lang);
+  const g = getZGame(s.playlist[s.index])!;
+  const info = gameInfo(g, lang);
   const [picked, setPicked] = useState<string[]>(suggested);
   const ready = useTapReady();
   const toggle = (name: string) => {

@@ -138,6 +138,7 @@ export function SouffleMode({ plan, ...c }: ModeCommon & { plan: SoufflePlan }) 
   return (
     <ModeEnd
       rows={rows}
+      result={{ scores: { names: ids.map((p) => c.players[p]), values: ids.map((p) => tot[p]) } }}
       unit={t.unitS}
       loser={loser ? { name: c.players[loser.p], colorIndex: loser.p, sentence: loser.s, onReroll: () => setLoser({ ...loser, s: c.rerollDare(loser.s) }), title: `${m.lastPenalty} · ${c.players[loser.p]}` } : null}
       tieNote={ids.length > 1 ? m.tieBottom : null}

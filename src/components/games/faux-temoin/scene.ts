@@ -360,7 +360,7 @@ export function planRound(s: Scene, nLast = 1): { ideas: Question[]; lasts: Ques
     if (!lasts.some((l) => l.topic.split("-")[0] === q.topic.split("-")[0])) lasts.push(q);
   }
   for (const q of cands) if (lasts.length < nLast && !lasts.includes(q)) lasts.push(q);
-  if (!lasts.length) lasts.push(all[all.length - 1]);
+  if (!lasts.length && nLast > 0) lasts.push(all[all.length - 1]);
   // Aucune idée ne doit trahir la réponse d'une dernière chance (les réponses se disent à voix haute)
   const leaksOne = (last: Question, q: Question) =>
     (last.q.t === "objectPresent" && last.answer.k === "obj" &&

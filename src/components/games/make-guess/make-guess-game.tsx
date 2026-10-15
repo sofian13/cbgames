@@ -139,7 +139,6 @@ export default function MakeGuessGame({
   const tuto = useFirstTimeTuto("make-guess", { atMount: true });
   const tutoSlides = useMakeGuessTuto();
   const [rulesOpen, setRulesOpen] = useState(false);
-  useGameFinished(phase === "game-over"); // fin de partie → demande de note éventuelle (app)
   const [currentRound, setCurrentRound] = useState(1);
   const [currentTeamIndex, setCurrentTeamIndex] = useState(0);
   // Dans une manche : passage 0 → le joueur 1 de chaque équipe fait deviner,
@@ -408,6 +407,14 @@ export default function MakeGuessGame({
   });
 
   const sortedFinal = [...finalScores].sort((a, b) => b.score - a.score);
+  // Fin de partie → note éventuelle + Soirée (app) : chaque joueur prend le score de son équipe
+  // (équipe seule en tête = ses deux joueurs gagnent ; égalité en tête = pas de gagnant désigné)
+  useGameFinished(phase === "game-over", {
+    scores: {
+      names: teams.flatMap((t) => [t.player1, t.player2]),
+      values: finalScores.flatMap((f) => [f.score, f.score]),
+    },
+  });
 
   // ── Round summary scores ──
   const roundSummaryScores = teams.map((t, tIdx) => {

@@ -7,6 +7,8 @@ import { useEffect, useRef } from "react";
  * sur le site web personne n'écoute, il ne se passe rien.
  */
 export const GAME_FINISHED_EVENT = "zz:game-finished";
+/** L'écran de fin vient d'être quitté (Rejouer, réglages…) : la partie n'est plus « finie » */
+export const GAME_UNFINISHED_EVENT = "zz:game-unfinished";
 
 export interface GameFinishedDetail {
   /** Fin d'une Soirée Zinzin complète (et non d'un jeu) */
@@ -55,19 +57,26 @@ export function emitGameFinished(detail: GameFinishedDetail = {}) {
 
 /**
  * Une ligne dans le jeu : `useGameFinished(phase === "end")` → émis à chaque arrivée sur l'écran de fin.
- * Optionnel : `{ loser }` et `{ scores }` (classement + gagnants), lus au moment de la fin.
+ * Optionnel : `{ loser }`, `{ scores }` (classement + gagnants) et `{ winners }` (gagnants
+ * désignés par le jeu lui-même, ex. l'équipe ou le camp gagnant), lus au moment de la fin.
  */
-export function useGameFinished(finished: boolean, info?: { loser?: string | null; scores?: GameScores }) {
+export function useGameFinished(finished: boolean, info?: { loser?: string | null; scores?: GameScores; winners?: string[] | null }) {
   const latest = useRef(info);
   useEffect(() => { latest.current = info; });
   useEffect(() => {
     if (!finished) return;
     const sc = latest.current?.scores;
     const ranking = sc ? rankByScores(sc.names, sc.values, sc.lowerWins) : [];
+    // Gagnants explicites du jeu (camp, équipe, dernier en vie…) prioritaires sur le podium des scores
+    const explicit = (latest.current?.winners ?? []).map((w) => (w ?? "").trim()).filter(Boolean);
+    const winners = explicit.length ? Array.from(new Set(explicit)) : ranking.length >= 2 ? topOf(ranking) : [];
     emitGameFinished({
       loser: latest.current?.loser ?? null,
-      ...(ranking.length >= 2 ? { ranking, winners: topOf(ranking) } : {}),
+      ...(ranking.length >= 2 ? { ranking } : {}),
+      ...(winners.length ? { winners } : {}),
     });
+    // On quitte l'écran de fin (Rejouer, démontage…) : l'app retire son bouton « Jeu suivant »
+    return () => { window.dispatchEvent(new Event(GAME_UNFINISHED_EVENT)); };
   }, [finished]);
 }
 

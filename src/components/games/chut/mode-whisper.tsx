@@ -149,6 +149,7 @@ export function WhisperMode({ plan, ...c }: ModeCommon & { plan: WhisperPlan }) 
     <ModeEnd
       title={win == null ? m.wTie : m.wWinner(m.teamNames[win])}
       rows={rows}
+      result={{ winners: win == null ? [] : plan.teams[win].map((p) => c.players[p]) }}
       unit={m.unitPts}
       loser={null}
       top={lose != null && sentence ? (

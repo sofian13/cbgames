@@ -274,13 +274,14 @@ export default function MotsEspionsLocal({ onReturnToLobby }: GameProps) {
   // Langue fixée pour la partie (mots de la grille)
   const [lang] = useState<Lang>(() => getLang());
   const [step, setStep] = useState<Step>("players");
-  useGameFinished(step === "end"); // fin de partie → demande de note éventuelle (app)
   const [players, setPlayers] = useState<string[]>([]);
   const [teamOf, setTeamOf] = useState<Team[]>([]);
   const [chiefs, setChiefs] = useState<Record<Team, number>>({ red: -1, blue: -1 });
   const [starterChoice, setStarterChoice] = useState<StarterChoice>("random");
   const [timer, setTimer] = useState<number>(0);
   const [game, setGame] = useState<GameState | null>(null);
+  // Fin de partie → note éventuelle + Soirée (app) : les joueurs de l'équipe gagnante
+  useGameFinished(step === "end", { winners: game?.winner ? players.filter((_, i) => teamOf[i] === game.winner) : [] });
   const [overlay, setOverlay] = useState<Overlay>(null);
   const [selected, setSelected] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
