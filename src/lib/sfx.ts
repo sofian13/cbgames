@@ -28,7 +28,9 @@ export type SfxName =
   // jingle de lancement (écran des blobs qui tombent)
   | "jingle" | "laugh"
   // liquides (pour et fizz bouclables : playLoop)
-  | "pour" | "glug" | "splash" | "fizz";
+  | "pour" | "glug" | "splash" | "fizz"
+  // élastique (blob tiré de l'accueil) : grincement bouclable pendant le tirage, claquement au lâcher
+  | "elastic-stretch" | "elastic-snap";
 
 /** Sons composés (plusieurs samples superposés / enchaînés). */
 export type SfxCombo = "explosion" | "fanfare" | "drumroll" | "fail" | "reveal" | "countdown";

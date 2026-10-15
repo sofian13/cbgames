@@ -1,7 +1,7 @@
 import { useEffect, useRef, type RefObject } from "react";
 import { ZBlob } from "./ZBlob";
 import { haptic, reducedMotion } from "./util";
-import { playSfx } from "@/lib/sfx";
+import { playLoop, playSfx, preloadSfx, type LoopHandle } from "@/lib/sfx";
 
 /**
  * Secret de l'accueil : un blob au bout d'un élastique, aux deux bords.
@@ -9,6 +9,9 @@ import { playSfx } from "@/lib/sfx";
  * - Tout en bas, tirer vers le haut fait monter un autre blob depuis le bas (même effet, inversé).
  * Résistance progressive (~140 px max). Au relâchement il repart d'un coup et claque (« boing ») ;
  * la page rebondit un peu.
+ * - Son : pendant le tirage, grincement d'élastique en boucle (vrai enregistrement) dont le volume et
+ *   la hauteur montent avec la tension ; coupé en fondu court au lâcher, juste sous le claquement.
+ *   Bouton son coupé : playLoop/playSfx ne jouent rien.
  * - Démarre seulement si le doigt se pose alors que l'accueil est DÉJÀ au bord, et que son
  *   1er mouvement part vers l'extérieur, franchement vertical. Un défilement (même rapide) qui
  *   arrive au bord pendant le geste ne déclenche rien ; un glissement de rail non plus.
@@ -32,6 +35,9 @@ const DROP = 70;
 const MIN_SNAP = 34;
 /** Tolérance (px) pour « au bord » (arrondis de scrollTop sur écrans Retina) */
 const EDGE = 1;
+/** Grincement : volume et vitesse (= hauteur) au repos → à pleine tension */
+const CREAK_VOL: [number, number] = [0.06, 0.62];
+const CREAK_RATE: [number, number] = [0.78, 1.3];
 
 type Side = "top" | "bottom";
 type Rig = { r: HTMLDivElement; ro: HTMLDivElement; b: HTMLDivElement };
@@ -53,6 +59,9 @@ export function PullBlob({ homeRef, contentRef }: { homeRef: RefObject<HTMLEleme
     let atTop = false, atBottom = false;
     let side: Side = "top";
     let x0 = 0, y0 = 0, d = 0, raf = 0, buzzed = false;
+    /** Boucle du grincement pendant le tirage (null hors tirage) */
+    let creak: LoopHandle | null = null;
+    const stopCreak = (fade: number) => { creak?.(fade); creak = null; };
     const reduce = reducedMotion();
 
     const rigOf = (s: Side): Rig | null => {
@@ -91,6 +100,8 @@ export function PullBlob({ homeRef, contentRef }: { homeRef: RefObject<HTMLEleme
 
     const release = () => {
       const was = d;
+      // Le grincement s'efface (vite si ça claque, pour laisser la place au « boing »)
+      stopCreak(was >= MIN_SNAP ? 0.04 : 0.12);
       d = 0;
       cancelAnimationFrame(raf);
       raf = 0;
@@ -103,7 +114,8 @@ export function PullBlob({ homeRef, contentRef }: { homeRef: RefObject<HTMLEleme
       const snap = was >= MIN_SNAP;
       const bTop = blobEdge(was) - SIZE;
       if (snap) {
-        // Il repart d'un coup et claque contre le bord : « boing »
+        // Il repart d'un coup et claque contre le bord : élastique lâché + « boing »
+        playSfx("elastic-snap", { volume: 0.5, rate: 0.9 + Math.min(1, was / MAX) * 0.2 });
         playSfx("bloop2", { volume: 0.55, rate: 0.55 });
         playSfx("bloop2", { volume: 0.4, rate: 0.95, delay: 0.09 });
         haptic("light");
@@ -165,6 +177,7 @@ export function PullBlob({ homeRef, contentRef }: { homeRef: RefObject<HTMLEleme
             }
           }
           buzzed = false;
+          creak = playLoop("elastic-stretch", { volume: CREAK_VOL[0], rate: CREAK_RATE[0], fadeIn: 0.06 });
         } else {
           state = "idle";
           return;
@@ -174,6 +187,12 @@ export function PullBlob({ homeRef, contentRef }: { homeRef: RefObject<HTMLEleme
       const pull = side === "top" ? dy : -dy;
       d = Math.max(0, MAX * (1 - Math.exp(-Math.max(0, pull) / K)));
       if (!buzzed && d > MAX * 0.85) { buzzed = true; haptic("light"); }
+      if (creak) {
+        // Plus on tire, plus l'élastique grince fort et aigu
+        const st = Math.min(1, d / MAX);
+        creak.setVolume(CREAK_VOL[0] + (CREAK_VOL[1] - CREAK_VOL[0]) * Math.pow(st, 0.8));
+        creak.setRate(CREAK_RATE[0] + (CREAK_RATE[1] - CREAK_RATE[0]) * st);
+      }
       schedule();
     };
     const onStart = (e: TouchEvent) => {
@@ -183,6 +202,8 @@ export function PullBlob({ homeRef, contentRef }: { homeRef: RefObject<HTMLEleme
       atTop = home.scrollTop <= EDGE;
       atBottom = home.scrollHeight - home.clientHeight > EDGE && home.scrollTop + home.clientHeight >= home.scrollHeight - EDGE;
       if (!atTop && !atBottom) return;
+      // Sons du tirage prêts avant le 1er mouvement (déjà en cache après la 1re fois)
+      preloadSfx(["elastic-stretch", "elastic-snap", "bloop2"]);
       x0 = e.touches[0].clientX;
       y0 = e.touches[0].clientY;
       state = "maybe";
@@ -203,6 +224,7 @@ export function PullBlob({ homeRef, contentRef }: { homeRef: RefObject<HTMLEleme
       home.removeEventListener("touchend", onEnd);
       home.removeEventListener("touchcancel", onEnd);
       cancelAnimationFrame(raf);
+      stopCreak(0.05);
       if (content0) { content0.style.transform = ""; content0.style.willChange = ""; }
     };
   }, [homeRef, contentRef]);

@@ -1,5 +1,5 @@
 Sons de Zinzin — bruitages réels, tous sous licence CC0 1.0 ou dans le domaine public.
-Usage commercial libre (app payante comprise), crédit NON obligatoire. Licence vérifiée sur la page source de chaque fichier (13/10/2026 ; son d'interface Kenney bloop2 ajouté le 15/10/2026).
+Usage commercial libre (app payante comprise), crédit NON obligatoire. Licence vérifiée sur la page source de chaque fichier (13/10/2026 ; son d'interface Kenney bloop2 et sons d'élastique Freesound ajoutés le 15/10/2026, licence CC0 lue sur chaque page Freesound).
 Traitement : découpe, fondus, filtrage, superposition, normalisation du volume ; AAC .m4a mono 44,1 kHz 96 kbit/s.
 Noms partagés (alias dans src/lib/sfx.ts) : success→correct, wrong→buzzer, question→pop2, powerup→chime, win/levelup→tada, lose→crowd-aww.
 
@@ -51,5 +51,7 @@ fizz (boucle)      | + Wikimedia Commons « Water vaporizing on hot stones.ogg �
 laugh              | OpenGameArt « Group giggling » (Nocturnal_Vanguard / AuraVoice)       | CC0          | https://opengameart.org/content/group-giggling
 laugh              | + Wikimedia Commons « Laughter(s).ogg » (sagetyrtle)                  | CC0          | https://commons.wikimedia.org/wiki/File:Laughter(s).ogg
 bloop2             | Kenney « Interface Sounds » (drop_002)                                 | CC0          | https://kenney.nl/assets/interface-sounds
+elastic-stretch (boucle) | Freesound « S34-16 Stretching bow or balloon.wav » (craigsmith), 36,2–39,4 s | CC0 | https://freesound.org/people/craigsmith/sounds/676001/
+elastic-snap       | Freesound « TentacleSnap.mp3 » (wilhellboy) — bande élastique tirée puis lâchée | CC0 | https://freesound.org/people/wilhellboy/sounds/351373/
 
 jingle.m4a — « Perfect Drop », fourni par le fondateur (licence à confirmer avant publication).
