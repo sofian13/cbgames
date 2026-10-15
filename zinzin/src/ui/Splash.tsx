@@ -5,6 +5,7 @@ import { reducedMotion } from "./util";
 import { ZLogo } from "./Logo";
 import { useT } from "@/lib/i18n";
 import { UI } from "../strings";
+import { playSfx } from "@/lib/sfx";
 
 /**
  * Écran de lancement : des blobs tombent, rebondissent (squash & stretch),
@@ -52,6 +53,9 @@ export function Splash({ onDone }: { onDone: () => void }) {
     setLeaving(true);
     setTimeout(onDone, 260);
   };
+
+  // Jingle de lancement (une fois, respecte le bouton son coupé)
+  useEffect(() => { playSfx("jingle", { volume: 0.85 }); }, []);
 
   useEffect(() => {
     const logoT = setTimeout(() => setLogo(true), still ? 100 : LOGO_AT);

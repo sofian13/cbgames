@@ -24,7 +24,9 @@ export type SfxName =
   | "bomb-tick" | "bomb-tock" | "fuse" | "detonator-beep" | "explosion" | "firecracker"
   // ambiance soirée / plateau télé
   | "applause" | "crowd-cheer" | "crowd-aww" | "drumroll" | "drumroll-end" | "tada" | "cymbal"
-  | "buzzer" | "correct" | "heartbeat" | "whistle" | "chime" | "laugh"
+  | "buzzer" | "correct" | "heartbeat" | "whistle" | "chime"
+  // jingle de lancement (écran des blobs qui tombent)
+  | "jingle" | "laugh"
   // liquides (pour et fizz bouclables : playLoop)
   | "pour" | "glug" | "splash" | "fizz";
 

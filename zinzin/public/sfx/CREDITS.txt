@@ -51,3 +51,5 @@ fizz (boucle)      | + Wikimedia Commons « Water vaporizing on hot stones.ogg �
 laugh              | OpenGameArt « Group giggling » (Nocturnal_Vanguard / AuraVoice)       | CC0          | https://opengameart.org/content/group-giggling
 laugh              | + Wikimedia Commons « Laughter(s).ogg » (sagetyrtle)                  | CC0          | https://commons.wikimedia.org/wiki/File:Laughter(s).ogg
 bloop2             | Kenney « Interface Sounds » (drop_002)                                 | CC0          | https://kenney.nl/assets/interface-sounds
+
+jingle.m4a — « Perfect Drop », fourni par le fondateur (licence à confirmer avant publication).
