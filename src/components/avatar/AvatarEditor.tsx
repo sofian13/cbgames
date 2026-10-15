@@ -12,7 +12,7 @@ import {
   lookHasPremium, randomLook, type AvatarLook, type AvatarSlot, type AvatarTab,
 } from "@/lib/avatar/look";
 import { AVATAR_NAMES, AVATAR_STR } from "@/lib/avatar/i18n";
-import { getSecrets, getServerSecrets, isZinzinName, subscribeSecrets } from "@/lib/avatar/secrets";
+import { getSecrets, getServerSecrets, isBossName, isZinzinName, subscribeSecrets } from "@/lib/avatar/secrets";
 import { AvatarBlob } from "./AvatarBlob";
 import { VoiceRecorderPanel } from "./VoiceUI";
 import { talkMood, useSpeaking, voiceKey } from "@/lib/avatar/voice";
@@ -109,6 +109,7 @@ export function AvatarEditor({
   const secrets = useSyncExternalStore(subscribeSecrets, getSecrets, getServerSecrets);
   const shownName = editName ? cleanNm : name;
   const zinzin = isZinzinName(shownName);
+  const boss = isBossName(shownName);
   // Bouche animée pendant la réécoute du son
   const talk = useSpeaking(voiceKey(cleanNm || name || "?"));
   const canSave = !busy && (!editName || cleanNm.length > 0);
@@ -172,10 +173,10 @@ export function AvatarEditor({
       {/* Aperçu */}
       <div className="relative mx-auto flex w-full max-w-lg shrink-0 items-center justify-between px-4" style={{ height: "min(22dvh, 200px)", minHeight: 108 }}>
         {/* Secret : clin d'œil aux « Zinzin » (couronne arc-en-ciel portée partout) */}
-        {zinzin && (
+        {(zinzin || boss) && (
           <span className="pointer-events-none absolute bottom-0 left-1/2 z-[1] -translate-x-1/2 whitespace-nowrap rounded-full px-2.5 py-0.5 text-[12px] font-bold"
             style={{ ...avSticker("#fff", 2), color: AV_INK, rotate: "-2deg", borderWidth: 2 }}>
-            {t.zinzinCrown}
+            {zinzin ? t.zinzinCrown : t.bossShades}
           </span>
         )}
         <div className="flex flex-col items-center gap-1.5">

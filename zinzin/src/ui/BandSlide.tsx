@@ -13,6 +13,7 @@ import { useBand } from "@/components/avatar/PlayerBlob";
 import { colorForIndexSafe } from "@/components/avatar/colors";
 import { baseLook, type AvatarLook } from "@/lib/avatar/look";
 import { setBand } from "@/lib/saved-players";
+import { isBossName } from "@/lib/avatar/secrets";
 import { uiSfx } from "@/lib/ui-sfx";
 
 /**
@@ -154,7 +155,7 @@ function compose(spots: Spot[], ext: Ext[]) {
 }
 
 /** Le groupe : mesuré (vraie silhouette de chaque perso) puis mis à l'échelle de la place libre. */
-function BandGroup({ looks, active }: { looks: AvatarLook[]; active: boolean }) {
+function BandGroup({ looks, active, boss = -1 }: { looks: AvatarLook[]; active: boolean; boss?: number }) {
   const n = Math.max(1, Math.min(MAX_SHOWN, looks.length)) as N;
   const host = useRef<HTMLDivElement>(null);
   const blobs = useRef<(HTMLDivElement | null)[]>([]);
@@ -229,7 +230,8 @@ function BandGroup({ looks, active }: { looks: AvatarLook[]; active: boolean }) 
             ["--d" as string]: `${-i * 400}ms`,
           }}>
             <div ref={(el) => { blobs.current[i] = el; }}>
-              <AvatarBlob look={look} size={size} mood={sp.mood} animate={active && i < 2} />
+              {/* Secret « Le Boss » : seulement les lunettes (la couronne « Zinzin » changerait la silhouette mesurée) */}
+              <AvatarBlob look={look} size={size} mood={sp.mood} animate={active && i < 2} name={i === boss ? "Sofian" : undefined} />
             </div>
           </div>
         );
@@ -239,15 +241,17 @@ function BandGroup({ looks, active }: { looks: AvatarLook[]; active: boolean }) 
 }
 
 /** Persos montrés : ceux de la bande (s'ils ont un look), sinon la bande d'exemple. */
-function useShownLooks(): { looks: AvatarLook[]; hasBand: boolean } {
+function useShownLooks(): { looks: AvatarLook[]; hasBand: boolean; boss: number } {
   const band = useBand();
   const custom = band.some((b) => b.look);
-  if (!custom) return { looks: SAMPLE_BAND, hasBand: band.length > 0 };
+  if (!custom) return { looks: SAMPLE_BAND, hasBand: band.length > 0, boss: -1 };
   // « Moi » en premier (au centre), puis l'ordre de la bande
-  const ordered = [...band].sort((a, b) => Number(b.me) - Number(a.me));
+  const ordered = [...band].sort((a, b) => Number(b.me) - Number(a.me)).slice(0, MAX_SHOWN);
   return {
-    looks: ordered.slice(0, MAX_SHOWN).map((b) => b.look ?? baseLook(colorForIndexSafe(band.indexOf(b)))),
+    looks: ordered.map((b) => b.look ?? baseLook(colorForIndexSafe(band.indexOf(b)))),
     hasBand: true,
+    // Rang du perso « Sofian » (lunettes noires), ou -1
+    boss: ordered.findIndex((b) => isBossName(b.name)),
   };
 }
 
@@ -258,7 +262,7 @@ function useShownLooks(): { looks: AvatarLook[]; hasBand: boolean } {
 export function BandSlide({ f, lang, active, hidden }: { f: ZFeatured; lang: Lang; active: boolean; hidden: boolean }) {
   const t = pick(BAND_SLIDE, lang);
   const band = useBand();
-  const { looks, hasBand } = useShownLooks();
+  const { looks, hasBand, boss } = useShownLooks();
   const [open, setOpen] = useState<"band" | "create" | null>(null);
   const action = hasBand ? t.see : t.create;
   // Perso créé : on enchaîne sur « Ma bande » (pour ajouter les potes)
@@ -293,7 +297,7 @@ export function BandSlide({ f, lang, active, hidden }: { f: ZFeatured; lang: Lan
             </span>
           </div>
           {/* La bande, en groupe, dans la place libre à droite du texte */}
-          <BandGroup looks={looks} active={active} />
+          <BandGroup looks={looks} active={active} boss={boss} />
         </div>
       </button>
 

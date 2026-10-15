@@ -93,6 +93,8 @@ interface MascotProps {
   tongue?: boolean;
   tear?: boolean;
   sparkle?: boolean;
+  /** Lunettes noires (secret « Le Boss ») : comme l'humeur « cool », sans changer la bouche */
+  shades?: boolean;
   delay?: number;
   style?: CSSProperties;
   className?: string;
@@ -101,7 +103,7 @@ interface MascotProps {
 export function Mascot({
   size = 80, color = "purple", mood = "happy", look = "center",
   bob = true, blink = true, arms = false, crown = false, sweat = false,
-  cheering = false, shadow = true, tongue = false, tear = false, sparkle = false,
+  cheering = false, shadow = true, tongue = false, tear = false, sparkle = false, shades = false,
   delay = 0, style, className,
 }: MascotProps) {
   const c = MASCOT_PALETTE[color] ?? MASCOT_PALETTE.purple;
@@ -178,6 +180,8 @@ export function Mascot({
 
   const isAsleep = mood === "asleep";
   const crownH = crown ? s * 0.3 : 0;
+  // Lunettes noires : humeur « cool », ou secret « Le Boss » (sauf éliminé : yeux en croix lisibles)
+  const glasses = mood === "cool" || (shades && mood !== "dead");
   const hasBrows = mood === "angry" || mood === "sus" || mood === "thinking" || mood === "cool";
 
   return (
@@ -246,7 +250,7 @@ export function Mascot({
           </>
         )}
 
-        {mood === "cool" && (
+        {glasses && (
           <div style={{ position: "absolute", top: eyeY - eyeSize * 0.2, left: "50%", transform: "translateX(-50%)", display: "flex", gap: s * 0.04, alignItems: "center", zIndex: 4 }}>
             <div style={{ position: "relative", overflow: "hidden", width: eyeSize * 1.4, height: eyeSize * 1.1, background: "linear-gradient(135deg, #1A0E2E 60%, #5B36D6 100%)", borderRadius: "30% 60% 30% 30%", border: `1.5px solid ${INK}` }}>
               <div style={{ position: "absolute", top: "-30%", left: "-60%", width: "55%", height: "180%", background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.55), transparent)", transform: "rotate(20deg)", animation: `mascot-shine ${2.6 + delay}s ease-in-out infinite`, animationDelay: `${delay}s` }} />
@@ -258,7 +262,7 @@ export function Mascot({
           </div>
         )}
 
-        {mood !== "cool" && (
+        {!glasses && (
           <div style={{ position: "absolute", top: eyeY - eyeSize / 2, left: "50%", transform: "translateX(-50%)", display: "flex", gap: eyeGap, zIndex: 2 }}>
             <BlobEye size={eyeSize} look={lookOff} closed={leftClosed} shape={leftShape} delay={delay} blink={blink && !leftClosed && leftShape === "round"} />
             <BlobEye size={eyeSize} look={lookOff} closed={rightClosed} shape={rightShape} delay={delay + 0.05} blink={blink && !rightClosed && rightShape === "round"} />

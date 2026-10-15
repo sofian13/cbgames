@@ -231,12 +231,12 @@ const BASE_CARDS: PicoletteCard[] = [
   { type: "table", pack: "quiz", text: "Citez chacun un personnage de conte de fées.", hint: T },
 
   // ── JOKERS (rares, effet immédiat) ───────────────────
-  { type: "joker", pack: "soft", joker: "amnesty", text: "AMNISTIE — La dernière peine distribuée est annulée.", hint: "Le compteur est corrigé tout de suite." },
-  { type: "joker", pack: "soft", joker: "pick", text: "CHOISIS — Le lecteur désigne directement qui prend une peine, sans débat.", hint: "Choisis vite, c'est ton heure." },
-  { type: "joker", pack: "soft", joker: "shield", text: "BOUCLIER — Donne un bouclier à quelqu'un : sa prochaine peine sera annulée.", hint: "Le bouclier 🛡️ s'affiche à côté de son nom." },
-  { type: "joker", pack: "soft", joker: "pick", text: "DOUBLON — Désigne deux joueurs : duel de regards. Le premier qui rit ou cligne des yeux prend la peine.", hint: "Le lecteur arbitre." },
-  { type: "joker", pack: "soft", joker: "reader", text: "PASSE-MAIN — Donne le téléphone à qui tu veux : c'est lui qui lit la suite.", hint: "Effet immédiat." },
-  { type: "joker", pack: "trash", joker: "pick", text: "INVERSION — Le dernier perdant choisit qui prend une peine à sa place.", hint: "Le pouvoir change de main." },
+  { type: "joker", pack: "soft", joker: "amnesty", text: "AMNISTIE : la dernière peine distribuée est annulée.", hint: "Le compteur est corrigé tout de suite." },
+  { type: "joker", pack: "soft", joker: "pick", text: "CHOISIS : le lecteur désigne directement qui prend une peine, sans débat.", hint: "Choisis vite, c'est ton heure." },
+  { type: "joker", pack: "soft", joker: "shield", text: "BOUCLIER : donne un bouclier à quelqu'un, sa prochaine peine sera annulée.", hint: "Le bouclier 🛡️ s'affiche à côté de son nom." },
+  { type: "joker", pack: "soft", joker: "pick", text: "DOUBLON : désigne deux joueurs pour un duel de regards. Le premier qui rit ou cligne des yeux prend la peine.", hint: "Le lecteur arbitre." },
+  { type: "joker", pack: "soft", joker: "reader", text: "PASSE-MAIN : donne le téléphone à qui tu veux, c'est lui qui lit la suite.", hint: "Effet immédiat." },
+  { type: "joker", pack: "trash", joker: "pick", text: "INVERSION : le dernier perdant choisit qui prend une peine à sa place.", hint: "Le pouvoir change de main." },
 ];
 
 // ═════════════════════════════════════════════════════════════
@@ -677,11 +677,11 @@ const MORE_CARDS: PicoletteCard[] = [
   { type: "coquin", pack: "coquin", text: "{p1}, fais ta déclaration la plus romantique… au canapé.", hint: "Pas convaincant ? Peine." },
 
   // ── JOKERS ────────────────────────────────────────────
-  { type: "joker", pack: "soft", joker: "clear", text: "LIBÉRATION — La règle en cours est levée. Respirez.", hint: "Effet immédiat." },
-  { type: "joker", pack: "soft", joker: "none", text: "PAUSE EAU — Tout le monde boit un verre d'eau. Aucune peine sur cette carte.", hint: "Hydratation, c'est la base." },
-  { type: "joker", pack: "soft", joker: "none", text: "TOURNÉE DE COMPLIMENTS — Chacun fait un compliment sincère à son voisin de gauche.", hint: "Aucune peine sur cette carte." },
-  { type: "joker", pack: "soft", joker: "shield", text: "ANGE GARDIEN — Le lecteur offre un bouclier à la personne de son choix.", hint: "Le bouclier s'affiche à côté de son nom." },
-  { type: "joker", pack: "pop", joker: "pick", text: "VENGEANCE — Celui qui a le plus de peines choisit qui prend la suivante.", hint: "Le compteur décide qui a le pouvoir." },
+  { type: "joker", pack: "soft", joker: "clear", text: "LIBÉRATION : la règle en cours est levée. Respirez.", hint: "Effet immédiat." },
+  { type: "joker", pack: "soft", joker: "none", text: "PAUSE EAU : tout le monde boit un verre d'eau. Aucune peine sur cette carte.", hint: "Hydratation, c'est la base." },
+  { type: "joker", pack: "soft", joker: "none", text: "TOURNÉE DE COMPLIMENTS : chacun fait un compliment sincère à son voisin de gauche.", hint: "Aucune peine sur cette carte." },
+  { type: "joker", pack: "soft", joker: "shield", text: "ANGE GARDIEN : le lecteur offre un bouclier à la personne de son choix.", hint: "Le bouclier s'affiche à côté de son nom." },
+  { type: "joker", pack: "pop", joker: "pick", text: "VENGEANCE : celui qui a le plus de peines choisit qui prend la suivante.", hint: "Le compteur décide qui a le pouvoir." },
 ];
 
 /** Cartes françaises (référence : EN / ES suivent le même ordre et la même structure). */

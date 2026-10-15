@@ -183,12 +183,12 @@ const BASE_CARDS_EN: PicoletteCard[] = [
   { type: "table", pack: "quiz", text: "Take turns naming a fairy-tale character.", hint: T },
 
   // ── JOKERS (rare, instant effect) ────────────────────
-  { type: "joker", pack: "soft", joker: "amnesty", text: "AMNESTY — The last penalty handed out is cancelled.", hint: "The counter is fixed right away." },
-  { type: "joker", pack: "soft", joker: "pick", text: "PICK — The reader chooses who takes a penalty, no debate.", hint: "Choose fast, this is your moment." },
-  { type: "joker", pack: "soft", joker: "shield", text: "SHIELD — Give someone a shield: their next penalty is cancelled.", hint: "The 🛡️ shield shows up next to their name." },
-  { type: "joker", pack: "soft", joker: "pick", text: "DOUBLE — Pick two players for a staring contest. First one to laugh or blink takes the penalty.", hint: "The reader referees." },
-  { type: "joker", pack: "soft", joker: "reader", text: "HAND-OFF — Give the phone to whoever you want: they read the next card.", hint: "Instant effect." },
-  { type: "joker", pack: "trash", joker: "pick", text: "SWITCH — The last loser picks who takes a penalty in their place.", hint: "The power changes hands." },
+  { type: "joker", pack: "soft", joker: "amnesty", text: "AMNESTY: the last penalty handed out is cancelled.", hint: "The counter is fixed right away." },
+  { type: "joker", pack: "soft", joker: "pick", text: "PICK: the reader chooses who takes a penalty, no debate.", hint: "Choose fast, this is your moment." },
+  { type: "joker", pack: "soft", joker: "shield", text: "SHIELD: give someone a shield. Their next penalty is cancelled.", hint: "The 🛡️ shield shows up next to their name." },
+  { type: "joker", pack: "soft", joker: "pick", text: "DOUBLE: pick two players for a staring contest. First one to laugh or blink takes the penalty.", hint: "The reader referees." },
+  { type: "joker", pack: "soft", joker: "reader", text: "HAND-OFF: give the phone to whoever you want. They read the next card.", hint: "Instant effect." },
+  { type: "joker", pack: "trash", joker: "pick", text: "SWITCH: the last loser picks who takes a penalty in their place.", hint: "The power changes hands." },
 ];
 
 // ═════════════════════════════════════════════════════════════
@@ -629,11 +629,11 @@ const MORE_CARDS_EN: PicoletteCard[] = [
   { type: "coquin", pack: "coquin", text: "{p1}, make your most romantic declaration… to the sofa.", hint: "Not convincing? Penalty." },
 
   // ── JOKERS ────────────────────────────────────────────
-  { type: "joker", pack: "soft", joker: "clear", text: "RELEASE — The current rule is lifted. Breathe.", hint: "Instant effect." },
-  { type: "joker", pack: "soft", joker: "none", text: "WATER BREAK — Everyone drinks a glass of water. No penalty on this card.", hint: "Stay hydrated, it's the basics." },
-  { type: "joker", pack: "soft", joker: "none", text: "COMPLIMENT ROUND — Everyone gives a sincere compliment to the person on their left.", hint: "No penalty on this card." },
-  { type: "joker", pack: "soft", joker: "shield", text: "GUARDIAN ANGEL — The reader gives a shield to anyone they like.", hint: "The shield shows up next to their name." },
-  { type: "joker", pack: "pop", joker: "pick", text: "REVENGE — Whoever has the most penalties picks who takes the next one.", hint: "The counter decides who holds the power." },
+  { type: "joker", pack: "soft", joker: "clear", text: "RELEASE: the current rule is lifted. Breathe.", hint: "Instant effect." },
+  { type: "joker", pack: "soft", joker: "none", text: "WATER BREAK: everyone drinks a glass of water. No penalty on this card.", hint: "Stay hydrated, it's the basics." },
+  { type: "joker", pack: "soft", joker: "none", text: "COMPLIMENT ROUND: everyone gives a sincere compliment to the person on their left.", hint: "No penalty on this card." },
+  { type: "joker", pack: "soft", joker: "shield", text: "GUARDIAN ANGEL: the reader gives a shield to anyone they like.", hint: "The shield shows up next to their name." },
+  { type: "joker", pack: "pop", joker: "pick", text: "REVENGE: whoever has the most penalties picks who takes the next one.", hint: "The counter decides who holds the power." },
 ];
 
 export const CARDS_EN: PicoletteCard[] = [...BASE_CARDS_EN, ...MORE_CARDS_EN];

@@ -45,7 +45,7 @@ export const GAME_TEXT = {
       pitch: "Le jeu de l'intrus : tout le monde a le même mot, sauf un qui en a un presque pareil.",
       example: "Vous avez tous « Pizza », mais Léa a « Burger ». Chacun donne un indice : « italien », « fromage », « fast-food »… Léa doit rester vague pour ne pas se griller. Vous votez : c'est elle ou pas ?",
       rules: [
-        "Chaque joueur reçoit un mot en secret — l'Intrus a un mot légèrement différent… et ne sait pas qu'il est l'Intrus !",
+        "Chaque joueur reçoit un mot en secret. L'Intrus a un mot légèrement différent… et ne sait pas qu'il est l'Intrus !",
         "À tour de rôle, donne un indice sur ton mot (sans le dire !)",
         "Après les indices, votez pour éliminer celui que vous suspectez",
         "Le Fantôme n'a aucun mot : il bluffe, et s'il est éliminé il peut gagner en devinant le mot des civils",
@@ -207,7 +207,7 @@ export const GAME_TEXT = {
       name: "Tu préfères ?",
       tagline: "Des dilemmes impossibles. On vote, on débat.",
       pitch: "Un dilemme impossible, tout le monde vote, et on débat.",
-      example: "« Tu préfères ne plus jamais manger de fromage ou ne plus jamais boire de café ? » — À 3, tout le monde lève la main, on compte les mains… et le camp minoritaire prend la peine.",
+      example: "« Tu préfères ne plus jamais manger de fromage ou ne plus jamais boire de café ? » À 3, tout le monde lève la main, on compte les mains… et le camp minoritaire prend la peine.",
       rules: [
         "Un seul téléphone posé au milieu : pas besoin de se le passer.",
         "Choisissez une ambiance : Classique, Chaud, Absurde ou Couple.",
@@ -544,7 +544,7 @@ export const GAME_TEXT = {
       example: "Cible : 7 secondes. Tu appuies sur GO, tu comptes dans ta tête… STOP à 6,82 s ! Ton pote fait 9,10 s : c'est lui le plus loin, il prend une peine.",
       rules: [
         "Une cible s'affiche (ex. 7 s) : appuie sur GO, compte dans ta tête, appuie sur STOP",
-        "Le chrono est INVISIBLE pour toi — ton temps s'affiche seulement après",
+        "Le chrono est INVISIBLE pour toi : ton temps s'affiche seulement après",
         "Chacun passe à tour de rôle sur le même téléphone",
         "2 règles : « Le plus proche » (le plus loin prend une peine) ou « Sans dépasser » (tu dépasses = dernier de la manche)",
         "À 0,10 s près de la cible : PILE POIL ! 🎯",
@@ -875,7 +875,7 @@ export const GAME_TEXT = {
       example: "Le mot est « Girafe ». Tu dis : « animal, très grand cou, Afrique » → il trouve ! Touche « Trouvé », mot suivant. Bloqué ? Touche « Passer ».",
       rules: [
         "Formez au moins 2 équipes de 2 joueurs",
-        "Celui qui fait deviner tient le téléphone — le devineur ne regarde pas l'écran !",
+        "Celui qui fait deviner tient le téléphone. Le devineur ne regarde pas l'écran !",
         "« Trouvé » = +1, « Passer » = mot suivant sans point, « Annuler le dernier » si tu t'es trompé",
         "Chaque joueur fait deviner une fois par manche",
         "L'équipe avec le plus de mots trouvés gagne !",
@@ -1360,7 +1360,7 @@ export const GAME_TEXT = {
       pitch: "Le jeu de cartes de soirée : le téléphone lit une carte, le groupe joue, le perdant ramasse.",
       example: "Max lit la carte : « Qui est le plus mauvais perdant ? ». Tout le monde pointe Léa. Max touche « Désigner un perdant », choisit Léa, et la roulette tombe sur 2 gorgées ou un gage. Carte suivante !",
       rules: [
-        "Le téléphone ne sert qu'à lire les cartes et désigner le perdant — tout se joue à l'oral",
+        "Le téléphone ne sert qu'à lire les cartes et désigner le perdant : tout se joue à l'oral",
         "Paquet Découverte offert (60 cartes) ; avec Zinzin+, choisis tes packs (Soft, Coquin 18+, Trash, Quiz…)",
         "Cartes : vote du groupe, tour de table, règles live, avoue, jokers…",
         "Carte « Tu préfères » : la minorité perd ; égalité ou unanimité, tout le monde prend",

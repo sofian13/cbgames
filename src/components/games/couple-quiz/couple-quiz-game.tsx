@@ -682,7 +682,7 @@ function CoupleQuizOnline({ roomCode, playerId, playerName, onReturnToLobby }: G
         <LocalShell accent={ACCENT} center>
           <div className="af-eyebrow mb-2" style={{ color: ACCENT }}>Manche {state.round + 1}/{state.total} · à toi</div>
           <h2 className="cb-display-sm mb-1 text-center sm:cb-display-md">Toi, tu es plutôt…</h2>
-          <p className="mb-6 text-sm" style={{ color: "var(--text-muted)" }}>Réponds honnêtement — {guesserName} va deviner.</p>
+          <p className="mb-6 text-sm" style={{ color: "var(--text-muted)" }}>Réponds honnêtement, {guesserName} va deviner.</p>
           <Choice a={q.a} b={q.b} onPick={(p) => sendAction({ action: "answer", pick: p })} />
         </LocalShell>
       );

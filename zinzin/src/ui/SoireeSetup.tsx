@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from "react";
-import { ArrowLeft, ChevronDown, ChevronUp, RefreshCw, Users, X } from "lucide-react";
+import { ArrowLeft, ChevronDown, ChevronUp, RefreshCw, Trophy, Users, X } from "lucide-react";
 import { PlayersSetup } from "@/components/games/local-kit";
 import { pick, useLang } from "@/lib/i18n";
 import { playSfx, preloadSfx } from "@/lib/sfx";
@@ -167,6 +167,10 @@ function Recap({ band, vibe, length, playlist, setPlaylist, onLaunch }: {
         <Tag bg={VIBE_LOOK[vibe].bg} tilt={2}>{t.vibes[vibe].name}</Tag>
         <Tag bg="#fff" tilt={-2}>{t.lengths[length].name}</Tag>
       </div>
+      {/* Le barème de la soirée, en une ligne */}
+      <p className="mt-3 text-[14px] font-extrabold leading-snug" style={{ color: "#FFD23F" }}>
+        <Trophy size={14} strokeWidth={3} className="mr-1 inline align-[-2px]" aria-hidden />{t.rule}
+      </p>
 
       {playlist.length === 0 ? (
         <div className="zz-stk mt-6 rounded-[24px] p-5 text-center text-[16px] font-bold" style={{ background: "#fff", color: "var(--zz-ink)" }}>

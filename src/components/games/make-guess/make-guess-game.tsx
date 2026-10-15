@@ -419,6 +419,7 @@ export default function MakeGuessGame({
       names: teams.flatMap((t) => [t.player1, t.player2]),
       values: finalScores.flatMap((f) => [f.score, f.score]),
     },
+    teams: true, // jeu par équipe : 2 pts de Soirée à chaque gagnant (pas de barème 3/2/1)
   });
 
   // ── Round summary scores ──

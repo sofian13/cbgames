@@ -670,7 +670,7 @@ function TopTenOnline({ roomCode, playerId, playerName }: GameProps) {
         }}
       >
         <span className="text-xs text-white/25 font-sans uppercase tracking-[0.2em] mb-3 mt-1">
-          Manche {state.round}/{state.totalRounds} · sur {state.numberRange} — R&eacute;sultat
+          Manche {state.round}/{state.totalRounds} · sur {state.numberRange} · R&eacute;sultat
         </span>
 
         <p

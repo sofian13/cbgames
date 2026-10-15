@@ -7,7 +7,7 @@ import { AVATAR_PALETTE, freeLook, type AvatarLook } from "@/lib/avatar/look";
 import { getBand, getPlayerLook, subscribePlayers, type BandEntry } from "@/lib/saved-players";
 import { colorForIndexSafe } from "./colors";
 import { AvatarBlob, RainbowCrown, type AvatarCostumeLayers } from "./AvatarBlob";
-import { isZinzinName } from "@/lib/avatar/secrets";
+import { isBossName, isZinzinName } from "@/lib/avatar/secrets";
 import { playPersoVoice, talkMood, usePersoVoice, useSpeaking, voiceKey } from "@/lib/avatar/voice";
 import { VoiceBadge, hopEl } from "./VoiceUI";
 
@@ -142,7 +142,8 @@ export function PlayerBlob({
   // Secret : un joueur nommé « Zinzin » porte la couronne arc-en-ciel (à la place de celle du gagnant)
   const zinzin = isZinzinName(name);
   if (!look) {
-    const mascotProps = { size, color: color ?? colorForIndexSafe(colorIndex), mood: m, arms, shadow, delay, cheering, sweat, sparkle, blink };
+    // Secret : « Sofian » (le créateur) porte des lunettes noires, quelle que soit l'humeur
+    const mascotProps = { size, color: color ?? colorForIndexSafe(colorIndex), mood: m, arms, shadow, delay, cheering, sweat, sparkle, blink, shades: isBossName(name) };
     const blob = zinzin
       ? <ZinzinMascot {...mascotProps} bob={bob} crownSpace={crown} style={talk || autoTalk ? undefined : style} className={talk || autoTalk ? undefined : className} />
       : <Mascot {...mascotProps} bob={bob} crown={crown} style={talk || autoTalk ? undefined : style} className={talk || autoTalk ? undefined : className} />;
@@ -177,7 +178,7 @@ export function PlayerBlob({
  */
 function ZinzinMascot({ size, bob, crownSpace, delay = 0, cheering, mood, style, className, ...rest }: {
   size: number; color: MascotColor; mood: MascotMood; arms?: boolean; bob?: boolean; shadow?: boolean; delay?: number;
-  cheering?: boolean; sweat?: boolean; sparkle?: boolean; blink?: boolean; crownSpace: boolean; style?: CSSProperties; className?: string;
+  cheering?: boolean; sweat?: boolean; sparkle?: boolean; blink?: boolean; shades?: boolean; crownSpace: boolean; style?: CSSProperties; className?: string;
 }) {
   const crownH = crownSpace ? size * 0.3 : 0;
   const anim = cheering

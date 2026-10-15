@@ -463,7 +463,7 @@ function PensezPareilOnline({ roomCode, playerId, playerName, onReturnToLobby }:
         <Mascot size={120} color="pink" mood="love" arms delay={0} />
         <h2 className="cb-display-xl mt-4 text-center" style={{ fontSize: "clamp(1.8rem,7vw,3rem)" }}>Pensez pareil…</h2>
         <p className="mt-4 max-w-xs animate-pulse text-center text-sm" style={{ color: "var(--text-muted)" }}>
-          Un thème arrive — 35 s pour répondre la même chose en 1 ou 2 mots, sans vous parler !
+          Un thème arrive : 35 s pour répondre la même chose en 1 ou 2 mots, sans vous parler !
         </p>
       </div>
     );

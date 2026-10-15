@@ -482,7 +482,7 @@ function LeBluffeurOnline({ roomCode, playerId, playerName, onSwitchLocal }: Gam
           <div className="mx-auto mb-5"><Mascot size={80} color="purple" mood="shifty" arms shadow={false} /></div>
           <p className="cb-display-sm">En attente de joueurs ({count}/{min})</p>
           <p className="mt-2 max-w-xs text-sm" style={{ color: "var(--text-dim)" }}>
-            Il faut au moins {min} joueurs en ligne pour que les bluffs piègent quelqu&apos;un — ou jouez sur un seul téléphone en vous le passant.
+            Il faut au moins {min} joueurs en ligne pour que les bluffs piègent quelqu&apos;un, ou jouez sur un seul téléphone en vous le passant.
           </p>
           <button onClick={onSwitchLocal} className="af-btn af-btn-primary mt-6 w-full max-w-xs">
             <GameInlineIcon icon={Smartphone} /> Jouer sur ce téléphone

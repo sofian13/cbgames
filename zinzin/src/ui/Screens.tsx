@@ -18,6 +18,7 @@ import { markRatedManually } from "../rating";
 import { setCurrentGame } from "@/lib/game-finished";
 import { SoireeNextContext } from "@/components/games/soiree-next";
 import { AppIconRow } from "./AppIconRow";
+import { VersionTap } from "./Credits";
 import { BandScreen } from "@/components/avatar/BandScreen";
 import { AvatarBlob } from "@/components/avatar/AvatarBlob";
 import { useBand } from "@/components/avatar/PlayerBlob";
@@ -173,9 +174,8 @@ export function SettingsSheet({
             <button type="button" className="zz-tap min-h-11 px-2 underline decoration-2 underline-offset-4" onClick={() => { uiSfx.open(); onLegal("mentions"); }}>{t.legalNotice}</button>
           </div>
           <EraseData />
-          <p className="text-center text-[13px]" style={{ color: "var(--zz-mute)" }}>
-            {t.version(APP_VERSION)}
-          </p>
+          {/* Secret : 7 touchers rapides → générique (Credits.tsx) */}
+          <VersionTap text={t.version(APP_VERSION)} />
         </div>
       )}
     </Sheet>

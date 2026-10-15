@@ -42,17 +42,17 @@ export default function PilePoilGame({ roomCode, playerId, playerName, onReturnT
         </p>
         <div className="mt-8 flex w-full max-w-xs flex-col gap-3">
           <button onClick={() => setRole("duel")} className="af-btn af-btn-primary" style={{ fontSize: 16 }}>
-            <GameInlineIcon icon={CircleDot} /> Le Bouton — c&apos;est moi qui joue
+            <GameInlineIcon icon={CircleDot} /> Le Bouton : c&apos;est moi qui joue
           </button>
           <button onClick={() => setRole("screen")} className="af-btn af-btn-primary" style={{ fontSize: 16, background: "linear-gradient(160deg,#4180D8,#2A5BB0)" }}>
-            <GameInlineIcon icon={Tv} /> L&apos;Écran — je vois son chrono
+            <GameInlineIcon icon={Tv} /> L&apos;Écran : je vois son chrono
           </button>
           <button onClick={() => setRole("pad")} className="af-btn af-btn-ghost" style={{ fontSize: 14 }}>
-            <GameInlineIcon icon={Users} /> Tournoi — tout sur ce tél (2-10 joueurs)
+            <GameInlineIcon icon={Users} /> Tournoi : tout sur ce tél (2-10 joueurs)
           </button>
         </div>
         <p className="mt-4 max-w-xs text-center text-[11px]" style={{ color: "var(--text-dim)" }}>
-          À 2 : un tél prend « Le Bouton », l&apos;autre « L&apos;Écran » (même room). Le temps max se règle sur l&apos;écran — ou pas, il est optionnel.
+          À 2 : un tél prend « Le Bouton », l&apos;autre « L&apos;Écran » (même room). Le temps max se règle sur l&apos;écran, ou pas : il est optionnel.
         </p>
       </LocalShell>
     );
@@ -144,8 +144,8 @@ function DuelPad({ roomCode, playerId, playerName }: GameProps) {
         {running
           ? "🤫 Compte dans ta tête…"
           : st === "done"
-            ? "Pause — le temps est figé sur l'autre tél. Réappuie pour CONTINUER."
-            : "Appuie pour lancer — l'autre tél voit tout"}
+            ? "Pause : le temps est figé sur l'autre tél. Réappuie pour CONTINUER."
+            : "Appuie pour lancer, l'autre tél voit tout"}
       </p>
       <button
         onClick={running ? stop : go}
@@ -169,7 +169,7 @@ function DuelPad({ roomCode, playerId, playerName }: GameProps) {
       )}
       {st === "idle" && (
         <p className="mt-6 max-w-xs text-[11px]" style={{ color: "rgba(255,255,255,0.35)" }}>
-          Le temps max se règle sur l&apos;autre tél (optionnel) — sinon on l&apos;annonce à l&apos;oral.
+          Le temps max se règle sur l&apos;autre tél (optionnel). Sinon, on l&apos;annonce à l&apos;oral.
         </p>
       )}
     </div>
@@ -246,7 +246,7 @@ function TargetControl({ value, onChange }: { value: number | null; onChange: (v
   });
   return (
     <div className="mt-6 w-full max-w-sm rounded-2xl p-3" style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.12)" }}>
-      <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.18em] text-white/50"><GameInlineIcon icon={Timer} /> Temps max — optionnel</p>
+      <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.18em] text-white/50"><GameInlineIcon icon={Timer} /> Temps max (optionnel)</p>
       <div className="flex flex-wrap items-center justify-center gap-1.5">
         <button onClick={() => onChange(null)} className="rounded-xl px-3 py-2 text-sm font-black" style={chip(value == null)}>
           Aucun
@@ -273,7 +273,7 @@ function TargetControl({ value, onChange }: { value: number | null; onChange: (v
       </div>
       {value != null && (
         <p className="mt-2 text-center text-[12px] font-bold" style={{ color: "#5FF5DD" }}>
-          Réglé sur {value} s — « DÉPASSÉ » s&apos;affichera en direct
+          Réglé sur {value} s. « DÉPASSÉ » s&apos;affichera en direct
         </p>
       )}
     </div>
@@ -500,7 +500,7 @@ function ScreenView({ roomCode, playerId, playerName }: GameProps) {
           À toi de fixer la cible !
         </p>
         <p className="mt-1 max-w-xs text-sm" style={{ color: "rgba(255,255,255,0.55)" }}>
-          Annonce-la à voix haute (ou pas 😈) et saisis-la ici — obligatoire pour lancer la manche.
+          Annonce-la à voix haute (ou pas 😈) et saisis-la ici (obligatoire pour lancer la manche).
         </p>
         <div className="mt-6 flex max-w-sm flex-wrap justify-center gap-2">
           {[3, 5, 7, 10, 12, 15, 20, 30].map((t) => (

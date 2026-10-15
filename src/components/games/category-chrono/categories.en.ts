@@ -181,7 +181,7 @@ export const PACKS_EN: CategoryPack[] = [
       c("🙊", "Things you whisper in someone's ear", "Shall we head home?…"),
       c("📵", "Reasons not to call back after a date", "Talked crypto for 3 hours…"),
       c("💌", "Ways to declare your love", "Letter, Serenade…"),
-      c("🛏️", "Things you do in bed (besides sleeping) — soft version", "Eat crisps, Cuddle…"),
+      c("🛏️", "Things you do in bed (besides sleeping), soft version", "Eat crisps, Cuddle…"),
       c("🥂", "Honeymoon activities", "Massage, Lie-in…"),
       c("😬", "Awkward couple moments", "Saying your ex's name…"),
       c("🔥", "Things that turn up the heat", "A look, A slow dance…"),

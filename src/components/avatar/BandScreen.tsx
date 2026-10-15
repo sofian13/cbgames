@@ -20,6 +20,7 @@ import { AV_DISPLAY, AV_INK, AvatarEditor, AvatarLayer, RoundIconBtn, avSticker 
 import { colorForIndexSafe } from "./colors";
 import { useBand } from "./PlayerBlob";
 import { BandStatsCard, BandStatsScreen, useBandStats } from "./BandStatsScreen";
+import { useBandPlay } from "./band-play";
 
 const lookOf = (e: { look: AvatarLook | null }, i: number) => e.look ?? baseLook(colorForIndexSafe(i));
 
@@ -68,6 +69,8 @@ export function BandScreen({ onClose }: { onClose: () => void }) {
   const [sharing, setSharing] = useState(false);
   const [manage, setManage] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const playRef = useRef<HTMLDivElement>(null);
+  useBandPlay(playRef, band.length > 0);
   useEffect(() => () => { clearTimeout(timer.current); stopVoice(); }, []);
   // Ménage : sons enregistrés puis abandonnés (éditeur fermé sans enregistrer…)
   useEffect(() => { void gcVoices(linkedVoiceIds()); }, []);
@@ -163,11 +166,12 @@ export function BandScreen({ onClose }: { onClose: () => void }) {
         {/* La bande : les blobs côte à côte, toucher = entendre */}
         {band.length > 0 && (
           <div className="relative mb-3 rounded-[28px] px-2 pb-4 pt-5" style={{ background: "rgba(255,255,255,0.06)", border: "2px solid rgba(255,255,255,0.12)" }}>
-            <div className="flex flex-wrap items-end justify-center" style={{ columnGap: band.length > 8 ? 4 : 10, rowGap: 14 }}>
+            {/* Secrets : appui long = blob écrasé ; appui long + glisser sur un autre = bisou (band-play.ts) */}
+            <div ref={playRef} className="flex flex-wrap items-end justify-center" style={{ columnGap: band.length > 8 ? 4 : 10, rowGap: 14, WebkitTouchCallout: "none", WebkitUserSelect: "none", userSelect: "none" }}>
               {band.map((b, i) => {
                 const size = band.length <= 3 ? 104 : band.length <= 6 ? 84 : band.length <= 10 ? 68 : 58;
                 return (
-                  <div key={b.name} className="flex flex-col items-center" style={{ width: size + 8, rotate: `${((i * 37) % 7) - 3}deg` }}>
+                  <div key={b.name} data-band-blob className="flex flex-col items-center" style={{ width: size + 8, rotate: `${((i * 37) % 7) - 3}deg` }}>
                     <TalkingBlob look={lookOf(b, i)} name={b.name} size={size} speakKey={voiceKey(b.name)} badge={audible(b)}
                       onTap={() => void hear(b, i)} label={audible(b) ? tv.playAria(b.name) : tv.micAria(b.name)} />
                     <span className="mt-1 block max-w-full truncate text-center text-[13px] font-extrabold" style={{ color: b.me ? "#FFD23F" : "#fff" }}>{b.name}</span>

@@ -73,7 +73,7 @@ export const APP_SECTIONS: AppSection[] = [
   {
     id: "after",
     title: "After 🔞",
-    subtitle: "Jeux à boire — avec modération",
+    subtitle: "Jeux à boire, avec modération",
     games: [
       { id: "picolette", color: "yellow", mood: "rofl", local: true, online: false, adult: true },
     ],

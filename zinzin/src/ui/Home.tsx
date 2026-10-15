@@ -13,6 +13,7 @@ import { GoldenBlob } from "./GoldenBlob";
 import { PullBlob } from "./PullBlob";
 import { CardBlob } from "./CardBlob";
 import { SleepyBlob } from "./SleepyBlob";
+import { FaceDownBlob } from "./FaceDownBlob";
 import { TapLogo } from "./Logo";
 import { drawGreeting, greetingText } from "../greeting";
 import { SoireeEntry } from "./SoireeKit";
@@ -50,7 +51,8 @@ export function Home({
   // au badge Zinzin+ et aux deux boutons ronds
   const [narrow] = useState(() => typeof window !== "undefined" && window.innerWidth < 340);
   return (
-    <div ref={scrollRef} className="zz-scroll zz-page zz-home fixed inset-0">
+    // Secret : 3 h du matin → phrase spéciale et cernes sous les yeux des blobs (zz-3h, zinzin.css)
+    <div ref={scrollRef} className={`zz-scroll zz-page zz-home fixed inset-0${greeting.slot === "three" ? " zz-3h" : ""}`}>
       <Backdrop scrollRef={scrollRef} />
       {/* Secret : secouer le tél → pluie de blobs (derrière le contenu, devant le fond) */}
       <ShakeRain homeRef={scrollRef} />
@@ -59,6 +61,8 @@ export function Home({
       <PullBlob homeRef={scrollRef} contentRef={contentRef} />
       {/* Secret : ~90 s sans toucher → le blob d'une carte s'endort (réveil au premier toucher) */}
       <SleepyBlob homeRef={scrollRef} />
+      {/* Secret : téléphone posé face contre la table puis retourné → un blob passe la tête */}
+      <FaceDownBlob homeRef={scrollRef} />
       <div ref={contentRef} className="relative mx-auto max-w-lg" style={{ zIndex: 1, paddingTop: "calc(var(--sat) + 10px)", paddingBottom: "calc(var(--sab) + 32px)" }}>
         {/* En-tête */}
         <header className="relative flex items-center justify-between px-5">

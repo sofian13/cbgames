@@ -196,7 +196,7 @@ export const PACKS: CategoryPack[] = [
       c("🙊", "Trucs qu'on chuchote à l'oreille", "On rentre ?…"),
       c("📵", "Raisons de ne pas rappeler après un date", "Il a parlé crypto 3 h…"),
       c("💌", "Façons de déclarer sa flamme", "Lettre, Sérénade…"),
-      c("🛏️", "Choses qu'on fait au lit (à part dormir) — version soft", "Manger des chips, Câlin…"),
+      c("🛏️", "Choses qu'on fait au lit (à part dormir), version soft", "Manger des chips, Câlin…"),
       c("🥂", "Choses qu'on fait lors d'une lune de miel", "Massage, Grasse mat'…"),
       c("😬", "Moments gênants en couple", "Dire le prénom de son ex…"),
       c("🔥", "Choses qui font monter la température", "Un regard, Un slow…"),

@@ -96,7 +96,7 @@ const STR: I18n<{
 
 ${text}
 
-— envoyé depuis l'app Zinzin`,
+Envoyé depuis l'app Zinzin`,
   },
   en: {
     reroll: "Meh? Another one",
@@ -117,7 +117,7 @@ ${text}
 
 ${text}
 
-— sent from the Zinzin app`,
+Sent from the Zinzin app`,
   },
   es: {
     reroll: "¿No mola? Otra",
@@ -138,7 +138,7 @@ ${text}
 
 ${text}
 
-— enviado desde la app Zinzin`,
+Enviado desde la app Zinzin`,
   },
 };
 

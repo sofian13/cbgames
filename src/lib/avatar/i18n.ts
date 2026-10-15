@@ -16,6 +16,8 @@ export const AVATAR_STR: I18n<{
   secret: string;
   /** Clin d'œil sous l'aperçu quand le perso s'appelle « Zinzin » */
   zinzinCrown: string;
+  /** Secret du prénom « Sofian » (lunettes noires) */
+  bossShades: string;
   locked: string;
   selected: string;
   close: string;
@@ -80,6 +82,7 @@ export const AVATAR_STR: I18n<{
     lockedHint: "Cadenas = Zinzin+ : essaie tout librement.",
     secret: "Secret",
     zinzinCrown: "Couronne réservée aux vrais Zinzin",
+    bossShades: "Le Boss est dans la place 😎",
     locked: "Zinzin+",
     selected: "choisi",
     close: "Fermer",
@@ -143,6 +146,7 @@ export const AVATAR_STR: I18n<{
     lockedHint: "Padlock = Zinzin+: try anything on.",
     secret: "Secret",
     zinzinCrown: "Crown reserved for true Zinzins",
+    bossShades: "The Boss is in the house 😎",
     locked: "Zinzin+",
     selected: "selected",
     close: "Close",
@@ -206,6 +210,7 @@ export const AVATAR_STR: I18n<{
     lockedHint: "Candado = Zinzin+: pruébalo todo.",
     secret: "Secreto",
     zinzinCrown: "Corona reservada a los verdaderos Zinzin",
+    bossShades: "El Jefe ha llegado 😎",
     locked: "Zinzin+",
     selected: "elegido",
     close: "Cerrar",

@@ -1,7 +1,7 @@
 /* Tests unitaires du comptage des points de la Soirée Zinzin (règle unique des gagnants).
  * Lancement : sh zinzin/tests/run.sh (bundle esbuild, alias @ → src, localStorage simulé). */
 import {
-  announced, captureFinished, computeTrophies, endSoiree, getSoiree, kingsOf, ranking, recapTitles, recordWinners,
+  announced, announcedGains, captureFinished, computeTrophies, migrateSoiree, soireeGains, endSoiree, getSoiree, kingsOf, ranking, recapTitles, recordWinners,
   resumeSoiree, setPhase, skipGame, startSoiree, uniqueBand, eligible,
   type SoireeState,
 } from "../src/soiree";
@@ -116,10 +116,10 @@ check("Soirée : Patate → Malik", eq(w, ["Malik"]));
 w = playGame([{ winners: ["Inès"], scores: { names: BAND, values: [0, 0, 0, 2] } }]);
 check("Soirée : Chrono → Inès", eq(w, ["Inès"]));
 let s = getSoiree()!;
-check("points après 2 jeux", eq(s.points, { "Léa": 0, Malik: 1, Tom: 0, "Inès": 1 }), J(s.points));
+check("points après 2 jeux (Patate classée 3/2/2/0 + Chrono survivante 2)", eq(s.points, { "Léa": 2, Malik: 3, Tom: 0, "Inès": 4 }), J(s.points));
 check("index 2, phase intro", s.index === 2 && s.phase === "intro");
 w = playGame([{ scores: { names: BAND, values: [5, 5, 3, 5] } }]);
-check("C1 : De 1 à 10, 3 ex æquo → les 3 (+1 chacun, comme l'écran du jeu)", eq(w, ["Léa", "Malik", "Inès"]));
+check("C1 : De 1 à 10, 3 ex æquo → les 3 (3 pts chacun, comme l'écran du jeu)", eq(w, ["Léa", "Malik", "Inès"]) && eq(getSoiree()!.gains?.[2], { "Léa": 3, Malik: 3, "Inès": 3 }), J(getSoiree()!.gains));
 // C1 : le jeu dit « pas de gagnant » (toute la table ex æquo) → la Soirée n'invente rien depuis le classement
 const before = { ...getSoiree()!.points };
 w = playGame([{ loser: null, scores: { names: BAND, values: [0, 0, 0, 0] } }]);
@@ -139,13 +139,13 @@ captureFinished({ gameId: getSoiree()!.playlist[getSoiree()!.index], ...finished
 setPhase("winner");
 const a = announced(getSoiree()!);
 check("M7 : prénom inconnu (« Léa2 ») gardé pour l'annonce + « Corriger » (plus perdu en silence)", eq(a, { winners: [], unknown: ["Léa2"] }), J(a));
-recordWinners(["Léa"]); // la table corrige : c'était Léa
-check("M7 : après « Corriger » → Léa +1", getSoiree()!.points["Léa"] === 2);
+recordWinners(["Léa"], { manual: true }); // la table corrige : c'était Léa
+check("M7 : après « Corriger » → Léa +2 (3 du 1er jeu + 2)", getSoiree()!.points["Léa"] === 5 && eq(getSoiree()!.gains?.[2], { "Léa": 2 }), J(getSoiree()!.points));
 check("bande dédoublonnée (accents/casse/espaces)", eq(uniqueBand(["Léa", "lea", " Tom ", "tom", "Inès"]), ["Léa", "Tom", "Inès"]));
 startSoiree(["Léa", "lea", "Tom"], "soiree", 4, PL.slice(0, 4));
 s = getSoiree()!;
 check("M8 : startSoiree dédoublonne : 2 membres, 2 clés de points", eq(s.band, ["Léa", "Tom"]) && Object.keys(s.points).length === 2, J(s.band));
-check("recordWinners : prénom hors bande ignoré", (() => { setPhase("winner"); recordWinners(["Zorro", "tom"]); return eq(getSoiree()!.points, { "Léa": 0, Tom: 1 }); })(), J(getSoiree()!.points));
+check("recordWinners : prénom hors bande ignoré", (() => { setPhase("winner"); recordWinners(["Zorro", "tom"]); return eq(getSoiree()!.points, { "Léa": 0, Tom: 2 }); })(), J(getSoiree()!.points));
 
 /* ── 5. Signaux parasites ── */
 startSoiree(BAND, "soiree", 10, PL);
@@ -169,7 +169,7 @@ check("doublon StrictMode idempotent", eq(getSoiree()!.pending?.winners, ["Malik
 setPhase("winner"); // croix pendant la 3e partie, jamais finie
 check("V1 : croix sans finir la partie relancée → résultat de la dernière terminée", eq(announced(getSoiree()!).winners, ["Malik"]));
 recordWinners(announced(getSoiree()!).winners);
-check("V1 : un seul point pour ce jeu", getSoiree()!.points.Malik === 1 && eq(getSoiree()!.results[0], ["Malik"]));
+check("V1 : points de ce jeu comptés une fois, selon la DERNIÈRE partie (Malik 3, Tom 2, Inès 1, Léa 0)", eq(getSoiree()!.points, { "Léa": 0, Malik: 3, Tom: 2, "Inès": 1 }) && eq(getSoiree()!.results[0], ["Malik"]), J(getSoiree()!.points));
 
 /* ── 7. Reprise après fermeture : pas de résultat périmé ── */
 setPhase("playing");
@@ -195,10 +195,10 @@ setPhase("winner");
 recordWinners(["Tom"]);
 recordWinners(["Tom"]); // double tap : on est déjà sur l'intro du jeu 2
 s = getSoiree()!;
-check("V3 : 2e recordWinners ignoré (Tom=1, index=1)", s.points.Tom === 1 && s.index === 1, `Tom=${s.points.Tom} index=${s.index}`);
+check("V3 : 2e recordWinners ignoré (Tom=2, index=1)", s.points.Tom === 2 && s.index === 1, `Tom=${s.points.Tom} index=${s.index}`);
 setPhase("playing");
 recordWinners(["Tom"]);
-check("V3 : recordWinners hors écran gagnant ignoré", getSoiree()!.points.Tom === 1);
+check("V3 : recordWinners hors écran gagnant ignoré", getSoiree()!.points.Tom === 2);
 setPhase("intro");
 
 /* ── 9. Récap et cérémonie (C8) ── */
@@ -218,7 +218,7 @@ function finish(band: string[], games: { winners: string[]; loser?: string }[]) 
 }
 // Cas réel de l'audit : 4 ex æquo à 2 points
 s = finish(BAND, [{ winners: ["Tom"] }, { winners: ["Léa"] }, { winners: ["Léa", "Malik", "Inès"] }, { winners: ["Malik", "Tom", "Inès"] }]);
-check("C8 : 4 ex æquo à 2 pts", Object.values(s.points).every((p) => p === 2), J(s.points));
+check("C8 : 4 ex æquo à 4 pts (2 victoires de camp chacun)", Object.values(s.points).every((p) => p === 4), J(s.points));
 let T = computeTrophies(s);
 check("C8 : toute la bande ex æquo → pas de Roi", !T.some((t) => t.id === "king"), J(T.map((t) => [t.name, t.id])));
 check("C8 : … et pas de Plus Gros Naze à égalité avec les autres", !T.some((t) => t.id === "naze"));
@@ -247,11 +247,133 @@ check("récap : A « Roi », C et D (derniers ex æquo) « fair-play »", titles
 // Tout le monde a gagné, mais pas autant : le Naze n'est jamais à égalité avec le Roi
 s = finish(["A", "B", "C"], [{ winners: ["A"] }, { winners: ["A"] }, { winners: ["B"], loser: "C" }, { winners: ["C"] }]);
 T = computeTrophies(s);
-check("Naze jamais ex æquo du Roi (B et C à 1 pt, C a 1 défaite → C)", T.find((t) => t.id === "naze")?.name === "C" && T.find((t) => t.id === "king")?.name === "A", J(T.map((t) => [t.name, t.id])));
+check("Naze jamais ex æquo du Roi (B et C à 2 pts, C a 1 défaite → C)", T.find((t) => t.id === "naze")?.name === "C" && T.find((t) => t.id === "king")?.name === "A", J(T.map((t) => [t.name, t.id])));
 // Prix « jeu » : cite tous les jeux gagnés (m10)
 s = finish(["A", "B", "C"], [{ winners: ["A"] }, { winners: ["B"] }, { winners: ["B"] }, { winners: ["A", "B"] }]);
 T = computeTrophies(s);
 check("m10 : prix de A cite tous ses jeux gagnés", (T.find((t) => t.name === "A")?.games ?? []).length === 2, J(T));
+
+
+/* ── 11. Barème : classé 3/2/1, camp 2, manuel 2, pas de gagnant 0 ── */
+/** Joue un jeu et renvoie [points gagnés sur ce jeu, points annoncés à l'écran] (doivent être identiques) */
+function playScored(signals: (GameFinishedDetail | FinishedInfo)[], opts: { raw?: boolean; table?: string[]; manual?: string[] } = {}) {
+  setPhase("playing");
+  const s0 = getSoiree()!;
+  for (const d of signals) {
+    const detail = opts.raw ? (d as GameFinishedDetail) : finishedPayload(d as FinishedInfo, opts.table);
+    captureFinished({ gameId: s0.playlist[s0.index], ...detail });
+  }
+  setPhase("winner");
+  const shown = announcedGains(getSoiree()!);
+  const before = { ...getSoiree()!.points };
+  const idx = getSoiree()!.index;
+  if (opts.manual) recordWinners(opts.manual, { manual: true });
+  else recordWinners(announced(getSoiree()!).winners);
+  const after = getSoiree()!;
+  const delta = Object.fromEntries(after.band.map((n) => [n, (after.points[n] ?? 0) - (before[n] ?? 0)]).filter(([, v]) => v !== 0));
+  const stored = after.gains?.[idx] ?? {};
+  return { delta, shown, stored };
+}
+/** Comparaison de points sans tenir compte de l'ordre des clés */
+const K = (o: object) => JSON.stringify(Object.entries(o).sort(([a], [b]) => a.localeCompare(b)));
+const same = (r: { delta: object; stored: object; shown?: object }, exp: object) => K(r.delta) === K(exp) && K(r.stored) === K(exp);
+const BAR = ["patate", "top-ten", "verre", "pile-poil", "undercover", "faux-temoin", "category-chrono", "make-guess", "tu-prefere", "chut"] as never[];
+
+check("payload : scores seuls → jeu classé", finishedPayload({ scores: { names: BAND, values: [3, 2, 1, 0] } }).ranked === true);
+check("payload : gagnants explicites (camp) → pas classé", finishedPayload({ winners: ["Tom"], scores: { names: BAND, values: [3, 2, 1, 0] } }).ranked === undefined);
+check("payload : équipes (Fais Deviner) → pas classé", finishedPayload({ teams: true, scores: { names: BAND, values: [3, 3, 1, 1] } }).ranked === undefined);
+check("payload : toute la table à égalité → pas classé, aucun gagnant", eq(finishedPayload({ scores: { names: BAND, values: [2, 2, 2, 2] } }), { loser: null, ranking: BAND.map((name) => ({ name, rank: 1 })), winners: [] }));
+check("soireeGains pur : classé 1,2,2,4", eq(soireeGains(["a"], [{ name: "a", rank: 1 }, { name: "b", rank: 2 }, { name: "c", rank: 2 }, { name: "d", rank: 4 }], true), { a: 3, b: 2, c: 2 }));
+check("soireeGains pur : gagnants ≠ 1ers du classement → 2 chacun (jamais un 3/2/1 incohérent)", eq(soireeGains(["b"], [{ name: "a", rank: 1 }, { name: "b", rank: 2 }], true), { b: 2 }));
+check("soireeGains pur : pas de gagnant → rien", eq(soireeGains([], [{ name: "a", rank: 1 }, { name: "b", rank: 2 }], true), {}));
+
+startSoiree(BAND, "soiree", 10, BAR);
+let r = playScored([{ loser: "Tom", scores: { names: BAND, values: [2, 0, 3, 1], lowerWins: true } }]);
+check("classé simple (Patate) : Malik 3, Inès 2, Léa 1, Tom 0", same(r, { "Léa": 1, Malik: 3, "Inès": 2 }) && K(r.shown) === K(r.stored), J(r));
+r = playScored([{ scores: { names: BAND, values: [7, 7, 4, 1] } }]);
+check("ex æquo en tête (De 1 à 10) : Léa 3, Malik 3, puis Tom 3e → 1, Inès 0", same(r, { "Léa": 3, Malik: 3, Tom: 1 }) && K(r.shown) === K(r.stored), J(r));
+r = playScored([{ scores: { names: BAND, values: [12, 5, 5, 1], tiebreak: [0, 0, 0, 0], tiebreakLowerWins: true } }]);
+check("ex æquo 2e (Verre) : Léa 3, Malik 2, Tom 2, Inès 4e → 0", same(r, { "Léa": 3, Malik: 2, Tom: 2 }) && K(r.shown) === K(r.stored), J(r));
+r = playScored([{ scores: { names: BAND, values: [9, 9, 9, 9] } }]);
+check("toute la table à égalité → 0 pour tous, rien d'annoncé", same(r, {}) && eq(r.shown, {}) && getSoiree()!.gains?.[3] === null, J(r));
+r = playScored([{ winners: ["Malik", "Tom", "Inès"] }], { table: BAND });
+check("camp (L'Intrus) : 2 pts à chaque gagnant", same(r, { Malik: 2, Tom: 2, "Inès": 2 }) && K(r.shown) === K(r.stored), J(r));
+r = playScored([{ scores: { names: BAND, values: [2, 2, 0, 1] }, winners: ["Tom", "Inès"] }]);
+check("Faux Témoin en camp : 2 pts chacun (le classement ne compte pas)", same(r, { Tom: 2, "Inès": 2 }), J(r));
+r = playScored([{ winners: ["Inès"], scores: { names: BAND, values: [0, 0, 0, 2] } }]);
+check("Catégorie Chrono (dernier en vie désigné) : 2 pts", same(r, { "Inès": 2 }), J(r));
+r = playScored([{ teams: true, scores: { names: ["Léa", "Malik", "Tom", "Inès"], values: [6, 6, 3, 3] } }]);
+check("Fais Deviner (équipes) : 2 pts à chaque joueur de l'équipe gagnante, 0 aux autres", same(r, { "Léa": 2, Malik: 2 }), J(r));
+r = playScored([]);
+check("jeu sans gagnant (Tu préfères, aucun signal) : 0", same(r, {}), J(r));
+const tot = getSoiree()!;
+const sumGains = (st: SoireeState) => Object.fromEntries(st.band.map((n) => [n, (st.gains ?? []).reduce((a, g) => a + (g?.[n] ?? 0), 0)]));
+check("total = somme des gains de chaque jeu (attendu = compté)", eq(tot.points, sumGains(tot)) && eq(tot.points, { "Léa": 9, Malik: 12, Tom: 7, "Inès": 8 }), J([tot.points, sumGains(tot)]));
+
+// Choix manuel : toujours 2 pts par gagnant choisi, même sur un jeu classé, même s'il reprend la suggestion
+startSoiree(BAND, "soiree", 4, BAR.slice(0, 4));
+r = playScored([{ scores: { names: BAND, values: [9, 5, 3, 1] } }], { manual: ["Léa", "Tom"] });
+check("manuel sur jeu classé : Léa 2, Tom 2, personne d'autre", same(r, { "Léa": 2, Tom: 2 }), J(r));
+r = playScored([{ scores: { names: BAND, values: [9, 5, 3, 1] } }], { manual: ["Léa"] });
+check("manuel = même gagnant que proposé : 2 (pas 3/2/1)", same(r, { "Léa": 2 }), J(r));
+r = playScored([], { manual: ["Inès"] });
+check("« Désigner un gagnant » sur un jeu sans gagnant : 2", same(r, { "Inès": 2 }), J(r));
+// Prénom inconnu, « Continuer sans corriger » : les gagnants connus à 2, annonce = compte
+r = playScored([{ scores: { names: ["Léa2", "Malik", "Tom", "Inès"], values: [9, 9, 3, 1] } }]);
+check("gagnant inconnu + continuer : Malik 2 (barème camp), annoncé = compté", same(r, { Malik: 2 }) && eq(r.shown, { Malik: 2 }), J(r));
+
+// Rejouer puis croix : barème de la DERNIÈRE partie terminée
+startSoiree(BAND, "soiree", 4, BAR.slice(0, 4));
+r = playScored([{ scores: { names: BAND, values: [9, 5, 3, 1] } }, { scores: { names: BAND, values: [1, 3, 5, 9] } }]);
+check("Rejouer : 2e partie remplace la 1re (Inès 3, Tom 2, Malik 1)", same(r, { Malik: 1, Tom: 2, "Inès": 3 }), J(r));
+r = playScored([{ scores: { names: BAND, values: [9, 5, 3, 1] } }, { scores: { names: BAND, values: [4, 4, 4, 4] } }]);
+check("Rejouer : dernière partie à égalité totale → 0 (l'ancienne ne compte plus)", same(r, {}), J(r));
+setPhase("playing");
+captureFinished({ gameId: "verre", ...finishedPayload({ scores: { names: BAND, values: [9, 5, 3, 1] } }) });
+resumeSoiree();
+setPhase("playing"); setPhase("winner");
+check("reprise : résultat d'avant la fermeture oublié → 0", eq(announcedGains(getSoiree()!), {}));
+recordWinners(announced(getSoiree()!).winners);
+check("reprise : rien compté", eq(getSoiree()!.gains?.[2], null) && eq(getSoiree()!.points, { "Léa": 0, Malik: 1, Tom: 2, "Inès": 3 }), J(getSoiree()!.points));
+
+// Sauvegarde d'avant le barème (+1 par gagnant) : convertie à 2 par gagnant, une seule fois
+{
+  const old = {
+    v: 1, band: ["A", "B", "C"], vibe: "soiree", length: 4, playlist: BAR.slice(0, 4), index: 2, phase: "winner",
+    points: { A: 2, B: 1, C: 0 }, results: [["A"], ["A", "B"], null, null], played: 2, startedAt: 1,
+    outcomes: [{ winners: ["A"] }, { winners: ["A", "B"] }, null, null], pending: { winners: ["C"], loser: null },
+  } as unknown as SoireeState;
+  const m = migrateSoiree(old);
+  check("ancienne sauvegarde : points recalculés (A 4, B 2, C 0), gains par jeu", eq(m.points, { A: 4, B: 2, C: 0 }) && eq(m.gains, [{ A: 2 }, { A: 2, B: 2 }, null, null]) && m.scale === 2, J(m));
+  check("ancienne sauvegarde : migration idempotente", migrateSoiree(m) === m);
+  check("ancienne sauvegarde : jeu en attente conservé (phase, pending)", m.phase === "winner" && eq(m.pending?.winners, ["C"]));
+}
+
+// Roi = le plus de points, même sans victoire ; le Naze n'est jamais à égalité avec lui
+startSoiree(BAND, "soiree", 4, BAR.slice(0, 4));
+playScored([{ scores: { names: BAND, values: [9, 5, 3, 1] } }]); // Léa 3 Malik 2 Tom 1
+playScored([{ scores: { names: BAND, values: [3, 5, 9, 1] } }]); // Tom 3 Malik 2 Léa 1
+playScored([{ scores: { names: BAND, values: [1, 5, 3, 9] } }]); // Inès 3 Malik 2 Tom 1
+endSoiree();
+s = getSoiree()!;
+check("barème cumulé : Malik 6 (trois 2es), Léa 4, Tom 5, Inès 3", eq(s.points, { "Léa": 4, Malik: 6, Tom: 5, "Inès": 3 }), J(s.points));
+check("Roi = Malik (plus de points, 0 victoire)", eq(kingsOf(s), ["Malik"]));
+T = computeTrophies(s);
+{
+  const king = T.find((t) => t.id === "king");
+  check("trophée Roi : Malik, 6 pts, aucun jeu gagné", king?.name === "Malik" && king.n === 6 && (king.games ?? []).length === 0, J(king));
+  const nz = T.find((t) => t.id === "naze");
+  check("Naze (s'il y en a un) jamais le Roi ni un ex æquo du Roi", !nz || (nz.name !== "Malik" && s.points[nz.name] < 6), J(nz));
+}
+titles = recapTitles(s, TITLES, LAST);
+check("récap : Malik « Roi », Inès (seule dernière, 4 joueurs) « fair-play »", titles[0] === TITLES[0] && ranking(s)[0].name === "Malik" && titles[3] === LAST && ranking(s)[3].name === "Inès", J([ranking(s), titles]));
+// Égalité de points en tête après barème : co-rois
+startSoiree(["A", "B", "C"], "soiree", 4, BAR.slice(0, 4));
+playScored([{ scores: { names: ["A", "B", "C"], values: [3, 2, 1] } }]); // A3 B2 C1
+playScored([{ scores: { names: ["A", "B", "C"], values: [2, 3, 1] } }]); // B3 A2 C1
+endSoiree();
+s = getSoiree()!;
+check("co-rois à 5 pts (A, B), C dernier", eq(kingsOf(s), ["A", "B"]) && s.points.C === 2, J(s.points));
 
 /* ── 10. Passer / bandes / catalogue ── */
 startSoiree(BAND, "soiree", 4, PL.slice(0, 4));

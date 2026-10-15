@@ -107,7 +107,7 @@ export const SECTIONS: ZSection[] = [
     subtitle: { fr: "Couples et meilleurs potes", en: "Couples and best friends", es: "Parejas y mejores amigos" } },
   { id: "after", ids: ["picolette", "tgv"],
     title: { fr: "After 🔞", en: "After party 🔞", es: "After 🔞" },
-    subtitle: { fr: "Jeux à boire — avec modération", en: "Drinking games, in moderation", es: "Juegos para beber, con moderación" } },
+    subtitle: { fr: "Jeux à boire, avec modération", en: "Drinking games, in moderation", es: "Juegos para beber, con moderación" } },
 ];
 
 /**

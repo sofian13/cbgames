@@ -63,6 +63,8 @@ export interface ZBlobProps {
   crown?: boolean;
   /** Couronne arc-en-ciel (secret du prénom « Zinzin ») : remplace la petite couronne */
   rainbowCrown?: boolean;
+  /** Lunettes noires « Le Boss » (secret du prénom « Sofian ») : yeux cachés, la bouche garde l'humeur */
+  shades?: boolean;
   /** Déguisement du jeu (voir costumes.tsx) */
   costume?: ZCostume;
   /** Saute quand on le touche (défaut : oui) */
@@ -158,7 +160,7 @@ export function pauseWhenOffscreen(el: Element | null): () => void {
 
 export function ZBlob({
   size = 96, color = "pink", mood = "happy", seed = 0, wobble = true, shadow = true,
-  speed = 2.6, delay = 0, outline = false, crown = false, rainbowCrown = false, costume, hop = true, palette, gloss = false, className, style,
+  speed = 2.6, delay = 0, outline = false, crown = false, rainbowCrown = false, shades = false, costume, hop = true, palette, gloss = false, className, style,
 }: ZBlobProps) {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => pauseWhenOffscreen(ref.current), []);
@@ -303,7 +305,9 @@ export function ZBlob({
 
   const cos = costumeLayers(costume, { c, L, R, clip });
   // Lunettes noires (humeur « cool » ou costume d'espion) : yeux cachés
-  const hideEyes = mood === "cool" || costume === "spy" || costume === "blindfold";
+  // « Le Boss » : pas par-dessus un accessoire de costume sur le visage (bandeau, espion…)
+  const boss = shades && !cos.face;
+  const hideEyes = mood === "cool" || boss || costume === "spy" || costume === "blindfold";
   const blush = mood === "love" || mood === "kiss" || mood === "happy" || mood === "laughing" || mood === "wink";
 
   return (
@@ -356,7 +360,7 @@ export function ZBlob({
           {!hideEyes && eye(L, look[0], 0)}
           {!hideEyes && eye(R, look[1], 1)}
           {brows()}
-          {mood === "cool" && (
+          {(mood === "cool" || boss) && (
             <g>
               <path d={`M${L.x - 15} ${L.y - 6} H${R.x + 17}`} stroke={INK} strokeWidth={4} strokeLinecap="round" />
               <path d={`M${L.x - 15} ${L.y - 7} H${L.x + 14} V${L.y + 2} C${L.x + 14} ${L.y + 12} ${L.x - 15} ${L.y + 12} ${L.x - 15} ${L.y + 2}Z`} fill={INK} />

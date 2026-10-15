@@ -25,8 +25,12 @@ export interface SoireeState {
   playlist: ZGameId[];
   index: number;
   phase: SoireePhase;
-  /** Points de soirée par prénom */
+  /** Points de soirée par prénom (barème : voir soireeGains) */
   points: Record<string, number>;
+  /** Version du barème : 2 = 3/2/1 (classé) · 2 par gagnant (camp). Absent = ancienne sauvegarde à +1, convertie au chargement */
+  scale?: 2;
+  /** Points gagnés à chaque jeu (même index que la playlist ; null = passé / pas de gagnant) */
+  gains?: (Record<string, number> | null)[];
   /** Gagnants de chaque jeu (null = passé ou personne) */
   results: (string[] | null)[];
   /** Jeux réellement joués (hors « Passer ce jeu ») */
@@ -39,7 +43,7 @@ export interface SoireeState {
    * en attente de l'annonce. winners = exactement ceux que le jeu a désignés (vide = pas de gagnant) ;
    * unknown = gagnants du jeu introuvables dans la bande (à corriger, jamais perdus en silence).
    */
-  pending?: Omit<SoireeOutcome, "winners"> & { winners?: string[]; unknown?: string[] };
+  pending?: Omit<SoireeOutcome, "winners" | "points"> & { winners?: string[]; unknown?: string[] };
   /** Cérémonie des trophées déjà vue ? */
   awards?: { done: boolean };
 }
@@ -52,6 +56,55 @@ export interface SoireeOutcome {
   loser?: string | null;
   /** Classement du jeu (rang 1 = meilleur), prénoms de la bande seulement */
   ranking?: GameRank[];
+  /** Jeu classé : gagnants = 1ers du classement individuel (barème 3/2/1) */
+  ranked?: boolean;
+  /** Points de soirée gagnés sur ce jeu */
+  points?: Record<string, number>;
+}
+
+/* ───────── Barème ───────── */
+
+/** Jeu classé : 1er, 2e, 3e (rangs « compétition » : ex æquo = mêmes points, le suivant saute des rangs) */
+export const RANK_POINTS = [3, 2, 1] as const;
+/** Jeu par camp / équipe, gagnants désignés directement, ou choix manuel : chaque gagnant */
+export const TEAM_POINTS = 2;
+
+/**
+ * Points de soirée d'un jeu. Pas de gagnant (jeu sans gagnant, toute la table à égalité) → personne.
+ * Classé (ranked + classement dont les rang 1 sont EXACTEMENT les gagnants) → 3/2/1 selon le rang,
+ * sinon → TEAM_POINTS à chaque gagnant.
+ */
+export function soireeGains(winners: string[], ranking?: GameRank[] | null, ranked = false): Record<string, number> {
+  const ws = Array.from(new Set(winners));
+  if (!ws.length) return {};
+  const rows = ranking ?? [];
+  const top = new Set(rows.filter((r) => r.rank === 1).map((r) => r.name));
+  if (ranked && rows.length >= 2 && top.size === ws.length && ws.every((w) => top.has(w))) {
+    const out: Record<string, number> = {};
+    for (const r of rows) {
+      const pts = RANK_POINTS[r.rank - 1] ?? 0;
+      if (pts > 0 && !(r.name in out)) out[r.name] = pts;
+    }
+    return out;
+  }
+  return Object.fromEntries(ws.map((w) => [w, TEAM_POINTS]));
+}
+
+/**
+ * Sauvegarde d'avant le barème (+1 par gagnant) : points recalculés depuis les gagnants enregistrés,
+ * à TEAM_POINTS chacun (on ne sait pas si ces jeux étaient classés). Idempotent.
+ */
+export function migrateSoiree(s: SoireeState): SoireeState {
+  if (s.scale === 2) return s;
+  const points: Record<string, number> = Object.fromEntries(s.band.map((n) => [n, 0]));
+  const gains = s.playlist.map((_, i) => {
+    const ws = (s.results?.[i] ?? []).filter((w) => s.band.includes(w));
+    const g = soireeGains(ws);
+    for (const [n, p] of Object.entries(g)) points[n] = (points[n] ?? 0) + p;
+    return ws.length ? g : null;
+  });
+  const outcomes = s.outcomes?.map((o, i) => (o ? { ...o, points: gains[i] ?? {} } : o));
+  return { ...s, scale: 2, points, gains, ...(outcomes ? { outcomes } : {}) };
 }
 
 /* ───────── Choix des jeux ───────── */
@@ -146,7 +199,7 @@ function readStored(): SoireeState | null {
     // Jeux disparus du catalogue : on les retire
     const ids = new Set(GAMES.map((g) => g.id as string));
     if (!s.playlist.every((id) => ids.has(id))) return null;
-    return s;
+    return migrateSoiree(s);
   } catch {
     return null;
   }
@@ -193,8 +246,9 @@ export function uniqueBand(names: string[]): string[] {
 export function startSoiree(names: string[], vibe: Vibe, length: SoireeLength, playlist: ZGameId[]) {
   const band = uniqueBand(names);
   commit({
-    v: 1, band, vibe, length, playlist, index: 0, phase: "intro",
+    v: 1, band, vibe, length, playlist, index: 0, phase: "intro", scale: 2,
     points: Object.fromEntries(band.map((n) => [n, 0])),
+    gains: playlist.map(() => null),
     results: playlist.map(() => null),
     played: 0,
     startedAt: Date.now(),
@@ -250,6 +304,7 @@ export function captureFinished(d: GameFinishedDetail) {
       ...(ranking.length >= 2 ? { ranking } : {}),
       winners,
       ...(unknown.length ? { unknown } : {}),
+      ...(d.ranked && ranking.length >= 2 ? { ranked: true } : {}),
     },
   });
 }
@@ -265,20 +320,41 @@ export function announced(s: SoireeState): { winners: string[]; unknown: string[
   };
 }
 
-/** Enregistre les gagnants du jeu en cours (+1 point chacun) puis passe à la suite. */
-export function recordWinners(names: string[]) {
+/**
+ * Ce que l'écran gagnant automatique rapportera (mêmes règles que recordWinners sans choix manuel) :
+ * barème 3/2/1 si le jeu est classé et que tous ses gagnants sont dans la bande, sinon 2 par gagnant.
+ */
+export function announcedGains(s: SoireeState): Record<string, number> {
+  const { winners, unknown } = announced(s);
+  const ranked = Boolean(s.pending?.ranked) && !unknown.length;
+  return soireeGains(winners, ranked ? s.pending?.ranking : null, ranked);
+}
+
+/**
+ * Enregistre les gagnants du jeu en cours et leurs points (soireeGains) puis passe à la suite.
+ * manual : choix fait par la table (« Qui a gagné ? » / « Corriger ») → TEAM_POINTS par gagnant choisi.
+ */
+export function recordWinners(names: string[], opts: { manual?: boolean } = {}) {
   // Garde : une seule fois par jeu de la playlist (écran « gagnant » du jeu en cours uniquement)
   if (!state || state.phase !== "winner" || state.index >= state.playlist.length) return;
   const band = state.band;
   const winners = Array.from(new Set(names.map((n) => inBand(band, n)).filter((n): n is string => Boolean(n))));
+  const p = state.pending;
+  // Barème classé seulement si ce sont EXACTEMENT les gagnants annoncés par un jeu classé (sinon soireeGains → 2 chacun)
+  const ranked = !opts.manual && Boolean(p?.ranked) && !p?.unknown?.length;
+  const gain = soireeGains(winners, ranked ? p?.ranking : null, ranked);
   const points = { ...state.points };
-  for (const w of winners) points[w] = (points[w] ?? 0) + 1;
+  for (const [n, pts] of Object.entries(gain)) points[n] = (points[n] ?? 0) + pts;
   const results = [...state.results];
   results[state.index] = winners.length ? winners : null;
+  const gains = state.playlist.map((_, i) => state!.gains?.[i] ?? null);
+  gains[state.index] = winners.length ? gain : null;
   const outcomes = state.playlist.map((_, i) => state!.outcomes?.[i] ?? null);
-  const p = state.pending;
-  outcomes[state.index] = { winners, ...(p?.loser ? { loser: p.loser } : {}), ...(p?.ranking ? { ranking: p.ranking } : {}) };
-  commit(advance({ ...state, points, results, outcomes, pending: undefined, played: (state.played ?? 0) + 1 }));
+  outcomes[state.index] = {
+    winners, points: gain,
+    ...(p?.loser ? { loser: p.loser } : {}), ...(p?.ranking ? { ranking: p.ranking } : {}), ...(ranked && winners.length ? { ranked: true } : {}),
+  };
+  commit(advance({ ...state, scale: 2, points, gains, results, outcomes, pending: undefined, played: (state.played ?? 0) + 1 }));
 }
 
 /** Fin de la cérémonie des trophées. */
@@ -332,7 +408,7 @@ export function recapTitles(s: SoireeState, titles: string[], lastTitle: string)
 /**
  * Un prix par perso de la bande, calculé UNIQUEMENT sur ce qui a été mesuré pendant la soirée
  * (gagnants validés par la table, perdants et classements remontés par les jeux) :
- * king = le plus de victoires · naze = rien gagné / le plus perdu (révélé en dernier) ·
+ * king = le plus de points (barème de la soirée) · naze = rien gagné / le plus perdu (révélé en dernier) ·
  * game = son jeu gagné le plus marquant · comeback = dernier à un jeu puis gagnant d'un suivant ·
  * consolation sans victoire : second (2e quelque part), cascadeur (désigné perdant), touriste (le reste).
  */
@@ -347,7 +423,7 @@ export interface Trophy {
   game?: ZGameId;
   /** comeback : le jeu perdu avant */
   lostGame?: ZGameId;
-  /** naze / touriste : jeux joués ou défaites */
+  /** naze / touriste : jeux joués ou défaites · king : points de la soirée */
   n?: number;
   /** naze : aucune victoire de la soirée */
   allLost?: boolean;
@@ -405,7 +481,7 @@ export function computeTrophies(s: SoireeState): Trophy[] {
   // Le(s) Roi(s) : le plus de POINTS (comme le récap) ; ex æquo en tête = co-rois ; toute la bande à égalité = aucun
   const P = (n: string) => s.points[n] ?? 0;
   const kings = kingsOf(s);
-  for (const k of kings) out.set(k, { id: "king", name: k, games: won[k], v: v(k, "king") });
+  for (const k of kings) out.set(k, { id: "king", name: k, games: won[k], n: P(k), v: v(k, "king") });
 
   // Le Plus Gros Naze : seulement parmi les DERNIERS aux points (jamais à égalité avec un roi) ;
   // ex æquo en bas : départage par le plus de défaites, puis le pire classement moyen (sinon personne)

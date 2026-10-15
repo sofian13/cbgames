@@ -436,3 +436,60 @@ html, body { overflow-x: clip; overscroll-behavior-x: none; }
   .zz-zzz > span { animation: none !important; opacity: 0.9; }
   .zz-home, .zz-home .zz-glow { transition: none; }
 }
+
+/* ── 3 h du matin (greeting.ts) : cernes sous les yeux des blobs de l'accueil ──
+ * L'ombre sous chaque œil (1re ellipse du groupe qui cligne) devient plus sombre et descend un peu :
+ * un croissant violet foncé sous l'œil. Rien d'autre ne change (clignement, dodo, sursaut intacts). */
+.zz-3h .zb-blink > ellipse:first-child, .zz-3h .av-blink > ellipse:first-child {
+  fill: #2A0B3D; opacity: 0.62; transform-box: fill-box; transform-origin: 50% 0%; transform: translateY(2.6px) scale(1.06, 1.1);
+}
+
+/* ── Face cachée (FaceDownBlob.tsx) : un blob passe la tête par le bord de l'écran ── */
+.zz-face-peek {
+  position: fixed; z-index: 5; top: 38%; display: flex; align-items: center; gap: 4px; pointer-events: none;
+  animation: zz-face-peek 3.8s ease-in-out both;
+}
+.zz-face-peek.is-left { left: calc(var(--zz-face-s) * -0.3); --zz-side: 1; transform-origin: 0% 100%; }
+.zz-face-peek.is-right { right: calc(var(--zz-face-s) * -0.3); --zz-side: -1; flex-direction: row-reverse; transform-origin: 100% 100%; }
+.zz-face-blob { flex-shrink: 0; rotate: calc(var(--zz-side) * 14deg); }
+.zz-face-bubble { text-wrap: balance; max-width: min(240px,calc(100vw - var(--zz-face-s) * 0.7 - 24px)); animation: zz-face-bubble 3.8s ease both; }
+.is-left > .zz-face-bubble { transform-origin: 0% 80%; }
+.is-right > .zz-face-bubble { transform-origin: 100% 80%; }
+@keyframes zz-face-peek {
+  0%       { transform: translateX(calc(var(--zz-side) * -110%)) rotate(calc(var(--zz-side) * -18deg)); }
+  13%      { transform: translateX(calc(var(--zz-side) * 10px)) rotate(calc(var(--zz-side) * 4deg)); }
+  19%, 84% { transform: translateX(0) rotate(0deg); }
+  100%     { transform: translateX(calc(var(--zz-side) * -110%)) rotate(calc(var(--zz-side) * -18deg)); }
+}
+@keyframes zz-face-bubble {
+  0%, 15%   { opacity: 0; transform: scale(0.3); }
+  22%       { opacity: 1; transform: scale(1.06); }
+  26%, 78%  { opacity: 1; transform: scale(1); }
+  84%, 100% { opacity: 0; transform: scale(0.5); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .zz-face-peek, .zz-face-bubble { animation: none !important; }
+}
+
+/* ── Générique secret (Credits.tsx, 7 touchers sur la version) : blobs qui dansent, texte qui défile ── */
+.zz-credits { animation: zz-screen-in 360ms var(--zz-ease) both; touch-action: none; user-select: none; -webkit-user-select: none; }
+.zz-credits.is-out { animation: zz-fade-out 260ms ease both; }
+.zz-credits-dance { transform-origin: 50% 100%; animation: zz-credits-dance 0.62s ease-in-out infinite alternate; }
+@keyframes zz-credits-dance {
+  0%   { transform: translateY(0) rotate(-7deg) scale(1.06, 0.94); }
+  100% { transform: translateY(-16%) rotate(7deg) scale(0.96, 1.05); }
+}
+.zz-credits-mask {
+  -webkit-mask-image: linear-gradient(transparent, #000 14%, #000 86%, transparent);
+  mask-image: linear-gradient(transparent, #000 14%, #000 86%, transparent);
+}
+/* Délai négatif : le titre est déjà à l'écran à l'ouverture (pas d'écran vide) */
+.zz-credits-roll { top: 100%; animation: zz-credits-roll var(--zz-roll, 24s) linear calc(var(--zz-roll, 24s) * -0.12) infinite; }
+@keyframes zz-credits-roll {
+  from { transform: translateY(0); }
+  to   { transform: translateY(calc(-100% - 85dvh)); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .zz-credits-dance { animation: none !important; }
+  .zz-credits-roll { animation-duration: calc(var(--zz-roll, 24s) * 2); }
+}

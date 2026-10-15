@@ -3,7 +3,7 @@
 import { useId, useInsertionEffect, type CSSProperties, type ReactNode } from "react";
 import type { MascotMood } from "@/components/Mascot";
 import { AVATAR_PALETTE, HAIR_COLORS, type AvatarLook } from "@/lib/avatar/look";
-import { isZinzinName } from "@/lib/avatar/secrets";
+import { isBossName, isZinzinName } from "@/lib/avatar/secrets";
 
 /**
  * AvatarBlob — le perso personnalisé d'un joueur (« Ma bande »).
@@ -195,6 +195,8 @@ function deadEyes(): ReactNode {
 
 /** Accessoires du visage qui masquent les yeux ou la bouche : retirés quand le perso est éliminé (lisibilité). */
 const FACE_HIDDEN_WHEN_DEAD = new Set(["shades", "patch", "mask", "goggles"]);
+/** Accessoires portés sur les yeux : remplacés (à l'affichage) par les lunettes noires du « Boss ». */
+const EYEWEAR = new Set(["shades", "round", "patch", "goggles", "domino"]);
 
 /* ───────── Bouche (selon l'humeur du moment) ───────── */
 function mouth(mood: MascotMood, clipId: string): ReactNode {
@@ -1073,17 +1075,19 @@ export function AvatarBlob({ look, size = 96, mood = "happy", animate = true, sh
   const uid = useId().replace(/[^a-zA-Z0-9_-]/g, "");
   return (
     <div className={[animate ? "av-wob" : "", className ?? ""].join(" ")} style={{ width: size, height: size, flexShrink: 0, position: "relative", ...style }} aria-hidden>
-      <AvatarSvg look={look} size={size} mood={mood} animate={animate} shadow={shadow} costume={costume} uid={uid} zinzin={isZinzinName(name)} />
+      <AvatarSvg look={look} size={size} mood={mood} animate={animate} shadow={shadow} costume={costume} uid={uid} zinzin={isZinzinName(name)} boss={isBossName(name)} />
     </div>
   );
 }
 
 /** Le SVG seul (aussi utilisé pour les images de partage). */
-export function AvatarSvg({ look, size, mood = "happy", animate = false, shadow = false, costume, uid, viewBox = "0 0 120 120", zinzin = false }: {
+export function AvatarSvg({ look, size, mood = "happy", animate = false, shadow = false, costume, uid, viewBox = "0 0 120 120", zinzin = false, boss = false }: {
   look: AvatarLook; size: number; mood?: MascotMood; animate?: boolean; shadow?: boolean;
   costume?: AvatarBlobProps["costume"]; uid: string; viewBox?: string;
   /** Couronne arc-en-ciel (prénom « Zinzin ») : remplace le chapeau, pas le couvre-chef d'un costume de jeu */
   zinzin?: boolean;
+  /** Lunettes noires « Le Boss » (prénom « Sofian ») : par-dessus le look, sans le modifier */
+  boss?: boolean;
 }) {
   const c = AVATAR_PALETTE[look.color] ?? AVATAR_PALETTE.pink;
   const clip = `av-c-${uid}`, gBody = `av-b-${uid}`, gShade = `av-s-${uid}`, hatClip = `av-h-${uid}`;
@@ -1097,10 +1101,15 @@ export function AvatarSvg({ look, size, mood = "happy", animate = false, shadow 
   const seat = cos.top ? 18 : HAIR_SEAT[look.hair] ?? 18;
   // Éliminé (mood « dead ») : yeux en croix + bouche zigzag, l'accessoire qui cache le visage est retiré
   const dead = mood === "dead";
-  const faceId = dead && FACE_HIDDEN_WHEN_DEAD.has(look.face) ? "none" : look.face;
+  // Secret « Le Boss » : lunettes noires à la place de ses lunettes (le reste du visage est gardé) ;
+  // pas sous un accessoire de costume, ni éliminé (yeux en croix lisibles)
+  const bossOn = boss && !cos.face && !dead;
+  const face0 = bossOn && EYEWEAR.has(look.face) ? "shades" : look.face;
+  const faceId = dead && FACE_HIDDEN_WHEN_DEAD.has(face0) ? "none" : face0;
   const face = cos.face ? {} : faceLayer(faceId, c, look.hair !== "none" ? hc : "#5A3420", clip);
+  const bossShades = bossOn && faceId !== "shades" ? faceLayer("shades", c, hc, clip).over : null;
   const extra = extraLayers(look.extra, c, seat, clip);
-  const hideEyes = { L: !cos.face && faceId === "shades", R: !cos.face && (faceId === "shades" || faceId === "patch") };
+  const hideEyes = { L: !cos.face && (faceId === "shades" || bossOn), R: !cos.face && (faceId === "shades" || faceId === "patch" || bossOn) };
   const hideMouth = !cos.face && faceId === "mask";
   // Couvre-chef : les cheveux au-dessus du bord sont rangés dessous
   const underHat = (n: ReactNode) => (cover !== undefined && n ? <g clipPath={`url(#${hatClip})`}>{n}</g> : n);
@@ -1147,6 +1156,7 @@ export function AvatarSvg({ look, size, mood = "happy", animate = false, shadow 
       {dead ? deadEyes() : eyes(look.eyes, c, hideEyes, animate)}
       {!hideMouth && mouth(mood, clip)}
       {face.over}
+      {bossShades}
       {cos.face}
 
       {/* Devant */}

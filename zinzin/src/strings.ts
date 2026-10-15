@@ -417,7 +417,12 @@ export const SOIREE: I18n<{
   nextGame: string;
   toResults: string;
   autoWin: (names: string[], game: string) => string;
-  autoPts: (n: number) => string;
+  /** Points gagnés par le(s) gagnant(s) : « +3 pts » / « +2 pts chacun » */
+  autoPts: (pts: number, many: boolean) => string;
+  /** Jeu classé : les places payées sous les gagnants (« 2e Tom +2 ») */
+  placePts: (rank: number, names: string, pts: number) => string;
+  /** Le barème, en une ligne (préparation + 1er jeu) */
+  rule: string;
   tapNext: string;
   fix: string;
   standings: string;
@@ -479,7 +484,9 @@ export const SOIREE: I18n<{
     nextGame: "Jeu suivant",
     toResults: "Voir les résultats",
     autoWin: (n, g) => `${n.length > 1 ? `${n.slice(0, -1).join(", ")} et ${n[n.length - 1]}` : n[0]} gagne${n.length > 1 ? "nt" : ""} ${g} !`,
-    autoPts: (n) => (n > 1 ? "+1 point chacun" : "+1 point"),
+    autoPts: (p, many) => `+${p} pt${p > 1 ? "s" : ""}${many ? " chacun" : ""}`,
+    placePts: (r, n, p) => `${r === 1 ? "1er" : `${r}e`} ${n} +${p}`,
+    rule: "1er 3 pts · 2e 2 pts · 3e 1 pt · équipe gagnante 2 pts",
     tapNext: "Touchez pour continuer",
     fix: "Corriger",
     standings: "Le classement de la soirée",
@@ -541,7 +548,9 @@ export const SOIREE: I18n<{
     nextGame: "Next game",
     toResults: "See the results",
     autoWin: (n, g) => `${n.length > 1 ? `${n.slice(0, -1).join(", ")} and ${n[n.length - 1]}` : n[0]} win${n.length > 1 ? "" : "s"} ${g}!`,
-    autoPts: (n) => (n > 1 ? "+1 point each" : "+1 point"),
+    autoPts: (p, many) => `+${p} pt${p === 1 ? "" : "s"}${many ? " each" : ""}`,
+    placePts: (r, n, p) => `${r === 1 ? "1st" : r === 2 ? "2nd" : r === 3 ? "3rd" : `${r}th`} ${n} +${p}`,
+    rule: "1st 3 pts · 2nd 2 pts · 3rd 1 pt · winning team 2 pts",
     tapNext: "Tap to continue",
     fix: "Change",
     standings: "Tonight's leaderboard",
@@ -603,7 +612,9 @@ export const SOIREE: I18n<{
     nextGame: "Siguiente juego",
     toResults: "Ver los resultados",
     autoWin: (n, g) => `¡${n.length > 1 ? `${n.slice(0, -1).join(", ")} y ${n[n.length - 1]}` : n[0]} gana${n.length > 1 ? "n" : ""} ${g}!`,
-    autoPts: (n) => (n > 1 ? "+1 punto cada uno" : "+1 punto"),
+    autoPts: (p, many) => `+${p} pt${p === 1 ? "" : "s"}${many ? " cada uno" : ""}`,
+    placePts: (r, n, p) => `${r}.º ${n} +${p}`,
+    rule: "1.º 3 pts · 2.º 2 pts · 3.º 1 pt · equipo ganador 2 pts",
     tapNext: "Toca para continuar",
     fix: "Corregir",
     standings: "La clasificación de la noche",

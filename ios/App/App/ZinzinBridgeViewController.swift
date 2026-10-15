@@ -1,5 +1,6 @@
 import UIKit
 import Capacitor
+import CoreMotion
 
 /// Vue Capacitor de Zinzin : enregistre les plugins natifs propres à l'app
 /// (ceux des paquets npm sont enregistrés automatiquement par Capacitor).
@@ -32,7 +33,11 @@ class ZinzinBridgeViewController: CAPBridgeViewController {
         if !observingActive {
             observingActive = true
             NotificationCenter.default.addObserver(self, selector: #selector(regainShakeFocus), name: UIApplication.didBecomeActiveNotification, object: nil)
+            // Face cachée : capteur coupé en arrière-plan (batterie), relancé au retour
+            NotificationCenter.default.addObserver(self, selector: #selector(startFaceDown), name: UIApplication.didBecomeActiveNotification, object: nil)
+            NotificationCenter.default.addObserver(self, selector: #selector(stopFaceDown), name: UIApplication.didEnterBackgroundNotification, object: nil)
         }
+        startFaceDown()
     }
     private var observingActive = false
 
@@ -48,6 +53,47 @@ class ZinzinBridgeViewController: CAPBridgeViewController {
         } else {
             super.motionEnded(motion, with: event)
         }
+    }
+
+    // MARK: - Face cachée (easter egg de l'accueil)
+    // Téléphone posé écran contre la table ≥ 2 s puis retourné : événement window « zzfacedown ».
+    // Accéléromètre brut à 5 Hz (pas de fusion de capteurs, coût quasi nul) ; aucune permission
+    // ni clé Info.plist (NSMotionUsageDescription ne concerne que CMMotionActivity / podomètre).
+    // z ≈ +1 g : écran vers le bas ; z < 0 : écran de nouveau vers le haut (ou tenu en main).
+
+    private let faceMotion = CMMotionManager()
+    private var faceDownSince: Date?
+    private var faceDownArmed = false
+    private var lowZ = 0.0
+
+    @objc private func startFaceDown() {
+        guard faceMotion.isAccelerometerAvailable, !faceMotion.isAccelerometerActive else { return }
+        faceDownSince = nil
+        faceDownArmed = false
+        lowZ = 0
+        faceMotion.accelerometerUpdateInterval = 0.2
+        faceMotion.startAccelerometerUpdates(to: .main) { [weak self] data, _ in
+            guard let self = self, let a = data?.acceleration else { return }
+            // Léger lissage : un choc sur la table ne compte pas
+            self.lowZ = self.lowZ * 0.5 + a.z * 0.5
+            if self.lowZ > 0.85 {
+                if self.faceDownSince == nil { self.faceDownSince = Date() }
+                if let t = self.faceDownSince, Date().timeIntervalSince(t) >= 2 { self.faceDownArmed = true }
+            } else if self.lowZ < -0.2 {
+                if self.faceDownArmed { self.bridge?.triggerWindowJSEvent(eventName: "zzfacedown") }
+                self.faceDownSince = nil
+                self.faceDownArmed = false
+            } else if !self.faceDownArmed {
+                // Sur la tranche, pas assez longtemps : on recommence à compter
+                self.faceDownSince = nil
+            }
+        }
+    }
+
+    @objc private func stopFaceDown() {
+        if faceMotion.isAccelerometerActive { faceMotion.stopAccelerometerUpdates() }
+        faceDownSince = nil
+        faceDownArmed = false
     }
 }
 

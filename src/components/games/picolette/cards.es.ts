@@ -192,12 +192,12 @@ export const CARDS_ES: PicoletteCard[] = [
   { type: "table", pack: "quiz", text: "Por turnos, nombrad un personaje de cuento de hadas.", hint: T },
 
   // ── COMODINES (raros, efecto inmediato) ──────────────
-  { type: "joker", pack: "soft", joker: "amnesty", text: "AMNISTÍA — El último castigo repartido queda anulado.", hint: "El contador se corrige al momento." },
-  { type: "joker", pack: "soft", joker: "pick", text: "ELIGE — El lector decide directamente quién se lleva un castigo, sin debate.", hint: "Elige rápido, es tu momento." },
-  { type: "joker", pack: "soft", joker: "shield", text: "ESCUDO — Dale un escudo a alguien: su próximo castigo quedará anulado.", hint: "El escudo 🛡️ aparece junto a su nombre." },
-  { type: "joker", pack: "soft", joker: "pick", text: "DOBLETE — Elige a dos jugadores: duelo de miradas. El primero que se ría o parpadee se lleva el castigo.", hint: "El lector hace de árbitro." },
-  { type: "joker", pack: "soft", joker: "reader", text: "PASAMANOS — Dale el móvil a quien quieras: esa persona lee lo que sigue.", hint: "Efecto inmediato." },
-  { type: "joker", pack: "trash", joker: "pick", text: "INVERSIÓN — El último que perdió elige quién se lleva un castigo en su lugar.", hint: "El poder cambia de manos." },
+  { type: "joker", pack: "soft", joker: "amnesty", text: "AMNISTÍA: el último castigo repartido queda anulado.", hint: "El contador se corrige al momento." },
+  { type: "joker", pack: "soft", joker: "pick", text: "ELIGE: el lector decide directamente quién se lleva un castigo, sin debate.", hint: "Elige rápido, es tu momento." },
+  { type: "joker", pack: "soft", joker: "shield", text: "ESCUDO: dale un escudo a alguien. Su próximo castigo quedará anulado.", hint: "El escudo 🛡️ aparece junto a su nombre." },
+  { type: "joker", pack: "soft", joker: "pick", text: "DOBLETE: elige a dos jugadores para un duelo de miradas. El primero que se ría o parpadee se lleva el castigo.", hint: "El lector hace de árbitro." },
+  { type: "joker", pack: "soft", joker: "reader", text: "PASAMANOS: dale el móvil a quien quieras. Esa persona lee lo que sigue.", hint: "Efecto inmediato." },
+  { type: "joker", pack: "trash", joker: "pick", text: "INVERSIÓN: el último que perdió elige quién se lleva un castigo en su lugar.", hint: "El poder cambia de manos." },
 
   // ═══════════════════════════════════════════════════════
   // Extensión: Nombra…, reglas por cartas, quiz con respuesta, duelos,
@@ -627,11 +627,11 @@ export const CARDS_ES: PicoletteCard[] = [
   { type: "coquin", pack: "coquin", text: "{p1}, haz tu declaración más romántica… al sofá.", hint: "¿No convence? Castigo." },
 
   // ── COMODINES ────────────────────────────────────────
-  { type: "joker", pack: "soft", joker: "clear", text: "LIBERACIÓN — La regla en curso queda anulada. Respirad.", hint: "Efecto inmediato." },
-  { type: "joker", pack: "soft", joker: "none", text: "PAUSA DE AGUA — Todos se toman un vaso de agua. Esta carta no tiene castigo.", hint: "Hidratarse es lo primero." },
-  { type: "joker", pack: "soft", joker: "none", text: "RONDA DE CUMPLIDOS — Cada uno le hace un cumplido sincero a quien tenga a su izquierda.", hint: "Esta carta no tiene castigo." },
-  { type: "joker", pack: "soft", joker: "shield", text: "ÁNGEL DE LA GUARDA — El lector regala un escudo a quien quiera.", hint: "El escudo aparece junto a su nombre." },
-  { type: "joker", pack: "pop", joker: "pick", text: "VENGANZA — Quien lleve más castigos elige quién se lleva el siguiente.", hint: "El contador decide quién tiene el poder." },
+  { type: "joker", pack: "soft", joker: "clear", text: "LIBERACIÓN: la regla en curso queda anulada. Respirad.", hint: "Efecto inmediato." },
+  { type: "joker", pack: "soft", joker: "none", text: "PAUSA DE AGUA: todos se toman un vaso de agua. Esta carta no tiene castigo.", hint: "Hidratarse es lo primero." },
+  { type: "joker", pack: "soft", joker: "none", text: "RONDA DE CUMPLIDOS: cada uno le hace un cumplido sincero a quien tenga a su izquierda.", hint: "Esta carta no tiene castigo." },
+  { type: "joker", pack: "soft", joker: "shield", text: "ÁNGEL DE LA GUARDA: el lector regala un escudo a quien quiera.", hint: "El escudo aparece junto a su nombre." },
+  { type: "joker", pack: "pop", joker: "pick", text: "VENGANZA: quien lleve más castigos elige quién se lleva el siguiente.", hint: "El contador decide quién tiene el poder." },
 ];
 
 /** Retos suaves, divertidos y sin peligro, sorteados por la ruleta. */

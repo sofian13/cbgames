@@ -4,10 +4,28 @@ import type { I18n } from "@/lib/i18n";
  * Petite phrase de l'accueil selon l'heure (et le week-end le matin).
  * Ton complice, jamais incitatif à boire. Tirée au hasard une fois par ouverture
  * (8 variantes par plage, jamais deux fois de suite la même).
+ * Secret : de 3 h à 3 h 59, phrase spéciale (« three ») et les blobs de l'accueil ont des cernes
+ * (classe zz-3h, voir Home.tsx / zinzin.css). En dev, `?zz3h=1` pour forcer.
  */
-type Slot = "morningWeekend" | "morning" | "day" | "apero" | "evening" | "night" | "late";
+type BaseSlot = "morningWeekend" | "morning" | "day" | "apero" | "evening" | "night" | "late";
+type Slot = BaseSlot | "three";
 
-const LINES: I18n<Record<Slot, string[]>> = {
+/** 3 h du matin : remplace la plage « late » pendant cette heure-là. */
+const THREE_AM: I18n<string[]> = {
+  fr: ["Il est 3 h. Vous êtes sûrs de vous ?", "3 h du mat'. Vous êtes sûrs de vous ?", "Il est 3 h. Même les blobs ont des cernes."],
+  en: ["It's 3 a.m. Are you sure about this?", "3 a.m. Are you all sure about this?", "It's 3 a.m. Even the blobs look tired."],
+  es: ["Son las 3. ¿Estáis seguros de esto?", "Las 3 de la mañana. ¿Seguro que sí?", "Son las 3. Hasta los blobs tienen ojeras."],
+};
+
+/** Entre 3 h et 3 h 59 (heure locale) ; en dev, `?zz3h=1` force le secret. */
+export function isThreeAm(now = new Date()): boolean {
+  if (import.meta.env.DEV && typeof location !== "undefined" && new URLSearchParams(location.search).get("zz3h") === "1") return true;
+  return now.getHours() === 3;
+}
+
+const lines = (lang: keyof typeof LINES, slot: Slot): string[] => (slot === "three" ? THREE_AM[lang] : LINES[lang][slot]);
+
+const LINES: I18n<Record<BaseSlot, string[]>> = {
   fr: {
     morningWeekend: [
       "Ça pique un peu ce matin ?", "Grosse soirée hier, non ?", "Café d'abord, Zinzin ensuite.", "Au fait, qui a gagné hier ?",
@@ -100,7 +118,7 @@ const LINES: I18n<Record<Slot, string[]>> = {
   },
 };
 
-function slotOf(d: Date): Slot {
+function slotOf(d: Date): BaseSlot {
   const h = d.getHours();
   const weekend = d.getDay() === 0 || d.getDay() === 6;
   if (h >= 1 && h < 6) return "late";
@@ -115,8 +133,8 @@ const LAST_KEY = "zz-greet-last";
 
 /** Tirage (une fois par ouverture) : la plage horaire + la variante, jamais la même que la dernière fois dans cette plage. */
 export function drawGreeting(now = new Date()): { slot: Slot; i: number } {
-  const slot = slotOf(now);
-  const n = LINES.fr[slot].length;
+  const slot: Slot = isThreeAm(now) ? "three" : slotOf(now);
+  const n = lines("fr", slot).length;
   let last: Partial<Record<Slot, number>> = {};
   try { last = JSON.parse(localStorage.getItem(LAST_KEY) ?? "{}") ?? {}; } catch { last = {}; }
   const prev = typeof last[slot] === "number" ? last[slot]! : -1;
@@ -129,6 +147,6 @@ export function drawGreeting(now = new Date()): { slot: Slot; i: number } {
 
 /** Le texte du tirage, dans la langue courante (même variante si on change de langue). */
 export function greetingText(g: { slot: Slot; i: number }, lang: keyof typeof LINES): string {
-  const list = LINES[lang][g.slot];
+  const list = lines(lang, g.slot);
   return list[g.i % list.length];
 }

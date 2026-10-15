@@ -24,6 +24,11 @@ export interface GameFinishedDetail {
   winners?: string[];
   /** Classement mesuré par le jeu (rang 1 = meilleur, ex æquo = même rang) — optionnel */
   ranking?: GameRank[];
+  /**
+   * true : jeu CLASSÉ — les gagnants sont les 1ers du classement INDIVIDUEL ci-dessus (barème 3/2/1 de la
+   * Soirée). Absent : jeu par camp / équipe ou gagnants désignés directement (2 pts par gagnant).
+   */
+  ranked?: boolean;
 }
 
 export interface GameRank { name: string; rank: number }
@@ -83,6 +88,8 @@ export interface FinishedInfo {
   winners?: string[] | null;
   /** Le jeu dit explicitement « pas de gagnant » (ex. « Terminer » avant que tout le monde ait joué) */
   noWinner?: boolean;
+  /** Scores par ÉQUIPE recopiés sur chaque joueur (ex. Fais Deviner) : pas un classement individuel */
+  teams?: boolean;
 }
 
 /**
@@ -94,10 +101,14 @@ export function finishedPayload(info: FinishedInfo | undefined, table?: string[]
   if (info?.noWinner) return { loser: null, winners: [] };
   const ranking = info?.scores ? rankingOf(info.scores) : [];
   const winners = decideWinners({ winners: info?.winners, ranking }, table);
+  // Jeu classé : gagnants tirés du classement individuel (pas de gagnants explicites, pas d'équipes)
+  const explicit = (info?.winners ?? []).some((w) => (w ?? "").trim());
+  const ranked = !explicit && !info?.teams && ranking.length >= 2 && winners.length > 0;
   return {
     loser: info?.loser ?? null,
     ...(ranking.length >= 2 ? { ranking } : {}),
     winners,
+    ...(ranked ? { ranked: true } : {}),
   };
 }
 

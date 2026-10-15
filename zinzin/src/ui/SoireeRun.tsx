@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Check, Crown, Home as HomeIcon, Pause, Share2, Sparkles } from "lucide-react";
+import { Check, Crown, Home as HomeIcon, Pause, Share2, Sparkles, Trophy } from "lucide-react";
 import { ConfettiBurst } from "@/components/ConfettiBurst";
 import { colorForIndex } from "@/components/games/local-kit";
 import { armPartyBand, disarmPartyBand } from "@/lib/saved-players";
@@ -12,7 +12,7 @@ import { shareApp } from "../settings";
 import { shareResultCard, shareTrophyCard } from "@/lib/share-card";
 import { soberKind } from "../no-alcohol";
 import {
-  announced, captureFinished, endSoiree, kingsOf, ranking, recapTitles, recordWinners, setPhase, skipGame, useSoiree, type SoireeState,
+  announced, announcedGains, captureFinished, endSoiree, kingsOf, ranking, recapTitles, recordWinners, setPhase, skipGame, useSoiree, type SoireeState,
 } from "../soiree";
 import { allTrophies, Ceremony, TROPHY_STR, TrophyList, trophyText } from "./SoireeTrophies";
 import { SOIREE } from "../strings";
@@ -143,6 +143,7 @@ function Intro({ s, onPause }: { s: SoireeState; onPause: () => void }) {
           </p>
         )}
 
+        {s.index === 0 && <p className="mt-3 text-[14px] font-extrabold leading-snug" style={{ opacity: 0.85 }}><Trophy size={14} strokeWidth={3} className="mr-1 inline align-[-2px]" aria-hidden />{t.rule}</p>}
         {top.length > 0 && (
           <div className="mt-4 flex flex-wrap items-center gap-1.5">
             {top.map((r) => (
@@ -273,6 +274,13 @@ function AutoWinner({ s, winners, unknown = [], onFix }: { s: SoireeState; winne
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const many = shown.length > 1;
+  // Points annoncés = exactement ceux que recordWinners(winners) va compter
+  const gains = announcedGains(s);
+  const winPts = winners.length ? gains[winners[0]] ?? 0 : 0;
+  // Jeu classé : les 2e / 3e payés, en une ligne (« 2e Tom +2 · 3e Inès +1 »)
+  const places = [2, 1].map((pts) => ({ pts, names: s.band.filter((n) => gains[n] === pts && !winners.includes(n)) }))
+    .filter((p) => p.names.length)
+    .map((p) => t.placePts(4 - p.pts, p.names.join(", "), p.pts));
   const size = shown.length === 1 ? 150 : shown.length <= 3 ? 96 : 70;
   const title = t.autoWin(shown, info.name);
   return (
@@ -295,7 +303,10 @@ function AutoWinner({ s, winners, unknown = [], onFix }: { s: SoireeState; winne
           ))}
         </div>
         <h1 className="zz-title mt-4 text-white" style={{ fontSize: title.length > 34 ? 30 : title.length > 22 ? 36 : 44, lineHeight: 1, overflowWrap: "anywhere" }}>{title}</h1>
-        {winners.length > 0 && <p className="mt-3 text-[18px] font-extrabold" style={{ color: "#FFD23F" }}>{t.autoPts(winners.length)}</p>}
+        {winners.length > 0 && <p className="mt-3 text-[22px] font-extrabold" style={{ color: "#FFD23F" }}>{t.autoPts(winPts, winners.length > 1)}</p>}
+        {winners.length > 0 && places.length > 0 && (
+          <p className="mt-1 max-w-[340px] text-[15px] font-bold leading-snug text-white" style={{ opacity: 0.85, overflowWrap: "anywhere" }}>{places.join(" · ")}</p>
+        )}
         {doubt ? (
           <>
             <p className="mt-4 max-w-[330px] text-[16px] font-bold leading-snug text-white">{u.notInBand(unknown)}</p>
@@ -337,7 +348,7 @@ function PickWinner({ s, suggested, onPause }: { s: SoireeState; suggested: stri
     done.current = true;
     haptic(names.length ? "success" : undefined);
     playSfx(names.length ? "coins" : "pop2", { volume: names.length ? 0.7 : 0.5 });
-    recordWinners(names);
+    recordWinners(names, { manual: true }); // choix de la table : 2 pts par gagnant choisi
   };
   const toggle = (name: string) => {
     if (!ready()) return;

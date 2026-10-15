@@ -4,6 +4,7 @@
  * - Accessoire secret : absent de l'éditeur tant qu'il n'est pas trouvé, gratuit ensuite
  *   (c'est une récompense, pas un élément Zinzin+).
  * - Prénom « Zinzin » (casse et accents ignorés) : couronne arc-en-ciel sur son perso.
+ * - Prénom « Sofian » (le créateur) : lunettes noires « Le Boss », posées à l'affichage seulement.
  */
 
 /** Chapeau secret débloqué en touchant le blob doré de l'accueil. */
@@ -54,4 +55,10 @@ export function subscribeSecrets(cb: () => void): () => void {
 export function isZinzinName(name?: string | null): boolean {
   if (!name) return false;
   return name.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z]/g, "") === "zinzin";
+}
+
+/** Le joueur s'appelle-t-il « Sofian » (le créateur) ? Même comparaison que « Zinzin » : lunettes noires « Le Boss ». */
+export function isBossName(name?: string | null): boolean {
+  if (!name) return false;
+  return name.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z]/g, "") === "sofian";
 }

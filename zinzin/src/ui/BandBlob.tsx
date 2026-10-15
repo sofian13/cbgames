@@ -3,7 +3,7 @@ import { usePersoTalk, usePlayerLook } from "@/components/avatar/PlayerBlob";
 import { VoiceBadge } from "@/components/avatar/VoiceUI";
 import { playPersoVoice, usePersoVoice } from "@/lib/avatar/voice";
 import { costumeLayers, type ZCostume } from "./costumes";
-import { isZinzinName } from "@/lib/avatar/secrets";
+import { isBossName, isZinzinName } from "@/lib/avatar/secrets";
 import { ZBlob, type ZBlobProps } from "./ZBlob";
 
 /** Couronne du gagnant (repère 120×120), posée à la place du chapeau. */
@@ -36,7 +36,7 @@ export function BandBlob({ name, costume, crown, talk = false, autoTalk = false,
     : crown && !zinzin ? () => CROWN : undefined;
   const blob = look
     ? <AvatarBlob look={look} size={size} mood={mood} name={name} animate={p.wobble !== false && !talking} costume={cos} className={p.className} style={p.style} />
-    : <ZBlob {...p} mood={mood} costume={costume} crown={crown} rainbowCrown={zinzin} />;
+    : <ZBlob {...p} mood={mood} costume={costume} crown={crown} rainbowCrown={zinzin} shades={isBossName(name)} />;
   if (!talk && !autoTalk) return blob;
   return (
     <div ref={ref} style={{ position: "relative", display: "inline-block" }}

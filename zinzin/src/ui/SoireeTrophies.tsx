@@ -47,6 +47,8 @@ type TStr = {
     nazeAll: (n: number) => string;
     nazeLoss: (n: number) => string;
     comeback: (lost: string, won: string) => string;
+    /** Roi : ses points de la soirée (« 9 pts ce soir ») */
+    kingPts: (n: number) => string;
   };
   prizes: Record<Exclude<TrophyId, "game">, V[]>;
   games: Record<ZGameId, V[]>;
@@ -76,6 +78,7 @@ export const TROPHY_STR: I18n<TStr> = {
       nazeAll: (n) => `0 victoire sur ${plFr(n, "jeu", "jeux")}`,
       nazeLoss: (n) => `${plFr(n, "défaite", "défaites")} ce soir`,
       comeback: (l, w) => `Dernier à ${l}, puis vainqueur à ${w}`,
+      kingPts: (n) => `${n} pt${n > 1 ? "s" : ""} ce soir`,
     },
     prizes: {
       king: [
@@ -154,6 +157,7 @@ export const TROPHY_STR: I18n<TStr> = {
       nazeAll: (n) => `0 wins in ${n} game${n > 1 ? "s" : ""}`,
       nazeLoss: (n) => `${n} loss${n > 1 ? "es" : ""} tonight`,
       comeback: (l, w) => `Last in ${l}, then won ${w}`,
+      kingPts: (n) => `${n} pt${n === 1 ? "" : "s"} tonight`,
     },
     prizes: {
       king: [
@@ -232,6 +236,7 @@ export const TROPHY_STR: I18n<TStr> = {
       nazeAll: (n) => `0 victorias en ${n} juego${n > 1 ? "s" : ""}`,
       nazeLoss: (n) => `${n} derrota${n > 1 ? "s" : ""} esta noche`,
       comeback: (l, w) => `Último en ${l}, luego ganó ${w}`,
+      kingPts: (n) => `${n} pt${n === 1 ? "" : "s"} esta noche`,
     },
     prizes: {
       king: [
@@ -303,7 +308,9 @@ export function trophyText(t: Trophy, lang: Lang): { name: string; fact: string;
   const variants = t.id === "game" ? (t.game ? s.games[t.game] : undefined) ?? s.prizes.touriste : s.prizes[t.id];
   const [name, quip] = variants[t.v % variants.length];
   const fact =
-    t.id === "king" || t.id === "game" ? s.fact.won(t.id === "king" || t.games?.length ? list(t.games) : gameName(t.game, lang))
+    // Roi = le plus de points : on les affiche (il peut l'être sans avoir gagné un jeu, à force de 2es places)
+    t.id === "king" ? (t.games?.length ? `${s.fact.won(list(t.games))} · ${s.fact.kingPts(t.n ?? 0)}` : s.fact.kingPts(t.n ?? 0))
+    : t.id === "game" ? s.fact.won(t.games?.length ? list(t.games) : gameName(t.game, lang))
       : t.id === "naze" ? (t.allLost ? s.fact.nazeAll(t.n ?? 0) : s.fact.nazeLoss(t.n ?? 0))
         : t.id === "comeback" ? s.fact.comeback(gameName(t.lostGame, lang), gameName(t.game, lang))
           : t.id === "second" ? s.fact.second(list(t.games))
