@@ -622,7 +622,7 @@ export default function FauxTemoinGame({ onReturnToLobby }: GameProps) {
         )}
         <ZTitle size="clamp(34px, 10vw, 46px)" className={end ? "text-center" : ""}>{end ? t.endTitle : t.scoresTitle}</ZTitle>
         {end && <p className="mt-2 text-center text-[20px] font-bold" style={{ color: ZZ.yellow }}>{round === 1 && winner ? (winner === "fakes" ? t.fakesWinTitle(fakes.length) : t.witnessesWinTitle) : endWinners.length === 0 ? wt.allTiedSub : solo ? t.winner(solo.name) : wt.win(endWinners)}</p>}
-        <div className="mt-5"><ZRanking rows={ranking} unit={t.pts} winners={end ? endWinners : undefined} /></div>
+        <div className="mt-5"><ZRanking rows={ranking} unit={t.pts} winners={end ? endWinners : undefined} gains={end} /></div>
         <div className="min-h-6 flex-1" />
         {end ? (
           <>

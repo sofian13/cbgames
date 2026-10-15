@@ -20,7 +20,7 @@ import { Check, CupSoda, Drama, Flame, RotateCw, Vibrate } from "lucide-react";
 import { GameInlineIcon } from "../game-icon-button";
 import { MASCOT_PALETTE } from "@/components/Mascot";
 import { uniqueMax, useGameFinished } from "@/lib/game-finished";
-import { SoireeNextButton } from "@/components/games/soiree-next";
+import { SoireeGain, SoireeNextButton } from "@/components/games/soiree-next";
 import { EndHomeLink, EndPill, EndPills, EndReplay } from "@/components/games/end-actions";
 
 // ── La Patate ──────────────────────────────────────────────
@@ -654,6 +654,7 @@ export default function PatateGame({ onReturnToLobby }: GameProps) {
             {/* Prénom long : passe à la ligne (au tiret) plutôt que d'être tronqué */}
             <span className="min-w-0 flex-1 text-[18px] leading-tight" style={{ ...DISPLAY, overflowWrap: "anywhere" }}>{r.name}</span>
             <span className="shrink-0 whitespace-nowrap text-[18px]" style={DISPLAY}>{t.booms(r.l)}</span>
+            <SoireeGain name={r.name} />
           </div>
         ))}
       </div>

@@ -24,7 +24,7 @@ import { WIN_STR } from "@/lib/winners-text";
 import { landscapeWhile } from "@/lib/orientation";
 import { requestMotionPermission } from "@/components/games/verre/sensors";
 import { useTiltGestures } from "./tilt";
-import { SoireeNextButton } from "@/components/games/soiree-next";
+import { SoireeGain, SoireeNextButton } from "@/components/games/soiree-next";
 import { EndHomeLink, EndPill, EndPills, EndReplay } from "@/components/games/end-actions";
 
 // ── Deviner le Mot ─────────────────────────────────────────
@@ -583,7 +583,9 @@ function Standings({ players, scores, big, winners }: { players: string[]; score
             <span className="grid w-6 place-items-center text-[18px]" style={DISPLAY}>{lead ? <Crown size={18} strokeWidth={2.8} aria-hidden /> : k + 1}</span>
             <PlayerBlob name={r.name} colorIndex={r.i} size={30} mood="happy" bob={false} />
             <span className="min-w-0 flex-1 truncate text-[18px]" style={DISPLAY}>{r.name}</span>
-            <span className="text-[19px]" style={DISPLAY}>{r.s}</span>
+            <span className="shrink-0 text-[19px]" style={DISPLAY}>{r.s}</span>
+            {/* Classement final (big) en Soirée : points de soirée gagnés */}
+            {big && <SoireeGain name={r.name} />}
           </div>
         );
       })}

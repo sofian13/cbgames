@@ -42,6 +42,7 @@ const HAIR_DEFAULT: Record<string, string> = {
   curly: "#E8642A", bowl: "#6B3E1F", emo: "#221838", flame: "#FF5A2E",
   silver: "#EDEBF5", ponytail: "#2A1B3D", messy: "#E8304A", twintails: "#2FC7C0", sticks: "#221838",
   hedgehog: "#6B3E1F", streak: "#221838", peekaboo: "#33407A", ahoge: "#C4622B", mane: "#2B2350",
+  mullet: "#C98A3A", quiff: "#221838",
 };
 
 /**
@@ -55,11 +56,12 @@ const HAIR_SEAT: Record<string, number> = {
   hero: 4, long: 11, buzz: 18, curly: 1, bowl: 8, emo: 10, flame: 9,
   silver: 11, ponytail: 12, messy: 8, twintails: 12, sticks: 12, hedgehog: 9,
   streak: 12, peekaboo: 10, ahoge: 12, mane: 10,
+  mullet: 10, quiff: -4,
 };
 
 /** Chapeaux qui couvrent le crâne : y du bord (les cheveux au-dessus sont cachés dessous). */
 const HAT_COVER: Record<string, number> = {
-  straw: 24, cap: 30, beanie: 32, bucket: 30, cowboy: 26, tophat: 23, bandana: 30,
+  straw: 24, cap: 30, beanie: 32, bucket: 30, cowboy: 26, tophat: 23, bandana: 30, propeller: 30,
 };
 
 /* ───────── Styles CSS (une seule fois) ───────── */
@@ -72,7 +74,9 @@ const CSS = `
 .av-crown{transform-box:fill-box;transform-origin:50% 100%;animation:av-crown 3.4s ease-in-out infinite}
 @keyframes av-twk{0%,100%{opacity:1;transform:scale(1) rotate(0deg)}50%{opacity:.35;transform:scale(.55) rotate(45deg)}}
 @keyframes av-crown{0%,100%{transform:rotate(0deg) translateY(0)}50%{transform:rotate(3deg) translateY(-1.5px)}}
-@media (prefers-reduced-motion: reduce){.av-wob,.av-blink,.av-twk,.av-crown{animation:none!important}}
+.av-prop{transform-box:fill-box;transform-origin:center;animation:av-prop .7s linear infinite}
+@keyframes av-prop{0%,100%{transform:scaleX(1)}50%{transform:scaleX(-1)}}
+@media (prefers-reduced-motion: reduce){.av-wob,.av-blink,.av-twk,.av-crown,.av-prop{animation:none!important}}
 `;
 let styleDone = false;
 function useAvatarStyle() {
@@ -176,6 +180,57 @@ function eyes(style: string, c: { body: string; deep: string }, hide: { L: boole
       ));
     case "cross":
       return both((e, s) => round(e, s ? [-0.5, 0.15] : [0.5, 0.15], 0.5, s), { x: 42, y: 58, r: 13 }, { x: 78, y: 56, r: 16 });
+    case "allnighter": {
+      // « Nuit blanche » : blanc rosi, petits vaisseaux rouges, grosses paupières tombantes (coin
+      // extérieur plus bas), pupilles basses qui regardent un peu dans le vague, cernes.
+      // Même structure que les yeux ronds (ombre en 1er, blanc #fff) : clignement, cernes de 3 h,
+      // yeux en spirale et blob fatigué s'appliquent tels quels.
+      const lid = mix(c.body, c.deep, 0.35);
+      const eye = (e: Eye, s: number) => {
+        const R = e.r + 0.6;
+        const a = s ? 2.5 : 7, b = s ? 7 : 2.5; // bord de paupière : plus bas côté extérieur
+        // Coins de la paupière posés sur le cercle de l'œil (l'arc suit exactement le haut de l'œil)
+        const xa = e.x - Math.sqrt(R * R - a * a), xb = e.x + Math.sqrt(R * R - b * b);
+        const edge = `Q${e.x} ${e.y + 8.5} ${xa} ${e.y + a}`;
+        const dx = s ? 2.4 : -1.8, dy = s ? 8.2 : 8.9; // pupilles qui divergent un peu
+        return (
+          <g key={s}>
+            <path d={`M${e.x - 9} ${e.y + e.r + 3.2} Q${e.x} ${e.y + e.r + 7} ${e.x + 9} ${e.y + e.r + 3.2}`} fill="none" stroke={mix(c.deep, INK, 0.35)} strokeWidth={2.2} strokeLinecap="round" opacity={0.55} />
+            <g className={blinkCls} style={blink ? { animationDelay: `${s * 0.08}s` } : undefined}>
+              <ellipse cx={e.x} cy={e.y + 2.2} rx={e.r} ry={e.r} fill={c.deep} opacity={0.5} />
+              <circle cx={e.x} cy={e.y} r={e.r} fill="#fff" stroke={ink} strokeWidth={1.6} />
+              <circle cx={e.x} cy={e.y} r={e.r - 0.8} fill="#FF5C66" opacity={0.42} />
+              <g transform={s ? `translate(${2 * e.x} 0) scale(-1 1)` : undefined} fill="none" stroke="#D41E38" strokeWidth={1.5} strokeLinecap="round">
+                <path d={`M${e.x - e.r + 1.2} ${e.y + 9} q3 -1.6 4.6 0.4 l2.4 -0.6 M${e.x - e.r + 3.6} ${e.y + 8.6} l0.6 -2`} />
+                <path d={`M${e.x + 3} ${e.y + e.r - 1} q0.4 -2.6 2.6 -3.2 M${e.x + e.r - 1.4} ${e.y + 6.4} q-2.6 0.6 -3.4 2.4`} />
+              </g>
+              <circle cx={e.x + dx} cy={e.y + dy} r={4.8} fill={ink} />
+              <circle cx={e.x + dx + 1.6} cy={e.y + dy - 1.4} r={1.4} fill="#fff" />
+              <path d={`M${xa} ${e.y + a} A${R} ${R} 0 1 1 ${xb} ${e.y + b} ${edge}Z`} fill={lid} />
+              <path d={`M${xa} ${e.y + a} A${R} ${R} 0 1 1 ${xb} ${e.y + b}`} fill="none" stroke={ink} strokeWidth={1.6} />
+              <path d={`M${xb} ${e.y + b} ${edge}`} fill="none" stroke={ink} strokeWidth={3.2} strokeLinecap="round" />
+            </g>
+          </g>
+        );
+      };
+      return both(eye);
+    }
+    case "tears": {
+      // « Larmes de rire » : yeux plissés en chevrons, grosses larmes qui jaillissent sur les côtés
+      const tear = "M0 -8 C3 -3 5.4 0.6 5.4 3.8 C5.4 7 3 9.2 0 9.2 C-3 9.2 -5.4 7 -5.4 3.8 C-5.4 0.6 -3 -3 0 -8Z";
+      return both((e, s) => {
+        const k = s ? -1 : 1; // côté intérieur
+        return (
+          <g key={s}>
+            <path d={`M${e.x - 8 * k} ${e.y - 7} L${e.x + 6 * k} ${e.y} L${e.x - 8 * k} ${e.y + 7}`} fill="none" stroke={ink} strokeWidth={4.4} strokeLinecap="round" strokeLinejoin="round" />
+            <g transform={`translate(${e.x - 14 * k} ${e.y + 12}) rotate(${28 * k})`}>
+              <path d={tear} fill="#7FD8FF" stroke={ink} strokeWidth={1.8} strokeLinejoin="round" />
+              <ellipse cx={-1.6} cy={3} rx={1.3} ry={2.2} fill="#fff" opacity={0.85} />
+            </g>
+          </g>
+        );
+      });
+    }
     case "classic":
     default:
       return both((e, s) => round(e, s ? [-0.18, -0.12] : [0.28, 0.12], 0.56, s), { x: 42, y: 58, r: 13 }, { x: 78, y: 55, r: 16 });
@@ -196,7 +251,7 @@ function deadEyes(): ReactNode {
 /** Accessoires du visage qui masquent les yeux ou la bouche : retirés quand le perso est éliminé (lisibilité). */
 const FACE_HIDDEN_WHEN_DEAD = new Set(["shades", "patch", "mask", "goggles"]);
 /** Accessoires portés sur les yeux : remplacés (à l'affichage) par les lunettes noires du « Boss ». */
-const EYEWEAR = new Set(["shades", "round", "patch", "goggles", "domino"]);
+const EYEWEAR = new Set(["shades", "round", "patch", "goggles", "domino", "glasses3d"]);
 
 /* ───────── Bouche (selon l'humeur du moment) ───────── */
 function mouth(mood: MascotMood, clipId: string): ReactNode {
@@ -506,6 +561,29 @@ function hairLayers(id: string, hc: string, covered = false): { back?: ReactNode
         front: P("M10 58 C6 30 30 8 60 8 C90 8 114 30 110 58 L102 46 L98 56 L90 40 L84 50 L78 36 L70 46 L64 34 L56 46 L50 34 L44 48 L38 36 L30 50 L26 42 L18 56 L16 48Z",
           shine("M28 22 C38 14 50 11 62 11")),
       };
+    /* ── Ajout v4 ── */
+    case "mullet":
+      // Mulet : court et en épis devant, long dans la nuque (pans qui dépassent sur les côtés)
+      return {
+        back: (
+          <g>
+            <path d="M60 10 C30 10 12 30 12 58 C12 72 8 84 1 97 L10 95 L11 106 L21 99 L30 105 L90 105 L99 99 L109 106 L110 95 L119 97 C112 84 108 72 108 58 C108 30 90 10 60 10Z" fill={mix(hc, INK, 0.15)} stroke={INK} strokeWidth={SW} strokeLinejoin="round" />
+            <path d="M9 82 C8 87 6 91 4 94 M111 82 C112 87 114 91 116 94" fill="none" stroke={mix(hc, INK, 0.5)} strokeWidth={2} strokeLinecap="round" opacity={0.6} />
+          </g>
+        ),
+        front: P("M11 52 C7 28 31 8 60 8 C89 8 113 28 109 52 C105 44 98 39 90 37 L86 43 L80 35 L72 41 L66 33 L59 40 L52 33 L45 40 L38 35 L33 42 C24 41 16 46 11 52Z",
+          shine("M28 22 C36 15 46 12 56 11")),
+      };
+    case "quiff":
+      // Banane : grosse vague ramenée vers l'avant, côtés courts
+      return {
+        skin: <path d="M0 -10 H120 V44 C110 38 104 35 98 34 C86 30 74 28 60 28 C46 28 34 30 22 34 C16 35 10 38 0 44Z" fill={hc} opacity={0.82} />,
+        front: P("M28 35 C20 18 25 -1 42 -10 C57 -18 81 -17 95 -7 C105 0 107 14 99 20 C95 13 87 10 81 13 C89 18 93 26 91 34 C76 29 45 29 28 35Z",
+          <>
+            {shine("M37 3 C47 -8 63 -12 80 -10", 3)}
+            <path d="M35 22 C40 9 52 2 67 0 M44 28 C49 18 60 13 73 13" fill="none" stroke={dark} strokeWidth={2} strokeLinecap="round" opacity={0.55} />
+          </>),
+      };
     default:
       return {};
   }
@@ -643,6 +721,49 @@ function hatLayer(id: string, dy: number, bc: string, animate = false): ReactNod
           <circle cx={14} cy={38} r={6} fill="#2A2342" {...S} />
         </g>
       );
+    case "flowers": {
+      // Couronne de fleurs : tige verte qui suit le haut du crâne (ou de la coupe), fleurs et feuilles
+      const pts = Array.from({ length: 7 }, (_, i) => {
+        const k = i / 6, u = 2 * k - 1;
+        return { x: 24 + 72 * k, y: 15 + 14 * u * u, a: u * 40 };
+      });
+      const cols = ["#FF7EC0", "#FFD23F", "#fff", "#A98BFF", "#fff", "#FFD23F", "#FF7EC0"];
+      const petals = [0, 72, 144, 216, 288];
+      return (
+        <g transform={`translate(0 ${dy})`}>
+          <path d="M22 31 C30 17 46 14 60 14 C74 14 90 17 98 31" fill="none" stroke={INK} strokeWidth={5.4} strokeLinecap="round" />
+          <path d="M22 31 C30 17 46 14 60 14 C74 14 90 17 98 31" fill="none" stroke="#3BAF5D" strokeWidth={2.4} strokeLinecap="round" />
+          {[[35, 19, -40], [50, 13, -15], [70, 13, 15], [85, 19, 40]].map(([x, y, r]) => (
+            <path key={x} transform={`translate(${x} ${y}) rotate(${r})`} d="M0 0 C3 -6 9 -7 12 -6 C10 -2 6 1 0 0Z" fill="#3DDC97" stroke={INK} strokeWidth={1.6} strokeLinejoin="round" />
+          ))}
+          {pts.map((p, i) => (
+            <g key={i} transform={`translate(${p.x} ${p.y}) rotate(${p.a + i * 17})`}>
+              {petals.map((d) => <circle key={d} cx={Math.cos((d * Math.PI) / 180) * 4} cy={Math.sin((d * Math.PI) / 180) * 4} r={3.9} fill={cols[i]} stroke={INK} strokeWidth={1.6} />)}
+              <circle r={2.6} fill={i % 2 ? "#FF9A2E" : "#FFD23F"} stroke={INK} strokeWidth={1.4} />
+            </g>
+          ))}
+        </g>
+      );
+    }
+    case "propeller":
+      // Casquette à hélice : calotte en quartiers, petite visière, hélice qui tourne (animée)
+      return (
+        <g>
+          <path d="M22 30 C30 39 50 41 60 40 L60 30Z" fill="#2A5BD6" {...S} />
+          <path d="M16 32 C16 7 38 -5 60 -5 C82 -5 104 7 104 32Z" fill="#FF3E5B" />
+          <path d="M16 32 C16 7 38 -5 60 -5 C47 4 39 18 37 32Z" fill="#3D7BFF" />
+          <path d="M104 32 C104 7 82 -5 60 -5 C73 4 81 18 83 32Z" fill="#3DDC97" />
+          <path d="M60 -5 C47 4 39 18 37 32 M60 -5 C73 4 81 18 83 32" fill="none" stroke={INK} strokeWidth={2} />
+          <path d="M16 32 C16 7 38 -5 60 -5 C82 -5 104 7 104 32Z" fill="none" {...S} />
+          <path d="M26 16 C32 8 40 3 48 1" fill="none" stroke="#fff" strokeWidth={2.6} strokeLinecap="round" opacity={0.6} />
+          <rect x={57.5} y={-15} width={5} height={11} rx={1.5} fill="#FFD23F" stroke={INK} strokeWidth={2} />
+          <g className={animate ? "av-prop" : undefined}>
+            <path d="M60 -15 C52 -21 38 -21 35 -16 C38 -11 52 -11 60 -15Z" fill="#FFD23F" stroke={INK} strokeWidth={2.2} strokeLinejoin="round" />
+            <path d="M60 -15 C68 -9 82 -9 85 -14 C82 -19 68 -19 60 -15Z" fill="#FF3EA5" stroke={INK} strokeWidth={2.2} strokeLinejoin="round" />
+          </g>
+          <circle cx={60} cy={-15} r={3.4} fill="#fff" stroke={INK} strokeWidth={2} />
+        </g>
+      );
     case "goldhalo": {
       // Secret (blob doré de l'accueil) : auréole d'or massif qui rayonne, reflets et étincelles
       const g = `${bc}-gold`;
@@ -757,7 +878,7 @@ export function RainbowCrown({ width, animate = true, style }: { width: number; 
 }
 
 /* ───────── Accessoires du visage ───────── */
-function faceLayer(id: string, c: { body: string; deep: string }, hc: string, bc: string): { skin?: ReactNode; over?: ReactNode; top?: ReactNode } {
+function faceLayer(id: string, c: { body: string; deep: string }, hc: string, bc: string, mood: MascotMood = "happy"): { skin?: ReactNode; over?: ReactNode; top?: ReactNode } {
   const S = { stroke: INK, strokeWidth: SW, strokeLinejoin: "round" as const };
   switch (id) {
     case "shades":
@@ -918,6 +1039,52 @@ function faceLayer(id: string, c: { body: string; deep: string }, hc: string, bc
           </g>
         ),
       };
+    /* ── Ajout v4 ── */
+    case "clown":
+      return {
+        over: (
+          <g>
+            <circle cx={60} cy={70.5} r={8.2} fill="#E8304A" stroke={INK} strokeWidth={2.6} />
+            <ellipse cx={57} cy={67.4} rx={2.8} ry={2} fill="#fff" opacity={0.75} />
+          </g>
+        ),
+      };
+    case "glasses3d":
+      // Lunettes 3D en carton : verres rouge et bleu translucides (les yeux restent visibles)
+      return {
+        over: (
+          <g>
+            <path d="M21 54 L9 50 M99 54 L111 50" stroke={INK} strokeWidth={4} strokeLinecap="round" />
+            <path fillRule="evenodd" fill="#F6F1E6" stroke={INK} strokeWidth={2.6} strokeLinejoin="round"
+              d="M20 42 C20 39 22 38 25 38 H95 C98 38 100 39 100 42 V69 C100 72 98 73 95 73 H68 C66 73 64 71 63 68 C62 65 61 64 60 64 C59 64 58 65 57 68 C56 71 54 73 52 73 H25 C22 73 20 72 20 69Z M26 43 V67 H55 V43Z M65 43 V67 H94 V43Z" />
+            <rect x={26} y={43} width={29} height={24} fill="#FF3E5B" opacity={0.55} />
+            <rect x={65} y={43} width={29} height={24} fill="#2EC4FF" opacity={0.55} />
+            <path d="M29 47 l6 0 M68 47 l6 0" stroke="#fff" strokeWidth={2.4} strokeLinecap="round" opacity={0.8} />
+          </g>
+        ),
+      };
+    case "goldtooth": {
+      // Dent en or : posée en haut de la bouche ouverte, ou qui dépasse sous la bouche fermée
+      const open: Partial<Record<MascotMood, [number, number, number, number]>> = {
+        happy: [64.8, 77, 6.2, 6.6], wink: [64.8, 77, 6.2, 6.6], fire: [64.8, 77, 6.2, 6.6],
+        laughing: [67.5, 77, 6.4, 6.8], rofl: [67.5, 77, 6.4, 6.8], shocked: [62, 79, 4.4, 5], mindblown: [62, 79, 4.4, 5],
+      };
+      const closed: Partial<Record<MascotMood, [number, number]>> = {
+        sad: [64, 85], angry: [64, 85], love: [63, 85.6], kiss: [63, 85.6], cool: [64, 86.6], thinking: [64, 86.6], dead: [0, 0],
+      };
+      const o = open[mood];
+      const [x, y, w, h] = o ?? [...(closed[mood] ?? [63, 85]), 5.6, 6];
+      if (!x) return {};
+      const tooth = `M${x - w / 2} ${y} V${y + h - 1.6} Q${x - w / 2} ${y + h} ${x} ${y + h} Q${x + w / 2} ${y + h} ${x + w / 2} ${y + h - 1.6} V${y}Z`;
+      return {
+        over: (
+          <g>
+            <path d={tooth} fill="#FFD23F" stroke={INK} strokeWidth={1.5} strokeLinejoin="round" />
+            <path d={`M${x - w / 2 + 1.4} ${y + 1.2} V${y + h - 2}`} stroke="#FFF6C2" strokeWidth={1.2} strokeLinecap="round" />
+          </g>
+        ),
+      };
+    }
     default:
       return {};
   }
@@ -925,7 +1092,7 @@ function faceLayer(id: string, c: { body: string; deep: string }, hc: string, bc
 
 /* ───────── Accessoires du corps ───────── */
 /** mid = dans le dos mais par-dessus les cheveux longs (ex. sabre : la poignée reste visible). */
-function extraLayers(id: string, c: { body: string; deep: string }, seat: number, bc: string): { back?: ReactNode; mid?: ReactNode; front?: ReactNode; top?: ReactNode } {
+function extraLayers(id: string, c: { body: string; deep: string }, seat: number, bc: string, animate = false): { back?: ReactNode; mid?: ReactNode; front?: ReactNode; top?: ReactNode } {
   const S = { stroke: INK, strokeWidth: SW, strokeLinejoin: "round" as const };
   switch (id) {
     case "scarf":
@@ -1071,6 +1238,36 @@ function extraLayers(id: string, c: { body: string; deep: string }, seat: number
         ),
         top: <ellipse cx={96} cy={101} rx={7} ry={6} fill="#FF9A2E" {...S} />,
       };
+    /* ── Ajout v4 ── */
+    case "medal":
+      // Médaille d'or au ruban tricolore (couleurs de l'app, pas de drapeau)
+      return {
+        front: (
+          <g>
+            <path d="M45 95 L55 111 L62 107 L53 94Z" fill="#3D7BFF" {...S} strokeWidth={2.4} />
+            <path d="M75 95 L65 111 L58 107 L67 94Z" fill="#FF3EA5" {...S} strokeWidth={2.4} />
+            <circle cx={60} cy={115} r={9.5} fill="#FFD23F" {...S} />
+            <circle cx={60} cy={115} r={6} fill="none" stroke="#E09A00" strokeWidth={1.6} />
+            <path transform="translate(60 115.4) scale(0.36)" d="M0 -12 L3.4 -3.8 L12 -3.6 L5.2 1.8 L7.6 10.4 L0 5.4 L-7.6 10.4 L-5.2 1.8 L-12 -3.6 L-3.4 -3.8Z" fill="#FFF3A0" stroke="#B87A00" strokeWidth={2.6} strokeLinejoin="round" />
+            <path d="M54 110 C55 108 57 107 59 107" fill="none" stroke="#FFF6C2" strokeWidth={1.6} strokeLinecap="round" />
+          </g>
+        ),
+      };
+    case "balloon": {
+      // Ballon de fête attaché dans le dos (couleur qui ressort sur le blob), se balance si animé
+      const warm = ["#FF3EA5", "#FF6B5B", "#E8304A", "#FF9A2E", "#FFC4A3", "#A8693E"].includes(c.body);
+      const col = warm ? "#3D7BFF" : "#E8304A";
+      return {
+        back: (
+          <g className={animate ? "av-crown" : undefined}>
+            <path d="M100 86 C112 76 119 58 114 32" fill="none" stroke={INK} strokeWidth={1.8} strokeLinecap="round" />
+            <path d="M111 33 L117 33 L115 29 L113 29Z" fill={col} stroke={INK} strokeWidth={1.6} strokeLinejoin="round" />
+            <path d="M114 29 C101 28 96 16 97 7 C98 -3 105 -9 114 -9 C123 -9 130 -3 131 7 C132 16 127 28 114 29Z" fill={col} {...S} />
+            <ellipse cx={107} cy={2} rx={3.4} ry={6} transform="rotate(20 107 2)" fill="#fff" opacity={0.55} />
+          </g>
+        ),
+      };
+    }
     default:
       return {};
   }
@@ -1133,9 +1330,9 @@ export function AvatarSvg({ look, size, mood = "happy", animate = false, shadow 
   const bossOn = boss && !cos.face && !dead;
   const face0 = bossOn && EYEWEAR.has(look.face) ? "shades" : look.face;
   const faceId = dead && FACE_HIDDEN_WHEN_DEAD.has(face0) ? "none" : face0;
-  const face = cos.face ? {} : faceLayer(faceId, c, look.hair !== "none" ? hc : "#5A3420", clip);
+  const face = cos.face ? {} : faceLayer(faceId, c, look.hair !== "none" ? hc : "#5A3420", clip, mood);
   const bossShades = bossOn && faceId !== "shades" ? faceLayer("shades", c, hc, clip).over : null;
-  const extra = extraLayers(look.extra, c, seat, clip);
+  const extra = extraLayers(look.extra, c, seat, clip, animate);
   const hideEyes = { L: !cos.face && (faceId === "shades" || bossOn), R: !cos.face && (faceId === "shades" || faceId === "patch" || bossOn) };
   const hideMouth = !cos.face && faceId === "mask";
   // Couvre-chef : les cheveux au-dessus du bord sont rangés dessous
@@ -1180,11 +1377,13 @@ export function AvatarSvg({ look, size, mood = "happy", animate = false, shadow 
       <path d={SHAPE} fill="none" stroke={INK} strokeWidth={sw} strokeLinejoin="round" />
 
       {/* Visage */}
-      {dead ? deadEyes() : eyes(look.eyes, c, hideEyes, animate)}
+      {/* data-eyes / data-eyes-top : repères des yeux en spirale de l'app (zinzin/src/ui/spiral-eyes.ts), sans effet visuel */}
+      <g data-eyes="">{dead ? deadEyes() : eyes(look.eyes, c, hideEyes, animate)}</g>
       {!hideMouth && mouth(mood, clip)}
       {face.over}
       {bossShades}
       {cos.face}
+      <g data-eyes-top="" />
 
       {/* Devant */}
       {underHat(hair.front)}

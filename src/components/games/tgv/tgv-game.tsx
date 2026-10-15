@@ -30,7 +30,7 @@ import {
   Volume2, VolumeX, X, type LucideIcon,
 } from "lucide-react";
 import { uniqueMax, useGameFinished, winnersOf } from "@/lib/game-finished";
-import { SoireeNextButton } from "@/components/games/soiree-next";
+import { SoireeGain, SoireeNextButton } from "@/components/games/soiree-next";
 import { EndHomeLink, EndPill, EndPills, EndReplay } from "@/components/games/end-actions";
 
 // ── DA sticker ────────────────────────────────────────────
@@ -596,7 +596,8 @@ export default function TgvGame({ onReturnToLobby }: GameProps) {
           </div>
           <p className="text-[15px] font-bold">{t.bestDriver}</p>
           <p style={{ ...DISPLAY, fontSize: nameSize(tops.map((p) => p.name).join(" & "), 40), lineHeight: 1, overflowWrap: "anywhere" }}>{tops.map((p) => p.name).join(" & ")}</p>
-          <p className="mt-1 text-[15px] font-bold">{t.penalties(top.losses)}</p>
+          {/* Soirée : ex æquo en tête = mêmes points pour chacun, une pastille suffit */}
+          <p className="mt-1 flex items-center justify-center gap-2 text-[15px] font-bold">{t.penalties(top.losses)}<SoireeGain name={top.name} /></p>
         </div>
       ) : (
         // Toute la table à égalité : pas de meilleur conducteur
@@ -610,7 +611,8 @@ export default function TgvGame({ onReturnToLobby }: GameProps) {
             <span className="w-7 text-[18px]" style={DISPLAY}>{rankOf(p.losses)}</span>
             <PlayerAvatar name={p.name} colorIndex={p.i} size={32} mood="happy" />
             <span className="min-w-0 flex-1 truncate text-[17px] font-bold">{p.name}</span>
-            <span className="text-[15px] font-bold">{t.penalties(p.losses)}</span>
+            <span className="shrink-0 whitespace-nowrap text-[15px] font-bold">{t.penalties(p.losses)}</span>
+            <SoireeGain name={p.name} />
           </div>
         ))}
       </div>

@@ -1,6 +1,8 @@
 import UIKit
+import AVFoundation
 import Capacitor
 import CoreMotion
+import WebKit
 
 /// Vue Capacitor de Zinzin : enregistre les plugins natifs propres à l'app
 /// (ceux des paquets npm sont enregistrés automatiquement par Capacitor).
@@ -16,6 +18,82 @@ class ZinzinBridgeViewController: CAPBridgeViewController {
         webView?.scrollView.bounces = false
         webView?.scrollView.alwaysBounceVertical = false
         webView?.scrollView.alwaysBounceHorizontal = false
+        startAudioWatch()
+    }
+
+    // MARK: - Session audio (zéro son perdu)
+    // Les sons doivent toujours repartir : après la veille, un appel, Siri, une alarme, un casque ou des
+    // écouteurs Bluetooth branchés/débranchés, et après le micro (Chut !, voix des persos). On remet la
+    // session telle que réglée au lancement (AppDelegate : lecture+enregistrement, haut-parleur, mélange
+    // avec la musique, mode silencieux ignoré) puis on prévient le JS (événement window « zzaudioresume »,
+    // écouté par src/lib/sfx.ts qui relance ou recrée son contexte audio).
+    // Seul le bouton son de l'app (JS) coupe le son : rien ici ne le contourne, on ne fait que réparer la sortie.
+
+    private static let audioOptions: AVAudioSession.CategoryOptions = [.mixWithOthers, .defaultToSpeaker, .allowBluetoothA2DP]
+    private var audioWatching = false
+    private var audioNotifyPending = false
+
+    private func startAudioWatch() {
+        guard !audioWatching else { return }
+        audioWatching = true
+        let nc = NotificationCenter.default
+        let session = AVAudioSession.sharedInstance()
+        // Fin d'interruption (appel, Siri, alarme, FaceTime…) : session réactivée, sons relancés
+        nc.addObserver(forName: AVAudioSession.interruptionNotification, object: session, queue: .main) { [weak self] note in
+            guard let raw = note.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt,
+                  AVAudioSession.InterruptionType(rawValue: raw) == .ended else { return }
+            self?.restoreAudio(defaultMode: false)
+        }
+        // Casque / Bluetooth / changement de catégorie (WebKit en ouvrant ou fermant le micro)
+        nc.addObserver(forName: AVAudioSession.routeChangeNotification, object: session, queue: .main) { [weak self] _ in
+            self?.restoreAudio(defaultMode: false)
+        }
+        // Services audio d'iOS redémarrés : tous les objets audio sont morts, le JS recrée son contexte
+        nc.addObserver(forName: AVAudioSession.mediaServicesWereResetNotification, object: session, queue: .main) { [weak self] _ in
+            self?.restoreAudio(defaultMode: true, reset: true)
+        }
+        // Retour au premier plan (UIScene : applicationDidBecomeActive n'est plus appelé, la notification si)
+        nc.addObserver(forName: UIApplication.didBecomeActiveNotification, object: nil, queue: .main) { [weak self] _ in
+            self?.restoreAudio(defaultMode: false)
+        }
+        // Le JS signale la fin du micro (window.webkit.messageHandlers.zzaudio.postMessage("mic-off"))
+        webView?.configuration.userContentController.add(ZinzinAudioMessages(self), name: "zzaudio")
+    }
+
+    /// Le micro est rendu : la sortie revient en mode normal sur le haut-parleur (WebKit a pu laisser
+    /// le mode « appel vidéo », plus faible ou dans l'écouteur). Revérifié un peu plus tard : WebKit
+    /// referme sa capture de façon asynchrone.
+    fileprivate func micReleased() {
+        restoreAudio(defaultMode: true)
+        for delay in [0.5, 1.5] {
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in self?.restoreAudio(defaultMode: true) }
+        }
+    }
+
+    /// Remet la catégorie de l'app si quelqu'un l'a changée (sans toucher au mode pendant une capture),
+    /// réactive la session et prévient le JS (regroupé : une seule notification par rafale).
+    private func restoreAudio(defaultMode: Bool, reset: Bool = false) {
+        // En arrière-plan : rien (pas de mode audio d'arrière-plan) ; le retour au premier plan s'en charge
+        guard UIApplication.shared.applicationState != .background else { return }
+        let session = AVAudioSession.sharedInstance()
+        let mode: AVAudioSession.Mode = defaultMode ? .default : session.mode
+        let want = ZinzinBridgeViewController.audioOptions
+        // Comparaison avant d'écrire : setCategory déclenche lui-même un changement de route (pas de boucle)
+        if reset || session.category != .playAndRecord || !session.categoryOptions.isSuperset(of: want) || session.mode != mode {
+            try? session.setCategory(.playAndRecord, mode: mode, options: want)
+        }
+        // Échoue pendant un appel : la fin d'interruption nous rappellera
+        try? session.setActive(true)
+        if reset {
+            bridge?.triggerWindowJSEvent(eventName: "zzaudioresume", data: "{\"zzReset\":true}")
+            return
+        }
+        guard !audioNotifyPending else { return }
+        audioNotifyPending = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { [weak self] in
+            self?.audioNotifyPending = false
+            self?.bridge?.triggerWindowJSEvent(eventName: "zzaudioresume")
+        }
     }
 
     // MARK: - Secousse (easter egg de l'accueil)
@@ -94,6 +172,16 @@ class ZinzinBridgeViewController: CAPBridgeViewController {
         if faceMotion.isAccelerometerActive { faceMotion.stopAccelerometerUpdates() }
         faceDownSince = nil
         faceDownArmed = false
+    }
+}
+
+/// Messages JS → natif pour l'audio (référence faible : pas de cycle avec la vue Capacitor).
+private final class ZinzinAudioMessages: NSObject, WKScriptMessageHandler {
+    private weak var owner: ZinzinBridgeViewController?
+    init(_ owner: ZinzinBridgeViewController) { self.owner = owner }
+
+    func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
+        if (message.body as? String) == "mic-off" { owner?.micReleased() }
     }
 }
 

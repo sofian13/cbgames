@@ -19,7 +19,7 @@ import { UC_STR } from "@/components/games/undercover/i18n";
 import { useGameFinished } from "@/lib/game-finished";
 import { GameTuto, TutoAgainButton, useFirstTimeTuto } from "@/components/games/game-tuto";
 import { useUndercoverTuto } from "@/components/games/undercover/tuto";
-import { SoireeNextButton } from "@/components/games/soiree-next";
+import { SoireeGain, SoireeNextButton } from "@/components/games/soiree-next";
 import { EndHomeLink, EndPills, EndReplay } from "@/components/games/end-actions";
 
 /* ─────────────────────────────────────────────────────────────
@@ -1170,10 +1170,11 @@ function GameOverScreen({
               <PlayerBlob name={p.name} colorIndex={p.idx} size={28} mood={win ? "wink" : "dead"} bob={false} />
               <span style={{ flex: 1, minWidth: 0, ...DISPLAY, fontSize: 18, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</span>
               <span style={{
-                fontSize: 13, padding: "3px 9px", borderRadius: 99,
+                fontSize: 13, padding: "3px 9px", borderRadius: 99, whiteSpace: "nowrap", flexShrink: 0,
                 background: rc, color: ZZ.ink, border: `2px solid ${ZZ.ink}`, fontWeight: 800,
               }}>{t.role[p.role]}</span>
-              <span style={{ ...DISPLAY, fontSize: 20, width: 40, textAlign: "right" }}>{p.score}</span>
+              <span style={{ ...DISPLAY, fontSize: 20, width: 40, textAlign: "right", flexShrink: 0 }}>{p.score}</span>
+              <SoireeGain name={p.name} />
             </div>
           );
         })}

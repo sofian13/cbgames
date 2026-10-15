@@ -18,6 +18,7 @@ import { GameIconBadge, GameIconButton, GameInlineIcon, GameTopRight } from "@/c
 import { isSfxMuted, playSfx, setSfxMuted, subscribeSfxMuted } from "@/lib/sfx";
 import { type I18n, useLang, useT } from "@/lib/i18n";
 import { localizeGameName } from "@/lib/games/game-names-i18n";
+import { SoireeGain } from "@/components/games/soiree-next";
 
 /** Textes du kit (FR / EN / ES) ; sur le site, toujours en français. */
 const STR: I18n<{
@@ -915,11 +916,14 @@ export function ZRanking({
   rows,
   unit = "pts",
   winners,
+  gains = true,
 }: {
   rows: { name: string; score: number | string; colorIndex: number; note?: ReactNode; rank?: number }[];
   unit?: string;
   /** Couronnés (règle unique des gagnants, src/lib/game-finished.ts) : sinon tous les rang 1 */
   winners?: string[];
+  /** Soirée : pastille « +3 » des points de soirée en bout de ligne (false pour un classement en cours de partie) */
+  gains?: boolean;
 }) {
   return (
     <div className="flex w-full flex-col gap-3">
@@ -950,6 +954,7 @@ export function ZRanking({
               {r.score}
               <span className="ml-1 text-[13px] font-bold" style={{ fontFamily: "inherit", letterSpacing: 0 }}>{unit === "pts" && typeof r.score === "number" && Math.abs(r.score) < 2 ? "pt" : unit}</span>
             </span>
+            {gains && <SoireeGain name={r.name} className="-mr-1" />}
           </div>
         );
       })}

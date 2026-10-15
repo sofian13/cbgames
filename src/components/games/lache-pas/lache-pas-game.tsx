@@ -22,7 +22,7 @@ import { GameRulesSheet, GameTuto, RulesIconButton, useFirstTimeTuto } from "@/c
 import { getSavedPlayers } from "@/lib/saved-players";
 import { LP_EXTRA, useLpTutoSlides } from "./tuto";
 import { rankingOf, uniqueMax, useGameFinished, winnersOf, type GameScores } from "@/lib/game-finished";
-import { SoireeNextButton } from "@/components/games/soiree-next";
+import { SoireeGain, SoireeNextButton } from "@/components/games/soiree-next";
 import { endHome, EndPills, EndReplay } from "@/components/games/end-actions";
 
 // ── Lâche pas ! ────────────────────────────────────────────
@@ -434,6 +434,7 @@ export default function LachePasGame({ onReturnToLobby }: GameProps) {
                     <MascotAvatar color={colorForIndex(k)} size={30} mood={won ? "cool" : "happy"} border={false} />
                     <span className="min-w-0 flex-1 truncate text-[17px]" style={DISPLAY}>{labelOf(k)}</span>
                     <span className="shrink-0 text-right text-[13px] font-bold leading-tight">{x.crowns(crowns[k])}<br />{x.losses(burns[k])}</span>
+                    <SoireeGain name={labelOf(k)} />
                   </div>
                 );
               })}

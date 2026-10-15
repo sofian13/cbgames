@@ -5,6 +5,8 @@
  * dès que la manche finit.
  */
 
+import { wakeSfx } from "@/lib/sfx";
+
 export type MicError = "denied" | "unavailable";
 export type Sensitivity = "library" | "living" | "club";
 
@@ -73,6 +75,8 @@ export class MicMeter {
     src.connect(an); // pas relié aux haut-parleurs : aucun retour
     this.analyser = an;
     this.buf = new Float32Array(an.fftSize);
+    // l'ouverture du micro a pu couper aussi le contexte des sons du jeu (BUZZ…) : on le vérifie
+    wakeSfx(false);
   }
 
   /** Niveau instantané en dBFS (≈ -100 silence total … 0 saturation). */
@@ -89,13 +93,16 @@ export class MicMeter {
 
   /** Libère le micro (le voyant orange de l'iPhone s'éteint). */
   stop() {
+    const opened = this.stream != null || this.ctx != null;
     this.stream?.getTracks().forEach((t) => t.stop());
     this.stream = null;
     this.analyser = null;
     this.buf = null;
     const ctx = this.ctx;
     this.ctx = null;
-    if (ctx && ctx.state !== "closed") void ctx.close().catch(() => {});
+    const closed = ctx && ctx.state !== "closed" ? ctx.close().catch(() => {}) : Promise.resolve();
+    // Micro rendu : les sons de l'app repartent (session iOS, haut-parleur, contexte partagé)
+    if (opened) void closed.then(() => wakeSfx());
   }
 }
 

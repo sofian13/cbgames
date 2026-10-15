@@ -70,9 +70,64 @@ export function mountAvatarLab() {
       { hair: "golden", hat: "crown", extra: "cape" }, { hair: "flame", hat: "tophat", face: "shades" },
     ];
     rows.push({ label: "mix2", looks: mixes.map((m, i) => ({ ...DEFAULT_LOOK, color: AVATAR_COLORS[(i * 3) % AVATAR_COLORS.length], ...m })) });
+  } else if (slot === ("mix4" as string)) {
+    // Éléments v4 combinés avec coupes et chapeaux existants
+    const mixes: Partial<AvatarLook>[] = [
+      { hair: "mullet", hat: "cap" }, { hair: "mullet", hat: "crown", face: "goldtooth" }, { hair: "mullet", hat: "propeller", extra: "balloon" },
+      { hair: "quiff", hat: "flowers" }, { hair: "quiff", hat: "beanie", face: "glasses3d" }, { hair: "quiff", extra: "headphones", eyes: "allnighter" },
+      { hair: "afro", hat: "flowers" }, { hair: "golden", hat: "flowers" }, { hair: "long", hat: "propeller" }, { hair: "flame", hat: "propeller" },
+      { hair: "twintails", face: "clown", extra: "medal" }, { hair: "swoop", eyes: "tears", extra: "balloon" },
+      { hair: "emo", face: "glasses3d", extra: "medal" }, { hair: "bun", eyes: "allnighter", face: "goldtooth" },
+      { hair: "mane", hat: "flowers", extra: "cape" }, { hair: "silver", extra: "balloon", face: "clown" },
+      { eyes: "allnighter", hat: "tophat", extra: "tie" }, { eyes: "tears", face: "blush", hat: "party" },
+      { eyes: "allnighter", face: "round" }, { eyes: "allnighter", face: "glasses3d", hair: "messy" },
+    ];
+    rows.push({ label: "mix4", looks: mixes.map((m, i) => ({ ...DEFAULT_LOOK, color: AVATAR_COLORS[(i * 5) % AVATAR_COLORS.length], ...m })) });
+  } else if (slot === ("states" as string)) {
+    // États des yeux : normal / clignement figé / éliminé / cernes de 3 h / fatigué / spirale / Boss
+    const eyesIds = (q.get("eyes") ?? "allnighter,tears,classic,sleepy").split(",");
+    const moods = ["happy", "laughing", "shocked", "neutral", "sad", "cool", "dead"] as const;
+    const st = document.createElement("style");
+    st.textContent = `.lab-blink .av-blink{animation-play-state:paused!important;animation-delay:-4.56s!important}`;
+    document.head.appendChild(st);
+    const states = ["normal", "blink", "dead", "zz-3h", "zz-tired", "spiral", "boss"];
+    createRoot(document.getElementById("root")!).render(
+      <div style={{ background: "#1E1250", color: "#fff", padding: 12, fontFamily: "system-ui", minHeight: "100vh" }}>
+        <div style={{ display: "flex", gap: 4, marginLeft: 114, fontSize: 11 }}>{states.map((x) => <div key={x} style={{ width: size * 1.6 }}>{x}</div>)}</div>
+        {eyesIds.map((e, i) => {
+          const look = { ...DEFAULT_LOOK, color: colors[i % colors.length], eyes: e, hair: i % 2 ? "swoop" : "none" };
+          return (
+            <div key={e} style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 4 }}>
+              <div style={{ width: 110, fontSize: 11 }}>eyes.{e}</div>
+              {states.map((x) => (
+                <div key={x} className={x === "blink" ? "lab-blink" : x.startsWith("zz-") ? x : x === "spiral" ? "lab-spiral" : undefined}
+                  style={{ width: size * 1.6, height: size * 1.6, display: "grid", placeItems: "end center", paddingBottom: size * 0.1, background: "#FFF6E5" }}>
+                  <AvatarBlob look={look} size={size} mood={x === "dead" ? "dead" : "happy"} animate={x === "blink" || x === "zz-tired" || x === "zz-3h"} name={x === "boss" ? "Sofian" : undefined} />
+                </div>
+              ))}
+            </div>
+          );
+        })}
+        <div style={{ display: "flex", gap: 4, marginTop: 10, flexWrap: "wrap" }}>
+          {moods.map((m) => (
+            <div key={m} style={{ width: size * 1.6, height: size * 1.6, display: "grid", placeItems: "end center", background: "#FFF6E5", color: "#000", fontSize: 10 }}>
+              <AvatarBlob look={{ ...DEFAULT_LOOK, color: "mint", face: "goldtooth" }} size={size} mood={m} animate={false} />
+              {m}
+            </div>
+          ))}
+        </div>
+      </div>,
+    );
+    setTimeout(() => {
+      document.querySelectorAll(".lab-spiral").forEach((el) => {
+        void import("./ui/spiral-eyes").then(({ spiralEyes }) => spiralEyes(el, 600000));
+      });
+    }, 300);
+    return;
   } else if (slot === "matrix") {
     // Matrice coupes × chapeaux (contrôle des chapeaux posés sur chaque coupe)
-    const hats = AVATAR_ITEMS.hat;
+    const hatIds = q.get("hats")?.split(",");
+    const hats = hatIds ? AVATAR_ITEMS.hat.filter((h) => hatIds.includes(h.id)) : AVATAR_ITEMS.hat;
     for (const [i, h] of pick(AVATAR_ITEMS.hair).entries()) {
       rows.push({ label: `hair.${h.id}`, looks: hats.map((t) => ({ ...DEFAULT_LOOK, color: colors[i % colors.length], hair: h.id, hat: t.id })) });
     }

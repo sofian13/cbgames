@@ -52,34 +52,144 @@ let master: GainNode | null = null;
 const buffers = new Map<SfxName, AudioBuffer>();
 const loading = new Map<SfxName, Promise<AudioBuffer | null>>();
 const listeners = new Set<() => void>();
-const activeLoops = new Set<LoopHandle>();
+/** Boucles en cours → leur relance sur le contexte courant (après une reconstruction). */
+const activeLoops = new Map<LoopHandle, () => void>();
+/** Lecteurs annexes (voix des persos) prévenus quand le contexte partagé est remplacé. */
+const ctxListeners = new Set<() => void>();
 
 let muted = (() => {
   try { return localStorage.getItem(MUTE_KEY) === "off"; } catch { return false; }
 })();
 
-function audio(): AudioContext | null {
-  if (typeof window === "undefined") return null;
-  if (!ctx) {
-    const AC = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-    if (!AC) return null;
-    ctx = new AC();
-    master = ctx.createGain();
-    master.gain.value = 0.9;
-    master.connect(ctx.destination);
-  }
-  if (ctx.state === "suspended") void ctx.resume();
-  return ctx;
+/* iOS : après une interruption (appel, Siri, alarme, micro, écran verrouillé, casque débranché), le contexte
+ * peut rester « interrupted »/« suspended » et resume() ne suffit plus, ou se dire « running » alors que son
+ * horloge est figée (plus rien ne sort) : plus aucun son jusqu'au redémarrage de l'app.
+ * On le marque alors « bloqué » et on le recrée (les AudioBuffer décodés restent valables d'un contexte à
+ * l'autre ; les boucles en cours repartent toutes seules sur le nouveau). */
+let stuck = false;
+let checkTimer: ReturnType<typeof setTimeout> | undefined;
+let lastRebuild = 0;
+
+function create(): AudioContext | null {
+  const AC = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+  if (!AC) return null;
+  let ac: AudioContext;
+  try { ac = new AC(); } catch { return null; }
+  ctx = ac;
+  master = ac.createGain();
+  master.gain.value = 0.9;
+  master.connect(ac.destination);
+  // Reparti tout seul (fin d'appel…) : plus besoin de le recréer
+  ac.addEventListener("statechange", () => { if (ctx === ac && ac.state === "running") stuck = false; });
+  // Les boucles qui jouaient sur l'ancien contexte reprennent sur celui-ci
+  activeLoops.forEach((revive) => revive());
+  return ac;
 }
 
-// iOS : le contexte audio ne démarre qu'après un geste → on le réveille au premier toucher
+/** Remplace le contexte (bloqué ou fermé) par un neuf. Le bouton son coupé reste respecté (rien ne rejoue). */
+function rebuild() {
+  const old = ctx;
+  ctx = null;
+  master = null;
+  stuck = false;
+  clearTimeout(checkTimer);
+  checkTimer = undefined;
+  lastRebuild = Date.now();
+  if (old && old.state !== "closed") void old.close().catch(() => {});
+  ctxListeners.forEach((l) => l());
+  if (typeof window !== "undefined") create();
+}
+
+/**
+ * Relance le contexte s'il dort ; `probe` : vérifie aussi qu'il tourne VRAIMENT (horloge qui avance),
+ * après un retour au premier plan, une fin d'interruption ou de micro. Sinon, on le recrée.
+ */
+function wake(ac: AudioContext, probe = false) {
+  if (ac.state !== "running") void ac.resume().catch(() => {});
+  else if (!probe) return;
+  if (!checkTimer) check(ac, ac.currentTime, 600, true); // sinon une vérification est déjà en cours
+}
+
+function check(ac: AudioContext, t0: number, ms: number, retry: boolean) {
+  checkTimer = setTimeout(() => {
+    checkTimer = undefined;
+    if (ctx !== ac || document.hidden) return; // en arrière-plan : on revérifiera au retour
+    if (ac.state === "running") {
+      if (ac.currentTime - t0 > 0.1) { stuck = false; return; }
+      // vient peut-être juste de repartir : on remesure l'horloge avant de conclure
+      if (retry) { check(ac, ac.currentTime, 500, false); return; }
+    }
+    // Bloqué : on le recrée tout de suite (l'app iOS autorise l'audio sans geste) ; si le nouveau
+    // ne démarre pas non plus (appel en cours…), un toucher ou la fin d'interruption le relancera
+    stuck = true;
+    if (Date.now() - lastRebuild < 5000) return; // pas de boucle de reconstructions
+    rebuild();
+  }, ms);
+}
+
+function audio(): AudioContext | null {
+  if (typeof window === "undefined") return null;
+  if (ctx && ctx.state === "closed") rebuild(); // fermé par le système : on en refait un
+  const ac = ctx ?? create();
+  if (!ac) return null;
+  wake(ac);
+  return ac;
+}
+
+/** Vérifie que le son sort encore (et le répare sinon) : retour au premier plan, fin d'interruption, micro rendu… */
+function heal(force = false) {
+  if (typeof window === "undefined" || !ctx) return; // pas encore de son joué : rien à réparer
+  if (force) { rebuild(); return; }
+  const ac = audio();
+  if (ac) wake(ac, true);
+}
+
+/**
+ * À appeler quand le micro est libéré (Chut !, voix des persos) : l'ouverture du micro bascule la session
+ * audio d'iOS et peut couper le contexte des sons ; on remet aussi la sortie sur le haut-parleur (natif).
+ * `micOff = false` : micro tout juste ouvert, on vérifie seulement que les sons sortent encore.
+ */
+export function wakeSfx(micOff = true) {
+  if (typeof window === "undefined") return;
+  if (micOff) try {
+    (window as unknown as { webkit?: { messageHandlers?: { zzaudio?: { postMessage: (m: string) => void } } } })
+      .webkit?.messageHandlers?.zzaudio?.postMessage("mic-off");
+  } catch { /* hors app iOS */ }
+  heal();
+  // la session iOS met un instant à revenir en lecture : deuxième vérification un peu plus tard
+  setTimeout(() => heal(), 1200);
+}
+
+// iOS : le contexte audio ne démarre qu'après un geste → on le réveille à chaque toucher (et on le
+// recrée s'il est resté bloqué), ainsi qu'au retour au premier plan
 if (typeof window !== "undefined") {
-  const unlock = () => { audio(); window.removeEventListener("pointerdown", unlock); };
-  window.addEventListener("pointerdown", unlock, { passive: true });
+  window.addEventListener("pointerdown", () => {
+    // dans le geste : le nouveau contexte peut démarrer (au plus une fois par seconde, ex. appel en cours)
+    if (stuck && Date.now() - lastRebuild > 1000) rebuild();
+    audio();
+  }, { passive: true, capture: true });
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) heal(); });
+  window.addEventListener("pageshow", () => heal());
+  // App iOS (ZinzinBridgeViewController) : fin d'interruption (appel, Siri, alarme), casque/Bluetooth
+  // branché ou débranché, retour au premier plan ; zzReset = services audio d'iOS redémarrés (tout est mort)
+  window.addEventListener("zzaudioresume", (e) => heal(!!(e as Event & { zzReset?: boolean }).zzReset));
 }
 
 function fileOf(name: SfxName): SfxName {
   return ALIASES[name] ?? name;
+}
+
+/** Décode sur le contexte courant ; jamais d'attente infinie (contexte bloqué) : le son sera retenté plus tard. */
+function decode(data: ArrayBuffer): Promise<AudioBuffer> {
+  const ac = audio();
+  if (!ac) return Promise.reject(new Error("no audio"));
+  return new Promise<AudioBuffer>((resolve, reject) => {
+    const t = setTimeout(() => reject(new Error("timeout")), 8000);
+    ac.decodeAudioData(data.slice(0)).then(
+      (buf) => { clearTimeout(t); resolve(buf); },
+      (e) => { clearTimeout(t); reject(e); },
+    );
+  });
 }
 
 function load(name: SfxName): Promise<AudioBuffer | null> {
@@ -88,11 +198,11 @@ function load(name: SfxName): Promise<AudioBuffer | null> {
   if (ready) return Promise.resolve(ready);
   const pending = loading.get(file);
   if (pending) return pending;
-  const ac = audio();
-  if (!ac) return Promise.resolve(null);
+  if (!audio()) return Promise.resolve(null);
   const p = fetch(`/sfx/${file}.m4a`)
     .then((r) => r.arrayBuffer())
-    .then((data) => ac.decodeAudioData(data))
+    // 2e essai sur le contexte courant : l'ancien a pu être recréé (fermé) pendant le décodage
+    .then((data) => decode(data).catch(() => decode(data)))
     .then((buf) => { buffers.set(file, buf); return buf; })
     .catch(() => { loading.delete(file); return null; });
   loading.set(file, p);
@@ -133,8 +243,9 @@ function play(name: SfxName, { volume = 1, rate = 1, delay = 0, duration, fromVo
   const asked = ac.currentTime;
   void load(name).then((buf) => {
     if (!buf || !ctx || !master || muted) return;
-    // Si le décodage a pris du temps, on garde le rendez-vous prévu (sans repartir dans le passé)
-    const at = Math.max(ctx.currentTime, asked + delay);
+    // Si le décodage a pris du temps, on garde le rendez-vous prévu (sans repartir dans le passé) ;
+    // contexte recréé entre-temps : son horloge repart de zéro, on garde juste le délai demandé
+    const at = ctx === ac ? Math.max(ctx.currentTime, asked + delay) : ctx.currentTime + delay;
     const src = ctx.createBufferSource();
     src.buffer = buf;
     src.playbackRate.value = rate;
@@ -185,17 +296,39 @@ export interface LoopHandle {
  */
 export function playLoop(name: SfxName, { volume = 1, rate = 1, fadeIn = 0.25 }: LoopOptions = {}): LoopHandle {
   let stopped = false;
+  let buffer: AudioBuffer | null = null;
   let src: AudioBufferSourceNode | null = null;
   let gain: GainNode | null = null;
+  let on: AudioContext | null = null; // contexte où joue `src`
   let curRate = rate;
   let curVol = clampVol(volume);
+
+  /** (Re)lance la boucle sur le contexte courant ; l'ancienne source (contexte remplacé) est lâchée. */
+  const attach = (fade: number) => {
+    if (stopped || muted || !buffer || !ctx || !master) return;
+    const old = src;
+    if (old) { try { old.stop(); old.disconnect(); } catch { /* contexte déjà fermé */ } }
+    const ac = ctx;
+    on = ac;
+    src = ac.createBufferSource();
+    src.buffer = buffer;
+    src.loop = true;
+    src.playbackRate.value = curRate;
+    gain = ac.createGain();
+    const t = ac.currentTime;
+    gain.gain.setValueAtTime(0, t);
+    gain.gain.linearRampToValueAtTime(curVol, t + Math.max(0.01, fade));
+    src.connect(gain).connect(master);
+    // départ à un endroit au hasard : deux manches ne sonnent pas pareil
+    src.start(t, Math.random() * buffer.duration * 0.9);
+  };
 
   const stop = ((fadeOut = 0.15) => {
     if (stopped) return;
     stopped = true;
     activeLoops.delete(stop);
-    if (!src || !gain || !ctx) return;
-    const t = ctx.currentTime;
+    if (!src || !gain || !on) return;
+    const t = on.currentTime;
     const f = Math.max(0.01, fadeOut);
     gain.gain.cancelScheduledValues(t);
     gain.gain.setValueAtTime(gain.gain.value, t);
@@ -206,37 +339,29 @@ export function playLoop(name: SfxName, { volume = 1, rate = 1, fadeIn = 0.25 }:
   }) as LoopHandle;
   stop.setRate = (r: number) => {
     curRate = r;
-    if (src && ctx) src.playbackRate.setTargetAtTime(r, ctx.currentTime, 0.08);
+    if (src && on) src.playbackRate.setTargetAtTime(r, on.currentTime, 0.08);
   };
   stop.setVolume = (v: number) => {
     curVol = clampVol(v);
-    if (gain && ctx && !stopped) gain.gain.setTargetAtTime(curVol, ctx.currentTime, 0.08);
+    if (gain && on && !stopped) gain.gain.setTargetAtTime(curVol, on.currentTime, 0.08);
   };
 
   if (muted) { stopped = true; return stop; }
   const ac = audio();
   if (!ac || !master) { stopped = true; return stop; }
-  activeLoops.add(stop);
+  // contexte recréé (iOS bloqué) : la boucle reprend dessus, même vitesse, même volume, fondu court
+  activeLoops.set(stop, () => attach(0.15));
   void load(name).then((buf) => {
     if (!buf || !ctx || !master || stopped || muted) { stop(); return; }
-    src = ctx.createBufferSource();
-    src.buffer = buf;
-    src.loop = true;
-    src.playbackRate.value = curRate;
-    gain = ctx.createGain();
-    const t = ctx.currentTime;
-    gain.gain.setValueAtTime(0, t);
-    gain.gain.linearRampToValueAtTime(curVol, t + Math.max(0.01, fadeIn));
-    src.connect(gain).connect(master);
-    // départ à un endroit au hasard : deux manches ne sonnent pas pareil
-    src.start(t, Math.random() * buf.duration * 0.9);
+    buffer = buf;
+    attach(fadeIn);
   });
   return stop;
 }
 
 /** Coupe toutes les boucles en cours (changement de jeu, son coupé…). */
 export function stopAllLoops(fadeOut = 0.1) {
-  [...activeLoops].forEach((s) => s(fadeOut));
+  [...activeLoops.keys()].forEach((s) => s(fadeOut));
 }
 
 /** Roulement de tambour réel, en crescendo, qui s'arrête net au bout de `seconds`. */
@@ -304,4 +429,13 @@ export function sfxOutput(): { ctx: AudioContext; master: GainNode } | null {
   if (muted) return null;
   const ac = audio();
   return ac && master ? { ctx: ac, master } : null;
+}
+
+/**
+ * Prévient quand le contexte partagé est remplacé (iOS bloqué → recréé) : ce qui jouait dessus s'est tu.
+ * Les lecteurs annexes ne gardent donc jamais `sfxOutput()` d'un appel à l'autre (le redemander à chaque son).
+ */
+export function onSfxContextChange(cb: () => void) {
+  ctxListeners.add(cb);
+  return () => { ctxListeners.delete(cb); };
 }

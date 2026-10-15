@@ -359,8 +359,11 @@ export function ZBlob({
             </g>
           )}
           {/* Lunettes de soleil : les yeux sont cachés (sinon ils débordent des verres) */}
-          {!hideEyes && eye(L, look[0], 0)}
-          {!hideEyes && eye(R, look[1], 1)}
+          {/* data-eyes / data-eyes-top : repères des yeux en spirale (spiral-eyes.ts), sans effet visuel */}
+          <g data-eyes="">
+            {!hideEyes && eye(L, look[0], 0)}
+            {!hideEyes && eye(R, look[1], 1)}
+          </g>
           {brows()}
           {(mood === "cool" || boss) && (
             <g>
@@ -374,6 +377,8 @@ export function ZBlob({
           {mouth()}
           {cos.face}
           {bandaid && bandaidLayer(96, 83)}
+          {/* Yeux cachés (lunettes, bandeau…) : spirales posées sur les verres */}
+          <g data-eyes-top={hideEyes ? `${L.x - 0.5} ${L.y + 2.5} 9 ${R.x + 1} ${L.y + 2.5} 9 lens` : `${L.x} ${L.y} ${L.r} ${R.x} ${R.y} ${R.r}`} />
         </g>
         {cos.top}
 

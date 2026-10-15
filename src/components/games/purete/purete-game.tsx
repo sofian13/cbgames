@@ -31,7 +31,7 @@ import { GameIconBadge, GameInlineIcon, GameTopRight } from "@/components/games/
 import { uniqueMin, useGameFinished, winnersOf } from "@/lib/game-finished";
 import { ShareResultButton } from "@/components/games/share-result-button";
 import { pureteGroupCard, pureteSoloCard, pureteTableCard } from "@/lib/share-cards";
-import { SoireeNextButton } from "@/components/games/soiree-next";
+import { SoireeGain, SoireeNextButton } from "@/components/games/soiree-next";
 import { EndHomeLink, EndPill, EndPills, EndReplay } from "@/components/games/end-actions";
 
 // ── Constantes visuelles ─────────────────────────────────
@@ -866,7 +866,10 @@ function PureteBody({ onReturnToLobby }: GameProps) {
                 <div className="min-w-0 flex-1">
                   <div className="flex items-baseline justify-between gap-2">
                     <span className="truncate text-[20px]" style={DISPLAY}>{players[pi]}</span>
-                    <span className="shrink-0 text-[22px]" style={DISPLAY}>{t.pct(pur)}</span>
+                    <span className="flex shrink-0 items-center gap-2">
+                      <span className="text-[22px]" style={DISPLAY}>{t.pct(pur)}</span>
+                      <SoireeGain name={players[pi]} />
+                    </span>
                   </div>
                   <div className="mt-1 h-3.5 w-full overflow-hidden rounded-full" style={{ border: `2px solid ${INK}`, background: "#fff" }}>
                     <BarFill pct={pur} color={c} delay={rank * 0.12} />

@@ -3,16 +3,17 @@ import { spiralEyes } from "./spiral-eyes";
 import { haptic, reducedMotion } from "./util";
 
 /**
- * Secret de l'accueil : défiler très vite de haut en bas plusieurs fois (≥ 3 changements de sens
- * rapides en ~2 s) → les blobs visibles titubent, yeux en spirale, ~2 s. Puis repos (pas de boucle).
+ * Secret de l'accueil : défiler très vite de haut en bas plusieurs fois (≥ 4 changements de sens
+ * rapides en ~2 s) → les blobs visibles titubent, yeux en spirale, étoiles qui tournent au-dessus
+ * de la tête, ~2 s. Puis repos (pas de boucle). Vibration seulement (pas de son).
  * Écouteur de défilement passif, aucun état React, rien par image : on mémorise juste la vitesse
  * la plus forte de chaque élan. L'élastique du haut / du bas (PullBlob) ne fait pas défiler : non concerné.
- * Animations : Web Animations sur les propriétés `rotate` / `translate` (le gigotement CSS des blobs,
- * en `transform`, continue dessous sans être touché).
+ * Animations : voir spiral-eyes.ts (Web Animations sur `rotate` / `translate` / `scale` : le gigotement
+ * CSS des blobs, en `transform`, continue dessous sans être touché).
  */
 
 const WINDOW_MS = 2000;
-const REVERSALS = 3;
+const REVERSALS = 4;
 /** Vitesse d'un élan « très rapide » (px/ms) */
 const FAST = 1.6;
 const SHOW_MS = 2000;
@@ -32,27 +33,8 @@ export function DizzyHome({ homeRef }: { homeRef: RefObject<HTMLElement | null> 
       quietUntil = performance.now() + COOLDOWN_MS;
       flips = [];
       haptic("medium");
-      undo = spiralEyes(home, SHOW_MS);
-      const blobs = Array.from(home.querySelectorAll<HTMLElement>(".zb")).filter((el) => {
-        const r = el.getBoundingClientRect();
-        return r.width > 0 && r.bottom > 0 && r.top < innerHeight;
-      });
-      blobs.forEach((el, i) => {
-        if (typeof el.animate !== "function") return;
-        const k = i % 2 ? -1 : 1;
-        el.animate(
-          [
-            { rotate: "0deg", translate: "0 0" },
-            { rotate: `${k * 14}deg`, translate: `${k * 4}px 0`, offset: 0.15 },
-            { rotate: `${-k * 12}deg`, translate: `${-k * 5}px 2px`, offset: 0.35 },
-            { rotate: `${k * 9}deg`, translate: `${k * 3}px 0`, offset: 0.55 },
-            { rotate: `${-k * 6}deg`, translate: `${-k * 2}px 1px`, offset: 0.75 },
-            { rotate: `${k * 2}deg`, translate: "0 0", offset: 0.9 },
-            { rotate: "0deg", translate: "0 0" },
-          ],
-          { duration: SHOW_MS, delay: (i % 4) * 60, easing: "ease-in-out" },
-        );
-      });
+      // Yeux en spirale, étoiles au-dessus de la tête et démarche d'ivrogne (spiral-eyes.ts)
+      undo = spiralEyes(home, SHOW_MS, { wobble: true });
     };
 
     const onScroll = () => {

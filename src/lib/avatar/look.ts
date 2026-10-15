@@ -76,6 +76,8 @@ export const AVATAR_ITEMS: Record<AvatarSlot, AvatarItem[]> = {
   eyes: [
     item("classic", true), item("big", true), item("happy", true), item("sleepy", true), item("determined", true),
     item("star", true), item("heart", true), item("wink", true), item("dots", true), item("cross", true),
+    // Ajout v4
+    item("allnighter", true), item("tears", true),
   ],
   hair: [
     item("none", true), item("swoop", true), item("afro", true), item("mohawk", true), item("bun", true),
@@ -87,6 +89,8 @@ export const AVATAR_ITEMS: Record<AvatarSlot, AvatarItem[]> = {
     item("twintails", false, "bun"), item("sticks", false, "bun"), item("hedgehog", true),
     item("streak", false, "swoop"), item("peekaboo", false, "swoop"), item("ahoge", false, "swoop"),
     item("mane", false, "afro"),
+    // Ajout v4
+    item("mullet", true), item("quiff", true),
   ],
   hat: [
     item("none", true), item("straw", false, "bucket"), item("cap", true), item("beanie", true), item("crown", false, "party"),
@@ -95,18 +99,24 @@ export const AVATAR_ITEMS: Record<AvatarSlot, AvatarItem[]> = {
     item("bandana", false, "beanie"),
     // Secret : trouvé en touchant le blob doré de l'accueil (ajout v3)
     secretItem("goldhalo"),
+    // Ajout v4
+    item("flowers", true), item("propeller", false, "cap"),
   ],
   face: [
     item("none", true), item("shades", true), item("round", true), item("moustache", false, "none"), item("scar", false, "plaster"),
     item("plaster", true), item("mask", false, "none"), item("patch", false, "shades"), item("blush", true),
     item("goggles", false, "round"), item("freckles", true), item("beard", false, "none"), item("domino", false, "shades"),
     item("crossscar", false, "plaster"), item("bandages", true), item("earring", false, "none"),
+    // Ajout v4
+    item("clown", true), item("glasses3d", false, "round"), item("goldtooth", true),
   ],
   extra: [
     item("none", true), item("scarf", true), item("armband", false, "scarf"), item("necklace", true), item("bowtie", true),
     item("cape", false, "scarf"), item("tie", false, "bowtie"), item("headphones", false, "necklace"),
     item("wings", false, "none"), item("lei", false, "necklace"),
     item("katana", false, "none"), item("longscarf", false, "scarf"),
+    // Ajout v4
+    item("medal", true), item("balloon", true),
   ],
 };
 
@@ -181,6 +191,8 @@ export function sameLook(a: AvatarLook, b: AvatarLook): boolean {
 /* ───────── Code de bande (hors ligne) ─────────
  * « ZZB1-… » : base64url d'un JSON compact [[prénom, look, moi?], …].
  * Le look tient en 7 caractères base36 : index dans le catalogue ci-dessus.
+ * Un caractère par élément : 36 éléments max par liste (index 0 à z), ne jamais dépasser.
+ * Index inconnu (code venu d'une version plus récente) → élément par défaut.
  */
 const CODE_PREFIX = "ZZB1-";
 export const BAND_MAX = 16;

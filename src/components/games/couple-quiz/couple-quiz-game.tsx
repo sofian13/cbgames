@@ -27,7 +27,7 @@ import { getLang, pick, useT, type Lang } from "@/lib/i18n";
 import { STR, packsFor } from "./i18n";
 import { getSavedDuo, saveDuo } from "@/lib/saved-players";
 import { useGameFinished, winnersOf } from "@/lib/game-finished";
-import { SoireeNextButton } from "@/components/games/soiree-next";
+import { SoireeGain, SoireeNextButton } from "@/components/games/soiree-next";
 import { EndHomeLink, EndPill, EndPills, EndReplay } from "@/components/games/end-actions";
 
 const ACCENT = "#FF6BAE";
@@ -571,6 +571,8 @@ function DuoScore({ name, score, idx, big, crown }: { name: string; score: numbe
       </span>
       <span className="min-w-0 flex-1 text-[15px] font-bold leading-tight" style={{ overflowWrap: "break-word" }}>{name}</span>
       {crown && <Crown size={20} strokeWidth={2.8} className="shrink-0" aria-hidden />}
+      {/* Écran de fin (big) en Soirée : points de soirée gagnés */}
+      {big && <SoireeGain name={name} />}
     </div>
   );
 }

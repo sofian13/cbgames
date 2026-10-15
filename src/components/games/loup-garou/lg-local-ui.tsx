@@ -16,6 +16,7 @@ import { GameIconButton } from "@/components/games/game-icon-button";
 import { useT } from "@/lib/i18n";
 import { TutoAgainButton } from "@/components/games/game-tuto";
 import { ROLE_TEXT, STR } from "./lg-local-i18n";
+import { SoireeGain } from "@/components/games/soiree-next";
 
 export type Tone = "night" | "day" | "dusk";
 
@@ -349,7 +350,7 @@ export function RevealedBlob({ p, size, reveal = false, delay = 0, ghost = !p.al
 }
 
 /** Ligne de joueur pour les récaps (rôle révélé) */
-export function PlayerRow({ p, lover = false, dim = false }: { p: Player; lover?: boolean; dim?: boolean }) {
+export function PlayerRow({ p, lover = false, dim = false, gain = false }: { p: Player; lover?: boolean; dim?: boolean; /** Écran de fin en Soirée : pastille des points de soirée */ gain?: boolean }) {
   const r = ROLES[p.role];
   const t = useT(STR);
   const name = useT(ROLE_TEXT)[p.role].name;
@@ -360,6 +361,7 @@ export function PlayerRow({ p, lover = false, dim = false }: { p: Player; lover?
         {p.name}{lover && <span style={{ color: PINK }}> · {t.lover}</span>}
       </span>
       <span className="shrink-0 rounded-full px-2.5 py-1 text-[14px] font-bold" style={{ ...stk(r.accent, 0, 2) }}>{name}</span>
+      {gain && <SoireeGain name={p.name} />}
     </div>
   );
 }

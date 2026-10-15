@@ -17,7 +17,7 @@ import { IdeaButton, RerollButton } from "@/components/games/idea-button";
 import { useGameFinished } from "@/lib/game-finished";
 import { GameRulesSheet, GameTuto, RulesIconButton, TutoAgainButton, useFirstTimeTuto } from "@/components/games/game-tuto";
 import { useChronoTuto } from "./tuto";
-import { SoireeNextButton } from "@/components/games/soiree-next";
+import { SoireeGain, SoireeNextButton } from "@/components/games/soiree-next";
 import { EndHomeLink, EndPill, EndPills, EndReplay } from "@/components/games/end-actions";
 
 // ── Catégorie Chrono ───────────────────────────────────────
@@ -538,6 +538,7 @@ export default function CategoryChronoGame({ onReturnToLobby }: GameProps) {
               <PlayerAvatar name={p.name} colorIndex={p.i} size={34} mood={k === 0 ? "cool" : p.lives > 0 ? "happy" : "dead"} />
               <span className="min-w-0 flex-1 truncate text-[17px] font-bold">{p.name}</span>
               {p.lives > 0 && <LifeHearts n={p.lives} size={16} label={t.livesAria(p.lives)} />}
+              <SoireeGain name={p.name} />
             </div>
           ))}
         </div>

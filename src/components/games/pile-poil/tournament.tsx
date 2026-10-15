@@ -16,7 +16,7 @@ import { CHALLENGES as CHALLENGE_TEXT, CHALLENGE_IDS, GAGES as GAGES_I18N, PP_ST
 import { fxBad, fxDrum, fxGood, fxNeutral, fxOver, fxPerfect, fxPreload, fxReveal, fxTap, fxTick, fxUnlock, vibrate } from "./pp-fx";
 import { rankingOf, useGameFinished, winnersOf, type GameScores } from "@/lib/game-finished";
 import { WIN_STR } from "@/lib/winners-text";
-import { SoireeNextButton } from "@/components/games/soiree-next";
+import { SoireeGain, SoireeNextButton } from "@/components/games/soiree-next";
 import { EndHomeLink, EndPill, EndPills, EndReplay } from "@/components/games/end-actions";
 
 // ── Pile Poil · mode Tournoi (tout sur un seul téléphone) ─────────────────
@@ -1057,6 +1057,7 @@ function FinalScreen({
             <PlayerAvatar name={s.name} colorIndex={s.i} size={32} mood={winners.includes(s.name) ? "cool" : "happy"} border={false} />
             <span className="min-w-0 flex-1 text-[18px] leading-tight" style={{ ...DISPLAY, overflowWrap: "anywhere" }}>{s.name}</span>
             <span className="shrink-0 whitespace-nowrap text-[18px]" style={DISPLAY}>{t.pts(s.pts)}</span>
+            <SoireeGain name={s.name} />
           </div>
         ))}
       </div>

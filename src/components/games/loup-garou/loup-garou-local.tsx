@@ -1036,7 +1036,7 @@ function EndScreen({
       </div>
       <SectionTitle className="mt-8 mb-3">{t.whoWasWho}</SectionTitle>
       <div className="grid gap-2.5">
-        {sorted.map((p) => <PlayerRow key={p.id} p={p} lover={!!game.lovers?.includes(p.id)} />)}
+        {sorted.map((p) => <PlayerRow key={p.id} p={p} lover={!!game.lovers?.includes(p.id)} gain />)}
       </div>
       <button type="button" onClick={onHistory} className="mt-4 self-center rounded-full px-4 text-[16px] font-bold active:translate-y-[2px]" style={{ ...stk("#fff", 3), color: INK, minHeight: 46 }}>
         <GameInlineIcon icon={ScrollText} /> {t.seeHistory}

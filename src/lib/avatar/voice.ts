@@ -8,7 +8,7 @@
  */
 import { useSyncExternalStore } from "react";
 import type { MascotMood } from "@/components/Mascot";
-import { sfxOutput } from "@/lib/sfx";
+import { onSfxContextChange, sfxOutput, wakeSfx } from "@/lib/sfx";
 import { getVoiceFor, subscribePlayers } from "@/lib/saved-players";
 import { VOICE_MAX_BYTES, VOICE_MAX_S, baseMime, getVoice, newVoiceId, type VoiceClip } from "./voice-store";
 
@@ -64,6 +64,7 @@ export async function warmUpMic(): Promise<RecError | null> {
   try {
     const s = await navigator.mediaDevices.getUserMedia({ audio: true });
     s.getTracks().forEach((t) => t.stop());
+    wakeSfx();
     return null;
   } catch (e) {
     return micErr(e);
@@ -134,6 +135,8 @@ export class VoiceRecorder {
         this.buf = new Float32Array(an.fftSize);
       }
     } catch { /* jauge facultative */ }
+    // l'ouverture du micro a pu couper le contexte des sons de l'app : on le vérifie
+    wakeSfx(false);
   }
 
   /** Secondes écoulées depuis le début. */
@@ -178,6 +181,7 @@ export class VoiceRecorder {
   }
 
   private release() {
+    const opened = this.stream != null || this.ctx != null;
     clearTimeout(this.limit);
     this.stream?.getTracks().forEach((t) => t.stop());
     this.stream = null;
@@ -185,7 +189,9 @@ export class VoiceRecorder {
     this.buf = null;
     const c = this.ctx;
     this.ctx = null;
-    if (c && c.state !== "closed") void c.close().catch(() => {});
+    const closed = c && c.state !== "closed" ? c.close().catch(() => {}) : Promise.resolve();
+    // Micro rendu : les sons de l'app repartent (session iOS, haut-parleur, contexte partagé)
+    if (opened) void closed.then(() => wakeSfx());
   }
 }
 
@@ -193,12 +199,14 @@ export class VoiceRecorder {
 async function analyse(data: ArrayBuffer, fallbackDur: number): Promise<{ dur: number; gain: number }> {
   try {
     const out = sfxOutput();
-    let audio: AudioBuffer;
-    if (out) audio = await out.ctx.decodeAudioData(data.slice(0));
-    else {
+    const offline = () => {
       const O = window.OfflineAudioContext ?? (window as unknown as { webkitOfflineAudioContext?: typeof OfflineAudioContext }).webkitOfflineAudioContext;
-      audio = await new O(1, 1, 44100).decodeAudioData(data.slice(0));
-    }
+      return new O(1, 1, 44100).decodeAudioData(data.slice(0));
+    };
+    let audio: AudioBuffer;
+    // contexte partagé recréé pendant le décodage (iOS) : on retente hors ligne
+    if (out) audio = await out.ctx.decodeAudioData(data.slice(0)).catch(offline);
+    else audio = await offline();
     const ch = audio.getChannelData(0);
     let peak = 0, sum = 0;
     for (let i = 0; i < ch.length; i++) { const v = Math.abs(ch[i]); if (v > peak) peak = v; sum += v * v; }
@@ -237,6 +245,17 @@ export function talkMood(level: 0 | 1 | 2): MascotMood {
 
 /* ───────── Lecture ───────── */
 const decoded = new WeakMap<ArrayBuffer, AudioBuffer>();
+
+/** Décode une voix ; si le contexte a été recréé pendant le décodage, 2e essai sur le contexte courant. */
+async function decodeClip(data: ArrayBuffer, ctx: AudioContext): Promise<AudioBuffer> {
+  try {
+    return await ctx.decodeAudioData(data.slice(0));
+  } catch (e) {
+    const now = sfxOutput()?.ctx;
+    if (!now || now === ctx) throw e;
+    return now.decodeAudioData(data.slice(0));
+  }
+}
 let current: { stop: () => void } | null = null;
 
 /** Coupe la voix en cours. */
@@ -250,9 +269,8 @@ export function stopVoice() {
  * Résout true si la lecture a démarré.
  */
 export async function playClip(key: string, clip: Pick<VoiceClip, "data" | "gain">, { volume = 0.9 }: { volume?: number } = {}): Promise<boolean> {
-  const out = sfxOutput();
-  if (!out) return false;
-  const { ctx, master } = out;
+  const first = sfxOutput();
+  if (!first) return false;
   stopVoice();
   let ended = false;
   const token = { stop: () => { ended = true; } };
@@ -260,7 +278,7 @@ export async function playClip(key: string, clip: Pick<VoiceClip, "data" | "gain
   let buf = decoded.get(clip.data);
   if (!buf) {
     try {
-      buf = await ctx.decodeAudioData(clip.data.slice(0));
+      buf = await decodeClip(clip.data, first.ctx);
       decoded.set(clip.data, buf);
     } catch {
       if (current === token) current = null;
@@ -268,6 +286,10 @@ export async function playClip(key: string, clip: Pick<VoiceClip, "data" | "gain
     }
   }
   if (ended || current !== token) return false;
+  // Redemandé après l'attente : le contexte partagé a pu être recréé (iOS) entre-temps
+  const out = sfxOutput();
+  if (!out) { if (current === token) current = null; return false; }
+  const { ctx, master } = out;
   const src = ctx.createBufferSource();
   src.buffer = buf;
   const g = ctx.createGain();
@@ -278,10 +300,13 @@ export async function playClip(key: string, clip: Pick<VoiceClip, "data" | "gain
   const data = new Float32Array(an.fftSize);
   let raf = 0;
   let done = false;
+  // contexte remplacé en pleine lecture : la voix s'est tue, la bouche se referme
+  let unsub = () => {};
   const finish = () => {
     if (done) return;
     done = true;
     ended = true;
+    unsub();
     cancelAnimationFrame(raf);
     raf = 0;
     try { src.stop(); } catch { /* déjà fini */ }
@@ -291,6 +316,7 @@ export async function playClip(key: string, clip: Pick<VoiceClip, "data" | "gain
   };
   token.stop = finish;
   src.onended = finish;
+  unsub = onSfxContextChange(finish);
   // Jamais plus de 5 s (un fichier reçu peut mentir sur sa durée)
   src.start(ctx.currentTime, 0, VOICE_MAX_S + 0.3);
   setSpeaking({ key, level: 1 });
@@ -338,18 +364,21 @@ export async function loadPersoVoice(name: string): Promise<Pick<VoiceClip, "dat
  * Respecte la coupure du son global. Volume modéré par défaut.
  */
 export async function playVoiceLayer(clip: Pick<VoiceClip, "data" | "gain">, { volume = 0.6 }: { volume?: number } = {}): Promise<boolean> {
-  const out = sfxOutput();
-  if (!out) return false;
-  const { ctx, master } = out;
+  const first = sfxOutput();
+  if (!first) return false;
   let buf = decoded.get(clip.data);
   if (!buf) {
     try {
-      buf = await ctx.decodeAudioData(clip.data.slice(0));
+      buf = await decodeClip(clip.data, first.ctx);
       decoded.set(clip.data, buf);
     } catch {
       return false;
     }
   }
+  // Redemandé après l'attente : contexte recréé entre-temps, ou son coupé pendant le décodage
+  const out = sfxOutput();
+  if (!out) return false;
+  const { ctx, master } = out;
   const src = ctx.createBufferSource();
   src.buffer = buf;
   const g = ctx.createGain();

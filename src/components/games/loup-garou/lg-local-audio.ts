@@ -43,18 +43,53 @@ export function speechMs(text: string): number {
   return Math.max(1800, (text.length * 62) / RATE);
 }
 
+function utterance(text: string): SpeechSynthesisUtterance {
+  const u = new SpeechSynthesisUtterance(text.replace(/·e/g, "e").replace(/[…]/g, "."));
+  const lang = getLang();
+  u.lang = SPEECH_LANG[lang];
+  const v = voiceFor(lang);
+  if (v) u.voice = v;
+  u.rate = RATE;
+  u.pitch = 0.92;
+  return u;
+}
+
+/* iOS : après la veille, un appel ou Siri, la synthèse peut rester « en pause » ou avec une file
+ * bloquée (speak() ne dit plus rien jusqu'au redémarrage). On la relance avant chaque phrase, et si
+ * la phrase n'a pas démarré peu après, on vide la file et on la redit une fois. */
+let lastUtterance: SpeechSynthesisUtterance | null = null;
+let watchdog: ReturnType<typeof setTimeout> | undefined;
+
+if (typeof window !== "undefined" && typeof document !== "undefined") {
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden || !speechAvailable()) return;
+    try { if (window.speechSynthesis.paused) window.speechSynthesis.resume(); } catch { /* rien */ }
+  });
+}
+
 export function speak(text: string, enabled: boolean) {
   if (!enabled || !speechAvailable() || !text) return;
   try {
     const synth = window.speechSynthesis;
     synth.cancel();
-    const u = new SpeechSynthesisUtterance(text.replace(/·e/g, "e").replace(/[…]/g, "."));
-    const lang = getLang();
-    u.lang = SPEECH_LANG[lang];
-    const v = voiceFor(lang);
-    if (v) u.voice = v;
-    u.rate = RATE;
-    u.pitch = 0.92;
+    if (synth.paused) synth.resume();
+    const u = utterance(text);
+    lastUtterance = u;
+    clearTimeout(watchdog);
+    if (text.trim()) {
+      let started = false;
+      u.onstart = () => { started = true; };
+      watchdog = setTimeout(() => {
+        if (started || lastUtterance !== u || document.hidden) return;
+        try {
+          synth.cancel();
+          synth.resume();
+          const again = utterance(text);
+          lastUtterance = again;
+          synth.speak(again);
+        } catch { /* le texte reste à l'écran */ }
+      }, 1500);
+    }
     synth.speak(u);
   } catch {
     /* narration indisponible : le texte reste à l'écran */
@@ -63,6 +98,8 @@ export function speak(text: string, enabled: boolean) {
 
 export function stopSpeech() {
   if (!speechAvailable()) return;
+  clearTimeout(watchdog);
+  lastUtterance = null;
   try { window.speechSynthesis.cancel(); } catch { /* rien */ }
 }
 

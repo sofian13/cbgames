@@ -85,7 +85,7 @@
 [data-zz-off] .zb-pupil-a, [data-zz-off] .zb-pupil-b, [data-zz-off] .zb-heart, [data-zz-off] .zb-flame,
 [data-zz-off] .zb-drop, [data-zz-off] .zb-zz, [data-zz-off] .zc-nose, [data-zz-off] .zc-tick,
 [data-zz-off] .zc-wave, [data-zz-off] .zc-tray, [data-zz-off] .zz-band-bob, [data-zz-off] .av-wob,
-[data-zz-off] .av-blink { animation-play-state: paused !important; }
+[data-zz-off] .av-blink, [data-zz-off] .av-prop { animation-play-state: paused !important; }
 
 /* Les pupilles suivent le doigt (--zz-lx/--zz-ly posés sur chaque .zb-follow par installLookAtFinger) */
 .zb-follow {
@@ -497,19 +497,28 @@ html, body { overflow-x: clip; overscroll-behavior-x: none; }
 /* ── Malchanceux de la Soirée (SoireeRun.tsx) : petit mot « Courage… » sous l'annonce ── */
 .zz-courage { animation: zz-pop 420ms var(--zz-spring) 500ms both; }
 
-/* ── Yeux en spirale (spiral-eyes.ts) : « accros » au Rejouer, accueil secoué ──
- * Blobs SVG : spirale ajoutée par-dessus le blanc de l'œil, qui tourne. Blobs des jeux (Mascot) : en CSS. */
-.zz-spiral-spin { transform-box: fill-box; transform-origin: center; animation: zz-spin 0.9s linear infinite; }
-.zz-spiral .zb-follow { opacity: 0; }
+/* ── Yeux en spirale (spiral-eyes.ts) : « accros » au Rejouer, accueil secoué (tournis) ──
+ * Blobs SVG : yeux d'origine masqués ([data-eyes]) le temps de l'effet, gros yeux en spirale posés
+ * par-dessus (les deux tournent en sens contraire et palpitent), étoiles qui tournent au-dessus de la
+ * tête (Web Animations). Blobs des jeux (Mascot) : en CSS. Tout est retiré après. */
+[data-zz-dizzy] [data-eyes] { visibility: hidden; }
+.zz-dz-pop {
+  transform-box: fill-box; transform-origin: center;
+  animation: zz-dz-pop 340ms var(--zz-spring) both, zz-dz-pulse 520ms ease-in-out infinite alternate;
+}
+@keyframes zz-dz-pop { 0% { transform: scale(0.2); } 60% { transform: scale(1.18); } 100% { transform: scale(1); } }
+@keyframes zz-dz-pulse { from { transform: scale(1); } to { transform: scale(1.09, 1.05); } }
+.zz-dz-spin { transform-box: fill-box; transform-origin: center; animation: zz-spin 0.75s linear infinite; }
+.zz-dz-spin.is-ccw { animation-direction: reverse; animation-duration: 0.9s; }
 .zz-spiral .mascot-eye::after {
   content: ""; position: absolute; inset: 0; border-radius: 50%;
-  background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-10 -10 20 20'%3E%3Cpath d='M0.00 0.00L0.19 0.08L0.29 0.29L0.24 0.57L0.00 0.82L-0.39 0.95L-0.87 0.87L-1.33 0.55L-1.64 0.00L-1.70 -0.71L-1.45 -1.45L-0.86 -2.08L-0.00 -2.46L1.02 -2.46L2.03 -2.03L2.84 -1.18L3.28 -0.00L3.22 1.33L2.61 2.61L1.49 3.60L0.00 4.10L-1.65 3.98L-3.19 3.19L-4.36 1.80L-4.92 0.00L-4.73 -1.96L-3.77 -3.77L-2.12 -5.11L-0.00 -5.74L2.28 -5.49L4.35 -4.35L5.87 -2.43L6.56 -0.00L6.25 2.59L4.93 4.93L2.75 6.63L0.00 7.38L-2.90 7.01L-5.51 5.51L-7.39 3.06L-8.20 0.00' fill='none' stroke='%2315082E' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E") center / 100% no-repeat;
-  animation: zz-spin 0.9s linear infinite;
+  background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-10 -10 20 20'%3E%3Cpath d='M0.4 0.0L0.5 0.1L0.6 0.2L0.7 0.4L0.7 0.5L0.7 0.7L0.6 0.9L0.5 1.1L0.4 1.3L0.2 1.5L-0.1 1.6L-0.3 1.7L-0.6 1.7L-1.0 1.7L-1.3 1.6L-1.6 1.4L-1.9 1.2L-2.2 1.0L-2.4 0.6L-2.6 0.2L-2.7 -0.2L-2.8 -0.6L-2.7 -1.1L-2.6 -1.6L-2.4 -2.1L-2.1 -2.5L-1.7 -2.9L-1.3 -3.2L-0.8 -3.5L-0.2 -3.7L0.4 -3.8L1.0 -3.8L1.7 -3.7L2.3 -3.4L2.9 -3.1L3.4 -2.7L3.9 -2.1L4.3 -1.5L4.6 -0.8L4.7 -0.1L4.8 0.7L4.7 1.5L4.5 2.2L4.2 3.0L3.7 3.7L3.2 4.3L2.5 4.9L1.7 5.3L0.8 5.6L-0.1 5.8L-1.0 5.8L-2.0 5.7L-2.9 5.4L-3.8 4.9L-4.6 4.3L-5.3 3.6L-5.9 2.7L-6.4 1.8L-6.7 0.7L-6.8 -0.3L-6.8 -1.4L-6.5 -2.5L-6.1 -3.6L-5.6 -4.6L-4.8 -5.5L-3.9 -6.3L-2.9 -6.9L-1.8 -7.4L-0.6 -7.7L0.7 -7.8L1.9 -7.7L3.2 -7.4L4.3 -6.9L5.5 -6.1L6.4 -5.3L7.3 -4.2L8.0 -3.0L8.4 -1.7L8.7 -0.4L8.7 1.0L8.6 2.5L8.2 3.8L7.5 5.1L6.7 6.4L5.6 7.4L4.4 8.3L3.1 9.0L1.6 9.5L0.1 9.7L-1.5 9.7L-3.1 9.4A1.3 1.3 0 0 1 -2.3 6.9L-2.3 6.9L-1.1 7.1L0.0 7.1L1.2 7.0L2.3 6.6L3.2 6.1L4.1 5.4L4.9 4.7L5.5 3.8L6.0 2.8L6.3 1.8L6.4 0.8L6.4 -0.3L6.2 -1.3L5.8 -2.2L5.3 -3.1L4.7 -3.8L4.0 -4.5L3.2 -5.0L2.3 -5.3L1.4 -5.6L0.5 -5.6L-0.4 -5.6L-1.3 -5.3L-2.1 -5.0L-2.8 -4.5L-3.5 -4.0L-4.0 -3.3L-4.4 -2.6L-4.7 -1.8L-4.8 -1.0L-4.9 -0.2L-4.7 0.5L-4.5 1.3L-4.2 1.9L-3.8 2.5L-3.2 3.0L-2.7 3.5L-2.0 3.8L-1.4 4.0L-0.7 4.1L-0.1 4.0L0.6 3.9L1.2 3.7L1.7 3.4L2.2 3.0L2.6 2.6L2.9 2.1L3.1 1.5L3.2 1.0L3.3 0.5L3.2 -0.1L3.1 -0.6L2.9 -1.0L2.6 -1.4L2.3 -1.8L1.9 -2.1L1.5 -2.3L1.1 -2.4L0.7 -2.5L0.3 -2.4L-0.1 -2.4L-0.5 -2.2L-0.8 -2.1L-1.1 -1.8L-1.3 -1.6L-1.5 -1.3L-1.6 -1.0L-1.6 -0.7L-1.6 -0.4L-1.6 -0.1L-1.5 0.1L-1.4 0.4L-1.2 0.5L-1.0 0.7L-0.9 0.8L-0.7 0.8L-0.5 0.8L-0.3 0.8L-0.2 0.8L-0.0 0.7L0.1 0.6L0.1 0.5L0.2 0.4L0.2 0.2L0.1 0.1L0.1 0.1L0.0 0.0L0.0 0.0L0.0 0.0L0.0 0.0Z' fill='%2315082E'/%3E%3C/svg%3E") center / 100% no-repeat;
+  animation: zz-spin 0.75s linear infinite;
 }
 @keyframes zz-spin { to { transform: rotate(360deg); } }
 .zz-addict { animation: zz-pop 380ms var(--zz-spring) both; }
 @media (prefers-reduced-motion: reduce) {
-  .zz-spiral-spin, .zz-spiral .mascot-eye::after, .zz-courage, .zz-addict { animation: none !important; }
+  .zz-dz-pop, .zz-dz-spin, .zz-spiral .mascot-eye::after, .zz-courage, .zz-addict { animation: none !important; }
 }
 
 /* ── Batterie faible (TiredBlob.tsx) : yeux mi-clos et blobs qui s'affaissent ~4 s ──

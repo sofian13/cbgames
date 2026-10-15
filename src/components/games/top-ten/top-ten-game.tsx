@@ -88,6 +88,9 @@ const themesForPack = (p: Pack) => THEMES[getLang()][p];
 // Version découverte (app sans Zinzin+) : tout le pack Culture pop (30 thèmes fixes) ;
 // le pack Soirée 18+ (thèmes chauds et malaise) est réservé à Zinzin+.
 const FREE_PACK: Pack = "culture";
+// Version découverte : les 30 premiers thèmes Culture pop (toujours les mêmes) ; les suivants = Zinzin+
+const FREE_COUNT = 30;
+const themesPlayable = (p: Pack, unlocked: boolean) => (unlocked || p !== FREE_PACK ? themesForPack(p) : themesForPack(p).slice(0, FREE_COUNT));
 // Aperçu du pack 18+ verrouillé : thèmes « malaise » drôles, pas les plus crus
 const PREVIEW_IDX = [41, 42];
 
@@ -160,9 +163,11 @@ function TopTenLocalGame({ onReturnToLobby, tools, onTuto }: { onReturnToLobby?:
   // 18+ jamais présélectionné, sauf en Soirée « Folle »
   const unlocked = useUnlocked();
   const nudge = useNudgeText();
-  const [packChoice, setPack] = useState<Pack>(() => (adultDefault(false) ? "adult" : "culture"));
+  // Packs cochés (un ou les deux, jamais zéro)
+  const [packChoice, setPackChoice] = useState<Pack[]>(() => [adultDefault(false) ? "adult" : "culture"]);
+  const togglePack = (p: Pack) => setPackChoice((cur) => (cur.includes(p) ? (cur.length > 1 ? cur.filter((x) => x !== p) : cur) : [...cur, p]));
   // Sans Zinzin+ : on reste sur le pack gratuit (réactif : tout se débloque dès l'abonnement)
-  const pack: Pack = unlocked ? packChoice : FREE_PACK;
+  const packs: Pack[] = unlocked ? packChoice : [FREE_PACK];
   const [themes, setThemes] = useState<ThemeState[]>(() => shuffle(themesForPack("adult")));
   const [themeCursor, setThemeCursor] = useState(0); // avance à chaque manche / changement
   const [numbers, setNumbers] = useState<Record<number, number>>({}); // playerIdx -> numéro
@@ -174,6 +179,8 @@ function TopTenLocalGame({ onReturnToLobby, tools, onTuto }: { onReturnToLobby?:
   useScrollTopOn(`${phase}-${stepIdx}`);
 
   const theme = themes[themeCursor % themes.length] ?? null;
+  // Vocabulaire de l'échelle = celui du pack d'origine du thème (utile quand les deux packs sont mélangés)
+  const pack: Pack = theme?.pack ?? packs[0];
   const total = players.length;
   const totalRounds = Math.min(8, Math.max(4, total));
 
@@ -205,7 +212,7 @@ function TopTenLocalGame({ onReturnToLobby, tools, onTuto }: { onReturnToLobby?:
     playSfx("card-shuffle", { volume: 0.8 });
     setScores(players.map(() => 0)); setGapTotals(players.map(() => 0));
     setTeamScore(0); setTeamMax(0); setPerfectRounds(0);
-    setThemes(shuffle(themesForPack(pack)));
+    setThemes(shuffle(packs.flatMap((p) => themesPlayable(p, unlocked).map((th) => ({ ...th, pack: p })))));
     setThemeCursor(0);
     startRound(1, players);
   };
@@ -235,7 +242,7 @@ function TopTenLocalGame({ onReturnToLobby, tools, onTuto }: { onReturnToLobby?:
   if (phase === "target") {
     return (
       <ZScreen tools={tools}>
-        <RangePicker range={numberRange} onPick={setNumberRange} pack={pack} onPickPack={setPack} locked={!unlocked} onStart={launch} onBack={() => setPhase("setup")} />
+        <RangePicker range={numberRange} onPick={setNumberRange} pack={packs[0]} packs={packs} onPickPack={togglePack} locked={!unlocked} onStart={launch} onBack={() => setPhase("setup")} />
         <TutoAgainButton onClick={onTuto} />
       </ZScreen>
     );
@@ -832,6 +839,7 @@ function RangePicker({
   onPick,
   pack,
   onPickPack,
+  packs,
   locked,
   onStart,
   onBack,
@@ -841,6 +849,8 @@ function RangePicker({
   onPick: (r: 10 | 25 | 50) => void;
   pack?: Pack;
   onPickPack?: (p: Pack) => void;
+  /** Mode local : multi-sélection (un ou les deux packs, mélangés) */
+  packs?: Pack[];
   /** App sans Zinzin+ : le pack 18+ est verrouillé (cadenas + aperçu) */
   locked?: boolean;
   onStart: () => void;
@@ -853,6 +863,7 @@ function RangePicker({
     { v: 25, label: t.rangeLabels[25], color: "#FFD23F" },
     { v: 50, label: t.rangeLabels[50], color: "#FF3EA5" },
   ];
+  const isOn = (p: Pack) => (packs ? packs.includes(p) : p === pack);
   const PACKS: { v: Pack; icon: LucideIcon; label: string; sub: string; color: string }[] = [
     { v: "adult", icon: Flame, ...t.packs.adult, color: "#FF3EA5" },
     { v: "culture", icon: Trophy, ...t.packs.culture, color: "#4ECDC4" },
@@ -870,7 +881,7 @@ function RangePicker({
                   <GameIconBadge icon={o.icon} bg="#fff" size={40} />
                   <span className="min-w-0 text-left">
                     <span className="block text-[20px] leading-none" style={DISPLAY}>{o.label}</span>
-                    <span className="mt-1 block text-[14px] font-semibold leading-tight">{o.sub}{"\u00A0·\u00A0"}{t.freeThemes(themesForPack(FREE_PACK).length)}</span>
+                    <span className="mt-1 block text-[14px] font-semibold leading-tight">{o.sub}{"\u00A0·\u00A0"}{t.freeThemes(themesPlayable(FREE_PACK, false).length)}</span>
                   </span>
                 </ZChoice>
               ))}
@@ -883,13 +894,16 @@ function RangePicker({
           ) : (
           <div className="mt-3 grid grid-cols-2 gap-3">
             {PACKS.map((o, i) => (
-              <ZChoice key={o.v} active={o.v === pack} color={o.color} onClick={() => onPickPack(o.v)} tilt={i ? 1.5 : -1.5} className="flex min-h-[124px] flex-col items-start justify-start">
-                <GameIconBadge icon={o.icon} bg={o.v === pack ? "#fff" : o.color} size={40} />
+              <ZChoice key={o.v} active={isOn(o.v)} color={o.color} onClick={() => onPickPack(o.v)} tilt={i ? 1.5 : -1.5} className="flex min-h-[124px] flex-col items-start justify-start">
+                <GameIconBadge icon={o.icon} bg={isOn(o.v) ? "#fff" : o.color} size={40} />
                 <p className="mt-2 text-[20px] leading-none" style={DISPLAY}>{o.label}</p>
                 <p className="mt-1 text-[14px] font-semibold leading-tight">{o.sub}</p>
               </ZChoice>
             ))}
           </div>
+          )}
+          {!locked && packs && (
+            <p className="mt-3 text-[15px] font-semibold leading-snug" style={{ color: "rgba(255,255,255,0.85)" }}>{t.packsHint}</p>
           )}
         </>
       )}

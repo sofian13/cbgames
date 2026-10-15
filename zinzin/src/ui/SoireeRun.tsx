@@ -85,7 +85,8 @@ function Intro({ s, onPause }: { s: SoireeState; onPause: () => void }) {
   const info = gameInfo(g, lang);
   const c = ZPALETTE[g.color] ?? ZPALETTE.pink;
   const n = s.playlist.length;
-  const top = ranking(s).filter((r) => r.points > 0).slice(0, 3);
+  // Classement complet de la soirée entre deux jeux (tout le monde voit sa place, même à 0)
+  const top = s.index > 0 ? ranking(s) : [];
   const kings = kingsOf(s);
   const longest = Math.max(...info.name.split(" ").map((w) => w.length));
   // Petit écran (iPhone SE) : blob plus petit pour garder la règle visible
@@ -154,7 +155,7 @@ function Intro({ s, onPause }: { s: SoireeState; onPause: () => void }) {
           <div className="mt-4 flex flex-wrap items-center gap-1.5">
             {top.map((r) => (
               <span key={r.name} className="inline-flex min-h-8 items-center gap-1 rounded-full px-2.5 text-[14px] font-extrabold" style={{ background: ZPALETTE[colorOf(s, r.name)].body, color: ZPALETTE[colorOf(s, r.name)].ink, border: "2.5px solid var(--zz-ink)" }}>
-                {kings.includes(r.name) && <Crown size={14} strokeWidth={3} aria-hidden />}{r.name} · {t.pts(r.points)}
+                {kings.includes(r.name) ? <Crown size={14} strokeWidth={3} aria-hidden /> : <span style={{ opacity: 0.7 }}>{r.rank}.</span>}{r.name} · {t.pts(r.points)}
               </span>
             ))}
           </div>

@@ -8,6 +8,8 @@ export interface ThemeState {
   theme: string;
   low: string;
   high: string;
+  /** Pack d'origine (posé au lancement quand on mélange les deux packs : chaque thème garde le vocabulaire de son échelle) */
+  pack?: "adult" | "culture";
 }
 
 export const THEMES: I18n<{ adult: ThemeState[]; culture: ThemeState[] }> = {

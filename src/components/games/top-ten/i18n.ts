@@ -46,6 +46,8 @@ interface TTStrings {
   rangeLabels: { 10: string; 25: string; 50: string };
   packs: Record<Pack, { label: string; sub: string }>;
   themesTitle: string;
+  /** Sous le choix des packs (multi-sélection) */
+  packsHint: string;
   numbersUpTo: string;
   rangeHelp: string;
   startGame: string;
@@ -112,6 +114,7 @@ export const TT_STR: I18n<TTStrings> = {
       culture: { label: "Culture pop", sub: "Animés, villes, foot…" },
     },
     themesTitle: "Les thèmes",
+    packsHint: "Prends-en un ou les deux, on mélange tout.",
     numbersUpTo: "Les numéros vont jusqu'à",
     rangeHelp: "Chacun reçoit un numéro secret et répond à voix haute selon son intensité, puis on range toute la table. Plus l'échelle est grande, plus il faut être précis.",
     startGame: "Lancer la partie",
@@ -174,6 +177,7 @@ export const TT_STR: I18n<TTStrings> = {
       culture: { label: "Pop culture", sub: "Anime, cities, football…" },
     },
     themesTitle: "Themes",
+    packsHint: "Pick one or both, we mix them up.",
     numbersUpTo: "Numbers go up to",
     rangeHelp: "Everyone gets a secret number and answers out loud to match it, then the whole table gets ranked. The bigger the scale, the sharper you need to be.",
     startGame: "Start the game",
@@ -236,6 +240,7 @@ export const TT_STR: I18n<TTStrings> = {
       culture: { label: "Cultura pop", sub: "Anime, ciudades, fútbol…" },
     },
     themesTitle: "Los temas",
+    packsHint: "Elige uno o los dos, se mezclan.",
     numbersUpTo: "Los números llegan hasta",
     rangeHelp: "Cada uno recibe un número secreto y responde en voz alta según su intensidad; luego se ordena a toda la mesa. Cuanto más grande la escala, más precisión hace falta.",
     startGame: "Empezar la partida",

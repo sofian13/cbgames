@@ -40,7 +40,7 @@ import { ShareResultButton } from "@/components/games/share-result-button";
 import { tourneeCard } from "@/lib/share-cards";
 import { GameTuto, RulesIconButton, useFirstTimeTuto } from "@/components/games/game-tuto";
 import { TourneeRules, useTourneeSlides } from "./tuto";
-import { SoireeNextButton } from "@/components/games/soiree-next";
+import { SoireeGain, SoireeNextButton } from "@/components/games/soiree-next";
 import { EndHomeLink, EndPills, EndReplay } from "@/components/games/end-actions";
 
 // ── DA sticker ────────────────────────────────────────────
@@ -873,7 +873,8 @@ export default function PicoletteGame({ onReturnToLobby }: GameProps) {
             </div>
             <p className="text-[15px] font-bold">{tr.overStar}</p>
             <p style={{ ...DISPLAY, fontSize: tops.length > 1 || top.name.length > 11 ? 32 : 40, lineHeight: 1, overflowWrap: "anywhere" }}>{wt.names(tops.map((p) => p.name))}</p>
-            <p className="mt-1 text-[15px] font-bold">{tr.penalties(top.losses)}</p>
+            {/* Soirée : ex æquo en tête = mêmes points pour chacun, une pastille suffit */}
+            <p className="mt-1 flex items-center justify-center gap-2 text-[15px] font-bold">{tr.penalties(top.losses)}<SoireeGain name={top.name} /></p>
           </div>
         ) : (
           <p className="mt-6 text-center text-[20px]" style={DISPLAY}>{wt.allTiedSub}</p>
@@ -886,7 +887,8 @@ export default function PicoletteGame({ onReturnToLobby }: GameProps) {
               <span className="w-7 text-[18px]" style={DISPLAY}>{1 + ranking.filter((x) => x.losses < p.losses).length}</span>
               <PlayerAvatar name={p.name} colorIndex={p.i} size={32} mood="happy" />
               <span className="min-w-0 flex-1 truncate text-[17px] font-bold">{p.name}</span>
-              <span className="text-[15px] font-bold">{tr.penalties(p.losses)}</span>
+              <span className="shrink-0 whitespace-nowrap text-[15px] font-bold">{tr.penalties(p.losses)}</span>
+              <SoireeGain name={p.name} />
             </div>
           ))}
         </div>
