@@ -4,7 +4,7 @@ import { spiralEyes } from "./spiral-eyes";
 import { haptic, reducedMotion } from "./util";
 
 /**
- * Secret de l'accueil : défiler très vite de haut en bas plusieurs fois (≥ 3 changements de sens
+ * Secret de l'accueil : défiler très vite de haut en bas plusieurs fois (≥ 2 changements de sens
  * rapides en ~2 s) → les blobs visibles titubent, yeux en spirale, ~2 s. Puis repos (pas de boucle).
  * Écouteur de défilement passif, aucun état React, rien par image : on mémorise juste la vitesse
  * la plus forte de chaque élan. L'élastique du haut / du bas (PullBlob) ne fait pas défiler : non concerné.
@@ -13,7 +13,7 @@ import { haptic, reducedMotion } from "./util";
  */
 
 const WINDOW_MS = 2000;
-const REVERSALS = 3;
+const REVERSALS = 2;
 /** Vitesse d'un élan « très rapide » (px/ms) */
 const FAST = 1.6;
 const SHOW_MS = 2000;
