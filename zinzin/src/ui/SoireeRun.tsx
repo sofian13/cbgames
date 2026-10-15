@@ -61,6 +61,9 @@ export function SoireeRun({ onHome, onNew, toast }: { onHome: () => void; onNew:
           label: s.index < s.playlist.length - 1 ? t.nextGame : t.toResults,
           onNext: toWinner,
           always: NO_END.includes(s.playlist[s.index]),
+          // Fin de partie captée : les points de soirée qu'elle rapporte, dans l'ordre (mêmes règles que l'écran gagnant)
+          gains: s.pending ? Object.entries(announcedGains(s)).map(([name, pts]) => ({ name, pts })).sort((a, b) => b.pts - a.pts) : [],
+          gainsLabel: pick(GAINS_LABEL, getLang()),
         }}
       />
     );
@@ -175,6 +178,8 @@ function Intro({ s, onPause }: { s: SoireeState; onPause: () => void }) {
     </div>
   );
 }
+
+const GAINS_LABEL: I18n<string> = { fr: "Points de soirée", en: "Party points", es: "Puntos de la noche" };
 
 /** Jeux sans écran de fin (on enchaîne quand on veut) : aucun pour l'instant (Tu préfères a son bilan) */
 const NO_END: string[] = [];

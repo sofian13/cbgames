@@ -13,6 +13,10 @@ export interface SoireeNext {
   /** « Jeu suivant » ou « Voir les résultats » au dernier jeu */
   label: string;
   onNext: () => void;
+  /** Points de soirée que ce jeu rapporte (déjà comptés par la Soirée), affichés au-dessus du bouton */
+  gains?: { name: string; pts: number }[];
+  /** Libellé de la ligne des points (« Soirée ») */
+  gainsLabel?: string;
 }
 
 export const SoireeNextContext = createContext<SoireeNext | null>(null);
@@ -25,9 +29,18 @@ export function useSoireeNext(): SoireeNext | null {
 export function SoireeNextButton({ bg = "#FFD23F", className, style }: { bg?: string; className?: string; style?: CSSProperties }) {
   const next = useSoireeNext();
   if (!next) return null;
+  const gains = next.gains ?? [];
   return (
-    <ZButton bg={bg} onClick={next.onNext} className={className} style={style}>
-      {next.label} <ArrowRight size={22} strokeWidth={3} aria-hidden />
-    </ZButton>
+    <>
+      {gains.length > 0 && (
+        <p className="mb-2 text-center text-[15px] font-bold leading-snug" style={{ color: "rgba(255,255,255,0.92)" }}>
+          <span style={{ color: "#FFD23F" }}>{next.gainsLabel}</span>
+          {gains.map((g, i) => <span key={g.name}>{i ? " · " : "\u00A0: "}{g.name}{"\u00A0"}+{g.pts}</span>)}
+        </p>
+      )}
+      <ZButton bg={bg} onClick={next.onNext} className={className} style={style}>
+        {next.label} <ArrowRight size={22} strokeWidth={3} aria-hidden />
+      </ZButton>
+    </>
   );
 }
