@@ -18,6 +18,7 @@ import { allTrophies, Ceremony, TROPHY_STR, TrophyList, trophyText } from "./Soi
 import { SOIREE } from "../strings";
 import { ZBlob, ZPALETTE } from "./ZBlob";
 import { BandBlob } from "./BandBlob";
+import { PlayerAvatar } from "@/components/avatar/PlayerBlob";
 import { BigBtn, Tag, useTapReady } from "./common";
 import { GameScreen } from "./Screens";
 import { CornerBtn, DiscoBall, SoireeStyles } from "./SoireeKit";
@@ -157,7 +158,9 @@ function Intro({ s, onPause }: { s: SoireeState; onPause: () => void }) {
         {top.length > 0 && (
           <div className="mt-4 flex flex-wrap items-center gap-1.5">
             {top.map((r) => (
-              <span key={r.name} className="inline-flex min-h-8 items-center gap-1 rounded-full px-2.5 text-[14px] font-extrabold" style={{ background: ZPALETTE[colorOf(s, r.name)].body, color: ZPALETTE[colorOf(s, r.name)].ink, border: "2.5px solid var(--zz-ink)" }}>
+              <span key={r.name} className="inline-flex min-h-8 items-center gap-1 rounded-full py-0.5 pl-0.5 pr-2.5 text-[14px] font-extrabold" style={{ background: kings.includes(r.name) && r.points > 0 ? "#FFD23F" : "#fff", color: "var(--zz-ink)", border: "2.5px solid var(--zz-ink)" }}>
+                {/* Même perso (et même couleur) que dans les jeux */}
+                <PlayerAvatar name={r.name} colorIndex={Math.max(0, s.band.indexOf(r.name))} size={24} border={false} />
                 {kings.includes(r.name) ? <Crown size={14} strokeWidth={3} aria-hidden /> : <span style={{ opacity: 0.7 }}>{r.rank}.</span>}{r.name} · {t.pts(r.points)}
               </span>
             ))}
