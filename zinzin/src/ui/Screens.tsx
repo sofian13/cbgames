@@ -15,7 +15,8 @@ import { APP_VERSION, haptic, setAgeOk } from "./util";
 import { setNoAlcohol, useNoAlcohol } from "@/lib/party-mood";
 import { NOALC_UI } from "../no-alcohol";
 import { markRatedManually } from "../rating";
-import { GAME_FINISHED_EVENT, GAME_UNFINISHED_EVENT, setCurrentGame } from "@/lib/game-finished";
+import { setCurrentGame } from "@/lib/game-finished";
+import { SoireeNextContext } from "@/components/games/soiree-next";
 import { AppIconRow } from "./AppIconRow";
 import { BandScreen } from "@/components/avatar/BandScreen";
 import { AvatarBlob } from "@/components/avatar/AvatarBlob";
@@ -421,13 +422,11 @@ function lazyGame(id: string) {
   return c;
 }
 
-/** Bouton « Jeu suivant » d'une Soirée : posé par-dessus l'écran de fin du jeu */
+/** « Jeu suivant » d'une Soirée : bouton posé par chaque jeu dans son écran de fin (SoireeNextButton) */
 export interface GameNext {
   label: string;
-  /** Petit lien qui retire le bouton pour revenir aux boutons du jeu (Rejouer…) */
-  stayLabel: string;
   onNext: () => void;
-  /** Jeu sans fin de partie (Tu préfères) : petit bouton toujours visible */
+  /** Jeu sans fin de partie (Tu préfères) : petit bouton toujours visible en haut */
   always?: boolean;
 }
 
@@ -440,44 +439,19 @@ export function GameScreen({ id, onExit, next }: { id: string; onExit: () => voi
   const t = useT(UI);
   // Jeu en cours : la fin de partie le signale avec son id (stats de la bande)
   useEffect(() => { setCurrentGame(id); return () => setCurrentGame(null); }, [id]);
-  // Soirée : l'écran de fin du jeu a été atteint → gros bouton « Jeu suivant » (retiré si on rejoue)
-  const [ended, setEnded] = useState(false);
-  const [stay, setStay] = useState(false);
-  useEffect(() => {
-    if (!next) return;
-    const on = (e: Event) => { if (!(e as CustomEvent<{ soiree?: boolean }>).detail?.soiree) { setEnded(true); setStay(false); } };
-    const off = () => setEnded(false);
-    window.addEventListener(GAME_FINISHED_EVENT, on);
-    window.addEventListener(GAME_UNFINISHED_EVENT, off);
-    return () => { window.removeEventListener(GAME_FINISHED_EVENT, on); window.removeEventListener(GAME_UNFINISHED_EVENT, off); };
-  }, [next]);
-  const showNext = !!next && ended && !stay;
+  // Soirée : les jeux affichent « Jeu suivant » dans leur écran de fin (contexte lu par SoireeNextButton)
+  const soireeNext = next ? { label: next.label, onNext: () => { haptic("medium"); uiSfx.primary(); next.onNext(); } } : null;
 
   return (
     <div className="zz-screen-in fixed inset-0 flex flex-col overflow-y-auto" style={{ background: "#0A0420", zIndex: 30 }}>
       <ErrorBoundary onBack={onExit} backLabel={t.backHome}>
-        <Suspense fallback={<Loading />}>
-          <Comp roomCode="LOCAL" playerId="local" playerName={t.player} onReturnToLobby={onExit} />
-        </Suspense>
+        <SoireeNextContext.Provider value={soireeNext}>
+          <Suspense fallback={<Loading />}>
+            <Comp roomCode="LOCAL" playerId="local" playerName={t.player} onReturnToLobby={onExit} />
+          </Suspense>
+        </SoireeNextContext.Provider>
       </ErrorBoundary>
 
-      {/* Soirée : la place du bouton fixe en bas, pour que la fin de l'écran du jeu reste lisible */}
-      {showNext && <div aria-hidden className="shrink-0" style={{ height: "calc(var(--sab) + 136px)" }} />}
-      {showNext && next && (
-        <div
-          className="zz-screen-in fixed inset-x-0 bottom-0 px-5 pt-4"
-          style={{ zIndex: 55, paddingBottom: "calc(var(--sab) + 6px)", background: "var(--zz-ink)", borderTop: "3px solid rgba(255,255,255,0.85)", borderRadius: "26px 26px 0 0" }}
-        >
-          <div className="mx-auto max-w-lg">
-            <BigBtn onClick={() => { haptic("medium"); uiSfx.primary(); next.onNext(); }} bg="#FFD23F">
-              {next.label} <ArrowRight size={22} strokeWidth={3} aria-hidden className="ml-1 inline align-[-3px]" />
-            </BigBtn>
-            <button type="button" onClick={() => { haptic(); setStay(true); }} className="zz-tap min-h-11 w-full text-[15px] font-bold text-white underline decoration-2 underline-offset-4" style={{ opacity: 0.85 }}>
-              {next.stayLabel}
-            </button>
-          </div>
-        </div>
-      )}
       {/* Jeu sans fin de partie : petit « Jeu suivant » en haut, à côté de la croix */}
       {next?.always && (
         <button

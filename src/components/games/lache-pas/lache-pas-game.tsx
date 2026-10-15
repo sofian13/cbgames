@@ -22,6 +22,7 @@ import { GameRulesSheet, GameTuto, RulesIconButton, useFirstTimeTuto } from "@/c
 import { getSavedPlayers } from "@/lib/saved-players";
 import { LP_EXTRA, useLpTutoSlides } from "./tuto";
 import { useGameFinished } from "@/lib/game-finished";
+import { SoireeNextButton } from "@/components/games/soiree-next";
 
 // ── Lâche pas ! ────────────────────────────────────────────
 // Tout le monde pose un doigt sur l'écran : une bombe à retardement (cachée,
@@ -395,6 +396,7 @@ export default function LachePasGame({ onReturnToLobby }: GameProps) {
           ))}
         </div>
         <div className="mt-auto flex w-full flex-col items-center gap-1 pt-7">
+          <SoireeNextButton className="mb-2" />
           <StickerBtn
             big
             bg={ACCENT}

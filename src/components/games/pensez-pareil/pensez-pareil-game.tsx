@@ -39,6 +39,7 @@ import { useGameFinished } from "@/lib/game-finished";
 import { GameRulesSheet, GameTuto, RulesIconButton, TutoAgainButton, useFirstTimeTuto } from "@/components/games/game-tuto";
 import { usePPRules, usePPTuto } from "@/components/games/pensez-pareil/tuto";
 import type { ReactNode } from "react";
+import { SoireeNextButton } from "@/components/games/soiree-next";
 
 const SYNC_BASE = 100;
 const COMBO_STEP = 25;
@@ -709,6 +710,7 @@ function GameOverScreen({
       </ZCard>
 
       <div className="min-h-8 flex-1" />
+      <SoireeNextButton bg="#fff" className="mb-3" />
       {onReplay && <ZButton bg="#FFD23F" onClick={onReplay}>{t.playAgain}</ZButton>}
       <div className="mt-4 flex justify-center"><IdeaButton game="Pensez Pareil" kind="thème" bg="#fff" /></div>
       {onReturnToLobby && <ZLink onClick={onReturnToLobby} color={GAME_INK} className="mt-2">{t.backHome}</ZLink>}

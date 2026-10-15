@@ -22,6 +22,7 @@ import { firstTimeNow, markTutoSeen } from "../game-tuto";
 import { uniqueMax, useGameFinished } from "@/lib/game-finished";
 import { ShareResultButton } from "../share-result-button";
 import { verreCard } from "@/lib/share-cards";
+import { SoireeNextButton } from "@/components/games/soiree-next";
 
 // ── Le Verre Invisible ──────────────────────────────────────
 // « Jenga liquide » sur un seul tél : le tél tenu à plat est un plateau avec un verre.
@@ -433,6 +434,7 @@ export default function VerreGame({ onReturnToLobby }: GameProps) {
         <p className="text-[18px] leading-tight" style={DISPLAY}>{king && king.sp > 0 ? t.spillKing(king.name, king.sp) : t.noSpill}</p>
       </ZCard>
       <div className="mt-auto flex flex-col gap-3 pt-7">
+        <SoireeNextButton />
         <ZButton bg={ACCENT} onClick={replay}>{t.replay}</ZButton>
         <div className="grid grid-cols-2 gap-3">
           <ZButton size="md" bg={ZZ.cream} onClick={() => setPhase("setup")}>{t.players}</ZButton>

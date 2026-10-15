@@ -26,6 +26,7 @@ import { TT_EXTRA, useTtTutoSlides } from "@/components/games/top-ten/tuto";
 import { uniqueMax, useGameFinished } from "@/lib/game-finished";
 import { ShareResultButton } from "@/components/games/share-result-button";
 import { rankingCard } from "@/lib/share-cards";
+import { SoireeNextButton } from "@/components/games/soiree-next";
 
 // ── Types ─────────────────────────────────────────────────
 interface TopTenPlayerState {
@@ -413,6 +414,7 @@ function TopTenLocalGame({ onReturnToLobby, tools, onTuto }: { onReturnToLobby?:
       <div className="min-h-8 flex-1" />
       {/* Version découverte : un petit mot sur Zinzin+, une seule fois, en fin de partie */}
       <PremiumNudge text={nudge.topTen(fmtCount(themesForPack("adult").length))} style={{ marginBottom: 16 }} />
+      <SoireeNextButton bg="#fff" className="mb-3" />
       <ZButton bg="#FFD23F" onClick={() => { setPhase("target"); }}>{t.playAgain}</ZButton>
       <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
         <ZButton size="sm" bg="#fff" style={{ width: "auto" }} onClick={() => setPhase("setup")}>{t.changePlayers}</ZButton>

@@ -416,7 +416,6 @@ export const SOIREE: I18n<{
   validate: (n: number) => string;
   nextGame: string;
   toResults: string;
-  stayHere: string;
   autoWin: (names: string[], game: string) => string;
   autoPts: (n: number) => string;
   tapNext: string;
@@ -479,7 +478,6 @@ export const SOIREE: I18n<{
     validate: (n) => (n > 1 ? `Valider (${n} gagnants)` : "Valider"),
     nextGame: "Jeu suivant",
     toResults: "Voir les résultats",
-    stayHere: "Rester sur ce jeu (rejouer…)",
     autoWin: (n, g) => `${n.length > 1 ? `${n.slice(0, -1).join(", ")} et ${n[n.length - 1]}` : n[0]} gagne${n.length > 1 ? "nt" : ""} ${g} !`,
     autoPts: (n) => (n > 1 ? "+1 point chacun" : "+1 point"),
     tapNext: "Touchez pour continuer",
@@ -542,7 +540,6 @@ export const SOIREE: I18n<{
     validate: (n) => (n > 1 ? `Confirm (${n} winners)` : "Confirm"),
     nextGame: "Next game",
     toResults: "See the results",
-    stayHere: "Stay on this game (play again…)",
     autoWin: (n, g) => `${n.length > 1 ? `${n.slice(0, -1).join(", ")} and ${n[n.length - 1]}` : n[0]} win${n.length > 1 ? "" : "s"} ${g}!`,
     autoPts: (n) => (n > 1 ? "+1 point each" : "+1 point"),
     tapNext: "Tap to continue",
@@ -605,7 +602,6 @@ export const SOIREE: I18n<{
     validate: (n) => (n > 1 ? `Confirmar (${n} ganadores)` : "Confirmar"),
     nextGame: "Siguiente juego",
     toResults: "Ver los resultados",
-    stayHere: "Quedarse en este juego (volver a jugar…)",
     autoWin: (n, g) => `¡${n.length > 1 ? `${n.slice(0, -1).join(", ")} y ${n[n.length - 1]}` : n[0]} gana${n.length > 1 ? "n" : ""} ${g}!`,
     autoPts: (n) => (n > 1 ? "+1 punto cada uno" : "+1 punto"),
     tapNext: "Toca para continuar",

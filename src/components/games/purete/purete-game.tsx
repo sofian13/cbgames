@@ -31,6 +31,7 @@ import { GameIconBadge, GameInlineIcon, GameTopRight } from "@/components/games/
 import { uniqueMin, useGameFinished } from "@/lib/game-finished";
 import { ShareResultButton } from "@/components/games/share-result-button";
 import { pureteGroupCard, pureteSoloCard, pureteTableCard } from "@/lib/share-cards";
+import { SoireeNextButton } from "@/components/games/soiree-next";
 
 // ── Constantes visuelles ─────────────────────────────────
 const INK = "#15082E";
@@ -916,6 +917,7 @@ function PureteBody({ onReturnToLobby }: GameProps) {
       {!unlocked && <div className="mt-7 w-full max-w-md"><PremiumNudge text={nudge.purete} /></div>}
 
       <div className="mt-8 grid w-full max-w-md gap-3">
+        <SoireeNextButton bg="#fff" />
         <Btn onClick={replay} bg={YELLOW} className="text-[22px]" style={{ minHeight: 60 }}><GameInlineIcon icon={RotateCcw} /> {t.replay}</Btn>
         <div className="grid grid-cols-2 gap-3">
           <Btn onClick={mode === "solo" ? () => setPhase({ k: "setup" }) : changePlayers} bg={CREAM} className="text-[16px] leading-tight">{mode === "solo" ? t.playMulti : t.changePlayers}</Btn>

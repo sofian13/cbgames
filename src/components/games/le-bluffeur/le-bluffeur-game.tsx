@@ -26,6 +26,7 @@ import { ShareResultButton } from "@/components/games/share-result-button";
 import { rankingCard } from "@/lib/share-cards";
 import { GameTuto, RulesIconButton, useFirstTimeTuto } from "@/components/games/game-tuto";
 import { BluffRules, useBluffSlides } from "@/components/games/le-bluffeur/tuto";
+import { SoireeNextButton } from "@/components/games/soiree-next";
 
 interface BluffPlayerState {
   id: string;
@@ -330,6 +331,7 @@ function LeBluffeurLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) 
       <ZTitle size={(ranking[0]?.name.length ?? 0) > 9 ? 30 : 40} className="text-center"><span className="whitespace-nowrap">{ranking[0]?.name},</span>{t.bluffAce}</ZTitle>
       <div className="mt-6"><ZRanking rows={ranking} /></div>
       <div className="min-h-8 flex-1" />
+      <SoireeNextButton className="mb-3" />
       <ZButton bg={GAME_INK} onClick={() => begin(players)}>{t.playAgain}</ZButton>
       <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
         <ZButton size="sm" bg="#fff" style={{ width: "auto" }} onClick={() => setPhase("setup")}>{t.changePlayers}</ZButton>

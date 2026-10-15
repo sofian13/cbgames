@@ -7,8 +7,6 @@ import { useEffect, useRef } from "react";
  * sur le site web personne n'écoute, il ne se passe rien.
  */
 export const GAME_FINISHED_EVENT = "zz:game-finished";
-/** L'écran de fin vient d'être quitté (Rejouer, réglages…) : la partie n'est plus « finie » */
-export const GAME_UNFINISHED_EVENT = "zz:game-unfinished";
 
 export interface GameFinishedDetail {
   /** Fin d'une Soirée Zinzin complète (et non d'un jeu) */
@@ -75,8 +73,6 @@ export function useGameFinished(finished: boolean, info?: { loser?: string | nul
       ...(ranking.length >= 2 ? { ranking } : {}),
       ...(winners.length ? { winners } : {}),
     });
-    // On quitte l'écran de fin (Rejouer, démontage…) : l'app retire son bouton « Jeu suivant »
-    return () => { window.dispatchEvent(new Event(GAME_UNFINISHED_EVENT)); };
   }, [finished]);
 }
 

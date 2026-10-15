@@ -25,6 +25,7 @@ import { ArrowLeft, ArrowRight, Bomb, Check, Crown, Dices, Eye, Pointer, RotateC
 import { CN_WORDS } from "./cn-local-words";
 import { STR } from "./i18n";
 import { ArtClue, ArtKey, ArtTap, ArtTeams } from "./tuto-art";
+import { SoireeNextButton } from "@/components/games/soiree-next";
 
 // ── Types ─────────────────────────────────────────────────
 type Team = "red" | "blue";
@@ -709,6 +710,7 @@ export default function MotsEspionsLocal({ onReturnToLobby }: GameProps) {
             )}
           </div>
         )}
+        {ended && <SoireeNextButton bg="#3DDC97" className="mb-2.5" />}
         <div className="flex items-center gap-2.5">
           {ended ? (
             <>

@@ -20,6 +20,7 @@ import { Check, CupSoda, Drama, Flame, RotateCw, Vibrate } from "lucide-react";
 import { GameInlineIcon } from "../game-icon-button";
 import { MASCOT_PALETTE } from "@/components/Mascot";
 import { uniqueMax, useGameFinished } from "@/lib/game-finished";
+import { SoireeNextButton } from "@/components/games/soiree-next";
 
 // ── La Patate ──────────────────────────────────────────────
 // Le téléphone EST la patate chaude. Une catégorie, chacun dit une réponse
@@ -659,6 +660,7 @@ export default function PatateGame({ onReturnToLobby }: GameProps) {
         />
       )}
       <div className="mt-auto flex w-full flex-col items-center gap-1 pt-7">
+        <SoireeNextButton className="mb-2" />
         <StickerBtn big bg={ACCENT} onClick={replay}>{t.replay}</StickerBtn>
         <div className="mt-2 grid w-full grid-cols-2 gap-3">
           <StickerBtn bg={C.cream} onClick={() => setPhase("setup")}>{t.players}</StickerBtn>

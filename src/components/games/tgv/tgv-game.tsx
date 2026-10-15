@@ -30,6 +30,7 @@ import {
   Volume2, VolumeX, X, type LucideIcon,
 } from "lucide-react";
 import { uniqueMax, useGameFinished } from "@/lib/game-finished";
+import { SoireeNextButton } from "@/components/games/soiree-next";
 
 // ── DA sticker ────────────────────────────────────────────
 const INK = "#15082E";
@@ -595,6 +596,7 @@ export default function TgvGame({ onReturnToLobby }: GameProps) {
       <div className="min-h-6 flex-1" />
       {/* Boutons collés en bas (le classement défile dessous avec beaucoup de joueurs) */}
       <div className="sticky bottom-0 -mx-5 mt-4 space-y-3 px-5 pt-4" style={{ paddingBottom: BOTTOM, marginBottom: `calc(-1 * ${BOTTOM})`, background: "linear-gradient(180deg, transparent, #1E1250 30%)" }}>
+        <SoireeNextButton />
         <Push
           big
           bg={ACCENT}

@@ -53,10 +53,9 @@ export function SoireeRun({ onHome, onNew, toast }: { onHome: () => void; onNew:
         key={`${s.index}-${s.playlist[s.index]}`}
         id={s.playlist[s.index]}
         onExit={toWinner}
-        // Écran de fin du jeu : gros « Jeu suivant » qui enchaîne la soirée (plus besoin de la croix)
+        // Écran de fin du jeu : gros « Jeu suivant » au-dessus de « Rejouer » (SoireeNextButton)
         next={{
           label: s.index < s.playlist.length - 1 ? t.nextGame : t.toResults,
-          stayLabel: t.stayHere,
           onNext: toWinner,
           always: NO_END.includes(s.playlist[s.index]),
         }}

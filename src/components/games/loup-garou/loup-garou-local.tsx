@@ -34,6 +34,7 @@ import { NightSleepers, WinnersParade } from "./lg-role-fx";
 import { useGameFinished } from "@/lib/game-finished";
 import { GameTuto, useFirstTimeTuto } from "@/components/games/game-tuto";
 import { useLgTutoSlides } from "./tuto";
+import { SoireeNextButton } from "@/components/games/soiree-next";
 
 // ── Réglages persistants ──────────────────────────────────
 interface Settings {
@@ -1040,6 +1041,7 @@ function EndScreen({
         <GameInlineIcon icon={ScrollText} /> {t.seeHistory}
       </button>
       <div className="mt-8 grid gap-3">
+        <SoireeNextButton />
         <BigButton onClick={onReplay}><GameInlineIcon icon={RotateCcw} /> {t.replaySame}</BigButton>
         <BigButton variant="ghost" onClick={onNewPlayers}>{t.changePlayers}</BigButton>
         <div className="flex justify-center pt-1">

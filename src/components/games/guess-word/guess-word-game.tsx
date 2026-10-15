@@ -23,6 +23,7 @@ import { useGameFinished } from "@/lib/game-finished";
 import { landscapeWhile } from "@/lib/orientation";
 import { requestMotionPermission } from "@/components/games/verre/sensors";
 import { useTiltGestures } from "./tilt";
+import { SoireeNextButton } from "@/components/games/soiree-next";
 
 // ── Deviner le Mot ─────────────────────────────────────────
 // Un joueur met le tél sur son front (écran vers les autres), les autres le
@@ -545,6 +546,7 @@ export default function GuessWordGame({ onReturnToLobby }: GameProps) {
       </h2>
       <Standings players={players} scores={scores} big />
       <div className="mt-auto flex w-full flex-col items-center pt-7">
+        <SoireeNextButton className="mb-3" />
         <StickerBtn big bg={ACCENT} onClick={replay}>{t.playAgain}</StickerBtn>
         <div className="mt-3 grid w-full grid-cols-2 gap-3">
           <StickerBtn bg={C.cream} onClick={() => setPhase("config")}>{t.themesBtn}</StickerBtn>

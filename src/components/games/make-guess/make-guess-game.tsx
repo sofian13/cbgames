@@ -23,6 +23,7 @@ import { DEFAULT_THEME_IDS, FREE_THEME_IDS, OPT_IN_THEME_IDS, THEME_IDS, WORDS, 
 import { requestPaywall, useUnlocked } from "@/lib/entitlements";
 import { PremiumNudge, fmtCount, useNudgeText } from "../premium-nudge";
 import { useGameFinished } from "@/lib/game-finished";
+import { SoireeNextButton } from "@/components/games/soiree-next";
 
 const ACCENT = "#FFD23F";
 
@@ -778,6 +779,7 @@ export default function MakeGuessGame({
       )}
 
       <div className="mt-auto flex w-full flex-col items-center pt-8">
+        <SoireeNextButton bg="#fff" className="mb-3" />
         <StickerBtn big bg={ACCENT} onClick={replay}>{t.rematch}</StickerBtn>
         <p className="mt-2 text-center text-[14px] font-semibold text-white/75">{t.rematchHint}</p>
         <div className="mt-3 grid w-full grid-cols-2 gap-3">

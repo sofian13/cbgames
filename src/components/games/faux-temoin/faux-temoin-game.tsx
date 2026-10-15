@@ -33,6 +33,7 @@ import { GameTuto, TutoAgainButton, useFirstTimeTuto } from "@/components/games/
 import { useFTExtra, useFTTuto } from "@/components/games/faux-temoin/tuto";
 import { ShareResultButton } from "@/components/games/share-result-button";
 import { rankingCard } from "@/lib/share-cards";
+import { SoireeNextButton } from "@/components/games/soiree-next";
 
 const ACCENT = "#4ECDC4";
 const VIEW_SEC = 5;
@@ -624,6 +625,7 @@ export default function FauxTemoinGame({ onReturnToLobby }: GameProps) {
               <ShareResultButton bg={ZZ.yellow} card={() => rankingCard("faux-temoin", ranking, t.pts)} />
               <IdeaButton game={t.name} kind={t.ideaKind} bg="#fff" />
             </div>
+            <SoireeNextButton className="mt-5 -mb-2" />
             <ZButton className="mt-5" bg={ACCENT} onClick={replay}>{t.replay}</ZButton>
             {onReturnToLobby && <ZButton className="mt-3" bg="#fff" size="md" onClick={onReturnToLobby}>{t.quit}</ZButton>}
           </>

@@ -17,6 +17,7 @@ import { IdeaButton, RerollButton } from "@/components/games/idea-button";
 import { useGameFinished } from "@/lib/game-finished";
 import { GameRulesSheet, GameTuto, RulesIconButton, TutoAgainButton, useFirstTimeTuto } from "@/components/games/game-tuto";
 import { useChronoTuto } from "./tuto";
+import { SoireeNextButton } from "@/components/games/soiree-next";
 
 // ── Catégorie Chrono ───────────────────────────────────────
 // Une catégorie s'affiche ; chacun son tour doit donner un mot de la catégorie
@@ -546,6 +547,7 @@ export default function CategoryChronoGame({ onReturnToLobby }: GameProps) {
       </div>
 
       <BottomBar>
+        <SoireeNextButton className="mb-3" />
         <BigBtn bg={ACCENT} onClick={() => startGame(names)}>
           <RotateCcw size={22} strokeWidth={3} aria-hidden /> {t.playAgain}
         </BigBtn>
@@ -601,7 +603,7 @@ function BottomBar({ children }: { children: ReactNode }) {
   return (
     <div
       className="sticky bottom-0 z-[2] -mx-5 mt-auto w-[calc(100%+40px)] px-5 pt-5"
-      style={{ paddingBottom: BOTTOM_SAFE, marginBottom: `calc(-1 * ${BOTTOM_SAFE})`, background: `linear-gradient(180deg, transparent, ${NIGHT} 38%)` }}
+      style={{ paddingBottom: BOTTOM_SAFE, marginBottom: `calc(-1 * ${BOTTOM_SAFE})`, background: `linear-gradient(180deg, transparent, ${NIGHT} 28px)` }}
     >
       <div className="mx-auto w-full max-w-md">{children}</div>
     </div>

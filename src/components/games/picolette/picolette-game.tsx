@@ -39,6 +39,7 @@ import { ShareResultButton } from "@/components/games/share-result-button";
 import { tourneeCard } from "@/lib/share-cards";
 import { GameTuto, RulesIconButton, useFirstTimeTuto } from "@/components/games/game-tuto";
 import { TourneeRules, useTourneeSlides } from "./tuto";
+import { SoireeNextButton } from "@/components/games/soiree-next";
 
 // ── DA sticker ────────────────────────────────────────────
 const INK = "#15082E";
@@ -888,6 +889,7 @@ export default function PicoletteGame({ onReturnToLobby }: GameProps) {
 
         <div className="min-h-6 flex-1" />
         <div className="space-y-3">
+          <SoireeNextButton bg="#fff" />
           <Push big bg={ACCENT} onClick={() => { playSfx("whoosh", { volume: 0.6 }); setPhase("setup"); }} className="w-full">
             <RotateCcw size={22} strokeWidth={3} aria-hidden /> {tr.playAgain}
           </Push>

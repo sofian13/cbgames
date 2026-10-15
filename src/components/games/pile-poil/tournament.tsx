@@ -15,6 +15,7 @@ import { sipsAllowed, soberLines } from "@/lib/party-mood";
 import { CHALLENGES as CHALLENGE_TEXT, CHALLENGE_IDS, GAGES as GAGES_I18N, PP_STR } from "./i18n";
 import { fxBad, fxDrum, fxGood, fxNeutral, fxOver, fxPerfect, fxPreload, fxReveal, fxTap, fxTick, fxUnlock, vibrate } from "./pp-fx";
 import { useGameFinished } from "@/lib/game-finished";
+import { SoireeNextButton } from "@/components/games/soiree-next";
 
 // ── Pile Poil · mode Tournoi (tout sur un seul téléphone) ─────────────────
 // Chacun à son tour : GO, on compte dans sa tête, STOP. Le temps est mesuré
@@ -1055,6 +1056,7 @@ function FinalScreen({
       )}
 
       <div className="mt-auto flex w-full flex-col items-center pt-7">
+        <SoireeNextButton className="mb-3" />
         <StickerBtn big bg={ACCENT} onClick={onReplay}>{t.replay}</StickerBtn>
         <div className="mt-3 grid w-full grid-cols-2 gap-3">
           <StickerBtn bg={C.cream} onClick={onNewPlayers}>{t.players}</StickerBtn>

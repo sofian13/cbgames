@@ -27,6 +27,7 @@ import { getLang, pick, useT, type Lang } from "@/lib/i18n";
 import { STR, packsFor } from "./i18n";
 import { getSavedDuo, saveDuo } from "@/lib/saved-players";
 import { useGameFinished } from "@/lib/game-finished";
+import { SoireeNextButton } from "@/components/games/soiree-next";
 
 const ACCENT = "#FF6BAE";
 
@@ -474,6 +475,7 @@ function CoupleQuizLocal({ onReturnToLobby }: { onReturnToLobby?: () => void }) 
       <Screen
         footer={
           <>
+            <SoireeNextButton className="mb-3" />
             <BigBtn bg={PINK} onClick={begin}><RotateCcw size={22} strokeWidth={3} aria-hidden /> {t.playAgain}</BigBtn>
             <div className="mt-1 flex justify-center gap-2">
               <SubBtn onClick={() => setPhase("config")}>{t.changeThemes}</SubBtn>

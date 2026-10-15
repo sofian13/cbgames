@@ -33,6 +33,7 @@ import { ShareResultButton } from "@/components/games/share-result-button";
 import { chutCard } from "@/lib/share-cards";
 import { GameTuto, TutoAgainButton, useFirstTimeTuto } from "@/components/games/game-tuto";
 import { useChutTuto } from "./tuto";
+import { SoireeNextButton } from "@/components/games/soiree-next";
 
 // ── Chut ! ────────────────────────────────────────────────
 // Jeux au micro, au choix : « Le bon volume » (mode phare), « Chuchote-le ! »,
@@ -1646,6 +1647,7 @@ function EndScreen({ players, mode, results, ko, tableCracks, tools, overlays, o
         <ZRanking rows={rows} unit={unit} />
       </div>
       <div className="mt-auto flex flex-col items-center gap-1 pt-7">
+        <SoireeNextButton className="mb-2" />
         <ZButton bg={ACCENT} onClick={onReplay}>{t.replay}</ZButton>
         {onQuit && <ZLink onClick={onQuit}>{t.quit}</ZLink>}
         <div className="mt-2 flex flex-wrap justify-center gap-3">
