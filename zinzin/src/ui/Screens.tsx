@@ -432,6 +432,8 @@ export interface GameNext {
   /** Points de soirée rapportés par ce jeu (affichés au-dessus de « Jeu suivant ») */
   gains?: { name: string; pts: number }[];
   gainsLabel?: string;
+  totals?: { name: string; pts: number; rank: number }[];
+  totalsLabel?: string;
 }
 
 export function GameScreen({ id, onExit, next }: { id: string; onExit: () => void; next?: GameNext }) {
@@ -446,7 +448,7 @@ export function GameScreen({ id, onExit, next }: { id: string; onExit: () => voi
   // Jeu en cours : la fin de partie le signale avec son id (stats de la bande)
   useEffect(() => { setCurrentGame(id); return () => setCurrentGame(null); }, [id]);
   // Soirée : les jeux affichent « Jeu suivant » dans leur écran de fin (contexte lu par SoireeNextButton)
-  const soireeNext = next ? { label: next.label, gains: next.gains, gainsLabel: next.gainsLabel, onNext: () => { haptic("medium"); uiSfx.primary(); next.onNext(); } } : null;
+  const soireeNext = next ? { label: next.label, gains: next.gains, gainsLabel: next.gainsLabel, totals: next.totals, totalsLabel: next.totalsLabel, onNext: () => { haptic("medium"); uiSfx.primary(); next.onNext(); } } : null;
 
   return (
     // Pas de rebond élastique : il découvrait ce fond sombre sous l'écran du jeu (bande noire en bas en défilant)

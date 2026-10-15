@@ -18,6 +18,10 @@ export interface SoireeNext {
   gains?: { name: string; pts: number }[];
   /** Libellé de la ligne des points (« Soirée ») */
   gainsLabel?: string;
+  /** Classement de la soirée APRÈS ce jeu (points de ce jeu compris), affiché au-dessus du bouton */
+  totals?: { name: string; pts: number; rank: number }[];
+  /** Libellé du classement (« Classement de la soirée ») */
+  totalsLabel?: string;
 }
 
 export const SoireeNextContext = createContext<SoireeNext | null>(null);
@@ -94,8 +98,22 @@ export function SoireeNextButton({ bg = "#FFD23F", className, style }: { bg?: st
   if (!next) return null;
   // Secours : ligne des points seulement si l'écran n'affiche aucune pastille « +3 »
   const gains = pills > 0 ? [] : next.gains ?? [];
+  const totals = next.totals ?? [];
   return (
     <>
+      {totals.length > 0 && (
+        <div className="mb-3 rounded-2xl px-3 py-2 text-center" style={{ background: "rgba(10,4,32,0.35)", border: "2px solid rgba(255,255,255,0.12)" }}>
+          <p className="text-[12px] font-extrabold uppercase tracking-wide" style={{ color: "#FFD23F" }}>{next.totalsLabel}</p>
+          <p className="mt-0.5 text-[15px] font-bold leading-snug" style={{ color: "rgba(255,255,255,0.95)" }}>
+            {totals.map((r, i) => (
+              <span key={r.name} className="whitespace-nowrap">
+                {i ? <span style={{ opacity: 0.45 }}>{"  ·  "}</span> : null}
+                {r.rank === 1 ? "👑\u00A0" : `${r.rank}.\u00A0`}{r.name}{"\u00A0"}<span style={{ color: "#FFD23F" }}>{r.pts}</span>
+              </span>
+            ))}
+          </p>
+        </div>
+      )}
       {gains.length > 0 && (
         <p className="mb-2 text-center text-[15px] font-bold leading-snug" style={{ color: "rgba(255,255,255,0.92)" }}>
           <span style={{ color: "#FFD23F" }}>{next.gainsLabel}</span>

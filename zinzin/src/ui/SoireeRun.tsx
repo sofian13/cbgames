@@ -64,6 +64,9 @@ export function SoireeRun({ onHome, onNew, toast }: { onHome: () => void; onNew:
           // Fin de partie captée : les points de soirée qu'elle rapporte, dans l'ordre (mêmes règles que l'écran gagnant)
           gains: s.pending ? Object.entries(announcedGains(s)).map(([name, pts]) => ({ name, pts })).sort((a, b) => b.pts - a.pts) : [],
           gainsLabel: pick(GAINS_LABEL, getLang()),
+          // Classement de la soirée en comptant déjà ce jeu (on voit qui mène sans attendre l'écran suivant)
+          totals: soireeTotals(s),
+          totalsLabel: pick(TOTALS_LABEL, getLang()),
         }}
       />
     );
@@ -178,6 +181,17 @@ function Intro({ s, onPause }: { s: SoireeState; onPause: () => void }) {
       </div>
     </div>
   );
+}
+
+const TOTALS_LABEL: I18n<string> = { fr: "Classement de la soirée", en: "Party standings", es: "Clasificación de la noche" };
+
+/** Points de la soirée + ceux que le jeu en cours rapporte (pas encore enregistrés), en rangs « compétition ». */
+function soireeTotals(s: SoireeState): { name: string; pts: number; rank: number }[] {
+  const add = s.pending ? announcedGains(s) : {};
+  const rows = s.band.map((name) => ({ name, pts: (s.points[name] ?? 0) + (add[name] ?? 0) }));
+  return rows
+    .map((r) => ({ ...r, rank: 1 + rows.filter((x) => x.pts > r.pts).length }))
+    .sort((a, b) => a.rank - b.rank);
 }
 
 const GAINS_LABEL: I18n<string> = { fr: "Points de soirée", en: "Party points", es: "Puntos de la noche" };
