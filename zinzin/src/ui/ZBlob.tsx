@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, type CSSProperties, type ReactNode } from "react";
 import type { MascotColor, MascotMood } from "@/components/Mascot";
 import { POTATO, costumeLayers, type ZCostume } from "./costumes";
-import { rainbowCrownLayer } from "@/components/avatar/AvatarBlob";
+import { bandaidLayer, rainbowCrownLayer } from "@/components/avatar/AvatarBlob";
 
 /**
  * ZBlob — les « blobs zinzins » de l'app.
@@ -65,6 +65,8 @@ export interface ZBlobProps {
   rainbowCrown?: boolean;
   /** Lunettes noires « Le Boss » (secret du prénom « Sofian ») : yeux cachés, la bouche garde l'humeur */
   shades?: boolean;
+  /** Pansement sur la joue (secret de la Soirée : dernier 3 jeux classés de suite) */
+  bandaid?: boolean;
   /** Déguisement du jeu (voir costumes.tsx) */
   costume?: ZCostume;
   /** Saute quand on le touche (défaut : oui) */
@@ -160,7 +162,7 @@ export function pauseWhenOffscreen(el: Element | null): () => void {
 
 export function ZBlob({
   size = 96, color = "pink", mood = "happy", seed = 0, wobble = true, shadow = true,
-  speed = 2.6, delay = 0, outline = false, crown = false, rainbowCrown = false, shades = false, costume, hop = true, palette, gloss = false, className, style,
+  speed = 2.6, delay = 0, outline = false, crown = false, rainbowCrown = false, shades = false, bandaid = false, costume, hop = true, palette, gloss = false, className, style,
 }: ZBlobProps) {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => pauseWhenOffscreen(ref.current), []);
@@ -371,6 +373,7 @@ export function ZBlob({
           )}
           {mouth()}
           {cos.face}
+          {bandaid && bandaidLayer(96, 83)}
         </g>
         {cos.top}
 

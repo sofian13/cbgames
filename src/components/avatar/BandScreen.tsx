@@ -21,6 +21,7 @@ import { colorForIndexSafe } from "./colors";
 import { useBand } from "./PlayerBlob";
 import { BandStatsCard, BandStatsScreen, useBandStats } from "./BandStatsScreen";
 import { useBandPlay } from "./band-play";
+import { ejectBlob } from "./band-eject";
 
 const lookOf = (e: { look: AvatarLook | null }, i: number) => e.look ?? baseLook(colorForIndexSafe(i));
 
@@ -171,7 +172,7 @@ export function BandScreen({ onClose }: { onClose: () => void }) {
               {band.map((b, i) => {
                 const size = band.length <= 3 ? 104 : band.length <= 6 ? 84 : band.length <= 10 ? 68 : 58;
                 return (
-                  <div key={b.name} data-band-blob className="flex flex-col items-center" style={{ width: size + 8, rotate: `${((i * 37) % 7) - 3}deg` }}>
+                  <div key={b.name} data-band-blob data-band-name={b.name} className="flex flex-col items-center" style={{ width: size + 8, rotate: `${((i * 37) % 7) - 3}deg` }}>
                     <TalkingBlob look={lookOf(b, i)} name={b.name} size={size} speakKey={voiceKey(b.name)} badge={audible(b)}
                       onTap={() => void hear(b, i)} label={audible(b) ? tv.playAria(b.name) : tv.micAria(b.name)} />
                     <span className="mt-1 block max-w-full truncate text-center text-[13px] font-extrabold" style={{ color: b.me ? "#FFD23F" : "#fff" }}>{b.name}</span>
@@ -285,6 +286,8 @@ export function BandScreen({ onClose }: { onClose: () => void }) {
             if (me) l = l.map((b) => (b === entry ? b : { ...b, me: false }));
             save(l);
             toast(t.saved);
+            // Secret : le 16e perso arrive (bande pleine) → un autre blob se fait éjecter puis revient en râlant
+            if (idx < 0 && l.length === BAND_MAX) setTimeout(() => ejectBlob(playRef.current, name), 650);
           }}
         />
       )}

@@ -2,7 +2,7 @@
  * Lancement : sh zinzin/tests/run.sh (bundle esbuild, alias @ → src, localStorage simulé). */
 import {
   announced, announcedGains, captureFinished, computeTrophies, migrateSoiree, soireeGains, endSoiree, getSoiree, kingsOf, ranking, recapTitles, recordWinners,
-  resumeSoiree, setPhase, skipGame, startSoiree, uniqueBand, eligible,
+  courageFor, lastStreak, uniqueLast, unluckyOf, resumeSoiree, setPhase, skipGame, startSoiree, uniqueBand, eligible,
   type SoireeState,
 } from "../src/soiree";
 import { getZGame } from "../src/catalog";
@@ -384,6 +384,70 @@ check("Passer ce jeu : pas de point, pending effacé", s.points.Tom === 0 && !s.
 check("played non incrémenté par Passer", s.played === 0);
 check("M4 : Mime exclu d'une Soirée à bande impaire", !eligible(getZGame("make-guess")!, 5, "soiree") && eligible(getZGame("make-guess")!, 6, "soiree"));
 check("M5 : Deviner le mot / Chrono / Mots Espions jouables jusqu'à 16 (comme la bande)", ["guess-word", "category-chrono", "code-names"].every((id) => eligible(getZGame(id)!, 16, "soiree")));
+
+/* ── 11. Secret « malchanceux » : 3 jeux classés de suite dernier (pansement, sans effet sur les points) ── */
+check("uniqueLast : seul en bas", uniqueLast([{ name: "a", rank: 1 }, { name: "b", rank: 2 }, { name: "c", rank: 3 }]) === "c");
+check("uniqueLast : ex æquo en bas → personne", uniqueLast([{ name: "a", rank: 1 }, { name: "b", rank: 2 }, { name: "c", rank: 2 }]) === null);
+check("uniqueLast : toute la table à égalité / un seul joueur → personne", uniqueLast([{ name: "a", rank: 1 }, { name: "b", rank: 1 }]) === null && uniqueLast([{ name: "a", rank: 1 }]) === null);
+{
+  const IN_LAST = { scores: { names: BAND, values: [9, 5, 3, 1] } }; // Inès dernière
+  startSoiree(BAND, "soiree", 10, BAR);
+  playScored([IN_LAST]);
+  playScored([IN_LAST]);
+  s = getSoiree()!;
+  check("2 fois dernière : pas encore de pansement", unluckyOf(s) === null && lastStreak(s)?.n === 2, J(lastStreak(s)));
+  const pts2 = { ...s.points };
+  // 3e jeu : écran gagnant (jeu en attente) → « Courage Inès » + pansement
+  setPhase("playing");
+  captureFinished({ gameId: s.playlist[s.index], ...finishedPayload(IN_LAST) });
+  setPhase("winner");
+  s = getSoiree()!;
+  check("3e fois dernière : « Courage » sur l'écran gagnant", courageFor(s) === "Inès" && unluckyOf(s) === "Inès", J(lastStreak(s)));
+  const shown = announcedGains(s);
+  recordWinners(announced(s).winners);
+  s = getSoiree()!;
+  check("pansement : aucun effet sur les points (3/2/1 inchangé)", eq(shown, { "Léa": 3, Malik: 2, Tom: 1 }) && s.points["Inès"] === pts2["Inès"] && s.points["Léa"] === pts2["Léa"] + 3, J(s.points));
+  check("après l'écran gagnant : pansement gardé, plus de « Courage »", unluckyOf(s) === "Inès" && courageFor(s) === null);
+  // Jeu en camp (non classé) : ne compte pas, ne coupe pas la série
+  playScored([{ winners: ["Tom"], scores: { names: BAND, values: [3, 5, 9, 1] } }]);
+  s = getSoiree()!;
+  check("jeu en camp : série ni comptée ni coupée", unluckyOf(s) === "Inès" && lastStreak(s)?.n === 3, J(lastStreak(s)));
+  // Jeu passé : ne compte pas
+  skipGame();
+  check("jeu passé : série intacte", unluckyOf(getSoiree()!) === "Inès");
+  // 4e fois dernière : encore un petit mot
+  setPhase("playing");
+  captureFinished({ gameId: getSoiree()!.playlist[getSoiree()!.index], ...finishedPayload(IN_LAST) });
+  setPhase("winner");
+  check("4e fois dernière : « Courage » encore", courageFor(getSoiree()!) === "Inès" && lastStreak(getSoiree()!)?.n === 4);
+  recordWinners(announced(getSoiree()!).winners);
+  // Ex æquo en bas : la série s'arrête, pansement retiré
+  playScored([{ scores: { names: BAND, values: [9, 5, 1, 1] } }]);
+  s = getSoiree()!;
+  check("ex æquo en bas : série coupée, plus de pansement", unluckyOf(s) === null && lastStreak(s) === null, J(lastStreak(s)));
+  check("jeux joués jusqu'ici dans la playlist", getSoiree()!.index === 7 && getSoiree()!.phase === "intro");
+}
+{
+  // Un autre dernier 3 fois : Tom ; puis il remonte → pansement retiré
+  startSoiree(BAND, "soiree", 10, BAR);
+  const IN_LAST = { scores: { names: BAND, values: [9, 5, 3, 1] } };
+  const TOM_LAST = { scores: { names: BAND, values: [9, 5, 1, 3] } };
+  playScored([TOM_LAST]); playScored([TOM_LAST]); playScored([TOM_LAST]);
+  check("Tom 3 fois dernier : pansement à Tom", unluckyOf(getSoiree()!) === "Tom");
+  playScored([IN_LAST]);
+  check("Tom n'est plus dernier : pansement retiré", unluckyOf(getSoiree()!) === null && lastStreak(getSoiree()!)?.name === "Inès");
+}
+{
+  // Choix manuel sur un jeu classé : ne compte pas (pas de classement individuel validé)
+  startSoiree(BAND, "soiree", 10, BAR);
+  const IN_LAST = { scores: { names: BAND, values: [9, 5, 3, 1] } };
+  playScored([IN_LAST]); playScored([IN_LAST]);
+  playScored([IN_LAST], { manual: ["Léa"] });
+  check("gagnant choisi à la main : le jeu ne compte pas", unluckyOf(getSoiree()!) === null && lastStreak(getSoiree()!)?.n === 2);
+  // Équipes (Fais Deviner) : jamais compté
+  playScored([{ teams: true, scores: { names: BAND, values: [6, 6, 3, 1] } }]);
+  check("jeu par équipes : ne compte pas", lastStreak(getSoiree()!)?.n === 2);
+}
 
 const st: SoireeState | null = getSoiree();
 void st;

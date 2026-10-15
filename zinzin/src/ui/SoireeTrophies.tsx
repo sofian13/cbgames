@@ -6,7 +6,7 @@ import { type I18n, type Lang, pick, useLang } from "@/lib/i18n";
 import { playCombo, playSfx } from "@/lib/sfx";
 import { getZGame } from "../catalog";
 import type { ZGameId } from "../catalog-text";
-import { computeTrophies, finishCeremony, type SoireeState, type Trophy, type TrophyId } from "../soiree";
+import { computeTrophies, finishCeremony, unluckyOf, type SoireeState, type Trophy, type TrophyId } from "../soiree";
 import { ZBlob, ZPALETTE } from "./ZBlob";
 import { BandBlob } from "./BandBlob";
 import { BigBtn, Tag, useTapReady } from "./common";
@@ -461,7 +461,7 @@ export function Ceremony({ s }: { s: SoireeState }) {
             <div className="mt-5 flex max-w-[340px] flex-wrap justify-center gap-1.5">
               {s.band.map((n, i) => (
                 <div key={n} className="zzs-dance" style={{ animationDelay: `${i * 0.12}s` }}>
-                  <BandBlob name={n} size={s.band.length > 6 ? 38 : 44} color={colorOf(s, n)} mood="happy" seed={i} outline shadow={false} wobble={false} hop={false} />
+                  <BandBlob name={n} size={s.band.length > 6 ? 38 : 44} color={colorOf(s, n)} mood="happy" seed={i} outline shadow={false} wobble={false} hop={false} bandaid={n === unluckyOf(s)} />
                 </div>
               ))}
             </div>
@@ -545,7 +545,7 @@ function Reveal({ s, trophy, index, total, onNext, last }: {
               <div className="zzc-pop relative">
                 {naze && <RainCloud />}
                 <div className={naze ? "zzc-slump" : "zzs-dance"}>
-                  <BandBlob name={trophy.name} size={blobSize} color={col} mood={naze ? "sad" : "laughing"} seed={index + 3} outline shadow={false} wobble={false} hop={false} crown={king} talk autoTalk talkDelay={naze ? 1400 : 500} />
+                  <BandBlob name={trophy.name} size={blobSize} color={col} mood={naze ? "sad" : "laughing"} seed={index + 3} outline shadow={false} wobble={false} hop={false} crown={king} talk autoTalk talkDelay={naze ? 1400 : 500} bandaid={trophy.name === unluckyOf(s)} />
                 </div>
               </div>
             </>
@@ -581,6 +581,8 @@ function Reveal({ s, trophy, index, total, onNext, last }: {
 /* ───────── Récap (écran de fin) ───────── */
 export function TrophyList({ s, trophies }: { s: SoireeState; trophies: Trophy[] }) {
   const lang = useLang();
+  // Secret : pansement du malchanceux (dernier 3 jeux classés de suite)
+  const hurt = unluckyOf(s);
   return (
     <ol className="mt-5 flex flex-col gap-3">
       {trophies.map((tr, i) => {
@@ -593,7 +595,7 @@ export function TrophyList({ s, trophies }: { s: SoireeState; trophies: Trophy[]
             className="zz-stk zz-rise relative flex items-center gap-2 rounded-[24px] py-2 pl-2 pr-3"
             style={{ background: king ? "#FFD23F" : naze ? "#D9D4F0" : "#fff", color: "var(--zz-ink)", rotate: `${i % 2 ? 0.8 : -0.8}deg`, ["--d" as string]: `${i * 70}ms` }}
           >
-            <BandBlob name={tr.name} size={60} color={col} mood={naze ? "sad" : king ? "laughing" : "happy"} seed={i} outline shadow={false} wobble={false} hop={false} crown={king} talk />
+            <BandBlob name={tr.name} size={60} color={col} mood={naze ? "sad" : king ? "laughing" : "happy"} seed={i} outline shadow={false} wobble={false} hop={false} crown={king} talk bandaid={tr.name === hurt} />
             <span className="min-w-0 flex-1">
               <span className="block text-[13px] font-extrabold uppercase leading-tight tracking-wide" style={{ opacity: 0.7 }}>{txt.name}</span>
               <span className="zz-title block truncate text-[22px]">{tr.name}</span>

@@ -493,3 +493,64 @@ html, body { overflow-x: clip; overscroll-behavior-x: none; }
   .zz-credits-dance { animation: none !important; }
   .zz-credits-roll { animation-duration: calc(var(--zz-roll, 24s) * 2); }
 }
+
+/* ── Malchanceux de la Soirée (SoireeRun.tsx) : petit mot « Courage… » sous l'annonce ── */
+.zz-courage { animation: zz-pop 420ms var(--zz-spring) 500ms both; }
+
+/* ── Yeux en spirale (spiral-eyes.ts) : « accros » au Rejouer, accueil secoué ──
+ * Blobs SVG : spirale ajoutée par-dessus le blanc de l'œil, qui tourne. Blobs des jeux (Mascot) : en CSS. */
+.zz-spiral-spin { transform-box: fill-box; transform-origin: center; animation: zz-spin 0.9s linear infinite; }
+.zz-spiral .zb-follow { opacity: 0; }
+.zz-spiral .mascot-eye::after {
+  content: ""; position: absolute; inset: 0; border-radius: 50%;
+  background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-10 -10 20 20'%3E%3Cpath d='M0.00 0.00L0.19 0.08L0.29 0.29L0.24 0.57L0.00 0.82L-0.39 0.95L-0.87 0.87L-1.33 0.55L-1.64 0.00L-1.70 -0.71L-1.45 -1.45L-0.86 -2.08L-0.00 -2.46L1.02 -2.46L2.03 -2.03L2.84 -1.18L3.28 -0.00L3.22 1.33L2.61 2.61L1.49 3.60L0.00 4.10L-1.65 3.98L-3.19 3.19L-4.36 1.80L-4.92 0.00L-4.73 -1.96L-3.77 -3.77L-2.12 -5.11L-0.00 -5.74L2.28 -5.49L4.35 -4.35L5.87 -2.43L6.56 -0.00L6.25 2.59L4.93 4.93L2.75 6.63L0.00 7.38L-2.90 7.01L-5.51 5.51L-7.39 3.06L-8.20 0.00' fill='none' stroke='%2315082E' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E") center / 100% no-repeat;
+  animation: zz-spin 0.9s linear infinite;
+}
+@keyframes zz-spin { to { transform: rotate(360deg); } }
+.zz-addict { animation: zz-pop 380ms var(--zz-spring) both; }
+@media (prefers-reduced-motion: reduce) {
+  .zz-spiral-spin, .zz-spiral .mascot-eye::after, .zz-courage, .zz-addict { animation: none !important; }
+}
+
+/* ── Batterie faible (TiredBlob.tsx) : yeux mi-clos et blobs qui s'affaissent ~4 s ──
+ * Propriétés `scale` / `translate` (et non `transform`) : le clignement, les paupières du blob qui dort
+ * et le regard qui suit le doigt (tous en `transform`) restent intacts. */
+.zz-tired .zb-blink, .zz-tired .av-blink { scale: 1 0.5; transition: scale 700ms ease; }
+.zz-tired .zb-follow { translate: 0 2px; }
+.zz-tired .zz-dozing .zb-blink { scale: none; }
+.zz-tired .zb > svg { translate: 0 3%; transition: translate 900ms ease; }
+.zz-tired-sigh { animation: zz-tired-sigh 4s ease both; transform-origin: var(--zz-ox, 50%) 100%; }
+@keyframes zz-tired-sigh {
+  0%, 8%   { opacity: 0; transform: translateY(6px) scale(0.5); }
+  16%      { opacity: 1; transform: translateY(0) scale(1.04); }
+  20%, 86% { opacity: 1; transform: translateY(0) scale(1); }
+  100%     { opacity: 0; transform: translateY(8px) scale(0.7); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .zz-tired .zb-blink, .zz-tired .zb > svg { transition: none; }
+  .zz-tired-sigh { animation: none !important; }
+}
+
+/* ── Changement de langue (LangBlob.tsx) : un blob à chapeau surgit du bas et dit bonjour ── */
+.zz-lang-pop {
+  position: fixed; z-index: 80; left: 26px; bottom: 0; display: flex; align-items: center; gap: 2px; pointer-events: none;
+  animation: zz-lang-pop 2.5s ease-in-out both;
+}
+.zz-lang-blob { flex-shrink: 0; transform-origin: 50% 100%; rotate: -6deg; }
+.zz-lang-bubble { margin-bottom: calc(var(--zz-lang-s) * 0.25); transform-origin: 0% 80%; animation: zz-lang-bubble 2.5s ease both; }
+@keyframes zz-lang-pop {
+  0%       { transform: translateY(110%); }
+  16%      { transform: translateY(calc(-1 * var(--sab) - 14px)); }
+  22%, 84% { transform: translateY(calc(-1 * var(--sab) - 6px)); }
+  100%     { transform: translateY(110%); }
+}
+@keyframes zz-lang-bubble {
+  0%, 18%   { opacity: 0; transform: scale(0.3); }
+  26%       { opacity: 1; transform: scale(1.08); }
+  30%, 80%  { opacity: 1; transform: scale(1); }
+  86%, 100% { opacity: 0; transform: scale(0.5); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .zz-lang-pop, .zz-lang-bubble { animation: none !important; }
+  .zz-lang-pop { bottom: calc(var(--sab) + 6px); }
+}

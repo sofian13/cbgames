@@ -66,8 +66,9 @@ function BlobEye({
   if (shape === "spiral") {
     return <div style={{ width: size, height: size, borderRadius: "50%", background: "conic-gradient(from 0deg, #15082E 0%, #15082E 30%, #fff 30%, #fff 50%, #15082E 50%, #15082E 80%, #fff 80%)", animation: "mascot-spin 1.6s linear infinite" }} />;
   }
+  // « mascot-eye » : repère des secrets de l'app (yeux en spirale, zinzin/src/ui/spiral-eyes.ts), sans style propre
   return (
-    <div style={{
+    <div className="mascot-eye" style={{
       width: size, height: size, background: "white", borderRadius: "50%", position: "relative",
       animation: blink ? `mascot-blink ${2.6 + delay * 0.3}s ease-in-out infinite` : "none",
       animationDelay: `${delay}s`, overflow: "hidden",

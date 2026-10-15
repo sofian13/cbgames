@@ -720,6 +720,29 @@ export function rainbowCrownLayer(uid: string, dy = 0, animate = false): ReactNo
 }
 
 /**
+ * Pansement en croix sur la joue (secret de la Soirée : dernier 3 jeux classés de suite), repère 120×120.
+ * Posé à l'affichage seulement, par-dessus le reste (rien ne change dans le look).
+ */
+export function bandaidLayer(x = 95, y = 82): ReactNode {
+  const strip = (rot: number) => (
+    <g transform={`rotate(${rot})`}>
+      <rect x={-13} y={-4.6} width={26} height={9.2} rx={4.6} fill="#F7C893" stroke={INK} strokeWidth={2.2} />
+      <rect x={-4.2} y={-3.4} width={8.4} height={6.8} rx={1.6} fill="#E9A46A" />
+      <circle cx={-9} cy={-1.4} r={0.9} fill="#C98450" />
+      <circle cx={-9} cy={1.6} r={0.9} fill="#C98450" />
+      <circle cx={9} cy={-1.4} r={0.9} fill="#C98450" />
+      <circle cx={9} cy={1.6} r={0.9} fill="#C98450" />
+    </g>
+  );
+  return (
+    <g transform={`translate(${x} ${y})`} aria-hidden>
+      {strip(-35)}
+      {strip(40)}
+    </g>
+  );
+}
+
+/**
  * Couronne arc-en-ciel seule (pour poser sur un blob qui n'est pas un perso : Mascot, ZBlob).
  * SVG 64×36 (unités du repère 120×120 des persos), à placer en absolu : la base est à ~8 % du bas.
  */
@@ -1066,28 +1089,32 @@ export interface AvatarBlobProps {
   costume?: (ctx: AvatarCostumeCtx) => AvatarCostumeLayers;
   /** Prénom du perso : « Zinzin » porte la couronne arc-en-ciel (secret) à la place de son chapeau */
   name?: string | null;
+  /** Pansement sur la joue (secret de la Soirée : le malchanceux) */
+  bandaid?: boolean;
   className?: string;
   style?: CSSProperties;
 }
 
-export function AvatarBlob({ look, size = 96, mood = "happy", animate = true, shadow = false, costume, name, className, style }: AvatarBlobProps) {
+export function AvatarBlob({ look, size = 96, mood = "happy", animate = true, shadow = false, costume, name, bandaid = false, className, style }: AvatarBlobProps) {
   useAvatarStyle();
   const uid = useId().replace(/[^a-zA-Z0-9_-]/g, "");
   return (
     <div className={[animate ? "av-wob" : "", className ?? ""].join(" ")} style={{ width: size, height: size, flexShrink: 0, position: "relative", ...style }} aria-hidden>
-      <AvatarSvg look={look} size={size} mood={mood} animate={animate} shadow={shadow} costume={costume} uid={uid} zinzin={isZinzinName(name)} boss={isBossName(name)} />
+      <AvatarSvg look={look} size={size} mood={mood} animate={animate} shadow={shadow} costume={costume} uid={uid} zinzin={isZinzinName(name)} boss={isBossName(name)} bandaid={bandaid} />
     </div>
   );
 }
 
 /** Le SVG seul (aussi utilisé pour les images de partage). */
-export function AvatarSvg({ look, size, mood = "happy", animate = false, shadow = false, costume, uid, viewBox = "0 0 120 120", zinzin = false, boss = false }: {
+export function AvatarSvg({ look, size, mood = "happy", animate = false, shadow = false, costume, uid, viewBox = "0 0 120 120", zinzin = false, boss = false, bandaid = false }: {
   look: AvatarLook; size: number; mood?: MascotMood; animate?: boolean; shadow?: boolean;
   costume?: AvatarBlobProps["costume"]; uid: string; viewBox?: string;
   /** Couronne arc-en-ciel (prénom « Zinzin ») : remplace le chapeau, pas le couvre-chef d'un costume de jeu */
   zinzin?: boolean;
   /** Lunettes noires « Le Boss » (prénom « Sofian ») : par-dessus le look, sans le modifier */
   boss?: boolean;
+  /** Pansement sur la joue (secret de la Soirée) : par-dessus tout, sans modifier le look */
+  bandaid?: boolean;
 }) {
   const c = AVATAR_PALETTE[look.color] ?? AVATAR_PALETTE.pink;
   const clip = `av-c-${uid}`, gBody = `av-b-${uid}`, gShade = `av-s-${uid}`, hatClip = `av-h-${uid}`;
@@ -1167,6 +1194,7 @@ export function AvatarSvg({ look, size, mood = "happy", animate = false, shadow 
       {zinzin && !cos.top && rainbowCrownLayer(clip, seat - 18, animate)}
       {cos.top}
       {extra.top}
+      {bandaid && bandaidLayer()}
     </svg>
   );
 }

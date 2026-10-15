@@ -12,7 +12,8 @@ public class AppIconPlugin: CAPPlugin, CAPBridgedPlugin {
     public let pluginMethods: [CAPPluginMethod] = [
         CAPPluginMethod(name: "isSupported", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "getName", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "setName", returnType: CAPPluginReturnPromise)
+        CAPPluginMethod(name: "setName", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "getBattery", returnType: CAPPluginReturnPromise)
     ]
 
     /// Seules ces icônes peuvent être demandées depuis le JS
@@ -53,6 +54,21 @@ public class AppIconPlugin: CAPPlugin, CAPBridgedPlugin {
                     call.resolve()
                 }
             }
+        }
+    }
+
+    /// Secret de l'accueil (batterie faible, TiredBlob.tsx) : niveau (0…1, -1 si inconnu) et en charge ?
+    /// Lu à la demande (pas d'observateur) ; la surveillance reste active, son coût est nul.
+    @objc func getBattery(_ call: CAPPluginCall) {
+        DispatchQueue.main.async {
+            let device = UIDevice.current
+            device.isBatteryMonitoringEnabled = true
+            let state = device.batteryState
+            call.resolve([
+                "level": Double(device.batteryLevel),
+                "charging": state == .charging || state == .full,
+                "known": state != .unknown
+            ])
         }
     }
 }

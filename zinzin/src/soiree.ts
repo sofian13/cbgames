@@ -403,6 +403,56 @@ export function recapTitles(s: SoireeState, titles: string[], lastTitle: string)
   });
 }
 
+/* ───────── Secret : le malchanceux (pansement) ───────── */
+
+/** Nombre de jeux de suite à finir dernier avant le petit mot d'encouragement et le pansement */
+export const UNLUCKY_STREAK = 3;
+
+/** Le dernier d'un classement, seulement s'il est SEUL en bas (ex æquo en bas : personne). */
+export function uniqueLast(rows?: GameRank[] | null): string | null {
+  if (!rows || rows.length < 2) return null;
+  const worst = Math.max(...rows.map((r) => r.rank));
+  const last = rows.filter((r) => r.rank === worst);
+  return worst > 1 && last.length === 1 ? last[0].name : null;
+}
+
+/**
+ * Série en cours de « dernier » (secret, sans aucun effet sur les points) : on suit les jeux à classement
+ * INDIVIDUEL (jeux classés) dans l'ordre de la soirée, + le jeu en attente sur l'écran gagnant.
+ * Les autres jeux (camps, équipes, sans classement, passés, gagnant choisi à la main) ne comptent pas
+ * et ne coupent pas la série. Un jeu classé où quelqu'un d'autre (ou personne, ex æquo) finit dernier la coupe.
+ * `withPending` : la série inclut le jeu qui vient de se finir (écran gagnant).
+ */
+export function lastStreak(s: SoireeState): { name: string; n: number; withPending: boolean } | null {
+  const rows: GameRank[][] = [];
+  for (let i = 0; i < Math.min(s.index, s.playlist.length); i++) {
+    const o = s.outcomes?.[i];
+    if (o?.ranked && o.ranking) rows.push(o.ranking);
+  }
+  const pend = s.phase === "winner" && s.pending?.ranked && s.pending.ranking ? s.pending.ranking : null;
+  if (pend) rows.push(pend);
+  let name: string | null = null;
+  let n = 0;
+  for (const r of rows) {
+    const l = uniqueLast(r);
+    if (l && l === name) n++;
+    else { name = l; n = l ? 1 : 0; }
+  }
+  return name && n ? { name, n, withPending: Boolean(pend) } : null;
+}
+
+/** Qui porte le pansement sur les écrans de la soirée (dernier au moins 3 jeux classés de suite), sinon null. */
+export function unluckyOf(s: SoireeState): string | null {
+  const st = lastStreak(s);
+  return st && st.n >= UNLUCKY_STREAK && s.band.includes(st.name) ? st.name : null;
+}
+
+/** Écran gagnant : le jeu qui vient de finir est le 3e (ou plus) de suite où ce joueur est dernier → « Courage… ». */
+export function courageFor(s: SoireeState): string | null {
+  const st = lastStreak(s);
+  return st && st.withPending && st.n >= UNLUCKY_STREAK && s.band.includes(st.name) ? st.name : null;
+}
+
 /* ───────── Trophées de fin de soirée ───────── */
 
 /**

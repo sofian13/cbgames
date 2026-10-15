@@ -40,6 +40,14 @@ export function haptic(kind: "light" | "medium" | "success" = "light") {
     .catch(() => {});
 }
 
+/** L'accueil est-il réellement à l'écran (pas recouvert par un jeu, une fiche ou les réglages) ? */
+export function homeVisible(home: HTMLElement): boolean {
+  const r = home.getBoundingClientRect();
+  if (r.width === 0 || r.height === 0) return false;
+  const top = document.elementFromPoint(innerWidth / 2, innerHeight / 2);
+  return !!top && home.contains(top);
+}
+
 export const reducedMotion = () =>
   typeof matchMedia !== "undefined" && matchMedia("(prefers-reduced-motion: reduce)").matches;
 

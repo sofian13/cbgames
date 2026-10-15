@@ -17,6 +17,8 @@ interface AppIconPlugin {
   isSupported(): Promise<{ value: boolean }>;
   getName(): Promise<{ value: string | null }>;
   setName(o: { name?: string }): Promise<void>;
+  /** Batterie (même plugin natif, voir AppIconPlugin.swift) : level 0…1 (-1 inconnu) */
+  getBattery(): Promise<{ level: number; charging: boolean; known: boolean }>;
 }
 
 type Cap = { isNativePlatform?: () => boolean; getPlatform?: () => string };
@@ -73,4 +75,25 @@ export async function setAppIcon(id: AppIconId): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+/**
+ * Batterie du téléphone (secret de l'accueil, TiredBlob.tsx) : niveau 0…1 et en charge, ou null si inconnu.
+ * iOS : le plugin natif de l'app (UIDevice) ; web : navigator.getBattery s'il existe ; sinon null.
+ */
+export async function batteryInfo(): Promise<{ level: number; charging: boolean } | null> {
+  if (isIos()) {
+    const h = await getPlugin();
+    if (!h) return null;
+    try {
+      const b = await h.p.getBattery();
+      return b.known && b.level >= 0 ? { level: b.level, charging: b.charging } : null;
+    } catch { return null; }
+  }
+  const nav = navigator as Navigator & { getBattery?: () => Promise<{ level: number; charging: boolean }> };
+  if (typeof nav.getBattery !== "function") return null;
+  try {
+    const b = await nav.getBattery();
+    return { level: b.level, charging: b.charging };
+  } catch { return null; }
 }

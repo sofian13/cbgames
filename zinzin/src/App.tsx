@@ -14,6 +14,7 @@ import { installLookAtFinger } from "./ui/ZBlob";
 import { isAgeOk } from "./ui/util";
 import { SoireeSetup } from "./ui/SoireeSetup";
 import { SoireeRun } from "./ui/SoireeRun";
+import { LangBlob } from "./ui/LangBlob";
 import { clearSoiree, getSoiree, resumeSoiree, startSoiree } from "./soiree";
 
 type Phase = "splash" | "age" | "tuto" | "app";
@@ -149,6 +150,9 @@ export function App() {
       )}
 
       {legal && <LegalScreen page={legal} onClose={() => setLegal(null)} />}
+
+      {/* Secret : changement de langue (Réglages) → un blob dit bonjour avec le chapeau du pays */}
+      {phase === "app" && <LangBlob />}
 
       {toast.node}
     </>

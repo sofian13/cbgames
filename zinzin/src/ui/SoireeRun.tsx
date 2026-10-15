@@ -12,7 +12,7 @@ import { shareApp } from "../settings";
 import { shareResultCard, shareTrophyCard } from "@/lib/share-card";
 import { soberKind } from "../no-alcohol";
 import {
-  announced, announcedGains, captureFinished, endSoiree, kingsOf, ranking, recapTitles, recordWinners, setPhase, skipGame, useSoiree, type SoireeState,
+  announced, announcedGains, captureFinished, courageFor, endSoiree, kingsOf, ranking, recapTitles, recordWinners, setPhase, skipGame, unluckyOf, useSoiree, type SoireeState,
 } from "../soiree";
 import { allTrophies, Ceremony, TROPHY_STR, TrophyList, trophyText } from "./SoireeTrophies";
 import { SOIREE } from "../strings";
@@ -245,6 +245,13 @@ const UNKNOWN_STR: I18n<{ notInBand: (names: string[]) => string; fixNow: string
   },
 };
 
+/** Secret : dernier 3 jeux classés de suite → petit mot d'encouragement (aucun effet sur les points) */
+const COURAGE: I18n<(name: string) => string> = {
+  fr: (n) => `Courage ${n}, ça va venir 🩹`,
+  en: (n) => `Hang in there, ${n}, it's coming 🩹`,
+  es: (n) => `Ánimo, ${n}, ya llegará 🩹`,
+};
+
 /* Annonce automatique « Malik gagne La Patate ! » (1,8 s ou tap), lien discret « Corriger ».
  * Un gagnant du jeu introuvable dans la bande : affiché quand même, pas de suite automatique, « Corriger » mis en avant. */
 function AutoWinner({ s, winners, unknown = [], onFix }: { s: SoireeState; winners: string[]; unknown?: string[]; onFix: () => void }) {
@@ -255,6 +262,8 @@ function AutoWinner({ s, winners, unknown = [], onFix }: { s: SoireeState; winne
   const doubt = unknown.length > 0;
   const g = getZGame(s.playlist[s.index])!;
   const info = gameInfo(g, lang);
+  // Secret : 3e jeu classé de suite où ce joueur finit dernier → « Courage… » (un peu plus de temps pour le lire)
+  const [courage] = useState(() => courageFor(s));
   const done = useRef(false);
   const timer = useRef<number | undefined>(undefined);
   const ready = useTapReady();
@@ -269,7 +278,7 @@ function AutoWinner({ s, winners, unknown = [], onFix }: { s: SoireeState; winne
   useEffect(() => {
     playSfx("tada", { volume: 0.7 });
     haptic("success");
-    if (!doubt) timer.current = window.setTimeout(go, 1900);
+    if (!doubt) timer.current = window.setTimeout(go, courage ? 3200 : 1900);
     return () => window.clearTimeout(timer.current);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -320,6 +329,12 @@ function AutoWinner({ s, winners, unknown = [], onFix }: { s: SoireeState; winne
         ) : (
           <p className="mt-6 text-[14px] font-semibold" style={{ color: "var(--zz-dim)" }}>{t.tapNext}</p>
         )}
+        {courage && (
+          <div className="zz-courage zz-stk-sm mt-4 flex max-w-[330px] items-center gap-2 rounded-full py-1 pl-1.5 pr-4 text-left" role="status" style={{ background: "#fff", color: "var(--zz-ink)" }}>
+            <BandBlob name={courage} size={40} color={colorOf(s, courage)} mood="sad" seed={7} outline shadow={false} wobble={false} hop={false} bandaid />
+            <span className="text-[15px] font-extrabold leading-snug" style={{ overflowWrap: "anywhere" }}>{pick(COURAGE, lang)(courage)}</span>
+          </div>
+        )}
       </div>
       {!doubt && <button
         type="button"
@@ -340,6 +355,8 @@ function PickWinner({ s, suggested, onPause }: { s: SoireeState; suggested: stri
   const g = getZGame(s.playlist[s.index])!;
   const info = gameInfo(g, lang);
   const [picked, setPicked] = useState<string[]>(suggested);
+  // Secret : pansement du malchanceux (dernier 3 jeux classés de suite)
+  const hurt = unluckyOf(s);
   const ready = useTapReady();
   // Un seul enregistrement (double tap sur « Valider » / « Personne »)
   const done = useRef(false);
@@ -389,7 +406,7 @@ function PickWinner({ s, suggested, onPause }: { s: SoireeState; suggested: stri
                     <Check size={17} strokeWidth={3.4} aria-hidden />
                   </span>
                 )}
-                <BandBlob name={name} size={58} color={col} mood={on ? "laughing" : "happy"} seed={i} outline shadow={false} crown={on} hop={false} />
+                <BandBlob name={name} size={58} color={col} mood={on ? "laughing" : "happy"} seed={i} outline shadow={false} crown={on} hop={false} bandaid={name === hurt} />
                 <span className="zz-title mt-1 w-full truncate text-center" style={{ fontSize: name.length > 10 ? 16 : 20 }}>{name}</span>
                 <span className="text-[13px] font-bold" style={{ opacity: 0.7 }}>{t.pts(s.points[name] ?? 0)}</span>
               </button>
@@ -431,6 +448,8 @@ function End({ s, onHome, onNew, toast }: { s: SoireeState; onHome: () => void; 
   // Trophées mesurés (+ prix du public) : remplacent le podium quand il y en a
   const trophies = allTrophies(s);
   const tt = pick(TROPHY_STR, lang);
+  // Secret : pansement du malchanceux (dernier 3 jeux classés de suite)
+  const hurt = unluckyOf(s);
 
   useEffect(() => {
     playCombo("fanfare");
@@ -499,7 +518,7 @@ function End({ s, onHome, onNew, toast }: { s: SoireeState; onHome: () => void; 
             return (
               <div key={r.name} className="flex w-[31%] min-w-0 flex-col items-center">
                 <div className={k === 0 ? "zzs-dance" : undefined}>
-                  <BandBlob name={r.name} size={k === 0 ? 92 : 70} color={col} mood={k === 0 ? "laughing" : k === 1 ? "happy" : "wink"} seed={k + 3} crown={kings.includes(r.name)} outline shadow={false} wobble={k !== 0} talk autoTalk={k === 0} talkDelay={1600} />
+                  <BandBlob name={r.name} size={k === 0 ? 92 : 70} color={col} mood={k === 0 ? "laughing" : k === 1 ? "happy" : "wink"} seed={k + 3} crown={kings.includes(r.name)} outline shadow={false} wobble={k !== 0} talk autoTalk={k === 0} talkDelay={1600} bandaid={r.name === hurt} />
                 </div>
                 <div className="zz-title mt-1 w-full truncate text-center text-white" style={{ fontSize: r.name.length > 9 ? 17 : 22 }}>{r.name}</div>
                 <div
@@ -519,7 +538,7 @@ function End({ s, onHome, onNew, toast }: { s: SoireeState; onHome: () => void; 
           {rows.map((r, i) => (
             <li key={r.name} className="flex items-center gap-3 px-3.5 py-2.5" style={{ borderTop: i ? "2px solid rgba(21,8,46,0.1)" : undefined }}>
               <span className="zz-title w-6 text-center text-[20px]">{r.rank}</span>
-              <BandBlob name={r.name} size={36} color={colorOf(s, r.name)} mood={kings.includes(r.name) ? "cool" : "happy"} seed={i} outline shadow={false} wobble={false} hop={false} />
+              <BandBlob name={r.name} size={36} color={colorOf(s, r.name)} mood={kings.includes(r.name) ? "cool" : "happy"} seed={i} outline shadow={false} wobble={false} hop={false} bandaid={r.name === hurt} />
               <span className="min-w-0 flex-1">
                 <span className="zz-title block truncate text-[19px]">{r.name}</span>
                 <span className="block text-[14px] font-bold" style={{ color: kings.includes(r.name) ? "#C2187A" : "rgba(21,8,46,0.7)" }}>{titleOf(i)}</span>

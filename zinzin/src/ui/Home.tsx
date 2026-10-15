@@ -14,6 +14,8 @@ import { PullBlob } from "./PullBlob";
 import { CardBlob } from "./CardBlob";
 import { SleepyBlob } from "./SleepyBlob";
 import { FaceDownBlob } from "./FaceDownBlob";
+import { TiredBlob } from "./TiredBlob";
+import { DizzyHome } from "./DizzyHome";
 import { TapLogo } from "./Logo";
 import { drawGreeting, greetingText } from "../greeting";
 import { SoireeEntry } from "./SoireeKit";
@@ -63,6 +65,10 @@ export function Home({
       <SleepyBlob homeRef={scrollRef} />
       {/* Secret : téléphone posé face contre la table puis retourné → un blob passe la tête */}
       <FaceDownBlob homeRef={scrollRef} />
+      {/* Secret : batterie < 10 % (pas en charge) → blobs épuisés + soupir, une fois par heure au plus */}
+      <TiredBlob homeRef={scrollRef} />
+      {/* Secret : défiler très vite de haut en bas → blobs qui titubent, yeux en spirale */}
+      <DizzyHome homeRef={scrollRef} />
       <div ref={contentRef} className="relative mx-auto max-w-lg" style={{ zIndex: 1, paddingTop: "calc(var(--sat) + 10px)", paddingBottom: "calc(var(--sab) + 32px)" }}>
         {/* En-tête */}
         <header className="relative flex items-center justify-between px-5">

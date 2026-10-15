@@ -10,6 +10,7 @@ import { ONBOARDING, UI } from "../strings";
 import { IdeaButton } from "@/components/games/idea-button";
 import { ZBlob, ZPALETTE } from "./ZBlob";
 import { BigBtn, CloseBtn, RoundBtn, Sheet, TAP_GUARD_MS } from "./common";
+import { AddictEgg } from "./AddictEgg";
 import { ErrorBoundary } from "./ErrorBoundary";
 import { APP_VERSION, haptic, setAgeOk } from "./util";
 import { setNoAlcohol, useNoAlcohol } from "@/lib/party-mood";
@@ -437,13 +438,15 @@ export function GameScreen({ id, onExit, next }: { id: string; onExit: () => voi
   // Double tap sur la croix : le 2e tap tombe sur le fond de la confirmation, il ne doit pas la refermer
   const confirmAt = useRef(0);
   const t = useT(UI);
+  // Secret « accros » (AddictEgg) : les blobs de l'écran de jeu prennent des yeux en spirale
+  const boxRef = useRef<HTMLDivElement>(null);
   // Jeu en cours : la fin de partie le signale avec son id (stats de la bande)
   useEffect(() => { setCurrentGame(id); return () => setCurrentGame(null); }, [id]);
   // Soirée : les jeux affichent « Jeu suivant » dans leur écran de fin (contexte lu par SoireeNextButton)
   const soireeNext = next ? { label: next.label, onNext: () => { haptic("medium"); uiSfx.primary(); next.onNext(); } } : null;
 
   return (
-    <div className="zz-screen-in fixed inset-0 flex flex-col overflow-y-auto" style={{ background: "#0A0420", zIndex: 30 }}>
+    <div ref={boxRef} className="zz-screen-in fixed inset-0 flex flex-col overflow-y-auto" style={{ background: "#0A0420", zIndex: 30 }}>
       <ErrorBoundary onBack={onExit} backLabel={t.backHome}>
         <SoireeNextContext.Provider value={soireeNext}>
           <Suspense fallback={<Loading />}>
@@ -451,6 +454,9 @@ export function GameScreen({ id, onExit, next }: { id: string; onExit: () => voi
           </Suspense>
         </SoireeNextContext.Provider>
       </ErrorBoundary>
+
+      {/* Secret : 5 « Rejouer » de suite → « Vous êtes accros, là » + yeux en spirale */}
+      <AddictEgg id={id} boxRef={boxRef} />
 
       {/* Jeu sans fin de partie : petit « Jeu suivant » en haut, à côté de la croix */}
       {next?.always && (
