@@ -1197,7 +1197,7 @@ function TeamsScreen({
                       className="cn-push flex min-h-[48px] w-full items-center gap-1.5 rounded-[16px] py-1 pl-1 pr-2 text-left"
                       style={{ ...stk("#fff", 2, 2), color: INK }}
                     >
-                      <PlayerBlob name={p} colorIndex={i} size={36} mood="happy" bob={false} />
+                      <PlayerBlob name={p} colorIndex={i} size={36} mood="happy" delay={i * 0.3} />
                       <span className="min-w-0 flex-1 truncate text-[15px] font-extrabold">{p}</span>
                     </button>
                   ),

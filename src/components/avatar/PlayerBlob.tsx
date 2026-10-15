@@ -164,7 +164,7 @@ export function PlayerBlob({
     <div ref={ref} className={[cheer ? "pb-cheer" : "", className ?? ""].join(" ").trim() || undefined} style={{ position: "relative", width: size, height: k + crownH, flexShrink: 0, marginTop: headroom === "auto" ? overTop : headroom ? size * 0.2 : undefined, ...cheer, ...style }} {...tap}>
       {cheer && <style>{"@media (prefers-reduced-motion: reduce){.pb-cheer{animation:none!important}}"}</style>}
       <div ref={art} style={{ position: "absolute", left: (size - k) / 2, bottom: -k * 0.04 }}>
-        <AvatarBlob look={look} size={k} mood={m} name={name} animate={animate && bob !== false && !talking && !cheer} costume={crown && !zinzin ? (look.extra === "headphones" ? crownHighCostume : crownCostume) : undefined} />
+        <AvatarBlob look={look} size={k} mood={m} name={name} animate={animate && !talking} float={bob !== false && !cheer} costume={crown && !zinzin ? (look.extra === "headphones" ? crownHighCostume : crownCostume) : undefined} />
       </div>
       {talk && voice && <VoiceBadge size={Math.max(16, Math.round(size * 0.3))} />}
     </div>

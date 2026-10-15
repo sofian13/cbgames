@@ -1281,6 +1281,8 @@ export interface AvatarBlobProps {
   mood?: MascotMood;
   /** Animation légère (gigote + cligne) */
   animate?: boolean;
+  /** Gigote/flotte (défaut : comme animate) ; false = cligne seulement, le corps reste immobile */
+  float?: boolean;
   shadow?: boolean;
   /** Costume de jeu : prioritaire sur le chapeau (top) et les accessoires du visage (face) */
   costume?: (ctx: AvatarCostumeCtx) => AvatarCostumeLayers;
@@ -1292,11 +1294,11 @@ export interface AvatarBlobProps {
   style?: CSSProperties;
 }
 
-export function AvatarBlob({ look, size = 96, mood = "happy", animate = true, shadow = false, costume, name, bandaid = false, className, style }: AvatarBlobProps) {
+export function AvatarBlob({ look, size = 96, mood = "happy", animate = true, float, shadow = false, costume, name, bandaid = false, className, style }: AvatarBlobProps) {
   useAvatarStyle();
   const uid = useId().replace(/[^a-zA-Z0-9_-]/g, "");
   return (
-    <div className={[animate ? "av-wob" : "", className ?? ""].join(" ")} style={{ width: size, height: size, flexShrink: 0, position: "relative", ...style }} aria-hidden>
+    <div className={[animate && float !== false ? "av-wob" : "", className ?? ""].join(" ")} style={{ width: size, height: size, flexShrink: 0, position: "relative", ...style }} aria-hidden>
       <AvatarSvg look={look} size={size} mood={mood} animate={animate} shadow={shadow} costume={costume} uid={uid} zinzin={isZinzinName(name)} boss={isBossName(name)} bandaid={bandaid} />
     </div>
   );
