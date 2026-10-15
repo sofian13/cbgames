@@ -1,5 +1,4 @@
 import { useEffect, type RefObject } from "react";
-import { playSfx } from "@/lib/sfx";
 import { spiralEyes } from "./spiral-eyes";
 import { haptic, reducedMotion } from "./util";
 
@@ -33,7 +32,6 @@ export function DizzyHome({ homeRef }: { homeRef: RefObject<HTMLElement | null> 
       quietUntil = performance.now() + COOLDOWN_MS;
       flips = [];
       haptic("medium");
-      playSfx("pluck2", { volume: 0.35, rate: 0.8 });
       undo = spiralEyes(home, SHOW_MS);
       const blobs = Array.from(home.querySelectorAll<HTMLElement>(".zb")).filter((el) => {
         const r = el.getBoundingClientRect();
