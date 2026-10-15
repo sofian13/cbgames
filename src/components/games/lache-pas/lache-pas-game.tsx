@@ -4,7 +4,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { sipsAllowed } from "@/lib/party-mood";
 import type { GameProps } from "@/lib/games/types";
 import { colorForIndex } from "@/components/games/local-kit";
-import { Mascot, MascotAvatar, MASCOT_PALETTE } from "@/components/Mascot";
+import { Mascot, MASCOT_PALETTE } from "@/components/Mascot";
+import { PlayerAvatar, PlayerBlob } from "@/components/avatar/PlayerBlob";
 import { ConfettiBurst } from "@/components/ConfettiBurst";
 import { buzz, preloadObjectSfx, sfxBoom, sfxCount, sfxHeart, sfxLift, sfxPop, startFuse, unlockAudio } from "@/components/games/patate/fx";
 import { ScrollReset } from "@/components/games/patate/rules-sheet";
@@ -349,7 +350,7 @@ export default function LachePasGame({ onReturnToLobby }: GameProps) {
           <div className="grid grid-cols-1 gap-2">
             {names.map((n, i) => (
               <label key={i} className="flex items-center gap-2.5 rounded-full py-1 pl-1 pr-3" style={{ ...sticker("#fff", { radius: 999, shadow: 3, border: 2.5 }) }}>
-                <MascotAvatar color={colorForIndex(i)} size={34} mood="happy" border={false} />
+                <PlayerAvatar name={n.trim()} colorIndex={i} size={34} mood="happy" border={false} />
                 <input
                   value={n}
                   maxLength={14}
@@ -431,7 +432,7 @@ export default function LachePasGame({ onReturnToLobby }: GameProps) {
                 return (
                   <div key={k} className="flex items-center gap-2.5 px-3 py-2" style={{ ...sticker(won ? C.yellow : "#fff", { radius: 18, shadow: 3, border: 2.5 }), color: INK }}>
                     <span className="w-6 text-center text-[18px]" style={DISPLAY}>{won ? <Crown size={18} strokeWidth={3} aria-hidden /> : rank}</span>
-                    <MascotAvatar color={colorForIndex(k)} size={30} mood={won ? "cool" : "happy"} border={false} />
+                    <PlayerAvatar name={nameOf(k)} colorIndex={k} size={30} mood={won ? "cool" : "happy"} border={false} />
                     <span className="min-w-0 flex-1 truncate text-[17px]" style={DISPLAY}>{labelOf(k)}</span>
                     <span className="shrink-0 text-right text-[13px] font-bold leading-tight">{x.crowns(crowns[k])}<br />{x.losses(burns[k])}</span>
                     <SoireeGain name={labelOf(k)} />
@@ -489,7 +490,7 @@ export default function LachePasGame({ onReturnToLobby }: GameProps) {
             const won = outcome.winner === f.slot;
             return (
               <div key={f.id} className="flex flex-col items-center" style={{ opacity: lost || won ? 1 : 0.6 }}>
-                <Mascot size={lost || won ? (crowd ? 58 : 68) : crowd ? 44 : 54} color={colorForIndex(f.slot)} mood={lost ? (caught ? "dead" : "sad") : won ? "cool" : "happy"} crown={won} bob={false} shadow={false} />
+                <PlayerBlob name={nameOf(f.slot)} size={lost || won ? (crowd ? 58 : 68) : crowd ? 44 : 54} colorIndex={f.slot} mood={lost ? (caught ? "dead" : "sad") : won ? "cool" : "happy"} crown={won} bob={false} shadow={false} />
                 {nameOf(f.slot) && <span className="mt-1 max-w-[84px] truncate text-[14px] leading-tight" style={DISPLAY}>{nameOf(f.slot)}</span>}
                 <span className="mt-1 whitespace-nowrap px-2 py-0.5 text-[13px] font-bold" style={{ ...sticker(lost ? INK : "#fff", { radius: 999, shadow: 0, border: 2, color: lost ? "#fff" : INK }) }}>
                   {f.liftedAt == null ? t.caught : `${decimal(f.liftedAt / 1000, 1, t.dec)}\u00a0s`}
@@ -503,7 +504,7 @@ export default function LachePasGame({ onReturnToLobby }: GameProps) {
           <StickerCard bg={C.cream} radius={26} shadow={6} className="mx-auto max-w-md p-4 text-center">
             <div className="flex flex-wrap items-center justify-center gap-1.5">
               {outcome.losers.map((sl) => (
-                <MascotAvatar key={sl} color={colorForIndex(sl)} size={30} mood="dead" border={false} />
+                <PlayerAvatar key={sl} name={nameOf(sl)} colorIndex={sl} size={30} mood="dead" border={false} />
               ))}
               {/* Plus de 2 perdants : le titre passe sous la rangée de blobs */}
               <span className={`text-[20px] leading-tight ${outcome.losers.length > 2 ? "basis-full" : "ml-1"}`} style={DISPLAY}>
@@ -630,7 +631,7 @@ export default function LachePasGame({ onReturnToLobby }: GameProps) {
               }}
             />
             <div className="absolute flex flex-col items-center" style={{ left: -32, top: -150, width: 64, opacity: lifted ? 0.55 : 1 }}>
-              <Mascot size={64} color={c} mood={lifted ? "cool" : live ? (heat > 0.5 ? "shocked" : "sus") : "happy"} sweat={live && !lifted} bob={false} shadow={false} />
+              <PlayerBlob name={nameOf(f.slot)} size={64} colorIndex={f.slot} mood={lifted ? "cool" : live ? (heat > 0.5 ? "shocked" : "sus") : "happy"} sweat={live && !lifted} bob={false} shadow={false} />
               <span className="mt-0.5 max-w-[110px] truncate whitespace-nowrap rounded-full px-2 text-[14px] font-bold" style={{ background: MASCOT_PALETTE[c].body, color: INK, border: `2px solid ${INK}` }}>{labelOf(f.slot)}</span>
               {lifted && <span className="mt-0.5 whitespace-nowrap rounded-full bg-white px-2 text-[13px] font-bold" style={{ color: INK, border: `2px solid ${INK}` }}>{decimal(f.liftedAt! / 1000, 1, t.dec)}&nbsp;s</span>}
             </div>

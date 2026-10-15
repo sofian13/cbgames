@@ -3,8 +3,10 @@ import { usePersoTalk, usePlayerLook } from "@/components/avatar/PlayerBlob";
 import { VoiceBadge } from "@/components/avatar/VoiceUI";
 import { playPersoVoice, usePersoVoice } from "@/lib/avatar/voice";
 import { costumeLayers, type ZCostume } from "./costumes";
-import { isBossName, isZinzinName } from "@/lib/avatar/secrets";
-import { ZBlob, type ZBlobProps } from "./ZBlob";
+import { isZinzinName } from "@/lib/avatar/secrets";
+import { defaultLookFor, lookSideOverflow } from "@/lib/avatar/look";
+import type { ZBlobProps } from "./ZBlob";
+import { useMemo } from "react";
 
 /** Couronne du gagnant (repère 120×120), posée à la place du chapeau. */
 const CROWN: AvatarCostumeLayers = {
@@ -18,14 +20,16 @@ const CROWN: AvatarCostumeLayers = {
 
 /**
  * Blob d'un joueur dans l'app (Soirée Zinzin) : son perso « Ma bande » s'il en a un,
- * sinon le ZBlob coloré. Costume de jeu ou couronne : prioritaires sur son chapeau.
+ * sinon un perso de base dans sa couleur (même style). Costume de jeu ou couronne : prioritaires sur son chapeau.
  * `talk` : toucher = il dit son son ; `autoTalk` : il le dit une fois à l'apparition (podium).
  * `bandaid` : pansement sur la joue (secret : dernier 3 jeux classés de suite, soiree.ts unluckyOf).
  */
 export function BandBlob({ name, costume, crown, bandaid = false, talk = false, autoTalk = false, talkDelay, ...p }: ZBlobProps & {
   name: string; costume?: ZCostume; talk?: boolean; autoTalk?: boolean; talkDelay?: number;
 }) {
-  const look = usePlayerLook(name);
+  const stored = usePlayerLook(name);
+  // Sans perso « Ma bande » : perso de base dans sa couleur (même style que les persos)
+  const look = useMemo(() => stored ?? defaultLookFor(p.color ?? "pink", p.mood), [stored, p.color, p.mood]);
   const voice = usePersoVoice(talk ? name : null);
   const { ref, mood: talking } = usePersoTalk(name, { auto: autoTalk, delay: talkDelay });
   const mood = talking ?? p.mood;
@@ -35,9 +39,14 @@ export function BandBlob({ name, costume, crown, bandaid = false, talk = false, 
   const cos = costume
     ? (ctx: AvatarCostumeCtx) => costumeLayers(costume, ctx)
     : crown && !zinzin ? () => CROWN : undefined;
-  const blob = look
-    ? <AvatarBlob look={look} size={size} mood={mood} name={name} animate={p.wobble !== false && !talking} costume={cos} bandaid={bandaid} className={p.className} style={p.style} />
-    : <ZBlob {...p} mood={mood} costume={costume} crown={crown} rainbowCrown={zinzin} shades={isBossName(name)} bandaid={bandaid} />;
+  // Petite case (rangées) : une coupe large (couettes…) est réduite pour ne pas déborder sur le prénom voisin
+  const side = size <= 48 ? lookSideOverflow(look) : 0;
+  const shrink = side > 0 ? Math.min(1, Math.max(0.75, 62 / (50.5 + side))) : 1;
+  const art = <AvatarBlob look={look} size={size} mood={mood} name={name} animate={p.wobble !== false && !talking} costume={cos} bandaid={bandaid}
+    className={shrink < 1 ? undefined : p.className} style={shrink < 1 ? undefined : p.style} />;
+  const blob = shrink < 1
+    ? <div className={p.className} style={{ width: size, height: size, flexShrink: 0, ...p.style }}><div style={{ transform: `scale(${shrink.toFixed(3)})`, transformOrigin: "50% 90%" }}>{art}</div></div>
+    : art;
   if (!talk && !autoTalk) return blob;
   return (
     <div ref={ref} style={{ position: "relative", display: "inline-block" }}

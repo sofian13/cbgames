@@ -6,7 +6,8 @@ import { useGameStore } from "@/lib/stores/game-store";
 import type { GameProps } from "@/lib/games/types";
 import { cn } from "@/lib/utils";
 import { useKeyedState } from "@/lib/use-keyed-state";
-import { Mascot, MascotAvatar, MASCOT_PALETTE, type MascotColor } from "@/components/Mascot";
+import { Mascot, MASCOT_PALETTE, type MascotColor } from "@/components/Mascot";
+import { PlayerAvatar } from "@/components/avatar/PlayerBlob";
 import { ConfettiBurst, Sparkles } from "@/components/ConfettiBurst";
 import {
   ModeSelect, PlayersSetup, PassScreen, type GameMode,
@@ -671,7 +672,7 @@ function LeBluffeurOnline({ roomCode, playerId, playerName, onSwitchLocal }: Gam
                        borderColor: "rgba(255,255,255,0.08)",
                        backdropFilter: "blur(6px)",
                      }}>
-                  <MascotAvatar color={color} size={32} mood={voterCount > 0 ? "wink" : "neutral"} border={false} />
+                  <PlayerAvatar name={authorNames[0]} color={color} size={32} mood={voterCount > 0 ? "wink" : "neutral"} border={false} />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <span className="min-w-0 truncate text-xs font-bold">{authorNames.length ? authorNames.join(" & ") : "?"}</span>
@@ -808,7 +809,7 @@ function PlayerProgress({ players, done, selfId }: {
         const isDone = done(p);
         return (
           <div key={p.id} className="relative">
-            <MascotAvatar color={c} size={36} mood={isDone ? "wink" : "shifty"} border={p.id === selfId} />
+            <PlayerAvatar name={p.name} color={c} size={36} mood={isDone ? "wink" : "shifty"} border={p.id === selfId} />
             {isDone && (
               <div className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full border-2 text-[10px] font-black text-white"
                    style={{ background: "var(--af-mint)", borderColor: "#0E0828" }}>
@@ -846,7 +847,7 @@ function BluffScoreboard({ players, playerId }: { players: BluffPlayerState[]; p
                    }}>
                 <div className="flex items-center gap-3">
                   <span className="cb-mono w-8 text-xl font-bold" style={{ color: i === 0 ? MASCOT_PALETTE[c].body : "var(--text-muted)" }}>#{i + 1}</span>
-                  <MascotAvatar color={c} size={36} mood={i === 0 ? "wink" : "neutral"} />
+                  <PlayerAvatar name={p.name} color={c} size={36} mood={i === 0 ? "wink" : "neutral"} />
                   <span className="text-sm font-bold" style={{ color: i === 0 ? "#fff" : "var(--text-dim)" }}>
                     {p.name}{p.id === playerId && " (toi)"}
                   </span>

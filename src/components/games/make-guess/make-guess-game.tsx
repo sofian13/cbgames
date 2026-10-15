@@ -3,7 +3,7 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import type { GameProps } from "@/lib/games/types";
 import { Mascot, type MascotColor } from "@/components/Mascot";
-import { PlayerBlob, usePlayerLook } from "@/components/avatar/PlayerBlob";
+import { PlayerBlob } from "@/components/avatar/PlayerBlob";
 import { ConfettiBurst } from "@/components/ConfettiBurst";
 import { registerSoftReplay } from "@/lib/game-replay";
 import { getSavedPlayers, savePlayers } from "@/lib/saved-players";
@@ -801,13 +801,12 @@ export default function MakeGuessGame({
   );
 }
 
-/** Blob d'une équipe sur le podium : les persos des deux joueurs s'ils en ont, sinon le blob d'équipe habituel. */
+/** Blob d'une équipe sur le podium : les deux joueurs côte à côte (leur perso, ou leur perso de base). */
 function TeamBlob({ team, size, color, mood, arms, cheering, crown, delay }: {
   team?: Team; size: number; color: MascotColor; mood: "happy"; arms?: boolean; cheering?: boolean; crown?: boolean; delay?: number;
 }) {
-  const a = usePlayerLook(team?.player1);
-  const b = usePlayerLook(team?.player2);
-  if (!team || (!a && !b)) return <Mascot size={size} color={color} mood={mood} arms={arms} cheering={cheering} crown={crown} delay={delay} shadow={false} />;
+  // Les deux joueurs de l'équipe (perso, sinon perso de base dans la couleur d'équipe)
+  if (!team) return <Mascot size={size} color={color} mood={mood} arms={arms} cheering={cheering} crown={crown} delay={delay} shadow={false} />;
   const k = Math.round(size * 0.78);
   return (
     // Même hauteur que le blob d'équipe : le podium ne bouge pas

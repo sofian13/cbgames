@@ -12,7 +12,7 @@ import { createContext, useContext, useEffect, useMemo, useRef, useState, type C
 import type { GameProps } from "@/lib/games/types";
 import { PlayersSetup, PassScreen, colorForIndex } from "@/components/games/local-kit";
 import { MASCOT_PALETTE, type MascotColor, type MascotMood } from "@/components/Mascot";
-import { PlayerAvatar, PlayerBlob, usePlayerLook } from "@/components/avatar/PlayerBlob";
+import { PlayerAvatar, PlayerBlob } from "@/components/avatar/PlayerBlob";
 import { ConfettiBurst } from "@/components/ConfettiBurst";
 import { playCombo, playSfx, preloadSfx } from "@/lib/sfx";
 import { IdeaButton, RerollButton } from "@/components/games/idea-button";
@@ -200,26 +200,25 @@ function PureBlob({ name, color, purity, size = 120, show = true, cheering = fal
   const halo = show && purity >= 60;
   const horns = show && purity < 40;
   const s = size;
-  // Perso : ses cheveux / chapeau dépassent au-dessus → un peu plus petit, posé en bas du même cadre
-  const look = usePlayerLook(name);
-  const ps = look ? Math.round(s * 0.86) : s;
+  // Perso (ou perso de base) : ses cheveux / chapeau dépassent au-dessus → un peu plus petit, posé en bas du même cadre
+  const ps = Math.round(s * 0.86);
   return (
     <div style={{ position: "relative", width: s, height: s * 1.15, animation: "pur-bob 2.4s ease-in-out infinite" }}>
       {horns && (
         <>
-          <div className="pur-pop" style={{ position: "absolute", top: s * (look ? 0.02 : -0.06), left: s * 0.14, width: s * 0.22, height: s * 0.32, zIndex: look ? 2 : 0, transform: "rotate(-18deg)", filter: `drop-shadow(3px 3px 0 ${INK})` }}>
+          <div className="pur-pop" style={{ position: "absolute", top: s * 0.02, left: s * 0.14, width: s * 0.22, height: s * 0.32, zIndex: 2, transform: "rotate(-18deg)", filter: `drop-shadow(3px 3px 0 ${INK})` }}>
             <div style={{ width: "100%", height: "100%", background: "linear-gradient(180deg, #FF2D2D, #A0101E)", clipPath: "polygon(50% 0%, 100% 100%, 0% 100%)" }} />
           </div>
-          <div className="pur-pop" style={{ position: "absolute", top: s * (look ? 0.02 : -0.06), right: s * 0.14, width: s * 0.22, height: s * 0.32, zIndex: look ? 2 : 0, transform: "rotate(18deg)", filter: `drop-shadow(3px 3px 0 ${INK})` }}>
+          <div className="pur-pop" style={{ position: "absolute", top: s * 0.02, right: s * 0.14, width: s * 0.22, height: s * 0.32, zIndex: 2, transform: "rotate(18deg)", filter: `drop-shadow(3px 3px 0 ${INK})` }}>
             <div style={{ width: "100%", height: "100%", background: "linear-gradient(180deg, #FF2D2D, #A0101E)", clipPath: "polygon(50% 0%, 100% 100%, 0% 100%)" }} />
           </div>
         </>
       )}
       <PlayerBlob name={name} color={color} size={ps} mood={show ? moodFor(purity) : "neutral"} bob={false} arms cheering={cheering} sparkle={show && purity >= 80} shadow
-        style={look ? { position: "absolute", left: (s - ps) / 2, bottom: 0 } : undefined} />
+        style={{ position: "absolute", left: (s - ps) / 2, bottom: 0 }} />
       {halo && (
         <div className="pur-halo" style={{
-          position: "absolute", top: -s * (look ? 0.08 : 0.1), left: "50%", width: s * 0.62, height: s * 0.17, marginLeft: -s * 0.31,
+          position: "absolute", top: -s * 0.08, left: "50%", width: s * 0.62, height: s * 0.17, marginLeft: -s * 0.31,
           border: `${Math.max(4, s * 0.055)}px solid #FFE36B`, borderRadius: "50%", zIndex: 5,
           boxShadow: `0 0 16px rgba(255,227,107,0.9), 3px 3px 0 ${INK}`,
         }} />

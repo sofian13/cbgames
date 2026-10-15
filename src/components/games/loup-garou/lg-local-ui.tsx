@@ -7,7 +7,7 @@
  */
 
 import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
-import { PlayerAvatar, PlayerBlob, usePlayerLook } from "@/components/avatar/PlayerBlob";
+import { PlayerAvatar, PlayerBlob } from "@/components/avatar/PlayerBlob";
 import { RoleBlob } from "./lg-role-blob";
 import { RoleBurst } from "./lg-role-fx";
 import { ROLES, SPECIALS, type Player, type RoleId } from "./lg-local-data";
@@ -329,17 +329,14 @@ export function RulesContent({ onTuto }: { onTuto?: () => void } = {}) {
 }
 
 /**
- * Joueur dont le rôle est révélé (morts, « Qui était qui ») : son perso s'il en a un
- * (mort = yeux/bouche « éliminé », un peu translucide, et le petit blob de rôle en badge),
- * sinon le blob costumé du rôle, comme avant.
+ * Joueur dont le rôle est révélé (morts, « Qui était qui ») : son perso (ou son perso de base)
+ * (mort = yeux/bouche « éliminé », un peu translucide, et le petit blob de rôle en badge).
  */
 export function RevealedBlob({ p, size, reveal = false, delay = 0, ghost = !p.alive, badge: withBadge = true }: { p: Player; size: number; reveal?: boolean; delay?: number; ghost?: boolean; badge?: boolean }) {
-  const look = usePlayerLook(p.name);
-  if (!look) return <RoleBlob role={p.role} size={size} state={ghost ? "ghost" : "idle"} still={!reveal} reveal={reveal} delay={delay} />;
   const badge = Math.round(size * 0.46);
   return (
     <div className="relative shrink-0" style={{ width: size, height: size * 1.15 }}>
-      <PlayerBlob name={p.name} colorIndex={p.id} size={size} mood={ghost ? "dead" : "happy"} bob={reveal} style={ghost ? { opacity: 0.78 } : undefined} />
+      <PlayerBlob name={p.name} colorIndex={p.id} size={size} mood={ghost ? "dead" : "happy"} bob={reveal} delay={delay} style={ghost ? { opacity: 0.78 } : undefined} />
       {withBadge && (
         <div className="absolute" style={{ right: -badge * 0.3, bottom: -badge * 0.1 }}>
           <RoleBlob role={p.role} size={badge} still />

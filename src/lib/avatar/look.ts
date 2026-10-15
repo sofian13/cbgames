@@ -166,6 +166,41 @@ export function baseLook(color?: string): AvatarLook {
   return { ...DEFAULT_LOOK, color: color && AVATAR_PALETTE[color] ? color : DEFAULT_LOOK.color };
 }
 
+/**
+ * Perso « de base » d'un joueur qui n'a pas encore de perso dans « Ma bande » :
+ * même dessin que les persos (contour, reflet), sans cheveux ni accessoire, dans la
+ * couleur de son rang (couleurs du blob par défaut = mêmes clés que AVATAR_PALETTE).
+ * Comme il n'a pas de regard choisi, ses yeux suivent l'humeur du moment (clin d'œil,
+ * cœurs, étoiles, rire…) et « cool » met les lunettes noires, comme l'ancien blob.
+ */
+const MOOD_EYES: Record<string, string> = {
+  wink: "wink", love: "heart", kiss: "heart", mindblown: "star", laughing: "happy", rofl: "happy",
+  asleep: "sleepy", shocked: "big",
+};
+export function defaultLookFor(color?: string, mood?: string): AvatarLook {
+  return {
+    ...baseLook(color),
+    eyes: (mood && MOOD_EYES[mood]) || "classic",
+    face: mood === "cool" ? "shades" : "none",
+  };
+}
+
+/**
+ * Débord latéral (repère 120, au-delà du perso nu, du côté qui dépasse le plus) des coupes,
+ * chapeaux et accessoires larges : mesuré au pixel sur le rendu (couettes, ailes, casquette…).
+ * Dans une rangée serrée, le perso est réduit pour que rien ne déborde de sa case
+ * (sinon une couette cache la 1re lettre du prénom). < 5 : négligeable, absent de la table.
+ */
+const SIDE_OVER: Partial<Record<AvatarSlot, Record<string, number>>> = {
+  hair: { afro: 14, pigtails: 19, golden: 19, hero: 19, long: 8, curly: 11, silver: 8, ponytail: 23, messy: 16, twintails: 26.5, mane: 19, mullet: 10 },
+  hat: { straw: 6, cap: 25, ninja: 22, cowboy: 17, bandana: 19 },
+  face: { bandages: 13.5 },
+  extra: { armband: 20, cape: 17, headphones: 10, wings: 26, katana: 18, longscarf: 43, balloon: 22.5 },
+};
+export function lookSideOverflow(look: AvatarLook): number {
+  return Math.max(0, ...AVATAR_SLOTS.map((s) => SIDE_OVER[s]?.[look[s]] ?? 0));
+}
+
 /** Tirage au hasard : chaque élément est tiré séparément (pas de tenue toute faite). */
 export function randomLook(onlyFree = false, rnd: () => number = Math.random): AvatarLook {
   const pickOf = <T,>(a: T[]) => a[Math.floor(rnd() * a.length)];

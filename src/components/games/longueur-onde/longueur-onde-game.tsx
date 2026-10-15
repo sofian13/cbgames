@@ -5,8 +5,8 @@ import { useGame } from "@/lib/party/use-game";
 import { useGameStore } from "@/lib/stores/game-store";
 import type { GameProps } from "@/lib/games/types";
 import { useKeyedState } from "@/lib/use-keyed-state";
-import { Mascot, MascotAvatar, MASCOT_PALETTE, type MascotColor } from "@/components/Mascot";
-import { PlayerBlob } from "@/components/avatar/PlayerBlob";
+import { MASCOT_PALETTE, type MascotColor } from "@/components/Mascot";
+import { PlayerAvatar, PlayerBlob } from "@/components/avatar/PlayerBlob";
 import { ConfettiBurst, Sparkles } from "@/components/ConfettiBurst";
 import {
   ModeSelect, PlayersSetup, PassScreen, type GameMode,
@@ -432,7 +432,7 @@ function LongueurOndeOnline({ roomCode, playerId, playerName }: GameProps) {
         <Sparkles count={10} />
         <p className="af-eyebrow mb-6">Manche {state.round} / {state.totalRounds}</p>
         <p className="text-sm mb-4" style={{ color: "var(--text-dim)" }}>Le Devin de ce tour est</p>
-        <Mascot size={120} color={psychicColor} mood="wink" arms crown delay={0} />
+        <PlayerBlob name={state.psychicName} size={120} color={psychicColor} mood="wink" crown />
         <h2 className="cb-display-xl mt-4" style={{ letterSpacing: -1.5, fontSize: "clamp(2rem, 7vw, 3.5rem)", textShadow: "0 0 40px rgba(91,54,214,0.5)" }}>
           {state.psychicName}
           {state.amPsychic && <span style={{ color: "var(--text-dim)", fontSize: "0.5em" }}> (toi)</span>}
@@ -575,7 +575,7 @@ function LongueurOndeOnline({ roomCode, playerId, playerName }: GameProps) {
                      }}>
                   <div className="flex items-center gap-3">
                     <span className="cb-mono w-8 text-xl font-bold" style={{ color: i === 0 ? MASCOT_PALETTE[c].body : "var(--text-muted)" }}>#{i + 1}</span>
-                    <MascotAvatar color={c} size={36} mood={i === 0 ? "wink" : "neutral"} />
+                    <PlayerAvatar name={p.name} color={c} size={36} mood={i === 0 ? "wink" : "neutral"} />
                     <span className="text-sm font-bold" style={{ color: i === 0 ? "#fff" : "var(--text-dim)" }}>
                       {p.name}{p.id === playerId && " (toi)"}
                     </span>
@@ -717,7 +717,7 @@ function SpectrumDial({
             return (
               <div key={i} className="absolute" style={{ left: `${m.value}%`, top: (i % 3) * 28 }}>
                 <div className="flex -translate-x-1/2 justify-center">
-                  <MascotAvatar color={m.color} size={22} mood={m.isMe ? "wink" : "happy"} border={m.isMe} />
+                  <PlayerAvatar name={m.label} color={m.color} size={22} mood={m.isMe ? "wink" : "happy"} border={m.isMe} />
                 </div>
                 <span className="absolute mt-0.5 block max-w-[40vw] truncate whitespace-nowrap rounded-full px-2 py-0.5 text-[13px] font-bold"
                   style={{ left: 0, transform: `translateX(${align})`, background: "#fff", color: GAME_INK, border: `2px solid ${GAME_INK}` }}>

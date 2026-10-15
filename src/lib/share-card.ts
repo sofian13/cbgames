@@ -3,7 +3,7 @@ import { GAME_NAMES } from "@/lib/games/game-names-i18n";
 import { type I18n, getLang, pick } from "@/lib/i18n";
 import { getPlayerLook } from "@/lib/saved-players";
 import { isUnlockedNow } from "@/lib/entitlements";
-import { baseLook, freeLook, type AvatarLook } from "@/lib/avatar/look";
+import { baseLook, defaultLookFor, freeLook, type AvatarLook } from "@/lib/avatar/look";
 import { avatarSvgMarkup } from "@/components/avatar/avatar-markup";
 
 /**
@@ -340,7 +340,8 @@ function lookOf(name?: string): AvatarLook | null {
 
 function blobSvg(o: ShareBlobOpts): string {
   try {
-    const look = lookOf(o.name);
+    // Joueur sans perso : son perso de base (même style que dans l'app)
+    const look = lookOf(o.name) ?? (o.name ? defaultLookFor(o.color, o.mood ?? "laughing") : null);
     const av = look ? avatarSvgMarkup(look, o.mood ?? "laughing") : null;
     if (av) return av;
     return blobArt?.(o) ?? fallbackBlob(o);

@@ -1,6 +1,6 @@
 "use client";
 
-import { PlayerBlob, usePlayerLook } from "@/components/avatar/PlayerBlob";
+import { PlayerBlob } from "@/components/avatar/PlayerBlob";
 import { useMemo, useState, useEffect, type CSSProperties, type ReactNode } from "react";
 import { Mascot, MASCOT_COLORS, MASCOT_PALETTE, type MascotColor, type MascotMood } from "@/components/Mascot";
 import { registerSoftReplay } from "@/lib/game-replay";
@@ -79,7 +79,6 @@ const wordFontSize = (word: string | null, max = 56) => {
 };
 const WORD_WRAP: CSSProperties = { overflowWrap: "break-word", wordBreak: "break-word", hyphens: "auto" };
 
-const colorByIdx = (idx: number): MascotColor => MASCOT_COLORS[idx % MASCOT_COLORS.length];
 
 // ═════════════════════════════════════════════════════════════
 //  Composant principal
@@ -1273,33 +1272,14 @@ function Btn({ children, tone = "primary", disabled = false, onClick, full = tru
   );
 }
 
-function SpyMascotById({ name, idx, size = 80, tilt = -3, mood = "sus", cheering = false, crown = false, arms = false, delay = 0 }: {
+function SpyMascotById({ name, idx, size = 80, mood = "sus", cheering = false, crown = false, arms = false, delay = 0 }: {
   name?: string; idx: number; size?: number; tilt?: number; mood?: MascotMood; cheering?: boolean; crown?: boolean; arms?: boolean; delay?: number;
 }) {
-  const look = usePlayerLook(name);
-  // Perso personnalisé : on le montre tel quel (sans les lunettes d'espion) ; éliminé = yeux/bouche « dead »
-  if (look) return <PlayerBlob name={name} colorIndex={idx} size={size} mood={mood} cheering={cheering} crown={crown} arms={arms} delay={delay} />;
-  const color = colorByIdx(idx);
-  const w = size * 0.66, h = size * 0.18;
-  // Les lunettes suivent l'animation du blob (sinon elles restent figées).
-  const bobAnim = cheering ? "mascot-cheer 0.9s ease-in-out infinite" : `mascot-bob ${2.4 + delay * 0.2}s ease-in-out infinite`;
-  return (
-    <div style={{ position: "relative", display: "inline-block", width: size, height: size * 1.15 + (crown ? size * 0.3 : 0) }}>
-      <Mascot size={size} color={color} mood={mood} cheering={cheering} crown={crown} arms={arms} delay={delay} />
-      <div style={{ position: "absolute", left: `calc(50% - ${w / 2}px)`, top: (crown ? size * 0.3 : 0) + size * 0.32, width: w, height: h, transformOrigin: "50% 600%", animation: bobAnim, animationDelay: `${delay}s`, pointerEvents: "none", zIndex: 5 }}>
-        <div style={{ width: "100%", height: "100%", transform: `rotate(${tilt}deg)` }}>
-          <svg viewBox="0 0 100 28" width="100%" height="100%" preserveAspectRatio="none">
-            <path d="M2 12 L18 12 M48 12 L52 12 M82 12 L98 12" stroke="#0E0828" strokeWidth="3" strokeLinecap="round" fill="none" />
-            <path d="M18 4 Q18 18 30 22 Q44 24 47 14 Q48 6 36 4 Z" fill="#0E0828" stroke="#FFD23F" strokeWidth="1.2" />
-            <path d="M53 14 Q56 24 70 22 Q82 18 82 4 L65 4 Q53 6 53 14 Z" fill="#0E0828" stroke="#FFD23F" strokeWidth="1.2" />
-            <ellipse cx="26" cy="9" rx="3" ry="2" fill="#FFD23F" opacity="0.6" />
-            <ellipse cx="63" cy="9" rx="3" ry="2" fill="#FFD23F" opacity="0.45" />
-          </svg>
-        </div>
-      </div>
-    </div>
-  );
+  // Perso personnalisé : tel quel ; sans perso : son perso de base avec les lunettes d'espion
+  // (éliminé = yeux/bouche « dead », les lunettes tombent)
+  return <PlayerBlob name={name} colorIndex={idx} size={size} mood={mood} cheering={cheering} crown={crown} arms={arms} delay={delay} fallbackLook={SPY_LOOK} />;
 }
+const SPY_LOOK = { face: "shades" } as const;
 
 function Stamp({ text, color = "#FF3EA5", rotate = -10, size = 18 }: { text: string; color?: string; rotate?: number; size?: number }) {
   return (

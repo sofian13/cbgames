@@ -68,7 +68,7 @@ const HAT_COVER: Record<string, number> = {
 const CSS = `
 .av-wob{animation:av-wob var(--av-d,2.8s) ease-in-out infinite;transform-origin:50% 92%}
 .av-blink{transform-box:fill-box;transform-origin:center;animation:av-blink 4.8s infinite}
-@keyframes av-wob{0%,100%{transform:translateY(0) scale(1,1)}50%{transform:translateY(-2.5%) scale(0.985,1.02)}}
+@keyframes av-wob{0%,100%{transform:translateY(0) scale(1,1)}50%{transform:translateY(-3.8%) scale(0.982,1.024)}}
 @keyframes av-blink{0%,92%,100%{transform:scaleY(1)}95%{transform:scaleY(0.12)}}
 .av-twk{transform-box:fill-box;transform-origin:center;animation:av-twk 2.2s ease-in-out infinite}
 .av-crown{transform-box:fill-box;transform-origin:50% 100%;animation:av-crown 3.4s ease-in-out infinite}
@@ -1297,8 +1297,11 @@ export interface AvatarBlobProps {
 export function AvatarBlob({ look, size = 96, mood = "happy", animate = true, float, shadow = false, costume, name, bandaid = false, className, style }: AvatarBlobProps) {
   useAvatarStyle();
   const uid = useId().replace(/[^a-zA-Z0-9_-]/g, "");
+  // Chacun flotte à son rythme (dérivé du prénom) : une rangée de persos ne bouge pas d'un bloc
+  const h = name ? [...name].reduce((a, ch) => (a * 31 + ch.charCodeAt(0)) >>> 0, 7) : 0;
+  const pace = name ? ({ ["--av-d" as string]: `${(2.5 + (h % 7) * 0.12).toFixed(2)}s`, animationDelay: `${-((h >> 3) % 10) * 0.27}s` } as CSSProperties) : undefined;
   return (
-    <div className={[animate && float !== false ? "av-wob" : "", className ?? ""].join(" ")} style={{ width: size, height: size, flexShrink: 0, position: "relative", ...style }} aria-hidden>
+    <div className={[animate && float !== false ? "av-wob" : "", className ?? ""].join(" ")} style={{ width: size, height: size, flexShrink: 0, position: "relative", ...pace, ...style }} aria-hidden>
       <AvatarSvg look={look} size={size} mood={mood} animate={animate} shadow={shadow} costume={costume} uid={uid} zinzin={isZinzinName(name)} boss={isBossName(name)} bandaid={bandaid} />
     </div>
   );
