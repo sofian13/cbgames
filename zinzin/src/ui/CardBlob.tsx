@@ -10,7 +10,7 @@ import { haptic, reducedMotion } from "./util";
  * Secret de l'accueil : le blob qui dépasse d'une carte de jeu réagit quand on le touche
  * (sa zone est sa propre cible : la fiche ne s'ouvre pas, le reste de la carte l'ouvre toujours).
  * Il s'écrase comme de la gelée avec un petit son (varié) ; au 5e toucher rapide il se vexe :
- * il se détourne et boude 2-3 s avec une bulle « Hé ! », puis revient.
+ * il se détourne et boude 2-3 s avec une bulle (« Hé ! », « Oh ! », « Aïe ! »…), puis revient.
  * Un glissement du rail ne déclenche rien (pas de « click » après un défilement).
  * État local : seul ce blob se redessine (jamais l'accueil).
  */
@@ -19,7 +19,19 @@ const RAPID_MS = 900;
 const SULK_AT = 5;
 const SULK_MS = 2600;
 
-const HEY: Record<Lang, string> = { fr: "Hé !", en: "Hey!", es: "¡Eh!" };
+/** Bulles du blob vexé (courtes : la bulle tient sur une ligne), jamais deux fois la même d'affilée */
+const HEY: Record<Lang, string[]> = {
+  fr: ["Hé !", "Oh !", "Aïe !", "Pas touche !", "Mais euh !", "Ça chatouille !", "Encore toi ?!", "Je boude.", "Arrête !", "Oh là là…"],
+  en: ["Hey!", "Oh!", "Ouch!", "Hands off!", "Not fair!", "That tickles!", "You again?!", "I'm sulking.", "Stop it!", "Oh dear…"],
+  es: ["¡Eh!", "¡Oh!", "¡Ay!", "¡No me toques!", "¡Jo!", "¡Cosquillas!", "¿¡Otra vez tú!?", "Me enfado.", "¡Para ya!", "¡Ay, ay, ay…!"],
+};
+let lastHey = -1;
+function pickHey(): number {
+  let i = Math.floor(Math.random() * HEY.fr.length);
+  if (i === lastHey) i = (i + 1) % HEY.fr.length;
+  lastHey = i;
+  return i;
+}
 
 /** Petits sons variés (bruitages existants), jamais deux fois le même d'affilée */
 const SOUNDS: (() => void)[] = [
@@ -55,6 +67,7 @@ export const CardBlob = memo(function CardBlob({ size, color, mood, seed, costum
   const taps = useRef({ n: 0, at: 0 });
   const lastSound = useRef(-1);
   const [sulk, setSulk] = useState(false);
+  const [hey, setHey] = useState(0);
 
   useEffect(() => {
     if (!sulk) return;
@@ -86,6 +99,7 @@ export const CardBlob = memo(function CardBlob({ size, color, mood, seed, costum
       playSfx("pop2", { volume: 0.5, rate: 0.62 });
       try { navigator.vibrate?.(25); } catch { /* indispo */ }
       jelly(wrap.current, true);
+      setHey(pickHey());
       setSulk(true);
       return;
     }
@@ -105,7 +119,7 @@ export const CardBlob = memo(function CardBlob({ size, color, mood, seed, costum
       </div>
       {sulk && (
         <span className="zz-hey zz-stk-sm pointer-events-none absolute whitespace-nowrap rounded-full px-2.5 py-0.5 text-[15px] font-extrabold" style={{ right: "86%", top: 2, background: "#fff", color: "var(--zz-ink)" }}>
-          {HEY[lang] ?? HEY.fr}
+          {(HEY[lang] ?? HEY.fr)[hey]}
         </span>
       )}
     </div>
