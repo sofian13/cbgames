@@ -134,9 +134,21 @@ export interface ZFeatured {
   costume?: ZCostume;
   /** Slide « Ma bande » (visuel = les persos de l'utilisateur, ouvre la personnalisation) */
   band?: true;
+  /** Slide « Quel jeu ce soir ? » (ouvre le choix guidé, GamePicker) */
+  picker?: true;
+  /** Texte du bouton de la slide (par défaut : « Voir le jeu ») */
+  cta?: I18n<string>;
 }
 
 export const FEATURED: ZFeatured[] = [
+  // Quel jeu ce soir ? : combien vous êtes + l'ambiance → 3 jeux proposés
+  { id: "picker", picker: true,
+    kicker: { fr: "Tu hésites ?", en: "Can't decide?", es: "¿No sabes cuál?" },
+    title: { fr: "Quel jeu ce soir ?", en: "What are we playing?", es: "¿A qué jugamos?" },
+    subtitle: { fr: "Dis-nous combien vous êtes, on choisit pour vous.", en: "Tell us how many you are, we'll pick for you.", es: "Dinos cuántos sois y elegimos por vosotros." },
+    cta: { fr: "Trouver le jeu", en: "Find the game", es: "Buscar juego" },
+    bg: "linear-gradient(135deg,#FF8A1F 0%,#FF3EA5 100%)", ink: "#fff",
+    blob: "yellow", mood: "mindblown", buddy: { color: "mint", mood: "shocked" } },
   // Ma bande : visuel = les persos de l'utilisateur (ou une bande d'exemple), ouvre la personnalisation
   { id: "band", band: true,
     kicker: { fr: "Nouveau · Ma bande", en: "New · My crew", es: "Nuevo · Mi grupo" },
@@ -149,11 +161,6 @@ export const FEATURED: ZFeatured[] = [
     title: { fr: "Le Verre Invisible", en: "The Invisible Glass", es: "El Vaso Invisible" },
     subtitle: { fr: "Le tél devient un plateau. Verse, passe… ne renverse rien !", en: "Your phone's a tray. Pour, pass… don't spill a drop!", es: "El móvil es una bandeja. Sirve, pasa… ¡no derrames nada!" },
     bg: "#52C7FF", ink: "#15082E", blob: "mint", mood: "shocked", buddy: { color: "pink", mood: "laughing" } },
-  { id: "purete", gameId: "purete",
-    kicker: { fr: "Tout nouveau", en: "Brand new", es: "Novedad" },
-    title: { fr: "Test de pureté", en: "Purity Test", es: "Test de Pureza" },
-    subtitle: { fr: "Ange ou démon ? Le tél tranche.", en: "Angel or devil? The phone decides.", es: "¿Ángel o demonio? El móvil decide." },
-    bg: "#A98BFF", ink: "#15082E", blob: "white", mood: "wink", costume: "angeldevil", buddy: { color: "pink", mood: "kiss" } },
   { id: "patate", costume: "potato", gameId: "patate",
     kicker: { fr: "Le tél va exploser", en: "The phone's gonna blow", es: "El móvil va a explotar" },
     title: { fr: "La Patate", en: "Hot Potato", es: "La Patata Caliente" },
@@ -164,11 +171,6 @@ export const FEATURED: ZFeatured[] = [
     title: { fr: "Loup-Garou", en: "Werewolf", es: "El Hombre Lobo" },
     subtitle: { fr: "Le tél raconte la nuit pour vous.", en: "The phone narrates the night for you.", es: "El móvil narra la noche por ti." },
     bg: "#7A4EE8", ink: "#fff", blob: "lavender", mood: "shifty", buddy: { color: "yellow", mood: "shocked" } },
-  { id: "lache-pas", costume: "fuse", gameId: "lache-pas",
-    kicker: { fr: "Nouveau", en: "New", es: "Nuevo" },
-    title: { fr: "Lâche pas !", en: "Don't Let Go!", es: "¡No Sueltes!" },
-    subtitle: { fr: "Un doigt sur l'écran. Tiens bon !", en: "One finger on the screen. Hold on!", es: "Un dedo en la pantalla. ¡Aguanta!" },
-    bg: "#FF6B5B", ink: "#15082E", blob: "yellow", mood: "sus" },
 ];
 
 /**

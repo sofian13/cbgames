@@ -1,3 +1,4 @@
+import { createPortal } from "react-dom";
 import { Fragment, useCallback, useEffect, useRef, useState, useSyncExternalStore, type CSSProperties } from "react";
 import { ArrowRight, Lock, Settings, Users, Volume2, VolumeX } from "lucide-react";
 import { FEATURED, SECTIONS, getZGame, type ZFeatured, type ZGame } from "../catalog";
@@ -8,6 +9,7 @@ import { type Lang, pick, useLang } from "@/lib/i18n";
 import { UI } from "../strings";
 import { Backdrop } from "./Backdrop";
 import { BandSlide } from "./BandSlide";
+import { GamePicker } from "./GamePicker";
 import { ShakeRain } from "./ShakeRain";
 import { GoldenBlob } from "./GoldenBlob";
 import { PullBlob } from "./PullBlob";
@@ -88,7 +90,7 @@ export function Home({
           </div>
         </header>
 
-        <Featured onOpenGame={onOpenGame} lang={lang} />
+        <Featured onOpenGame={onOpenGame} lang={lang} premium={premium} />
 
         {/* Soirée Zinzin : les jeux s'enchaînent tout seuls (sans Zinzin+ : jeux gratuits seulement) */}
         <SoireeEntry
@@ -170,8 +172,9 @@ function stripTitle(t: string) {
 /* ───────── Carrousel « à la une » ───────── */
 const AUTOPLAY_MS = 4000;
 
-function Featured({ onOpenGame, lang }: { onOpenGame: (id: string) => void; lang: Lang }) {
+function Featured({ onOpenGame, lang, premium }: { onOpenGame: (id: string) => void; lang: Lang; premium: boolean }) {
   const t = pick(UI, lang);
+  const [picking, setPicking] = useState(false);
   // Slides dont le jeu existe (une nouveauté pas encore au catalogue est masquée)
   const slides = FEATURED.filter((f) => !f.gameId || getZGame(f.gameId));
   const n = slides.length;
@@ -247,7 +250,8 @@ function Featured({ onOpenGame, lang }: { onOpenGame: (id: string) => void; lang
         {track.map((f, i) => (
           f.band
             ? <BandSlide key={f.id} f={f} lang={lang} active={i % n === idx} hidden={i >= n} />
-            : <Slide key={f.id} f={f} lang={lang} active={i % n === idx} hidden={i >= n} onOpen={f.gameId ? () => { haptic(); uiSfx.blob(); onOpenGame(f.gameId!); } : undefined} />
+            : <Slide key={f.id} f={f} lang={lang} active={i % n === idx} hidden={i >= n}
+                onOpen={f.picker ? () => { haptic(); uiSfx.open(); setPicking(true); } : f.gameId ? () => { haptic(); uiSfx.blob(); onOpenGame(f.gameId!); } : undefined} />
         ))}
       </div>
 
@@ -276,6 +280,8 @@ function Featured({ onOpenGame, lang }: { onOpenGame: (id: string) => void; lang
           ))}
         </div>
       )}
+      {/* Hors du carrousel (animé, donc transformé) : sinon la fiche « fixed » resterait prisonnière de la carte */}
+      {picking && createPortal(<GamePicker premium={premium} onClose={() => setPicking(false)} onOpenGame={onOpenGame} />, document.body)}
     </div>
   );
 }
@@ -295,7 +301,7 @@ function Slide({ f, lang, active, hidden, onOpen }: { f: ZFeatured; lang: Lang; 
         <p className="mt-2 text-[14.5px] font-semibold leading-snug" style={{ opacity: 0.85 }}>{f.subtitle[lang]}</p>
         {onOpen && (
           <span className="zz-stk-sm mt-3 inline-flex h-9 items-center gap-1.5 rounded-full px-3.5 text-[14px] font-bold" style={{ background: "#fff", color: "var(--zz-ink)", rotate: "2deg" }}>
-            {t.seeGame} <ArrowRight size={16} strokeWidth={3} />
+            {f.cta?.[lang] ?? t.seeGame} <ArrowRight size={16} strokeWidth={3} />
           </span>
         )}
       </div>
@@ -313,7 +319,7 @@ function Slide({ f, lang, active, hidden, onOpen }: { f: ZFeatured; lang: Lang; 
   return (
     <div className="px-5 pb-6 pt-7" aria-hidden={hidden || undefined}>
       {onOpen ? (
-        <button type="button" onClick={onOpen} tabIndex={hidden ? -1 : 0} className="zz-push block w-full rounded-[30px]" aria-label={t.seeGameAria(f.title[lang])}>
+        <button type="button" onClick={onOpen} tabIndex={hidden ? -1 : 0} className="zz-push block w-full rounded-[30px]" aria-label={f.cta ? f.title[lang] : t.seeGameAria(f.title[lang])}>
           {body}
         </button>
       ) : body}
