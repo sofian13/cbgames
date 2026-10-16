@@ -10,6 +10,7 @@ import { UI } from "../strings";
 import { Backdrop } from "./Backdrop";
 import { BandSlide } from "./BandSlide";
 import { GamePicker } from "./GamePicker";
+import { SEASON } from "../season";
 import { ShakeRain } from "./ShakeRain";
 import { GoldenBlob } from "./GoldenBlob";
 import { PullBlob } from "./PullBlob";
@@ -307,7 +308,7 @@ function Slide({ f, lang, active, hidden, onOpen }: { f: ZFeatured; lang: Lang; 
       </div>
       {/* Le blob déborde de la carte */}
       <div className="absolute -right-3" style={{ bottom: -18 }}>
-        <ZBlob size={hero ? 150 : 140} color={f.blob} mood={f.mood} seed={hero ? 2 : f.id.length} shadow={false} outline={!hero} wobble={active} costume={f.costume ?? (f.gameId ? getZGame(f.gameId)?.costume : undefined)} />
+        <ZBlob size={hero ? 150 : 140} color={f.blob} mood={f.mood} seed={hero ? 2 : f.id.length} shadow={false} outline={!hero} wobble={active} costume={f.costume ?? (f.gameId ? getZGame(f.gameId)?.costume : SEASON === "halloween" ? "witch" : undefined)} />
       </div>
       {f.buddy && (
         <div className="absolute right-6 -top-5">

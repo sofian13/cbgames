@@ -1,23 +1,31 @@
 import { useEffect, useRef, type ReactNode, type RefObject } from "react";
 import { ZBlob, pauseWhenOffscreen } from "./ZBlob";
 import { reducedMotion } from "./util";
+import { SEASON } from "../season";
 
 /**
  * Fond vivant de l'accueil : lueurs qui dérivent, petits dessins qui flottent
  * et scintillent, mini-blobs qui dépassent des bords. Purement décoratif
  * (pointer-events: none), en transform/opacity uniquement pour rester à 60 fps.
  * Léger effet de profondeur au défilement du conteneur `scrollRef`.
+ * Halloween (season.ts) : chauves-souris, citrouilles, fantômes, bonbons et mini-blobs déguisés.
  */
 
 const INK = "#15082E";
 
 type Doodle = { x: string; y: number; size: number; rot: number; color: string; kind: Kind; float: number; delay: number; twinkle?: boolean; mid?: boolean };
-type Kind = "star" | "sparkle" | "squiggle" | "ring" | "heart" | "dice" | "card" | "bolt" | "question" | "plus";
+type Kind = "star" | "sparkle" | "squiggle" | "ring" | "heart" | "dice" | "card" | "bolt" | "question" | "plus"
+  | "bat" | "pumpkin" | "ghost" | "candy";
 
 // Décor généré une fois, de façon déterministe (même placement à chaque ouverture) :
 // ~40 dessins répartis sur ~2 écrans et demi, sur toute la largeur.
-const KINDS: Kind[] = ["sparkle", "star", "heart", "squiggle", "dice", "card", "bolt", "question", "ring", "plus"];
-const COLORS = ["#FFD23F", "#FF3EA5", "#4ECDC4", "#A98BFF", "#3DDC97", "#FF6B5B"];
+const SPOOKY = SEASON === "halloween";
+const KINDS: Kind[] = SPOOKY
+  ? ["sparkle", "bat", "pumpkin", "squiggle", "ghost", "candy", "bat", "star", "pumpkin", "ghost"]
+  : ["sparkle", "star", "heart", "squiggle", "dice", "card", "bolt", "question", "ring", "plus"];
+const COLORS = SPOOKY
+  ? ["#FF8A1F", "#A98BFF", "#3DDC97", "#FFD23F", "#FF8A1F", "#FF3EA5"]
+  : ["#FFD23F", "#FF3EA5", "#4ECDC4", "#A98BFF", "#3DDC97", "#FF6B5B"];
 function rand(seed: number) {
   const x = Math.sin(seed * 9301 + 49297) * 233280;
   return x - Math.floor(x);
@@ -83,9 +91,9 @@ export function Backdrop({ scrollRef }: { scrollRef: RefObject<HTMLElement | nul
         ))}
 
         {/* Mini-blobs qui dépassent des bords */}
-        <Peek side="right" top={210}><ZBlob size={46} color="mint" mood="shocked" seed={11} speed={3} shadow={false} outline hop={false} /></Peek>
-        <Peek side="left" top={760}><ZBlob size={40} color="yellow" mood="wink" seed={12} speed={3.4} shadow={false} outline hop={false} /></Peek>
-        <Peek side="right" top={1420}><ZBlob size={44} color="pink" mood="love" seed={13} speed={2.8} shadow={false} outline hop={false} /></Peek>
+        <Peek side="right" top={210}><ZBlob size={46} color="mint" mood="shocked" seed={11} speed={3} shadow={false} outline hop={false} costume={SPOOKY ? "witch" : undefined} /></Peek>
+        <Peek side="left" top={760}><ZBlob size={40} color="yellow" mood="wink" seed={12} speed={3.4} shadow={false} outline hop={false} costume={SPOOKY ? "pumpkin" : undefined} /></Peek>
+        <Peek side="right" top={1420}><ZBlob size={44} color="pink" mood={SPOOKY ? "laughing" : "love"} seed={13} speed={2.8} shadow={false} outline hop={false} costume={SPOOKY ? "vampire" : undefined} /></Peek>
       </div>
     </div>
   );
@@ -132,5 +140,25 @@ function DoodleSvg({ kind, color }: { kind: Kind; color: string }) {
       return <svg viewBox="0 0 24 24" width="100%" height="100%"><path d="M8.5 8.5a3.6 3.6 0 1 1 5.3 3.2c-1.2.7-1.8 1.4-1.8 2.8" fill="none" stroke={color} strokeWidth="3.2" strokeLinecap="round" /><circle cx="12" cy="19.3" r="1.9" fill={color} /></svg>;
     case "plus":
       return <svg viewBox="0 0 24 24" width="100%" height="100%"><path d="M12 4v16M4 12h16" stroke={color} strokeWidth="4" strokeLinecap="round" /></svg>;
+    case "bat":
+      return <svg viewBox="0 0 32 16" width="100%" height="100%"><path d="M16 5c-2-3-6-4-9-2 1 1 1 3 1 4-2-1-4-1-5 1 3 0 5 2 6 5 1-2 3-3 5-2 1-1 1.5-1 2-1s1 0 2 1c2-1 4 0 5 2 1-3 3-5 6-5-1-2-3-2-5-1 0-1 0-3 1-4-3-2-7-1-9 2z" fill="#2B1A4A" stroke={INK} strokeWidth="1.6" strokeLinejoin="round" /></svg>;
+    case "pumpkin":
+      return (
+        <svg viewBox="0 0 24 24" width="100%" height="100%">
+          <path d="M12 7c-1-2-.5-3.5 1-4.5" fill="none" stroke="#3E7A23" strokeWidth="2.4" strokeLinecap="round" />
+          <ellipse {...common} fill="#FF8A1F" cx="12" cy="14" rx="9.5" ry="7.5" />
+          <path d="M8.5 7.5c-2 4-2 9 0 13M15.5 7.5c2 4 2 9 0 13" fill="none" stroke="#C4530A" strokeWidth="1.4" />
+        </svg>
+      );
+    case "ghost":
+      return <svg viewBox="0 0 24 24" width="100%" height="100%"><path {...common} fill="#fff" d="M4.5 21V11a7.5 7.5 0 0 1 15 0v10l-2.5-2-2.5 2-2.5-2-2.5 2-2.5-2z" /><circle cx="9.5" cy="11" r="1.5" fill={INK} /><circle cx="14.5" cy="11" r="1.5" fill={INK} /></svg>;
+    case "candy":
+      return (
+        <svg viewBox="0 0 32 16" width="100%" height="100%">
+          <path {...common} d="M9 8L3 3v10zM23 8l6-5v10z" />
+          <circle {...common} cx="16" cy="8" r="6.5" />
+          <path d="M12 5.5c2 1 6 4 8 5" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" opacity=".8" />
+        </svg>
+      );
   }
 }

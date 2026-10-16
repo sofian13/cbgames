@@ -1,17 +1,25 @@
 /**
- * Icônes alternatives de l'app (réservées à Zinzin+) : Classique, Or, Nuit, Néon.
+ * Icônes alternatives de l'app (réservées à Zinzin+) : Classique, Or, Nuit, Néon, Halloween.
+ * L'icône Halloween met aussi l'app en mode Halloween au prochain lancement (season.ts).
  * Natif iOS : mini plugin local « ZinzinAppIcon » (ios/App/App/AppIconPlugin.swift),
  * icônes dans Assets.xcassets (AppIcon-Or…). Ailleurs (web, Android pour l'instant) : non supporté,
  * la rangée des Réglages est masquée.
  */
-export type AppIconId = "classic" | "or" | "nuit" | "neon";
+export type AppIconId = "classic" | "or" | "nuit" | "neon" | "halloween";
 
 export const APP_ICONS: { id: AppIconId; native: string | null; thumb: string }[] = [
   { id: "classic", native: null, thumb: "app-icons/classic.png" },
   { id: "or", native: "AppIcon-Or", thumb: "app-icons/or.png" },
   { id: "nuit", native: "AppIcon-Nuit", thumb: "app-icons/nuit.png" },
   { id: "neon", native: "AppIcon-Neon", thumb: "app-icons/neon.png" },
+  { id: "halloween", native: "AppIcon-Halloween", thumb: "app-icons/halloween.png" },
 ];
+
+/** Icône choisie, recopiée en local : lue sans attendre le natif au lancement (mode Halloween, season.ts). */
+export const APP_ICON_KEY = "zz-app-icon";
+function remember(id: AppIconId) {
+  try { if (id === "classic") localStorage.removeItem(APP_ICON_KEY); else localStorage.setItem(APP_ICON_KEY, id); } catch { /* indispo */ }
+}
 
 interface AppIconPlugin {
   isSupported(): Promise<{ value: boolean }>;
@@ -60,17 +68,20 @@ export async function currentAppIcon(): Promise<AppIconId> {
     const h = await getPlugin();
     try { name = h ? (await h.p.getName()).value : null; } catch { name = null; }
   }
-  return APP_ICONS.find((x) => x.native === name)?.id ?? "classic";
+  const id = APP_ICONS.find((x) => x.native === name)?.id ?? "classic";
+  remember(id);
+  return id;
 }
 
 /** Change l'icône (iOS affiche sa petite alerte de confirmation). */
 export async function setAppIcon(id: AppIconId): Promise<boolean> {
   const native = APP_ICONS.find((x) => x.id === id)?.native ?? null;
-  if (devMock()) { mockName = native; return true; }
+  if (devMock()) { mockName = native; remember(id); return true; }
   const h = await getPlugin();
   if (!h) return false;
   try {
     await h.p.setName(native ? { name: native } : {});
+    remember(id);
     return true;
   } catch {
     return false;

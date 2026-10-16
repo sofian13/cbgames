@@ -6,7 +6,7 @@ import { ZLogo } from "./Logo";
 import { useT } from "@/lib/i18n";
 import { UI } from "../strings";
 import { playSfx } from "@/lib/sfx";
-import { currentSeason } from "../season";
+import { SEASON } from "../season";
 import type { ZCostume } from "./costumes";
 
 /**
@@ -42,7 +42,7 @@ export function Splash({ onDone }: { onDone: () => void }) {
   const H = typeof window !== "undefined" ? window.innerHeight : 844;
   const still = reducedMotion();
   const t = useT(UI);
-  const halloween = useMemo(() => currentSeason() === "halloween", []);
+  const halloween = SEASON === "halloween";
 
   // Blobs : tailles variées proportionnelles à la largeur
   const specs = useMemo(() => {

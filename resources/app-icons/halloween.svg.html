@@ -1,0 +1,46 @@
+<!doctype html><html><body style="margin:0;background:#000">
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+<defs>
+ <radialGradient id="bg" cx="50%" cy="45%" r="75%"><stop offset="0" stop-color="#3A1A5E"/><stop offset=".55" stop-color="#1A0B33"/><stop offset="1" stop-color="#07030F"/></radialGradient>
+ <radialGradient id="glow" cx="50%" cy="58%" r="45%"><stop offset="0" stop-color="#FF7A00" stop-opacity=".55"/><stop offset="1" stop-color="#FF7A00" stop-opacity="0"/></radialGradient>
+ <radialGradient id="body" cx="38%" cy="32%" r="75%"><stop offset="0" stop-color="#FFB054"/><stop offset=".55" stop-color="#FF8A1F"/><stop offset="1" stop-color="#E0650C"/></radialGradient>
+ <clipPath id="clip"><path id="shape" d="M512 250 C700 250 860 380 860 580 C860 760 720 870 512 870 C300 870 164 760 164 580 C164 380 324 250 512 250Z"/></clipPath>
+ <filter id="blur"><feGaussianBlur stdDeviation="14"/></filter>
+</defs>
+<rect width="1024" height="1024" fill="url(#bg)"/>
+<rect width="1024" height="1024" fill="url(#glow)"/>
+<!-- lune -->
+<circle cx="820" cy="190" r="92" fill="#FFF1A6"/>
+<circle cx="790" cy="165" r="18" fill="#F2D36B"/><circle cx="850" cy="225" r="13" fill="#F2D36B"/><circle cx="845" cy="150" r="9" fill="#F2D36B"/>
+<!-- chauves-souris -->
+<g fill="#0A0414" stroke="#FF9A3C" stroke-width="1.2" stroke-opacity=".7">
+ <path transform="translate(190 190) scale(2.2)" d="M0 0 C-8 -10 -22 -12 -32 -6 C-26 -4 -25 2 -24 6 C-20 2 -14 3 -12 8 C-9 4 -4 4 0 8 C4 4 9 4 12 8 C14 3 20 2 24 6 C25 2 26 -4 32 -6 C22 -12 8 -10 0 0Z"/>
+ <path transform="translate(330 120) scale(1.4)" d="M0 0 C-8 -10 -22 -12 -32 -6 C-26 -4 -25 2 -24 6 C-20 2 -14 3 -12 8 C-9 4 -4 4 0 8 C4 4 9 4 12 8 C14 3 20 2 24 6 C25 2 26 -4 32 -6 C22 -12 8 -10 0 0Z"/>
+</g>
+<!-- ombre du blob -->
+<use href="#shape" fill="#8A3500" transform="translate(0 22)" opacity=".6"/>
+<!-- tige + feuille -->
+<path d="M488 262 C484 220 494 190 520 160 L560 172 C540 200 532 228 536 262Z" fill="#6B8E23" stroke="#1A0B33" stroke-width="14" stroke-linejoin="round"/>
+<path d="M548 200 C590 150 660 160 684 200 C640 232 590 230 548 200Z" fill="#7BD35A" stroke="#1A0B33" stroke-width="12" stroke-linejoin="round"/>
+<!-- corps -->
+<use href="#shape" fill="url(#body)"/>
+<g clip-path="url(#clip)">
+ <g fill="none" stroke="#C4530A" stroke-width="16" stroke-linecap="round" opacity=".55">
+  <path d="M370 262 C290 400 290 720 370 880"/><path d="M654 262 C734 400 734 720 654 880"/><path d="M512 250 C496 420 496 700 512 880" opacity=".5"/>
+ </g>
+ <path d="M164 640 C260 780 420 820 560 810 C700 800 820 730 860 620 L860 880 L164 880Z" fill="#C4530A" opacity=".35"/>
+</g>
+<ellipse cx="370" cy="340" rx="72" ry="40" fill="#fff" opacity=".55" transform="rotate(-28 370 340)" filter="url(#blur)"/>
+<!-- yeux -->
+<circle cx="392" cy="512" r="88" fill="#C4530A" opacity=".6" transform="translate(0 10)"/>
+<circle cx="392" cy="512" r="88" fill="#fff"/>
+<circle cx="642" cy="498" r="108" fill="#C4530A" opacity=".6" transform="translate(0 10)"/>
+<circle cx="642" cy="498" r="108" fill="#fff"/>
+<circle cx="420" cy="540" r="46" fill="#14062E"/><circle cx="436" cy="522" r="15" fill="#fff"/>
+<circle cx="618" cy="470" r="52" fill="#14062E"/><circle cx="636" cy="450" r="16" fill="#fff"/>
+<!-- sourcils -->
+<!-- bouche avec crocs -->
+<path d="M392 640 H636 C636 740 584 790 514 790 C444 790 392 740 392 640Z" fill="#14062E"/>
+<ellipse cx="514" cy="770" rx="62" ry="30" fill="#FF6B8B"/>
+<path d="M422 640 L440 692 L458 640Z" fill="#fff"/><path d="M570 640 L588 692 L606 640Z" fill="#fff"/>
+</svg></body></html>

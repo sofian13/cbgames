@@ -5,35 +5,42 @@ import { requestPaywall } from "@/lib/entitlements";
 import { APP_ICONS, appIconSupported, currentAppIcon, setAppIcon, type AppIconId } from "../app-icon";
 import { haptic } from "./util";
 
-const STR: I18n<{ title: string; sub: string; names: Record<AppIconId, string>; aria: (n: string) => string; locked: string; failed: string }> = {
+const STR: I18n<{ title: string; sub: string; names: Record<AppIconId, string>; aria: (n: string) => string; locked: string; failed: string; spookyOn: string; spookyOff: string }> = {
   fr: {
     title: "Icône de l'app",
     sub: "Réservé à Zinzin+",
-    names: { classic: "Classique", or: "Or", nuit: "Nuit", neon: "Néon" },
+    names: { classic: "Classique", or: "Or", nuit: "Nuit", neon: "Néon", halloween: "Halloween" },
     aria: (n) => `Icône ${n}`,
     locked: "(Zinzin+)",
     failed: "L'icône n'a pas pu changer, réessaie.",
+    spookyOn: "Relance l'app pour passer en mode Halloween 🎃",
+    spookyOff: "Relance l'app pour quitter le mode Halloween",
   },
   en: {
     title: "App icon",
     sub: "Zinzin+ only",
-    names: { classic: "Classic", or: "Gold", nuit: "Night", neon: "Neon" },
+    names: { classic: "Classic", or: "Gold", nuit: "Night", neon: "Neon", halloween: "Halloween" },
     aria: (n) => `${n} icon`,
     locked: "(Zinzin+)",
     failed: "Couldn't change the icon, try again.",
+    spookyOn: "Restart the app for Halloween mode 🎃",
+    spookyOff: "Restart the app to leave Halloween mode",
   },
   es: {
     title: "Icono de la app",
     sub: "Solo con Zinzin+",
-    names: { classic: "Clásico", or: "Oro", nuit: "Noche", neon: "Neón" },
+    names: { classic: "Clásico", or: "Oro", nuit: "Noche", neon: "Neón", halloween: "Halloween" },
     aria: (n) => `Icono ${n}`,
     locked: "(Zinzin+)",
     failed: "No se pudo cambiar el icono, inténtalo otra vez.",
+    spookyOn: "Reinicia la app para el modo Halloween 🎃",
+    spookyOff: "Reinicia la app para salir del modo Halloween",
   },
 };
 
 /**
- * Réglages : « Icône de l'app » (Classique + Or, Nuit, Néon pour Zinzin+).
+ * Réglages : « Icône de l'app » (Classique + Or, Nuit, Néon, Halloween pour Zinzin+).
+ * L'icône Halloween met l'app en mode Halloween au prochain lancement (season.ts).
  * Masquée si l'appareil ne sait pas changer d'icône (web, simulateur sans support…).
  */
 export function AppIconRow({ premium, toast }: { premium: boolean; toast: (m: string) => void }) {
@@ -62,8 +69,11 @@ export function AppIconRow({ premium, toast }: { premium: boolean; toast: (m: st
     setBusy(true);
     const ok = await setAppIcon(id);
     setBusy(false);
-    if (ok) setCurrent(id);
-    else toast(t.failed);
+    if (ok) {
+      if (id === "halloween") toast(t.spookyOn);
+      else if (current === "halloween") toast(t.spookyOff);
+      setCurrent(id);
+    } else toast(t.failed);
   };
 
   return (
@@ -72,7 +82,7 @@ export function AppIconRow({ premium, toast }: { premium: boolean; toast: (m: st
         <div className="zz-title text-[20px] text-white">{t.title}</div>
         {!premium && <div className="text-[13px] font-semibold" style={{ color: "var(--zz-dim)" }}>{t.sub}</div>}
       </div>
-      <div className="grid grid-cols-4 gap-2">
+      <div className="grid grid-cols-5 gap-1.5">
         {APP_ICONS.map((ic) => {
           const on = ic.id === current;
           const locked = ic.id !== "classic" && !premium;

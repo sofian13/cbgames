@@ -393,6 +393,14 @@ html, body { overflow-x: clip; overscroll-behavior-x: none; }
 :root[data-zz-theme="neon"] .zz-home .zz-glow { opacity: 0.18; }
 :root[data-zz-theme="sunset"] .zz-home .zz-glow, :root[data-zz-theme="candy"] .zz-home .zz-glow { opacity: 0.32; }
 
+/* ── Halloween (season.ts : du 24 oct. au 1er nov., ou icône Halloween) : couleurs de nuit à l'accueil,
+ * sauf si un thème de fond secret est choisi (il garde la priorité). */
+:root[data-zz-season="halloween"]:not([data-zz-theme]) .zz-home {
+  --zz-bg: #1A0E2E; --zz-dot: rgba(255, 170, 80, 0.09); --zz-glow: #FF7A00; --zz-glow-2: #3DDC97;
+  --zz-dim: #D9C2E6; --zz-mute: #B39BC4;
+}
+:root[data-zz-season="halloween"]:not([data-zz-theme]) .zz-home .zz-glow { opacity: 0.24; }
+
 /* Logo : indice au 5e toucher (« … ? ») */
 .zz-logo-hint { animation: zz-pop 380ms var(--zz-spring) both; rotate: 8deg; }
 

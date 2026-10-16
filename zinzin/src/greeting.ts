@@ -1,4 +1,5 @@
 import type { I18n } from "@/lib/i18n";
+import { SEASON } from "./season";
 
 /**
  * Petite phrase de l'accueil selon l'heure (et le week-end le matin).
@@ -8,7 +9,14 @@ import type { I18n } from "@/lib/i18n";
  * (classe zz-3h, voir Home.tsx / zinzin.css). En dev, `?zz3h=1` pour forcer.
  */
 type BaseSlot = "morningWeekend" | "morning" | "day" | "apero" | "evening" | "night" | "late";
-type Slot = BaseSlot | "three";
+type Slot = BaseSlot | "three" | "halloween";
+
+/** Halloween (season.ts) : remplace les phrases de l'heure (sauf le secret de 3 h). */
+const HALLOWEEN: I18n<string[]> = {
+  fr: ["Joyeux Halloween 🎃", "Soirée frissons ce soir ?", "Les blobs se sont déguisés.", "Qui est le vrai monstre ici ?"],
+  en: ["Happy Halloween 🎃", "Spooky night tonight?", "The blobs dressed up.", "Who's the real monster here?"],
+  es: ["¡Feliz Halloween! 🎃", "¿Noche de miedo hoy?", "Los blobs se han disfrazado.", "¿Quién es el monstruo de verdad?"],
+};
 
 /** 3 h du matin : remplace la plage « late » pendant cette heure-là. */
 const THREE_AM: I18n<string[]> = {
@@ -23,7 +31,8 @@ export function isThreeAm(now = new Date()): boolean {
   return now.getHours() === 3;
 }
 
-const lines = (lang: keyof typeof LINES, slot: Slot): string[] => (slot === "three" ? THREE_AM[lang] : LINES[lang][slot]);
+const lines = (lang: keyof typeof LINES, slot: Slot): string[] =>
+  slot === "three" ? THREE_AM[lang] : slot === "halloween" ? HALLOWEEN[lang] : LINES[lang][slot];
 
 const LINES: I18n<Record<BaseSlot, string[]>> = {
   fr: {
@@ -133,7 +142,7 @@ const LAST_KEY = "zz-greet-last";
 
 /** Tirage (une fois par ouverture) : la plage horaire + la variante, jamais la même que la dernière fois dans cette plage. */
 export function drawGreeting(now = new Date()): { slot: Slot; i: number } {
-  const slot: Slot = isThreeAm(now) ? "three" : slotOf(now);
+  const slot: Slot = isThreeAm(now) ? "three" : SEASON === "halloween" ? "halloween" : slotOf(now);
   const n = lines("fr", slot).length;
   let last: Partial<Record<Slot, number>> = {};
   try { last = JSON.parse(localStorage.getItem(LAST_KEY) ?? "{}") ?? {}; } catch { last = {}; }
