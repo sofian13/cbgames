@@ -1,7 +1,7 @@
 import UIKit
 import Capacitor
 
-/// Icônes alternatives (Zinzin+) : Classique, Or, Nuit, Néon.
+/// Icônes alternatives (Zinzin+) : Classique, Or, Nuit, Néon, Halloween.
 /// Les icônes sont dans Assets.xcassets (AppIcon-Or…) et listées dans le réglage
 /// ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES du projet. API publique uniquement
 /// (UIApplication.setAlternateIconName) : iOS affiche sa petite alerte de confirmation.
@@ -17,7 +17,7 @@ public class AppIconPlugin: CAPPlugin, CAPBridgedPlugin {
     ]
 
     /// Seules ces icônes peuvent être demandées depuis le JS
-    private let allowed: Set<String> = ["AppIcon-Or", "AppIcon-Nuit", "AppIcon-Neon"]
+    private let allowed: Set<String> = ["AppIcon-Or", "AppIcon-Nuit", "AppIcon-Neon", "AppIcon-Halloween"]
 
     @objc func isSupported(_ call: CAPPluginCall) {
         DispatchQueue.main.async {
