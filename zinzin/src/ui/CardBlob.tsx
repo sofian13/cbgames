@@ -10,7 +10,7 @@ import { haptic, reducedMotion } from "./util";
  * Secret de l'accueil : le blob qui dépasse d'une carte de jeu réagit quand on le touche
  * (sa zone est sa propre cible : la fiche ne s'ouvre pas, le reste de la carte l'ouvre toujours).
  * Il s'écrase comme de la gelée avec un petit son (varié) ; au 5e toucher rapide il se vexe :
- * il se détourne et boude 2-3 s avec une bulle (« Hé ! », « Oh ! », « Aïe ! »…), puis revient.
+ * il se détourne et boude 2-3 s avec une bulle (« Hé ! », « Oh ! », « Aïe ! »…, toujours très courtes), puis revient.
  * Un glissement du rail ne déclenche rien (pas de « click » après un défilement).
  * État local : seul ce blob se redessine (jamais l'accueil).
  */
@@ -21,9 +21,9 @@ const SULK_MS = 2600;
 
 /** Bulles du blob vexé (courtes : la bulle tient sur une ligne), jamais deux fois la même d'affilée */
 const HEY: Record<Lang, string[]> = {
-  fr: ["Hé !", "Oh !", "Aïe !", "Pas touche !", "Mais euh !", "Ça chatouille !", "Encore toi ?!", "Je boude.", "Arrête !", "Oh là là…"],
-  en: ["Hey!", "Oh!", "Ouch!", "Hands off!", "Not fair!", "That tickles!", "You again?!", "I'm sulking.", "Stop it!", "Oh dear…"],
-  es: ["¡Eh!", "¡Oh!", "¡Ay!", "¡No me toques!", "¡Jo!", "¡Cosquillas!", "¿¡Otra vez tú!?", "Me enfado.", "¡Para ya!", "¡Ay, ay, ay…!"],
+  fr: ["Hé !", "Oh !", "Aïe !", "Ouille !", "Hmpf !", "Pfff…", "Arrête !", "Mais euh !"],
+  en: ["Hey!", "Oh!", "Ouch!", "Ow!", "Hmph!", "Pfff…", "Stop!", "Aww!"],
+  es: ["¡Eh!", "¡Oh!", "¡Ay!", "¡Uy!", "¡Hmpf!", "Pfff…", "¡Para!", "¡Jo!"],
 };
 let lastHey = -1;
 function pickHey(): number {
