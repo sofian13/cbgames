@@ -11,6 +11,7 @@ import { Backdrop } from "./Backdrop";
 import { BandSlide } from "./BandSlide";
 import { GamePicker } from "./GamePicker";
 import { SEASON } from "../season";
+import { HalloweenEggs, TrickOrTreat } from "./HalloweenEggs";
 import { ShakeRain } from "./ShakeRain";
 import { GoldenBlob } from "./GoldenBlob";
 import { PullBlob } from "./PullBlob";
@@ -72,6 +73,8 @@ export function Home({
       <TiredBlob homeRef={scrollRef} />
       {/* Secret : défiler très vite de haut en bas → blobs qui titubent, yeux en spirale */}
       <DizzyHome homeRef={scrollRef} />
+      {/* Secrets d'Halloween (mode Halloween seulement) : fantôme, lumière éteinte (appui long sur le logo), minuit */}
+      {SEASON === "halloween" && <HalloweenEggs homeRef={scrollRef} />}
       <div ref={contentRef} className="relative mx-auto max-w-lg" style={{ zIndex: 1, paddingTop: "calc(var(--sat) + 10px)", paddingBottom: "calc(var(--sab) + 32px)" }}>
         {/* En-tête */}
         <header className="relative flex items-center justify-between px-5">
@@ -121,6 +124,9 @@ export function Home({
             </span>
           </button>
         )}
+
+        {/* Halloween : citrouille au bord de l'écran, « Bonbon ou un sort ? » */}
+        {SEASON === "halloween" && <TrickOrTreat homeRef={scrollRef} />}
 
         {/* Sections */}
         {SECTIONS.map((sec, si) => {

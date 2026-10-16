@@ -114,6 +114,9 @@ class ZinzinBridgeViewController: CAPBridgeViewController {
             // Face cachée : capteur coupé en arrière-plan (batterie), relancé au retour
             NotificationCenter.default.addObserver(self, selector: #selector(startFaceDown), name: UIApplication.didBecomeActiveNotification, object: nil)
             NotificationCenter.default.addObserver(self, selector: #selector(stopFaceDown), name: UIApplication.didEnterBackgroundNotification, object: nil)
+            // App à scènes (UIScene) : on écoute aussi la scène, au cas où les notifications de l'app n'arrivent pas
+            NotificationCenter.default.addObserver(self, selector: #selector(startFaceDown), name: UIScene.didActivateNotification, object: nil)
+            NotificationCenter.default.addObserver(self, selector: #selector(stopFaceDown), name: UIScene.didEnterBackgroundNotification, object: nil)
         }
         startFaceDown()
     }
@@ -137,7 +140,7 @@ class ZinzinBridgeViewController: CAPBridgeViewController {
     // Téléphone posé écran contre la table ≥ 2 s puis retourné : événement window « zzfacedown ».
     // Accéléromètre brut à 5 Hz (pas de fusion de capteurs, coût quasi nul) ; aucune permission
     // ni clé Info.plist (NSMotionUsageDescription ne concerne que CMMotionActivity / podomètre).
-    // z ≈ +1 g : écran vers le bas ; z < 0 : écran de nouveau vers le haut (ou tenu en main).
+    // z ≈ +1 g : écran vers le bas ; z < 0,3 après ≥ 1,5 s à plat face cachée : relevé (vers le haut ou à la verticale).
 
     private let faceMotion = CMMotionManager()
     private var faceDownSince: Date?
@@ -156,9 +159,10 @@ class ZinzinBridgeViewController: CAPBridgeViewController {
             self.lowZ = self.lowZ * 0.5 + a.z * 0.5
             if self.lowZ > 0.85 {
                 if self.faceDownSince == nil { self.faceDownSince = Date() }
-                if let t = self.faceDownSince, Date().timeIntervalSince(t) >= 2 { self.faceDownArmed = true }
-            } else if self.lowZ < -0.2 {
-                if self.faceDownArmed { self.bridge?.triggerWindowJSEvent(eventName: "zzfacedown") }
+                if let t = self.faceDownSince, Date().timeIntervalSince(t) >= 1.5 { self.faceDownArmed = true }
+            } else if self.faceDownArmed && self.lowZ < 0.3 {
+                // Relevé : écran vers le haut OU simplement redressé (tenu à la verticale, z ≈ 0)
+                self.bridge?.triggerWindowJSEvent(eventName: "zzfacedown")
                 self.faceDownSince = nil
                 self.faceDownArmed = false
             } else if !self.faceDownArmed {

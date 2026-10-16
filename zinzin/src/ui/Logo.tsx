@@ -5,6 +5,7 @@ import { useT, type I18n } from "@/lib/i18n";
 import { playSfx } from "@/lib/sfx";
 import { haptic, reducedMotion } from "./util";
 import { BG_THEME_NAMES, nextBgTheme, type BgTheme } from "./bg-theme";
+import { SEASON } from "../season";
 
 /**
  * Logo « zinzin » multicolore (même que sur le site) : lettres stickers
@@ -49,6 +50,8 @@ const SECRET: I18n<{ unlocked: string; back: string; hint: string; aria: string 
 const SECRET_TAPS = 10;
 const HINT_TAP = 5;
 const SECRET_WINDOW = 6000;
+/** Halloween : appui long sur le logo → lumière éteinte (HalloweenEggs.tsx) */
+const LONG_PRESS_MS = 650;
 
 /**
  * Logo de l'accueil : un tap fait sauter les lettres en vague (+ petit son) ;
@@ -65,9 +68,20 @@ export function TapLogo({ size = 44 }: { size?: number }) {
   const hintTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const [secret, setSecret] = useState<BgTheme | null>(null);
   const [hint, setHint] = useState(false);
-  useEffect(() => () => { clearTimeout(timer.current); clearTimeout(hintTimer.current); }, []);
+  const press = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const longDone = useRef(false);
+  useEffect(() => () => { clearTimeout(timer.current); clearTimeout(hintTimer.current); clearTimeout(press.current); }, []);
+  const pressStart = () => {
+    if (SEASON !== "halloween") return;
+    longDone.current = false;
+    clearTimeout(press.current);
+    press.current = setTimeout(() => { longDone.current = true; window.dispatchEvent(new Event("zz:lights-off")); }, LONG_PRESS_MS);
+  };
+  const pressEnd = () => clearTimeout(press.current);
 
   const tap = () => {
+    // Le clic qui suit un appui long (lumière éteinte) ne compte pas comme un toucher
+    if (longDone.current) { longDone.current = false; return; }
     const now = performance.now();
     taps.current = [...taps.current.filter((x) => now - x < SECRET_WINDOW), now];
     const n = taps.current.length;
@@ -112,7 +126,9 @@ export function TapLogo({ size = 44 }: { size?: number }) {
   return (
     <>
       <span className="relative block">
-        <button type="button" onClick={tap} aria-label={t.aria} className="block leading-none" style={{ WebkitTapHighlightColor: "transparent" }}>
+        <button type="button" onClick={tap} onPointerDown={pressStart} onPointerUp={pressEnd} onPointerLeave={pressEnd} onPointerCancel={pressEnd}
+          onContextMenu={(e) => e.preventDefault()} aria-label={t.aria} className="block leading-none"
+          style={{ WebkitTapHighlightColor: "transparent", WebkitTouchCallout: "none", userSelect: "none" }}>
           <ZLogo size={size} jumpRef={logo} />
         </button>
         {hint && (

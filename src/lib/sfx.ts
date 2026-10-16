@@ -29,6 +29,8 @@ export type SfxName =
   | "jingle" | "laugh"
   // intro d'Halloween : orgue « Toccata » (Bach, domaine public) synthétisé maison, voir tools/sfx/spooky-synth.py
   | "spooky"
+  // easter eggs d'Halloween (synthétisés maison, tools/sfx/halloween-synth.py) : fantôme, crapaud du sort
+  | "ghost-boo" | "croak"
   // liquides (pour et fizz bouclables : playLoop)
   | "pour" | "glug" | "splash" | "fizz"
   // élastique (blob tiré de l'accueil) : grincement bouclable pendant le tirage, claquement au lâcher

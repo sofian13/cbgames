@@ -401,6 +401,27 @@ html, body { overflow-x: clip; overscroll-behavior-x: none; }
 }
 :root[data-zz-season="halloween"]:not([data-zz-theme]) .zz-home .zz-glow { opacity: 0.24; }
 
+/* Secrets d'Halloween (HalloweenEggs.tsx) */
+.zz-candy { opacity: 0; animation: zz-candy-fall 2s cubic-bezier(.3,.1,.7,1) both; }
+@keyframes zz-candy-fall {
+  0% { opacity: 1; transform: translateY(-60px) rotate(0deg); }
+  85% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(105vh) rotate(var(--r, 360deg)); }
+}
+/* Le sort : les blobs virent au vert crapaud et gigotent */
+svg.zz-hexed { filter: sepia(1) saturate(3.5) hue-rotate(62deg) brightness(0.95); animation: zz-hex-wob 0.5s ease-in-out infinite; transition: filter 400ms; }
+@keyframes zz-hex-wob { 0%, 100% { transform: scale(1, 1); } 50% { transform: scale(1.08, 0.92); } }
+.zz-lights { animation: zz-fade-in 220ms ease both; }
+.zz-eye-glow { background: radial-gradient(circle, #FFFBD0 0%, #F8FF6B 45%, rgba(190,255,60,0) 72%); box-shadow: 0 0 14px 4px rgba(214,255,80,0.55); animation: zz-eye-blink 3.4s ease-in-out infinite; transition: opacity 200ms; }
+@keyframes zz-eye-blink { 0%, 90%, 100% { transform: scaleY(1); } 94% { transform: scaleY(0.1); } }
+@keyframes zz-fade-in { from { opacity: 0; } to { opacity: 1; } }
+.zz-midnight { background: radial-gradient(circle at 50% 45%, rgba(200,0,30,0.38), rgba(90,0,10,0.75)); animation: zz-midnight-in 1.2s ease both, zz-midnight-pulse 2.4s ease-in-out 1.2s infinite; }
+@keyframes zz-midnight-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes zz-midnight-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.82; } }
+@media (prefers-reduced-motion: reduce) {
+  svg.zz-hexed, .zz-eye-glow, .zz-midnight { animation: none !important; }
+}
+
 /* Logo : indice au 5e toucher (« … ? ») */
 .zz-logo-hint { animation: zz-pop 380ms var(--zz-spring) both; rotate: 8deg; }
 

@@ -56,3 +56,4 @@ elastic-snap       | Freesound « TentacleSnap.mp3 » (wilhellboy) — bande él
 
 jingle.m4a — « Perfect Drop », fourni par le fondateur (licence à confirmer avant publication).
 spooky.m4a — orgue façon film d'horreur (motif de la Toccata BWV 565 de Bach, domaine public) + fantôme, synthétisé maison (tools/sfx/spooky-synth.py) : aucun droit tiers.
+ghost-boo.m4a, croak.m4a — fantôme et crapaud d'Halloween, synthétisés maison (tools/sfx/halloween-synth.py) : aucun droit tiers.
