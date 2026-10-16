@@ -272,7 +272,7 @@ const DARES = [
   "Imite le rire de la personne à ta gauche.",
   "Fais cinq squats en disant « je suis sérieux » à chaque fois.",
   "Termine chaque phrase par « coin coin » jusqu'au prochain tour.",
-  "Fais une révérence à chaque joueur.",
+  "Fais une révérence royale à chaque joueur en l'appelant « Votre Altesse ».",
   "Mime ton animal préféré jusqu'à ce que quelqu'un devine.",
   "Fais une déclaration d'amour à l'objet le plus proche.",
   "Danse dix secondes sans musique.",

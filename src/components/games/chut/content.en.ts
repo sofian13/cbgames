@@ -280,7 +280,7 @@ const DARES = [
   "Imitate the laugh of the person on your left.",
   "Do five squats, saying “I am very serious” each time.",
   "End every sentence with “quack quack” until the next turn.",
-  "Bow or curtsy to each player.",
+  "Bow like a courtier to each player, calling them “Your Highness”.",
   "Act out your favourite animal until someone guesses it.",
   "Declare your love to the nearest object.",
   "Dance for ten seconds with no music.",

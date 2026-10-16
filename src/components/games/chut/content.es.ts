@@ -275,7 +275,7 @@ const DARES = [
   "Imita la risa de la persona a tu izquierda.",
   "Haz cinco sentadillas diciendo «soy una persona seria» en cada una.",
   "Termina cada frase con «cuac cuac» hasta el próximo turno.",
-  "Haz una reverencia a cada jugador.",
+  "Haz una reverencia real a cada jugador llamándole « Su Alteza ».",
   "Imita a tu animal favorito hasta que alguien lo adivine.",
   "Declárale tu amor al objeto más cercano.",
   "Baila diez segundos sin música.",
