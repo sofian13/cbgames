@@ -122,6 +122,44 @@ export function AvatarEditor({
       { duration: 380, easing: "ease-out" },
     );
   };
+  // Secret : toucher l'aperçu le gifle (tête qui part sur le côté, mine choquée) ;
+  // 5 gifles rapides → il a le tournis (yeux en spirale, côté app : événement « zz:dizzy »)
+  const [slapped, setSlapped] = useState(false);
+  const slaps = useRef({ n: 0, at: 0, dir: 1, dizzyUntil: 0 });
+  const slapT = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  useEffect(() => () => clearTimeout(slapT.current), []);
+  const slap = () => {
+    const el = preview.current;
+    const now = performance.now();
+    const sl = slaps.current;
+    if (now < sl.dizzyUntil) return; // il a déjà le tournis : on le laisse tranquille
+    sl.n = now - sl.at < 900 ? sl.n + 1 : 1;
+    sl.at = now;
+    sl.dir = -sl.dir; // aller-retour : une joue, puis l'autre
+    playSfx("slap", { volume: 0.7, rate: 0.92 + Math.random() * 0.16 });
+    setSlapped(true);
+    clearTimeout(slapT.current);
+    slapT.current = setTimeout(() => setSlapped(false), 650);
+    if (el && typeof el.animate === "function" && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      const d = sl.dir;
+      el.animate(
+        [
+          { transform: "translateX(0) rotate(0deg) scale(1,1)" },
+          { transform: `translateX(${d * 14}px) rotate(${d * 20}deg) scale(1.06,0.94)`, offset: 0.18 },
+          { transform: `translateX(${-d * 5}px) rotate(${-d * 8}deg) scale(0.97,1.03)`, offset: 0.5 },
+          { transform: `translateX(${d * 2}px) rotate(${d * 3}deg)`, offset: 0.75 },
+          { transform: "translateX(0) rotate(0deg) scale(1,1)" },
+        ],
+        { duration: 460, easing: "ease-out" },
+      );
+    }
+    if (sl.n >= 5 && el) {
+      sl.n = 0;
+      sl.dizzyUntil = now + 3000;
+      window.dispatchEvent(new CustomEvent("zz:dizzy", { detail: el }));
+    }
+  };
+
   const set = (patch: Partial<AvatarLook>) => {
     setLook((l) => ({ ...l, ...patch }));
     setErr(null);
@@ -185,8 +223,8 @@ export function AvatarEditor({
         </div>
         <div className="relative grid h-full flex-1 place-items-center">
           <div className="absolute bottom-[4%] h-[12%] w-[46%] rounded-[50%]" style={{ background: "rgba(0,0,0,0.28)" }} />
-          <div ref={preview} style={{ marginTop: "10%" }}>
-            <AvatarBlob look={look} name={shownName} size={pv} mood={talk !== null ? talkMood(talk) : "happy"} animate={talk === null} />
+          <div ref={preview} onClick={slap} role="button" aria-label={shownName || "Perso"} style={{ marginTop: "10%", cursor: "pointer", WebkitTapHighlightColor: "transparent" }}>
+            <AvatarBlob look={look} name={shownName} size={pv} mood={talk !== null ? talkMood(talk) : slapped ? "shocked" : "happy"} animate={talk === null} />
           </div>
         </div>
         <div className="flex flex-col items-center gap-1.5">

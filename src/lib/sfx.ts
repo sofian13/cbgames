@@ -31,6 +31,8 @@ export type SfxName =
   | "spooky"
   // easter eggs d'Halloween (synthétisés maison, tools/sfx/halloween-synth.py) : fantôme, crapaud du sort
   | "ghost-boo" | "croak"
+  // gifle du perso dans l'éditeur (synthétisée maison, tools/sfx/slap-synth.py)
+  | "slap"
   // liquides (pour et fizz bouclables : playLoop)
   | "pour" | "glug" | "splash" | "fizz"
   // élastique (blob tiré de l'accueil) : grincement bouclable pendant le tirage, claquement au lâcher

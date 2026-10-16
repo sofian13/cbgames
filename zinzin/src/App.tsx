@@ -7,6 +7,7 @@ import { useToast } from "./ui/common";
 import { GameSheet } from "./ui/GameSheet";
 import { Home, isLocked } from "./ui/Home";
 import { Paywall } from "./ui/Paywall";
+import { spiralEyes } from "./ui/spiral-eyes";
 import { AgeGate, GameScreen, LegalScreen, SettingsSheet, type LegalPage } from "./ui/Screens";
 import { Splash } from "./ui/Splash";
 import { Onboarding, isOnboarded } from "./ui/Onboarding";
@@ -64,6 +65,16 @@ export function App() {
     if (paywall) hadPaywall.current = true;
     else if (hadPaywall.current) { hadPaywall.current = false; notifyPaywallClosed(); }
   }, [paywall]);
+  // Secret de l'éditeur de perso (AvatarEditor) : gifles répétées → yeux en spirale sur l'aperçu
+  useEffect(() => {
+    const on = (e: Event) => {
+      const el = (e as CustomEvent<Element>).detail;
+      if (el instanceof Element) spiralEyes(el, 2800, { wobble: true });
+    };
+    window.addEventListener("zz:dizzy", on);
+    return () => window.removeEventListener("zz:dizzy", on);
+  }, []);
+
   useEffect(() => {
     const open = () => setReplayTuto(true);
     window.addEventListener("zz:onboarding", open);
