@@ -270,7 +270,7 @@ export const AVATAR_NAMES: I18n<Record<string, string>> = {
     // couleurs
     "color.pink": "Rose", "color.yellow": "Jaune", "color.purple": "Violet", "color.mint": "Menthe", "color.sky": "Lagon",
     "color.coral": "Corail", "color.lavender": "Lavande", "color.white": "Crème", "color.orange": "Orange", "color.cherry": "Cerise",
-    "color.blue": "Bleu", "color.forest": "Sapin", "color.cocoa": "Cacao", "color.peach": "Pêche", "color.night": "Nuit", "color.lime": "Citron vert",
+    "color.blue": "Bleu", "color.forest": "Sapin", "color.cocoa": "Cacao", "color.peach": "Pêche", "color.night": "Nuit", "color.lime": "Citron vert", "color.pumpkin": "Citrouille",
     // couleurs de cheveux
     "hc.auto": "D'origine", "hc.black": "Noir", "hc.brown": "Châtain", "hc.blond": "Blond", "hc.ginger": "Roux", "hc.pink": "Rose",
     "hc.blue": "Bleu", "hc.green": "Vert", "hc.white": "Blanc", "hc.purple": "Violet",
@@ -309,7 +309,7 @@ export const AVATAR_NAMES: I18n<Record<string, string>> = {
   en: {
     "color.pink": "Pink", "color.yellow": "Yellow", "color.purple": "Purple", "color.mint": "Mint", "color.sky": "Lagoon",
     "color.coral": "Coral", "color.lavender": "Lavender", "color.white": "Cream", "color.orange": "Orange", "color.cherry": "Cherry",
-    "color.blue": "Blue", "color.forest": "Pine", "color.cocoa": "Cocoa", "color.peach": "Peach", "color.night": "Night", "color.lime": "Lime",
+    "color.blue": "Blue", "color.forest": "Pine", "color.cocoa": "Cocoa", "color.peach": "Peach", "color.night": "Night", "color.lime": "Lime", "color.pumpkin": "Pumpkin",
     "hc.auto": "Original", "hc.black": "Black", "hc.brown": "Brown", "hc.blond": "Blond", "hc.ginger": "Ginger", "hc.pink": "Pink",
     "hc.blue": "Blue", "hc.green": "Green", "hc.white": "White", "hc.purple": "Purple",
     "eyes.classic": "Zinzin", "eyes.big": "Sparkly eyes", "eyes.happy": "Delighted", "eyes.sleepy": "Sleepy", "eyes.determined": "Determined",
@@ -342,7 +342,7 @@ export const AVATAR_NAMES: I18n<Record<string, string>> = {
   es: {
     "color.pink": "Rosa", "color.yellow": "Amarillo", "color.purple": "Morado", "color.mint": "Menta", "color.sky": "Laguna",
     "color.coral": "Coral", "color.lavender": "Lavanda", "color.white": "Crema", "color.orange": "Naranja", "color.cherry": "Cereza",
-    "color.blue": "Azul", "color.forest": "Pino", "color.cocoa": "Cacao", "color.peach": "Melocotón", "color.night": "Noche", "color.lime": "Lima",
+    "color.blue": "Azul", "color.forest": "Pino", "color.cocoa": "Cacao", "color.peach": "Melocotón", "color.night": "Noche", "color.lime": "Lima", "color.pumpkin": "Calabaza",
     "hc.auto": "Original", "hc.black": "Negro", "hc.brown": "Castaño", "hc.blond": "Rubio", "hc.ginger": "Pelirrojo", "hc.pink": "Rosa",
     "hc.blue": "Azul", "hc.green": "Verde", "hc.white": "Blanco", "hc.purple": "Morado",
     "eyes.classic": "Zinzin", "eyes.big": "Ojos brillantes", "eyes.happy": "Encantado", "eyes.sleepy": "Dormido", "eyes.determined": "Decidido",

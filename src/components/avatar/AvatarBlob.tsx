@@ -59,6 +59,13 @@ const HAIR_SEAT: Record<string, number> = {
   mullet: 10, quiff: -4,
 };
 
+/** Côtes de citrouille sur le corps : couleur « Citrouille » ou chapeau « Citrouille » (Halloween). */
+const PUMPKIN_RIBS = (
+  <g fill="none" stroke="#000" strokeOpacity={0.22} strokeWidth={3.2} strokeLinecap="round">
+    <path d="M38 14 C24 40 24 86 38 116" /><path d="M82 14 C96 40 96 86 82 116" /><path d="M60 10 C56 40 56 86 60 118" strokeOpacity={0.12} />
+  </g>
+);
+
 /** Chapeaux qui couvrent le crâne : y du bord (les cheveux au-dessus sont cachés dessous). */
 const HAT_COVER: Record<string, number> = {
   straw: 24, cap: 30, beanie: 32, bucket: 30, cowboy: 26, tophat: 23, bandana: 30, propeller: 30, witch: 24,
@@ -758,12 +765,9 @@ function hatLayer(id: string, dy: number, bc: string, animate = false): ReactNod
         </g>
       );
     case "pumpkin":
-      // Halloween : citrouille (côtes sur le corps, tige, feuille et vrille ; plus joli avec la couleur Orange)
+      // Halloween : tige, feuille et vrille de citrouille (les côtes sont dessinées sur le corps, voir PUMPKIN_RIBS)
       return (
         <g>
-          <g clipPath={`url(#${bc})`} fill="none" stroke="#000" strokeOpacity={0.22} strokeWidth={3.2} strokeLinecap="round">
-            <path d="M38 14 C24 40 24 86 38 116" /><path d="M82 14 C96 40 96 86 82 116" /><path d="M60 10 C56 40 56 86 60 118" strokeOpacity={0.12} />
-          </g>
           <path d="M55 16 C54 8 55 2 59 -4 L66 -2 C63 4 62 9 63 16Z" fill="#5E8C2A" {...S} />
           <path d="M64 4 C72 -6 86 -4 90 4 C82 10 72 10 64 4Z" fill="#7BD35A" stroke={INK} strokeWidth={2.6} strokeLinejoin="round" />
           <path d="M54 6 C46 2 44 -6 50 -8 C54 -9 55 -4 51 -3" fill="none" stroke="#5DA03A" strokeWidth={2.4} strokeLinecap="round" />
@@ -1428,6 +1432,7 @@ export function AvatarSvg({ look, size, mood = "happy", animate = false, shadow 
       <g clipPath={`url(#${clip})`}>
         <ellipse cx={37} cy={30} rx={14} ry={8.5} transform="rotate(-24 37 30)" fill="#fff" opacity={0.5} />
         <circle cx={55} cy={22} r={2.6} fill="#fff" opacity={0.6} />
+        {(look.color === "pumpkin" || hatId === "pumpkin") && PUMPKIN_RIBS}
         {hair.skin}
         {face.skin}
       </g>

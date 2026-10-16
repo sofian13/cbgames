@@ -49,6 +49,8 @@ export const AVATAR_PALETTE: Record<string, { body: string; deep: string; hi: st
   peach:    { body: "#FFC4A3", deep: "#E08E68", hi: "#FFE6D6" },
   night:    { body: "#5A4E85", deep: "#352B5A", hi: "#9F94CC" },
   lime:     { body: "#C6F04A", deep: "#8DB51C", hi: "#EBFFB0" },
+  // Halloween : orange citrouille, avec des côtes sur le corps (AvatarBlob)
+  pumpkin:  { body: "#FF8A1F", deep: "#D2560A", hi: "#FFC07A" },
 };
 export const AVATAR_COLORS = Object.keys(AVATAR_PALETTE);
 
@@ -93,7 +95,10 @@ export const AVATAR_ITEMS: Record<AvatarSlot, AvatarItem[]> = {
     item("mullet", true), item("quiff", true),
   ],
   hat: [
-    item("none", true), item("straw", false, "bucket"), item("cap", true), item("beanie", true), item("crown", false, "party"),
+    item("none", true),
+    // Halloween (ajout v5), en tête de liste
+    item("witch", true), item("pumpkin", true),
+    item("straw", false, "bucket"), item("cap", true), item("beanie", true), item("crown", false, "party"),
     item("horns", false, "party"), item("bucket", true), item("ninja", false, "beanie"), item("cowboy", false, "bucket"),
     item("bow", true), item("halo", false, "party"), item("tophat", false, "cap"), item("party", true),
     item("bandana", false, "beanie"),
@@ -101,28 +106,28 @@ export const AVATAR_ITEMS: Record<AvatarSlot, AvatarItem[]> = {
     secretItem("goldhalo"),
     // Ajout v4
     item("flowers", true), item("propeller", false, "cap"),
-    // Halloween (ajout v5)
-    item("witch", true), item("pumpkin", true),
   ],
   face: [
-    item("none", true), item("shades", true), item("round", true), item("moustache", false, "none"), item("scar", false, "plaster"),
+    item("none", true),
+    // Halloween (ajout v5)
+    item("fangs", true),
+    item("shades", true), item("round", true), item("moustache", false, "none"), item("scar", false, "plaster"),
     item("plaster", true), item("mask", false, "none"), item("patch", false, "shades"), item("blush", true),
     item("goggles", false, "round"), item("freckles", true), item("beard", false, "none"), item("domino", false, "shades"),
     item("crossscar", false, "plaster"), item("bandages", true), item("earring", false, "none"),
     // Ajout v4
     item("clown", true), item("glasses3d", false, "round"), item("goldtooth", true),
-    // Halloween (ajout v5)
-    item("fangs", true),
   ],
   extra: [
-    item("none", true), item("scarf", true), item("armband", false, "scarf"), item("necklace", true), item("bowtie", true),
+    item("none", true),
+    // Halloween (ajout v5)
+    item("batwings", false, "none"),
+    item("scarf", true), item("armband", false, "scarf"), item("necklace", true), item("bowtie", true),
     item("cape", false, "scarf"), item("tie", false, "bowtie"), item("headphones", false, "necklace"),
     item("wings", false, "none"), item("lei", false, "necklace"),
     item("katana", false, "none"), item("longscarf", false, "scarf"),
     // Ajout v4
     item("medal", true), item("balloon", true),
-    // Halloween (ajout v5)
-    item("batwings", false, "none"),
   ],
 };
 
