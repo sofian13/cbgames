@@ -244,7 +244,7 @@ export const DARES_ES: string[] = [
   "Cuenta tu momento más vergonzoso… en 3 frases.",
   "Dile un cumplido sincero a cada jugador.",
   "Pon una mueca y no la quites hasta que alguien se ría.",
-  "Lee en voz alta el último mensaje que enviaste.",
+  "Haz 10 sentadillas contando en inglés.",
   "Habla de ti en tercera persona hasta la próxima ronda.",
   "Haz 5 flexiones (o 10 segundos de plancha).",
   "Haz un anuncio de 15 segundos para la patata.",

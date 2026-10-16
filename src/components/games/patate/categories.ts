@@ -249,7 +249,7 @@ export const DARES: string[] = [
   "Raconte ta pire honte… en 3 phrases.",
   "Fais un compliment sincère à chaque joueur.",
   "Garde une grimace jusqu'à ce que quelqu'un rigole.",
-  "Lis à voix haute le dernier message que tu as envoyé.",
+  "Fais 10 squats en comptant en anglais.",
   "Parle à la 3ᵉ personne jusqu'à la prochaine manche.",
   "Fais 5 pompes (ou 10 secondes de gainage).",
   "Fais une pub de 15 secondes pour la patate.",

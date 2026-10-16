@@ -244,7 +244,7 @@ export const DARES_EN: string[] = [
   "Tell your most embarrassing story… in 3 sentences.",
   "Give every player a genuine compliment.",
   "Pull a face and hold it until someone laughs.",
-  "Read out loud the last text you sent.",
+  "Do 10 squats counting in another language.",
   "Talk about yourself in the third person until the next round.",
   "Do 5 push-ups (or a 10-second plank).",
   "Do a 15-second advert for the potato.",
