@@ -23,6 +23,19 @@ type Phase = "splash" | "age" | "tuto" | "app";
  * Navigation de l'app (état React, pas d'URL) :
  * lancement animé → âge (1re fois) → tuto (1re fois) → paywall (si pas premium) → accueil.
  */
+/** Jour du dernier paywall de lancement (le 1er lancement compte comme « déjà vu aujourd'hui »). */
+const LAUNCH_PAYWALL_KEY = "zz-launch-paywall-day";
+function launchPaywallDue(): boolean {
+  const today = new Date().toDateString();
+  try {
+    const last = localStorage.getItem(LAUNCH_PAYWALL_KEY);
+    localStorage.setItem(LAUNCH_PAYWALL_KEY, today);
+    return last !== null && last !== today;
+  } catch {
+    return false;
+  }
+}
+
 export function App() {
   const premium = usePremium();
   const toast = useToast();
@@ -58,8 +71,9 @@ export function App() {
   }, []);
 
   const afterIntro = useCallback(() => {
-    // Paywall de lancement : uniquement pour les non-premium
-    if (!premium) setPaywall({});
+    // Paywall de lancement : uniquement pour les non-premium, jamais au tout premier lancement
+    // (on joue d'abord), puis une fois par jour au plus. Les contenus verrouillés l'ouvrent toujours.
+    if (!premium && launchPaywallDue()) setPaywall({});
   }, [premium]);
 
   const openGame = (id: string) => setSheet(id);
