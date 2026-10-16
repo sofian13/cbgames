@@ -101,6 +101,8 @@ export const AVATAR_ITEMS: Record<AvatarSlot, AvatarItem[]> = {
     secretItem("goldhalo"),
     // Ajout v4
     item("flowers", true), item("propeller", false, "cap"),
+    // Halloween (ajout v5)
+    item("witch", true), item("pumpkin", true),
   ],
   face: [
     item("none", true), item("shades", true), item("round", true), item("moustache", false, "none"), item("scar", false, "plaster"),
@@ -109,6 +111,8 @@ export const AVATAR_ITEMS: Record<AvatarSlot, AvatarItem[]> = {
     item("crossscar", false, "plaster"), item("bandages", true), item("earring", false, "none"),
     // Ajout v4
     item("clown", true), item("glasses3d", false, "round"), item("goldtooth", true),
+    // Halloween (ajout v5)
+    item("fangs", true),
   ],
   extra: [
     item("none", true), item("scarf", true), item("armband", false, "scarf"), item("necklace", true), item("bowtie", true),
@@ -117,6 +121,8 @@ export const AVATAR_ITEMS: Record<AvatarSlot, AvatarItem[]> = {
     item("katana", false, "none"), item("longscarf", false, "scarf"),
     // Ajout v4
     item("medal", true), item("balloon", true),
+    // Halloween (ajout v5)
+    item("batwings", false, "none"),
   ],
 };
 

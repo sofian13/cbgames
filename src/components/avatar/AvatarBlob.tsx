@@ -61,7 +61,7 @@ const HAIR_SEAT: Record<string, number> = {
 
 /** Chapeaux qui couvrent le crâne : y du bord (les cheveux au-dessus sont cachés dessous). */
 const HAT_COVER: Record<string, number> = {
-  straw: 24, cap: 30, beanie: 32, bucket: 30, cowboy: 26, tophat: 23, bandana: 30, propeller: 30,
+  straw: 24, cap: 30, beanie: 32, bucket: 30, cowboy: 26, tophat: 23, bandana: 30, propeller: 30, witch: 24,
 };
 
 /* ───────── Styles CSS (une seule fois) ───────── */
@@ -745,6 +745,30 @@ function hatLayer(id: string, dy: number, bc: string, animate = false): ReactNod
         </g>
       );
     }
+    case "witch":
+      // Halloween : chapeau pointu de sorcière (pointe qui retombe, ruban violet, boucle dorée)
+      return (
+        <g transform="rotate(-7 60 22)">
+          <path d="M36 22 C42 4 48 -18 66 -34 C64 -24 70 -2 84 22Z" fill="#3B1F6E" {...S} />
+          <path d="M66 -34 C74 -38 80 -32 77 -26" fill="none" stroke={INK} strokeWidth={SW} strokeLinecap="round" />
+          <path d="M40 12 C52 15 70 15 82 11 L84 19 C70 23 52 23 38 20Z" fill="#9B5CFF" stroke={INK} strokeWidth={2.4} strokeLinejoin="round" />
+          <rect x={55} y={11} width={10} height={9} rx={1.8} fill="#FFD23F" stroke={INK} strokeWidth={2} />
+          <path d="M48 -6 C46 2 44 8 43 12" fill="none" stroke="#6A44B0" strokeWidth={2.4} strokeLinecap="round" />
+          <ellipse cx={60} cy={24} rx={48} ry={8.5} fill="#3B1F6E" {...S} />
+        </g>
+      );
+    case "pumpkin":
+      // Halloween : citrouille (côtes sur le corps, tige, feuille et vrille ; plus joli avec la couleur Orange)
+      return (
+        <g>
+          <g clipPath={`url(#${bc})`} fill="none" stroke="#000" strokeOpacity={0.22} strokeWidth={3.2} strokeLinecap="round">
+            <path d="M38 14 C24 40 24 86 38 116" /><path d="M82 14 C96 40 96 86 82 116" /><path d="M60 10 C56 40 56 86 60 118" strokeOpacity={0.12} />
+          </g>
+          <path d="M55 16 C54 8 55 2 59 -4 L66 -2 C63 4 62 9 63 16Z" fill="#5E8C2A" {...S} />
+          <path d="M64 4 C72 -6 86 -4 90 4 C82 10 72 10 64 4Z" fill="#7BD35A" stroke={INK} strokeWidth={2.6} strokeLinejoin="round" />
+          <path d="M54 6 C46 2 44 -6 50 -8 C54 -9 55 -4 51 -3" fill="none" stroke="#5DA03A" strokeWidth={2.4} strokeLinecap="round" />
+        </g>
+      );
     case "propeller":
       // Casquette à hélice : calotte en quartiers, petite visière, hélice qui tourne (animée)
       return (
@@ -1085,6 +1109,22 @@ function faceLayer(id: string, c: { body: string; deep: string }, hc: string, bc
         ),
       };
     }
+    case "fangs": {
+      // Halloween : crocs de vampire, posés en haut de la bouche ouverte (ou qui dépassent sous la bouche fermée)
+      const open: Partial<Record<MascotMood, [number, number, number]>> = {
+        happy: [60, 77, 9], wink: [60, 77, 9], fire: [60, 77, 9], laughing: [60, 77, 12], rofl: [60, 77, 12],
+        shocked: [60, 79, 4.5], mindblown: [60, 79, 4.5],
+      };
+      const [x, y, dx] = open[mood] ?? [60, 84, 6];
+      const fang = (cx: number) => `M${cx - 2.6} ${y} L${cx} ${y + 7} L${cx + 2.6} ${y}Z`;
+      return {
+        over: (
+          <g fill="#fff" stroke={INK} strokeWidth={1.5} strokeLinejoin="round">
+            <path d={fang(x - dx)} /><path d={fang(x + dx)} />
+          </g>
+        ),
+      };
+    }
     default:
       return {};
   }
@@ -1182,6 +1222,19 @@ function extraLayers(id: string, c: { body: string; deep: string }, seat: number
             <path d={w} fill="#fff" {...S} />
             <path d={w} transform={flip} fill="#fff" {...S} />
             <path d="M-6 62 C2 62 10 64 16 68 M126 62 C118 62 110 64 104 68" fill="none" stroke="#C9C0E0" strokeWidth={1.8} strokeLinecap="round" />
+          </g>
+        ),
+      };
+    }
+    case "batwings": {
+      // Halloween : ailes de chauve-souris (membrane violet nuit, nervures)
+      const w = "M20 58 C10 40 -6 34 -18 42 C-12 46 -12 52 -14 56 C-8 53 -2 55 0 61 C4 57 10 58 12 64 C15 60 19 60 21 64Z";
+      return {
+        back: (
+          <g>
+            <path d={w} fill="#2B1A4A" {...S} />
+            <path d={w} transform={flip} fill="#2B1A4A" {...S} />
+            <path d="M18 56 C10 50 0 46 -12 44 M14 58 C8 56 2 56 -4 58 M106 60 C112 54 120 50 132 44 M106 58 C112 56 118 56 124 58" fill="none" stroke="#6A4FA0" strokeWidth={1.6} strokeLinecap="round" />
           </g>
         ),
       };

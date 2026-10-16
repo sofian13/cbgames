@@ -179,7 +179,8 @@ export function TrickOrTreat({ homeRef }: { homeRef: RefObject<HTMLElement | nul
   return (
     // Rogné à droite seulement (overflow-x: clip) : la citrouille inclinée ne doit jamais faire défiler l'accueil sur le côté
     <div className="relative h-0" style={{ overflowX: "clip", overflowY: "visible" }}>
-      <div className="absolute right-0 top-1 flex items-center" style={{ zIndex: 3 }}>
+      {/* Au niveau du sous-titre de la 1re section (texte court à gauche) : jamais sur le grand titre */}
+      <div className="absolute right-0 flex items-center" style={{ top: 58, zIndex: 3 }}>
         {(ask || after) && (
           <div className="zz-pop zz-stk-sm mr-1 flex flex-col items-end gap-1.5 rounded-[18px] px-3 py-2" style={{ background: "#fff", color: "var(--zz-ink)" }}>
             <span className="text-[15px] font-extrabold">{after ? t.after : t.ask}</span>
@@ -198,7 +199,7 @@ export function TrickOrTreat({ homeRef }: { homeRef: RefObject<HTMLElement | nul
           className="block"
           style={{ marginRight: 2, rotate: "-14deg" }}
         >
-          <ZBlob size={56} color="yellow" mood="wink" seed={21} shadow={false} outline costume="pumpkin" hop={false} speed={2.2} />
+          <ZBlob size={48} color="yellow" mood="wink" seed={21} shadow={false} outline costume="pumpkin" hop={false} speed={2.2} />
         </button>
       </div>
       {rain > 0 && <CandyRain id={rain} />}
