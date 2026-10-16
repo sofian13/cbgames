@@ -84,7 +84,7 @@
 [data-zz-off] .zb-wob, [data-zz-off] .zb-rofl, [data-zz-off] .zb-face, [data-zz-off] .zb-blink,
 [data-zz-off] .zb-pupil-a, [data-zz-off] .zb-pupil-b, [data-zz-off] .zb-heart, [data-zz-off] .zb-flame,
 [data-zz-off] .zb-drop, [data-zz-off] .zb-zz, [data-zz-off] .zc-nose, [data-zz-off] .zc-tick,
-[data-zz-off] .zc-wave, [data-zz-off] .zc-tray, [data-zz-off] .zz-band-bob, [data-zz-off] .av-wob,
+[data-zz-off] .zc-wave, [data-zz-off] .zc-wing, [data-zz-off] .zc-tray, [data-zz-off] .zz-band-bob, [data-zz-off] .av-wob,
 [data-zz-off] .av-blink, [data-zz-off] .av-prop { animation-play-state: paused !important; }
 
 /* Les pupilles suivent le doigt (--zz-lx/--zz-ly posés sur chaque .zb-follow par installLookAtFinger) */
@@ -101,6 +101,10 @@
 .zc-wave { animation: zc-wave 1.6s ease-in-out infinite; }
 .zc-wave-2 { animation-delay: 0.3s; }
 @keyframes zc-wave { 0%, 100% { opacity: 0.15; } 50% { opacity: 1; } }
+.zc-wing { animation: zc-wing 0.5s ease-in-out infinite; }
+.zc-wing-r { animation-name: zc-wing-r; }
+@keyframes zc-wing { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(18deg); } }
+@keyframes zc-wing-r { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(-18deg); } }
 .zc-tray { animation: zc-tray 2.4s ease-in-out infinite; }
 @keyframes zc-tray { 0%, 100% { transform: rotate(-5deg); } 50% { transform: rotate(6deg); } }
 
@@ -187,7 +191,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .zb-follow { transform: none !important; }
-  .zc-nose, .zc-tick, .zc-wave, .zc-tray { animation: none !important; }
+  .zc-nose, .zc-tick, .zc-wave, .zc-wing, .zc-tray { animation: none !important; }
   .zb-wob, .zb-rofl, .zb-face, .zb-blink, .zb-pupil-a, .zb-pupil-b, .zb-heart, .zb-flame, .zb-drop, .zb-zz { animation: none !important; }
   .zz-rise, .zz-pop, .zz-logo-in, .zz-sheet, .zz-screen-in { animation-duration: 1ms !important; animation-delay: 0ms !important; }
 }

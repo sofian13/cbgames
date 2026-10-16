@@ -6,14 +6,19 @@ import { ZLogo } from "./Logo";
 import { useT } from "@/lib/i18n";
 import { UI } from "../strings";
 import { playSfx } from "@/lib/sfx";
+import { currentSeason } from "../season";
+import type { ZCostume } from "./costumes";
 
 /**
  * Écran de lancement : des blobs tombent, rebondissent (squash & stretch),
  * s'entassent en bas en se bousculant, puis le logo arrive avec un rebond.
  * Physique maison (cercles + gravité), rendu direct dans le DOM via refs.
+ * Halloween (voir season.ts) : blobs déguisés, nuit orange et verte, lune, orgue qui fait peur.
  */
 
 const MOODS: MascotMood[] = ["happy", "laughing", "shocked", "wink", "love", "mindblown", "happy", "cool", "laughing", "kiss", "fire", "shocked", "rofl", "happy"];
+const SPOOKY_MOODS: MascotMood[] = ["shocked", "laughing", "wink", "mindblown", "fire", "shocked", "rofl", "cool", "laughing", "wink"];
+const SPOOKY: ZCostume[] = ["pumpkin", "witch", "vampire", "bat"];
 const LOGO_AT = 1250;
 const END_AT = 2350;
 
@@ -37,15 +42,18 @@ export function Splash({ onDone }: { onDone: () => void }) {
   const H = typeof window !== "undefined" ? window.innerHeight : 844;
   const still = reducedMotion();
   const t = useT(UI);
+  const halloween = useMemo(() => currentSeason() === "halloween", []);
 
   // Blobs : tailles variées proportionnelles à la largeur
   const specs = useMemo(() => {
     const n = W > 600 ? 18 : 14;
     return Array.from({ length: n }, (_, i) => {
       const r = W * (0.075 + rand(i + 1) * 0.07);
-      return { r, color: ZCOLORS[i % ZCOLORS.length] as ZColor, mood: MOODS[i % MOODS.length], seed: i * 3 + 1 };
+      const costume = halloween ? SPOOKY[i % SPOOKY.length] : undefined;
+      const mood = halloween ? SPOOKY_MOODS[i % SPOOKY_MOODS.length] : MOODS[i % MOODS.length];
+      return { r, color: ZCOLORS[i % ZCOLORS.length] as ZColor, mood, seed: i * 3 + 1, costume };
     });
-  }, [W]);
+  }, [W, halloween]);
 
   const finish = () => {
     if (doneRef.current) return;
@@ -55,7 +63,7 @@ export function Splash({ onDone }: { onDone: () => void }) {
   };
 
   // Jingle de lancement (une fois, respecte le bouton son coupé)
-  useEffect(() => { playSfx("jingle", { volume: 0.85 }); }, []);
+  useEffect(() => { playSfx(halloween ? "spooky" : "jingle", { volume: 0.85 }); }, [halloween]);
 
   useEffect(() => {
     const logoT = setTimeout(() => setLogo(true), still ? 100 : LOGO_AT);
@@ -186,19 +194,27 @@ export function Splash({ onDone }: { onDone: () => void }) {
   return (
     <div
       className="zz-tap fixed inset-0 overflow-hidden"
-      style={{ background: "var(--zz-bg)", opacity: leaving ? 0 : 1, transition: "opacity 260ms ease", zIndex: 50 }}
+      style={{ background: halloween ? "#120A22" : "var(--zz-bg)", opacity: leaving ? 0 : 1, transition: "opacity 260ms ease", zIndex: 50 }}
       onPointerDown={finish}
       role="button"
       aria-label={t.skipIntro}
     >
-      <div className="zz-glow" style={{ width: W * 0.9, height: W * 0.9, left: -W * 0.2, top: H * 0.12, background: "#5A2BE0", opacity: 0.35 }} />
-      <div className="zz-glow" style={{ width: W * 0.8, height: W * 0.8, right: -W * 0.3, top: H * 0.3, background: "#FF3EA5", opacity: 0.2 }} />
+      <div className="zz-glow" style={{ width: W * 0.9, height: W * 0.9, left: -W * 0.2, top: H * 0.12, background: halloween ? "#FF7A00" : "#5A2BE0", opacity: halloween ? 0.28 : 0.35 }} />
+      <div className="zz-glow" style={{ width: W * 0.8, height: W * 0.8, right: -W * 0.3, top: H * 0.3, background: halloween ? "#3DDC97" : "#FF3EA5", opacity: 0.2 }} />
+      {halloween && (
+        <svg className="zz-fade absolute" width={W * 0.22} height={W * 0.22} viewBox="0 0 100 100" style={{ right: W * 0.08, top: H * 0.07 }} aria-hidden>
+          <circle cx={50} cy={50} r={44} fill="#FFF1A6" stroke="#1A0B33" strokeWidth={5} />
+          <circle cx={36} cy={38} r={8} fill="#F2D36B" />
+          <circle cx={62} cy={62} r={6} fill="#F2D36B" />
+          <circle cx={60} cy={30} r={4} fill="#F2D36B" />
+        </svg>
+      )}
 
       {logo && (
         <div className="absolute inset-x-0 flex flex-col items-center" style={{ top: "28%" }}>
           <h1 className="zz-logo-in select-none" style={{ lineHeight: 1 }}><ZLogo size={Math.min(104, W * 0.26)} /></h1>
           <p className="zz-fade mt-3 text-[15px] font-semibold" style={{ color: "var(--zz-dim)", animationDelay: "250ms" }}>
-            {t.splashTagline}
+            {halloween ? t.splashHalloween : t.splashTagline}
           </p>
         </div>
       )}
@@ -210,7 +226,7 @@ export function Splash({ onDone }: { onDone: () => void }) {
           className="absolute left-0 top-0"
           style={{ opacity: 0, transformOrigin: "50% 92%", willChange: "transform" }}
         >
-          <ZBlob size={(sp.r * 2) / 0.8} color={sp.color} mood={sp.mood} seed={sp.seed} wobble={false} shadow={false} />
+          <ZBlob size={(sp.r * 2) / 0.8} color={sp.color} mood={sp.mood} seed={sp.seed} wobble={false} shadow={false} costume={sp.costume} />
         </div>
       ))}
     </div>

@@ -9,10 +9,15 @@ import type { ReactNode } from "react";
 export type ZCostume =
   | "wolf" | "groucho" | "pinocchio" | "ten" | "stopwatch" | "potato" | "fuse"
   | "spy" | "angeldevil" | "antenna" | "mime" | "card" | "hourglass" | "split"
-  | "duo" | "hearts" | "beer" | "train" | "blindfold" | "waiter" | "shush";
+  | "duo" | "hearts" | "beer" | "train" | "blindfold" | "waiter" | "shush"
+  // Halloween (intro spéciale, voir Splash.tsx)
+  | "pumpkin" | "witch" | "vampire" | "bat";
 
 /** Palette « pomme de terre » (le costume patate recolore le blob). */
 export const POTATO = { body: "#D9A066", deep: "#A8692F", hi: "#F4D3A0", ink: "#2A1A00" };
+
+/** Palette « citrouille » (le costume citrouille recolore le blob). */
+export const PUMPKIN = { body: "#FF8A1F", deep: "#D2560A", hi: "#FFC07A", ink: "#2A1200" };
 
 const INK = "#1A0B33";
 const SW = 3.2; // épaisseur des contours
@@ -154,6 +159,79 @@ export function costumeLayers(kind: ZCostume | undefined, ctx: Ctx): CostumeLaye
             <path d="M62 15 C64 4 72 0 80 1 C74 6 70 10 62 15Z" fill="#7BD35A" stroke={INK} strokeWidth={2.6} strokeLinejoin="round" />
             <path className="zb-drop" d="M16 30 C20 37 22 41 22 44 A6 6 0 0 1 10 44 C10 41 12 37 16 30Z" fill="#8FE3FF" stroke="#2A9CC4" strokeWidth={1.6} />
             <path className="zb-drop" style={{ animationDelay: "-1.1s" }} d="M104 54 C107 59 108 62 108 64 A4.5 4.5 0 0 1 99 64 C99 62 101 59 104 54Z" fill="#8FE3FF" stroke="#2A9CC4" strokeWidth={1.4} />
+          </g>
+        ),
+      };
+
+    // Halloween : citrouille (côtes, tige, feuille et vrille)
+    case "pumpkin":
+      return {
+        skin: clipped(
+          <g fill="none" stroke={PUMPKIN.deep} strokeWidth={3} strokeLinecap="round" opacity={0.6}>
+            <path d="M40 20 C26 44 26 84 40 112" />
+            <path d="M80 20 C94 44 94 84 80 112" />
+            <path d="M60 14 C56 44 56 84 60 116" opacity={0.5} />
+          </g>,
+        ),
+        top: (
+          <g>
+            <path d="M55 18 C54 10 55 4 59 -2 L66 0 C63 6 62 11 63 18Z" fill="#6B8E23" stroke={INK} strokeWidth={SW} strokeLinejoin="round" />
+            <path d="M64 6 C72 -4 86 -2 90 6 C82 12 72 12 64 6Z" fill="#7BD35A" stroke={INK} strokeWidth={2.6} strokeLinejoin="round" />
+            <path d="M54 8 C46 4 44 -4 50 -6 C54 -7 55 -2 51 -1" fill="none" stroke="#5DA03A" strokeWidth={2.4} strokeLinecap="round" />
+          </g>
+        ),
+      };
+
+    // Halloween : chapeau pointu de sorcière (bord large, ruban, boucle)
+    case "witch":
+      return {
+        top: (
+          <g transform="rotate(-8 60 14)">
+            <path d="M40 14 C46 -2 52 -22 70 -34 C66 -24 70 -6 80 14Z" fill="#3B1F6E" stroke={INK} strokeWidth={SW} strokeLinejoin="round" />
+            <path d="M70 -34 C76 -36 80 -32 78 -28" fill="none" stroke={INK} strokeWidth={SW} strokeLinecap="round" />
+            <path d="M44 6 C54 9 68 9 77 5 L79 12 C68 16 54 16 42 13Z" fill="#9B5CFF" stroke={INK} strokeWidth={2.4} strokeLinejoin="round" />
+            <rect x={55} y={6} width={9} height={8} rx={1.5} fill="#FFD23F" stroke={INK} strokeWidth={2} />
+            <ellipse cx={60} cy={16} rx={36} ry={7} fill="#3B1F6E" stroke={INK} strokeWidth={SW} />
+          </g>
+        ),
+      };
+
+    // Halloween : vampire (cape à grand col, mèche pointue, crocs)
+    case "vampire":
+      return {
+        back: (
+          <g>
+            <path d="M6 104 C10 78 18 60 30 52 L60 96 L90 52 C102 60 110 78 114 104 Q102 96 90 106 Q76 96 60 106 Q44 96 30 106 Q18 96 6 104Z" fill="#1A0B33" stroke={INK} strokeWidth={SW} strokeLinejoin="round" />
+            <path d="M22 40 L8 20 L38 34Z" fill="#C41F3A" stroke={INK} strokeWidth={SW} strokeLinejoin="round" />
+            <path d="M98 40 L112 20 L82 34Z" fill="#C41F3A" stroke={INK} strokeWidth={SW} strokeLinejoin="round" />
+          </g>
+        ),
+        top: <path d="M42 22 C50 14 56 18 60 30 C64 18 70 14 78 22 C72 10 48 10 42 22Z" fill={INK} />,
+        face: (
+          <g>
+            <path d="M51 83 L54 92 L57 83Z" fill="#fff" stroke={INK} strokeWidth={2.2} strokeLinejoin="round" />
+            <path d="M63 83 L66 92 L69 83Z" fill="#fff" stroke={INK} strokeWidth={2.2} strokeLinejoin="round" />
+          </g>
+        ),
+      };
+
+    // Halloween : ailes de chauve-souris qui battent
+    case "bat":
+      return {
+        back: (
+          <g>
+            <g className="zc-wing" style={{ transformOrigin: "30px 56px" }}>
+              <path d="M30 50 C18 34 4 32 -10 40 C-4 44 -4 50 -2 54 C2 50 8 52 10 58 C14 54 20 56 22 62Z" fill="#2B1A4A" stroke={INK} strokeWidth={SW} strokeLinejoin="round" />
+            </g>
+            <g className="zc-wing zc-wing-r" style={{ transformOrigin: "90px 56px" }}>
+              <path d="M90 50 C102 34 116 32 130 40 C124 44 124 50 122 54 C118 50 112 52 110 58 C106 54 100 56 98 62Z" fill="#2B1A4A" stroke={INK} strokeWidth={SW} strokeLinejoin="round" />
+            </g>
+          </g>
+        ),
+        top: (
+          <g>
+            <path d="M38 20 L36 2 L50 14Z" fill="#2B1A4A" stroke={INK} strokeWidth={SW} strokeLinejoin="round" />
+            <path d="M82 20 L84 2 L70 14Z" fill="#2B1A4A" stroke={INK} strokeWidth={SW} strokeLinejoin="round" />
           </g>
         ),
       };

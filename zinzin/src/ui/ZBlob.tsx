@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, type CSSProperties, type ReactNode } from "react";
 import type { MascotColor, MascotMood } from "@/components/Mascot";
-import { POTATO, costumeLayers, type ZCostume } from "./costumes";
+import { POTATO, PUMPKIN, costumeLayers, type ZCostume } from "./costumes";
 import { bandaidLayer, rainbowCrownLayer } from "@/components/avatar/AvatarBlob";
 
 /**
@@ -167,7 +167,7 @@ export function ZBlob({
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => pauseWhenOffscreen(ref.current), []);
   const uid = useId().replace(/:/g, "");
-  const c = palette ?? (costume === "potato" ? POTATO : (ZPALETTE[color] ?? ZPALETTE.pink));
+  const c = palette ?? (costume === "potato" ? POTATO : costume === "pumpkin" ? PUMPKIN : (ZPALETTE[color] ?? ZPALETTE.pink));
   const s = Math.abs(Math.floor(seed));
   const shape = SHAPES[s % SHAPES.length];
   const look = LOOKS[(s + (mood === "sus" || mood === "shifty" ? 4 : 0)) % LOOKS.length];

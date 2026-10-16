@@ -12,6 +12,7 @@ export const UI: I18n<{
   settings: string;
   // Lancement
   splashTagline: string;
+  splashHalloween: string;
   skipIntro: string;
   // Âge
   ageTitle: string;
@@ -104,6 +105,7 @@ export const UI: I18n<{
     back: "Retour",
     settings: "Réglages",
     splashTagline: "Jeux de soirée · un seul téléphone",
+    splashHalloween: "Joyeux Halloween 🎃",
     skipIntro: "Passer l'introduction",
     ageTitle: "Ici, c’est entre adultes.",
     ageText: "Zinzin est réservé aux 18 ans et plus. Dans les jeux à boire, une « gorgée de zinzin », c’est de ce que tu veux : eau, soft, jus… Avec modération.",
@@ -196,6 +198,7 @@ export const UI: I18n<{
     back: "Back",
     settings: "Settings",
     splashTagline: "Party games · just one phone",
+    splashHalloween: "Happy Halloween 🎃",
     skipIntro: "Skip intro",
     ageTitle: "Adults only in here.",
     ageText: "Zinzin is for ages 18 and up. In the drinking games, a \"zinzin sip\" is whatever you like: water, soft drinks, juice… Please drink responsibly.",
@@ -288,6 +291,7 @@ export const UI: I18n<{
     back: "Volver",
     settings: "Ajustes",
     splashTagline: "Juegos de fiesta · un solo móvil",
+    splashHalloween: "¡Feliz Halloween! 🎃",
     skipIntro: "Saltar la introducción",
     ageTitle: "Aquí solo entran adultos.",
     ageText: "Zinzin es solo para mayores de 18 años. En los juegos para beber, un «trago de zinzin» es de lo que quieras: agua, refresco, zumo… Con moderación.",
