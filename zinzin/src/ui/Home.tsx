@@ -307,7 +307,7 @@ function Slide({ f, lang, active, hidden, onOpen }: { f: ZFeatured; lang: Lang; 
       </div>
       {/* Le blob déborde de la carte */}
       <div className="absolute -right-3" style={{ bottom: -18 }}>
-        <ZBlob size={hero ? 150 : 140} color={f.blob} mood={f.mood} seed={hero ? 2 : f.id.length} shadow={false} outline={!hero} wobble={active} stoned={f.stoned} costume={f.costume ?? (f.gameId ? getZGame(f.gameId)?.costume : undefined)} />
+        <ZBlob size={hero ? 150 : 140} color={f.blob} mood={f.mood} seed={hero ? 2 : f.id.length} shadow={false} outline={!hero} wobble={active} costume={f.costume ?? (f.gameId ? getZGame(f.gameId)?.costume : undefined)} />
       </div>
       {f.buddy && (
         <div className="absolute right-6 -top-5">

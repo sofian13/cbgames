@@ -134,8 +134,6 @@ export interface ZFeatured {
   costume?: ZCostume;
   /** Slide « Ma bande » (visuel = les persos de l'utilisateur, ouvre la personnalisation) */
   band?: true;
-  /** Yeux « Nuit blanche » pour le blob de la slide */
-  stoned?: true;
   /** Slide « Quel jeu ce soir ? » (ouvre le choix guidé, GamePicker) */
   picker?: true;
   /** Texte du bouton de la slide (par défaut : « Voir le jeu ») */
@@ -150,7 +148,7 @@ export const FEATURED: ZFeatured[] = [
     subtitle: { fr: "Dis-nous combien vous êtes, on choisit pour vous.", en: "Tell us how many you are, we'll pick for you.", es: "Dinos cuántos sois y elegimos por vosotros." },
     cta: { fr: "Trouver le jeu", en: "Find the game", es: "Buscar juego" },
     bg: "linear-gradient(135deg,#FF8A1F 0%,#FF3EA5 100%)", ink: "#fff",
-    blob: "yellow", mood: "happy", stoned: true, buddy: { color: "mint", mood: "shocked" } },
+    blob: "yellow", mood: "mindblown", buddy: { color: "mint", mood: "shocked" } },
   // Ma bande : visuel = les persos de l'utilisateur (ou une bande d'exemple), ouvre la personnalisation
   { id: "band", band: true,
     kicker: { fr: "Nouveau · Ma bande", en: "New · My crew", es: "Nuevo · Mi grupo" },

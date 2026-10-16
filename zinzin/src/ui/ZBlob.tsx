@@ -67,8 +67,6 @@ export interface ZBlobProps {
   shades?: boolean;
   /** Pansement sur la joue (secret de la Soirée : dernier 3 jeux classés de suite) */
   bandaid?: boolean;
-  /** Yeux « Nuit blanche » (comme l'option des persos) : blanc rosi, vaisseaux rouges, paupières lourdes */
-  stoned?: boolean;
   /** Déguisement du jeu (voir costumes.tsx) */
   costume?: ZCostume;
   /** Saute quand on le touche (défaut : oui) */
@@ -164,7 +162,7 @@ export function pauseWhenOffscreen(el: Element | null): () => void {
 
 export function ZBlob({
   size = 96, color = "pink", mood = "happy", seed = 0, wobble = true, shadow = true,
-  speed = 2.6, delay = 0, outline = false, crown = false, rainbowCrown = false, shades = false, bandaid = false, stoned = false, costume, hop = true, palette, gloss = false, className, style,
+  speed = 2.6, delay = 0, outline = false, crown = false, rainbowCrown = false, shades = false, bandaid = false, costume, hop = true, palette, gloss = false, className, style,
 }: ZBlobProps) {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => pauseWhenOffscreen(ref.current), []);
@@ -209,29 +207,6 @@ export function ZBlob({
             fill="#FF2E7E" stroke={INK} strokeWidth={1.6}
             className="zb-heart"
           />
-        </g>
-      );
-    }
-    if (stoned) {
-      // « Nuit blanche » : même dessin que l'option des persos (AvatarBlob, eyes « allnighter »)
-      const r = e.r, R0 = r + 0.6;
-      const a = side ? r * 0.17 : r * 0.47, b = side ? r * 0.47 : r * 0.17; // paupière plus basse côté extérieur
-      const xa = e.x - Math.sqrt(R0 * R0 - a * a), xb = e.x + Math.sqrt(R0 * R0 - b * b);
-      const edge = `Q${e.x} ${e.y + r * 0.57} ${xa} ${e.y + a}`;
-      const dx = side ? r * 0.16 : -r * 0.12, dy = r * 0.57;
-      return (
-        <g className="zb-blink" style={{ animationDelay: `${(s % 5) * 0.7 + side * 0.08}s` }}>
-          <ellipse cx={e.x} cy={e.y + 2.2} rx={r} ry={r} fill={c.deep} opacity={0.55} />
-          <circle cx={e.x} cy={e.y} r={r} fill="#fff" />
-          <circle cx={e.x} cy={e.y} r={r - 0.8} fill="#FF5C66" opacity={0.42} />
-          <g transform={side ? `translate(${2 * e.x} 0) scale(-1 1)` : undefined} fill="none" stroke="#D41E38" strokeWidth={1.6} strokeLinecap="round">
-            <path d={`M${e.x - r + 1.2} ${e.y + r * 0.6} q3 -1.6 4.6 0.4 l2.4 -0.6 M${e.x - r + 3.6} ${e.y + r * 0.57} l0.6 -2`} />
-            <path d={`M${e.x + 3} ${e.y + r - 1} q0.4 -2.6 2.6 -3.2 M${e.x + r - 1.4} ${e.y + r * 0.43} q-2.6 0.6 -3.4 2.4`} />
-          </g>
-          <circle cx={e.x + dx} cy={e.y + dy} r={r * 0.34} fill={INK} />
-          <circle cx={e.x + dx + r * 0.11} cy={e.y + dy - r * 0.1} r={r * 0.1} fill="#fff" />
-          <path d={`M${xa} ${e.y + a} A${R0} ${R0} 0 1 1 ${xb} ${e.y + b} ${edge}Z`} fill={c.body} />
-          <path d={`M${xb} ${e.y + b} ${edge}`} fill="none" stroke={INK} strokeWidth={3.4} strokeLinecap="round" />
         </g>
       );
     }
