@@ -136,7 +136,8 @@ export function AvatarEditor({
     sl.n = now - sl.at < 900 ? sl.n + 1 : 1;
     sl.at = now;
     sl.dir = -sl.dir; // aller-retour : une joue, puis l'autre
-    playSfx("slap", { volume: 0.7, rate: 0.92 + Math.random() * 0.16 });
+    // Vraie gifle enregistrée, jamais tout à fait la même (3 prises, hauteur un peu variée)
+    playSfx((["slap", "slap2", "slap3"] as const)[Math.floor(Math.random() * 3)], { volume: 0.75, rate: 0.95 + Math.random() * 0.1 });
     setSlapped(true);
     clearTimeout(slapT.current);
     slapT.current = setTimeout(() => setSlapped(false), 650);
