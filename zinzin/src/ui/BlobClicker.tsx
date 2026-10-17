@@ -27,8 +27,6 @@ import { loadBest, loadLocal, saveBoth, saveLocal } from "../clicker-save";
  * Sauvegarde en double sur le téléphone (clicker-save.ts).
  */
 
-const OFFLINE_CAP_S = 4 * 3600;
-const OFFLINE_RATE = 0.1;
 const FRENZY_MS = 30_000;
 const GOLD_SHOW_MS = 9000;
 
@@ -36,11 +34,43 @@ type Reward = { at: number; secret?: string; kind: "eyes" | "extra" | "anim" | "
 const REWARDS: Reward[] = [
   { at: 100, secret: "spiral", kind: "eyes" },
   { at: 500, secret: "foamfinger", kind: "extra" },
-  { at: 1000, kind: "anim" },
   { at: 5000, secret: "color-chrome", kind: "color" },
   { at: 10000, secret: "aura", kind: "legend" },
   { at: 50000, kind: "badge" },
 ];
+
+/** Pouvoirs visuels du blob, débloqués aux paliers de vrais taps (grosse annonce à chaque fois). */
+type Power = "sweat" | "boom" | "fire" | "sparks" | "bolts" | "crown" | "cosmos";
+const POWERS: { at: number; id: Power; icon: string }[] = [
+  { at: 250, id: "sweat", icon: "💦" },
+  { at: 1000, id: "boom", icon: "🎉" },
+  { at: 2500, id: "fire", icon: "🔥" },
+  { at: 5000, id: "sparks", icon: "✨" },
+  { at: 25000, id: "bolts", icon: "⚡" },
+  { at: 50000, id: "crown", icon: "👑" },
+  { at: 100000, id: "cosmos", icon: "🌌" },
+];
+const POWER_TXT: I18n<{ title: string; name: Record<Power, string>; desc: Record<Power, string>; combo: (n: number) => string }> = {
+  fr: {
+    title: "NOUVEAU POUVOIR !",
+    name: { sweat: "La sueur", boom: "Taps explosifs", fire: "Combo de feu", sparks: "Étincelles", bolts: "Éclairs", crown: "Couronne de flammes", cosmos: "Blob cosmique" },
+    desc: { sweat: "Tape vite : ton blob transpire.", boom: "Chaque tap explose en confettis.", fire: "8 taps d'affilée : ton blob prend feu !", sparks: "Des étincelles tournent autour de lui.", bolts: "Gros combo : la foudre tombe.", crown: "Une couronne de flammes, pour toujours.", cosmos: "Ton blob part dans l'espace." },
+    combo: (n) => `COMBO ×${n}`,
+  },
+  en: {
+    title: "NEW POWER!",
+    name: { sweat: "Sweat", boom: "Explosive taps", fire: "Fire combo", sparks: "Sparkles", bolts: "Lightning", crown: "Crown of flames", cosmos: "Cosmic blob" },
+    desc: { sweat: "Tap fast: your blob sweats.", boom: "Every tap bursts into confetti.", fire: "8 taps in a row: your blob catches fire!", sparks: "Sparkles orbit around it.", bolts: "Huge combo: lightning strikes.", crown: "A crown of flames, forever.", cosmos: "Your blob goes to space." },
+    combo: (n) => `COMBO ×${n}`,
+  },
+  es: {
+    title: "¡NUEVO PODER!",
+    name: { sweat: "El sudor", boom: "Toques explosivos", fire: "Combo de fuego", sparks: "Chispas", bolts: "Rayos", crown: "Corona de llamas", cosmos: "Blob cósmico" },
+    desc: { sweat: "Toca rápido: tu blob suda.", boom: "Cada toque explota en confeti.", fire: "¡8 toques seguidos: tu blob arde!", sparks: "Unas chispas giran a su alrededor.", bolts: "Combo enorme: caen rayos.", crown: "Una corona de llamas, para siempre.", cosmos: "Tu blob se va al espacio." },
+    combo: (n) => `COMBO ×${n}`,
+  },
+};
+const hasPower = (taps: number, id: Power) => taps >= (POWERS.find((p) => p.id === id)?.at ?? Infinity);
 
 const LINES: I18n<[number, string][]> = {
   fr: [
@@ -143,25 +173,25 @@ export function BlobClicker({ onClose }: { onClose: () => void }) {
   const [now, setNow] = useState(Date.now());
   const [frenzyUntil, setFrenzyUntil] = useState(0);
   const [gold, setGold] = useState<{ id: number; x: number; y: number } | null>(null);
-  const [pops, setPops] = useState<{ id: number; x: number; y: number; v: string; boom: boolean }[]>([]);
+  const [pops, setPops] = useState<{ id: number; x: number; y: number; v: string; boom: boolean; sweat?: boolean }[]>([]);
   const blob = useRef<HTMLDivElement>(null);
   const combo = useRef<number[]>([]);
   const note = useRef(0);
   const popId = useRef(0);
+  const pw = pick(POWER_TXT, lang);
+  // Combo : taps enchaînés à moins de 450 ms ; retombe à zéro dès qu'on s'arrête
+  const [streak, setStreak] = useState(0);
+  const streakT = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const [celebrate, setCelebrate] = useState<Power | null>(null);
+  const celebrateT = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  useEffect(() => () => { clearTimeout(streakT.current); clearTimeout(celebrateT.current); }, []);
   const frenzy = now < frenzyUntil;
   const update = (next: ClickerState) => { sRef.current = next; setS(next); };
 
-  // Ouverture : la meilleure des deux sauvegardes + gains hors ligne
+  // Ouverture : la meilleure des deux sauvegardes. Rien ne se gagne quand on ne joue pas.
   useEffect(() => {
     let alive = true;
-    void loadBest().then((best) => {
-      if (!alive) return;
-      const secs = Math.min(OFFLINE_CAP_S, Math.max(0, (Date.now() - best.last) / 1000));
-      const got = perSecond(best) * secs * OFFLINE_RATE;
-      const next = got >= 1 ? earn(best, got) : best;
-      update(next);
-      if (got >= 10 && secs >= 60) setTimeout(() => toast(t.offline(fmtBig(got, lang))), 400);
-    });
+    void loadBest().then((best) => { if (alive) update(best); });
     return () => { alive = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -171,7 +201,8 @@ export function BlobClicker({ onClose }: { onClose: () => void }) {
     let lastT = performance.now();
     const tick = setInterval(() => {
       const n = performance.now();
-      const dt = (n - lastT) / 1000;
+      // Pas de rattrapage : app en arrière-plan ou page en pause = rien ne tourne
+      const dt = document.hidden ? 0 : Math.min(0.25, (n - lastT) / 1000);
       lastT = n;
       const ms = Date.now();
       setNow(ms);
@@ -219,7 +250,7 @@ export function BlobClicker({ onClose }: { onClose: () => void }) {
     }
   };
 
-  const explosive = s.taps >= 1000;
+  const explosive = hasPower(s.taps, "boom");
   const legendary = s.taps >= 10000;
 
   const tap = (e: React.PointerEvent) => {
@@ -236,8 +267,21 @@ export function BlobClicker({ onClose }: { onClose: () => void }) {
         toast(t.unlocked(t.reward[r.kind]));
       }
     }
+    // Nouveau pouvoir : grosse annonce plein écran
+    const power = POWERS.find((p) => cur.taps < p.at && next.taps >= p.at);
+    if (power) {
+      setCelebrate(power.id);
+      playSfx("tada", { volume: 0.55 });
+      playSfx("firecracker", { volume: 0.35, delay: 0.15 });
+      haptic("success");
+      clearTimeout(celebrateT.current);
+      celebrateT.current = setTimeout(() => setCelebrate(null), 2600);
+    }
     update(next);
     haptic("light");
+    setStreak((n) => n + 1);
+    clearTimeout(streakT.current);
+    streakT.current = setTimeout(() => setStreak(0), 450);
     // Note : monte tant qu'on tape vite, redescend doucement sinon (boucle la mélodie en haut)
     note.current = combo.current.length > 1 ? note.current + 1 : Math.max(0, note.current - 3);
     if (note.current >= SCALE.length) note.current = 5;
@@ -257,7 +301,7 @@ export function BlobClicker({ onClose }: { onClose: () => void }) {
       );
     }
     const id = ++popId.current;
-    setPops((p) => [...p.slice(-12), { id, x: e.clientX + (Math.random() * 40 - 20), y: e.clientY, v: fmtBig(v, lang), boom: explosive }]);
+    setPops((p) => [...p.slice(-12), { id, x: e.clientX + (Math.random() * 40 - 20), y: e.clientY, v: fmtBig(v, lang), boom: explosive, sweat: hasPower(next.taps, "sweat") && streak >= 5 }]);
     setTimeout(() => setPops((p) => p.filter((q) => q.id !== id)), 900);
   };
 
@@ -285,6 +329,7 @@ export function BlobClicker({ onClose }: { onClose: () => void }) {
   const ps = perSecond(s, frenzy);
   const line = [...lines].reverse().find(([at]) => s.taps >= at)?.[1] ?? lines[0][1];
   const nextReward = REWARDS.find((r) => s.taps < r.at);
+  const nextPower = POWERS.find((p) => s.taps < p.at);
   const confettiGain = partyConfetti(s);
 
   const share = async () => {
@@ -320,16 +365,42 @@ export function BlobClicker({ onClose }: { onClose: () => void }) {
           <p className="mx-6 mt-1.5 text-[15.5px] font-bold leading-snug text-white">{line}</p>
         </div>
 
-        {/* Le blob à tapoter, ses mini-blobs, et parfois le blob doré */}
+        {/* Le blob à tapoter, ses mini-blobs, ses pouvoirs, et parfois le blob doré */}
         <div className="relative grid min-h-0 flex-1 place-items-center" style={{ touchAction: "manipulation" }}>
+          {hasPower(s.taps, "cosmos") && <div className="zz-cosmos pointer-events-none absolute inset-0" aria-hidden />}
+          {hasPower(s.taps, "fire") && streak >= 8 && (
+            <div className="zz-fire" aria-hidden style={{ opacity: Math.min(1, 0.55 + (streak - 8) * 0.06), ["--fs" as string]: String(Math.min(1.35, 0.9 + (streak - 8) * 0.03)) } as CSSProperties}>
+              {[0, 1, 2, 3, 4, 5].map((i) => <span key={i} style={{ left: `${6 + i * 15}%`, height: `${[58, 78, 96, 90, 72, 54][i]}%`, animationDelay: `${-i * 0.13}s` }} />)}
+            </div>
+          )}
+          {hasPower(s.taps, "sparks") && Array.from({ length: 6 }, (_, i) => (
+            <span key={`sp${i}`} aria-hidden className="zz-click-spark pointer-events-none absolute text-[18px]" style={{ ["--a" as string]: `${i * 60}deg`, animationDelay: `${-i * 0.5}s` } as CSSProperties}>✦</span>
+          ))}
+          {hasPower(s.taps, "bolts") && streak >= 14 && [0, 1, 2].map((i) => (
+            <svg key={`b${i}`} aria-hidden className="zz-bolt pointer-events-none absolute" width="46" height="90" viewBox="0 0 46 90"
+              style={{ left: `${[14, 72, 44][i]}%`, top: `${[12, 18, 2][i]}%`, animationDelay: `${i * 0.17}s`, rotate: `${[-14, 12, 4][i]}deg` }}>
+              <path d="M28 0 L4 50 L20 50 L12 90 L42 34 L25 34 L36 0Z" fill="#FFF36B" stroke="#15082E" strokeWidth="3" strokeLinejoin="round" />
+            </svg>
+          ))}
+          {streak >= 5 && (
+            <div className="zz-combo pointer-events-none absolute left-1/2 top-[6%] z-[3] -translate-x-1/2 whitespace-nowrap" key={Math.floor(streak / 5)}
+              style={{ color: streak >= 14 ? "#FFF36B" : streak >= 8 ? "#FF8A1F" : "#fff", fontSize: Math.min(34, 20 + streak * 0.5) }}>
+              {pw.combo(streak)}{streak >= 8 && hasPower(s.taps, "fire") ? " 🔥" : ""}
+            </div>
+          )}
           {Array.from({ length: Math.min(8, s.lv[1]) }, (_, i) => (
             <div key={i} className="zz-click-mini absolute" style={{ ["--a" as string]: `${i * 45}deg`, animationDelay: `${-i * 0.37}s` } as CSSProperties}>
               <AvatarBlob look={{ ...baseLook(["mint", "yellow", "sky", "coral", "lavender", "orange", "lime", "pink"][i]), eyes: "happy" }} size={30} animate={false} />
             </div>
           ))}
           <div ref={blob} onPointerDown={tap} role="button" aria-label={t.title}
-            className={`relative select-none ${legendary ? "zz-click-legend" : ""}`}
+            className={`relative z-[2] select-none ${legendary ? "zz-click-legend" : ""}`}
             style={{ WebkitTapHighlightColor: "transparent", WebkitUserSelect: "none", cursor: "pointer" }}>
+            {hasPower(s.taps, "crown") && (
+              <div className="zz-crownfire pointer-events-none absolute left-1/2 top-[-22px] z-[3] -translate-x-1/2" aria-hidden>
+                {[0, 1, 2, 3, 4].map((i) => <span key={i} style={{ left: `${i * 22}px`, height: `${[26, 36, 44, 36, 26][i]}px`, animationDelay: `${-i * 0.11}s` }} />)}
+              </div>
+            )}
             <AvatarBlob look={legendary && look.extra === "none" ? { ...look, extra: "aura" } : look} name={me?.name} size={170} mood={combo.current.length > 8 ? "laughing" : "happy"} />
           </div>
           {gold && (
@@ -380,13 +451,35 @@ export function BlobClicker({ onClose }: { onClose: () => void }) {
         </div>
         <div className="mt-2 flex items-center justify-between gap-2 px-4">
           <p className="min-w-0 flex-1 text-[12px] font-semibold leading-tight" style={{ color: "var(--zz-mute)" }}>
-            {nextReward ? t.next(fmtBig(nextReward.at, lang), t.reward[nextReward.kind]) : t.allDone}
+            {nextPower && (!nextReward || nextPower.at <= nextReward.at)
+              ? t.next(fmtBig(nextPower.at, lang), `${nextPower.icon} ${pw.name[nextPower.id]}`)
+              : nextReward ? t.next(fmtBig(nextReward.at, lang), t.reward[nextReward.kind]) : t.allDone}
           </p>
           <button type="button" onClick={() => void share()} className="zz-push zz-stk-sm flex h-10 shrink-0 items-center gap-1.5 rounded-full px-3.5 text-[13.5px] font-extrabold" style={{ background: "#FF3EA5", color: "#fff" }}>
             <Share2 size={15} strokeWidth={2.8} /> {t.share}
           </button>
         </div>
       </div>
+
+      {/* Nouveau pouvoir : annonce plein écran */}
+      {celebrate && (
+        <div className="pointer-events-none fixed inset-0 grid place-items-center" style={{ zIndex: 48, background: "rgba(10,2,30,0.55)" }} aria-live="polite">
+          <div className="zz-power text-center">
+            <div className="zz-stk-sm mx-auto inline-block rounded-full px-4 py-1 text-[15px] font-extrabold" style={{ background: "#FFD23F", color: "var(--zz-ink)", rotate: "-3deg" }}>{pw.title}</div>
+            <div className="mt-2 text-[86px] leading-none">{POWERS.find((p) => p.id === celebrate)?.icon}</div>
+            <div className="zz-title mt-1 text-[38px] leading-tight text-white">{pw.name[celebrate]}</div>
+            <div className="mx-8 mt-1 text-[16px] font-bold" style={{ color: "#FFD23F" }}>{pw.desc[celebrate]}</div>
+            {Array.from({ length: 14 }, (_, i) => (
+              <i key={i} className="zz-click-bit zz-power-bit" style={{ ["--a" as string]: `${i * 26}deg`, background: ["#FF3EA5", "#3DDC97", "#52C7FF", "#FFD23F", "#A98BFF", "#FF8A1F"][i % 6] } as CSSProperties} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Gouttes de sueur (pouvoir « La sueur ») */}
+      {pops.filter((p) => p.sweat).map((p) => (
+        <span key={`d${p.id}`} className="zz-sweat pointer-events-none fixed text-[20px]" style={{ left: p.x, top: p.y - 60, zIndex: 46, ["--dx" as string]: `${p.id % 2 ? 60 : -60}px` } as CSSProperties}>💦</span>
+      ))}
 
       {/* « +N » qui s'envolent (et confettis à partir de 1 000 taps) */}
       {pops.map((p) => (
