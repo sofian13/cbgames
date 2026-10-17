@@ -77,12 +77,15 @@ export function FaceDownBlob({ homeRef }: { homeRef: RefObject<HTMLElement | nul
     let n = 0;
     let lastLine = -1;
     let timer: ReturnType<typeof setTimeout> | undefined;
-    const diag = (shown: boolean) => {
+    // Diagnostic (générique secret) : relevé reçu par l'app ?, blob montré ? (l'état du capteur se lit côté natif)
+    const bump = (k: "n" | "shown") => {
       try {
-        const d = JSON.parse(localStorage.getItem(FACEDOWN_DIAG_KEY) ?? "{}") as { n?: number; shown?: number };
-        localStorage.setItem(FACEDOWN_DIAG_KEY, JSON.stringify({ n: (d.n ?? 0) + 1, shown: (d.shown ?? 0) + (shown ? 1 : 0) }));
+        const d = JSON.parse(localStorage.getItem(FACEDOWN_DIAG_KEY) ?? "{}") as Record<string, number>;
+        d[k] = (d[k] ?? 0) + 1;
+        localStorage.setItem(FACEDOWN_DIAG_KEY, JSON.stringify(d));
       } catch { /* indispo */ }
     };
+    const diag = (shown: boolean) => { bump("n"); if (shown) bump("shown"); };
     const peekIn = (shot: boolean) => {
       const home = homeRef.current;
       const now = performance.now();
@@ -115,7 +118,10 @@ export function FaceDownBlob({ homeRef }: { homeRef: RefObject<HTMLElement | nul
     const onShot = () => peekIn(true);
     window.addEventListener(EVENT, onFace);
     window.addEventListener(SHOT_EVENT, onShot);
-    return () => { window.removeEventListener(EVENT, onFace); window.removeEventListener(SHOT_EVENT, onShot); clearTimeout(timer); };
+    return () => {
+      window.removeEventListener(EVENT, onFace); window.removeEventListener(SHOT_EVENT, onShot);
+      clearTimeout(timer);
+    };
   }, [homeRef]);
 
   if (!peek) return null;

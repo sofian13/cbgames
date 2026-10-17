@@ -101,7 +101,7 @@ export function SoireeEntry({
   const t = useT(SOIREE);
   const ui = useT(UI);
   return (
-    <div className="zz-rise mx-5 mt-4" style={{ ["--d" as string]: "60ms" }}>
+    <div className="zz-rise relative mx-5 mt-4" style={{ ["--d" as string]: "60ms" }}>
       <SoireeStyles />
       <button
         type="button"
@@ -111,14 +111,6 @@ export function SoireeEntry({
         aria-label={resume ? t.resume(resume.i, resume.n) : `${t.name} : ${t.cardSub}${locked ? ui.lockedSuffix : ""}`}
       >
         {/* La boule pend au-dessus de la carte, le blob DJ danse dessous */}
-        {/* Secret : toucher la boule → l'accueil passe en boîte de nuit (DiscoMode.tsx), sans lancer la soirée */}
-        <div
-          className="zzs-swing absolute"
-          style={{ right: 62, top: -40, padding: 8 }}
-          onClick={(e) => { e.stopPropagation(); e.preventDefault(); window.dispatchEvent(new Event("zz:disco")); }}
-        >
-          <DiscoBall size={64} hang={18} />
-        </div>
         <div className="pointer-events-none absolute -right-2" style={{ bottom: -14 }}>
           <div className="zzs-dance"><ZBlob size={112} color="yellow" mood="cool" seed={4} outline shadow={false} wobble={false} hop={false} /></div>
         </div>
@@ -135,6 +127,17 @@ export function SoireeEntry({
             {resume ? <><Play size={15} strokeWidth={3} fill="currentColor" /> {t.resume(resume.i, resume.n)}</> : <>{t.cardCta} <ArrowRight size={16} strokeWidth={3} /></>}
           </span>
         </div>
+      </button>
+      {/* Secret : la boule → l'accueil passe en boîte de nuit (DiscoMode.tsx). HORS du bouton de la carte :
+          la toucher ne peut jamais lancer la soirée (un bouton imbriqué recevait parfois le toucher sur iPhone). */}
+      <button
+        type="button"
+        aria-label="🪩"
+        className="zzs-swing absolute z-[2]"
+        style={{ right: 62, top: -40, padding: 8, WebkitTapHighlightColor: "transparent" }}
+        onClick={() => window.dispatchEvent(new Event("zz:disco"))}
+      >
+        <DiscoBall size={64} hang={18} />
       </button>
       {resume && (
         <button

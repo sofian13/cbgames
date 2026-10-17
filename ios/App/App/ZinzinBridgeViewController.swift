@@ -148,28 +148,57 @@ class ZinzinBridgeViewController: CAPBridgeViewController {
     private var faceDownSince: Date?
     private var faceDownArmed = false
     private var lowZ = 0.0
+    // Secousse maison (plus facile à déclencher que celle d'iOS) : gravité estimée + pics d'accélération
+    private var grav = (x: 0.0, y: 0.0, z: -1.0)
+    private var shakePeaks: [Date] = []
+    private var lastShake = Date.distantPast
+    private var lastPeak = Date.distantPast
 
     @objc private func startFaceDown() {
-        guard faceMotion.isAccelerometerAvailable, !faceMotion.isAccelerometerActive else { return }
+        ZinzinMotionStatus.available = faceMotion.isAccelerometerAvailable
+        guard faceMotion.isAccelerometerAvailable else { return }
+        guard !faceMotion.isAccelerometerActive else { return }
         faceDownSince = nil
         faceDownArmed = false
         lowZ = 0
-        faceMotion.accelerometerUpdateInterval = 0.2
+        // 20 mesures par seconde : assez pour une secousse, coût négligeable
+        faceMotion.accelerometerUpdateInterval = 0.05
+        ZinzinMotionStatus.active = true
         faceMotion.startAccelerometerUpdates(to: .main) { [weak self] data, _ in
             guard let self = self, let a = data?.acceleration else { return }
-            // Léger lissage : un choc sur la table ne compte pas
-            self.lowZ = self.lowZ * 0.5 + a.z * 0.5
-            if self.lowZ > 0.85 {
-                if self.faceDownSince == nil { self.faceDownSince = Date() }
-                if let t = self.faceDownSince, Date().timeIntervalSince(t) >= 1.5 { self.faceDownArmed = true }
+            ZinzinMotionStatus.samples += 1
+            let now = Date()
+            // ── Face cachée ── z ≈ +1 g : écran vers le bas (lissé : un choc sur la table ne compte pas)
+            self.lowZ = self.lowZ * 0.8 + a.z * 0.2
+            if self.lowZ > 0.8 {
+                if self.faceDownSince == nil { self.faceDownSince = now }
+                if !self.faceDownArmed, let t = self.faceDownSince, now.timeIntervalSince(t) >= 1.5 {
+                    self.faceDownArmed = true
+                    ZinzinMotionStatus.armed += 1
+                }
             } else if self.faceDownArmed && self.lowZ < 0.3 {
                 // Relevé : écran vers le haut OU simplement redressé (tenu à la verticale, z ≈ 0)
+                ZinzinMotionStatus.fired += 1
                 self.bridge?.triggerWindowJSEvent(eventName: "zzfacedown")
                 self.faceDownSince = nil
                 self.faceDownArmed = false
             } else if !self.faceDownArmed {
-                // Sur la tranche, pas assez longtemps : on recommence à compter
                 self.faceDownSince = nil
+            }
+            // ── Secousse ── accélération hors gravité > 1,1 g, 3 pics en 0,8 s
+            let k = 0.85
+            self.grav = (self.grav.x * k + a.x * (1 - k), self.grav.y * k + a.y * (1 - k), self.grav.z * k + a.z * (1 - k))
+            let hx = a.x - self.grav.x, hy = a.y - self.grav.y, hz = a.z - self.grav.z
+            if (hx * hx + hy * hy + hz * hz).squareRoot() > 1.1 && now.timeIntervalSince(self.lastPeak) > 0.09 {
+                self.lastPeak = now
+                self.shakePeaks.append(now)
+                self.shakePeaks.removeAll { now.timeIntervalSince($0) > 0.8 }
+                if self.shakePeaks.count >= 3 && now.timeIntervalSince(self.lastShake) > 1.5 {
+                    self.lastShake = now
+                    self.shakePeaks.removeAll()
+                    ZinzinMotionStatus.shakes += 1
+                    self.bridge?.triggerWindowJSEvent(eventName: "zzshake")
+                }
             }
         }
     }
@@ -179,6 +208,7 @@ class ZinzinBridgeViewController: CAPBridgeViewController {
     }
 
     @objc private func stopFaceDown() {
+        ZinzinMotionStatus.active = false
         if faceMotion.isAccelerometerActive { faceMotion.stopAccelerometerUpdates() }
         faceDownSince = nil
         faceDownArmed = false
@@ -208,4 +238,14 @@ private extension UIResponder {
     @objc func zzCaptureFirstResponder() {
         UIResponder.zzFound = self
     }
+}
+
+/// État du capteur de mouvement (diagnostic du générique secret, lu par le plugin ZinzinAppIcon.getMotion).
+enum ZinzinMotionStatus {
+    static var available = false
+    static var active = false
+    static var samples = 0
+    static var armed = 0
+    static var fired = 0
+    static var shakes = 0
 }

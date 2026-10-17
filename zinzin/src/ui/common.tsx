@@ -88,6 +88,7 @@ function useDragToClose(
           g.state = "drag";
           g.y0 = t.clientY; // pas de saut : la fiche part d'où est le doigt
           el.style.transition = "none";
+          el.style.willChange = "translate"; // la fiche glisse sur son propre calque, sans rien repeindre
         } else { g.state = "no"; return; }
       }
       if (e.cancelable) e.preventDefault(); // la fiche bouge, pas le contenu
@@ -105,6 +106,7 @@ function useDragToClose(
       if (Array.from(e.touches).some((x) => x.identifier === g!.id)) return;
       const cur = g;
       g = null;
+      el.style.willChange = "";
       if (cur.state !== "drag") return;
       // Vitesse sur les ~100 dernières ms (px/ms, positive vers le bas)
       const last = cur.samples[cur.samples.length - 1];

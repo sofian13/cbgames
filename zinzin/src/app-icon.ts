@@ -27,6 +27,8 @@ interface AppIconPlugin {
   setName(o: { name?: string }): Promise<void>;
   /** Batterie (même plugin natif, voir AppIconPlugin.swift) : level 0…1 (-1 inconnu) */
   getBattery(): Promise<{ level: number; charging: boolean; known: boolean }>;
+  /** Diagnostic du capteur de mouvement (générique secret) */
+  getMotion(): Promise<{ available: boolean; active: boolean; samples: number; armed: number; fired: number; shakes: number }>;
 }
 
 type Cap = { isNativePlatform?: () => boolean; getPlatform?: () => string };
@@ -107,4 +109,11 @@ export async function batteryInfo(): Promise<{ level: number; charging: boolean 
     const b = await nav.getBattery();
     return { level: b.level, charging: b.charging };
   } catch { return null; }
+}
+
+/** Diagnostic natif du capteur (téléphone retourné, secousse), ou null hors iPhone. */
+export async function motionStatus(): Promise<{ available: boolean; active: boolean; samples: number; armed: number; fired: number; shakes: number } | null> {
+  const h = await getPlugin();
+  if (!h) return null;
+  try { return await h.p.getMotion(); } catch { return null; }
 }

@@ -165,7 +165,8 @@
 @keyframes zz-pop { from { opacity: 0; transform: scale(0.6); } to { opacity: 1; transform: none; } }
 
 /* ── Sheets ───────────────────────────────── */
-.zz-backdrop { position: fixed; inset: 0; background: rgba(5, 2, 16, 0.62); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); animation: zz-fade 260ms ease both; }
+/* Fond des fiches : simple voile sombre (un flou d'arrière-plan en direct coûte très cher et saccade au glisser) */
+.zz-backdrop { position: fixed; inset: 0; background: rgba(5, 2, 16, 0.72); animation: zz-fade 260ms ease both; }
 .zz-backdrop.is-out { animation: zz-fade-out 240ms ease both; }
 .zz-sheet { animation: zz-sheet-in 460ms var(--zz-ease) both; }
 .zz-sheet.is-out { animation: zz-sheet-out 260ms cubic-bezier(0.4, 0, 1, 1) both; }

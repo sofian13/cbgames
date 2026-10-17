@@ -13,7 +13,8 @@ public class AppIconPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "isSupported", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "getName", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "setName", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "getBattery", returnType: CAPPluginReturnPromise)
+        CAPPluginMethod(name: "getBattery", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "getMotion", returnType: CAPPluginReturnPromise)
     ]
 
     /// Seules ces icônes peuvent être demandées depuis le JS
@@ -68,6 +69,20 @@ public class AppIconPlugin: CAPPlugin, CAPBridgedPlugin {
                 "level": Double(device.batteryLevel),
                 "charging": state == .charging || state == .full,
                 "known": state != .unknown
+            ])
+        }
+    }
+
+    /// Diagnostic du capteur de mouvement (téléphone retourné, secousse) : générique secret.
+    @objc func getMotion(_ call: CAPPluginCall) {
+        DispatchQueue.main.async {
+            call.resolve([
+                "available": ZinzinMotionStatus.available,
+                "active": ZinzinMotionStatus.active,
+                "samples": ZinzinMotionStatus.samples,
+                "armed": ZinzinMotionStatus.armed,
+                "fired": ZinzinMotionStatus.fired,
+                "shakes": ZinzinMotionStatus.shakes,
             ])
         }
     }

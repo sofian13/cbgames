@@ -8,6 +8,7 @@ import { ZBlob, ZCOLORS } from "./ZBlob";
 import { haptic } from "./util";
 import { FACEDOWN_DIAG_KEY } from "./FaceDownBlob";
 import { isLiteFx } from "./perf";
+import { motionStatus } from "../app-icon";
 import { foundSecret } from "@/lib/secrets-found";
 
 /**
@@ -142,6 +143,13 @@ export function VersionTap({ text }: { text: string }) {
 /** Le générique : blobs qui dansent en haut, texte qui défile, fermeture au toucher / glisser vers le bas. */
 function Credits({ onClose }: { onClose: () => void }) {
   useEffect(() => { foundSecret("credits"); }, []);
+  // État réel du capteur côté iPhone (diagnostic du téléphone retourné et de la secousse)
+  const [motion, setMotion] = useState("");
+  useEffect(() => {
+    void motionStatus().then((m) => {
+      if (m) setMotion(` · capt ${m.available ? (m.active ? "on" : "stop") : "absent"} ${m.samples} · arm ${m.armed} · rel ${m.fired} · sec ${m.shakes}`);
+    });
+  }, []);
   const t = useT(STR);
   const band = useBand();
   const [openedAt] = useState(() => performance.now());
@@ -210,7 +218,7 @@ function Credits({ onClose }: { onClose: () => void }) {
       <p className="pointer-events-none relative z-[1] pb-2 text-center text-[13px] font-semibold" style={{ color: "var(--zz-mute)", paddingBottom: "calc(var(--sab) + 12px)" }}>
         {t.close}
         {/* Diagnostic discret du capteur « téléphone retourné » : signaux reçus / blob montré */}
-        <span className="block text-[11px] opacity-60">{faceDiag()}</span>
+        <span className="block text-[11px] opacity-60">{faceDiag()}{motion}</span>
       </p>
     </div>,
     document.body,
@@ -219,7 +227,8 @@ function Credits({ onClose }: { onClose: () => void }) {
 
 function faceDiag(): string {
   try {
-    const d = JSON.parse(localStorage.getItem(FACEDOWN_DIAG_KEY) ?? "{}") as { n?: number; shown?: number };
+    const d = JSON.parse(localStorage.getItem(FACEDOWN_DIAG_KEY) ?? "{}") as Record<string, number | undefined>;
+    // relevés reçus par l'app / blob montré · effets
     return `fd ${d.n ?? 0}/${d.shown ?? 0} · fx ${isLiteFx() ? "léger" : "max"}`;
   } catch {
     return "fd ?";
