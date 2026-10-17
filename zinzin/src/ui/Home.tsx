@@ -249,7 +249,7 @@ function Featured({ onOpenGame, lang, premium }: { onOpenGame: (id: string) => v
     if (n < 2 || reducedMotion()) return;
     const t = setInterval(() => {
       const el = ref.current;
-      if (!el || hold.current || document.hidden || el.offsetParent === null) return;
+      if (!el || hold.current || document.hidden || el.offsetParent === null || el.closest(".zz-covered")) return;
       // Le blob de la carte s'est endormi (SleepyBlob) : on ne le fait pas glisser hors de l'écran
       if (el.querySelector(".zz-dozing")) return;
       if (Date.now() - lastTouch.current < 3000) return;

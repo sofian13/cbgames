@@ -483,6 +483,9 @@ svg.zz-dancing { animation: zz-dance .484s ease-in-out infinite alternate; trans
 @keyframes zz-power-bit { from { transform: rotate(var(--a)) translateX(0); opacity: 1; } to { transform: rotate(var(--a)) translateX(170px); opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .zz-fire span, .zz-crownfire span, .zz-click-spark, .zz-bolt, .zz-cosmos, .zz-sweat, .zz-power, .zz-power-bit { animation-duration: 1ms !important; } }
 
+/* Accueil recouvert par un écran plein (Tapote le blob…) : animations en pause */
+.zz-covered *, .zz-covered *::before, .zz-covered *::after { animation-play-state: paused !important; }
+
 /* Logo : indice au 5e toucher (« … ? ») */
 .zz-logo-hint { animation: zz-pop 380ms var(--zz-spring) both; rotate: 8deg; }
 

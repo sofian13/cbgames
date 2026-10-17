@@ -222,6 +222,12 @@ export function BlobClicker({ onClose }: { onClose: () => void }) {
     return () => { clearInterval(tick); clearInterval(loc); clearInterval(file); document.removeEventListener("visibilitychange", hide); };
   }, [frenzyUntil]);
   useEffect(() => () => { void saveBoth(sRef.current); }, []);
+  // L'accueil est entièrement recouvert : ses animations se mettent en pause (batterie, fluidité du mini-jeu)
+  useEffect(() => {
+    const home = document.querySelector(".zz-home");
+    home?.classList.add("zz-covered");
+    return () => home?.classList.remove("zz-covered");
+  }, []);
 
   // Blob doré : passe de temps en temps (toutes les 60 à 150 s), 9 s pour l'attraper
   useEffect(() => {
