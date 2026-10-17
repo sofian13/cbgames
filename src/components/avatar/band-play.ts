@@ -3,6 +3,7 @@
 import { useEffect, type RefObject } from "react";
 import { haptic } from "@/lib/app-mode";
 import { playSfx } from "@/lib/sfx";
+import { foundSecret } from "@/lib/secrets-found";
 
 /**
  * Secrets de « Ma bande » (la rangée de blobs côte à côte) :
@@ -153,6 +154,7 @@ export function useBandPlay(ref: RefObject<HTMLElement | null>, active = true) {
       ).onfinish = () => { busy.delete(other); other.style.transformOrigin = ""; };
       // Le « smack » : deux petits pops aigus, une note douce, des cœurs entre les deux têtes
       setTimeout(() => {
+        foundSecret("kiss");
         playSfx("pop", { volume: 0.4, rate: 1.9 });
         setTimeout(() => playSfx("pop2", { volume: 0.35, rate: 2.1 }), 110);
         playSfx("chime", { volume: 0.18, rate: 1.25 });

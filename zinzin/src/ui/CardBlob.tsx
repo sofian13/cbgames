@@ -5,6 +5,7 @@ import { playSfx } from "@/lib/sfx";
 import { ZBlob, type ZColor } from "./ZBlob";
 import type { ZCostume } from "./costumes";
 import { haptic, reducedMotion } from "./util";
+import { foundSecret } from "@/lib/secrets-found";
 
 /**
  * Secret de l'accueil : le blob qui dépasse d'une carte de jeu réagit quand on le touche
@@ -99,6 +100,7 @@ export const CardBlob = memo(function CardBlob({ size, color, mood, seed, costum
       playSfx("pop2", { volume: 0.5, rate: 0.62 });
       try { navigator.vibrate?.(25); } catch { /* indispo */ }
       jelly(wrap.current, true);
+      foundSecret("sulk");
       setHey(pickHey());
       setSulk(true);
       return;

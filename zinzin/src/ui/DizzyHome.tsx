@@ -1,6 +1,7 @@
 import { useEffect, type RefObject } from "react";
 import { spiralEyes } from "./spiral-eyes";
 import { haptic, reducedMotion } from "./util";
+import { foundSecret } from "@/lib/secrets-found";
 
 /**
  * Secret de l'accueil : défiler très vite de haut en bas plusieurs fois (≥ 4 changements de sens
@@ -32,6 +33,7 @@ export function DizzyHome({ homeRef }: { homeRef: RefObject<HTMLElement | null> 
     const dizzy = () => {
       quietUntil = performance.now() + COOLDOWN_MS;
       flips = [];
+      foundSecret("dizzy");
       haptic("medium");
       // Yeux en spirale, étoiles au-dessus de la tête et démarche d'ivrogne (spiral-eyes.ts)
       undo = spiralEyes(home, SHOW_MS, { wobble: true });

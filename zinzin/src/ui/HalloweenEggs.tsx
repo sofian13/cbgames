@@ -4,6 +4,7 @@ import { useT, type I18n } from "@/lib/i18n";
 import { playSfx } from "@/lib/sfx";
 import { ZBlob } from "./ZBlob";
 import { haptic, reducedMotion } from "./util";
+import { foundSecret } from "@/lib/secrets-found";
 
 /**
  * Secrets d'Halloween de l'accueil (seulement en mode Halloween, voir season.ts) :
@@ -96,6 +97,7 @@ function GhostPass({ homeRef }: { homeRef: RefObject<HTMLElement | null> }) {
   const boo = () => {
     if (caught) return;
     setCaught(true);
+    foundSecret("ghost");
     haptic("success");
     playSfx("ghost-boo", { volume: 0.8 });
     const el = ref.current;
@@ -156,6 +158,7 @@ export function TrickOrTreat({ homeRef }: { homeRef: RefObject<HTMLElement | nul
 
   const treat = () => {
     setAsk(false);
+    foundSecret("trick");
     haptic("success");
     setRain((r) => r + 1);
     playSfx("coins", { volume: 0.5 });
@@ -165,6 +168,7 @@ export function TrickOrTreat({ homeRef }: { homeRef: RefObject<HTMLElement | nul
   };
   const trick = () => {
     setAsk(false);
+    foundSecret("trick");
     haptic("medium");
     const home = homeRef.current;
     playSfx("croak", { volume: 0.8 });
@@ -233,6 +237,7 @@ function LightsOff({ homeRef }: { homeRef: RefObject<HTMLElement | null> }) {
       }
       setLamp(null);
       setOn({ eyes: eyes.slice(0, 80) });
+      foundSecret("lights");
       haptic("medium");
       playSfx("toggle", { volume: 0.7, rate: 0.8 });
       clearTimeout(timer);
@@ -275,6 +280,7 @@ function Midnight({ homeRef }: { homeRef: RefObject<HTMLElement | null> }) {
     let off: ReturnType<typeof setTimeout>;
     const fire = () => {
       setOn(true);
+      foundSecret("midnight");
       haptic("medium");
       playSfx("gong", { volume: 0.6, rate: 0.7 });
       setTimeout(() => playSfx("spooky", { volume: 0.7 }), 600);

@@ -6,6 +6,7 @@ import { playSfx } from "@/lib/sfx";
 import { haptic, reducedMotion } from "./util";
 import { BG_THEME_NAMES, nextBgTheme, type BgTheme } from "./bg-theme";
 import { SEASON } from "../season";
+import { foundSecret } from "@/lib/secrets-found";
 
 /**
  * Logo « zinzin » multicolore (même que sur le site) : lettres stickers
@@ -115,6 +116,7 @@ export function TapLogo({ size = 44 }: { size?: number }) {
       taps.current = [];
       setHint(false);
       const theme = nextBgTheme();
+      foundSecret("themes");
       setSecret(theme);
       playSfx(theme === "normal" ? "pop2" : "tada", { volume: 0.45 });
       haptic("success");

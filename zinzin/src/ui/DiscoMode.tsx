@@ -2,6 +2,7 @@ import { useEffect, useState, type RefObject } from "react";
 import { createPortal } from "react-dom";
 import { playSfx } from "@/lib/sfx";
 import { haptic, reducedMotion } from "./util";
+import { foundSecret } from "@/lib/secrets-found";
 
 /**
  * Secret de l'accueil : toucher la boule à facettes de la carte « Soirée Zinzin » (SoireeKit.tsx,
@@ -25,6 +26,7 @@ export function DiscoMode({ homeRef }: { homeRef: RefObject<HTMLElement | null> 
       const home = homeRef.current;
       if (busy || !home) return;
       busy = true;
+      foundSecret("disco");
       haptic("medium");
       playSfx("disco", { volume: 0.8 });
       // Les blobs visibles dansent (pas tous en même temps : délais décalés)

@@ -2,6 +2,7 @@ import { useEffect, useRef, type RefObject } from "react";
 import { ZBlob } from "./ZBlob";
 import { haptic, reducedMotion } from "./util";
 import { playLoop, playSfx, preloadSfx, type LoopHandle } from "@/lib/sfx";
+import { foundSecret } from "@/lib/secrets-found";
 
 /**
  * Secret de l'accueil : un blob au bout d'un élastique, aux deux bords.
@@ -114,6 +115,7 @@ export function PullBlob({ homeRef, contentRef }: { homeRef: RefObject<HTMLEleme
       const snap = was >= MIN_SNAP;
       const bTop = blobEdge(was) - SIZE;
       if (snap) {
+        foundSecret("pull");
         // Il repart d'un coup et claque contre le bord : élastique lâché + « boing »
         playSfx("elastic-snap", { volume: 0.5, rate: 0.9 + Math.min(1, was / MAX) * 0.2 });
         playSfx("bloop2", { volume: 0.55, rate: 0.55 });

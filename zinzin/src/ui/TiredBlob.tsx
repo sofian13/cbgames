@@ -3,6 +3,7 @@ import { useT, type I18n } from "@/lib/i18n";
 import { playSfx } from "@/lib/sfx";
 import { batteryInfo } from "../app-icon";
 import { haptic, homeVisible } from "./util";
+import { foundSecret } from "@/lib/secrets-found";
 
 /**
  * Secret de l'accueil : batterie sous 10 % (et pas en charge) → les blobs de l'accueil ont l'air épuisés
@@ -79,6 +80,7 @@ export function TiredBlob({ homeRef }: { homeRef: RefObject<HTMLElement | null> 
       try { localStorage.setItem(KEY, String(Date.now())); } catch { /* stockage indisponible */ }
       const r = el.getBoundingClientRect();
       home.classList.add("zz-tired");
+      foundSecret("battery");
       setSigh({ id: ++n, x: r.left + r.width / 2, y: r.top, line: Math.floor(Math.random() * LINES.fr.length) });
       haptic();
       playSfx("whooshdown", { volume: 0.25, rate: 0.8 });

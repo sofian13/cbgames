@@ -7,6 +7,7 @@ import { playSfx } from "@/lib/sfx";
 import { ZBlob, ZCOLORS } from "./ZBlob";
 import { haptic } from "./util";
 import { FACEDOWN_DIAG_KEY } from "./FaceDownBlob";
+import { foundSecret } from "@/lib/secrets-found";
 
 /**
  * Secret des Réglages : 7 touchers rapides sur le numéro de version → « Générique » plein écran.
@@ -139,6 +140,7 @@ export function VersionTap({ text }: { text: string }) {
 
 /** Le générique : blobs qui dansent en haut, texte qui défile, fermeture au toucher / glisser vers le bas. */
 function Credits({ onClose }: { onClose: () => void }) {
+  useEffect(() => { foundSecret("credits"); }, []);
   const t = useT(STR);
   const band = useBand();
   const [openedAt] = useState(() => performance.now());

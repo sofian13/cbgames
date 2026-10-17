@@ -3,6 +3,7 @@
 import { haptic } from "@/lib/app-mode";
 import { getLang, type I18n } from "@/lib/i18n";
 import { playSfx } from "@/lib/sfx";
+import { foundSecret } from "@/lib/secrets-found";
 
 /**
  * Secret de « Ma bande » : quand le 16e perso arrive (bande pleine), un autre blob est éjecté
@@ -63,6 +64,7 @@ function launch(wrap: HTMLElement) {
   const dir = r.left + r.width / 2 < innerWidth / 2 ? -1 : 1;
   wrap.style.position = "relative";
   wrap.style.zIndex = "6";
+  foundSecret("eject");
   haptic("medium");
   playSfx("whoosh", { volume: 0.45, rate: 1.15 });
   const anim = reduced()

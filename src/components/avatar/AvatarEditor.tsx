@@ -16,6 +16,7 @@ import { getSecrets, getServerSecrets, isBossName, isZinzinName, subscribeSecret
 import { AvatarBlob } from "./AvatarBlob";
 import { VoiceRecorderPanel } from "./VoiceUI";
 import { talkMood, useSpeaking, voiceKey } from "@/lib/avatar/voice";
+import { foundSecret } from "@/lib/secrets-found";
 
 export const AV_INK = "#15082E";
 export const AV_NIGHT = "#1E1250";
@@ -109,6 +110,7 @@ export function AvatarEditor({
   const secrets = useSyncExternalStore(subscribeSecrets, getSecrets, getServerSecrets);
   const shownName = editName ? cleanNm : name;
   const zinzin = isZinzinName(shownName);
+  useEffect(() => { if (zinzin) foundSecret("crown"); }, [zinzin]);
   const boss = isBossName(shownName);
   // Bouche animée pendant la réécoute du son
   const talk = useSpeaking(voiceKey(cleanNm || name || "?"));
@@ -157,6 +159,7 @@ export function AvatarEditor({
     if (sl.n >= 5 && el) {
       sl.n = 0;
       sl.dizzyUntil = now + 3000;
+      foundSecret("slap");
       window.dispatchEvent(new CustomEvent("zz:dizzy", { detail: el }));
     }
   };

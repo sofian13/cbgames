@@ -29,6 +29,7 @@ import { useNoAlcohol } from "@/lib/party-mood";
 import { NOALC_UI } from "../no-alcohol";
 import { isSfxMuted, setSfxMuted, subscribeSfxMuted } from "@/lib/sfx";
 import { preloadUiSfx, uiSfx } from "@/lib/ui-sfx";
+import { foundSecret } from "@/lib/secrets-found";
 
 export function isLocked(g: ZGame, premium: boolean) {
   return !premium && !g.free;
@@ -54,6 +55,7 @@ export function Home({
   // Tirée une fois par ouverture de l'app (l'accueil reste monté pendant les jeux)
   const [greeting] = useState(() => drawGreeting());
   useEffect(() => { preloadUiSfx(); }, []);
+  useEffect(() => { if (greeting.slot === "three") foundSecret("threeam"); }, [greeting.slot]);
   // Très petit écran (iPhone SE 1re gén., 320 px) : logo un peu plus petit pour laisser la place
   // au badge Zinzin+ et aux deux boutons ronds
   const [narrow] = useState(() => typeof window !== "undefined" && window.innerWidth < 340);

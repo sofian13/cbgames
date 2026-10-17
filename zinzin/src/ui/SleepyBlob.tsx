@@ -1,6 +1,7 @@
 import { useEffect, useState, type RefObject } from "react";
 import { playSfx } from "@/lib/sfx";
 import { haptic, reducedMotion } from "./util";
+import { foundSecret } from "@/lib/secrets-found";
 
 /**
  * Secret de l'accueil : après ~30 s sur l'accueil (même en touchant ; ouvrir un jeu remet à zéro) (app au premier plan, rien d'ouvert
@@ -103,6 +104,7 @@ export function SleepyBlob({ homeRef }: { homeRef: RefObject<HTMLElement | null>
       setZzz(null);
       if (!el) return;
       el.classList.remove("zz-dozing");
+      foundSecret("sleepy");
       startle(el);
       haptic();
       playSfx("pop", { volume: 0.32, rate: 1.25 });

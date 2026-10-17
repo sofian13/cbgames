@@ -7,6 +7,7 @@ import { playSfx } from "@/lib/sfx";
 import { AvatarBlob } from "@/components/avatar/AvatarBlob";
 import { baseLook } from "@/lib/avatar/look";
 import { SECRET_GOLD_HAT, unlockSecret } from "@/lib/avatar/secrets";
+import { foundSecret } from "@/lib/secrets-found";
 
 /**
  * Secret de l'accueil : LE BLOB DORÉ. Environ 1 ouverture de l'accueil sur 40 (jamais deux fois
@@ -158,6 +159,7 @@ export function GoldenBlob({ homeRef }: { homeRef: RefObject<HTMLElement | null>
     let swallow = false;
     const catchIt = (p: Pos) => {
       const isNew = unlockSecret(SECRET_GOLD_HAT);
+      foundSecret("golden");
       // Gros « bling » : cloche claire + pièces + carillon
       playSfx("ding2", { volume: 0.9, rate: 1.25 });
       playSfx("coins", { volume: 0.55, delay: 0.05 });

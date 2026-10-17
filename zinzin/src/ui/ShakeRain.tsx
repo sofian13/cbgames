@@ -6,6 +6,7 @@ import { loadPersoVoice, playVoiceLayer } from "@/lib/avatar/voice";
 import { getVoiceFor } from "@/lib/saved-players";
 import { isSfxMuted, playSfx } from "@/lib/sfx";
 import { haptic, reducedMotion } from "./util";
+import { foundSecret } from "@/lib/secrets-found";
 
 /**
  * Secret de l'accueil : secouer le téléphone → une pluie de blobs (ceux de « Ma bande »
@@ -135,6 +136,7 @@ export function ShakeRain({ homeRef }: { homeRef: RefObject<HTMLElement | null> 
         d.mood = "laughing";
       });
       setDrops(list);
+      foundSecret("shake");
       playSfx("whooshdown", { volume: 0.5 });
       // Sans voix enregistrée : le « pop » d'arrivée habituel
       if (!voiced.length) setTimeout(() => playSfx("pop", { volume: 0.6 }), 380);

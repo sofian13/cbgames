@@ -4,6 +4,7 @@ import { useT, type I18n } from "@/lib/i18n";
 import { playSfx } from "@/lib/sfx";
 import { spiralEyes } from "./spiral-eyes";
 import { haptic } from "./util";
+import { foundSecret } from "@/lib/secrets-found";
 
 /**
  * Secret « accros » : 5 « Rejouer » de suite sur le même jeu → sur l'écran de fin, petit mot
@@ -53,6 +54,7 @@ export function AddictEgg({ id, boxRef }: { id: string; boxRef: RefObject<HTMLEl
         const box = boxRef.current;
         if (!box || !box.isConnected) return;
         undo = spiralEyes(box, SHOW_MS);
+        foundSecret("addicts");
         setShow(Date.now());
         haptic();
         playSfx("laugh", { volume: 0.35 });

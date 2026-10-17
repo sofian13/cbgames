@@ -20,6 +20,7 @@ import { setCurrentGame } from "@/lib/game-finished";
 import { SoireeNextContext } from "@/components/games/soiree-next";
 import { AppIconRow } from "./AppIconRow";
 import { VersionTap } from "./Credits";
+import { SecretsRow } from "./SecretsRow";
 import { BandScreen } from "@/components/avatar/BandScreen";
 import { AvatarBlob } from "@/components/avatar/AvatarBlob";
 import { useBand } from "@/components/avatar/PlayerBlob";
@@ -150,6 +151,9 @@ export function SettingsSheet({
 
           {/* Langue */}
           <LangPicker />
+
+          {/* Secrets (easter eggs) trouvés : compteur + liste avec indices */}
+          <SecretsRow />
 
           <div className="mt-5 flex justify-center">
             <IdeaButton game="Zinzin (nouveau jeu)" kind="idée de jeu" />

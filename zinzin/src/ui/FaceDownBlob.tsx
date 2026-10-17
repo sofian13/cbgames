@@ -6,6 +6,7 @@ import { useT, type I18n } from "@/lib/i18n";
 import { playSfx } from "@/lib/sfx";
 import { ZBlob, ZCOLORS, type ZColor } from "./ZBlob";
 import { haptic } from "./util";
+import { foundSecret } from "@/lib/secrets-found";
 
 /**
  * Secret de l'accueil : téléphone posé écran contre la table (≥ 2 s) puis retourné → un blob
@@ -89,6 +90,7 @@ export function FaceDownBlob({ homeRef }: { homeRef: RefObject<HTMLElement | nul
       if (!shot) diag(ok);
       if (!ok) return;
       if (shot) lastShot = now; else last = now;
+      foundSecret(shot ? "screenshot" : "facedown");
       // Jamais deux fois de suite la même phrase
       const count = (shot ? SHOT_LINES : LINES).fr.length;
       let line = Math.floor(Math.random() * (count - 1));
