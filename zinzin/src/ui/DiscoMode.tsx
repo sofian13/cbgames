@@ -1,4 +1,4 @@
-import { useEffect, useState, type RefObject } from "react";
+import { useEffect, useState, type CSSProperties, type RefObject } from "react";
 import { createPortal } from "react-dom";
 import { playSfx } from "@/lib/sfx";
 import { haptic, reducedMotion } from "./util";
@@ -60,8 +60,10 @@ export function DiscoMode({ homeRef }: { homeRef: RefObject<HTMLElement | null> 
   if (!on) return null;
   return createPortal(
     <div key={on} aria-hidden className="zz-disco pointer-events-none fixed inset-0 overflow-hidden" style={{ zIndex: 33 }}>
-      <div className="zz-disco-beams" />
-      <div className="zz-disco-beams zz-disco-beams-2" />
+      {/* Faisceaux : fins rayons qui balaient depuis le haut (petits calques : presque rien en mémoire) */}
+      {SPOTS.map((c, i) => (
+        <span key={`beam${i}`} className="zz-disco-beam" style={{ left: `${10 + i * 16}%`, ["--c" as string]: c, animationDelay: `${-i * 0.45}s`, animationDuration: `${2.4 + (i % 3) * 0.5}s` } as CSSProperties} />
+      ))}
       {Array.from({ length: 18 }, (_, i) => (
         <span
           key={i}
