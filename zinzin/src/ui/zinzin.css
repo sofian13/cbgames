@@ -422,6 +422,22 @@ svg.zz-hexed { filter: sepia(1) saturate(3.5) hue-rotate(62deg) brightness(0.95)
   svg.zz-hexed, .zz-eye-glow, .zz-midnight { animation: none !important; }
 }
 
+/* Secret de la boule à facettes (DiscoMode.tsx) */
+.zz-disco { background: rgba(12, 0, 34, 0.18); animation: zz-fade-in 300ms ease both; }
+.zz-disco-beams {
+  position: absolute; left: 50%; top: -20%; width: 220vmax; height: 220vmax; margin-left: -110vmax; margin-top: -110vmax;
+  background: conic-gradient(from 0deg, rgba(255,62,165,.28) 0 6deg, transparent 6deg 30deg, rgba(255,210,63,.24) 30deg 36deg, transparent 36deg 60deg,
+    rgba(61,220,151,.24) 60deg 66deg, transparent 66deg 90deg, rgba(82,199,255,.26) 90deg 96deg, transparent 96deg 120deg);
+  mix-blend-mode: screen; animation: zz-disco-spin 6s linear infinite;
+}
+.zz-disco-beams-2 { animation-direction: reverse; animation-duration: 9s; opacity: .7; }
+@keyframes zz-disco-spin { to { transform: rotate(360deg); } }
+.zz-disco-spot { opacity: .0; mix-blend-mode: screen; filter: blur(2px); animation: zz-disco-spot 2.6s ease-in-out infinite; }
+@keyframes zz-disco-spot { 0%, 100% { opacity: 0; transform: translate(0, 0) scale(.6); } 50% { opacity: .75; transform: translate(14px, -10px) scale(1.1); } }
+svg.zz-dancing { animation: zz-dance .484s ease-in-out infinite alternate; transform-origin: 50% 90%; }
+@keyframes zz-dance { from { transform: translateY(0) rotate(-7deg) scale(1.03, .97); } to { transform: translateY(-9%) rotate(7deg) scale(.97, 1.04); } }
+@media (prefers-reduced-motion: reduce) { .zz-disco-beams, .zz-disco-spot, svg.zz-dancing { animation: none !important; } }
+
 /* Logo : indice au 5e toucher (« … ? ») */
 .zz-logo-hint { animation: zz-pop 380ms var(--zz-spring) both; rotate: 8deg; }
 

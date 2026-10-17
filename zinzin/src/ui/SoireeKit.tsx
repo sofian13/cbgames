@@ -111,7 +111,12 @@ export function SoireeEntry({
         aria-label={resume ? t.resume(resume.i, resume.n) : `${t.name} : ${t.cardSub}${locked ? ui.lockedSuffix : ""}`}
       >
         {/* La boule pend au-dessus de la carte, le blob DJ danse dessous */}
-        <div className="zzs-swing pointer-events-none absolute" style={{ right: 70, top: -34 }}>
+        {/* Secret : toucher la boule → l'accueil passe en boîte de nuit (DiscoMode.tsx), sans lancer la soirée */}
+        <div
+          className="zzs-swing absolute"
+          style={{ right: 62, top: -40, padding: 8 }}
+          onClick={(e) => { e.stopPropagation(); e.preventDefault(); window.dispatchEvent(new Event("zz:disco")); }}
+        >
           <DiscoBall size={64} hang={18} />
         </div>
         <div className="pointer-events-none absolute -right-2" style={{ bottom: -14 }}>

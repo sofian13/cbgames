@@ -33,6 +33,8 @@ export type SfxName =
   | "ghost-boo" | "croak"
   // gifle du perso dans l'éditeur : 3 vraies gifles enregistrées (CC0, voir CREDITS)
   | "slap" | "slap2" | "slap3"
+  // boule à facettes de l'accueil : petite boucle disco composée maison (tools/sfx/disco-synth.py)
+  | "disco"
   // liquides (pour et fizz bouclables : playLoop)
   | "pour" | "glug" | "splash" | "fizz"
   // élastique (blob tiré de l'accueil) : grincement bouclable pendant le tirage, claquement au lâcher

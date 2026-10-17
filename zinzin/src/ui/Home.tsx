@@ -12,6 +12,7 @@ import { BandSlide } from "./BandSlide";
 import { GamePicker } from "./GamePicker";
 import { SEASON } from "../season";
 import { HalloweenEggs, TrickOrTreat } from "./HalloweenEggs";
+import { DiscoMode } from "./DiscoMode";
 import { ShakeRain } from "./ShakeRain";
 import { GoldenBlob } from "./GoldenBlob";
 import { PullBlob } from "./PullBlob";
@@ -73,6 +74,8 @@ export function Home({
       <TiredBlob homeRef={scrollRef} />
       {/* Secret : défiler très vite de haut en bas → blobs qui titubent, yeux en spirale */}
       <DizzyHome homeRef={scrollRef} />
+      {/* Secret : boule à facettes de la carte Soirée → boîte de nuit */}
+      <DiscoMode homeRef={scrollRef} />
       {/* Secrets d'Halloween (mode Halloween seulement) : fantôme, lumière éteinte (appui long sur le logo), minuit */}
       {SEASON === "halloween" && <HalloweenEggs homeRef={scrollRef} />}
       <div ref={contentRef} className="relative mx-auto max-w-lg" style={{ zIndex: 1, paddingTop: "calc(var(--sat) + 10px)", paddingBottom: "calc(var(--sab) + 32px)" }}>

@@ -117,6 +117,8 @@ class ZinzinBridgeViewController: CAPBridgeViewController {
             // App à scènes (UIScene) : on écoute aussi la scène, au cas où les notifications de l'app n'arrivent pas
             NotificationCenter.default.addObserver(self, selector: #selector(startFaceDown), name: UIScene.didActivateNotification, object: nil)
             NotificationCenter.default.addObserver(self, selector: #selector(stopFaceDown), name: UIScene.didEnterBackgroundNotification, object: nil)
+            // Capture d'écran (secret de l'accueil) : un blob réagit
+            NotificationCenter.default.addObserver(self, selector: #selector(screenshotTaken), name: UIApplication.userDidTakeScreenshotNotification, object: nil)
         }
         startFaceDown()
     }
@@ -170,6 +172,10 @@ class ZinzinBridgeViewController: CAPBridgeViewController {
                 self.faceDownSince = nil
             }
         }
+    }
+
+    @objc private func screenshotTaken() {
+        bridge?.triggerWindowJSEvent(eventName: "zzscreenshot")
     }
 
     @objc private func stopFaceDown() {

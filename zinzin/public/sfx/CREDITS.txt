@@ -59,3 +59,4 @@ spooky.m4a — orgue façon film d'horreur (motif de la Toccata BWV 565 de Bach,
 ghost-boo.m4a, croak.m4a — fantôme et crapaud d'Halloween, synthétisés maison (tools/sfx/halloween-synth.py) : aucun droit tiers.
 slap.m4a, slap2.m4a — Freesound « Face Slap - Sound Pack » (haratman), 2 gifles extraites | CC0 | https://freesound.org/people/haratman/sounds/414513/
 slap3.m4a — Freesound « Face slap sound effect » (magicjoshua) | CC0 | https://freesound.org/people/magicjoshua/sounds/704179/
+disco.m4a — boucle disco composée et synthétisée maison (tools/sfx/disco-synth.py) : aucun droit tiers.

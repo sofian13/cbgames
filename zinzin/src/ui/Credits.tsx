@@ -6,6 +6,7 @@ import { useT, type I18n } from "@/lib/i18n";
 import { playSfx } from "@/lib/sfx";
 import { ZBlob, ZCOLORS } from "./ZBlob";
 import { haptic } from "./util";
+import { FACEDOWN_DIAG_KEY } from "./FaceDownBlob";
 
 /**
  * Secret des Réglages : 7 touchers rapides sur le numéro de version → « Générique » plein écran.
@@ -203,8 +204,21 @@ function Credits({ onClose }: { onClose: () => void }) {
         </div>
       </div>
 
-      <p className="pointer-events-none relative z-[1] pb-2 text-center text-[13px] font-semibold" style={{ color: "var(--zz-mute)", paddingBottom: "calc(var(--sab) + 12px)" }}>{t.close}</p>
+      <p className="pointer-events-none relative z-[1] pb-2 text-center text-[13px] font-semibold" style={{ color: "var(--zz-mute)", paddingBottom: "calc(var(--sab) + 12px)" }}>
+        {t.close}
+        {/* Diagnostic discret du capteur « téléphone retourné » : signaux reçus / blob montré */}
+        <span className="block text-[11px] opacity-60">{faceDiag()}</span>
+      </p>
     </div>,
     document.body,
   );
+}
+
+function faceDiag(): string {
+  try {
+    const d = JSON.parse(localStorage.getItem(FACEDOWN_DIAG_KEY) ?? "{}") as { n?: number; shown?: number };
+    return `fd ${d.n ?? 0}/${d.shown ?? 0}`;
+  } catch {
+    return "fd ?";
+  }
 }
