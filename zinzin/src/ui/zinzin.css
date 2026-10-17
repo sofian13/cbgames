@@ -446,6 +446,8 @@ svg.zz-dancing { animation: zz-dance .484s ease-in-out infinite alternate; trans
 .zz-click-mini { animation: zz-click-orbit 9s linear infinite; }
 @keyframes zz-click-orbit { from { transform: rotate(var(--a)) translateX(128px) rotate(calc(-1 * var(--a))); } to { transform: rotate(calc(var(--a) + 360deg)) translateX(128px) rotate(calc(-1 * var(--a) - 360deg)); } }
 .zz-click-legend { filter: drop-shadow(0 0 18px rgba(255, 210, 63, 0.75)); }
+.zz-click-gold { transform: translate(-50%, -50%); animation: zz-click-gold 1.6s ease-in-out infinite; filter: drop-shadow(0 0 14px rgba(255, 210, 63, 0.9)); }
+@keyframes zz-click-gold { 0%, 100% { translate: 0 0; rotate: -8deg; } 50% { translate: 0 -10px; rotate: 8deg; } }
 @media (prefers-reduced-motion: reduce) { .zz-click-mini, .zz-click-pop, .zz-click-bit { animation-duration: 1ms !important; } }
 
 /* Logo : indice au 5e toucher (« … ? ») */
