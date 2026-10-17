@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { notifyPaywallClosed } from "@/lib/entitlements";
 import { getZGame } from "./catalog";
-import { usePremium } from "./premium";
+import { takeTrialOverPopup, usePremium } from "./premium";
 import "./ui/zinzin.css";
 import { useToast } from "./ui/common";
 import { GameSheet } from "./ui/GameSheet";
@@ -84,7 +84,10 @@ export function App() {
   const afterIntro = useCallback(() => {
     // Paywall de lancement : uniquement pour les non-premium, jamais au tout premier lancement
     // (on joue d'abord), puis une fois par jour au plus. Les contenus verrouillés l'ouvrent toujours.
-    if (!premium && launchPaywallDue()) setPaywall({});
+    // Essai gratuit terminé sans abonnement : paywall avec le bilan des jeux joués, une fois (même le jour déjà vu)
+    const trialOver = takeTrialOverPopup();
+    const due = launchPaywallDue();
+    if (!premium && (trialOver || due)) setPaywall({});
   }, [premium]);
 
   const openGame = (id: string) => setSheet(id);

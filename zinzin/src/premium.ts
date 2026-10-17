@@ -119,6 +119,28 @@ async function rc() {
   return { P: Purchases };
 }
 
+/* Essai gratuit déjà commencé sur ce téléphone (pour le bilan « fin d'essai » du paywall) */
+const TRIAL_SEEN_KEY = "zz-trial-seen";
+const TRIAL_OVER_SHOWN_KEY = "zz-trial-over-shown";
+function markTrialSeen() {
+  try { localStorage.setItem(TRIAL_SEEN_KEY, "1"); localStorage.removeItem(TRIAL_OVER_SHOWN_KEY); } catch { /* indispo */ }
+}
+
+/** L'essai gratuit est fini sans abonnement (essai commencé ici, plus de Zinzin+). */
+export function trialEnded(): boolean {
+  try { return !premium && localStorage.getItem(TRIAL_SEEN_KEY) === "1"; } catch { return false; }
+}
+
+/** Une seule fois après la fin de l'essai : ouvrir le paywall (avec le bilan) au lancement. */
+export function takeTrialOverPopup(): boolean {
+  if (!trialEnded()) return false;
+  try {
+    if (localStorage.getItem(TRIAL_OVER_SHOWN_KEY) === "1") return false;
+    localStorage.setItem(TRIAL_OVER_SHOWN_KEY, "1");
+  } catch { return false; }
+  return true;
+}
+
 /** À appeler au démarrage : resynchronise l'état d'abonnement. */
 export async function initPremium() {
   if (isTestMode()) return;
@@ -127,6 +149,7 @@ export async function initPremium() {
     const { customerInfo } = await Purchases.getCustomerInfo();
     const ent = customerInfo.entitlements.active[ENTITLEMENT];
     setPremium(Boolean(ent));
+    if (ent && String(ent.periodType).toLowerCase() === "trial") markTrialSeen();
     // Essai résilié / terminé : le rappel « l'essai se termine demain » n'a plus lieu d'être
     if (!ent || !ent.willRenew || String(ent.periodType).toLowerCase() !== "trial") void cancelTrialReminder();
   } catch {
@@ -186,7 +209,7 @@ export async function buy(plan: Plan): Promise<boolean> {
     const { customerInfo } = await Purchases.purchasePackage({ aPackage: plan.pkg as any });
     const ok = Boolean(customerInfo.entitlements.active[ENTITLEMENT]);
     setPremium(ok);
-    if (ok && plan.trialDays) void scheduleTrialReminder(plan);
+    if (ok && plan.trialDays) { markTrialSeen(); void scheduleTrialReminder(plan); }
     return ok;
   } catch {
     return false;

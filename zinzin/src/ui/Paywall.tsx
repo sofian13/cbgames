@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { Check, Loader2 } from "lucide-react";
-import { buy, defaultPlans, defaultYearlyPrice, isAndroid, isTestMode, loadPlans, restore, trialReminderPossible, type Plan } from "../premium";
+import { buy, defaultPlans, defaultYearlyPrice, isAndroid, isTestMode, loadPlans, restore, trialEnded, trialReminderPossible, type Plan } from "../premium";
+import { GAMES } from "../catalog";
+import { getBandStats } from "@/lib/band-stats";
 import { pick, useLang } from "@/lib/i18n";
 import { TRIAL, UI } from "../strings";
 import { ZBlob } from "./ZBlob";
@@ -34,6 +36,13 @@ export function Paywall({
   const t = pick(UI, lang);
   const tr = pick(TRIAL, lang);
   const [plans, setPlans] = useState<Plan[]>(() => defaultPlans(lang));
+  // Essai gratuit terminé : bilan « ta bande a joué à X jeux sur 21 » (jeux différents menés jusqu'à l'écran de fin)
+  const [over] = useState(() => {
+    if (!trialEnded()) return null;
+    const byGame = getBandStats().byGame;
+    const played = GAMES.filter((g) => (byGame[g.id] ?? 0) > 0).length;
+    return { played, total: GAMES.length };
+  });
   // L'annuel est présélectionné (c'est lui qui porte l'essai gratuit)
   const [sel, setSel] = useState<string>("yearly");
   // « Jour 2 : on te prévient » seulement si la notif pourra vraiment partir
@@ -106,8 +115,14 @@ export function Paywall({
         </div>
 
         <div className="zz-rise mt-3 flex justify-center" style={{ ["--d" as string]: "60ms" }}>
-          <Tag bg="#FF3EA5" color="#fff" tilt={-4}>{t.premium}</Tag>
+          <Tag bg="#FF3EA5" color="#fff" tilt={-4}>{over ? tr.overTag : t.premium}</Tag>
         </div>
+        {over && (
+          <div className="zz-rise zz-stk mx-auto mt-3 w-full max-w-[330px] rounded-[20px] px-4 py-3 text-center" style={{ background: "#fff", color: "var(--zz-ink)", rotate: "-1deg", ["--d" as string]: "70ms" }}>
+            <div className="text-[16px] font-extrabold leading-snug">{tr.overPlayed(over.played, over.total)}</div>
+            <div className="mt-0.5 text-[15px] font-bold leading-snug" style={{ color: "#C41F78" }}>{tr.overLeft(over.total - over.played)}</div>
+          </div>
+        )}
         <h1 className="zz-title zz-rise mt-2 text-center text-white" style={{ fontSize: 37, ["--d" as string]: "80ms" }}>
           {t.paywallTitle1}
           <br />

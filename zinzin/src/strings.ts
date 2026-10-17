@@ -651,6 +651,10 @@ export const TRIAL: I18n<{
   endDay: (d: number) => string;
   endText: string;
   timelineLabel: string;
+  /** Après l'essai gratuit (non converti) : bilan des jeux joués, en haut du paywall */
+  overTag: string;
+  overPlayed: (n: number, total: number) => string;
+  overLeft: (left: number) => string;
   started: (n: number) => string;
   /** Notification locale la veille de la fin de l'essai */
   reminderTitle: string;
@@ -669,6 +673,9 @@ export const TRIAL: I18n<{
     endDay: (d) => `Jour ${d}`,
     endText: "Début de l’abonnement",
     timelineLabel: "Déroulé de l’essai",
+    overTag: "Ton essai est terminé",
+    overPlayed: (n, total) => n === 0 ? "Ta bande n’a pas encore fini de partie." : n >= total ? `Ta bande a joué aux ${total} jeux !` : `Ta bande a joué à ${n} jeu${n > 1 ? "x" : ""} sur ${total}.`,
+    overLeft: (left) => left > 0 ? `Il te reste encore ${left} jeux à découvrir !` : "Garde tout avec Zinzin+ !",
     started: (n) => `C’est parti : ${n} jours offerts !`,
     reminderTitle: "Ton essai Zinzin se termine demain",
     reminderBody: (price, android) =>
@@ -687,6 +694,9 @@ export const TRIAL: I18n<{
     endDay: (d) => `Day ${d}`,
     endText: "Subscription starts",
     timelineLabel: "How the trial works",
+    overTag: "Your trial is over",
+    overPlayed: (n, total) => n === 0 ? "Your crew hasn’t finished a game yet." : n >= total ? `Your crew played all ${total} games!` : `Your crew played ${n} game${n > 1 ? "s" : ""} out of ${total}.`,
+    overLeft: (left) => left > 0 ? `${left} more games still waiting for you!` : "Keep it all with Zinzin+!",
     started: (n) => `You're in: ${n} days free!`,
     reminderTitle: "Your Zinzin trial ends tomorrow",
     reminderBody: (price, android) =>
@@ -705,6 +715,9 @@ export const TRIAL: I18n<{
     endDay: (d) => `Día ${d}`,
     endText: "Empieza la suscripción",
     timelineLabel: "Cómo funciona la prueba",
+    overTag: "Tu prueba ha terminado",
+    overPlayed: (n, total) => n === 0 ? "Tu grupo aún no ha terminado ninguna partida." : n >= total ? `¡Tu grupo ha jugado a los ${total} juegos!` : `Tu grupo ha jugado a ${n} juego${n > 1 ? "s" : ""} de ${total}.`,
+    overLeft: (left) => left > 0 ? `¡Aún te quedan ${left} juegos por descubrir!` : "¡Quédatelo todo con Zinzin+!",
     started: (n) => `¡Listo! ${n} días gratis`,
     reminderTitle: "Tu prueba de Zinzin termina mañana",
     reminderBody: (price, android) =>
