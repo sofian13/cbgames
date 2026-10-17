@@ -7,6 +7,7 @@ import { playSfx } from "@/lib/sfx";
 import { ZBlob, ZCOLORS } from "./ZBlob";
 import { haptic } from "./util";
 import { FACEDOWN_DIAG_KEY } from "./FaceDownBlob";
+import { isLiteFx } from "./perf";
 import { foundSecret } from "@/lib/secrets-found";
 
 /**
@@ -219,7 +220,7 @@ function Credits({ onClose }: { onClose: () => void }) {
 function faceDiag(): string {
   try {
     const d = JSON.parse(localStorage.getItem(FACEDOWN_DIAG_KEY) ?? "{}") as { n?: number; shown?: number };
-    return `fd ${d.n ?? 0}/${d.shown ?? 0}`;
+    return `fd ${d.n ?? 0}/${d.shown ?? 0} · fx ${isLiteFx() ? "léger" : "max"}`;
   } catch {
     return "fd ?";
   }

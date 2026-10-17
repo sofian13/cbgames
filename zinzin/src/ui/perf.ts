@@ -11,20 +11,28 @@ import { useSyncExternalStore } from "react";
 
 const KEY = "zz-lite-fx";
 const listeners = new Set<() => void>();
+/** Mode léger mémorisé valable 7 jours : un ralentissement passager ne bride pas le téléphone pour toujours. */
+const STICKY_MS = 7 * 24 * 3600 * 1000;
 let lite = (() => {
   if (typeof window === "undefined") return false;
-  try { if (localStorage.getItem(KEY) === "1") return true; } catch { /* indispo */ }
-  const nav = navigator as Navigator & { deviceMemory?: number };
-  const cores = nav.hardwareConcurrency ?? 8;
-  const mem = nav.deviceMemory ?? 8;
+  try {
+    const at = Number(localStorage.getItem(KEY));
+    if (at > 1 && Date.now() - at < STICKY_MS) return true;
+    if (at) localStorage.removeItem(KEY);
+  } catch { /* indispo */ }
   const reduce = typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
-  return reduce || cores <= 4 || mem <= 3;
+  if (reduce) return true;
+  // Nombre de cœurs et mémoire : seulement là où ils sont fiables (Android). Sur iPhone, Safari
+  // plafonne volontairement ces chiffres (anti-pistage) : on se fie uniquement à la mesure en direct.
+  const nav = navigator as Navigator & { deviceMemory?: number };
+  if (typeof nav.deviceMemory !== "number") return false;
+  return nav.deviceMemory <= 3 || (nav.hardwareConcurrency ?? 8) <= 4;
 })();
 
 function setLite(v: boolean) {
   if (lite === v) return;
   lite = v;
-  try { if (v) localStorage.setItem(KEY, "1"); else localStorage.removeItem(KEY); } catch { /* indispo */ }
+  try { if (v) localStorage.setItem(KEY, String(Date.now())); else localStorage.removeItem(KEY); } catch { /* indispo */ }
   listeners.forEach((l) => l());
 }
 
