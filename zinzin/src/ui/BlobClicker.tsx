@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
 import { Share2, X } from "lucide-react";
 import { AvatarBlob } from "@/components/avatar/AvatarBlob";
@@ -10,6 +10,7 @@ import { playSfx } from "@/lib/sfx";
 import { shareBandCard } from "@/lib/share-card";
 import { haptic, reducedMotion } from "./util";
 import { useToast } from "./common";
+import { useLiteFx, watchFps } from "./perf";
 import { ZBlob } from "./ZBlob";
 import {
   LEVELS, PARTY_MIN, bigParty, earn, fmtBig, levelCost, levelOutput, levelUnlocked, partyConfetti, perSecond, perTap,
@@ -179,6 +180,8 @@ export function BlobClicker({ onClose }: { onClose: () => void }) {
   const note = useRef(0);
   const popId = useRef(0);
   const pw = pick(POWER_TXT, lang);
+  // Téléphone qui peine : effets allégés automatiquement (perf.ts)
+  const liteFx = useLiteFx();
   // Combo : taps enchaînés à moins de 450 ms ; retombe à zéro dès qu'on s'arrête
   const [streak, setStreak] = useState(0);
   const streakT = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -199,6 +202,7 @@ export function BlobClicker({ onClose }: { onClose: () => void }) {
   // Production : 10 fois par seconde ; sauvegardes (locale toutes les 2 s, fichier toutes les 15 s, et en quittant)
   useEffect(() => {
     let lastT = performance.now();
+    let frames = 0;
     const tick = setInterval(() => {
       const n = performance.now();
       // Pas de rattrapage : app en arrière-plan ou page en pause = rien ne tourne
@@ -207,7 +211,9 @@ export function BlobClicker({ onClose }: { onClose: () => void }) {
       const ms = Date.now();
       setNow(ms);
       const ps = perSecond(sRef.current, ms < frenzyUntil);
-      if (ps > 0) update(earn(sRef.current, ps * dt));
+      if (ps > 0) sRef.current = earn(sRef.current, ps * dt);
+      // Affichage 4 fois par seconde seulement (le calcul, lui, reste fin) : moins de travail pour le téléphone
+      if (++frames % 3 === 0) setS(sRef.current);
     }, 100);
     const loc = setInterval(() => saveLocal(sRef.current), 2000);
     const file = setInterval(() => void saveBoth(sRef.current), 15000);
@@ -279,7 +285,7 @@ export function BlobClicker({ onClose }: { onClose: () => void }) {
     }
     update(next);
     haptic("light");
-    setStreak((n) => n + 1);
+    setStreak((n) => { if (n + 1 === 6 || (n + 1) % 12 === 0) watchFps(1500); return n + 1; });
     clearTimeout(streakT.current);
     streakT.current = setTimeout(() => setStreak(0), 450);
     // Note : monte tant qu'on tape vite, redescend doucement sinon (boucle la mélodie en haut)
@@ -301,7 +307,7 @@ export function BlobClicker({ onClose }: { onClose: () => void }) {
       );
     }
     const id = ++popId.current;
-    setPops((p) => [...p.slice(-12), { id, x: e.clientX + (Math.random() * 40 - 20), y: e.clientY, v: fmtBig(v, lang), boom: explosive, sweat: hasPower(next.taps, "sweat") && streak >= 5 }]);
+    setPops((p) => [...p.slice(liteFx ? -5 : -12), { id, x: e.clientX + (Math.random() * 40 - 20), y: e.clientY, v: fmtBig(v, lang), boom: explosive, sweat: hasPower(next.taps, "sweat") && streak >= 5 }]);
     setTimeout(() => setPops((p) => p.filter((q) => q.id !== id)), 900);
   };
 
@@ -337,6 +343,21 @@ export function BlobClicker({ onClose }: { onClose: () => void }) {
     await shareBandCard([{ name: me?.name ?? "Moi", look }], t.shareTitle(fmtBig(s.taps, lang)), line, t.shareText, [`${fmtBig(s.earnedAll, lang)} ${t.gloops}`]);
   };
 
+  // Dessins lourds (SVG des persos) recalculés seulement quand ils changent, pas à chaque image
+  const laughing = streak > 8;
+  const shownLook = legendary && look.extra === "none" ? { ...look, extra: "aura" } : look;
+  const lookKey = JSON.stringify(shownLook);
+  const bigBlob = useMemo(
+    () => <AvatarBlob look={shownLook} name={me?.name} size={170} mood={laughing ? "laughing" : "happy"} />,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [lookKey, me?.name, laughing],
+  );
+  const miniCount = Math.min(8, s.lv[1]);
+  const minis = useMemo(() => Array.from({ length: miniCount }, (_, i) => (
+    <div key={i} className="zz-click-mini absolute" style={{ ["--a" as string]: `${i * 45}deg`, animationDelay: `${-i * 0.37}s` } as CSSProperties}>
+      <AvatarBlob look={{ ...baseLook(["mint", "yellow", "sky", "coral", "lavender", "orange", "lime", "pink"][i]), eyes: "happy" }} size={30} animate={false} />
+    </div>
+  )), [miniCount]);
   const card = (can: boolean): CSSProperties => ({ background: can ? "#fff" : "rgba(255,255,255,0.12)", color: can ? "var(--zz-ink)" : "rgba(255,255,255,0.75)" });
 
   return createPortal(
@@ -367,16 +388,16 @@ export function BlobClicker({ onClose }: { onClose: () => void }) {
 
         {/* Le blob à tapoter, ses mini-blobs, ses pouvoirs, et parfois le blob doré */}
         <div className="relative grid min-h-0 flex-1 place-items-center" style={{ touchAction: "manipulation" }}>
-          {hasPower(s.taps, "cosmos") && <div className="zz-cosmos pointer-events-none absolute inset-0" aria-hidden />}
+          {hasPower(s.taps, "cosmos") && <div className={`zz-cosmos pointer-events-none absolute inset-0${liteFx ? " zz-cosmos-still" : ""}`} aria-hidden />}
           {hasPower(s.taps, "fire") && streak >= 8 && (
             <div className="zz-fire" aria-hidden style={{ opacity: Math.min(1, 0.55 + (streak - 8) * 0.06), ["--fs" as string]: String(Math.min(1.35, 0.9 + (streak - 8) * 0.03)) } as CSSProperties}>
-              {[0, 1, 2, 3, 4, 5].map((i) => <span key={i} style={{ left: `${6 + i * 15}%`, height: `${[58, 78, 96, 90, 72, 54][i]}%`, animationDelay: `${-i * 0.13}s` }} />)}
+              {(liteFx ? [1, 2, 3] : [0, 1, 2, 3, 4, 5]).map((i) => <span key={i} style={{ left: `${6 + i * 15}%`, height: `${[58, 78, 96, 90, 72, 54][i]}%`, animationDelay: `${-i * 0.13}s` }} />)}
             </div>
           )}
-          {hasPower(s.taps, "sparks") && Array.from({ length: 6 }, (_, i) => (
-            <span key={`sp${i}`} aria-hidden className="zz-click-spark pointer-events-none absolute text-[18px]" style={{ ["--a" as string]: `${i * 60}deg`, animationDelay: `${-i * 0.5}s` } as CSSProperties}>✦</span>
+          {hasPower(s.taps, "sparks") && Array.from({ length: liteFx ? 3 : 6 }, (_, i) => (
+            <span key={`sp${i}`} aria-hidden className="zz-click-spark pointer-events-none absolute text-[18px]" style={{ ["--a" as string]: `${i * (liteFx ? 120 : 60)}deg`, animationDelay: `${-i * 0.5}s` } as CSSProperties}>✦</span>
           ))}
-          {hasPower(s.taps, "bolts") && streak >= 14 && [0, 1, 2].map((i) => (
+          {hasPower(s.taps, "bolts") && streak >= 14 && (liteFx ? [2] : [0, 1, 2]).map((i) => (
             <svg key={`b${i}`} aria-hidden className="zz-bolt pointer-events-none absolute" width="46" height="90" viewBox="0 0 46 90"
               style={{ left: `${[14, 72, 44][i]}%`, top: `${[12, 18, 2][i]}%`, animationDelay: `${i * 0.17}s`, rotate: `${[-14, 12, 4][i]}deg` }}>
               <path d="M28 0 L4 50 L20 50 L12 90 L42 34 L25 34 L36 0Z" fill="#FFF36B" stroke="#15082E" strokeWidth="3" strokeLinejoin="round" />
@@ -388,20 +409,17 @@ export function BlobClicker({ onClose }: { onClose: () => void }) {
               {pw.combo(streak)}{streak >= 8 && hasPower(s.taps, "fire") ? " 🔥" : ""}
             </div>
           )}
-          {Array.from({ length: Math.min(8, s.lv[1]) }, (_, i) => (
-            <div key={i} className="zz-click-mini absolute" style={{ ["--a" as string]: `${i * 45}deg`, animationDelay: `${-i * 0.37}s` } as CSSProperties}>
-              <AvatarBlob look={{ ...baseLook(["mint", "yellow", "sky", "coral", "lavender", "orange", "lime", "pink"][i]), eyes: "happy" }} size={30} animate={false} />
-            </div>
-          ))}
+          {minis}
           <div ref={blob} onPointerDown={tap} role="button" aria-label={t.title}
-            className={`relative z-[2] select-none ${legendary ? "zz-click-legend" : ""}`}
-            style={{ WebkitTapHighlightColor: "transparent", WebkitUserSelect: "none", cursor: "pointer" }}>
+            className="relative z-[2] select-none"
+            style={{ WebkitTapHighlightColor: "transparent", WebkitUserSelect: "none", cursor: "pointer", willChange: "transform" }}>
             {hasPower(s.taps, "crown") && (
               <div className="zz-crownfire pointer-events-none absolute left-1/2 top-[-22px] z-[3] -translate-x-1/2" aria-hidden>
                 {[0, 1, 2, 3, 4].map((i) => <span key={i} style={{ left: `${i * 22}px`, height: `${[26, 36, 44, 36, 26][i]}px`, animationDelay: `${-i * 0.11}s` }} />)}
               </div>
             )}
-            <AvatarBlob look={legendary && look.extra === "none" ? { ...look, extra: "aura" } : look} name={me?.name} size={170} mood={combo.current.length > 8 ? "laughing" : "happy"} />
+            {legendary && <div className="zz-click-glow pointer-events-none absolute inset-[-18%] -z-[1] rounded-full" aria-hidden />}
+            {bigBlob}
           </div>
           {gold && (
             <button key={gold.id} type="button" onClick={catchGold} aria-label="Blob doré"
@@ -469,8 +487,8 @@ export function BlobClicker({ onClose }: { onClose: () => void }) {
             <div className="mt-2 text-[86px] leading-none">{POWERS.find((p) => p.id === celebrate)?.icon}</div>
             <div className="zz-title mt-1 text-[38px] leading-tight text-white">{pw.name[celebrate]}</div>
             <div className="mx-8 mt-1 text-[16px] font-bold" style={{ color: "#FFD23F" }}>{pw.desc[celebrate]}</div>
-            {Array.from({ length: 14 }, (_, i) => (
-              <i key={i} className="zz-click-bit zz-power-bit" style={{ ["--a" as string]: `${i * 26}deg`, background: ["#FF3EA5", "#3DDC97", "#52C7FF", "#FFD23F", "#A98BFF", "#FF8A1F"][i % 6] } as CSSProperties} />
+            {Array.from({ length: liteFx ? 7 : 14 }, (_, i) => (
+              <i key={i} className="zz-click-bit zz-power-bit" style={{ ["--a" as string]: `${i * (liteFx ? 52 : 26)}deg`, background: ["#FF3EA5", "#3DDC97", "#52C7FF", "#FFD23F", "#A98BFF", "#FF8A1F"][i % 6] } as CSSProperties} />
             ))}
           </div>
         </div>
@@ -485,8 +503,8 @@ export function BlobClicker({ onClose }: { onClose: () => void }) {
       {pops.map((p) => (
         <span key={p.id} className="zz-click-pop zz-title pointer-events-none fixed text-[26px]" style={{ left: p.x, top: p.y - 30, color: "#fff", zIndex: 46 }}>
           +{p.v}
-          {p.boom && Array.from({ length: 6 }, (_, i) => (
-            <i key={i} className="zz-click-bit" style={{ ["--a" as string]: `${i * 60 + 15}deg`, background: ["#FF3EA5", "#3DDC97", "#52C7FF", "#FFD23F", "#A98BFF", "#FF8A1F"][i] } as CSSProperties} />
+          {p.boom && Array.from({ length: liteFx ? 3 : 6 }, (_, i) => (
+            <i key={i} className="zz-click-bit" style={{ ["--a" as string]: `${i * (liteFx ? 120 : 60) + 15}deg`, background: ["#FF3EA5", "#3DDC97", "#52C7FF", "#FFD23F", "#A98BFF", "#FF8A1F"][i] } as CSSProperties} />
           ))}
         </span>
       ))}
