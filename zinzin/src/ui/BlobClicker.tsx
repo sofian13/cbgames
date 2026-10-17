@@ -157,6 +157,14 @@ const T: I18n<{
   },
 };
 
+/** Flamme de dessin animé (contour épais, langues de feu) : posée en couronne derrière le blob en combo. */
+const FLAME = "M50 128 C22 128 6 106 12 80 C16 64 26 58 28 46 C36 56 38 64 36 72 C46 58 44 36 56 6 C62 30 76 40 80 60 C84 52 84 44 82 36 C96 54 98 82 90 100 C82 118 68 128 50 128Z";
+// Couronne de flammes qui sortent de DERRIÈRE le blob (bas des flammes cachés derrière lui)
+const FLAMES: { x: number; y: number; w: number; r: number }[] = [
+  { x: -104, y: -40, w: 60, r: -30 }, { x: -82, y: 6, w: 72, r: -18 }, { x: -42, y: 36, w: 84, r: -7 },
+  { x: 0, y: 48, w: 96, r: 0 }, { x: 42, y: 36, w: 84, r: 7 }, { x: 82, y: 6, w: 72, r: 18 }, { x: 104, y: -40, w: 60, r: 30 },
+];
+
 /** Gamme pentatonique (demi-tons) : le pop monte d'une note à chaque tap rapide, puis redescend. */
 const SCALE = [0, 2, 4, 7, 9, 12, 14, 16, 19, 21, 24];
 
@@ -179,6 +187,8 @@ export function BlobClicker({ onClose }: { onClose: () => void }) {
   const combo = useRef<number[]>([]);
   const note = useRef(0);
   const popId = useRef(0);
+  const squash = useRef<Animation | null>(null);
+  const lastFx = useRef(0);
   const pw = pick(POWER_TXT, lang);
   // Téléphone qui peine : effets allégés automatiquement (perf.ts)
   const liteFx = useLiteFx();
@@ -290,26 +300,33 @@ export function BlobClicker({ onClose }: { onClose: () => void }) {
       celebrateT.current = setTimeout(() => setCelebrate(null), 2600);
     }
     update(next);
-    haptic("light");
+    // Plusieurs doigts = des dizaines de taps par seconde : vibration et son limités (le compteur, lui, compte tout)
+    const nowT = performance.now();
+    const quiet = nowT - lastFx.current < 45;
+    if (!quiet) lastFx.current = nowT;
+    if (!quiet) haptic("light");
     setStreak((n) => { if (n + 1 === 6 || (n + 1) % 12 === 0) watchFps(1500); return n + 1; });
     clearTimeout(streakT.current);
     streakT.current = setTimeout(() => setStreak(0), 450);
     // Note : monte tant qu'on tape vite, redescend doucement sinon (boucle la mélodie en haut)
     note.current = combo.current.length > 1 ? note.current + 1 : Math.max(0, note.current - 3);
     if (note.current >= SCALE.length) note.current = 5;
-    playSfx("pop", { volume: 0.32, rate: 0.85 * 2 ** (SCALE[note.current] / 12) });
+    if (!quiet) playSfx("pop", { volume: 0.32, rate: 0.85 * 2 ** (SCALE[note.current] / 12) });
     const k = Math.min(1, combo.current.length / 12);
     const el = blob.current;
     if (el && typeof el.animate === "function" && !reducedMotion()) {
       const big = 1 + k * 0.14;
-      el.animate(
+      // Une seule animation à la fois : la précédente est annulée (sinon elles s'empilaient en mémoire
+      // jusqu'au plantage quand on tapait à plusieurs doigts)
+      squash.current?.cancel();
+      squash.current = el.animate(
         [
           { transform: `scale(${big},${big})` },
           { transform: `scale(${big * 1.14},${big * 0.86})`, offset: 0.22 },
           { transform: `scale(${big * 0.95},${big * 1.06})`, offset: 0.55 },
           { transform: `scale(${big},${big})` },
         ],
-        { duration: 240, easing: "ease-out", fill: "forwards" },
+        { duration: 240, easing: "ease-out" },
       );
     }
     const id = ++popId.current;
@@ -396,8 +413,15 @@ export function BlobClicker({ onClose }: { onClose: () => void }) {
         <div className="relative grid min-h-0 flex-1 place-items-center" style={{ touchAction: "manipulation" }}>
           {hasPower(s.taps, "cosmos") && <div className={`zz-cosmos pointer-events-none absolute inset-0${liteFx ? " zz-cosmos-still" : ""}`} aria-hidden />}
           {hasPower(s.taps, "fire") && streak >= 8 && (
-            <div className="zz-fire" aria-hidden style={{ opacity: Math.min(1, 0.55 + (streak - 8) * 0.06), ["--fs" as string]: String(Math.min(1.35, 0.9 + (streak - 8) * 0.03)) } as CSSProperties}>
-              {(liteFx ? [1, 2, 3] : [0, 1, 2, 3, 4, 5]).map((i) => <span key={i} style={{ left: `${6 + i * 15}%`, height: `${[58, 78, 96, 90, 72, 54][i]}%`, animationDelay: `${-i * 0.13}s` }} />)}
+            <div className="zz-fire" aria-hidden style={{ ["--fs" as string]: String(Math.min(1.25, 0.9 + (streak - 8) * 0.025)) } as CSSProperties}>
+              {(liteFx ? FLAMES.filter((_, i) => i % 2 === 0) : FLAMES).map((f, i) => (
+                <svg key={i} className="zz-flame" viewBox="0 0 100 130" width={f.w} height={f.w * 1.3}
+                  style={{ left: `calc(50% + ${f.x}px)`, bottom: f.y, rotate: `${f.r}deg`, animationDelay: `${-i * 0.11}s`, animationDuration: `${0.36 + (i % 3) * 0.07}s` }}>
+                  <path d={FLAME} fill="#FF6A1A" stroke="#15082E" strokeWidth={7} strokeLinejoin="round" />
+                  <path d={FLAME} fill="#FFD23F" transform="translate(50 128) scale(0.6) translate(-50 -128)" />
+                  <path d={FLAME} fill="#FFF7C2" transform="translate(50 128) scale(0.28) translate(-50 -128)" />
+                </svg>
+              ))}
             </div>
           )}
           {hasPower(s.taps, "sparks") && Array.from({ length: liteFx ? 3 : 6 }, (_, i) => (
@@ -421,7 +445,13 @@ export function BlobClicker({ onClose }: { onClose: () => void }) {
             style={{ WebkitTapHighlightColor: "transparent", WebkitUserSelect: "none", cursor: "pointer", willChange: "transform" }}>
             {hasPower(s.taps, "crown") && (
               <div className="zz-crownfire pointer-events-none absolute left-1/2 top-[-22px] z-[3] -translate-x-1/2" aria-hidden>
-                {[0, 1, 2, 3, 4].map((i) => <span key={i} style={{ left: `${i * 22}px`, height: `${[26, 36, 44, 36, 26][i]}px`, animationDelay: `${-i * 0.11}s` }} />)}
+                {[0, 1, 2, 3, 4].map((i) => (
+                  <svg key={i} className="zz-flame" viewBox="0 0 100 130" width={[20, 26, 32, 26, 20][i]} height={[26, 34, 42, 34, 26][i]}
+                    style={{ left: `${10 + i * 22}px`, bottom: 0, animationDelay: `${-i * 0.11}s` }}>
+                    <path d={FLAME} fill="#FF6A1A" stroke="#15082E" strokeWidth={9} strokeLinejoin="round" />
+                    <path d={FLAME} fill="#FFD23F" transform="translate(50 128) scale(0.55) translate(-50 -128)" />
+                  </svg>
+                ))}
               </div>
             )}
             {legendary && <div className="zz-click-glow pointer-events-none absolute inset-[-18%] -z-[1] rounded-full" aria-hidden />}

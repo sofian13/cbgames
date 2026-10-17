@@ -451,15 +451,13 @@ svg.zz-dancing { animation: zz-dance .484s ease-in-out infinite alternate; trans
 @keyframes zz-click-gold { 0%, 100% { translate: 0 0; rotate: -8deg; } 50% { translate: 0 -10px; rotate: 8deg; } }
 @media (prefers-reduced-motion: reduce) { .zz-click-mini, .zz-click-pop, .zz-click-bit { animation-duration: 1ms !important; } }
 /* Pouvoirs du blob (BlobClicker.tsx) */
-.zz-fire { position: absolute; left: 50%; top: 50%; width: 240px; height: 250px; transform: translate(-50%, -66%) scale(var(--fs, 1)); pointer-events: none; z-index: 1; transition: opacity 200ms; }
-.zz-fire span { position: absolute; bottom: 0; width: 26%; border-radius: 50% 50% 46% 46% / 64% 64% 36% 36%;
-  background: radial-gradient(ellipse at 50% 82%, #FFF7B0 0%, #FFC12E 30%, #FF6A1A 58%, rgba(255, 50, 20, 0) 74%);
-  transform-origin: 50% 100%; animation: zz-flame 0.42s ease-in-out infinite alternate; will-change: transform; }
-@keyframes zz-flame { from { transform: scale(0.88, 0.82) translateX(-4px) rotate(-3deg); } to { transform: scale(1.06, 1.18) translateX(4px) rotate(3deg); } }
+.zz-fire { position: absolute; left: 0; right: 0; top: 50%; height: 0; transform: scale(var(--fs, 1)); transform-origin: 50% 0; pointer-events: none; z-index: 1; animation: zz-fire-in 180ms ease-out both; }
+.zz-flame { position: absolute; margin-left: calc(var(--w, 0px) * -0.5); translate: -50% 0; transform-origin: 50% 100%;
+  animation: zz-flame 0.4s ease-in-out infinite alternate; will-change: transform; overflow: visible; }
+@keyframes zz-flame { from { transform: scale(0.92, 0.86) skewX(-4deg); } to { transform: scale(1.05, 1.12) skewX(4deg); } }
+@keyframes zz-fire-in { from { opacity: 0; transform: scale(0.6); } to { opacity: 1; transform: scale(var(--fs, 1)); } }
 .zz-crownfire { width: 110px; height: 44px; }
-.zz-crownfire span { position: absolute; bottom: 0; width: 22px; border-radius: 50% 50% 40% 40% / 70% 70% 30% 30%;
-  background: radial-gradient(ellipse at 50% 85%, #FFF7B0 0%, #FFB21F 40%, #FF4A1A 68%, rgba(255, 40, 0, 0) 76%);
-  transform-origin: 50% 100%; animation: zz-flame 0.35s ease-in-out infinite alternate; }
+
 .zz-click-spark { color: #FFF36B; text-shadow: 0 0 10px #FFD23F; animation: zz-click-spark 4.5s linear infinite; z-index: 3; }
 @keyframes zz-click-spark { from { transform: rotate(var(--a)) translateX(108px) rotate(calc(-1 * var(--a))) scale(0.8); } 50% { opacity: 0.4; } to { transform: rotate(calc(var(--a) + 360deg)) translateX(108px) rotate(calc(-1 * var(--a) - 360deg)) scale(1.1); } }
 .zz-bolt { z-index: 3; opacity: 0; animation: zz-bolt 0.55s steps(1) infinite; filter: drop-shadow(0 0 10px #FFF36B); }
@@ -481,7 +479,7 @@ svg.zz-dancing { animation: zz-dance .484s ease-in-out infinite alternate; trans
 @keyframes zz-power { 0% { opacity: 0; transform: scale(0.4) rotate(-8deg); } 14% { opacity: 1; transform: scale(1.12) rotate(2deg); } 22% { transform: scale(1) rotate(0deg); } 86% { opacity: 1; transform: scale(1); } 100% { opacity: 0; transform: scale(0.9); } }
 .zz-power-bit { width: 12px; height: 12px; animation: zz-power-bit 1.1s ease-out 0.25s both; }
 @keyframes zz-power-bit { from { transform: rotate(var(--a)) translateX(0); opacity: 1; } to { transform: rotate(var(--a)) translateX(170px); opacity: 0; } }
-@media (prefers-reduced-motion: reduce) { .zz-fire span, .zz-crownfire span, .zz-click-spark, .zz-bolt, .zz-cosmos, .zz-sweat, .zz-power, .zz-power-bit { animation-duration: 1ms !important; } }
+@media (prefers-reduced-motion: reduce) { .zz-flame, .zz-click-spark, .zz-bolt, .zz-cosmos, .zz-sweat, .zz-power, .zz-power-bit { animation-duration: 1ms !important; } }
 
 /* Accueil au repos depuis 30 s (Home.tsx) : décor en pause, les yeux clignent toujours */
 .zz-idle .zz-doodle, .zz-idle .zz-glow, .zz-idle .zz-letter, .zz-idle .zz-letter-jump, .zz-idle .zb-wob, .zz-idle .zb-face,
