@@ -12,6 +12,7 @@ import { haptic, reducedMotion } from "./util";
 import { useToast } from "./common";
 import { useLiteFx, watchFps } from "./perf";
 import { ZBlob } from "./ZBlob";
+import { ClickerScene, ENVS, type EnvId } from "./ClickerScenes";
 import {
   LEVELS, PARTY_MIN, bigParty, earn, fmtBig, levelCost, levelOutput, levelUnlocked, partyConfetti, perSecond, perTap,
   type ClickerState,
@@ -29,6 +30,7 @@ import { loadBest, loadLocal, saveBoth, saveLocal } from "../clicker-save";
  */
 
 const FRENZY_MS = 30_000;
+const GIFT_KEY = "zz-clicker-gift-day";
 const GOLD_SHOW_MS = 9000;
 
 type Reward = { at: number; secret?: string; kind: "eyes" | "extra" | "anim" | "color" | "legend" | "badge" };
@@ -41,7 +43,7 @@ const REWARDS: Reward[] = [
 ];
 
 /** Pouvoirs visuels du blob, débloqués aux paliers de vrais taps (grosse annonce à chaque fois). */
-type Power = "sweat" | "boom" | "fire" | "sparks" | "bolts" | "crown" | "cosmos";
+type Power = "sweat" | "boom" | "fire" | "sparks" | "bolts" | "crown";
 const POWERS: { at: number; id: Power; icon: string }[] = [
   { at: 250, id: "sweat", icon: "💦" },
   { at: 1000, id: "boom", icon: "🎉" },
@@ -49,25 +51,24 @@ const POWERS: { at: number; id: Power; icon: string }[] = [
   { at: 5000, id: "sparks", icon: "✨" },
   { at: 25000, id: "bolts", icon: "⚡" },
   { at: 50000, id: "crown", icon: "👑" },
-  { at: 100000, id: "cosmos", icon: "🌌" },
 ];
 const POWER_TXT: I18n<{ title: string; name: Record<Power, string>; desc: Record<Power, string>; combo: (n: number) => string }> = {
   fr: {
     title: "NOUVEAU POUVOIR !",
-    name: { sweat: "La sueur", boom: "Taps explosifs", fire: "Combo de feu", sparks: "Étincelles", bolts: "Éclairs", crown: "Couronne de flammes", cosmos: "Blob cosmique" },
-    desc: { sweat: "Tape vite : ton blob transpire.", boom: "Chaque tap explose en confettis.", fire: "8 taps d'affilée : ton blob prend feu !", sparks: "Des étincelles tournent autour de lui.", bolts: "Gros combo : la foudre tombe.", crown: "Une couronne de flammes, pour toujours.", cosmos: "Ton blob part dans l'espace." },
+    name: { sweat: "La sueur", boom: "Taps explosifs", fire: "Combo de feu", sparks: "Étincelles", bolts: "Éclairs", crown: "Couronne de flammes" },
+    desc: { sweat: "Tape vite : ton blob transpire.", boom: "Chaque tap explose en confettis.", fire: "8 taps d'affilée : ton blob prend feu !", sparks: "Des étincelles tournent autour de lui.", bolts: "Gros combo : la foudre tombe.", crown: "Une couronne de flammes, pour toujours." },
     combo: (n) => `COMBO ×${n}`,
   },
   en: {
     title: "NEW POWER!",
-    name: { sweat: "Sweat", boom: "Explosive taps", fire: "Fire combo", sparks: "Sparkles", bolts: "Lightning", crown: "Crown of flames", cosmos: "Cosmic blob" },
-    desc: { sweat: "Tap fast: your blob sweats.", boom: "Every tap bursts into confetti.", fire: "8 taps in a row: your blob catches fire!", sparks: "Sparkles orbit around it.", bolts: "Huge combo: lightning strikes.", crown: "A crown of flames, forever.", cosmos: "Your blob goes to space." },
+    name: { sweat: "Sweat", boom: "Explosive taps", fire: "Fire combo", sparks: "Sparkles", bolts: "Lightning", crown: "Crown of flames" },
+    desc: { sweat: "Tap fast: your blob sweats.", boom: "Every tap bursts into confetti.", fire: "8 taps in a row: your blob catches fire!", sparks: "Sparkles orbit around it.", bolts: "Huge combo: lightning strikes.", crown: "A crown of flames, forever." },
     combo: (n) => `COMBO ×${n}`,
   },
   es: {
     title: "¡NUEVO PODER!",
-    name: { sweat: "El sudor", boom: "Toques explosivos", fire: "Combo de fuego", sparks: "Chispas", bolts: "Rayos", crown: "Corona de llamas", cosmos: "Blob cósmico" },
-    desc: { sweat: "Toca rápido: tu blob suda.", boom: "Cada toque explota en confeti.", fire: "¡8 toques seguidos: tu blob arde!", sparks: "Unas chispas giran a su alrededor.", bolts: "Combo enorme: caen rayos.", crown: "Una corona de llamas, para siempre.", cosmos: "Tu blob se va al espacio." },
+    name: { sweat: "El sudor", boom: "Toques explosivos", fire: "Combo de fuego", sparks: "Chispas", bolts: "Rayos", crown: "Corona de llamas" },
+    desc: { sweat: "Toca rápido: tu blob suda.", boom: "Cada toque explota en confeti.", fire: "¡8 toques seguidos: tu blob arde!", sparks: "Unas chispas giran a su alrededor.", bolts: "Combo enorme: caen rayos.", crown: "Una corona de llamas, para siempre." },
     combo: (n) => `COMBO ×${n}`,
   },
 };
@@ -109,6 +110,7 @@ const T: I18n<{
   reward: Record<Reward["kind"], string>; unlocked: (what: string) => string; close: string; badge: string;
   lvl: (n: number) => string; plusTap: (n: string) => string; soon: (n: number) => string; unlockAt: (n: string) => string;
   partyShort: string; partyGain: (n: number) => string; partyAt: (n: string) => string; doubled: (name: string) => string;
+  envNew: string; envDesc: string; envAt: (n: string) => string; giftTitle: string; giftSub: string; giftBtn: string;
 }> = {
   fr: {
     title: "Tapote le blob", gloops: "gloops", perSec: (n) => `${n} par seconde`, taps: (n) => `${n} taps`, perTap: (n) => `+${n} par tap`,
@@ -124,6 +126,8 @@ const T: I18n<{
     unlocked: (what) => `🎁 Débloqué : ${what} !`, close: "Fermer", badge: "🏆 Sans vie sociale",
     lvl: (n) => `niv. ${n}`, plusTap: (n) => `+${n}/tap`, soon: (n) => `dans ${n}`, unlockAt: (n) => `à ${n} gloops`,
     partyShort: "Grande fête", partyGain: (n) => `+${n} confettis`, partyAt: (n) => `à ${n} gagnés`, doubled: (name) => `⚡ ${name} : efficacité ×2 !`,
+    envNew: "NOUVEAU DÉCOR !", envDesc: "Ton blob déménage. Change de décor quand tu veux, en haut.", envAt: (n) => `à ${n} taps`,
+    giftTitle: "Cadeau du jour", giftSub: "Content de te revoir ! Reviens demain pour un autre cadeau.", giftBtn: "Je prends !",
   },
   en: {
     title: "Tap the blob", gloops: "gloops", perSec: (n) => `${n} per second`, taps: (n) => `${n} taps`, perTap: (n) => `+${n} per tap`,
@@ -139,6 +143,8 @@ const T: I18n<{
     unlocked: (what) => `🎁 Unlocked: ${what}!`, close: "Close", badge: "🏆 No social life",
     lvl: (n) => `lv ${n}`, plusTap: (n) => `+${n}/tap`, soon: (n) => `in ${n}`, unlockAt: (n) => `at ${n} gloops`,
     partyShort: "Big Party", partyGain: (n) => `+${n} confetti`, partyAt: (n) => `at ${n} earned`, doubled: (name) => `⚡ ${name}: ×2 power!`,
+    envNew: "NEW SCENERY!", envDesc: "Your blob is moving. Switch scenery anytime, up top.", envAt: (n) => `at ${n} taps`,
+    giftTitle: "Daily gift", giftSub: "Good to see you! Come back tomorrow for another gift.", giftBtn: "Grab it!",
   },
   es: {
     title: "Toca el blob", gloops: "gloops", perSec: (n) => `${n} por segundo`, taps: (n) => `${n} toques`, perTap: (n) => `+${n} por toque`,
@@ -154,6 +160,8 @@ const T: I18n<{
     unlocked: (what) => `🎁 Desbloqueado: ${what}`, close: "Cerrar", badge: "🏆 Sin vida social",
     lvl: (n) => `niv. ${n}`, plusTap: (n) => `+${n}/toque`, soon: (n) => `en ${n}`, unlockAt: (n) => `a ${n} gloops`,
     partyShort: "Gran fiesta", partyGain: (n) => `+${n} confeti`, partyAt: (n) => `a ${n} ganados`, doubled: (name) => `⚡ ${name}: ¡×2 de potencia!`,
+    envNew: "¡NUEVO ESCENARIO!", envDesc: "Tu blob se muda. Cambia de escenario cuando quieras, arriba.", envAt: (n) => `a ${n} toques`,
+    giftTitle: "Regalo del día", giftSub: "¡Qué bien verte! Vuelve mañana para otro regalo.", giftBtn: "¡Lo quiero!",
   },
 };
 
@@ -214,6 +222,9 @@ export function BlobClicker({ onClose }: { onClose: () => void }) {
   const [streak, setStreak] = useState(0);
   const streakT = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const [celebrate, setCelebrate] = useState<Power | null>(null);
+  const [envCelebrate, setEnvCelebrate] = useState<EnvId | null>(null);
+  const [envPick, setEnvPick] = useState(false);
+  const [gift, setGift] = useState<number | null>(null);
   const celebrateT = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   useEffect(() => () => { clearTimeout(streakT.current); clearTimeout(celebrateT.current); }, []);
   const frenzy = now < frenzyUntil;
@@ -222,7 +233,17 @@ export function BlobClicker({ onClose }: { onClose: () => void }) {
   // Ouverture : la meilleure des deux sauvegardes. Rien ne se gagne quand on ne joue pas.
   useEffect(() => {
     let alive = true;
-    void loadBest().then((best) => { if (alive) update(best); });
+    void loadBest().then((best) => {
+      if (!alive) return;
+      update(best);
+      // Cadeau du jour : à la 1re ouverture de la journée (rien n'est perdu si on rate un jour)
+      try {
+        const today = new Date().toDateString();
+        if (localStorage.getItem(GIFT_KEY) !== today) {
+          setGift(Math.max(100, Math.round(perSecond(best) * 120 + perTap(best) * 40)));
+        }
+      } catch { /* indispo */ }
+    });
     return () => { alive = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -317,6 +338,16 @@ export function BlobClicker({ onClose }: { onClose: () => void }) {
       clearTimeout(celebrateT.current);
       celebrateT.current = setTimeout(() => setCelebrate(null), 2600);
     }
+    // Nouveau décor : grande annonce, et on y emménage directement
+    const newEnv = ENVS.find((e) => e.at > 0 && cur.taps < e.at && next.taps >= e.at);
+    if (newEnv) {
+      next.env = newEnv.id;
+      setEnvCelebrate(newEnv.id);
+      playSfx("tada", { volume: 0.55 });
+      haptic("success");
+      clearTimeout(celebrateT.current);
+      celebrateT.current = setTimeout(() => setEnvCelebrate(null), 2800);
+    }
     update(next);
     // Plusieurs doigts = des dizaines de taps par seconde : vibration et son limités (le compteur, lui, compte tout)
     const nowT = performance.now();
@@ -373,10 +404,24 @@ export function BlobClicker({ onClose }: { onClose: () => void }) {
     toast(t.partyDone(next.confetti));
   };
 
+  const unlockedEnvs = ENVS.filter((e) => s.taps >= e.at);
+  const envId: EnvId = (unlockedEnvs.find((e) => e.id === s.env) ?? unlockedEnvs[unlockedEnvs.length - 1]).id;
+  const envInfo = ENVS.find((e) => e.id === envId)!;
+  const chooseEnv = (id: EnvId) => { haptic("light"); playSfx("pop", { volume: 0.35 }); update({ ...sRef.current, env: id }); setEnvPick(false); };
+  const takeGift = () => {
+    if (gift == null) return;
+    try { localStorage.setItem(GIFT_KEY, new Date().toDateString()); } catch { /* indispo */ }
+    update(earn(sRef.current, gift));
+    playSfx("coins", { volume: 0.55 });
+    playSfx("tada", { volume: 0.4, delay: 0.1 });
+    haptic("success");
+    setGift(null);
+  };
   const ps = perSecond(s, frenzy);
   const line = [...lines].reverse().find(([at]) => s.taps >= at)?.[1] ?? lines[0][1];
   const nextReward = REWARDS.find((r) => s.taps < r.at);
   const nextPower = POWERS.find((p) => s.taps < p.at);
+  const nextEnv = ENVS.find((e) => s.taps < e.at);
   const confettiGain = partyConfetti(s);
 
   const share = async () => {
@@ -401,8 +446,10 @@ export function BlobClicker({ onClose }: { onClose: () => void }) {
   )), [miniCount]);
 
   return createPortal(
-    <div className="fixed inset-0 flex flex-col overflow-hidden" style={{ zIndex: 45, background: frenzy ? "#3A0E3F" : "var(--zz-bg)", transition: "background 400ms", paddingTop: "calc(var(--sat) + 8px)", paddingBottom: "calc(var(--sab) + 10px)" }} role="dialog" aria-label={t.title}>
-      <div className="mx-auto flex w-full max-w-lg min-h-0 flex-1 flex-col">
+    <div className="fixed inset-0 flex flex-col overflow-hidden" style={{ zIndex: 45, background: "var(--zz-bg)", paddingTop: "calc(var(--sat) + 8px)", paddingBottom: "calc(var(--sab) + 10px)" }} role="dialog" aria-label={t.title}>
+      <ClickerScene env={envId} still={liteFx} />
+      {frenzy && <div className="pointer-events-none absolute inset-0" style={{ background: "rgba(255, 62, 165, 0.16)" }} aria-hidden />}
+      <div className="relative z-[1] mx-auto flex w-full max-w-lg min-h-0 flex-1 flex-col">
         <div className="flex items-center justify-between px-5">
           <h2 className="zz-title text-[26px] text-white">{t.title}</h2>
           <button type="button" onClick={() => { void saveBoth(sRef.current); onClose(); }} aria-label={t.close}
@@ -424,11 +471,35 @@ export function BlobClicker({ onClose }: { onClose: () => void }) {
               </div>
             )}
           <p className="mx-6 mt-1.5 text-[15.5px] font-bold leading-snug text-white">{line}</p>
+          {/* Décor : pastille pour en changer (seulement s'il y en a plusieurs de débloqués) */}
+          {unlockedEnvs.length > 1 && (
+            <button type="button" onClick={() => { haptic("light"); setEnvPick((v) => !v); }}
+              className="zz-push zz-stk-sm mx-auto mt-1.5 flex h-8 items-center gap-1.5 rounded-full px-3 text-[13px] font-extrabold"
+              style={{ background: "#fff", color: "#15082E" }} aria-expanded={envPick}>
+              <span>{envInfo.icon}</span>{envInfo.name[lang]}<span style={{ opacity: 0.6 }}>{envPick ? "▴" : "▾"}</span>
+            </button>
+          )}
+          {envPick && (
+            <div className="zz-pop mx-3 mt-2 flex flex-wrap justify-center gap-1.5">
+              {ENVS.map((e) => {
+                const open = s.taps >= e.at;
+                const on = e.id === envId;
+                return (
+                  <button key={e.id} type="button" disabled={!open} onClick={() => chooseEnv(e.id)}
+                    className="zz-push flex h-9 items-center gap-1 rounded-full px-2.5 text-[12.5px] font-extrabold"
+                    style={open
+                      ? { background: on ? "#FFD23F" : "#fff", color: "#15082E", border: "2.5px solid #15082E" }
+                      : { background: "rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.6)", border: "2.5px solid transparent" }}>
+                    <span>{open ? e.icon : "🔒"}</span>{open ? e.name[lang] : t.envAt(fmtBig(e.at, lang))}
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* Le blob à tapoter, ses mini-blobs, ses pouvoirs, et parfois le blob doré */}
         <div className="relative grid min-h-0 flex-1 place-items-center" style={{ touchAction: "manipulation" }}>
-          {hasPower(s.taps, "cosmos") && <div className={`zz-cosmos pointer-events-none absolute inset-0${liteFx ? " zz-cosmos-still" : ""}`} aria-hidden />}
           {hasPower(s.taps, "fire") && streak >= 8 && (
             <div className="zz-fire" aria-hidden style={{ ["--fs" as string]: String(Math.min(1.25, 0.9 + (streak - 8) * 0.025)) } as CSSProperties}>
               {(liteFx ? FLAMES.filter((_, i) => i % 2 === 0) : FLAMES).map((f, i) => (
@@ -496,8 +567,9 @@ export function BlobClicker({ onClose }: { onClose: () => void }) {
               <button key={d.id} type="button" onClick={() => buyLevel(i)} disabled={!open}
                 className="zz-push zz-stk-sm relative flex min-h-[100px] flex-col items-center justify-center rounded-[18px] px-1 py-1.5 text-center"
                 style={!open
-                  ? { background: "rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.6)", boxShadow: "none", borderColor: "rgba(255,255,255,0.15)" }
-                  : { background: cs.bg, color: "#15082E", opacity: can ? 1 : 0.6, transition: "opacity 200ms" }}>
+                  ? { background: "#2B1F52", color: "rgba(255,255,255,0.6)" }
+                  // Pas assez de gloops : même couleur, assombrie (pleine : le décor ne transparaît jamais)
+                  : { background: can ? cs.bg : `linear-gradient(rgba(21,8,46,0.38), rgba(21,8,46,0.38)), ${cs.bg}`, color: "#15082E", transition: "background 200ms" }}>
                 {open && s.lv[i] > 0 && (
                   <span className="absolute -right-1.5 -top-2 rounded-full px-1.5 text-[11px] font-extrabold" style={{ background: "#FFD23F", color: "#15082E", border: "2px solid #15082E" }}>{t.lvl(s.lv[i])}</span>
                 )}
@@ -517,7 +589,7 @@ export function BlobClicker({ onClose }: { onClose: () => void }) {
           {/* 6e carte : la Grande fête (recommencer contre des confettis) */}
           <button type="button" onClick={party} disabled={confettiGain <= 0}
             className="zz-push zz-stk-sm flex min-h-[100px] flex-col items-center justify-center rounded-[18px] px-1 py-1.5 text-center"
-            style={confettiGain > 0 ? { background: "#FFD23F", color: "#15082E" } : { background: "rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.6)", boxShadow: "none", borderColor: "rgba(255,255,255,0.15)" }}>
+            style={confettiGain > 0 ? { background: "#FFD23F", color: "#15082E" } : { background: "#2B1F52", color: "rgba(255,255,255,0.6)" }}>
             {confettiGain > 0
               ? <span className="grid h-9 w-9 place-items-center rounded-full" style={{ background: "#fff", border: "2.5px solid #15082E", boxShadow: "0 2px 0 #15082E" }}><PartyPopper size={19} strokeWidth={2.8} color="#15082E" /></span>
               : <PartyPopper size={20} strokeWidth={2.8} />}
@@ -527,15 +599,50 @@ export function BlobClicker({ onClose }: { onClose: () => void }) {
         </div>
         <div className="mt-2 flex items-center justify-between gap-2 px-4">
           <p className="min-w-0 flex-1 text-[12px] font-semibold leading-tight" style={{ color: "var(--zz-mute)" }}>
-            {nextPower && (!nextReward || nextPower.at <= nextReward.at)
-              ? t.next(fmtBig(nextPower.at, lang), `${nextPower.icon} ${pw.name[nextPower.id]}`)
-              : nextReward ? t.next(fmtBig(nextReward.at, lang), t.reward[nextReward.kind]) : t.allDone}
+            {(() => {
+              // La prochaine nouveauté, quelle qu'elle soit : décor, pouvoir ou récompense pour les persos
+              const opts = [
+                nextEnv && { at: nextEnv.at, label: `${nextEnv.icon} ${nextEnv.name[lang]}` },
+                nextPower && { at: nextPower.at, label: `${nextPower.icon} ${pw.name[nextPower.id]}` },
+                nextReward && { at: nextReward.at, label: t.reward[nextReward.kind] },
+              ].filter(Boolean) as { at: number; label: string }[];
+              const n = opts.sort((a, b) => a.at - b.at)[0];
+              return n ? t.next(fmtBig(n.at, lang), n.label) : t.allDone;
+            })()}
           </p>
           <button type="button" onClick={() => void share()} className="zz-push zz-stk-sm flex h-10 shrink-0 items-center gap-1.5 rounded-full px-3.5 text-[13.5px] font-extrabold" style={{ background: "#FF3EA5", color: "#fff" }}>
             <Share2 size={15} strokeWidth={2.8} /> {t.share}
           </button>
         </div>
       </div>
+
+      {/* Nouveau décor : annonce plein écran */}
+      {envCelebrate && (
+        <div className="pointer-events-none fixed inset-0 grid place-items-center" style={{ zIndex: 48, background: "rgba(10,2,30,0.5)" }} aria-live="polite">
+          <div className="zz-power text-center">
+            <div className="zz-stk-sm mx-auto inline-block rounded-full px-4 py-1 text-[15px] font-extrabold" style={{ background: "#3DDC97", color: "#15082E", rotate: "-3deg" }}>{t.envNew}</div>
+            <div className="mt-2 text-[86px] leading-none">{ENVS.find((e) => e.id === envCelebrate)?.icon}</div>
+            <div className="zz-title mt-1 text-[38px] leading-tight text-white">{ENVS.find((e) => e.id === envCelebrate)?.name[lang]}</div>
+            <div className="mx-8 mt-1 text-[16px] font-bold" style={{ color: "#FFD23F" }}>{t.envDesc}</div>
+          </div>
+        </div>
+      )}
+
+      {/* Cadeau du jour */}
+      {gift != null && (
+        <div className="fixed inset-0 grid place-items-center px-8" style={{ zIndex: 49, background: "rgba(10,2,30,0.6)" }}>
+          <div className="zz-pop zz-stk w-full max-w-[300px] rounded-[28px] px-5 pb-5 pt-4 text-center" style={{ background: "#fff", color: "#15082E", rotate: "-1.5deg" }}>
+            <div className="mx-auto -mt-14 w-fit"><ZBlob size={96} color="pink" mood="love" seed={6} shadow={false} outline hop={false} /></div>
+            <div className="zz-title mt-1 text-[26px]">🎁 {t.giftTitle}</div>
+            <div className="zz-title mt-1 text-[36px]" style={{ color: "#FF3EA5" }}>+{fmtBig(gift, lang)}</div>
+            <div className="text-[13px] font-bold" style={{ opacity: 0.6 }}>{t.gloops}</div>
+            <p className="mt-2 text-[13.5px] font-semibold leading-snug" style={{ opacity: 0.75 }}>{t.giftSub}</p>
+            <button type="button" onClick={takeGift} className="zz-push zz-stk-sm mt-3 h-12 w-full rounded-full text-[17px] font-extrabold" style={{ background: "#FFD23F", color: "#15082E" }}>
+              {t.giftBtn}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Nouveau pouvoir : annonce plein écran */}
       {celebrate && (

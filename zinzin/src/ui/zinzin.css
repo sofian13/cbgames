@@ -450,6 +450,31 @@ svg.zz-dancing { animation: zz-dance .484s ease-in-out infinite alternate; trans
 .zz-click-gold { transform: translate(-50%, -50%); animation: zz-click-gold 1.6s ease-in-out infinite; filter: drop-shadow(0 0 14px rgba(255, 210, 63, 0.9)); }
 @keyframes zz-click-gold { 0%, 100% { translate: 0 0; rotate: -8deg; } 50% { translate: 0 -10px; rotate: 8deg; } }
 @media (prefers-reduced-motion: reduce) { .zz-click-mini, .zz-click-pop, .zz-click-bit { animation-duration: 1ms !important; } }
+/* Décors de Tapote le blob (ClickerScenes.tsx) : petites animations seulement, transform/opacity */
+.cs-scene { animation: zz-fade-in 400ms ease both; }
+.cs-scene svg { display: block; }
+.cs-fx { position: absolute; will-change: transform, opacity; }
+.cs-twinkle { animation: cs-twinkle 2.4s ease-in-out infinite; }
+@keyframes cs-twinkle { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
+.cs-neon { opacity: 0; animation: cs-neon 4s steps(1) infinite; }
+@keyframes cs-neon { 0%, 46%, 50%, 54%, 100% { opacity: 0; } 48%, 52% { opacity: 0.65; } }
+.cs-ball { animation: cs-ball 3s ease-in-out infinite alternate; transform-origin: 50% 0; }
+@keyframes cs-ball { from { rotate: -4deg; } to { rotate: 4deg; } }
+.cs-thump { transform-origin: center; animation: cs-thump 0.48s ease-in-out infinite alternate; }
+@keyframes cs-thump { from { transform: scale(1); } to { transform: scale(1.12); } }
+.cs-tile { animation: cs-tile 2s ease-in-out infinite; }
+@keyframes cs-tile { 0%, 100% { opacity: 0.35; } 50% { opacity: 1; } }
+.cs-cloud { animation: cs-cloud 14s ease-in-out infinite alternate; }
+@keyframes cs-cloud { from { translate: -14px 0; } to { translate: 14px 0; } }
+.cs-shimmer { animation: cs-shimmer 1.6s ease-in-out infinite alternate; }
+@keyframes cs-shimmer { from { opacity: 0.35; translate: -6px 0; } to { opacity: 0.85; translate: 6px 0; } }
+.cs-ember { animation: cs-ember 2.8s ease-out infinite; }
+@keyframes cs-ember { 0% { opacity: 0; translate: 0 0; } 15% { opacity: 1; } 100% { opacity: 0; translate: var(--dx, 10px) -200px; } }
+.cs-shoot { animation: cs-shoot 7s ease-in infinite; }
+@keyframes cs-shoot { 0%, 78% { opacity: 0; translate: 60px -20px; } 80% { opacity: 1; translate: 60px -20px; } 92% { opacity: 1; translate: -260px 110px; } 93%, 100% { opacity: 0; translate: -260px 110px; } }
+/* Mode effets légers : décors fixes */
+.cs-still *, .cs-still { animation: none !important; }
+
 /* Pouvoirs du blob (BlobClicker.tsx) */
 .zz-fire { position: absolute; left: 0; right: 0; top: 50%; height: 0; transform: scale(var(--fs, 1)); transform-origin: 50% 0; pointer-events: none; z-index: 1; animation: zz-fire-in 180ms ease-out both; }
 .zz-flame { position: absolute; margin-left: calc(var(--w, 0px) * -0.5); translate: -50% 0; transform-origin: 50% 100%;

@@ -22,6 +22,8 @@ export interface ClickerState {
   confetti: number;
   last: number;
   savedAt: number;
+  /** Décor choisi (ClickerScenes.tsx) ; par défaut le dernier débloqué */
+  env?: string;
 }
 
 export interface LevelDef { id: string; icon: string; base: number; growth: number; /** 0 = le doigt (par tap) ; sinon production /s par niveau */ prod: number; name: I18n<string> }
@@ -67,7 +69,7 @@ export function partyConfetti(s: ClickerState): number {
   return Math.floor(Math.sqrt(s.earnedAll / PARTY_MIN)) * 5 - s.confetti;
 }
 export function bigParty(s: ClickerState): ClickerState {
-  return { ...freshState(), taps: s.taps, earnedAll: s.earnedAll, confetti: s.confetti + Math.max(0, partyConfetti(s)), last: Date.now() };
+  return { ...freshState(), taps: s.taps, earnedAll: s.earnedAll, confetti: s.confetti + Math.max(0, partyConfetti(s)), last: Date.now(), env: s.env };
 }
 
 /* ───── Grands nombres ───── */
@@ -95,7 +97,7 @@ export function migrate(raw: unknown): ClickerState {
   const keep = { taps: num("taps"), gloops: num("gloops"), confetti: 0, last: num("last") || Date.now(), savedAt: num("savedAt") };
   if (o.v === 3) {
     const lv = Array.isArray(o.lv) ? LEVELS.map((_, i) => Math.max(0, Math.floor(Number((o.lv as unknown[])[i]) || 0))) : base.lv;
-    return { ...base, ...keep, earned: num("earned"), earnedAll: num("earnedAll"), lv, confetti: num("confetti") };
+    return { ...base, ...keep, earned: num("earned"), earnedAll: num("earnedAll"), lv, confetti: num("confetti"), ...(typeof o.env === "string" ? { env: o.env } : {}) };
   }
   const lv = base.lv.slice();
   if (o.v === 2) {
