@@ -12,7 +12,7 @@ import { haptic, reducedMotion } from "./util";
 import { useToast } from "./common";
 import { ZBlob } from "./ZBlob";
 import {
-  BUILDINGS, PARTY_MIN, UPGRADES, bigParty, buildingCost, buildingMult, earn, fmtBig, globalMult, partyConfetti, perSecond, perTap,
+  LEVELS, PARTY_MIN, bigParty, earn, fmtBig, levelCost, levelOutput, levelUnlocked, partyConfetti, perSecond, perTap,
   type ClickerState,
 } from "../clicker-engine";
 import { loadBest, loadLocal, saveBoth, saveLocal } from "../clicker-save";
@@ -75,7 +75,9 @@ const T: I18n<{
   offline: (n: string) => string; frenzy: (s: number) => string; goldFrenzy: string; goldJackpot: (n: string) => string;
   party: string; partySub: (n: number) => string; partyNeed: (n: string) => string; partyBtn: (n: number) => string; partyDone: (n: number) => string; confetti: (n: number) => string;
   next: (at: string, what: string) => string; allDone: string; share: string; shareTitle: (n: string) => string; shareText: string;
-  reward: Record<Reward["kind"], string>; unlocked: (what: string) => string; close: string; badge: string; shop: string;
+  reward: Record<Reward["kind"], string>; unlocked: (what: string) => string; close: string; badge: string;
+  lvl: (n: number) => string; plusTap: (n: string) => string; soon: (n: number) => string; unlockAt: (n: string) => string;
+  partyShort: string; partyGain: (n: number) => string; partyAt: (n: string) => string; doubled: (name: string) => string;
 }> = {
   fr: {
     title: "Tapote le blob", gloops: "gloops", perSec: (n) => `${n} par seconde`, taps: (n) => `${n} taps`, perTap: (n) => `+${n} par tap`,
@@ -84,11 +86,13 @@ const T: I18n<{
     goldFrenzy: "✨ Blob doré : FRÉNÉSIE ×7 pendant 30 s !", goldJackpot: (n) => `✨ Blob doré : jackpot de ${n} gloops !`,
     party: "🎉 La Grande fête", partySub: (n) => `Tout recommence à zéro, mais tu gagnes ${n} confettis : +2 % de tout par confetti, pour toujours.`,
     partyNeed: (n) => `Gagne ${n} gloops au total pour lancer la Grande fête.`, partyBtn: (n) => `Lancer la fête (+${n} confettis)`,
-    partyDone: (n) => `🎉 Grande fête ! ${n} confettis : tout rapporte plus.`, confetti: (n) => `🎊 ${n} confettis (+${n * 2} %)`,
+    partyDone: (n) => `🎉 Grande fête ! ${n} confettis : tout rapporte plus.`, confetti: (n) => `🎊 ${n} confettis (+${n * 3} %)`,
     next: (at, what) => `Prochaine récompense : ${what} à ${at} taps`, allDone: "Toutes les récompenses sont débloquées. Respect (et inquiétude).",
     share: "Partager ma honte", shareTitle: (n) => `${n} taps sur un blob`, shareText: "J'ai tapoté un blob au lieu de profiter de la soirée. Zinzin 🫠",
     reward: { eyes: "les yeux Hypnotisé", extra: "le Doigt en mousse", anim: "les taps explosifs", color: "la couleur Chrome", legend: "le blob légendaire (Aura)", badge: "le succès « Sans vie sociale »" },
-    unlocked: (what) => `🎁 Débloqué : ${what} !`, close: "Fermer", badge: "🏆 Sans vie sociale", shop: "Boutique",
+    unlocked: (what) => `🎁 Débloqué : ${what} !`, close: "Fermer", badge: "🏆 Sans vie sociale",
+    lvl: (n) => `niv. ${n}`, plusTap: (n) => `+${n}/tap`, soon: (n) => `dans ${n}`, unlockAt: (n) => `à ${n} gloops`,
+    partyShort: "Grande fête", partyGain: (n) => `+${n} confettis`, partyAt: (n) => `à ${n} gagnés`, doubled: (name) => `⚡ ${name} : efficacité ×2 !`,
   },
   en: {
     title: "Tap the blob", gloops: "gloops", perSec: (n) => `${n} per second`, taps: (n) => `${n} taps`, perTap: (n) => `+${n} per tap`,
@@ -97,11 +101,13 @@ const T: I18n<{
     goldFrenzy: "✨ Golden blob: FRENZY ×7 for 30 s!", goldJackpot: (n) => `✨ Golden blob: ${n} gloops jackpot!`,
     party: "🎉 The Big Party", partySub: (n) => `Everything starts over, but you get ${n} confetti: +2% to everything per confetti, forever.`,
     partyNeed: (n) => `Earn ${n} gloops in total to throw the Big Party.`, partyBtn: (n) => `Throw the party (+${n} confetti)`,
-    partyDone: (n) => `🎉 Big Party! ${n} confetti: everything pays more.`, confetti: (n) => `🎊 ${n} confetti (+${n * 2}%)`,
+    partyDone: (n) => `🎉 Big Party! ${n} confetti: everything pays more.`, confetti: (n) => `🎊 ${n} confetti (+${n * 3}%)`,
     next: (at, what) => `Next reward: ${what} at ${at} taps`, allDone: "All rewards unlocked. Respect (and concern).",
     share: "Share my shame", shareTitle: (n) => `${n} taps on a blob`, shareText: "I tapped a blob instead of enjoying the party. Zinzin 🫠",
     reward: { eyes: "Hypnotized eyes", extra: "the Foam finger", anim: "explosive taps", color: "the Chrome color", legend: "the legendary blob (Aura)", badge: "the “No social life” achievement" },
-    unlocked: (what) => `🎁 Unlocked: ${what}!`, close: "Close", badge: "🏆 No social life", shop: "Shop",
+    unlocked: (what) => `🎁 Unlocked: ${what}!`, close: "Close", badge: "🏆 No social life",
+    lvl: (n) => `lv ${n}`, plusTap: (n) => `+${n}/tap`, soon: (n) => `in ${n}`, unlockAt: (n) => `at ${n} gloops`,
+    partyShort: "Big Party", partyGain: (n) => `+${n} confetti`, partyAt: (n) => `at ${n} earned`, doubled: (name) => `⚡ ${name}: ×2 power!`,
   },
   es: {
     title: "Toca el blob", gloops: "gloops", perSec: (n) => `${n} por segundo`, taps: (n) => `${n} toques`, perTap: (n) => `+${n} por toque`,
@@ -110,11 +116,13 @@ const T: I18n<{
     goldFrenzy: "✨ Blob dorado: ¡FRENESÍ ×7 durante 30 s!", goldJackpot: (n) => `✨ Blob dorado: ¡premio de ${n} gloops!`,
     party: "🎉 La Gran fiesta", partySub: (n) => `Todo vuelve a empezar, pero ganas ${n} confeti: +2 % de todo por confeti, para siempre.`,
     partyNeed: (n) => `Gana ${n} gloops en total para montar la Gran fiesta.`, partyBtn: (n) => `Montar la fiesta (+${n} confeti)`,
-    partyDone: (n) => `🎉 ¡Gran fiesta! ${n} confeti: todo rinde más.`, confetti: (n) => `🎊 ${n} confeti (+${n * 2} %)`,
+    partyDone: (n) => `🎉 ¡Gran fiesta! ${n} confeti: todo rinde más.`, confetti: (n) => `🎊 ${n} confeti (+${n * 3} %)`,
     next: (at, what) => `Próxima recompensa: ${what} a los ${at} toques`, allDone: "Todas las recompensas desbloqueadas. Respeto (y preocupación).",
     share: "Compartir mi vergüenza", shareTitle: (n) => `${n} toques a un blob`, shareText: "He tocado un blob en vez de disfrutar de la fiesta. Zinzin 🫠",
     reward: { eyes: "los ojos Hipnotizado", extra: "el Dedo de espuma", anim: "los toques explosivos", color: "el color Cromo", legend: "el blob legendario (Aura)", badge: "el logro «Sin vida social»" },
-    unlocked: (what) => `🎁 Desbloqueado: ${what}`, close: "Cerrar", badge: "🏆 Sin vida social", shop: "Tienda",
+    unlocked: (what) => `🎁 Desbloqueado: ${what}`, close: "Cerrar", badge: "🏆 Sin vida social",
+    lvl: (n) => `niv. ${n}`, plusTap: (n) => `+${n}/toque`, soon: (n) => `en ${n}`, unlockAt: (n) => `a ${n} gloops`,
+    partyShort: "Gran fiesta", partyGain: (n) => `+${n} confeti`, partyAt: (n) => `a ${n} ganados`, doubled: (name) => `⚡ ${name}: ¡×2 de potencia!`,
   },
 };
 
@@ -135,7 +143,6 @@ export function BlobClicker({ onClose }: { onClose: () => void }) {
   const [now, setNow] = useState(Date.now());
   const [frenzyUntil, setFrenzyUntil] = useState(0);
   const [gold, setGold] = useState<{ id: number; x: number; y: number } | null>(null);
-  const [shop, setShop] = useState(false);
   const [pops, setPops] = useState<{ id: number; x: number; y: number; v: string; boom: boolean }[]>([]);
   const blob = useRef<HTMLDivElement>(null);
   const combo = useRef<number[]>([]);
@@ -254,21 +261,15 @@ export function BlobClicker({ onClose }: { onClose: () => void }) {
     setTimeout(() => setPops((p) => p.filter((q) => q.id !== id)), 900);
   };
 
-  const buyBuilding = (bi: number) => {
+  const buyLevel = (i: number) => {
     const cur = sRef.current;
-    const cost = buildingCost(BUILDINGS[bi], cur.bld[bi]);
-    if (cur.gloops < cost) { haptic("light"); return; }
-    const bld = cur.bld.slice(); bld[bi]++;
-    update({ ...cur, gloops: cur.gloops - cost, bld });
-    haptic("medium");
-    playSfx("coin", { volume: 0.4, rate: 1 + Math.min(0.5, bi * 0.05) });
-  };
-  const buyUpgrade = (id: string, cost: number) => {
-    const cur = sRef.current;
-    if (cur.gloops < cost || cur.upg.includes(id)) { haptic("light"); return; }
-    update({ ...cur, gloops: cur.gloops - cost, upg: [...cur.upg, id] });
-    haptic("success");
-    playSfx("ding", { volume: 0.45, rate: 1.2 });
+    const cost = levelCost(i, cur.lv[i]);
+    if (!levelUnlocked(cur, i) || cur.gloops < cost) { haptic("light"); return; }
+    const lv = cur.lv.slice(); lv[i]++;
+    update({ ...cur, gloops: cur.gloops - cost, lv });
+    // Jalon : tous les 10 niveaux, l'amélioration double
+    if (lv[i] % 10 === 0) { haptic("success"); playSfx("ding", { volume: 0.45, rate: 1.2 }); toast(t.doubled(LEVELS[i].name[lang])); }
+    else { haptic("medium"); playSfx("coin", { volume: 0.4, rate: 1 + i * 0.06 }); }
   };
   const party = () => {
     const gain = partyConfetti(sRef.current);
@@ -284,9 +285,6 @@ export function BlobClicker({ onClose }: { onClose: () => void }) {
   const ps = perSecond(s, frenzy);
   const line = [...lines].reverse().find(([at]) => s.taps >= at)?.[1] ?? lines[0][1];
   const nextReward = REWARDS.find((r) => s.taps < r.at);
-  const ups = UPGRADES.filter((u) => !s.upg.includes(u.id) && u.show(s)).sort((a, b) => a.cost - b.cost).slice(0, 8);
-  // Bâtiments : ceux qu'on a ou qu'on peut presque se payer, puis un seul « ??? »
-  const lastShown = Math.max(0, ...BUILDINGS.map((b, i) => (s.bld[i] > 0 || s.earned >= b.base * 0.6 ? i : 0)));
   const confettiGain = partyConfetti(s);
 
   const share = async () => {
@@ -294,11 +292,6 @@ export function BlobClicker({ onClose }: { onClose: () => void }) {
     await shareBandCard([{ name: me?.name ?? "Moi", look }], t.shareTitle(fmtBig(s.taps, lang)), line, t.shareText, [`${fmtBig(s.earnedAll, lang)} ${t.gloops}`]);
   };
 
-  // Raccourcis des 3 cartes du bas : le bâtiment et l'amélioration les plus abordables
-  const visibleB = BUILDINGS.map((b, i) => ({ b, i, cost: buildingCost(b, s.bld[i]) })).filter(({ i }) => i <= lastShown);
-  const bestB = visibleB.filter((x) => x.cost <= s.gloops).sort((a, z) => z.i - a.i)[0] ?? visibleB.sort((a, z) => a.cost - z.cost)[0];
-  const bestU = ups[0];
-  const affordable = visibleB.filter((x) => x.cost <= s.gloops).length + ups.filter((u) => u.cost <= s.gloops).length;
   const card = (can: boolean): CSSProperties => ({ background: can ? "#fff" : "rgba(255,255,255,0.12)", color: can ? "var(--zz-ink)" : "rgba(255,255,255,0.75)" });
 
   return createPortal(
@@ -329,7 +322,7 @@ export function BlobClicker({ onClose }: { onClose: () => void }) {
 
         {/* Le blob à tapoter, ses mini-blobs, et parfois le blob doré */}
         <div className="relative grid min-h-0 flex-1 place-items-center" style={{ touchAction: "manipulation" }}>
-          {Array.from({ length: Math.min(8, s.bld[0]) }, (_, i) => (
+          {Array.from({ length: Math.min(8, s.lv[1]) }, (_, i) => (
             <div key={i} className="zz-click-mini absolute" style={{ ["--a" as string]: `${i * 45}deg`, animationDelay: `${-i * 0.37}s` } as CSSProperties}>
               <AvatarBlob look={{ ...baseLook(["mint", "yellow", "sky", "coral", "lavender", "orange", "lime", "pink"][i]), eyes: "happy" }} size={30} animate={false} />
             </div>
@@ -348,34 +341,45 @@ export function BlobClicker({ onClose }: { onClose: () => void }) {
           )}
         </div>
 
-        {/* 3 cartes : le bâtiment à acheter, l'amélioration à prendre, la boutique complète */}
-        <div className="grid grid-cols-3 gap-2 px-5">
-          {bestB && (
-            <button type="button" onClick={() => buyBuilding(bestB.i)} className="zz-push zz-stk-sm flex min-h-[100px] flex-col items-center justify-center rounded-[18px] px-1.5 py-2 text-center" style={card(s.gloops >= bestB.cost)}>
-              <span className="text-[22px] leading-none">{bestB.b.icon}</span>
-              <span className="mt-1 text-[13px] font-extrabold leading-tight">{bestB.b.name[lang]}{s.bld[bestB.i] ? ` ${s.bld[bestB.i]}` : ""}</span>
-              <span className="text-[11.5px] font-semibold" style={{ opacity: 0.8 }}>{t.prod(fmtBig(bestB.b.prod * buildingMult(s, bestB.i) * globalMult(s, false), lang))}</span>
-              <span className="mt-0.5 text-[13px] font-extrabold" style={{ color: s.gloops >= bestB.cost ? "#C41F78" : undefined }}>{fmtBig(bestB.cost, lang)}</span>
-            </button>
-          )}
-          {bestU ? (
-            <button type="button" onClick={() => buyUpgrade(bestU.id, bestU.cost)} className="zz-push zz-stk-sm flex min-h-[100px] flex-col items-center justify-center rounded-[18px] px-1.5 py-2 text-center" style={card(s.gloops >= bestU.cost)}>
-              <span className="text-[22px] leading-none">{bestU.icon}</span>
-              <span className="mt-1 line-clamp-2 text-[12.5px] font-extrabold leading-tight">{bestU.name[lang]}</span>
-              <span className="mt-0.5 text-[13px] font-extrabold" style={{ color: s.gloops >= bestU.cost ? "#C41F78" : undefined }}>{fmtBig(bestU.cost, lang)}</span>
-            </button>
-          ) : (
-            <div className="flex min-h-[100px] flex-col items-center justify-center rounded-[18px] px-1.5 text-center text-[12.5px] font-bold" style={{ background: "rgba(255,255,255,0.06)", color: "var(--zz-mute)" }}>{t.upgrades}<br />…</div>
-          )}
-          <button type="button" onClick={() => { haptic(); playSfx("pop", { volume: 0.35 }); setShop(true); }}
-            className="zz-push zz-stk-sm relative flex min-h-[100px] flex-col items-center justify-center rounded-[18px] px-1.5 py-2 text-center" style={{ background: "#FFD23F", color: "var(--zz-ink)" }}>
-            <span className="text-[24px] leading-none">🛒</span>
-            <span className="mt-1 text-[14px] font-extrabold">{t.shop}</span>
-            {affordable > 0 && <span className="absolute -right-1.5 -top-1.5 grid h-6 min-w-6 place-items-center rounded-full px-1.5 text-[12px] font-extrabold" style={{ background: "#FF3EA5", color: "#fff", border: "2px solid var(--zz-ink)" }}>{affordable}</span>}
+        {/* 6 cartes toujours à la même place : 5 améliorations à niveaux + la Grande fête */}
+        <div className="grid grid-cols-3 gap-2 px-4">
+          {LEVELS.map((d, i) => {
+            const open = levelUnlocked(s, i);
+            const cost = levelCost(i, s.lv[i]);
+            const can = open && s.gloops >= cost;
+            const gain = levelOutput(s, i, s.lv[i] + 1) - levelOutput(s, i);
+            const toDouble = 10 - (s.lv[i] % 10);
+            return (
+              <button key={d.id} type="button" onClick={() => buyLevel(i)} disabled={!open}
+                className="zz-push zz-stk-sm relative flex min-h-[92px] flex-col items-center justify-center rounded-[18px] px-1 py-1.5 text-center"
+                style={!open ? { background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.55)" } : card(can)}>
+                {open && s.lv[i] > 0 && (
+                  <span className="absolute -right-1 -top-1.5 rounded-full px-1.5 text-[11px] font-extrabold" style={{ background: "var(--zz-ink)", color: "#FFD23F" }}>{t.lvl(s.lv[i])}</span>
+                )}
+                <span className="text-[20px] leading-none">{open ? d.icon : "🔒"}</span>
+                <span className="mt-1 text-[12.5px] font-extrabold leading-tight">{open ? d.name[lang] : t.locked}</span>
+                {open ? (
+                  <>
+                    <span className="text-[11px] font-bold" style={{ opacity: 0.75 }}>{i === 0 ? t.plusTap(fmtBig(gain, lang)) : t.prod(fmtBig(gain, lang))}{toDouble <= 3 ? ` · ×2 ${t.soon(toDouble)}` : ""}</span>
+                    <span className="mt-0.5 text-[13px] font-extrabold" style={{ color: can ? "#C41F78" : undefined }}>{fmtBig(cost, lang)}</span>
+                  </>
+                ) : (
+                  <span className="text-[11px] font-bold">{t.unlockAt(fmtBig(LEVELS[i].base * 0.5, lang))}</span>
+                )}
+              </button>
+            );
+          })}
+          {/* 6e carte : la Grande fête (recommencer contre des confettis) */}
+          <button type="button" onClick={party} disabled={confettiGain <= 0}
+            className="zz-push zz-stk-sm flex min-h-[92px] flex-col items-center justify-center rounded-[18px] px-1 py-1.5 text-center"
+            style={confettiGain > 0 ? { background: "#FFD23F", color: "var(--zz-ink)" } : { background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.6)" }}>
+            <span className="text-[20px] leading-none">🎉</span>
+            <span className="mt-1 text-[12.5px] font-extrabold leading-tight">{t.partyShort}</span>
+            <span className="text-[11px] font-bold leading-tight">{confettiGain > 0 ? t.partyGain(confettiGain) : t.partyAt(fmtBig(PARTY_MIN, lang))}</span>
           </button>
         </div>
-        <div className="mt-2 flex items-center justify-between gap-2 px-5">
-          <p className="min-w-0 flex-1 text-[12.5px] font-semibold leading-tight" style={{ color: "var(--zz-mute)" }}>
+        <div className="mt-2 flex items-center justify-between gap-2 px-4">
+          <p className="min-w-0 flex-1 text-[12px] font-semibold leading-tight" style={{ color: "var(--zz-mute)" }}>
             {nextReward ? t.next(fmtBig(nextReward.at, lang), t.reward[nextReward.kind]) : t.allDone}
           </p>
           <button type="button" onClick={() => void share()} className="zz-push zz-stk-sm flex h-10 shrink-0 items-center gap-1.5 rounded-full px-3.5 text-[13.5px] font-extrabold" style={{ background: "#FF3EA5", color: "#fff" }}>
@@ -383,74 +387,6 @@ export function BlobClicker({ onClose }: { onClose: () => void }) {
           </button>
         </div>
       </div>
-
-      {/* Boutique complète : améliorations, bâtiments, Grande fête (elle seule défile) */}
-      {shop && (
-        <div className="absolute inset-0 flex flex-col justify-end" style={{ zIndex: 47 }}>
-          <div className="absolute inset-0" style={{ background: "rgba(8,2,20,0.55)" }} onClick={() => setShop(false)} />
-          <div className="zz-sheet relative mx-auto flex max-h-[82%] w-full max-w-lg flex-col overflow-hidden rounded-t-[28px]" style={{ background: "var(--zz-bg)", border: "3px solid var(--zz-ink)", borderBottom: 0 }}>
-            <div className="flex items-center justify-between px-5 pb-2 pt-4">
-              <div>
-                <p className="zz-title text-[24px] text-white">🛒 {t.shop}</p>
-                <p className="text-[13px] font-bold" style={{ color: "#FFD23F" }}>{fmtBig(s.gloops, lang)} {t.gloops}</p>
-              </div>
-              <button type="button" onClick={() => setShop(false)} aria-label={t.close} className="zz-push zz-stk-sm grid h-10 w-10 place-items-center rounded-full" style={{ background: "#fff", color: "var(--zz-ink)" }}>
-                <X size={20} strokeWidth={3} />
-              </button>
-            </div>
-            <div className="zz-scroll min-h-0 flex-1 px-5" style={{ paddingBottom: "calc(var(--sab) + 16px)" }}>
-              {ups.length > 0 && (
-                <>
-                  <p className="mb-2 text-[14px] font-extrabold" style={{ color: "var(--zz-dim)" }}>{t.upgrades}</p>
-                  <div className="grid grid-cols-2 gap-2">
-                    {ups.map((u) => {
-                      const can = s.gloops >= u.cost;
-                      return (
-                        <button key={u.id} type="button" onClick={() => buyUpgrade(u.id, u.cost)} className="zz-push flex items-center gap-2 rounded-[16px] px-2.5 py-2 text-left" style={card(can)}>
-                          <span className="text-[18px]">{u.icon}</span>
-                          <span className="min-w-0">
-                            <span className="block text-[12.5px] font-extrabold leading-tight">{u.name[lang]}</span>
-                            <span className="text-[12.5px] font-extrabold" style={{ color: can ? "#C41F78" : undefined }}>{fmtBig(u.cost, lang)}</span>
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </>
-              )}
-              <p className="mb-2 mt-4 text-[14px] font-extrabold" style={{ color: "var(--zz-dim)" }}>{t.buildings}</p>
-              <div className="flex flex-col gap-2">
-                {BUILDINGS.slice(0, Math.min(BUILDINGS.length, lastShown + 2)).map((b, i) => {
-                  const hidden = i > lastShown;
-                  const cost = buildingCost(b, s.bld[i]);
-                  const can = s.gloops >= cost && !hidden;
-                  return (
-                    <button key={b.id} type="button" disabled={hidden} onClick={() => buyBuilding(i)} className="zz-push flex min-h-[54px] w-full items-center gap-3 rounded-[16px] px-3 py-2 text-left" style={hidden ? { background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.6)" } : card(can)}>
-                      <span className="text-[22px]">{hidden ? "❔" : b.icon}</span>
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate text-[14.5px] font-extrabold">{hidden ? t.locked : b.name[lang]}</span>
-                        {!hidden && <span className="block text-[12px] font-semibold" style={{ opacity: 0.75 }}>{t.prod(fmtBig(b.prod * buildingMult(s, i) * globalMult(s, false), lang))}{s.bld[i] ? ` · ${t.owned(s.bld[i])}` : ""}</span>}
-                      </span>
-                      {!hidden && <span className="shrink-0 text-[14px] font-extrabold" style={{ color: can ? "#C41F78" : undefined }}>{fmtBig(cost, lang)}</span>}
-                    </button>
-                  );
-                })}
-              </div>
-              <div className="mt-4 rounded-[18px] px-4 py-3" style={{ background: "rgba(255,255,255,0.08)" }}>
-                <p className="zz-title text-[17px] text-white">{t.party}</p>
-                {confettiGain > 0 ? (
-                  <>
-                    <p className="mt-1 text-[13px] font-semibold leading-snug" style={{ color: "var(--zz-dim)" }}>{t.partySub(confettiGain)}</p>
-                    <button type="button" onClick={party} className="zz-push zz-stk-sm mt-2 h-11 w-full rounded-full text-[15px] font-extrabold" style={{ background: "#FFD23F", color: "var(--zz-ink)" }}>{t.partyBtn(confettiGain)}</button>
-                  </>
-                ) : (
-                  <p className="mt-1 text-[13px] font-semibold leading-snug" style={{ color: "var(--zz-mute)" }}>{t.partyNeed(fmtBig(PARTY_MIN, lang))}</p>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* « +N » qui s'envolent (et confettis à partir de 1 000 taps) */}
       {pops.map((p) => (

@@ -21,7 +21,7 @@ import { lockOrientation } from "@/lib/orientation";
 const cap = (globalThis as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor;
 if (cap?.isNativePlatform?.()) {
   const hapticsP = import("@capacitor/haptics");
-  navigator.vibrate = (pattern: VibratePattern) => {
+  (navigator as { vibrate: (p: VibratePattern) => boolean }).vibrate = (pattern: VibratePattern) => {
     const ms = Array.isArray(pattern) ? pattern.filter((_, i) => i % 2 === 0).reduce((a, b) => a + b, 0) : pattern;
     if (!ms) return true;
     hapticsP.then(({ Haptics, ImpactStyle }) =>
