@@ -8,9 +8,11 @@ import type { I18n } from "@/lib/i18n";
  * Un voile sombre en haut garde le compteur lisible sur tous les décors.
  */
 
-export type EnvId = "salon" | "bar" | "club" | "beach" | "volcano" | "space" | "zinzin";
+export type EnvId = "plain" | "salon" | "bar" | "club" | "beach" | "volcano" | "space" | "zinzin";
 
 export const ENVS: { id: EnvId; at: number; icon: string; name: I18n<string> }[] = [
+  // Le fond uni de l'app, toujours disponible
+  { id: "plain", at: 0, icon: "🟣", name: { fr: "Fond classique", en: "Classic", es: "Clásico" } },
   { id: "salon", at: 0, icon: "🛋️", name: { fr: "Le salon", en: "The living room", es: "El salón" } },
   { id: "bar", at: 750, icon: "🍹", name: { fr: "Le bar", en: "The bar", es: "El bar" } },
   { id: "club", at: 2500, icon: "🪩", name: { fr: "La boîte de nuit", en: "The nightclub", es: "La discoteca" } },
@@ -35,6 +37,19 @@ function TopScrim({ id }: { id: string }) {
       </defs>
       <rect x="0" y="0" width="390" height="300" fill={`url(#scrim-${id})`} />
     </>
+  );
+}
+
+/** Fond classique : le violet uni de l'app, avec ses petits pois discrets */
+function Plain() {
+  return (
+    <svg viewBox="0 0 390 844" preserveAspectRatio="xMidYMid slice" width="100%" height="100%">
+      <defs>
+        <pattern id="pl-dots" width="26" height="26" patternUnits="userSpaceOnUse"><circle cx="13" cy="13" r="1.6" fill="#ffffff" opacity="0.07" /></pattern>
+      </defs>
+      <rect width="390" height="844" fill="#211052" />
+      <rect width="390" height="844" fill="url(#pl-dots)" />
+    </svg>
   );
 }
 
@@ -283,7 +298,7 @@ function ZinzinWorld() {
   );
 }
 
-const SCENES: Record<EnvId, () => React.JSX.Element> = { salon: Salon, bar: Bar, club: Club, beach: Beach, volcano: Volcano, space: Space, zinzin: ZinzinWorld };
+const SCENES: Record<EnvId, () => React.JSX.Element> = { plain: Plain, salon: Salon, bar: Bar, club: Club, beach: Beach, volcano: Volcano, space: Space, zinzin: ZinzinWorld };
 
 /* ───── Éléments animés : petits calques séparés posés sur le dessin fixe ─────
  * Dans un SVG plein écran, la moindre animation fait redessiner tout le dessin. Ici chaque élément qui bouge
@@ -373,6 +388,21 @@ export const ClickerScene = memo(function ClickerScene({ env, still }: { env: En
       {env === "club" && ["#FF3EA5", "#52C7FF", "#FFD23F", "#3DDC97"].map((c, k) => (
         <span key={k} className="zz-disco-beam" style={{ left: `${15 + k * 23}%`, ["--c" as string]: c, animationDelay: `${-k * 0.6}s`, animationDuration: `${2.6 + (k % 2) * 0.6}s`, opacity: 0.22 } as CSSProperties} />
       ))}
+    </div>
+  );
+});
+
+/** Partie la plus reconnaissable de chaque décor (fraction de la hauteur où commence l'aperçu) */
+const FOCUS: Record<EnvId, number> = { plain: 0.3, salon: 0.16, bar: 0.24, club: 0.66, beach: 0.42, volcano: 0.36, space: 0.16, zinzin: 0.6 };
+
+/** Aperçu fixe d'un décor (fenêtre de choix du décor) : le dessin seul, sans animation, cadré sur l'essentiel. */
+export const ScenePreview = memo(function ScenePreview({ env }: { env: EnvId }) {
+  const Scene = SCENES[env] ?? Salon;
+  return (
+    <div className="absolute inset-0 overflow-hidden">
+      <div className="absolute left-0 top-0 w-full" style={{ aspectRatio: "390 / 844", transform: `translateY(-${FOCUS[env] * 100}%)` }}>
+        <Scene />
+      </div>
     </div>
   );
 });

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
-import { Disc3, Headphones, Lock, Orbit, PartyPopper, Pointer, Share2, X } from "lucide-react";
+import { Check, Disc3, Headphones, Image as ImageIcon, Lock, Orbit, PartyPopper, Pointer, Share2, X } from "lucide-react";
 import { AvatarBlob } from "@/components/avatar/AvatarBlob";
 import { useBand } from "@/components/avatar/PlayerBlob";
 import { baseLook, type AvatarLook } from "@/lib/avatar/look";
@@ -12,7 +12,7 @@ import { haptic, reducedMotion } from "./util";
 import { useToast } from "./common";
 import { useLiteFx, watchFps } from "./perf";
 import { ZBlob } from "./ZBlob";
-import { ClickerScene, ENVS, type EnvId } from "./ClickerScenes";
+import { ClickerScene, ENVS, ScenePreview, type EnvId } from "./ClickerScenes";
 import {
   LEVELS, PARTY_MIN, bigParty, earn, fmtBig, levelCost, levelOutput, levelUnlocked, partyConfetti, perSecond, perTap,
   type ClickerState,
@@ -110,7 +110,7 @@ const T: I18n<{
   reward: Record<Reward["kind"], string>; unlocked: (what: string) => string; close: string; badge: string;
   lvl: (n: number) => string; plusTap: (n: string) => string; soon: (n: number) => string; unlockAt: (n: string) => string;
   partyShort: string; partyGain: (n: number) => string; partyAt: (n: string) => string; doubled: (name: string) => string;
-  envNew: string; envDesc: string; envAt: (n: string) => string; giftTitle: string; giftSub: string; giftBtn: string;
+  envNew: string; envDesc: string; envAt: (n: string) => string; envPick: string; giftTitle: string; giftSub: string; giftBtn: string;
 }> = {
   fr: {
     title: "Tapote le blob", gloops: "gloops", perSec: (n) => `${n} par seconde`, taps: (n) => `${n} taps`, perTap: (n) => `+${n} par tap`,
@@ -126,7 +126,7 @@ const T: I18n<{
     unlocked: (what) => `🎁 Débloqué : ${what} !`, close: "Fermer", badge: "🏆 Sans vie sociale",
     lvl: (n) => `niv. ${n}`, plusTap: (n) => `+${n}/tap`, soon: (n) => `dans ${n}`, unlockAt: (n) => `à ${n} gloops`,
     partyShort: "Grande fête", partyGain: (n) => `+${n} confettis`, partyAt: (n) => `à ${n} gagnés`, doubled: (name) => `⚡ ${name} : efficacité ×2 !`,
-    envNew: "NOUVEAU DÉCOR !", envDesc: "Ton blob déménage. Change de décor quand tu veux, en haut.", envAt: (n) => `à ${n} taps`,
+    envNew: "NOUVEAU DÉCOR !", envDesc: "Ton blob déménage. Change de décor quand tu veux avec le bouton en haut.", envAt: (n) => `à ${n} taps`, envPick: "Choisis ton décor",
     giftTitle: "Cadeau du jour", giftSub: "Content de te revoir ! Reviens demain pour un autre cadeau.", giftBtn: "Je prends !",
   },
   en: {
@@ -143,7 +143,7 @@ const T: I18n<{
     unlocked: (what) => `🎁 Unlocked: ${what}!`, close: "Close", badge: "🏆 No social life",
     lvl: (n) => `lv ${n}`, plusTap: (n) => `+${n}/tap`, soon: (n) => `in ${n}`, unlockAt: (n) => `at ${n} gloops`,
     partyShort: "Big Party", partyGain: (n) => `+${n} confetti`, partyAt: (n) => `at ${n} earned`, doubled: (name) => `⚡ ${name}: ×2 power!`,
-    envNew: "NEW SCENERY!", envDesc: "Your blob is moving. Switch scenery anytime, up top.", envAt: (n) => `at ${n} taps`,
+    envNew: "NEW SCENERY!", envDesc: "Your blob is moving. Switch scenery anytime, up top.", envAt: (n) => `at ${n} taps`, envPick: "Pick your scenery",
     giftTitle: "Daily gift", giftSub: "Good to see you! Come back tomorrow for another gift.", giftBtn: "Grab it!",
   },
   es: {
@@ -160,7 +160,7 @@ const T: I18n<{
     unlocked: (what) => `🎁 Desbloqueado: ${what}`, close: "Cerrar", badge: "🏆 Sin vida social",
     lvl: (n) => `niv. ${n}`, plusTap: (n) => `+${n}/toque`, soon: (n) => `en ${n}`, unlockAt: (n) => `a ${n} gloops`,
     partyShort: "Gran fiesta", partyGain: (n) => `+${n} confeti`, partyAt: (n) => `a ${n} ganados`, doubled: (name) => `⚡ ${name}: ¡×2 de potencia!`,
-    envNew: "¡NUEVO ESCENARIO!", envDesc: "Tu blob se muda. Cambia de escenario cuando quieras, arriba.", envAt: (n) => `a ${n} toques`,
+    envNew: "¡NUEVO ESCENARIO!", envDesc: "Tu blob se muda. Cambia de escenario cuando quieras, arriba.", envAt: (n) => `a ${n} toques`, envPick: "Elige tu escenario",
     giftTitle: "Regalo del día", giftSub: "¡Qué bien verte! Vuelve mañana para otro regalo.", giftBtn: "¡Lo quiero!",
   },
 };
@@ -452,10 +452,17 @@ export function BlobClicker({ onClose }: { onClose: () => void }) {
       <div className="relative z-[1] mx-auto flex w-full max-w-lg min-h-0 flex-1 flex-col">
         <div className="flex items-center justify-between px-5">
           <h2 className="zz-title text-[26px] text-white">{t.title}</h2>
-          <button type="button" onClick={() => { void saveBoth(sRef.current); onClose(); }} aria-label={t.close}
-            className="zz-push zz-stk-sm grid h-11 w-11 place-items-center rounded-full" style={{ background: "#fff", color: "var(--zz-ink)" }}>
-            <X size={22} strokeWidth={3} />
-          </button>
+          <div className="flex items-center gap-2">
+            {/* Choisir le décor */}
+            <button type="button" onClick={() => { haptic("light"); playSfx("pop", { volume: 0.35 }); setEnvPick(true); }} aria-label={t.envPick}
+              className="zz-push zz-stk-sm grid h-11 w-11 place-items-center rounded-full" style={{ background: "#fff", color: "var(--zz-ink)" }}>
+              <ImageIcon size={21} strokeWidth={2.6} />
+            </button>
+            <button type="button" onClick={() => { void saveBoth(sRef.current); onClose(); }} aria-label={t.close}
+              className="zz-push zz-stk-sm grid h-11 w-11 place-items-center rounded-full" style={{ background: "#fff", color: "var(--zz-ink)" }}>
+              <X size={22} strokeWidth={3} />
+            </button>
+          </div>
         </div>
         <div className="text-center">
           <div className="zz-title text-[44px] leading-none" style={{ color: "#FFD23F" }}>{fmtBig(s.gloops, lang)}</div>
@@ -471,31 +478,6 @@ export function BlobClicker({ onClose }: { onClose: () => void }) {
               </div>
             )}
           <p className="mx-6 mt-1.5 text-[15.5px] font-bold leading-snug text-white">{line}</p>
-          {/* Décor : pastille pour en changer (seulement s'il y en a plusieurs de débloqués) */}
-          {unlockedEnvs.length > 1 && (
-            <button type="button" onClick={() => { haptic("light"); setEnvPick((v) => !v); }}
-              className="zz-push zz-stk-sm mx-auto mt-1.5 flex h-8 items-center gap-1.5 rounded-full px-3 text-[13px] font-extrabold"
-              style={{ background: "#fff", color: "#15082E" }} aria-expanded={envPick}>
-              <span>{envInfo.icon}</span>{envInfo.name[lang]}<span style={{ opacity: 0.6 }}>{envPick ? "▴" : "▾"}</span>
-            </button>
-          )}
-          {envPick && (
-            <div className="zz-pop mx-3 mt-2 flex flex-wrap justify-center gap-1.5">
-              {ENVS.map((e) => {
-                const open = s.taps >= e.at;
-                const on = e.id === envId;
-                return (
-                  <button key={e.id} type="button" disabled={!open} onClick={() => chooseEnv(e.id)}
-                    className="zz-push flex h-9 items-center gap-1 rounded-full px-2.5 text-[12.5px] font-extrabold"
-                    style={open
-                      ? { background: on ? "#FFD23F" : "#fff", color: "#15082E", border: "2.5px solid #15082E" }
-                      : { background: "rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.6)", border: "2.5px solid transparent" }}>
-                    <span>{open ? e.icon : "🔒"}</span>{open ? e.name[lang] : t.envAt(fmtBig(e.at, lang))}
-                  </button>
-                );
-              })}
-            </div>
-          )}
         </div>
 
         {/* Le blob à tapoter, ses mini-blobs, ses pouvoirs, et parfois le blob doré */}
@@ -624,6 +606,40 @@ export function BlobClicker({ onClose }: { onClose: () => void }) {
             <div className="mt-2 text-[86px] leading-none">{ENVS.find((e) => e.id === envCelebrate)?.icon}</div>
             <div className="zz-title mt-1 text-[38px] leading-tight text-white">{ENVS.find((e) => e.id === envCelebrate)?.name[lang]}</div>
             <div className="mx-8 mt-1 text-[16px] font-bold" style={{ color: "#FFD23F" }}>{t.envDesc}</div>
+          </div>
+        </div>
+      )}
+
+      {/* Choix du décor : aperçus des 7 décors (verrouillés : palier à atteindre) */}
+      {envPick && (
+        <div className="fixed inset-0 flex items-end justify-center" style={{ zIndex: 49 }}>
+          <div className="absolute inset-0" style={{ background: "rgba(10,2,30,0.65)" }} onClick={() => setEnvPick(false)} />
+          <div className="zz-sheet relative w-full max-w-lg rounded-t-[28px] px-4 pt-4" style={{ background: "var(--zz-bg)", border: "3px solid #15082E", borderBottom: 0, paddingBottom: "calc(var(--sab) + 16px)" }}>
+            <div className="mb-3 flex items-center justify-between">
+              <p className="zz-title text-[24px] text-white">{t.envPick}</p>
+              <button type="button" onClick={() => setEnvPick(false)} aria-label={t.close} className="zz-push zz-stk-sm grid h-10 w-10 place-items-center rounded-full" style={{ background: "#fff", color: "#15082E" }}>
+                <X size={20} strokeWidth={3} />
+              </button>
+            </div>
+            <div className="grid grid-cols-2 gap-2.5">
+              {ENVS.map((e) => {
+                const open = s.taps >= e.at;
+                const on = e.id === envId;
+                return (
+                  <button key={e.id} type="button" disabled={!open} onClick={() => chooseEnv(e.id)}
+                    className="zz-push relative h-[104px] overflow-hidden rounded-[18px] text-left"
+                    style={{ border: `3px solid ${on ? "#FFD23F" : "#15082E"}`, boxShadow: on ? "0 0 0 3px #15082E" : "0 3px 0 #15082E" }}>
+                    <ScenePreview env={e.id} />
+                    {!open && <div className="absolute inset-0" style={{ background: "rgba(10,2,30,0.72)" }} />}
+                    <span className="absolute bottom-1.5 left-1.5 flex items-center gap-1 rounded-full px-2 py-0.5 text-[12px] font-extrabold"
+                      style={{ background: "#fff", color: "#15082E", border: "2px solid #15082E" }}>
+                      {open ? <>{e.icon} {e.name[lang]}</> : <><Lock size={11} strokeWidth={3} /> {t.envAt(fmtBig(e.at, lang))}</>}
+                    </span>
+                    {on && <span className="absolute right-1.5 top-1.5 grid h-6 w-6 place-items-center rounded-full" style={{ background: "#FFD23F", border: "2px solid #15082E" }}><Check size={13} strokeWidth={3.6} color="#15082E" /></span>}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
       )}
