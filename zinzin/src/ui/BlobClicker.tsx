@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
-import { Share2, X } from "lucide-react";
+import { Disc3, Headphones, Lock, Orbit, PartyPopper, Pointer, Share2, X } from "lucide-react";
 import { AvatarBlob } from "@/components/avatar/AvatarBlob";
 import { useBand } from "@/components/avatar/PlayerBlob";
 import { baseLook, type AvatarLook } from "@/lib/avatar/look";
@@ -164,6 +164,24 @@ const FLAMES: { x: number; y: number; w: number; r: number }[] = [
   { x: -104, y: -40, w: 60, r: -30 }, { x: -82, y: 6, w: 72, r: -18 }, { x: -42, y: 36, w: 84, r: -7 },
   { x: 0, y: 48, w: 96, r: 0 }, { x: 42, y: 36, w: 84, r: 7 }, { x: 82, y: 6, w: 72, r: 18 }, { x: 104, y: -40, w: 60, r: 30 },
 ];
+
+/** Couleurs et pictos des 6 cartes (même famille que les cartes de jeux de l'accueil) */
+const CARD_STYLE: { bg: string; deep: string; icon: "finger" | "mini" | "dj" | "club" | "planet" }[] = [
+  { bg: "#FF3EA5", deep: "#C41F78", icon: "finger" },
+  { bg: "#3DDC97", deep: "#1C9E68", icon: "mini" },
+  { bg: "#A98BFF", deep: "#6E50D8", icon: "dj" },
+  { bg: "#52C7FF", deep: "#1F8FC4", icon: "club" },
+  { bg: "#FF8A1F", deep: "#D2560A", icon: "planet" },
+];
+function CardIcon({ kind }: { kind: (typeof CARD_STYLE)[number]["icon"] }) {
+  const p = { size: 19, strokeWidth: 2.8, color: "#15082E" };
+  return (
+    <span className="grid h-9 w-9 place-items-center rounded-full" style={{ background: "#fff", border: "2.5px solid #15082E", boxShadow: "0 2px 0 #15082E" }}>
+      {kind === "finger" ? <Pointer {...p} /> : kind === "mini" ? <ZBlob size={26} color="mint" mood="happy" seed={3} shadow={false} wobble={false} hop={false} />
+        : kind === "dj" ? <Headphones {...p} /> : kind === "club" ? <Disc3 {...p} /> : <Orbit {...p} />}
+    </span>
+  );
+}
 
 /** Gamme pentatonique (demi-tons) : le pop monte d'une note à chaque tap rapide, puis redescend. */
 const SCALE = [0, 2, 4, 7, 9, 12, 14, 16, 19, 21, 24];
@@ -381,7 +399,6 @@ export function BlobClicker({ onClose }: { onClose: () => void }) {
       <AvatarBlob look={{ ...baseLook(["mint", "yellow", "sky", "coral", "lavender", "orange", "lime", "pink"][i]), eyes: "happy" }} size={30} animate={false} />
     </div>
   )), [miniCount]);
-  const card = (can: boolean): CSSProperties => ({ background: can ? "#fff" : "rgba(255,255,255,0.12)", color: can ? "var(--zz-ink)" : "rgba(255,255,255,0.75)" });
 
   return createPortal(
     <div className="fixed inset-0 flex flex-col overflow-hidden" style={{ zIndex: 45, background: frenzy ? "#3A0E3F" : "var(--zz-bg)", transition: "background 400ms", paddingTop: "calc(var(--sat) + 8px)", paddingBottom: "calc(var(--sab) + 10px)" }} role="dialog" aria-label={t.title}>
@@ -474,19 +491,22 @@ export function BlobClicker({ onClose }: { onClose: () => void }) {
             const can = open && s.gloops >= cost;
             const gain = levelOutput(s, i, s.lv[i] + 1) - levelOutput(s, i);
             const toDouble = 10 - (s.lv[i] % 10);
+            const cs = CARD_STYLE[i];
             return (
               <button key={d.id} type="button" onClick={() => buyLevel(i)} disabled={!open}
-                className="zz-push zz-stk-sm relative flex min-h-[92px] flex-col items-center justify-center rounded-[18px] px-1 py-1.5 text-center"
-                style={!open ? { background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.55)" } : card(can)}>
+                className="zz-push zz-stk-sm relative flex min-h-[100px] flex-col items-center justify-center rounded-[18px] px-1 py-1.5 text-center"
+                style={!open
+                  ? { background: "rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.6)", boxShadow: "none", borderColor: "rgba(255,255,255,0.15)" }
+                  : { background: cs.bg, color: "#15082E", opacity: can ? 1 : 0.6, transition: "opacity 200ms" }}>
                 {open && s.lv[i] > 0 && (
-                  <span className="absolute -right-1 -top-1.5 rounded-full px-1.5 text-[11px] font-extrabold" style={{ background: "var(--zz-ink)", color: "#FFD23F" }}>{t.lvl(s.lv[i])}</span>
+                  <span className="absolute -right-1.5 -top-2 rounded-full px-1.5 text-[11px] font-extrabold" style={{ background: "#FFD23F", color: "#15082E", border: "2px solid #15082E" }}>{t.lvl(s.lv[i])}</span>
                 )}
-                <span className="text-[20px] leading-none">{open ? d.icon : "🔒"}</span>
+                {open ? <CardIcon kind={cs.icon} /> : <Lock size={20} strokeWidth={2.8} />}
                 <span className="mt-1 text-[12.5px] font-extrabold leading-tight">{open ? d.name[lang] : t.locked}</span>
                 {open ? (
                   <>
-                    <span className="text-[11px] font-bold" style={{ opacity: 0.75 }}>{i === 0 ? t.plusTap(fmtBig(gain, lang)) : t.prod(fmtBig(gain, lang))}{toDouble <= 3 ? ` · ×2 ${t.soon(toDouble)}` : ""}</span>
-                    <span className="mt-0.5 text-[13px] font-extrabold" style={{ color: can ? "#C41F78" : undefined }}>{fmtBig(cost, lang)}</span>
+                    <span className="text-[11px] font-bold" style={{ opacity: 0.8 }}>{i === 0 ? t.plusTap(fmtBig(gain, lang)) : t.prod(fmtBig(gain, lang))}{toDouble <= 3 ? ` · ×2 ${t.soon(toDouble)}` : ""}</span>
+                    <span className="mt-1 rounded-full px-2 text-[12.5px] font-extrabold" style={{ background: "#fff", color: "#15082E", border: "2px solid #15082E" }}>{fmtBig(cost, lang)}</span>
                   </>
                 ) : (
                   <span className="text-[11px] font-bold">{t.unlockAt(fmtBig(LEVELS[i].base * 0.5, lang))}</span>
@@ -496,9 +516,11 @@ export function BlobClicker({ onClose }: { onClose: () => void }) {
           })}
           {/* 6e carte : la Grande fête (recommencer contre des confettis) */}
           <button type="button" onClick={party} disabled={confettiGain <= 0}
-            className="zz-push zz-stk-sm flex min-h-[92px] flex-col items-center justify-center rounded-[18px] px-1 py-1.5 text-center"
-            style={confettiGain > 0 ? { background: "#FFD23F", color: "var(--zz-ink)" } : { background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.6)" }}>
-            <span className="text-[20px] leading-none">🎉</span>
+            className="zz-push zz-stk-sm flex min-h-[100px] flex-col items-center justify-center rounded-[18px] px-1 py-1.5 text-center"
+            style={confettiGain > 0 ? { background: "#FFD23F", color: "#15082E" } : { background: "rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.6)", boxShadow: "none", borderColor: "rgba(255,255,255,0.15)" }}>
+            {confettiGain > 0
+              ? <span className="grid h-9 w-9 place-items-center rounded-full" style={{ background: "#fff", border: "2.5px solid #15082E", boxShadow: "0 2px 0 #15082E" }}><PartyPopper size={19} strokeWidth={2.8} color="#15082E" /></span>
+              : <PartyPopper size={20} strokeWidth={2.8} />}
             <span className="mt-1 text-[12.5px] font-extrabold leading-tight">{t.partyShort}</span>
             <span className="text-[11px] font-bold leading-tight">{confettiGain > 0 ? t.partyGain(confettiGain) : t.partyAt(fmtBig(PARTY_MIN, lang))}</span>
           </button>

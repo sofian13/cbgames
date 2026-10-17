@@ -481,6 +481,9 @@ svg.zz-dancing { animation: zz-dance .484s ease-in-out infinite alternate; trans
 @keyframes zz-power-bit { from { transform: rotate(var(--a)) translateX(0); opacity: 1; } to { transform: rotate(var(--a)) translateX(170px); opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .zz-flame, .zz-click-spark, .zz-bolt, .zz-cosmos, .zz-sweat, .zz-power, .zz-power-bit { animation-duration: 1ms !important; } }
 
+/* Fiche qu'on fait glisser (common.tsx) : ses animations internes attendent la fin du geste */
+.zz-dragging *, .zz-dragging *::before, .zz-dragging *::after { animation-play-state: paused !important; }
+
 /* Accueil au repos depuis 30 s (Home.tsx) : décor en pause, les yeux clignent toujours */
 .zz-idle .zz-doodle, .zz-idle .zz-glow, .zz-idle .zz-letter, .zz-idle .zz-letter-jump, .zz-idle .zb-wob, .zz-idle .zb-face,
 .zz-idle .zb-pupil-a, .zz-idle .zb-pupil-b, .zz-idle .zz-peek, .zz-idle .zzs-spark, .zz-idle .zz-band-bob, .zz-idle .av-wob { animation-play-state: paused !important; }

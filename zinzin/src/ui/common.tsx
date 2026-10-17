@@ -47,15 +47,17 @@ function useDragToClose(
   useEffect(() => {
     const el = panel.current;
     if (!el) return;
-    type G = { id: number; x0: number; y0: number; grab: boolean; scroller: HTMLElement | null; state: "wait" | "drag" | "no"; dy: number; samples: { t: number; y: number }[] };
+    type G = { id: number; x0: number; y0: number; grab: boolean; scroller: HTMLElement | null; state: "wait" | "drag" | "no"; dy: number; h: number; samples: { t: number; y: number }[] };
     let g: G | null = null;
-
-    const setDim = (dy: number) => {
+    // Déplacements regroupés au rythme de l'écran (une seule écriture par image), hauteur mesurée UNE fois
+    // au début du geste : jamais de relecture de la mise en page pendant le glisser (fluidité)
+    let raf = 0;
+    const paint = () => {
+      raf = 0;
+      if (!g || g.state !== "drag") return;
+      el.style.translate = `0 ${g.dy.toFixed(1)}px`;
       const bd = backdrop.current;
-      if (!bd) return;
-      bd.style.animation = "none";
-      bd.style.transition = "none";
-      bd.style.opacity = String(Math.max(0, 1 - dy / Math.max(1, el.offsetHeight)));
+      if (bd) bd.style.opacity = String(Math.max(0, 1 - Math.max(0, g.dy) / Math.max(1, g.h)));
     };
 
     const onStart = (e: TouchEvent) => {
@@ -67,7 +69,7 @@ function useDragToClose(
       const top = el.getBoundingClientRect().top;
       g = {
         id: t.identifier, x0: t.clientX, y0: t.clientY, grab: t.clientY - top < GRAB_ZONE,
-        scroller: scrollerOf(target, el), state: "wait", dy: 0, samples: [{ t: performance.now(), y: t.clientY }],
+        scroller: scrollerOf(target, el), state: "wait", dy: 0, h: 0, samples: [{ t: performance.now(), y: t.clientY }],
       };
     };
 
@@ -87,16 +89,19 @@ function useDragToClose(
         if (dy > 0 && Math.abs(dy) >= Math.abs(dx) && (g.grab || atTop)) {
           g.state = "drag";
           g.y0 = t.clientY; // pas de saut : la fiche part d'où est le doigt
+          g.h = el.offsetHeight;
           el.style.transition = "none";
           el.style.willChange = "translate"; // la fiche glisse sur son propre calque, sans rien repeindre
+          el.classList.add("zz-dragging"); // animations internes en pause pendant le geste
+          const bd = backdrop.current;
+          if (bd) { bd.style.animation = "none"; bd.style.transition = "none"; }
         } else { g.state = "no"; return; }
       }
       if (e.cancelable) e.preventDefault(); // la fiche bouge, pas le contenu
       const d = t.clientY - g.y0;
       // Vers le haut : forte résistance (on ne décolle pas la fiche du bas)
       g.dy = d >= 0 ? d : -Math.sqrt(-d) * 2;
-      el.style.translate = `0 ${g.dy.toFixed(1)}px`;
-      setDim(Math.max(0, g.dy));
+      if (!raf) raf = requestAnimationFrame(paint);
       g.samples.push({ t: performance.now(), y: t.clientY });
       if (g.samples.length > 6) g.samples.shift();
     };
@@ -107,13 +112,15 @@ function useDragToClose(
       const cur = g;
       g = null;
       el.style.willChange = "";
+      el.classList.remove("zz-dragging");
+      if (raf) { cancelAnimationFrame(raf); raf = 0; }
       if (cur.state !== "drag") return;
       // Vitesse sur les ~100 dernières ms (px/ms, positive vers le bas)
       const last = cur.samples[cur.samples.length - 1];
       const first = cur.samples.find((s) => last.t - s.t <= 100) ?? cur.samples[0];
       // (doigt arrêté avant de lâcher : pas de lancer)
       const v = last.t > first.t && performance.now() - last.t < 120 ? (last.y - first.y) / (last.t - first.t) : 0;
-      const h = el.offsetHeight;
+      const h = cur.h || el.offsetHeight;
       const reduce = reducedMotion();
       const bd = backdrop.current;
       if (cur.dy > h * 0.25 || (v > 0.5 && cur.dy > 12)) {
@@ -137,6 +144,7 @@ function useDragToClose(
     el.addEventListener("touchend", onEnd);
     el.addEventListener("touchcancel", onEnd);
     return () => {
+      if (raf) cancelAnimationFrame(raf);
       el.removeEventListener("touchstart", onStart);
       el.removeEventListener("touchmove", onMove);
       el.removeEventListener("touchend", onEnd);
