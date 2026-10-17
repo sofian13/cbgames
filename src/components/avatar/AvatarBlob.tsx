@@ -81,6 +81,10 @@ const CSS = `
 .av-crown{transform-box:fill-box;transform-origin:50% 100%;animation:av-crown 3.4s ease-in-out infinite}
 @keyframes av-twk{0%,100%{opacity:1;transform:scale(1) rotate(0deg)}50%{opacity:.35;transform:scale(.55) rotate(45deg)}}
 @keyframes av-crown{0%,100%{transform:rotate(0deg) translateY(0)}50%{transform:rotate(3deg) translateY(-1.5px)}}
+.av-rainbow{animation:av-rainbow 6s linear infinite}
+@keyframes av-rainbow{to{filter:hue-rotate(360deg)}}
+.av-aura{transform-box:fill-box;transform-origin:center;animation:av-aura 2.4s ease-in-out infinite}
+@keyframes av-aura{0%,100%{opacity:.55;transform:scale(1)}50%{opacity:1;transform:scale(1.06)}}
 .av-prop{transform-box:fill-box;transform-origin:center;animation:av-prop .7s linear infinite}
 @keyframes av-prop{0%,100%{transform:scaleX(1)}50%{transform:scaleX(-1)}}
 @media (prefers-reduced-motion: reduce){.av-wob,.av-blink,.av-twk,.av-crown,.av-prop{animation:none!important}}
@@ -222,6 +226,22 @@ function eyes(style: string, c: { body: string; deep: string }, hide: { L: boole
       };
       return both(eye);
     }
+    case "spiral":
+      // Secret (100 taps dans « Tapote le blob ») : yeux hypnotisés, spirales
+      return both((e, s) => {
+        const pts: string[] = [];
+        for (let k = 0; k <= 46; k++) {
+          const a = (s ? -1 : 1) * k * 0.42, r = (k / 46) * (e.r - 2.2);
+          pts.push(`${(e.x + Math.cos(a) * r).toFixed(2)} ${(e.y + Math.sin(a) * r).toFixed(2)}`);
+        }
+        return (
+          <g key={s} className={blinkCls} style={blink ? { animationDelay: `${s * 0.06}s` } : undefined}>
+            <ellipse cx={e.x} cy={e.y + 2.2} rx={e.r} ry={e.r} fill={c.deep} opacity={0.5} />
+            <circle cx={e.x} cy={e.y} r={e.r} fill="#fff" stroke={ink} strokeWidth={1.6} />
+            <path d={`M${pts.join(" L")}`} fill="none" stroke={ink} strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" />
+          </g>
+        );
+      });
     case "tears": {
       // « Larmes de rire » : yeux plissés en chevrons, grosses larmes qui jaillissent sur les côtés
       const tear = "M0 -8 C3 -3 5.4 0.6 5.4 3.8 C5.4 7 3 9.2 0 9.2 C-3 9.2 -5.4 7 -5.4 3.8 C-5.4 0.6 -3 -3 0 -8Z";
@@ -1230,6 +1250,29 @@ function extraLayers(id: string, c: { body: string; deep: string }, seat: number
         ),
       };
     }
+    case "foamfinger":
+      // Secret (500 taps) : main en mousse « n°1 », brandie sur le côté
+      return {
+        front: (
+          <g transform="translate(104 70) rotate(18)">
+            <path d="M-9 26 L-9 2 C-9 -3 -2 -3 -2 2 L-2 -22 C-2 -29 7 -29 7 -22 L7 2 C10 -2 16 0 15 5 L14 26 C14 33 -9 33 -9 26Z" fill="#FFD23F" stroke={INK} strokeWidth={2.6} strokeLinejoin="round" />
+            <text x={3} y={22} textAnchor="middle" fontSize={11} fontWeight={900} fill="#E8304A" style={{ fontFamily: "system-ui, sans-serif" }}>#1</text>
+          </g>
+        ),
+      };
+    case "aura":
+      // Secret (10 000 taps) : aura légendaire qui pulse derrière le perso
+      return {
+        back: (
+          <g className={animate ? "av-aura" : undefined}>
+            <ellipse cx={60} cy={62} rx={64} ry={58} fill="none" stroke="#FFD23F" strokeWidth={7} opacity={0.35} />
+            <ellipse cx={60} cy={62} rx={58} ry={52} fill="none" stroke="#FFF3A0" strokeWidth={3} />
+            {[0, 60, 120, 180, 240, 300].map((d) => (
+              <path key={d} transform={`rotate(${d} 60 62)`} d="M60 0 L64 8 L60 6 L56 8Z" fill="#FFD23F" stroke={INK} strokeWidth={1.2} />
+            ))}
+          </g>
+        ),
+      };
     case "batwings": {
       // Halloween : ailes de chauve-souris (membrane violet nuit, nervures)
       const w = "M20 58 C10 40 -6 34 -18 42 C-12 46 -12 52 -14 56 C-8 53 -2 55 0 61 C4 57 10 58 12 64 C15 60 19 60 21 64Z";
@@ -1404,11 +1447,19 @@ export function AvatarSvg({ look, size, mood = "happy", animate = false, shadow 
   return (
     <svg viewBox={viewBox} width={size} height={size} style={{ overflow: "visible", display: "block" }} xmlns="http://www.w3.org/2000/svg">
       <defs>
-        <radialGradient id={gBody} cx="34%" cy="28%" r="78%">
-          <stop offset="0%" stopColor={c.hi} />
-          <stop offset="38%" stopColor={c.body} />
-          <stop offset="100%" stopColor={c.body} />
-        </radialGradient>
+        {look.color === "rainbow" ? (
+          // Couleur secrète « Arc-en-ciel » : dégradé multicolore (qui défile, voir .av-rainbow)
+          <linearGradient id={gBody} x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stopColor="#FF5E9C" /><stop offset="22%" stopColor="#FFB23F" /><stop offset="42%" stopColor="#FFE74A" />
+            <stop offset="62%" stopColor="#3DDC97" /><stop offset="80%" stopColor="#4E9BFF" /><stop offset="100%" stopColor="#A06BFF" />
+          </linearGradient>
+        ) : (
+          <radialGradient id={gBody} cx="34%" cy="28%" r="78%">
+            <stop offset="0%" stopColor={c.hi} />
+            <stop offset="38%" stopColor={c.body} />
+            <stop offset="100%" stopColor={c.body} />
+          </radialGradient>
+        )}
         <radialGradient id={gShade} cx="36%" cy="30%" r="80%">
           <stop offset="62%" stopColor={c.deep} stopOpacity={0} />
           <stop offset="100%" stopColor={c.deep} stopOpacity={0.75} />
@@ -1427,7 +1478,7 @@ export function AvatarSvg({ look, size, mood = "happy", animate = false, shadow 
 
       {/* Corps : ombre dure, dégradé, contour */}
       <path d={SHAPE} transform="translate(0 4)" fill={INK} stroke={INK} strokeWidth={sw + 1.6} strokeLinejoin="round" />
-      <path d={SHAPE} fill={`url(#${gBody})`} />
+      <path d={SHAPE} fill={`url(#${gBody})`} className={look.color === "rainbow" && animate ? "av-rainbow" : undefined} />
       <path d={SHAPE} fill={`url(#${gShade})`} />
       <g clipPath={`url(#${clip})`}>
         <ellipse cx={37} cy={30} rx={14} ry={8.5} transform="rotate(-24 37 30)" fill="#fff" opacity={0.5} />

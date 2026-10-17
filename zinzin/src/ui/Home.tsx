@@ -13,6 +13,7 @@ import { GamePicker } from "./GamePicker";
 import { SEASON } from "../season";
 import { HalloweenEggs, TrickOrTreat } from "./HalloweenEggs";
 import { DiscoMode } from "./DiscoMode";
+import { BlobClicker } from "./BlobClicker";
 import { ShakeRain } from "./ShakeRain";
 import { GoldenBlob } from "./GoldenBlob";
 import { PullBlob } from "./PullBlob";
@@ -54,6 +55,7 @@ export function Home({
   const noAlc = useNoAlcohol();
   // Tirée une fois par ouverture de l'app (l'accueil reste monté pendant les jeux)
   const [greeting] = useState(() => drawGreeting());
+  const [clicker, setClicker] = useState(false);
   useEffect(() => { preloadUiSfx(); }, []);
   useEffect(() => { if (greeting.slot === "three") foundSecret("threeam"); }, [greeting.slot]);
   // Très petit écran (iPhone SE 1re gén., 320 px) : logo un peu plus petit pour laisser la place
@@ -165,6 +167,19 @@ export function Home({
             </section>
           );
         })}
+
+        {/* « Tapote le blob » : mini-jeu pour celui qui s'ennuie en soirée */}
+        <div className="mt-6 flex justify-center">
+          <button
+            type="button"
+            onClick={() => { haptic(); uiSfx.open(); setClicker(true); }}
+            className="zz-push zz-stk-sm flex h-11 items-center gap-2 rounded-full px-5 text-[15px] font-bold"
+            style={{ background: "rgba(255,255,255,0.1)", color: "#fff" }}
+          >
+            {t.boredCta}
+          </button>
+        </div>
+        {clicker && <BlobClicker onClose={() => setClicker(false)} />}
 
         {!noAlc && (
           <p className="mt-4 px-8 text-center text-[13px] leading-relaxed" style={{ color: "var(--zz-mute)" }}>

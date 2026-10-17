@@ -8,7 +8,7 @@ import { requestPaywall, useUnlocked } from "@/lib/entitlements";
 import { playSfx } from "@/lib/sfx";
 import { uiSfx } from "@/lib/ui-sfx";
 import {
-  AVATAR_COLORS, AVATAR_ITEMS, AVATAR_PALETTE, HAIR_COLORS, HAIR_COLOR_IDS, baseLook, cleanName,
+  AVATAR_COLORS, AVATAR_ITEMS, AVATAR_PALETTE, SECRET_COLORS, HAIR_COLORS, HAIR_COLOR_IDS, baseLook, cleanName,
   lookHasPremium, randomLook, type AvatarLook, type AvatarSlot, type AvatarTab,
 } from "@/lib/avatar/look";
 import { AVATAR_NAMES, AVATAR_STR } from "@/lib/avatar/i18n";
@@ -193,7 +193,7 @@ export function AvatarEditor({
   // Vignettes de l'onglet courant
   const tiles: { key: string; label: string; free: boolean; secret?: boolean; on: boolean; apply: () => void; preview: AvatarLook; swatch?: string }[] =
     tab === "color"
-      ? AVATAR_COLORS.map((col) => ({ key: col, label: names[`color.${col}`], free: true, on: look.color === col, apply: () => set({ color: col }), preview: { ...look, color: col }, swatch: AVATAR_PALETTE[col].body }))
+      ? [...AVATAR_COLORS, ...SECRET_COLORS.filter((col) => secrets.includes(`color-${col}`) || look.color === col)].map((col) => ({ key: col, label: names[`color.${col}`], free: true, on: look.color === col, apply: () => set({ color: col }), preview: { ...look, color: col }, swatch: AVATAR_PALETTE[col].body }))
       : AVATAR_ITEMS[tab as AvatarSlot]
         // Accessoire secret : invisible tant qu'il n'est pas trouvé (sauf s'il est déjà porté, ex. code de bande)
         .filter((it) => !it.secret || secrets.includes(it.id) || look[tab as AvatarSlot] === it.id)

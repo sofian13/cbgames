@@ -438,6 +438,16 @@ svg.zz-dancing { animation: zz-dance .484s ease-in-out infinite alternate; trans
 @keyframes zz-dance { from { transform: translateY(0) rotate(-7deg) scale(1.03, .97); } to { transform: translateY(-9%) rotate(7deg) scale(.97, 1.04); } }
 @media (prefers-reduced-motion: reduce) { .zz-disco-beams, .zz-disco-spot, svg.zz-dancing { animation: none !important; } }
 
+/* « Tapote le blob » (BlobClicker.tsx) */
+.zz-click-pop { transform: translate(-50%, -50%); animation: zz-click-pop 0.9s ease-out forwards; -webkit-text-stroke: 5px #15082E; paint-order: stroke fill; }
+@keyframes zz-click-pop { from { opacity: 1; translate: 0 0; } to { opacity: 0; translate: 0 -90px; } }
+.zz-click-bit { position: absolute; left: 50%; top: 50%; width: 8px; height: 8px; border-radius: 2px; animation: zz-click-bit 0.7s ease-out forwards; }
+@keyframes zz-click-bit { from { transform: rotate(var(--a)) translateX(0); opacity: 1; } to { transform: rotate(var(--a)) translateX(46px); opacity: 0; } }
+.zz-click-mini { animation: zz-click-orbit 9s linear infinite; }
+@keyframes zz-click-orbit { from { transform: rotate(var(--a)) translateX(128px) rotate(calc(-1 * var(--a))); } to { transform: rotate(calc(var(--a) + 360deg)) translateX(128px) rotate(calc(-1 * var(--a) - 360deg)); } }
+.zz-click-legend { filter: drop-shadow(0 0 18px rgba(255, 210, 63, 0.75)); }
+@media (prefers-reduced-motion: reduce) { .zz-click-mini, .zz-click-pop, .zz-click-bit { animation-duration: 1ms !important; } }
+
 /* Logo : indice au 5e toucher (« … ? ») */
 .zz-logo-hint { animation: zz-pop 380ms var(--zz-spring) both; rotate: 8deg; }
 

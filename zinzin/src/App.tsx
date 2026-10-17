@@ -10,6 +10,7 @@ import { Paywall } from "./ui/Paywall";
 import { spiralEyes } from "./ui/spiral-eyes";
 import { SECRET_FOUND_EVENT, foundSecrets } from "@/lib/secrets-found";
 import { HALLOWEEN_SECRETS, SECRETS, SECRETS_UI } from "./secrets-list";
+import { unlockSecret } from "@/lib/avatar/secrets";
 import { pick, getLang } from "@/lib/i18n";
 import { playSfx } from "@/lib/sfx";
 import { AgeGate, GameScreen, LegalScreen, SettingsSheet, type LegalPage } from "./ui/Screens";
@@ -77,9 +78,11 @@ export function App() {
       const found = foundSecrets();
       const bonus = HALLOWEEN_SECRETS.some((s) => s.id === id);
       const n = SECRETS.filter((s) => found.has(s.id)).length;
+      // Tous les secrets trouvés : couleur secrète « Arc-en-ciel » pour les persos
+      const all = !bonus && n === SECRETS.length && unlockSecret("color-rainbow");
       setTimeout(() => {
-        playSfx("chime", { volume: 0.45 });
-        toast.show(bonus ? t.bonusToast : t.toast(n, SECRETS.length));
+        playSfx(all ? "tada" : "chime", { volume: 0.45 });
+        toast.show(all ? t.rainbowToast : bonus ? t.bonusToast : t.toast(n, SECRETS.length));
       }, 1600);
     };
     window.addEventListener(SECRET_FOUND_EVENT, on);

@@ -51,8 +51,17 @@ export const AVATAR_PALETTE: Record<string, { body: string; deep: string; hi: st
   lime:     { body: "#C6F04A", deep: "#8DB51C", hi: "#EBFFB0" },
   // Halloween : orange citrouille, avec des côtes sur le corps (AvatarBlob)
   pumpkin:  { body: "#FF8A1F", deep: "#D2560A", hi: "#FFC07A" },
+  // Couleurs SECRÈTES (récompenses, voir SECRET_COLORS) : arc-en-ciel animé, chrome
+  rainbow:  { body: "#FF5E9C", deep: "#7A4EE8", hi: "#FFF0A8" },
+  chrome:   { body: "#C9D1DC", deep: "#7F8A9E", hi: "#FFFFFF" },
 };
-export const AVATAR_COLORS = Object.keys(AVATAR_PALETTE);
+/**
+ * Couleurs secrètes : absentes de l'éditeur tant qu'elles ne sont pas débloquées (secret « color-<id> »,
+ * src/lib/avatar/secrets.ts), jamais tirées au hasard. Arc-en-ciel : les 18 secrets trouvés ;
+ * Chrome : 5 000 taps dans « Tapote le blob ».
+ */
+export const SECRET_COLORS = ["rainbow", "chrome"];
+export const AVATAR_COLORS = Object.keys(AVATAR_PALETTE).filter((c) => !SECRET_COLORS.includes(c));
 
 /* ───────── Couleurs de cheveux (gratuites) ───────── */
 export const HAIR_COLORS: Record<string, string> = {
@@ -80,6 +89,8 @@ export const AVATAR_ITEMS: Record<AvatarSlot, AvatarItem[]> = {
     item("star", true), item("heart", true), item("wink", true), item("dots", true), item("cross", true),
     // Ajout v4
     item("allnighter", true), item("tears", true),
+    // Secret : 100 taps dans « Tapote le blob »
+    secretItem("spiral"),
   ],
   hair: [
     item("none", true), item("swoop", true), item("afro", true), item("mohawk", true), item("bun", true),
@@ -128,6 +139,8 @@ export const AVATAR_ITEMS: Record<AvatarSlot, AvatarItem[]> = {
     item("katana", false, "none"), item("longscarf", false, "scarf"),
     // Ajout v4
     item("medal", true), item("balloon", true),
+    // Secrets de « Tapote le blob » : 500 taps (doigt en mousse), 10 000 taps (aura légendaire)
+    secretItem("foamfinger"), secretItem("aura"),
   ],
 };
 

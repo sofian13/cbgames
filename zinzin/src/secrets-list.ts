@@ -40,13 +40,16 @@ export const HALLOWEEN_SECRETS: SecretInfo[] = [
   S("midnight", ["Minuit", "Reste là jusqu'à minuit pile."], ["Midnight", "Stay until midnight sharp."], ["Medianoche", "Quédate hasta la medianoche en punto."]),
 ];
 
-export const SECRETS_UI: I18n<{ title: string; found: (n: number, total: number) => string; bonus: (n: number, total: number) => string; toast: (n: number, total: number) => string; bonusToast: string }> = {
+export const SECRETS_UI: I18n<{ title: string; found: (n: number, total: number) => string; bonus: (n: number, total: number) => string; toast: (n: number, total: number) => string; bonusToast: string; rainbowToast: string; reward: string; rewardDone: string }> = {
   fr: {
     title: "Secrets trouvés",
     found: (n, total) => `${n} / ${total}`,
     bonus: (n, total) => `Bonus Halloween : ${n} / ${total}`,
     toast: (n, total) => `🔓 Secret trouvé ! (${n}/${total})`,
     bonusToast: "🎃 Secret d'Halloween trouvé !",
+    rainbowToast: "🌈 18/18 ! Couleur Arc-en-ciel débloquée pour tes persos",
+    reward: "🌈 Trouve-les tous : une couleur secrète t'attend.",
+    rewardDone: "🌈 Couleur Arc-en-ciel débloquée (Ma bande → Couleur)",
   },
   en: {
     title: "Secrets found",
@@ -54,6 +57,9 @@ export const SECRETS_UI: I18n<{ title: string; found: (n: number, total: number)
     bonus: (n, total) => `Halloween bonus: ${n} / ${total}`,
     toast: (n, total) => `🔓 Secret found! (${n}/${total})`,
     bonusToast: "🎃 Halloween secret found!",
+    rainbowToast: "🌈 18/18! Rainbow color unlocked for your characters",
+    reward: "🌈 Find them all: a secret color awaits.",
+    rewardDone: "🌈 Rainbow color unlocked (My crew → Color)",
   },
   es: {
     title: "Secretos encontrados",
@@ -61,5 +67,8 @@ export const SECRETS_UI: I18n<{ title: string; found: (n: number, total: number)
     bonus: (n, total) => `Bonus Halloween: ${n} / ${total}`,
     toast: (n, total) => `🔓 ¡Secreto encontrado! (${n}/${total})`,
     bonusToast: "🎃 ¡Secreto de Halloween encontrado!",
+    rainbowToast: "🌈 ¡18/18! Color Arcoíris desbloqueado para tus personajes",
+    reward: "🌈 Encuéntralos todos: te espera un color secreto.",
+    rewardDone: "🌈 Color Arcoíris desbloqueado (Mi grupo → Color)",
   },
 };

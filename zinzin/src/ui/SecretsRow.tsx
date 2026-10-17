@@ -56,6 +56,7 @@ export function SecretsRow() {
       </button>
       {open && (
         <div className="mt-2">
+          <p className="mb-1 text-[14px] font-extrabold" style={{ color: "#FFD23F" }}>{n === SECRETS.length ? t.rewardDone : t.reward}</p>
           <ul>{SECRETS.map(row)}</ul>
           {showBonus && (
             <>
