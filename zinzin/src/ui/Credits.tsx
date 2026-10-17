@@ -147,7 +147,7 @@ function Credits({ onClose }: { onClose: () => void }) {
   const [motion, setMotion] = useState("");
   useEffect(() => {
     void motionStatus().then((m) => {
-      if (m) setMotion(` · capt ${m.available ? (m.active ? "on" : "stop") : "absent"} ${m.samples} · arm ${m.armed} · rel ${m.fired} · sec ${m.shakes}`);
+      if (m) setMotion(` · capt ${m.available ? (m.active ? "on" : "stop") : "absent"} ${m.samples} · arm ${m.armed} · rel ${m.fired} · sec ${m.shakes} · zmax ${typeof m.maxZ === "number" ? m.maxZ.toFixed(2) : "?"} · pause ${m.pauses ?? "?"}`);
     });
   }, []);
   const t = useT(STR);

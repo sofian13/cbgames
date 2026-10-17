@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type CSSProperties, type ReactNode } from "react";
+import { memo, useEffect, useMemo, useRef, useState, useSyncExternalStore, type CSSProperties, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { Check, Dices, Lock, RotateCcw, Star, X } from "lucide-react";
 import { useT } from "@/lib/i18n";
@@ -316,7 +316,7 @@ export function AvatarEditor({
                 className="relative flex flex-col items-center rounded-[18px] px-1 pb-1.5 pt-2 active:translate-y-[2px]"
                 style={{ ...avSticker(x.on ? "#FFD23F" : "#fff", x.on ? 4 : 3), color: AV_INK, outline: x.on ? "3px solid #fff" : undefined, outlineOffset: 2 }}>
                 <span className="grid w-full place-items-center" style={{ height: 58, paddingTop: 10 }}>
-                  <AvatarBlob look={x.preview} size={46} animate={false} />
+                  <TileBlob look={x.preview} />
                 </span>
                 <span className="mt-1 line-clamp-2 w-full text-center text-[12px] font-bold leading-[1.15]" style={{ minHeight: 28, overflowWrap: "break-word" }}>{x.label}</span>
                 {lockedTile && (
@@ -357,3 +357,16 @@ export function AvatarEditor({
     </AvatarLayer>
   );
 }
+
+/**
+ * Aperçu d'une vignette : redessiné seulement si SON look change. Changer un élément de l'onglet en cours
+ * ne change l'aperçu d'aucune vignette (chacune montre son propre élément) : plus de 30 persos redessinés
+ * à chaque toucher → aucun (fluide même sur un petit téléphone).
+ */
+const lookKey = (l: AvatarLook) => `${l.color}|${l.eyes}|${l.hair}|${l.hairColor}|${l.hat}|${l.face}|${l.extra}`;
+const TileBlob = memo(
+  function TileBlob({ look }: { look: AvatarLook }) {
+    return <AvatarBlob look={look} size={46} animate={false} />;
+  },
+  (a, b) => lookKey(a.look) === lookKey(b.look),
+);

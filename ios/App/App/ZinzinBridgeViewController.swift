@@ -153,13 +153,18 @@ class ZinzinBridgeViewController: CAPBridgeViewController {
     private var shakePeaks: [Date] = []
     private var lastShake = Date.distantPast
     private var lastPeak = Date.distantPast
+    /// Moment où le capteur a été coupé alors que le téléphone était retourné (pause d'iOS)
+    private var pausedFaceDown: Date?
 
     @objc private func startFaceDown() {
         ZinzinMotionStatus.available = faceMotion.isAccelerometerAvailable
         guard faceMotion.isAccelerometerAvailable else { return }
         guard !faceMotion.isAccelerometerActive else { return }
         faceDownSince = nil
-        faceDownArmed = false
+        // Retour après une pause « face cachée » (moins de 10 min) : armé, il suffit d'être de nouveau à l'endroit
+        faceDownArmed = pausedFaceDown.map { Date().timeIntervalSince($0) < 600 } ?? false
+        if faceDownArmed { ZinzinMotionStatus.armed += 1 }
+        pausedFaceDown = nil
         lowZ = 0
         // 20 mesures par seconde : assez pour une secousse, coût négligeable
         faceMotion.accelerometerUpdateInterval = 0.05
@@ -167,6 +172,7 @@ class ZinzinBridgeViewController: CAPBridgeViewController {
         faceMotion.startAccelerometerUpdates(to: .main) { [weak self] data, _ in
             guard let self = self, let a = data?.acceleration else { return }
             ZinzinMotionStatus.samples += 1
+            ZinzinMotionStatus.maxZ = max(ZinzinMotionStatus.maxZ, a.z)
             let now = Date()
             // ── Face cachée ── z ≈ +1 g : écran vers le bas (lissé : un choc sur la table ne compte pas)
             self.lowZ = self.lowZ * 0.8 + a.z * 0.2
@@ -185,15 +191,15 @@ class ZinzinBridgeViewController: CAPBridgeViewController {
             } else if !self.faceDownArmed {
                 self.faceDownSince = nil
             }
-            // ── Secousse ── accélération hors gravité > 1,1 g, 3 pics en 0,8 s
+            // ── Secousse ── accélération hors gravité > 1,1 g, 4 pics en 1 s
             let k = 0.85
             self.grav = (self.grav.x * k + a.x * (1 - k), self.grav.y * k + a.y * (1 - k), self.grav.z * k + a.z * (1 - k))
             let hx = a.x - self.grav.x, hy = a.y - self.grav.y, hz = a.z - self.grav.z
             if (hx * hx + hy * hy + hz * hz).squareRoot() > 1.1 && now.timeIntervalSince(self.lastPeak) > 0.09 {
                 self.lastPeak = now
                 self.shakePeaks.append(now)
-                self.shakePeaks.removeAll { now.timeIntervalSince($0) > 0.8 }
-                if self.shakePeaks.count >= 3 && now.timeIntervalSince(self.lastShake) > 1.5 {
+                self.shakePeaks.removeAll { now.timeIntervalSince($0) > 1.0 }
+                if self.shakePeaks.count >= 4 && now.timeIntervalSince(self.lastShake) > 1.5 {
                     self.lastShake = now
                     self.shakePeaks.removeAll()
                     ZinzinMotionStatus.shakes += 1
@@ -208,8 +214,14 @@ class ZinzinBridgeViewController: CAPBridgeViewController {
     }
 
     @objc private func stopFaceDown() {
+        if faceMotion.isAccelerometerActive {
+            // Mis en pause alors que le téléphone est (ou passe) face contre la table : iOS peut éteindre
+            // l'écran / mettre l'app en pause dès qu'on le retourne. On s'en souvient pour déclencher au retour.
+            if lowZ > 0.5 { pausedFaceDown = Date() }
+            ZinzinMotionStatus.pauses += 1
+            faceMotion.stopAccelerometerUpdates()
+        }
         ZinzinMotionStatus.active = false
-        if faceMotion.isAccelerometerActive { faceMotion.stopAccelerometerUpdates() }
         faceDownSince = nil
         faceDownArmed = false
     }
@@ -248,4 +260,8 @@ enum ZinzinMotionStatus {
     static var armed = 0
     static var fired = 0
     static var shakes = 0
+    /// Plus grande valeur z vue (≈ +1 = écran contre la table)
+    static var maxZ = -2.0
+    /// Nombre de fois où le capteur a été coupé (app en pause / arrière-plan)
+    static var pauses = 0
 }

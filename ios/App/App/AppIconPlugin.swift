@@ -83,6 +83,8 @@ public class AppIconPlugin: CAPPlugin, CAPBridgedPlugin {
                 "armed": ZinzinMotionStatus.armed,
                 "fired": ZinzinMotionStatus.fired,
                 "shakes": ZinzinMotionStatus.shakes,
+                "maxZ": ZinzinMotionStatus.maxZ,
+                "pauses": ZinzinMotionStatus.pauses,
             ])
         }
     }
