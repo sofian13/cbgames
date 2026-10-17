@@ -438,8 +438,9 @@ svg.zz-dancing { animation: zz-dance .484s ease-in-out infinite alternate; trans
 
 /* « Tapote le blob » (BlobClicker.tsx) */
 .zz-click-pop { transform: translate(-50%, -50%); animation: zz-click-pop 0.9s ease-out forwards; -webkit-text-stroke: 5px #15082E; paint-order: stroke fill; }
-/* Particules : sur leur propre calque (le téléphone les déplace sans rien repeindre) */
-.zz-click-pop, .zz-click-bit, .zz-sweat, .zz-click-spark, .zz-click-mini, .zz-bolt { will-change: transform, opacity; }
+/* Éléments PERMANENTS sur leur propre calque. Pas les particules éphémères (« +N », confettis, sueur) :
+   à plusieurs doigts, des centaines de calques créés/détruits par seconde saturent la mémoire graphique d'iOS. */
+.zz-click-spark, .zz-click-mini { will-change: transform, opacity; }
 @keyframes zz-click-pop { from { opacity: 1; translate: 0 0; } to { opacity: 0; translate: 0 -90px; } }
 .zz-click-bit { position: absolute; left: 50%; top: 50%; width: 8px; height: 8px; border-radius: 2px; animation: zz-click-bit 0.7s ease-out forwards; }
 @keyframes zz-click-bit { from { transform: rotate(var(--a)) translateX(0); opacity: 1; } to { transform: rotate(var(--a)) translateX(46px); opacity: 0; } }

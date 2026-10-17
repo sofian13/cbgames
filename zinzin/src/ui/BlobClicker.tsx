@@ -378,8 +378,10 @@ export function BlobClicker({ onClose }: { onClose: () => void }) {
         { duration: 240, easing: "ease-out" },
       );
     }
+    // Particules limitées quand on tape très vite (plusieurs doigts) : au plus ~20 « +N » par seconde, 8 à l'écran
+    if (quiet) return;
     const id = ++popId.current;
-    setPops((p) => [...p.slice(liteFx ? -5 : -12), { id, x: e.clientX + (Math.random() * 40 - 20), y: e.clientY, v: fmtBig(v, lang), boom: explosive, sweat: hasPower(next.taps, "sweat") && streak >= 5 }]);
+    setPops((p) => [...p.slice(liteFx ? -4 : -7), { id, x: e.clientX + (Math.random() * 40 - 20), y: e.clientY, v: fmtBig(v, lang), boom: explosive, sweat: hasPower(next.taps, "sweat") && streak >= 5 }]);
     setTimeout(() => setPops((p) => p.filter((q) => q.id !== id)), 900);
   };
 
