@@ -27,6 +27,8 @@ interface AppIconPlugin {
   setName(o: { name?: string }): Promise<void>;
   /** Batterie (même plugin natif, voir AppIconPlugin.swift) : level 0…1 (-1 inconnu) */
   getBattery(): Promise<{ level: number; charging: boolean; known: boolean }>;
+  /** Écran toujours allumé (pendant une partie) */
+  setKeepAwake(o: { on: boolean }): Promise<void>;
   /** Diagnostic du capteur de mouvement (générique secret) */
   getMotion(): Promise<{ available: boolean; active: boolean; samples: number; armed: number; fired: number; shakes: number; maxZ?: number; pauses?: number }>;
 }
@@ -116,4 +118,31 @@ export async function motionStatus(): Promise<{ available: boolean; active: bool
   const h = await getPlugin();
   if (!h) return null;
   try { return await h.p.getMotion(); } catch { return null; }
+}
+
+/**
+ * Écran toujours allumé pendant une partie (le tél reste posé sans qu'on le touche : nuit du Loup-Garou,
+ * débats…). iPhone : plugin natif (isIdleTimerDisabled). Ailleurs (Android, navigateur) : Screen Wake Lock.
+ * Hors partie : comportement normal du téléphone.
+ */
+let wakeLock: { release: () => Promise<void> } | null = null;
+let keepOn = false;
+export async function keepScreenAwake(on: boolean): Promise<void> {
+  keepOn = on;
+  const h = await getPlugin();
+  if (h) {
+    try { await h.p.setKeepAwake({ on }); } catch { /* plugin ancien : sans effet */ }
+    return;
+  }
+  const nav = navigator as Navigator & { wakeLock?: { request: (t: "screen") => Promise<{ release: () => Promise<void> }> } };
+  try {
+    if (on && !wakeLock && nav.wakeLock) wakeLock = await nav.wakeLock.request("screen");
+    else if (!on && wakeLock) { await wakeLock.release(); wakeLock = null; }
+  } catch { wakeLock = null; }
+}
+// Le verrou d'écran du navigateur saute quand l'app passe en arrière-plan : on le reprend au retour
+if (typeof document !== "undefined") {
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden && keepOn) { wakeLock = null; void keepScreenAwake(true); }
+  });
 }

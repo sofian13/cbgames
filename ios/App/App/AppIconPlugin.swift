@@ -14,7 +14,8 @@ public class AppIconPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "getName", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "setName", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "getBattery", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "getMotion", returnType: CAPPluginReturnPromise)
+        CAPPluginMethod(name: "getMotion", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "setKeepAwake", returnType: CAPPluginReturnPromise)
     ]
 
     /// Seules ces icônes peuvent être demandées depuis le JS
@@ -86,6 +87,15 @@ public class AppIconPlugin: CAPPlugin, CAPBridgedPlugin {
                 "maxZ": ZinzinMotionStatus.maxZ,
                 "pauses": ZinzinMotionStatus.pauses,
             ])
+        }
+    }
+
+    /// Écran toujours allumé pendant une partie (pas de verrouillage automatique) ; off = comportement normal d'iOS.
+    @objc func setKeepAwake(_ call: CAPPluginCall) {
+        let on = call.getBool("on") ?? false
+        DispatchQueue.main.async {
+            UIApplication.shared.isIdleTimerDisabled = on
+            call.resolve()
         }
     }
 }

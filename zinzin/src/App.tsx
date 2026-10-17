@@ -8,6 +8,7 @@ import { GameSheet } from "./ui/GameSheet";
 import { Home, isLocked } from "./ui/Home";
 import { Paywall } from "./ui/Paywall";
 import { spiralEyes } from "./ui/spiral-eyes";
+import { keepScreenAwake } from "./app-icon";
 import { SECRET_FOUND_EVENT, foundSecrets } from "@/lib/secrets-found";
 import { HALLOWEEN_SECRETS, SECRETS, SECRETS_UI } from "./secrets-list";
 import { unlockSecret } from "@/lib/avatar/secrets";
@@ -70,6 +71,10 @@ export function App() {
     if (paywall) hadPaywall.current = true;
     else if (hadPaywall.current) { hadPaywall.current = false; notifyPaywallClosed(); }
   }, [paywall]);
+  // Écran toujours allumé pendant une partie ou une Soirée en cours ; ailleurs, verrouillage normal d'iOS
+  const inGame = Boolean(playing) || soiree === "run";
+  useEffect(() => { void keepScreenAwake(inGame); }, [inGame]);
+
   // Nouveau secret trouvé → « Secret trouvé ! (n/18) », un peu après l'effet du secret lui-même
   useEffect(() => {
     const on = (e: Event) => {
