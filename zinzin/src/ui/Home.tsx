@@ -169,16 +169,23 @@ export function Home({
         })}
 
         {/* « Tapote le blob » : mini-jeu pour celui qui s'ennuie en soirée */}
-        <div className="mt-6 flex justify-center">
-          <button
-            type="button"
-            onClick={() => { haptic(); uiSfx.open(); setClicker(true); }}
-            className="zz-push zz-stk-sm flex h-11 items-center gap-2 rounded-full px-5 text-[15px] font-bold"
-            style={{ background: "rgba(255,255,255,0.1)", color: "#fff" }}
-          >
-            {t.boredCta}
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={() => { haptic(); uiSfx.open(); setClicker(true); }}
+          className="zz-push zz-stk relative mx-5 mt-7 flex w-[calc(100%-40px)] items-center gap-3 rounded-[24px] py-3 pl-[78px] pr-3 text-left"
+          style={{ background: "#fff", color: "var(--zz-ink)", rotate: "-1deg" }}
+        >
+          <div className="absolute -top-4 left-1">
+            <ZBlob size={70} color="lavender" mood="wink" seed={8} shadow={false} outline />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="zz-title text-[20px] leading-tight">{t.boredCta}</div>
+            <div className="mt-0.5 text-[13.5px] font-semibold leading-snug" style={{ opacity: 0.7 }}>{t.boredSub}</div>
+          </div>
+          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full" style={{ background: "var(--zz-ink)", color: "#FFD23F" }}>
+            <ArrowRight size={20} strokeWidth={3} />
+          </span>
+        </button>
         {clicker && <BlobClicker onClose={() => setClicker(false)} />}
 
         {!noAlc && (

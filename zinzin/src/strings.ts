@@ -15,6 +15,7 @@ export const UI: I18n<{
   splashHalloween: string;
   /** Bouton du bas de l'accueil : mini-jeu « Tapote le blob » */
   boredCta: string;
+  boredSub: string;
   skipIntro: string;
   // Âge
   ageTitle: string;
@@ -108,7 +109,8 @@ export const UI: I18n<{
     settings: "Réglages",
     splashTagline: "Jeux de soirée · un seul téléphone",
     splashHalloween: "Joyeux Halloween 🎃",
-    boredCta: "Tu t'ennuies ? Tapote le blob 👆",
+    boredCta: "Tu t'ennuies ? Tapote-moi !",
+    boredSub: "Un mini-jeu pour tuer le temps",
     skipIntro: "Passer l'introduction",
     ageTitle: "Ici, c’est entre adultes.",
     ageText: "Zinzin est réservé aux 18 ans et plus. Dans les jeux à boire, une « gorgée de zinzin », c’est de ce que tu veux : eau, soft, jus… Avec modération.",
@@ -202,7 +204,8 @@ export const UI: I18n<{
     settings: "Settings",
     splashTagline: "Party games · just one phone",
     splashHalloween: "Happy Halloween 🎃",
-    boredCta: "Bored? Tap the blob 👆",
+    boredCta: "Bored? Tap me!",
+    boredSub: "A little game to kill time",
     skipIntro: "Skip intro",
     ageTitle: "Adults only in here.",
     ageText: "Zinzin is for ages 18 and up. In the drinking games, a \"zinzin sip\" is whatever you like: water, soft drinks, juice… Please drink responsibly.",
@@ -296,7 +299,8 @@ export const UI: I18n<{
     settings: "Ajustes",
     splashTagline: "Juegos de fiesta · un solo móvil",
     splashHalloween: "¡Feliz Halloween! 🎃",
-    boredCta: "¿Te aburres? Toca el blob 👆",
+    boredCta: "¿Te aburres? ¡Tócame!",
+    boredSub: "Un minijuego para matar el rato",
     skipIntro: "Saltar la introducción",
     ageTitle: "Aquí solo entran adultos.",
     ageText: "Zinzin es solo para mayores de 18 años. En los juegos para beber, un «trago de zinzin» es de lo que quieras: agua, refresco, zumo… Con moderación.",
