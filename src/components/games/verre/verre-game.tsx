@@ -680,7 +680,11 @@ function RoundPlay({
 
     const resize = () => {
       const rect = wrap.getBoundingClientRect();
-      dpr = Math.min(3, window.devicePixelRatio || 1);
+      // Densité plafonnée à 2 (1,5 en mode effets légers) : un liquide aux formes douces ne gagne rien
+      // à ×3, et c'est 2,25× moins de pixels redessinés 60 fois par seconde (batterie, chauffe)
+      let lite = false;
+      try { lite = Number(localStorage.getItem("zz-lite-fx")) > 0; } catch { /* indispo */ }
+      dpr = Math.min(lite ? 1.5 : 2, window.devicePixelRatio || 1);
       canvas.width = Math.round(rect.width * dpr);
       canvas.height = Math.round(rect.height * dpr);
       canvas.style.width = `${rect.width}px`;

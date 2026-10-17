@@ -58,6 +58,22 @@ export function Home({
   const [clicker, setClicker] = useState(false);
   useEffect(() => { preloadUiSfx(); }, []);
   useEffect(() => { if (greeting.slot === "three") foundSecret("threeam"); }, [greeting.slot]);
+  // Accueil laissé tranquille 30 s (tél posé entre deux jeux) : le décor se met en pause (batterie),
+  // les blobs continuent de cligner des yeux ; tout repart au premier toucher
+  useEffect(() => {
+    const home = scrollRef.current;
+    if (!home) return;
+    let t: ReturnType<typeof setTimeout>;
+    const wake = () => {
+      home.classList.remove("zz-idle");
+      clearTimeout(t);
+      t = setTimeout(() => home.classList.add("zz-idle"), 30_000);
+    };
+    wake();
+    const evs = ["pointerdown", "scroll", "wheel", "keydown"] as const;
+    evs.forEach((e) => home.addEventListener(e, wake, { passive: true }));
+    return () => { clearTimeout(t); evs.forEach((e) => home.removeEventListener(e, wake)); };
+  }, []);
   // Très petit écran (iPhone SE 1re gén., 320 px) : logo un peu plus petit pour laisser la place
   // au badge Zinzin+ et aux deux boutons ronds
   const [narrow] = useState(() => typeof window !== "undefined" && window.innerWidth < 340);
